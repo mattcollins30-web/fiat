@@ -1,6 +1,7 @@
 # The Issue - Fiat's second act (draft, 25 Oct)
 
-Status: design, agreed in outline with Matt on 25 Oct; nothing built. Mockups to follow on the canvas.
+Status: built 25 Oct (Matt: "let's push and do the lot"), all four stages - see §10 for what was built and where. Balance
+next: a full pass with everything in. Art is test art (the host sites' plates) until Matt reviews the cost.
 
 ## Why
 
@@ -107,3 +108,59 @@ It also ends the cash flood by design: gate 14 (cash held) has been red for thre
 - The rate's drift: random, or moved by what you sell?
 - What the runner sees of fiat before the Issue - a hint on the Radio, the Issuer's words at the Mint.
 - Whether retirement (level 50) changes once the second campaign exists.
+
+## 10. As built (25 Oct)
+
+Matt's calls on the night: a full kit of six; the rate moved by what you do; the names and the fights below; commit in
+stages; no art run until he's reviewed the cost.
+
+**Stage 1, the Issue** (commit 0e44688). `Sim.issue()` on the first Mint win: fiat = FIAT_PILE_K x sqrt(tins + notes x
+NOTE_TINS x the day's inflation). After it `notes` reads the fiat as notes (every notes price keeps working), prices are
+the Issue's x FIAT_SCALE x circ_mult() (1 + circulation / FIAT_CIRC_SPAN, capped at FIAT_CIRC_CAP), the Fence buys at
+`fiat_rate` (a sale lowers it, RATE_RECOVER_H brings it back), the burn takes BURN_TINS-worth out of circulation x
+BURN_MULT, and every later Issuer win prints PRINT_HAUL. The Issuer's counter is the Fence's fifth tab
+(scripts/ui/issuer_counter.gd).
+
+**Issued kit** (Data.ISSUED; the cap's rule reworded - see the questions):
+
+| Piece | Rule |
+|---|---|
+| Issued rifle | kills pay x1.5; damage +25% |
+| Issued sidearm | every fifth shot printed twice; damage +20% |
+| Issued cap | the Fence never pays you under the face rate; all resists +15 |
+| Issued plate | a fifth less from the order and the County |
+| Issued webbing | meds heal +50%, one med more |
+| Issued seal | burns count double; loot quality +20% |
+
+Stamped and numbered ("· No. 0001"), at the reach + ISSUED_OVER, ISSUED_LIFT on its figures; kept on a death; never
+broken into patterns.
+
+**Stages 2-3, the County.** Data.COUNTY_ZONES and Data.COUNTY: four zones, three places each, the last the head's. A
+place runs through the order's plumbing (its key in `_sig["order"]`, Data.pinnacle falls back to Data.county), laid on a
+host site's crew and drops, at the reach + `over` + a level a win. A zone wants ISSUED_WANT [2, 3, 4, 6] issued pieces
+worn; its places open in turn; its head down opens the next. A head drops COUNTY_HEAD_ISSUED issued pieces at his level.
+
+| Zone | Places (host site) | Head and fight |
+|---|---|---|
+| The Motorway | the Toll Plaza (Services), the Distribution Centre (Retail Park), the Truck Stop (Services) | the Bailiff: seizes your best piece with damage or armour; a gun's share of your fire lost (BAILIFF_CUT), an armour piece x1.25 taken, till he's under half |
+| The Docks | the Container Port (Barracks), the Ferry Terminal (Pleasure Park), the Customs Shed (Shopping Centre) | the Auditor: skills cost x1.5, and he seals one every 12 s |
+| The Big Houses | the Golf Club (Top Farm), the Gated Close (Ransacked Streets), the Manor (Hospital) | the Collector: what you take grows 5% every 3 s, back to nothing when one of his debtors (one every 6 s) drops |
+| The Treasury | the Counting House, the Bullion Vault, the Treasury (all the Bank) | the Treasurer: the Lineman's shield and the Issuer's press |
+
+The Map's "The County" button (once on fiat) swaps the drawn map for the board (scripts/ui/county.gd); a zone not yet
+open reads scrambled.
+
+**Stage 4, the remix** (`Sim._remix`, after the Treasurer): a signal may be laid on a County place (REMIX_COUNTY_ODDS),
+its head one of the Issuer's people away from home (REMIX_HEAD_ODDS, at full strength, his issued kit when he drops);
+a signal won at the reach or past it brings an issued piece home now and then (REMIX_ISSUED_ODDS).
+
+**The bot** (tests/bot.gd): reads the order's and the County's places every half hour and runs one that reads (a first
+County place or the Mint before the Issue at FIRST, the rest at PUSH); buys issued kit with three times the price in
+hand and wears it; burns when prices pass x1.5. The balance read reports the Issue's hour, the County's firsts and the
+fiat (gate 18).
+
+**Questions for Matt**
+- Kit bought before the Issue dodges the square root (buy the Fence's stock, sell it after). Start the rate at RATE_MIN
+  on the day, or count the stash's worth in the pile?
+- The cap's rule was approved as "the rate never falls on a run"; built as "the Fence never pays you under the face
+  rate" (the rate only moves at camp, so the first wording did nothing). Keep?

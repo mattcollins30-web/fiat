@@ -510,6 +510,20 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			sg_full[1] += 1 if e.get("won", false) else 0
 	g["faint"] = sg_faint
 	g["full_at_reach"] = sg_full
+	# the Issue and the County (25 Oct): when the town went on fiat, the order's and the County's wins, issued kit
+	g["issue_at"] = -1.0
+	g["county_firsts"] = []
+	for e in sim.chronicle:
+		if str(e.get("k", "")) == "issue" and float(g["issue_at"]) < 0.0:
+			g["issue_at"] = snappedf(float(e.get("t", 0.0)) / 3600.0, 0.01)
+		if str(e.get("k", "")) == "county_done" and e.get("won", false):
+			if not (str(e["key"]) in g["county_firsts"].map(func(x): return x[1])):
+				g["county_firsts"].append([snappedf(float(e.get("t", 0.0)) / 3600.0, 0.01), str(e["key"]), int(e.get("level", 0))])
+	g["orders_beaten"] = sim.order_beaten.duplicate()
+	g["county_taken"] = sim.county_taken_count()
+	g["issued_worn"] = sim.issued_worn()
+	g["issued_bought"] = sim.issued_serial
+	g["fiat"] = {"cash": int(sim.cash), "circulation": int(sim.circulation), "prices": snappedf(sim.circ_mult(), 0.01), "rate": snappedf(sim.fiat_rate, 0.01)} if sim.issued else {}
 	var stand_to: float = sim.elapsed / 3600.0 if moved.is_empty() else float(moved[0][0]) / 3600.0     # to the first move: the move is the stall's answer, and the campaign again isn't a stand
 	g["reach_stand_h"] = _longest_gap(float(g["radio_at"]), stand_to, g["reach_log"].map(func(x): return float(x[0]))) if float(g["radio_at"]) >= 0.0 else -1.0
 	var gate_odds: Array = []

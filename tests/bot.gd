@@ -121,7 +121,15 @@ func step(sim) -> int:
 	# campaign site farmed for the papers
 	var t := -1
 	var t0 := Time.get_ticks_usec()
-	if sim.campaign_done() and sim.room_open("radio"):
+	var okey: String = _pick_order(sim) if sim.campaign_done() else ""
+	if okey != "":
+		var o_lv: int = sim.order_level(okey)
+		if sim.deploy_order(okey):
+			t = int(Data.pinnacle(okey)["site"])
+			last_tier = -1
+			bought.append([sim.elapsed, "ran %s at level %d" % [str(Data.pinnacle(okey)["place"]), o_lv]])
+		t0 = _lap("step/order", t0)
+	if t < 0 and sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
 		t0 = _lap("step/signals", t0)
 		var k := _pick_signal(sim)
@@ -178,6 +186,71 @@ func step(sim) -> int:
 	return t
 var ran_signal: Array = []
 var _to_seen := -1
+
+
+## The order's places and the County's (25 Oct, the Issue): read every ORDER_EVERY of the yard's time - a dry run is a
+## head's long fight - and run one when it reads: a County place not yet taken, or the Mint before the Issue, at FIRST;
+## any other at PUSH. The County's road first, then the Mint, then the deepest.
+const ORDER_EVERY := 1800.0
+var _order_read_at := -1e9
+func _pick_order(sim) -> String:
+	if sim.elapsed - _order_read_at < ORDER_EVERY:
+		return ""
+	_order_read_at = sim.elapsed
+	var keys: Array = []
+	for c in Data.COUNTY:
+		keys.append(str(c["key"]))
+	for p in Data.PINNACLES:
+		keys.append(str(p["key"]))
+	var best := ""
+	var best_rank := -1
+	for k in keys:
+		if sim.order_block(k) != "":
+			continue
+		var county: bool = sim.is_county(k)
+		var first: bool = int(sim.order_beaten.get(k, 0)) == 0
+		var need: float = FIRST if (first and (county or k == "mint")) else PUSH
+		var rank: int = (2000 if county and first else (1000 if k == "mint" and not sim.issued else 0)) + sim.order_level(k)
+		if rank <= best_rank:
+			continue
+		if float(sim.order_odds(k)[0]) >= need:
+			best = k
+			best_rank = rank
+	return best
+
+
+## Issued kit (25 Oct): a piece a slot from the Issuer once the town's on fiat, while three times its price is in hand
+## (the County's first zones want them worn), a slot's piece bought again when the counter's is ten levels past it;
+## worn whatever the score says. And a burn when the prices run past half again and the fiat's there four times.
+func _issued(sim) -> void:
+	if not sim.issued or sim.on_mission():
+		return
+	for u in Data.ISSUED:
+		var sl: String = str(u["slot"])
+		var worn = sim.equipped.get(sl)
+		var have_lv: int = Items.ilvl(worn) if worn != null and worn.get("issued", false) else -100
+		var offer: Dictionary = sim.issued_piece(sl)
+		if Items.ilvl(offer) - have_lv < 10:
+			continue
+		var price: int = sim.issued_price(sl)
+		if sim.cash >= price * 3.0 and sim.buy_issued(sl):
+			bought.append([sim.elapsed, "issued %s for %d fiat" % [sl, price]])
+	_wear_issued(sim)
+	if sim.circ_mult() > 1.5 and sim.can_burn() and sim.cash >= sim.burn_price() * 4.0:
+		sim.burn()
+		bought.append([sim.elapsed, "burnt %d fiat" % int(sim.burn_price())])
+
+
+## The newest issued piece of each slot worn.
+func _wear_issued(sim) -> void:
+	for sl in Data.SLOTS:
+		var best = null
+		for it in sim.stash:
+			if it.get("issued", false) and str(it.get("slot", "")) == sl and sim.can_wear(it) and (best == null or Items.ilvl(it) > Items.ilvl(best)):
+				best = it
+		var worn = sim.equipped.get(sl)
+		if best != null and (worn == null or not worn.get("issued", false) or Items.ilvl(best) > Items.ilvl(worn)):
+			sim.equip_item(int(best["id"]))
 
 
 ## A signal's extras for the log: its site, the head, a convoy, its codes.
@@ -295,6 +368,7 @@ func tidy(sim) -> void:
 		_tidy_kit(sim)
 	t0 = Time.get_ticks_usec()
 	_restock_meds(sim)                    # every run: the rig's meds and the endgame's business (the review: a run out with no meds, a signal waiting)
+	_issued(sim)
 	_endgame(sim)
 	_lap("endgame", t0)
 
@@ -308,6 +382,7 @@ func _tidy_kit(sim) -> void:
 		_hold_the_type(sim, TYPE_OF[sim.cls])
 	if element != "":
 		_hold_the_element(sim)
+	_wear_issued(sim)                         # issued kit stays on (the County wants it worn)
 	t0 = _lap("fit", t0)
 	_train_tree(sim)
 	t0 = _lap("train", t0)

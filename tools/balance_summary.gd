@@ -671,6 +671,16 @@ func _economy_rows(rows: Array, full: Array) -> void:
 		if held_s > SCRAP_HOURS:
 			off.append("%s holds %d scrap, %.1f hours' scrap" % [bd["build"], int(bd.get("scrap_end", 0)), held_s])
 	rows.append(["15. Scrap", "scrap in hand at the end no more than %.0f hours' scrap income (the tempers spend it)" % SCRAP_HOURS, "; ".join(off) if not off.is_empty() else "every build under (most %.1f)" % most_s, off.is_empty()])
+	# the Issue and the County (25 Oct): the Issuer beaten and the town on fiat by the read's end on most builds; how far
+	# into the County each got, and the fiat's state, for the read
+	var issued_n := 0
+	var bits: Array = []
+	for bd in full:
+		var at: float = float(bd.get("issue_at", -1.0))
+		if at >= 0.0:
+			issued_n += 1
+		bits.append("%s %s, County %d/12, %d issued" % [bd["build"], ("on fiat at %.1f h" % at) if at >= 0.0 else "no Issue", int(bd.get("county_taken", 0)), int(bd.get("issued_bought", 0))])
+	rows.append(["18. The Issue", "the Issuer beaten and the town on fiat by the read's end, most builds (the County's progress read alongside)", "; ".join(bits), issued_n * 2 > full.size()])
 
 
 ## The loot read's tables: {"Outskirts": {rolls, drops: [{rar: [C,U,R,E,L], wear, sets}], gamble: [...]}, ...} for the

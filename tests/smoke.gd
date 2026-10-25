@@ -4691,6 +4691,7 @@ func _pinnacle_checks(main) -> void:
 	_loadout_checks(main)
 	_review_fix_checks(main)
 	_issue_checks(main)
+	_county_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -19843,3 +19844,188 @@ func _issue_checks(main) -> void:
 	_check(not sim.issued and not main._fence._tabs[4].visible, "the counter's tab stayed up on a camp before the Issue")
 	print("the Issue ok: hard on piles, prices by the circulation, notes as fiat, the rate, the burn, six issued pieces, the card, the counter")
 
+
+
+## The County (25 Oct): its zones and places open in turn, each zone wanting issued kit worn; a place runs as the
+## order's on its host's crew, a head's with his own fight and issued kit off him; the Map's County board; the remix.
+func _county_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done, as the Issue's camp would be
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
+	_check(Data.COUNTY.size() == 12 and Data.COUNTY_ZONES.size() == 4 and Data.ISSUED_WANT.size() == 4, "the County isn't four zones of three")
+	for z in range(4):
+		var ks: Array = sim.county_places(z)
+		_check(ks.size() == 3 and Data.county(str(ks[2])).has("who") and not Data.county(str(ks[0])).has("who"), "the County's zone %d: its head isn't its last place" % z)
+		_check(str(Data.county(str(ks[2]))["who"]) == str(Data.COUNTY_ZONES[z]["head"]), "zone %d's head isn't its zone's" % z)
+	for c in Data.COUNTY:
+		_check(Words.COUNTY_WORDS.has(str(c["key"])) and int(c["site"]) < Data.TIERS.size(), "%s has no line or no host" % c["place"])
+	sim.issued = false
+	sim.order_beaten = {}
+	_check(not sim.county_zone_open(0) and sim.order_block("toll_plaza") == Words.COUNTY["not_yet"], "the County open before the Issue")
+	sim.issue()
+	sim.reach = 30
+	for sl in Data.SLOTS:
+		var w = sim.equipped.get(sl)
+		if w != null and w.get("issued", false):
+			sim.equipped[sl] = null
+	_check(sim.county_zone_open(0) and sim.order_open("toll_plaza") and not sim.order_open("distribution") and not sim.county_zone_open(1), "after the Issue: the Motorway's first place alone open")
+	_check(sim.order_block("toll_plaza") == Words.COUNTY["want"] % [2, 0], "the Toll Plaza doesn't want issued kit: '%s'" % sim.order_block("toll_plaza"))
+	_check(sim.order_level("toll_plaza") == 30 + int(Data.county("toll_plaza")["over"]), "the Toll Plaza's level %d" % sim.order_level("toll_plaza"))
+	# two issued pieces worn
+	sim.cash = 1e12
+	for sl in ["Armour", "Helmet"]:
+		_check(sim.buy_issued(sl), "the fixture: no issued %s" % sl)
+		var it: Dictionary = sim.stash.back()
+		sim.stash.erase(it)
+		sim.equipped[sl] = it
+	_check(sim.issued_worn() == 2 and sim.order_block("toll_plaza") == "", "two worn, the Toll Plaza still shut: '%s'" % sim.order_block("toll_plaza"))
+	# the Map's County board
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._missions._county_btn.visible, "no County button on the Map after the Issue")
+	main._missions.set_county(true)
+	main.refresh()
+	var cb = main._missions._county
+	_check(cb.visible and not main._missions._map.visible, "the County board didn't take the map's place")
+	main._missions._came_open = true
+	main.refresh()
+	_check(not main._missions._came.visible, "what came back sits over the County's board")
+	main._missions._came_open = false
+	main.refresh()
+	_check(cb.card("toll_plaza")["button"].visible and not cb.card("distribution")["button"].visible and cb.card("distribution")["note"].text.begins_with("Take"), "the County's cards: the Toll Plaza's Go %s, the next's note '%s'" % [cb.card("toll_plaza")["button"].visible, cb.card("distribution")["note"].text])
+	for n in cb.text_nodes():
+		if n is Label:
+			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
+	_check_fit(main, "the County")
+	# a place run: its host's crew, no head; won, the next opens
+	sim.hp = sim.max_hp()
+	sim.wounds = {}
+	var e: Dictionary = sim.order_read("toll_plaza")
+	_check(not e.has("boss") and e["name"] == "The Toll Plaza" and bool(e.get("county", false)), "the Toll Plaza reads %s" % str(e.get("boss", {})))
+	_check(sim.deploy_order("toll_plaza") and sim.mission != null and not sim.mission.has("boss"), "the Toll Plaza would not set off: %s" % sim.order_block("toll_plaza"))
+	if sim.mission != null:
+		var mm: Dictionary = sim.mission
+		mm["remaining"] = 0
+		mm["cleared"] = true
+		sim.extract_now()
+		_check(int(sim.order_beaten.get("toll_plaza", 0)) == 1 and sim.order_open("distribution") and sim._sig.is_empty(), "the Toll Plaza's win didn't open the Distribution Centre")
+	# the head's place: his fight, issued kit off him, the next zone
+	sim.order_beaten["distribution"] = 1
+	sim.hp = sim.max_hp()
+	var eh: Dictionary = sim.order_read("truck_stop")
+	_check(eh.has("boss") and str(eh["boss"]["name"]) == "The Bailiff" and str(eh["boss"].get("mech", "")) == "bailiff", "the Truck Stop's head reads %s" % str(eh.get("boss", {})))
+	_check(sim.deploy_order("truck_stop") and sim.mission != null and sim.mission.has("boss"), "the Truck Stop would not set off: %s" % sim.order_block("truck_stop"))
+	if sim.mission != null:
+		var mh: Dictionary = sim.mission
+		var serial0: int = sim.issued_serial
+		mh["remaining"] = 0
+		mh["cleared"] = true
+		sim._boss_down(mh, mh["t"])
+		_check(mh["found"].any(func(x): return x.get("issued", false)) and sim.issued_serial == serial0 + Data.COUNTY_HEAD_ISSUED, "the Bailiff dropped no issued kit")
+		sim.extract_now()
+		_check(sim.county_zone_open(1) and sim.order_open("container_port") and sim.order_block("container_port") == Words.COUNTY["want"] % [3, 2], "the Bailiff's fall didn't open the Docks, wanting three: '%s'" % sim.order_block("container_port"))
+	# a County run saved mid-fight and loaded finishes as the County's (the review)
+	sim.order_beaten["truck_stop"] = 0
+	sim.hp = sim.max_hp()
+	if sim.deploy_order("truck_stop"):
+		var ms: Dictionary = sim.mission
+		ms["remaining"] = 0
+		ms["boss"]["started"] = true
+		ms["target_hp"] = float(ms["boss"]["hp"])
+		sim._order_tick(ms, ms["t"], 0.1, "bailiff")
+		var s5 = Sim.new()
+		s5.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+		_check(str(s5._sig.get("order", "")) == "truck_stop" and str(s5.mission["boss"].get("mech", "")) == "bailiff" and str(s5.mission.get("seized", "")) == str(ms.get("seized", "")) and bool(s5.mission.get("seize_on", false)) == bool(ms.get("seize_on", false)), "a loaded County run lost its head's fight: %s" % str(s5.mission.get("boss", {})))
+		var m5: Dictionary = s5.mission
+		m5["cleared"] = true
+		s5._boss_down(m5, m5["t"])
+		s5.extract_now()
+		_check(int(s5.order_beaten.get("truck_stop", 0)) == 1 and s5._sig.is_empty(), "a loaded County run didn't finish as the County's")
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: the Truck Stop wouldn't set off again: %s" % sim.order_block("truck_stop"))
+	sim.order_beaten["truck_stop"] = 1
+	# a remix head: one of the Issuer's people on a plain signal - his issued kit, no County run counted
+	_check(sim.signal_head_name({"county_head": "manor", "zone": 1}) == "The Collector" and sim.signal_head_name({"zone": 1}) == "The Carpet Man", "the Radio names a remix head '%s'" % sim.signal_head_name({"county_head": "manor", "zone": 1}))
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.mission != null:
+		var mr: Dictionary = sim.mission
+		mr["boss"] = sim._boss_entry({"name": "The Collector", "hp": 100.0, "dps": 1.0, "zone": 1, "order": "manor", "mech": "collector", "remix": true})
+		mr["remaining"] = 0
+		var beaten0: Dictionary = sim.order_beaten.duplicate()
+		var heads0: int = sim.chronicle.filter(func(x): return str(x.get("k", "")) == "county_head").size()
+		var ser0: int = sim.issued_serial
+		sim._boss_down(mr, mr["t"])
+		_check(sim.issued_serial == ser0 + Data.COUNTY_HEAD_ISSUED and sim.order_beaten == beaten0 and sim.chronicle.filter(func(x): return str(x.get("k", "")) == "county_head").size() == heads0, "a remix head's kill: serial %d from %d, beaten %s" % [sim.issued_serial, ser0, str(sim.order_beaten)])
+		sim.extract_now()
+	# the heads' fights
+	var head_run := func(key: String) -> Dictionary:
+		if sim.on_mission():
+			sim.extract_now()
+		sim.hp = sim.max_hp()
+		sim.deploy(3)
+		var mx: Dictionary = sim.mission
+		mx["boss"] = sim._boss_entry({"name": "A head", "hp": 1000.0, "dps": 1.0, "zone": 0, "order": "x", "mech": key})
+		mx["boss"]["started"] = true
+		mx["remaining"] = 1
+		mx["target_hp"] = 1000.0
+		mx["dots"] = {}
+		return mx
+	var m: Dictionary = head_run.call("bailiff")
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	_check(str(m.get("seized", "")) != "" and bool(m["seize_on"]), "the Bailiff seized nothing")
+	_check(sim.order_chips(true).any(func(c): return str(c[0]).begins_with("Seized")), "no Seized chip on you: %s" % str(sim.order_chips(true)))
+	m["target_hp"] = 400.0
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	_check(not bool(m["seize_on"]), "the Bailiff kept your piece under half")
+	m = head_run.call("collector")
+	_check(is_equal_approx(sim.county_taken(m), 1.0), "the Collector's bill started above nothing")
+	for k in range(14):
+		sim._order_tick(m, m["t"], 0.5, "collector")
+	_check(is_equal_approx(sim.county_taken(m), 1.0 + 2.0 * Data.COLLECTOR_GROW) and int(m.get("printed", 0)) == 1, "the Collector after 7 s: ×%.2f, %d debtors" % [sim.county_taken(m), int(m.get("printed", 0))])
+	m["target_hp"] = 1000.0 - float(m["t"]["hp"]) - 1.0
+	sim._order_absorb(m, m["t"], 1000.0, "collector")
+	_check(is_equal_approx(sim.county_taken(m), 1.0), "a debtor down didn't clear the bill: ×%.2f" % sim.county_taken(m))
+	m = head_run.call("auditor")
+	sim.skill_slots = [str(sim.skill_slots[0]), "", ""] if not sim.skill_slots.is_empty() else ["", "", ""]
+	var id0: String = str(sim.skill_slots[0])
+	if id0 != "":
+		var taxed: float = sim.skill_cost_now(0)
+		var mbk = sim.mission
+		sim.mission = null
+		var plain: float = sim.skill_cost_now(0)
+		sim.mission = mbk
+		_check(is_equal_approx(taxed, plain * Data.AUDITOR_TAX), "the Auditor's tax: %.1f against %.1f" % [taxed, plain])
+	m = head_run.call("treasurer")
+	for k in range(int(Data.ORDER_PRINT_EVERY / 0.5) + 1):
+		sim._order_tick(m, m["t"], 0.5, "treasurer")
+	_check(float(m.get("shield", 0.0)) > 0.0 and int(m.get("printed", 0)) >= 1, "the Treasurer: shield %.0f, printed %d" % [float(m.get("shield", 0.0)), int(m.get("printed", 0))])
+	if sim.on_mission():
+		sim.extract_now()
+	# the remix: the Treasurer down, signals on the County's places, its heads away from home
+	_check(not sim.county_done(), "the County done before the Treasurer")
+	sim.order_beaten["treasury"] = 1
+	_check(sim.county_done(), "the Treasurer down and the County not done")
+	var on_county := false
+	var away := false
+	for k in range(60):
+		var sg := {"id": 0, "site": 4, "zone": 1, "depth": 1, "head": true}
+		sim._remix(sg, 0)
+		if sg.has("county"):
+			on_county = true
+			_check(sim.signal_place(sg) == str(Data.county(str(sg["county"]))["place"]) and int(sg["site"]) == int(Data.county(str(sg["county"]))["site"]), "a remixed signal's place: %s" % sim.signal_place(sg))
+		if sg.has("county_head"):
+			away = true
+	_check(on_county and away, "sixty remixed signals: on the County %s, a head away %s" % [on_county, away])
+	main._missions.set_county(false)
+	sim.load_dict(hold)
+	main.refresh()
+	_check(not main._missions._county_btn.visible and not main._missions._county.visible, "the County's button stayed up on a camp before the Issue")
+	print("the County ok: four zones of three, issued kit wanted, places in turn, the heads' fights, the board, the remix")

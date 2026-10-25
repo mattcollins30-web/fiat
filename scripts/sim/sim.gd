@@ -974,8 +974,10 @@ func order_chips(on_you := false) -> Array:
 		return out
 	var m: Dictionary = mission
 	var mech: String = _order_mech(m)
-	if (mech == "archive") != on_you:
+	if (mech in ["archive", "auditor", "bailiff"]) != on_you:
 		return out
+	if mech == "treasurer":
+		mech = "grid" if float(m.get("shield", 0.0)) > 0.0 or float(m.get("stunned_t", 0.0)) > 0.0 else "mint"
 	match mech:
 		"grid":
 			if float(m.get("stunned_t", 0.0)) > 0.0:
@@ -987,9 +989,18 @@ func order_chips(on_you := false) -> Array:
 				out.append([Words.ORDER_CHIPS["taped"] % int(ceil(float(m["taped_t"]))), "Red tape", "bleed"])
 			elif not m.get("sealed", {}).is_empty():
 				out.append([Words.ORDER_CHIPS["sealed"], "Stamped", "bleed"])
-		"mint":
+		"mint", "collector":
 			if int(m.get("printed", 0)) > 0:
 				out.append([Words.ORDER_CHIPS["printed"] % mini(int(m["printed"]), contact(m["t"])), "Printed", "fire"])     # those on you, not every one alive
+			if mech == "collector" and collector_taken(m) > 1.0:
+				out.append([Words.COUNTY["chip_owed"] % roundi((collector_taken(m) - 1.0) * 100.0), "Owed", "fire"])
+		"auditor":
+			out.append([Words.COUNTY["chip_tax"], "Taxed", "bleed"])
+			if not m.get("sealed", {}).is_empty():
+				out.append([Words.ORDER_CHIPS["sealed"], "Stamped", "bleed"])
+		"bailiff":
+			if bool(m.get("seize_on", false)):
+				out.append([Words.COUNTY["chip_seized"] % str(m["seized"]).to_lower(), "Seized", "bleed"])
 	return out
 
 
@@ -1700,11 +1711,11 @@ func issued_def(slot: String) -> Dictionary:
 
 
 ## The piece the counter offers for a slot, at the reach: rolled fresh (no number till it's bought).
-func issued_piece(slot: String) -> Dictionary:
+func issued_piece(slot: String, at := -1) -> Dictionary:
 	var u := issued_def(slot)
 	if u.is_empty():
 		return {}
-	var lv: int = maxi(1, reach) + Data.ISSUED_OVER
+	var lv: int = (maxi(1, reach) + Data.ISSUED_OVER) if at < 0 else at     # a County head's at his level (25 Oct)
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([slot, lv, issued_serial])     # its own dice: what the counter shows is what's bought, and the run's dice don't move
 	var it := Items.roll_unique(u, r, lv)
@@ -1761,7 +1772,7 @@ func issued_worn() -> int:
 func issued_plate_cut(m: Dictionary) -> float:
 	if not has_rule("issued_plate"):
 		return 1.0
-	var county: bool = m.has("t") and bool(m["t"].get("county", false))
+	var county: bool = (m.has("t") and bool(m["t"].get("county", false))) or _order_mech(m) in ["bailiff", "auditor", "collector", "treasurer"]
 	var order: bool = not _sig.is_empty() and _sig.has("order")
 	return Data.FX["rule/issued_plate.cut"] if (county or order) else 1.0
 
@@ -5385,9 +5396,19 @@ func effective(i: int) -> Dictionary:
 			walks = true
 	var b := boss_of(i)
 	var sig_here: bool = not _sig.is_empty() and int(_sig["site"]) == i
+	if sig_here and str(_sig.get("county", "")) != "" and is_county(str(_sig["county"])):
+		e["name"] = Data.county(str(_sig["county"]))["place"]     # the remix: a signal on one of the County's places
+		e["county"] = true
 	if sig_here and _sig.has("order"):
-		e["boss"] = order_head(str(_sig["order"]), e)     # the order's true pinnacle (18 Oct): their own head, on the host site's crew
+		if Data.pinnacle(str(_sig["order"])).has("who"):     # a County place without its head is its crew alone (25 Oct)
+			e["boss"] = order_head(str(_sig["order"]), e)     # the order's true pinnacle (18 Oct): their own head, on the host site's crew
 		e["name"] = Data.pinnacle(str(_sig["order"]))["place"]
+		e["county"] = is_county(str(_sig["order"]))
+	elif sig_here and str(_sig.get("county_head", "")) != "" and is_county(str(_sig["county_head"])):
+		e["boss"] = order_head(str(_sig["county_head"]), e)     # the remix: one of the Issuer's people away from home (25 Oct)
+		e["boss"]["pinnacle"] = true
+		e["boss"]["remix"] = true                                # down, his issued kit; not a County run (no chron of one)
+		e["boss"]["hp"] = float(e["boss"]["hp"]) * Data.PINNACLE_HP
 	elif sig_here and bool(_sig.get("head", false)) and not zone_boss(int(_sig["zone"])).is_empty():
 		e["boss"] = boss_form(zone_boss(int(_sig["zone"])), e, true)     # a signal's extra: the crew's head at full strength
 	elif (boss_armed.get(i, false) and is_convoy(i)) or (sig_here and bool(_sig.get("convoy_fight", false))):     # the depot's signal: the convoy (15 Oct)
@@ -5734,6 +5755,8 @@ func _head_materials(m: Dictionary) -> void:
 
 ## The order's true pinnacles: open once their rebuild is.
 func order_open(k: String) -> bool:
+	if is_county(k):
+		return county_open(k)
 	var p: Dictionary = Data.pinnacle(k)
 	return not p.is_empty() and rebuild_rank(str(p["opened_by"])) > 0
 
@@ -5741,6 +5764,8 @@ func order_open(k: String) -> bool:
 ## An order's place known (20 Oct, Matt: "the grid, archive and mint also need to be encoded"): its place rebuilt and
 ## its host site's zone open; till then its names read scrambled, as a shut zone's do.
 func order_known(k: String) -> bool:
+	if is_county(k):
+		return county_zone_open(int(Data.county(k)["cz"]))
 	var p: Dictionary = Data.pinnacle(k)
 	return order_open(k) and zone_open(int(Data.TIERS[int(p["site"])]["zone"]))
 
@@ -5755,6 +5780,8 @@ func any_order_open() -> bool:
 ## A true pinnacle's level: your reach and its own step past it, a level more every PINNACLE_WORTH of the town's worth
 ## and every time it's been beaten.
 func order_level(k: String) -> int:
+	if is_county(k):
+		return county_level(k)
 	var p: Dictionary = Data.pinnacle(k)
 	@warning_ignore("integer_division")
 	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
@@ -5773,6 +5800,7 @@ func order_head(k: String, e: Dictionary) -> Dictionary:
 	var p: Dictionary = Data.pinnacle(k)
 	var b := boss_form({"name": p["who"], "hp": p["hp"], "dps": p["dps"], "zone": p["zone"]}, e, false)
 	b["order"] = k
+	b["mech"] = str(p.get("mech", k))     # the fight he brings: the order's own by key, a County head's by his (25 Oct)
 	return b
 
 
@@ -5832,10 +5860,16 @@ func order_block(k: String) -> String:
 	var p: Dictionary = Data.pinnacle(k)
 	if p.is_empty():
 		return "no such place"
-	if not order_open(k):
+	if is_county(k):
+		var cw: String = county_block(k)
+		if cw != "":
+			return cw
+	elif not order_open(k):
 		return "Rebuild %s to open" % str(Data.rebuild(str(p["opened_by"]))["name"]).to_lower()
 	if not can_deploy() or not _sig.is_empty():
 		return "The runner is out" if mission != null else "The runner can't go"
+	if not tier_open(int(p["site"])):
+		return "The way there is shut"            # its host site shut (the review: a silent failed Go)
 	return ""
 
 
@@ -5857,6 +5891,9 @@ func deploy_order(k: String) -> bool:
 ## A true pinnacle's head down: the run's pay, their unique (always the first time), their handful of materials.
 func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	var k: String = str(b["order"])
+	if is_county(k):
+		_county_down(m, t, b)
+		return
 	var p: Dictionary = Data.pinnacle(k)
 	var first: bool = int(order_beaten.get(k, 0)) == 0
 	chron("order_down", {"key": k, "first": first, "level": int(t.get("level", 0))})
@@ -5875,6 +5912,9 @@ func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 ## back to its campaign self. The reach is the signals'; the order's never moves it.
 func _order_done(won: bool) -> void:
 	var k: String = str(_sig["order"])
+	if is_county(k):
+		_county_done(k, won)
+		return
 	var p: Dictionary = Data.pinnacle(k)
 	chron("order_done", {"key": k, "won": won})
 	if not won:
@@ -5898,6 +5938,127 @@ func _order_done(won: bool) -> void:
 		circulation += haul * Data.PRINT_CIRC          # he prints: a haul, and the prices jump with it
 		log_event(Words.ISSUE["printed"] % fiat_words(haul))
 	log_event(Words.REBUILD["order_won"] % p["who"])
+
+
+# ------------------------------------------------------------------ the County (25 Oct, the Issue's second campaign)
+
+## A County place: fought as one of the order's (its key in `_sig["order"]`), on its host site.
+static func is_county(k: String) -> bool:
+	return not Data.county(k).is_empty()
+
+
+## A County zone's places, in order; the last is its head's.
+static func county_places(z: int) -> Array:
+	var out: Array = []
+	for c in Data.COUNTY:
+		if int(c["cz"]) == z:
+			out.append(str(c["key"]))
+	return out
+
+
+static func county_head_key(z: int) -> String:
+	var ks := county_places(z)
+	return str(ks.back()) if not ks.is_empty() else ""
+
+
+## A County zone stands open once the town's on fiat and the zone before has lost its head. (Its want of issued kit
+## is on the places' Go, county_block: take a piece off and the zone's still there, its places shut till it's back.)
+func county_zone_open(z: int) -> bool:
+	if not issued or z < 0 or z >= Data.COUNTY_ZONES.size():
+		return false
+	return z == 0 or int(order_beaten.get(county_head_key(z - 1), 0)) > 0
+
+
+## A place opens when its zone has and the place before it in the zone is taken.
+func county_open(k: String) -> bool:
+	var c: Dictionary = Data.county(k)
+	if c.is_empty() or not county_zone_open(int(c["cz"])):
+		return false
+	var ks := county_places(int(c["cz"]))
+	var at: int = ks.find(k)
+	return at == 0 or int(order_beaten.get(str(ks[at - 1]), 0)) > 0
+
+
+func county_want(z: int) -> int:
+	return int(Data.ISSUED_WANT[clampi(z, 0, Data.ISSUED_WANT.size() - 1)])
+
+
+## Why a County place can't be run for what it is (its zone, the place before, the issued kit worn), or "".
+func county_block(k: String) -> String:
+	var c: Dictionary = Data.county(k)
+	var z: int = int(c["cz"])
+	if not issued:
+		return Words.COUNTY["not_yet"]
+	if not county_zone_open(z):
+		return Words.COUNTY["zone_shut"] % str(Data.COUNTY_ZONES[z - 1]["head"])
+	if not county_open(k):
+		var ks := county_places(z)
+		return Words.COUNTY["place_shut"] % Words.mid(str(Data.county(str(ks[ks.find(k) - 1]))["place"]))
+	if issued_worn() < county_want(z):
+		return Words.COUNTY["want"] % [county_want(z), issued_worn()]
+	return ""
+
+
+## A County place's level: the reach, its own step past it, and a level more every time it's been taken.
+func county_level(k: String) -> int:
+	var c: Dictionary = Data.county(k)
+	return maxi(Data.REACH_START, reach) + int(c["over"]) + int(order_beaten.get(k, 0))
+
+
+## The Treasurer down: the County taken, and the Radio's remix open.
+func county_done() -> bool:
+	return int(order_beaten.get(county_head_key(Data.COUNTY_ZONES.size() - 1), 0)) > 0
+
+
+## The places taken, of the twelve.
+func county_taken_count() -> int:
+	var n := 0
+	for c in Data.COUNTY:
+		if int(order_beaten.get(str(c["key"]), 0)) > 0:
+			n += 1
+	return n
+
+
+## A County head down: his handful of the site's material, and issued kit at his level, stamped and numbered.
+func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
+	var k: String = str(b["order"])
+	var c: Dictionary = Data.county(k)
+	if not bool(b.get("remix", false)):
+		chron("county_head", {"key": k, "first": int(order_beaten.get(k, 0)) == 0, "level": int(t.get("level", 0))})
+	_head_materials(m)
+	var lv: int = int(t.get("level", reach)) + Data.ISSUED_OVER
+	var got: Array = []
+	for n in range(Data.COUNTY_HEAD_ISSUED):
+		var slot: String = str(Data.ISSUED[rng.randi_range(0, Data.ISSUED.size() - 1)]["slot"])
+		var it := issued_piece(slot, lv)
+		issued_serial += 1
+		it["serial"] = issued_serial
+		m["found"].append(it)
+		_read(it)
+		got.append(Items.full_name(it))
+	log_event(Words.COUNTY["head_down"] % [str(c["who"]), ", ".join(got)])
+
+
+## A County run over: won, the place is taken (and its next one opens, or the next zone with its head); either way
+## the host site goes back to its campaign self.
+func _county_done(k: String, won: bool) -> void:
+	var c: Dictionary = Data.county(k)
+	chron("county_done", {"key": k, "won": won, "level": county_level(k)})
+	if not won:
+		log_event(Words.COUNTY["lost"] % str(c["place"]))
+		return
+	var first: bool = int(order_beaten.get(k, 0)) == 0
+	var was_done: bool = county_done()
+	order_beaten[k] = int(order_beaten.get(k, 0)) + 1
+	if not first:
+		log_event(Words.COUNTY["again"] % str(c["place"]))
+		return
+	log_event(Words.COUNTY["taken"] % str(c["place"]))
+	var z: int = int(c["cz"])
+	if k == county_head_key(z) and z + 1 < Data.COUNTY_ZONES.size():
+		log_event(Words.COUNTY["zone_opens"] % [str(Data.COUNTY_ZONES[z + 1]["name"]), county_want(z + 1)])
+	if county_done() and not was_done:
+		log_event(Words.COUNTY["remix"])
 
 
 # ------------------------------------------------------------------ signals (15 Oct, the Radio's endgame)
@@ -6123,9 +6284,10 @@ func decrypt(ids: Array, crew := -1) -> Dictionary:
 		"depth": depth_for_level(site, maxi(Data.REACH_START, reach + step + up)), "codes": codes, "papers": names,
 		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS * float(grade["extras"]), "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS * float(grade["extras"]),
 		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1), "grade": int(grade["papers"])}
+	_remix(sig, step + up)
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "codes": codes.duplicate(), "papers": names.duplicate()})
-	log_event(Words.SIGNAL_MADE % [Words.mid(str(Data.TIERS[int(sig["site"])]["name"])), signal_level(sig)])
+	log_event(Words.SIGNAL_MADE % [Words.mid(signal_place(sig)), signal_level(sig)])
 	return sig
 
 
@@ -6140,6 +6302,50 @@ func _story_signal(beat: int, names: Array) -> Dictionary:
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "story": beat, "papers": names.duplicate()})
 	log_event(Words.STORY[beat]["made"])
 	return sig
+
+
+## The Radio's remix (25 Oct, after the Treasurer): a signal may be laid on one of the County's places (its host's
+## plate and drops, the crew any campaign's), and its head, when it brings one, one of the Issuer's people away from home.
+func _remix(sig: Dictionary, over: int) -> void:
+	if not county_done():
+		return
+	if rng.randf() < Data.REMIX_COUNTY_ODDS:
+		var c: Dictionary = Data.COUNTY[rng.randi_range(0, Data.COUNTY.size() - 1)]
+		sig["county"] = str(c["key"])
+		sig["site"] = int(c["site"])
+		sig["depth"] = depth_for_level(int(sig["site"]), maxi(Data.REACH_START, reach + over))
+	if bool(sig.get("head", false)) and rng.randf() < Data.REMIX_HEAD_ODDS:
+		sig["county_head"] = county_head_key(rng.randi_range(0, Data.COUNTY_ZONES.size() - 1))
+
+
+## A signal's head as the Radio names it: one of the Issuer's people in the remix, else the crew's.
+func signal_head_name(sg: Dictionary) -> String:
+	if str(sg.get("county_head", "")) != "" and is_county(str(sg["county_head"])):
+		return str(Data.county(str(sg["county_head"]))["who"])
+	return str(zone_boss(int(sg.get("zone", 0))).get("name", "their head"))
+
+
+## A signal's place as the Radio names it: a County place's when the remix laid it on one.
+func signal_place(sg: Dictionary) -> String:
+	if str(sg.get("county", "")) != "" and is_county(str(sg["county"])):
+		return str(Data.county(str(sg["county"]))["place"])
+	return str(Data.TIERS[int(sg["site"])]["name"])
+
+
+## The deepest signals in the remix carry issued kit (25 Oct): one won at the reach or past it, now and then, a piece
+## at its level comes home.
+func _remix_issued(d: int) -> void:
+	if not county_done() or d < reach or rng.randf() >= Data.REMIX_ISSUED_ODDS:
+		return
+	var slot: String = str(Data.ISSUED[rng.randi_range(0, Data.ISSUED.size() - 1)]["slot"])
+	var it := issued_piece(slot, d + Data.ISSUED_OVER)
+	if not stash_room(Items.size(it)):
+		return
+	issued_serial += 1
+	it["serial"] = issued_serial
+	stash.append(it)
+	_read(it)
+	log_event(Words.COUNTY["remix_issued"] % Items.full_name(it))
 
 
 func _sig_ints(sg: Dictionary) -> void:
@@ -6435,6 +6641,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won, "grade": int(_sig.get("grade", 0)), "reach": reach, "story": _sig.has("story")})     # the grade and the reach it met (the pass, 20 Oct: the signals' gate)
 	if won:
 		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
+		_remix_issued(d)
 	if won and d >= reach and int(_sig.get("grade", 0)) != 1:     # a faint one never moves it (20 Oct; at the first reach its band is the reach)
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
@@ -7348,7 +7555,7 @@ func _order_mech(m: Dictionary) -> String:
 	var b: Dictionary = m["boss"]
 	if not b.get("started", false) or not b.get("alive", false):
 		return ""
-	return str(b.get("order", ""))
+	return str(b.get("mech", b.get("order", "")))
 
 
 ## Each pinnacle's clock a tick: the Lineman's shield up, its window and its return, his stun; the Registrar's seal on
@@ -7363,6 +7570,71 @@ func _order_tick(m: Dictionary, t: Dictionary, dt: float, mech: String) -> void:
 			seal_map.erase(k)
 	m["sealed"] = seal_map
 	var bhp: float = float(m["boss"]["hp"])
+	if mech == "treasurer":
+		_order_tick_as(m, t, dt, "grid", bhp)     # the Treasurer: the Lineman's shield and the Issuer's press (25 Oct)
+		_order_tick_as(m, t, dt, "mint", bhp)
+		return
+	if mech == "auditor":
+		mech = "archive"                     # the Auditor seals as the Registrar does; his tax is on the skills' cost
+	elif mech == "collector":
+		_collector_tick(m, dt)
+		mech = "mint"
+	elif mech == "bailiff":
+		_bailiff_tick(m, bhp)
+		return
+	_order_tick_as(m, t, dt, mech, bhp)
+
+
+## The fights that print men (the Issuer's press, the Collector's debtors, the Treasurer's), and that shield.
+static func mech_prints(mech: String) -> bool:
+	return mech in ["mint", "collector", "treasurer"]
+
+
+static func mech_shields(mech: String) -> bool:
+	return mech in ["grid", "treasurer"]
+
+
+## The Collector's clock: what you take grows COLLECTOR_GROW every COLLECTOR_EVERY seconds he's out.
+func _collector_tick(m: Dictionary, dt: float) -> void:
+	m["grow_t"] = float(m.get("grow_t", 0.0)) + dt
+
+
+func collector_taken(m: Dictionary) -> float:
+	return 1.0 + Data.COLLECTOR_GROW * floorf(float(m.get("grow_t", 0.0)) / Data.COLLECTOR_EVERY)
+
+
+## The Bailiff's hold: as he comes out he seizes your best piece worn (by its worth); under BAILIFF_FREE of his HP he
+## lets it go.
+func _bailiff_tick(m: Dictionary, bhp: float) -> void:
+	if not m.has("seized"):
+		var best := ""
+		var top := -1.0
+		for sl in Data.SLOTS:
+			var it = equipped.get(sl)
+			if it != null and Items.grows(it) and float(Items.worth(it)) > top:     # a piece with damage or armour to count half (Matt's rule)
+				top = float(Items.worth(it))
+				best = str(sl)
+		m["seized"] = best
+		m["seize_on"] = best != ""
+	if bool(m.get("seize_on", false)) and float(m["target_hp"]) < bhp * Data.BAILIFF_FREE:
+		m["seize_on"] = false
+		if not m.get("dry", false):
+			log_event(Words.COUNTY["let_go"] % str(m["seized"]).to_lower())
+
+
+## What the County's heads add to the fire on you: the Collector's growing bill, the Bailiff holding your armour.
+func county_taken(m: Dictionary) -> float:
+	var mech: String = _order_mech(m)
+	if mech == "collector":
+		return collector_taken(m)
+	if mech == "bailiff" and bool(m.get("seize_on", false)) and not Data.BAILIFF_CUT.has(str(m.get("seized", ""))):
+		return Data.BAILIFF_TAKEN
+	return 1.0
+
+
+## One of the order's clocks for a tick (the Treasurer runs two).
+func _order_tick_as(m: Dictionary, t: Dictionary, dt: float, mech: String, bhp: float) -> void:
+	var seal_map: Dictionary = m.get("sealed", {})
 	match mech:
 		"grid":
 			if not m.has("shield"):
@@ -7391,7 +7663,8 @@ func _order_tick(m: Dictionary, t: Dictionary, dt: float, mech: String) -> void:
 					m["taped_t"] = Data.ORDER_SEAL_FOR
 		"mint":
 			m["print_t"] = float(m.get("print_t", 0.0)) + dt
-			if float(m["print_t"]) >= Data.ORDER_PRINT_EVERY and int(m.get("printed", 0)) < Data.ORDER_PRINT_MAX:
+			var every: float = Data.COLLECTOR_MEN_EVERY if str(m["boss"].get("mech", "")) == "collector" else Data.ORDER_PRINT_EVERY
+			if float(m["print_t"]) >= every and int(m.get("printed", 0)) < Data.ORDER_PRINT_MAX:
 				m["print_t"] = 0.0
 				m["printed"] = int(m.get("printed", 0)) + 1
 				m["print_pool"] = float(m.get("print_pool", 0.0)) + float(t["hp"])     # one of the host crew's men
@@ -7421,7 +7694,7 @@ func _order_absorb(m: Dictionary, t: Dictionary, hp_before: float, mech: String)
 	var took: float = hp_before - float(m["target_hp"])
 	if took <= 0.0:
 		return
-	if mech == "grid" and float(m.get("shield", 0.0)) > 0.0:
+	if mech_shields(mech) and float(m.get("shield", 0.0)) > 0.0:
 		var off: float = minf(float(m["shield"]), took)
 		m["shield"] = float(m["shield"]) - off
 		m["target_hp"] = float(m["target_hp"]) + off
@@ -7429,7 +7702,7 @@ func _order_absorb(m: Dictionary, t: Dictionary, hp_before: float, mech: String)
 			m["stunned_t"] = Data.ORDER_SHIELD_STUN
 			m["shield_back"] = Data.ORDER_SHIELD_BACK
 			m["shield_breaks"] = int(m.get("shield_breaks", 0)) + 1
-	elif mech == "mint" and float(m.get("print_pool", 0.0)) > 0.0:
+	elif mech_prints(mech) and float(m.get("print_pool", 0.0)) > 0.0:
 		var off2: float = minf(float(m["print_pool"]), took)
 		m["print_pool"] = float(m["print_pool"]) - off2
 		m["target_hp"] = float(m["target_hp"]) + off2
@@ -7439,6 +7712,7 @@ func _order_absorb(m: Dictionary, t: Dictionary, hp_before: float, mech: String)
 			m["printed"] = left
 			m["kills"] = int(m["kills"]) + down
 			m["printed_down"] = int(m.get("printed_down", 0)) + down
+			m["grow_t"] = 0.0                    # the Collector's: one of his men down, what you take back to nothing
 			for k in range(down):
 				_heal(m, _kill_heal())             # a printed man down is a kill to the heals and the skills (25 Oct, the review); no drop, no pay
 				_skills_on_kill(m)
@@ -7526,7 +7800,7 @@ func _take(m: Dictionary, amount: float) -> float:
 
 
 func _boss_entry(b: Dictionary) -> Dictionary:
-	return {"name": b["name"], "hp": b["hp"], "dps": b["dps"], "zone": b["zone"], "pinnacle": b.get("pinnacle", false), "order": str(b.get("order", "")), "started": false, "alive": true}
+	return {"name": b["name"], "hp": b["hp"], "dps": b["dps"], "zone": b["zone"], "pinnacle": b.get("pinnacle", false), "order": str(b.get("order", "")), "mech": str(b.get("mech", b.get("order", ""))), "remix": bool(b.get("remix", false)), "started": false, "alive": true}
 
 
 ## A run's event on the dice, or "" (17 Oct, Matt: a convoy on the very first Allotments run took both starter
@@ -7637,6 +7911,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		mult *= 1.1                           # Clocked: the first of the gang down, +10% for the rest of it
 	if float(m.get("taped_t", 0.0)) > 0.0:
 		mult *= 1.0 - Data.ORDER_TAPE_CUT     # the Registrar's red tape with nothing to seal: your fire cut
+	if mech == "bailiff":
+		mult *= 1.0 - float(Data.BAILIFF_CUT.get(str(m.get("seized", "")), 0.0)) * (1.0 if bool(m.get("seize_on", false)) else 0.0)     # the Bailiff holds your gun
 	if has_node("last_orders") and m["remaining"] == 1 and not (m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]):
 		mult *= 1.4                           # Last orders: +40% to the last of each gang
 	if has_node("bin_lid") and float(m.get("guard", 0.0)) > 0.0:
@@ -7652,9 +7928,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var single_total := 0.0                   # what the one in front took this tick, every type: the Revolver's killing shot is cut from it
 	var single_top := ["physical", 0.0]
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
-	if mech == "mint":
+	if mech_prints(mech):
 		crowd_on_you = mini(1 + int(m.get("printed", 0)), contact(t) + 1)     # the Issuer's printed men stand with him: spread reaches them
-	_skills_tick(m, t, dt, (1 + int(m.get("printed", 0)) if mech == "mint" else 1) if (m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]) else int(m["remaining"]))     # the skills before the hit (milestone 8); "3+ on you" counts everyone in the fight, not just those firing (Matt's call 3, skills.md §11)
+	_skills_tick(m, t, dt, (1 + int(m.get("printed", 0)) if mech_prints(mech) else 1) if (m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]) else int(m["remaining"]))     # the skills before the hit (milestone 8); "3+ on you" counts everyone in the fight, not just those firing (Matt's call 3, skills.md §11)
 	mult *= _skill_hit_mult(m)
 	var held := gun_type()
 	mult *= _joint_hit_mult(m, held)
@@ -7847,7 +8123,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		incoming = incoming_rate({"dps": m["boss"]["dps"], "types": t.get("types", {})}, 1, chilled) * their_swing
 		if float(m.get("stunned_t", 0.0)) > 0.0:
 			incoming = 0.0                     # the Lineman, his shield broken: stunned
-		if mech == "mint" and int(m.get("printed", 0)) > 0:
+		if mech_prints(mech) and int(m.get("printed", 0)) > 0:
 			var pn: int = mini(int(m["printed"]), contact(t))     # no more fire on you than can reach you (the review)
 			on_you = 1 + pn
 			incoming += incoming_rate(t, pn, chilled) * their_swing     # the Issuer's printed men fire too
@@ -7968,7 +8244,7 @@ func _joint_hit_mult(m: Dictionary, held: String) -> float:
 
 ## Their fire on you after the joints and Knuckles: a share, 1.0 with none. Runs Flattened's clock down.
 func _joints_on_incoming(m: Dictionary, chilled: bool, dt: float) -> float:
-	var f := issued_plate_cut(m)                 # the issued plate (25 Oct)
+	var f := issued_plate_cut(m) * county_taken(m)     # the issued plate (25 Oct); the County's heads
 	var held := gun_type()
 	if has_joint("paramedic_frost") and chilled:
 		f *= Data.FX["joint/paramedic_frost.taken"]                                  # chilled gangs do 30% less to you
@@ -10678,7 +10954,8 @@ func skill_cost_now(i: int) -> float:
 	if mission != null and mission.get("sk", {}).get("free", false):
 		return 0.0
 	var half: bool = mission != null and float(mission.get("sk", {}).get("fx", {}).get("fam_t", 0.0)) > 0.0     # Fire and manoeuvre
-	return float(skill(id).get("cost", 0.0)) * (0.5 if half else 1.0) * skill_cost_mult()
+	var tax: float = Data.AUDITOR_TAX if mission != null and _order_mech(mission) == "auditor" else 1.0     # the Auditor's (25 Oct)
+	return float(skill(id).get("cost", 0.0)) * (0.5 if half else 1.0) * skill_cost_mult() * tax
 
 
 ## What every skill costs, as a share: the Recruit's 10% off, Firing blanks' 25% off, Quick march's 25% on.

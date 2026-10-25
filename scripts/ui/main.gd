@@ -516,6 +516,14 @@ func _read_odds() -> void:
 		return
 	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin
 	# wears its odds' colour), then the order's open places
+	if room == MISSIONS and _missions.county_on:
+		for c in Data.COUNTY:                     # the County's open places (25 Oct), each read to its count in turn
+			if sim._odds_time_up():
+				break
+			if sim.order_open(str(c["key"])) and not bool(sim.order_odds_now(str(c["key"]))[1]):
+				sim.order_odds(str(c["key"]))
+		sim.odds_time_ms = 0.0
+		return
 	if room == MISSIONS and _missions.order_key != "" and sim.order_open(_missions.order_key):
 		sim.order_odds(_missions.order_key)       # read on to the whole count: its card's figure
 	var order: Array = [_missions.selected] if _missions.selected >= 0 else []

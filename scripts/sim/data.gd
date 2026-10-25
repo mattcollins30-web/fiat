@@ -3316,6 +3316,55 @@ const ISSUED_OVER := 5
 const ISSUED_PRICE := 6.0              # an issued piece's price: its worth x this, at the day's (fiat) prices
 const ISSUED_WANT := [2, 3, 4, 6]      # issued pieces worn to stand in the County's zones, one a zone
 
+## The County (25 Oct, the Issue's second campaign: docs/design/the_issue.md §4): four zones of three places past the
+## City, each held by one of the Issuer's people. A place is fought as the order's are - laid on a host site's crew and
+## drops (`site`, `zone`), under its own name - at the reach + `over`, a level more every time it's beaten. A zone
+## wants ISSUED_WANT issued pieces worn; its places open in turn; its last is its head's; the head down opens the next
+## zone. The Treasurer down opens the Radio's remix. The art is the host site's plate until the County's is drawn.
+const COUNTY_ZONES := [
+	{"name": "The Motorway", "head": "The Bailiff", "words": "The Toll Plaza, the Distribution Centre, the Truck Stop - the road out, and what it carries."},
+	{"name": "The Docks", "head": "The Auditor", "words": "The Container Port, the Ferry Terminal, the Customs Shed - everything in, counted."},
+	{"name": "The Big Houses", "head": "The Collector", "words": "The Golf Club, the Gated Close, the Manor - where the money went to live."},
+	{"name": "The Treasury", "head": "The Treasurer", "words": "The Counting House, the Bullion Vault, the Treasury - where it's made to stick."},
+]
+const COUNTY := [
+	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "over": 2},
+	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "over": 3},
+	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "over": 4,
+		"who": "The Bailiff", "mech": "bailiff", "hp": 14.0, "dps": 3.0},
+	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "over": 5},
+	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "over": 6},
+	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "over": 7,
+		"who": "The Auditor", "mech": "auditor", "hp": 16.0, "dps": 3.5},
+	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "over": 8},
+	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "over": 9},
+	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "over": 10,
+		"who": "The Collector", "mech": "collector", "hp": 18.0, "dps": 3.5},
+	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "over": 11},
+	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "over": 12},
+	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "over": 14,
+		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 4.5},
+]
+## The heads' fights (Matt, 25 Oct), each a different check:
+const BAILIFF_CUT := {"Primary": 0.4, "Secondary": 0.15}   # the Bailiff seizes your best piece: a gun's share of your fire lost while he holds it
+const BAILIFF_TAKEN := 1.25            # a piece you wear for its armour seized: you take this much
+const BAILIFF_FREE := 0.5              # under this share of his HP he lets it go
+const AUDITOR_TAX := 1.5               # the Auditor: every skill costs half again (and he seals one, ORDER_SEAL_EVERY)
+const COLLECTOR_GROW := 0.05           # the Collector: what you take grows this much
+const COLLECTOR_EVERY := 3.0           # every this many seconds he's out, back to nothing each time one of his men drops
+const COLLECTOR_MEN_EVERY := 6.0       # he calls a debtor in this often (ORDER_PRINT_MAX on you at most)
+const COUNTY_HEAD_ISSUED := 1          # a head beaten: this many issued pieces of his level, stamped and numbered
+const REMIX_COUNTY_ODDS := 0.4         # the remix (after the Treasurer): a signal laid on one of the County's places
+const REMIX_HEAD_ODDS := 0.5           # a signal's head, one of the Issuer's people away from home
+const REMIX_ISSUED_ODDS := 0.2         # a signal won at the reach or past it: an issued piece at its level
+
+
+static func county(key: String) -> Dictionary:
+	for c in COUNTY:
+		if c["key"] == key:
+			return c
+	return {}
+
 ## The Issue (25 Oct, docs/design/the_issue.md): the first Issuer win puts the town on fiat for good.
 const FIAT_SCALE := 0.0005             # a fiat's worth against the day's tins: every price and pay after the Issue is the tins' x this
 const FIAT_PILE_K := 0.8               # the conversion, hard on piles: fiat = this x the square root of tins held (and notes at NOTE_TINS)
@@ -3375,7 +3424,7 @@ static func pinnacle(key: String) -> Dictionary:
 	for p in PINNACLES:
 		if p["key"] == key:
 			return p
-	return {}
+	return county(key)     # a County place reads as one of the order's (25 Oct): its host site, its level past the reach
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.

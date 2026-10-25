@@ -6945,3 +6945,11 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   (fiat out, prices down), a big print on every later Issuer win (the Mint's doubling gone). The Issuer's counter, the
   Fence's fifth tab: six pieces of issued kit (stamped, numbered, a rule each; kept on a death, never broken into
   patterns). The Issue's card once, then the Fence. Money reads ƒ after it. Smoke 250 green.
+- Stages 2-4, the County and the remix: four zones of three places past the City (the Motorway, the Docks, the Big
+  Houses, the Treasury), each place fought as the order's are on a host site's crew, at the reach + its step, a level
+  more a win; each zone wants issued kit worn (2, 3, 4, 6); the heads' own fights (the Bailiff seizes your best piece,
+  the Auditor taxes and seals skills, the Collector's bill grows, the Treasurer shields and prints); a head drops issued
+  kit. The Map's "The County" button shows the board. After the Treasurer the Radio remixes: signals on the County's
+  places, its heads away from home, issued kit off the deepest. The bot runs the order and the County and buys and wears
+  issued kit; the balance read reports the Issue and the County (gate 18). Art is the host sites' plates for now.
+  Smoke 251 green. Then the full 32 h pass.

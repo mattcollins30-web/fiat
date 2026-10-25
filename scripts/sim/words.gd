@@ -175,6 +175,36 @@ const PINNACLE_WORDS := {
 	"archive": "Decides who was born, who owns, who's owed.",
 	"mint": "Prints the money nobody believes in. \"Its value is as stated.\"",
 }
+## The County's places (25 Oct): a line each on its card.
+const COUNTY_WORDS := {
+	"toll_plaza": "The barriers are down again. Everything that moves on the road pays here.",
+	"distribution": "Where the lorries were loaded. They load them for the Issuer now.",
+	"truck_stop": "The Bailiff keeps the drivers' cafe. He keeps their keys too.",
+	"container_port": "Stacks of boxes, every one stamped. Nobody opens one without a form.",
+	"ferry_terminal": "The boats still come in. What's on them is declared or it's gone.",
+	"customs_shed": "The Auditor counts what comes through, and what you carry out.",
+	"golf_club": "The members kept their club. Their staff carry guns now, not bags.",
+	"gated_close": "Six houses and a gate. The gate is the point.",
+	"manor": "The Collector lives where the debts end up. Most of the county owes him.",
+	"counting_house": "Clerks at long tables, counting what the County is said to be worth.",
+	"bullion_vault": "There's no gold in it. There are guards on it anyway.",
+	"treasury": "The Treasurer makes the money stick. She is the last of the Issuer's people.",
+}
+const COUNTY := {
+	"title": "The County", "tab": "The County", "kicker": "THE ISSUER'S PEOPLE",
+	"sub": "Past the City, where the new money's made to stick. Each zone wants issued kit worn.",
+	"not_yet": "Not before the Issue", "zone_shut": "%s first", "place_shut": "Take %s first",
+	"want": "Wear %d issued pieces (%d worn)", "want_short": "Wear %d issued",
+	"taken": "%s is taken.", "again": "%s, taken again. It'll be harder next time.", "lost": "The County keeps %s.",
+	"zone_opens": "The road's open to %s. It wants %d issued pieces worn.",
+	"remix": "The Treasurer's down. The Radio picks up both maps now: the remix is open.",
+	"head_down": "%s is down. Found: %s.", "let_go": "The Bailiff lets your %s go.",
+	"chip_owed": "Owed +%d%%", "chip_tax": "Skills taxed ×1.5", "chip_seized": "Seized: %s",
+	"level": "Level %d", "beaten": "Taken %d", "head": "Its head: %s", "odds_reading": "Reading the odds",
+	"drops_head": "The host's crew and drops, paid in fiat", "drops_issued": "Issued kit off the head",
+	"progress": "%d of 12 taken",
+	"remix_issued": "Off the signal: %s.",
+}
 const SIGNAL_MADE := "A signal: a fix on %s, level %d"
 const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
@@ -608,6 +638,11 @@ const BOSSES := {
 	"The Carpet Man": {"armed": "Word goes to the warehouse that you're coming. He puts the kettle on.", "out": "He's brought the whole warehouse.", "down": "The warehouse crew go quiet. Somebody else will have the car park by morning."},
 	"The Manager": {"armed": "The branch is told to expect you. He has the staff tidy the counters.", "out": "He's in a suit. It fits.", "down": "The staff stop. Nobody's told them what to do next, and he isn't going to."},
 	"The Quartermaster": {"armed": "The depot's gate is left open for you. That's not a kindness.", "out": "He signs for you.", "down": "The depot's unlocked. Nobody's counting any more."},
+	# the County's (25 Oct): the Issuer's people
+	"The Bailiff": {"out": "He has a clipboard and a warrant with your name on it. He takes your best piece before you've said a word."},
+	"The Auditor": {"out": "He wants it all accounted for. Every skill you use is a line on his sheet, and he charges for the line."},
+	"The Collector": {"out": "He sends his debtors in first. The longer he's out, the more you owe."},
+	"The Treasurer": {"out": "She stands behind the glass and has another man printed for every one you put down."},
 }
 
 

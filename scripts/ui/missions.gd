@@ -16,6 +16,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 const TierGuide := preload("res://scripts/ui/tier_guide.gd")
 const Order := preload("res://scripts/ui/order.gd")
+const County := preload("res://scripts/ui/county.gd")
 const MapView := preload("res://scripts/ui/map_view.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const SkillPicker := preload("res://scripts/ui/skill_picker.gd")
@@ -51,6 +52,9 @@ var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
 var _came_btn: Button              # the tally's button at the zone row's right, before the guide's
 var _order                         # the order's places (order.gd): one card at the right, its pin picked
+var _county                        # the County (county.gd, 25 Oct): over the map and the card while it's picked
+var _county_btn: Button            # "The County" in the row, once the town's on fiat
+var county_on := false
 var _guide_btn: Button             # "What a site pays" (16 Oct, item 11): the map's tier guide, at the row's end
 var _guide
 var _came_open := false            # the card dropped down
@@ -77,7 +81,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the row: the picked site's zone and its sky at the left (the zones are the map's now, not tabs)
-	_title = UI.label(self, Rect2(0, 0, Pal.GRID_W - GUIDE_W - CAME_BTN_W - 2 * COL_GAP, ZONE_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_title = UI.label(self, Rect2(0, 0, Pal.GRID_W - GUIDE_W - CAME_BTN_W - COUNTY_BTN_W - 3 * COL_GAP, ZONE_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_map = MapView.new(Rect2(0, TOP, MAP_W, Pal.ROOM_H - TOP))
 	_map.picked.connect(select)
 	_map.picked_order.connect(select_order)
@@ -87,6 +91,9 @@ func _init() -> void:
 	_came_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W - COL_GAP - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
 	_came_btn.pressed.connect(_toggle_came)
 	_came_btn.visible = false
+	_county_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W - CAME_BTN_W - COUNTY_BTN_W - 2 * COL_GAP, 0, COUNTY_BTN_W, ZONE_H), false)
+	_county_btn.pressed.connect(func(): set_county(not county_on))
+	_county_btn.visible = false
 	for col in range(1):
 		var x := CARD_X
 		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -197,6 +204,10 @@ func _init() -> void:
 	_order.mouse_filter = Control.MOUSE_FILTER_IGNORE     # its full-width frame over the map: only its card takes a click
 	_order.acted.connect(func(): acted.emit())
 	add_child(_order)
+	_county = County.new(Rect2(0, TOP, Pal.GRID_W, Pal.ROOM_H - TOP))
+	_county.visible = false
+	_county.acted.connect(func(): acted.emit())
+	add_child(_county)
 	_came = CameBack.new()
 	_came.visible = false
 	_came.acted.connect(func(): acted.emit())
@@ -320,6 +331,25 @@ func show_state(s) -> void:
 		_skill_pick.show_state(sim)
 		_skill_pick.move_to_front()
 	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
+	_county_btn.visible = sim.issued and not picking
+	if not sim.issued:
+		county_on = false
+	UI.fit_button(_county_btn, ["Back to the map", "The map"] if county_on else ["The County", "County"])
+	UI.style_button(_county_btn, county_on, "good")
+	_county.visible = county_on and not picking
+	_map.visible = not _county.visible
+	if _county.visible:
+		UI.fit(_title, [Words.COUNTY["title"] + " · " + Words.COUNTY["progress"] % sim.county_taken_count(), Words.COUNTY["title"]])
+		_county.show_state(sim)
+		_order.visible = false
+		_pick.visible = false
+		for c in _cols:
+			c["panel"].visible = false
+			c["edge"].visible = false
+		_shown = ""
+		_came.move_to_front()
+		_guide.move_to_front()
+		return
 	_pick.visible = picking
 	if picking:
 		_order.visible = false
@@ -500,6 +530,15 @@ func select(i: int) -> void:
 	show_state(sim)
 
 
+## The County over the map, or the map back (25 Oct).
+func set_county(on: bool) -> void:
+	county_on = on and sim != null and sim.issued
+	_shown = ""
+	_county._shown = ""
+	if sim != null:
+		show_state(sim)
+
+
 ## An order's place picked: its card in the site's place.
 func select_order(k: String) -> void:
 	if sim == null or not sim.order_known(k):
@@ -663,6 +702,7 @@ func _boss(k: int) -> void:
 ## column only (its band and fight), clear of every button. Seen puts both away.
 const CAME_BTN_W := 340
 const GUIDE_W := 220               # the tier guide's button, the zone row's last
+const COUNTY_BTN_W := 220          # the County's, before the tally's (25 Oct)
 const CAME_Y := ZONE_H + 4
 
 
@@ -695,7 +735,7 @@ func _show_came_back() -> void:
 		UI.style_button(_came_btn, _came_open, "good")
 	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
 	_came_btn.disabled = picking
-	_came.visible = has and _came_open and order_key == "" and not picking     # an order's card has the column (20 Oct: the card over it); the trait pick too (the review)
+	_came.visible = has and _came_open and order_key == "" and not picking and not county_on     # nor over the County's board (the smoke: it sat on its zones)     # an order's card has the column (20 Oct: the card over it); the trait pick too (the review)
 	_came.position = Vector2(Pal.GRID_W - _came.size.x, CAME_Y)
 	_came.move_to_front()
 
@@ -766,6 +806,8 @@ func text_nodes() -> Array:
 	out.append_array(_came.text_nodes())
 	if _came_btn.visible:
 		out.append(_came_btn)
+	if _county_btn.visible:
+		out.append(_county_btn)
 	out.append(_guide_btn)
 	if _guide.visible:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
@@ -784,6 +826,9 @@ func text_nodes() -> Array:
 		return out
 	if _order.visible:
 		out.append_array(_order.text_nodes())
+		return out
+	if _county.visible:
+		out.append_array(_county.text_nodes())
 		return out
 	out.append_array(_skill_pick.text_nodes())
 	for c in _cols:
