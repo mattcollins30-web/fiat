@@ -6851,3 +6851,13 @@ order, each reviewed, each with its smoke area:
 - **Art.** tools/pixellab_chase_art_manifest.json (23 jobs, about $1.84): the three uniques and the 20 web nodes with
   no picture (the renamed six and the Recruit's fourteen fillers), checked against pixellab_lessons.md; art.flag set.
 - VERSION 0.9.0. Smoke: the cloud's full run green but for its known art-less reds (the watcher was off).
+- The single pass (25 Oct, 32 h, the one-save method, 24 reads and 12 parity reads; docs/balance/summary.md): 20 red
+  (0.8.1's pass: 18). Green: the Bank, the builds' band, no reds at depth 1, the gang clock, the loot tables, the
+  gamble, loot quality and quantity, gear to wear. Red as before: the campaign's bot timings and levels (the QM at
+  2.3 h, level 25-27 at him, over the gear at each site), the bot's safety (deaths one in 1,200-8,500, wounds 0-2%,
+  odds 100%), and the endgame (the lorry at 4 h, the reach standing 11-26 h, level 50 before hour 8 on five reads,
+  cash and scrap piling). New: build parity (from the Radio's checkpoint, 4 h: Poacher as poison +46 levels of reach,
+  the rest +24 to +34; the Paramedic's two +17 and +19 and Poacher as frost +18 under half the best) and the
+  capstone gate (four builds 2.1-2.7 h after the QM). Matt's last record (24 Oct): the Manager at 54 min, level 13.
+  The smoke on his machine found Knuckles' name off its starter (Windows measures the words wider): placed with slack,
+  the far name first; smoke 243 green.
