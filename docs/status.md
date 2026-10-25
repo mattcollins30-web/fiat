@@ -6910,3 +6910,11 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
 - The summary: gate 17 at the bot's pace, P1 the campaign's with bails, P3 on first clears and heads, P6 bot play,
   parity twice a build on the mean, each read's ending named. .gitattributes: .bat and .ps1 CRLF.
 - The chase art flagged again for the art session (it wasn't open the first time). Smoke 246 green.
+- The third pass (25 Oct, 32 h, on 22ee2ac; 50 reads, all ended ok): 15 red - 6 design, 3 bot timing, 6 bot play (the
+  second: 19). Green now: the Quartermaster at 2.8 h, levels at him (21-23 on every build), the Outskirts at the bot's
+  pace, the Radio's ladder (2.3-4.9 reach levels an hour to hour 12). Parity: one build behind (Recruit as physical +20,
+  the mean of +17 and +23, against the best's +42; five before). Still red: levels over the sites from the Services on
+  (5 over), cash held 2.0-3.8 h on four builds, scrap 5-60 crafts an hour (the gate's yardstick, 120 scrap, is
+  stale), the reach standing 5-25 h late on, retirement's median 31 h (11 of 24 never), the capstone and the lorry
+  (bot timing), and the bot's safety (odds 100% even on first clears, deaths and bails one in 50-1,000). No runaway:
+  the top reach 70, tempers 47-228 a read.
