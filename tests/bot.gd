@@ -691,11 +691,45 @@ func _build_lines() -> Array:
 	return out
 
 
+## Tempering (25 Oct, the endgame): the cheapest worn piece a level up while the scrap and the tins run to it, the
+## Build column's scrap kept back - so the climb goes as fast as the piles allow, as a player's would.
+const TEMPER_SLOTS := ["Primary", "Armour", "Helmet", "Secondary", "Rig", "Charm", "Backpack"]
+const TEMPERS_A_PASS := 24
+var tempers := 0                  # every temper the read made (the summary's)
+
+
+func _temper(sim, floor_cash: float) -> void:
+	var keep: int = Data.BUILD_GUN * 3
+	var done := 0
+	for n in range(TEMPERS_A_PASS):
+		var best = null
+		var best_scrap := 0
+		for sl in TEMPER_SLOTS:
+			var it = sim.equipped.get(sl)
+			if it == null or sim.temper_block(it) != "":
+				continue
+			var sc: int = sim.temper_scrap(it)
+			if best == null or sc < best_scrap:
+				best = it
+				best_scrap = sc
+		if best == null or sim.scrap - best_scrap < keep:
+			break
+		var cc: int = sim.craft_cost(best, "temper")
+		if cc < 0 or sim.cash - cc < floor_cash or not sim.craft(best["id"], "temper"):
+			break
+		done += 1
+		tempers += 1
+	if done > 0:
+		var lv: Array = TEMPER_SLOTS.filter(func(sl): return sim.equipped.get(sl) != null).map(func(sl): return Items.ilvl(sim.equipped[sl]))
+		bought.append([sim.elapsed, "bench: %d tempers, the kit at item levels %s" % [done, str(lv)]])
+
+
 func _bench_needs(sim) -> void:
 	if sim.elapsed - _bench_at < BENCH_EVERY:
 		return
 	_bench_at = sim.elapsed
 	var floor_cash := maxf(2000.0, _reserve(sim))
+	_temper(sim, floor_cash)
 	var jobs := 0
 	for s in BENCH_SLOTS:
 		var it = sim.equipped.get(s)
@@ -816,6 +850,8 @@ func _craft_toward(sim) -> void:
 ## behind it - the base's share, its affixes, what's fitted - weighed with its
 ## score; a plain gun needs to be well ahead to displace one that carries the element.
 func _elem_share(it: Dictionary) -> float:
+	if str(it.get("rule", "")) == "weed_burner":
+		return 1.0 if element == "fire" else -0.45     # all fire: an element build's own element switched off (25 Oct, the review: on 11 of 24 end kits)
 	if element == "physical":
 		# the physical build (Knuckles, 9 Oct): the share of the gun's hit that isn't converted
 		var conv := 0.0

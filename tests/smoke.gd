@@ -252,7 +252,18 @@ func _press_class(main, name: String) -> void:
 		main._barracks._pick_class(name)
 
 
+const SMOKE_SEED := 1025                  # the smoke's dice (25 Oct)
+const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of wall, never reached on a healthy run
+
+
 func _init() -> void:
+	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` none
+	var args := OS.get_cmdline_user_args()
+	var si := args.find("seed")
+	var seed_word: String = str(args[si + 1]) if si >= 0 and si + 1 < args.size() else str(SMOKE_SEED)
+	Sim.fixed_seed = 0 if seed_word == "random" else int(seed_word)
+	seed(Sim.fixed_seed if Sim.fixed_seed != 0 else int(Time.get_ticks_usec()))
+	print("SMOKE seed %s" % seed_word)
 	var main = load("res://scripts/ui/main.gd").new()
 	main.intro = false
 	# the smoke saves to its own files, never the player's (7 Oct: it wrote slot 1 and took the autosave on the Legion)
@@ -291,7 +302,7 @@ func _init() -> void:
 	var kias := 0
 	var meds_used := 0
 	var t_start := Time.get_ticks_msec()
-	while not sim.depot_cleared and runs < 300 and Time.get_ticks_msec() - t_start < 60000:
+	while not sim.depot_cleared and runs < 300 and Time.get_ticks_msec() - t_start < SMOKE_WALL_MS:     # capped by runs; the wall only against a hang (25 Oct: the cloud stopped early and tested another camp)
 		var t := _pick_tier(sim)
 		if sim.hp < sim.max_hp() * 0.7:
 			if not sim.treat():
@@ -344,7 +355,7 @@ func _init() -> void:
 			sim.dps(), sim.armour(), sim.stash.size(), str(sim.best_depth)])
 	# keep climbing for a while after the depot: how deep does the bot get in three hours?
 	var started := Time.get_ticks_msec()
-	while sim.elapsed < 1.5 * 3600.0 and runs < 200 and Time.get_ticks_msec() - started < 40000:
+	while sim.elapsed < 1.5 * 3600.0 and runs < 200 and Time.get_ticks_msec() - started < SMOKE_WALL_MS:
 		var t := _pick_tier(sim)
 		if sim.hp < sim.max_hp() * 0.7 and not sim.treat():
 			sim.advance(120.0)
@@ -693,6 +704,7 @@ func _init() -> void:
 	_press_class(main, "Doorman")
 	if sim.cash >= sim.respec_cost() and not sim.tree.is_empty():
 		main._barracks._on_respec()
+		main._barracks._on_respec()     # the reset asks twice now (25 Oct, the review)
 		_check(sim.tree.all(func(id): return sim.is_pitch(str(id))), "respec did not clear the class's trees: %s" % str(sim.tree))
 		main._barracks._pick("The Pitch/0")
 		main._barracks._on_train()
@@ -751,7 +763,18 @@ func _init() -> void:
 func _only_areas() -> Array:
 	var args := OS.get_cmdline_user_args()
 	var i := args.find("only")
-	return [] if i < 0 else Array(args.slice(i + 1))
+	if i < 0:
+		return []
+	var out: Array = []
+	var skip := false
+	for w in args.slice(i + 1):
+		if skip:
+			skip = false
+		elif w == "seed":
+			skip = true                        # `seed N` isn't an area
+		else:
+			out.append(w)
+	return out
 
 
 func _run_only(main, only: Array) -> void:
@@ -1300,6 +1323,7 @@ func _fence_screen(main) -> void:
 			commons += 1
 	if commons > 0:
 		main._fence._sell._sell(0)          # Common (Fence A, 19 Oct: an upgrade on what's worn is kept)
+		main._fence._sell._sell(0)     # the press asks twice now (25 Oct, the review)
 		var left := 0
 		for it in sim.stash:
 			if sim._spare(it, 0):      # the deeds never go to the Fence (13 Oct: the bot's run had found them); papers and mythics one at a time
@@ -2464,7 +2488,9 @@ func _joint_payoff_checks(main) -> void:
 	m["target_hp"] = 0.0
 	sim._fight(m, m["t"], 0.05)
 	_check(float(m.get("flat_t", 0.0)) > 0.0, "a kill with the plain did not flatten the next")
-	_check(sim._joints_on_incoming(m, false, 0.1) <= 0.5 + 0.001, "Flattened did not halve their fire")
+	var flat_on: float = float(maxi(1, mini(int(m.get("remaining", 1)), sim.contact(m["t"]))))     # one man of those on you fires at half, not the gang (25 Oct, the review)
+	var flat_x: float = sim._joints_on_incoming(m, false, 0.1)
+	_check(flat_x <= 1.0 - 0.5 / flat_on + 0.001 and flat_x < 1.0, "Flattened did not halve the next man's fire: ×%.2f with %d on you" % [flat_x, int(flat_on)])
 	sim.tops_open = false
 	if sim.on_mission():
 		sim.extract_now()
@@ -3696,10 +3722,10 @@ func _unique_rules_checks(main) -> void:
 	sim.words[3] = []
 	sim.set_depth(3, 1)
 	var t: Dictionary = sim.effective(3)
-	# the burner: all fire, takes nothing, spreads
+	# the burner: all fire, spreads; it takes rounds now (25 Oct, the review: trimmed)
 	var burner := Items.roll_unique(sim._unique_named("The Council's Weed Burner"), sim.rng)
 	sim.equipped["Primary"] = burner
-	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) == "Takes no rounds", "the burner is not all fire and free: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) != "Takes no rounds", "the burner is not all fire, or still free: %s" % str(sim.conversion()))
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
 	# Jump Leads: a third shock
 	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("Jump Leads"), sim.rng)
@@ -4661,6 +4687,7 @@ func _pinnacle_checks(main) -> void:
 	_loot_rule_checks(main)
 	_collection_checks(main)
 	_loadout_checks(main)
+	_review_fix_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -4790,10 +4817,12 @@ func _craft_checks(main) -> void:
 	sim.craft(rare["id"], "affixes")
 	for a in rare["affixes"]:
 		_check(int(a["tier"]) <= Items.rarity_cap(rare) and int(a["tier"]) >= lo_r, "a re-roll on a level-16 Rare gave T%d" % int(a["tier"]))
-	# a set piece: no bench job at all, its affixes are the set's
+	# a set piece: no bench job on its affixes, they are the set's
 	var set_piece: Dictionary = Items.roll_set_piece(Data.SETS[0]["name"], Data.SETS[0]["pieces"][0], sim.rng)
 	sim.stash.append(set_piece)
 	for kind in Data.CRAFT:
+		if kind == "temper":
+			continue                 # tempering lifts its level, never its affixes: the one job a set piece takes (25 Oct, the review)
 		_check(sim.craft_cost(set_piece, kind, set_piece["affixes"][0]["stat"] if not set_piece["affixes"].is_empty() else "") < 0, "the Bench offers %s on a set piece" % kind)
 	# not on a unique, not on paper, not without a bench, not on a run, not short
 	var u := Items.roll_unique(Data.UNIQUES[0], sim.rng)
@@ -11208,13 +11237,13 @@ func _six_checks(main, m: Dictionary) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", "Machete")
 	main.refresh()
 	_check(run._six[5]["value"].text == "melee" and run._six[5]["value"].get_theme_color("font_color") == Pal.TEXT_3, "a machete's rounds read '%s', not melee" % run._six[5]["value"].text)
-	# the Weed Burner: a shotgun's base, but it never spends a round - not "dry"
+	# the Weed Burner: a shotgun's base, and it spends rounds as one now (25 Oct, the review: no longer free)
 	var wb: Dictionary = Items.roll_unique(sim._unique_named("The Council's Weed Burner"), sim.rng)
 	if not wb.is_empty():
 		sim.equipped["Primary"] = wb
 		main.refresh()
 		_check(run._six[5]["value"].get_theme_font("font").has_char(0x221E), "the tiles' font has no ∞ for the Weed Burner")
-		_check(run._six[5]["value"].text == "∞" and run._six[5]["value"].get_theme_color("font_color") == Pal.TEXT_3, "the Weed Burner's rounds read '%s'" % run._six[5]["value"].text)
+		_check(run._six[5]["value"].text != "∞" and run._six[5]["value"].text != "melee", "the Weed Burner's rounds read '%s', as if free" % run._six[5]["value"].text)
 	sim.equipped["Primary"] = gun_was
 	m["last_incoming"] = 0.0
 	main.refresh()
@@ -12505,7 +12534,7 @@ func _site_level_checks(main) -> void:
 	_check(c0["band"].kicker.text == "The Estate · Tier 1", "the streets' kicker isn't its zone and tier: '%s'" % c0["band"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
 	var finds := -1
 	for r in range(6):
-		if c0["tiles"][r]["key"].text == "Gear level":
+		if c0["tiles"][r]["key"].text == "Item level":
 			finds = r
 	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with(str(sim.wear_of(8))), "the streets' Gear level tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Gear level tile"))
 	# every open site's tile reads the same way: the number first, never "level N gear" on one and "level N" on the next (Matt's shot)
@@ -12907,7 +12936,7 @@ func _growth_checks(main) -> void:
 	var pct_d: float = float(Data.paragon_row("damage")["pct"])
 	var pct_h: float = float(Data.paragon_row("hp")["pct"])
 	_check(not sim.paragon_add("find") and sim.paragon_free() == 0, "a point past the paragon levels went on the board")
-	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + pct_h * 4.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + pct_d * 6.0 / 100.0), "the board's points did not pay: hp ×%.3f dps ×%.3f" % [sim.max_hp() / hp50, sim.dps() / dps50])
+	_check(is_equal_approx(sim.max_hp() / hp50, pow(1.0 + pct_h / 100.0, 4.0)) and is_equal_approx(sim.dps() / dps50, pow(1.0 + pct_d / 100.0, 6.0)), "the board's points did not pay (each on the last, 25 Oct): hp ×%.3f dps ×%.3f" % [sim.max_hp() / hp50, sim.dps() / dps50])
 	var pg: Array = sim.paragon_progress()
 	_check(is_equal_approx(pg[0], 0.0) and pg[1] > 0.0, "the next paragon level reads %s" % str(pg))
 	# the paragon's levels grow gently past 50, not doubling every seven (24 Oct: they stopped coming and the reach walled)
@@ -12977,6 +13006,7 @@ func _growth_checks(main) -> void:
 	_check(sim.train_block(entry_id).begins_with("full") and int(sim.ring[entry_id]) == Data.RING_STACK, "a ring node took points past its stack: %d, '%s'" % [int(sim.ring[entry_id]), sim.train_block(entry_id)])
 	_check(bk._respec.text.begins_with("Reset the ring") and not bk._respec.disabled, "the ring's reset button reads '%s'" % bk._respec.text)
 	bk._on_respec()
+	bk._on_respec()     # the reset asks twice now (25 Oct, the review)
 	_check(sim.paragon_spent() == 0 and sim.ring.is_empty() and not sim.tree.any(func(id): return sim.is_ring(str(id))), "the ring's reset button did not reset it")
 	wv.pick("")
 	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 10) - Data.xp_for_level(Data.MAX_LEVEL)
@@ -16546,7 +16576,7 @@ func _room_intro_checks(main) -> void:
 ## camp, no Boss, no letter-spaced kicker, no format code left unfilled, no spaced hyphen.
 const WORDS_BANNED := ["cash", "operator", "boss", "health", "ammo", "faster", "cache", "dots", "first shot", "first hit",
 		"quarter", "a third", "a fifth", "a tenth", "half again", "depth", "camp", "one head"]
-const WORDS_SCREEN_BANNED := ["depth", "camp", "Boss", "pouchs", "1 finds", " - "]
+const WORDS_SCREEN_BANNED := ["depth", "camp", "Boss", "pouchs", "1 finds", " - ", "damage/s", "Gear level", "loadout", "Loadout"]     # 25 Oct, the review: the style guide's slips
 func _words_checks(main) -> void:
 	var rx := RegEx.new()
 	rx.compile("(?i)\\b(" + "|".join(WORDS_BANNED) + ")\\b")
@@ -17541,6 +17571,7 @@ func _fence_ab_checks(main) -> void:
 	_check_fit(main, "Fence A (a part picked)")
 	fv._show("shelf")
 	fv._sell._sell(1)
+	fv._sell._sell(1)     # the press asks twice now (25 Oct, the review)
 	_check(sim.stash.has(up) and not sim.stash.has(part) and sim.stash.has(med) and sim.stash.has(box), "selling the uncommons took the upgrade, a med or rounds, or left the part")
 	# the boxes: the primary's rounds first and lit
 	if g0 != null and Items.ammo_type(g0) in fv._sell.TYPES:
@@ -18058,7 +18089,7 @@ func _skills_checks(sim) -> void:
 	m["sk"]["seq"] = int(m["sk"]["seq"]) + 1
 	var before_trap: float = float(m["target_hp"])
 	sim._skills_tick(m, t, 0.0, 0)
-	_check(absf(before_trap - float(m["target_hp"]) - sim.damage_total() * 3.0) < 0.01 and float(m["dots"].get("bleed", 0.0)) > 0.0, "Gin trap on the next man: %.1f off, bleed %s" % [before_trap - float(m["target_hp"]), str(m["dots"])])
+	_check(absf(before_trap - float(m["target_hp"]) - _skill_hit_expected(sim, m, 3.0)) < 0.01 and float(m["dots"].get("bleed", 0.0)) > 0.0, "Gin trap on the next man: %.1f off, bleed %s" % [before_trap - float(m["target_hp"]), str(m["dots"])])
 	before_trap = float(m["target_hp"])
 	m["sk"]["seq"] = int(m["sk"]["seq"]) + 1
 	sim._skills_tick(m, t, 0.0, 0)
@@ -18441,12 +18472,16 @@ func _class_skills_checks(sim) -> void:
 	fire.call("duck_and_weave")
 	_check(sim._skill_in_mult(m, 3) == 0.0 and float(m["sk"]["fx"]["hidden_t"]) > 0.0, "Duck and weave: in ×%.2f" % sim._skill_in_mult(m, 3))
 	# hits now
+	_check(not sim.has_joint("recruit_physical") and not sim.has_rule("linemans_bag"), "the skills' fixture has a joint or the Tool Bag on: the hits below won't read plain")
+	var pat_m: Dictionary = {"t": {"res": {"physical": 0.2}}, "target_hp": 1000.0, "sk": {"fx": {}}}     # a plain man: a fifth resisted, no shock, no pat-down
+	sim._skill_damage(pat_m, 100.0, "physical", true)
+	_check(is_equal_approx(1000.0 - float(pat_m["target_hp"]), 100.0 * (1.0 - sim.phys_resist(0.2))), "a skill's hit on a fifth resisted took %.1f of 100" % (1000.0 - float(pat_m["target_hp"])))
 	m["target_hp"] = 10000.0
 	fire.call("shoulder_charge")
-	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 3.0) < 0.5 and m["sk"]["fx"]["stuns"].size() + int(m["sk"]["stun_share"] > 0.0) > 0, "Shoulder charge: %.1f off" % (10000.0 - float(m["target_hp"])))
+	_check(absf(10000.0 - float(m["target_hp"]) - _skill_hit_expected(sim, m, 3.0)) < 0.5 and m["sk"]["fx"]["stuns"].size() + int(m["sk"]["stun_share"] > 0.0) > 0, "Shoulder charge: %.1f off" % (10000.0 - float(m["target_hp"])))
 	m["target_hp"] = 10000.0
 	fire.call("ring_main")
-	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 1.5 * mini(3, mini(4, sim.contact(t)))) < 0.5, "Ring main: %.1f off" % (10000.0 - float(m["target_hp"])))
+	_check(absf(10000.0 - float(m["target_hp"]) - _skill_hit_expected(sim, m, 1.5) * mini(3, mini(4, sim.contact(t)))) < 0.5, "Ring main: %.1f off" % (10000.0 - float(m["target_hp"])))
 	m["target_hp"] = 10000.0
 	var hp0: float = sim.hp
 	fire.call("danger_close")
@@ -18480,7 +18515,7 @@ func _class_skills_checks(sim) -> void:
 	_check(absf(10000.0 - float(m["target_hp"])) < 0.01, "Sedative dart hit him")
 	m["target_hp"] = 10000.0
 	fire.call("headbutt")
-	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 1.5) < 0.5, "Headbutt: %.1f off" % (10000.0 - float(m["target_hp"])))
+	_check(absf(10000.0 - float(m["target_hp"]) - _skill_hit_expected(sim, m, 1.5)) < 0.5, "Headbutt: %.1f off" % (10000.0 - float(m["target_hp"])))
 	var gun_keep = sim.equipped["Primary"]
 	var rig_keep: Array = sim.rig.duplicate()
 	sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")     # a gun that takes rounds, and room for them
@@ -19400,3 +19435,141 @@ func _loadout_checks(main) -> void:
 	sim.load_dict(hold)
 	main.refresh()
 	print("loadouts and build codes ok: save, wear, gone pieces, the save, the Kit's cards, a code both ways, the plan, the retrain, the panel")
+
+
+## The review's bugs (25 Oct, docs/review/game.md A1-A8): each with the check that would have caught it.
+func _review_fix_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	# A1: another class's read leaves the camp's nodes - the elements' and the ring's - where they were
+	if sim.cls == "":
+		sim.set_class(str(Data.CLASSES[0]["name"]))
+	var other: String = str(Data.CLASSES[1]["name"]) if sim.cls != str(Data.CLASSES[1]["name"]) else str(Data.CLASSES[0]["name"])
+	var el_id: String = "%s/0" % str(Data.ELEMENT_TREES[0]["name"])
+	if not sim.tree.has(el_id):
+		sim.tree.append(el_id)
+	var ring_id: String = "%s/0" % str(Data.RING["name"])
+	if not sim.tree.has(ring_id):
+		sim.tree.append(ring_id)
+	var me: String = sim.cls
+	sim.set_class(other)
+	sim.set_class(me)
+	var tree0: Array = sim.tree.duplicate()
+	var h: Dictionary = sim._read_as(other)
+	sim._read_back(h)
+	_check(sim.cls == me and sim.tree.has(el_id) and sim.tree.has(ring_id) and sim.tree.size() == tree0.size(), "another class's read dropped the camp's nodes: %d of %d, element %s, ring %s" % [sim.tree.size(), tree0.size(), str(sim.tree.has(el_id)), str(sim.tree.has(ring_id))])
+	# A2: the skills are the class's: a swap empties the slots for one who knows none, and the way back brings them
+	var sk_ids: Array = Data.SKILLS.keys().filter(func(id): return str(Data.SKILLS[id]["cls"]) == me)
+	if not sk_ids.is_empty():
+		sim.skill_slots = [str(sk_ids[0]), "", ""]
+		sim.set_class(other)
+		_check(not sim.skill_slots.has(str(sk_ids[0])), "a swap kept the last class's skill in the slots: %s" % str(sim.skill_slots))
+		sim.set_class(me)
+		_check(sim.skill_slots[0] == str(sk_ids[0]) or not sim.skill_known(str(sk_ids[0])), "the way back lost the class's skills: %s" % str(sim.skill_slots))
+	# A4: Floored holds one man of three, not the gang
+	var m := {"remaining": 3, "t": sim.tier(0), "floor_t": 1.0}
+	var f: float = sim._joints_on_incoming(m, false, 0.1)
+	var on: int = mini(3, sim.contact(sim.tier(0)))
+	_check(on <= 1 or absf(f - (1.0 - 1.0 / on)) < 0.01, "Floored silenced %.2f of their fire with %d on you" % [1.0 - f, on])
+	# A7: a skill's hit is cut by their resist to its type
+	var m2 := {"t": {"res": {"shock": 0.5}}, "target_hp": 1000.0, "dealt": 0.0}
+	sim._skill_damage(m2, 100.0, "shock", true)
+	var cut: float = 1000.0 - float(m2["target_hp"])
+	_check(cut > 0.0 and cut <= 60.0, "a skill's shock hit wasn't cut by a 50%% resist: %.0f of 100" % cut)
+	# A8: the Arsonist's Rig grows with the fight
+	var lasts_names: Array = [str(sim.node("Petrol/3").get("name", "")), str(sim.node("The Rat Man/3").get("name", "")), str(sim.node("Blades/3").get("name", ""))]
+	_check(lasts_names == ["Lit", "Dosed", "Opened up"], "the dots' notables the sim doubles by id are now %s" % str(lasts_names))     # dot_seconds reads them by index (the reviewer, 25 Oct)
+	_check(Data.FX.has("rule/arsonists_rig.blast") and Data.FX.has("node/fire_pct.notable_s") and Data.FX.has("node/cap_flattened.cut"), "the review's figures aren't in Data.FX")
+	# the endgame's (25 Oct, Matt's go): tempering past the raise, compounding paragon, worth by item level, greed
+	sim.xp = maxf(sim.xp, Data.xp_for_level(Data.MAX_LEVEL))
+	var gun: Dictionary = sim._plain("Primary", "Pump shotgun")
+	gun["id"] = 992001
+	sim.stash.append(gun)
+	_check(sim.temper_block(gun) == Words.TEMPER["raise_first"], "a plain piece under the raise tempers: '%s'" % sim.temper_block(gun))
+	gun["ilvl"] = int(gun["tier"]) + sim.bump_cap()
+	var dps0: float = Items.dps(gun)
+	var worth0: float = Items.worth(gun)
+	var sc0: int = sim.temper_scrap(gun)
+	sim.scrap = 1000000
+	sim.cash = 1e12
+	var lv0: int = Items.ilvl(gun)
+	_check(sim.temper_block(gun) == "" and sim.craft(992001, "temper") and Items.ilvl(gun) == lv0 + 1 and int(sim.scrap) == 1000000 - sc0, "a temper didn't take: '%s', level %d" % [sim.temper_block(gun), Items.ilvl(gun)])
+	_check(Items.dps(gun) > dps0 and Items.worth(gun) > worth0 and sim.temper_scrap(gun) > sc0, "a temper grew nothing: dps %.0f from %.0f, worth %.0f from %.0f, next %d from %d" % [Items.dps(gun), dps0, Items.worth(gun), worth0, sim.temper_scrap(gun), sc0])
+	var uq: Dictionary = Items.roll_unique(sim._unique_named("The Butcher's Steel"), sim.rng, 10)
+	_check(sim.temper_block(uq) == "", "a unique won't temper: '%s'" % sim.temper_block(uq))
+	var myth: Dictionary = gun.duplicate(true)
+	myth["mythic"] = true
+	_check(sim.temper_block(myth) == Words.TEMPER["mythic"], "a mythic tempers")
+	var pts_hold: Dictionary = sim.ring.duplicate()
+	_check(is_equal_approx(pow(1.02, 10), pow(1.0 + float(Data.paragon_row("damage")["pct"]) / 100.0, 10)), "the paragon's damage isn't 2% a point")
+	sim.ring = pts_hold
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	if sim.mission != null:
+		var q0: float = sim.rarity_bonus()
+		sim.mission["cleared"] = true
+		sim.mission["patrols"] = 2
+		_check(is_equal_approx(sim.rarity_bonus() - q0, 2.0 * Data.GREED_QUALITY * (Data.FX["rule/bookies_pencil.rarity"] if sim.has_rule("bookies_pencil") else 1.0)) and sim.greed_gangs() == 2, "greed after the clear: %.2f from %.2f" % [sim.rarity_bonus(), q0])
+		sim.extract_now()
+	# the UI's (docs/review/ui.md 1, 3, 5, 25, 26): the Fence's rarity row keeps a unique, a set piece, a patterned piece
+	var leg: int = Data.RARITIES.size() - 1
+	var u: Dictionary = Items.roll_unique(sim._unique_named("The Butcher's Steel"), sim.rng, 10)
+	var patd: Dictionary = sim._plain("Helmet", "Hard hat")
+	patd["rarity"] = leg
+	patd["pattern"] = "The Butcher's Steel"
+	sim.stash.append_array([u, patd])
+	sim.sell_rarity(leg)
+	_check(sim.stash.has(u) and sim.stash.has(patd), "the Fence's rarity row sold a unique or a patterned piece")
+	var spare_common: Dictionary = sim._plain("Primary", "Army SMG")     # a common to sell, so the row's button is live (the reviewer: a disabled row passed it)
+	spare_common["rarity"] = 0
+	sim.stash.append(spare_common)
+	var worn_was = sim.equipped.get("Primary", null)
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")     # the same in hand: the spare's no upgrade the row keeps back
+	main.show_room(main.MARKET)
+	main._fence._show("shelf")
+	main.refresh()
+	var fs = main._fence._sell
+	_check(not fs.row_of(0)["sell"].disabled, "the Fence's common row can't sell a spare common")
+	var n_before: int = sim.stash.size()
+	fs._sell(0)
+	main.refresh()
+	_check(sim.stash.size() == n_before and fs.row_of(0)["sell"].text == Words.FENCE_SURE, "the Fence's Sell didn't ask twice: '%s'" % fs.row_of(0)["sell"].text)
+	fs._sell(0)
+	_check(not sim.stash.has(spare_common), "the Fence's second press didn't sell")
+	sim.equipped["Primary"] = worn_was
+	fs._armed = -1
+	# the top bar and the fire tile shorten a big figure, never cut it
+	var lab: Label = main._top_labels["dps"]
+	var forms: Array = main.top_dps_forms(256613.0)
+	_check(UI.text_width(lab, str(forms.back())) <= lab.size.x + 0.5, "the top bar's shortest damage won't fit: '%s'" % str(forms.back()))
+	var hforms: Array = main.top_hp_forms(123456.0, 123456.0, 0.0)
+	_check(UI.text_width(main._top_labels["hp"], str(hforms.back())) <= main._top_labels["hp"].size.x + 0.5, "the top bar's shortest HP won't fit: '%s'" % str(hforms.back()))
+	# the Clinic's rail: not Hurt one HP short
+	sim.hp = sim.max_hp() - 1.0
+	sim.wounds = {}
+	_check(str(main._rail_status(main.MEDIC).get("badge", "")) == "", "the Clinic says Hurt one HP short")
+	# Reset trees asks twice
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	var bk = main._barracks
+	var tree_n: int = sim.tree.size()
+	sim.cash = 1e9
+	bk._on_respec()
+	_check(bk.respec_armed and sim.tree.size() == tree_n, "Reset trees didn't ask twice")
+	bk.respec_armed = false
+	sim.load_dict(hold)
+	main.refresh()
+	print("the review's fixes ok: the camp's nodes through a read, the skills by class, Floored one man, skills resisted, the Fence keeps, the figures shorten, the resets ask")
+
+
+## A skill's hit as the sim lands it: the runner's hits, cut by the man's resist (less what a pat-down took) and lifted
+## by a shock, as a gun's are (25 Oct, the review: skills had skipped the resist).
+func _skill_hit_expected(sim, m: Dictionary, mult: float, ty := "physical") -> float:
+	var r_ty: float = float(m["t"].get("res", {}).get(ty, 0.0)) if m.has("t") else 0.0
+	if ty == "physical":
+		r_ty = sim.phys_resist(r_ty)
+	r_ty *= 1.0 - sim._skill_pat(m)
+	var shock: float = (1.0 + sim.shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0
+	return sim._skill_base() * mult * (1.0 - r_ty) * shock

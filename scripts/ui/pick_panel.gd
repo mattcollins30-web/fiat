@@ -326,7 +326,7 @@ static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 	var b := Items.headline(fitted)
 	var d := float(a[0]) - float(b[0])
 	if absf(d) >= 0.5:
-		out.append([d, "%.0f %s" % [absf(d), {"damage/s": "dmg/s", "armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
+		out.append([d, "%.0f %s" % [absf(d), {"armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
 	var seen := {}
 	for ax in Data.AFFIXES:
 		if seen.has(ax["stat"]):

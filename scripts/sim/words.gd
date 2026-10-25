@@ -1162,6 +1162,10 @@ const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bl
 	"grenades": "Grenades", "fists": "Bare hands", "rule:arsonists_rig": "The Arsonist's Rig", "rule:issuers_revolver": "Repeat hits · The Issuer's Revolver", "other": "Everything else"}
 ## What hit you, by type: frost on the runner is a chill (skills.md §11).
 const TOOK_WORDS := {"physical": "Physical", "fire": "Fire", "frost": "Chill", "poison": "Poison", "shock": "Shock", "bleed": "Bleed"}
+const TEMPER := {"done": "Tempered: item level %d → %d", "no_piece": "Only kit you wear tempers", "mythic": "A mythic takes no temper",
+	"raise_first": "Raise its level first", "too_high": "Past the level you can wear", "price": "%s scrap · %s", "job": "Temper +1"}
+const GREED := {"chip": "Greed · +%d%% quality, +%d%% finds", "short": "Greed +%d%%"}
+const FENCE_SURE := "Sure?"     # a rarity row's Sell, pressed once (25 Oct): the second sells
 const FIGHT_BUTTON := "The fight ›"
 ## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).
 const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "worn_now": "worn now", "ready": "ready to wear",
@@ -1170,7 +1174,7 @@ const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "w
 const BUILD := {"copy": "Copy build", "paste": "Paste build", "copied": "Build code copied", "bad": "That isn't a build code", "old": "A build code from an older version: the web has changed since",
 	"out": "Not while the runner's out", "class": "A %s build: swap to them in Training first", "short": "Short of tins: the reset is %s",
 	"title": "A %s build · %d perks · %d skills", "plan": "Resets every perk for %s, then trains %d of %d", "plan_free": "Trains %d of %d perks, no reset",
-	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks"}
+	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Again: reset for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
 const COLLECTION := {"button": "The collection ›", "title": "The collection", "sub": "Every runner's, for the record · it gives no power", "close": "Close",
 	"uniques": "Uniques found", "mythics": "Mythics found", "sites": "Sites with every mark", "classes": "Classes at level 50", "order": "The order's three beaten", "sets": "Sets complete",
 	"of": "of %d", "grid_head": "Every unique · the found ones in colour, the rest by slot", "sites_head": "Sites · a mark at levels %s",

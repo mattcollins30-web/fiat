@@ -67,6 +67,7 @@ const ROOMS := [RUNNER, ARMOURY, MISSIONS, BARRACKS, MEDIC, MARKET, WORKSHOP, OV
 ## The top bar: level and HP on the left, the purse right-justified on the right. The left group's slots are as wide
 ## as the widest text they can hold, so nothing there shifts; the purse lays out by its figures as they read
 ## (_lay_top_right), so a salvage kind can join it.
+const MEDIC_HURT_UNDER := 0.9         # the Clinic's rail says Hurt under this share of max HP, or with a wound
 const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "scrap", "copper", "steel", "army", "cash"]
 ## The right group, right to left (10 Oct, Bar-C): the cash, each salvage kind once there's any, scrap, notes, the place.
 const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"]
@@ -1048,9 +1049,9 @@ func refresh() -> void:
 	for k in TOP_SALVAGE:
 		_top_labels[k].text = Fmt.num(int(sim.salvage.get(k, 0)))
 	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
-	_top_labels["hp"].text = ("%d / %d +%d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(sim.guard()))]) if sim.guard() >= 0.5 else "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]     # Guard (12 Oct)
+	UI.fit(_top_labels["hp"], top_hp_forms(sim.hp_shown(), sim.max_hp_shown(), sim.guard()))     # Guard (12 Oct); shortened, never clipped (25 Oct, the review)
 	var split: Dictionary = sim.damage_split()
-	_top_labels["dps"].text = "%.0f dmg/s" % float(split["total"])     # one figure, the hits and the dots' burn together (16 Oct, item 14)
+	UI.fit(_top_labels["dps"], top_dps_forms(float(split["total"])))     # one figure, the hits and the dots' burn together (16 Oct, item 14)
 	for c in [_top_glyphs["dps"], _top_labels["dps"]]:
 		c.tooltip_text = sim.split_words(split)
 		c.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1175,6 +1176,16 @@ static func _by_sentence(line: String) -> Array:
 
 
 ## "XP 1,234 / 2,345": into this level, of what the next takes; at the cap, into the crew's next paragon level (21 Oct).
+## The top bar's figures long to short (25 Oct, the review: "256613 d..."): the last always fits.
+static func top_dps_forms(d: float) -> Array:
+	return ["%s dmg/s" % Fmt.group(int(round(d))), "%s dmg/s" % Fmt.short_num(d), Fmt.short_num(d)]
+
+
+static func top_hp_forms(h: float, top: float, guard_v: float) -> Array:
+	var g: String = (" +%s" % Fmt.short_num(guard_v)) if guard_v >= 0.5 else ""
+	return ["%s / %s%s" % [Fmt.group(int(h)), Fmt.group(int(top)), g], "%s / %s%s" % [Fmt.short_num(h), Fmt.short_num(top), g], "%s / %s" % [Fmt.short_num(h), Fmt.short_num(top)]]
+
+
 func _xp_words() -> String:
 	if sim.level() >= Data.MAX_LEVEL:
 		var pg: Array = sim.paragon_progress()
@@ -1272,13 +1283,11 @@ func _rail_status(nm: String) -> Dictionary:
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
-			var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()     # every pool (23 Oct, the key)
-			for el in Data.TYPES:
-				free += maxi(0, sim.element_free(el))     # the elements' own points (slice 3)
+			var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()     # the pools a press spends (25 Oct, the review: the elements' meters kept it lit for good; their points are the key's)
 			return {"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}
 		MEDIC:
-			var full: bool = sim.hp >= sim.max_hp() - 0.5
-			return {"badge": "" if full or sim.on_mission() else "Hurt", "badge_tone": "warn"}
+			var fine: bool = sim.hp >= sim.max_hp() * MEDIC_HURT_UNDER and sim.wounds.is_empty()     # hurt under 90% or wounded (25 Oct, the review: "Hurt" at 1087 of 1088)
+			return {"badge": "" if fine or sim.on_mission() else "Hurt", "badge_tone": "warn"}
 		MARKET:
 			# the contracts were easy to miss as a tab: the rail says when one's ready (they pay currency only, 9 Oct)
 			var is_ready := 0

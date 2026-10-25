@@ -345,7 +345,7 @@ func _build_panel() -> void:
 
 
 const EFFECT_WORDS := {
-	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity", "search_pct": "Search %d%% faster",
+	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity", "search_pct": "Search %d%% quicker",
 	"first_pct": "+%d%% damage to each gang's first", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
 	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d in the rig", "rest_pct": "Rest +%d%%", "treat_pct": "Clinic prices −%d%%",
 	"att_share": "+%d%% from gun parts", "sell_pct": "Fence pays +%d%%", "cash_pct": "Tins +%d%%", "rarity": "+%d%% loot quality",
@@ -1012,8 +1012,9 @@ func _show_panel() -> void:
 		_respec.text = "Reset the ring for %s" % Fmt.money(sim.paragon_reset_cost())
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
 	else:
-		_respec.text = "Reset trees for %s" % Fmt.money(sim.respec_cost())
+		_respec.text = (Words.BUILD["reset_sure"] % Fmt.money(sim.respec_cost())) if respec_armed else "Reset trees for %s" % Fmt.money(sim.respec_cost())
 		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
+	UI.style_button(_respec, false, "bad" if respec_armed else "")
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
 	var x: float = Pal.GRID_W - PAD
 	x -= _respec.size.x
@@ -1145,10 +1146,27 @@ func _on_train() -> void:
 	show_state(sim)
 
 
+## The reset asks twice (25 Oct, the review: one press threw a whole build away): the first arms it; the second resets,
+## with the build's code copied first so it can be pasted back.
+var respec_armed := false
+
+
 func _on_respec() -> void:
 	_armed = ""
-	if (sim.paragon_reset() if selected != "" and sim.is_ring(selected) else sim.respec()):
+	if not respec_armed:
+		respec_armed = true
+		_shown = ""
+		show_state(sim)
+		return
+	respec_armed = false
+	var ring_one: bool = selected != "" and sim.is_ring(selected)
+	if not ring_one:
+		DisplayServer.clipboard_set(sim.build_code())
+	if (sim.paragon_reset() if ring_one else sim.respec()):
+		if not ring_one:
+			sim.log_event(Words.BUILD["reset_copied"])
 		acted.emit()
+	_shown = ""
 	show_state(sim)
 
 
@@ -1246,6 +1264,8 @@ func _retrain_build() -> void:
 
 ## Leaving the room drops a pasted code's plan.
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
+		respec_armed = false                 # out of the room, the reset's arm goes
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and code_panel != null and code_panel.visible:
 		pending_build = {}
 		code_panel.visible = false

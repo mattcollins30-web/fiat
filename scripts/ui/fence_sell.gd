@@ -8,6 +8,7 @@ extends Control
 signal acted
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const Words := preload("res://scripts/sim/words.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -88,7 +89,7 @@ func worn_types() -> Array:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%d|%s|%s|%s" % [int(sim.cash), str(sim.stash.map(func(it): return int(it["id"]))), str(worn_types()), str(sim.yard_has("racks"))]
+	var sig := "%d|%d|%s|%s|%s" % [_armed, int(sim.cash), str(sim.stash.map(func(it): return int(it["id"]))), str(worn_types()), str(sim.yard_has("racks"))]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -106,11 +107,15 @@ func show_state(s) -> void:
 		else:
 			words = ["none spare"]
 		if kept > 0:
-			UI.fit(row["count"], ["%s · %d an upgrade, kept" % [words[0], kept], "%s · %d kept" % [words[0], kept], words[0]])
+			UI.fit(row["count"], ["%s · %d kept" % [words[0], kept], words[0]])     # upgrades, uniques, sets, kit pieces, a rule's keep (25 Oct)
 		else:
 			row["count"].text = words[0]
 		UI.fit(row["worth"], [Fmt.group(int(spare[1])), Fmt.short_num(int(spare[1]))] if n > 0 else ["–"])
 		row["sell"].disabled = n == 0
+		if _armed == r and n == 0:
+			_armed = -1
+		row["sell"].text = Words.FENCE_SURE if _armed == r else "Sell"
+		UI.style_button(row["sell"], false, "bad" if _armed == r else "")
 	# the boxes: your guns' first, lit; then the others in a fixed order; the rest named under them
 	var worn: Array = worn_types()
 	var order: Array = worn.duplicate()
@@ -150,7 +155,17 @@ func _both(ty: String) -> bool:
 	return n > 1
 
 
+## A row's Sell asks twice (25 Oct, the review: one press sold a rarity's worth): the first arms it, the second sells.
+var _armed := -1
+
+
 func _sell(r: int) -> void:
+	if _armed != r:
+		_armed = r
+		_shown = ""
+		show_state(sim)
+		return
+	_armed = -1
 	if sim != null and sim.sell_rarity(r) > 0:
 		_shown = ""
 		acted.emit()

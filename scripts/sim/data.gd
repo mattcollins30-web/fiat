@@ -820,7 +820,7 @@ const UNIQUES := [
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
 	# in the game and the Barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
 	{"name": "The Council's Weed Burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "band": "core", "range": [4, 9], "depth": 6,
-		"words": "All damage is fire and hits everyone on you; uses no rounds", "short": "All fire, hits all on you", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
+		"words": "All damage is fire and hits everyone on you", "short": "All fire, hits all on you", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
 	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "33% of damage becomes shock; shock hits everyone on you", "short": "33% as shock, hits all", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
 	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [4, 9], "depth": 6,
@@ -1173,6 +1173,9 @@ const FX := {
 	"node/bodyline": 0.5,     # Bodyline: With three on you, you take half the damage
 	"node/cap_bleed_out": 1.5,     # Bleed out (capstone): bleed builds half again
 	"node/cap_flattened": 2.0,     # Flattened: A kill with the plain staggers the next gang: they fire at half for two seconds
+	"node/cap_flattened.cut": 0.5,     # and by how much: the next of them at half (25 Oct: one man's share, not the gang's)
+	"rule/arsonists_rig.blast": 80.0,     # the Arsonist's Rig's blast, grown with the fight as a grenade's (25 Oct, the review)
+	"node/fire_pct.notable_s": 2.0,     # Lit, Dosed, Opened up: their dot lasts twice as long - fire, poison and bleed alike; named under fire_pct for the table's check (25 Oct, the review)
 	"node/cap_held": 0.1,     # Held: No second of their fire takes more than a tenth of you
 	"node/cap_iron": 0.1,     # Iron: Under half HP, every kill heals a tenth of you
 	"node/cap_jerry": 1.5,     # Jerry-rigged: Something improvised hits half again as hard
@@ -1492,11 +1495,11 @@ const CONVOY_DPS := 0.85          # 0.75 to 1.0 to 0.85 (12 Oct, with CONVOY_HP)
 const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, the moves in 16 h fell from 9-20 to 1-9 - the ×1.25 outran a depth's ×1.14 and each leg came easier than the last); the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
 ## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
 const PARAGON_BOARD := [
-	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point"},
-	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point"},
+	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point, each on the last"},
+	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point, each on the last"},
 	{"key": "resists", "name": "Resists", "pct": 1.0, "words": "+1% to every resist a point, to the cap"},
 	{"key": "find", "name": "Find", "pct": 3.0, "words": "+3% loot quality a point"},
-	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point"},
+	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point, each on the last"},
 ]
 
 
@@ -2403,7 +2406,13 @@ const CRAFT := {
 	"socket": {"name": "Cut a socket", "cash": 80, "words": "Adds a socket, up to %d"},
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Removes every affix; it becomes Common, worth less"},
 	"bump": {"name": "Raise the item's level", "notes": 10, "words": "+3 item levels, so the lowest affix tiers stop rolling; up to item level base tier + 20"},
+	# 25 Oct (the review, Matt's go: the endgame stall): past the raise, a level at a time, on any piece but a mythic -
+	# the base's damage and armour grow with it; scrap dearer a level (TEMPER_GROW), and tins by item level
+	"temper": {"name": "Temper", "scrap": 20, "cash": 150, "words": "+1 item level past the raise: its damage and armour grow 5%; any piece but a mythic"},
 }
+const GREED_QUALITY := 0.10          # greed after the clear (25 Oct): loot quality a gang that comes after it, for the rest of the run
+const GREED_QUANTITY := 0.05         # and quantity
+const TEMPER_GROW := 1.10             # a temper's scrap, this much dearer each level past the raise: the climb's pace is its price
 const LOCK_PRICE := 1.0               # a padlock adds this share of a re-roll's price (20 Oct)
 const LOCKS := 1                      # padlocks at the Bench; the Pitch's Two locks adds one (Matt: "2 locks with one as an upgrade")
 const BUMP_LEVELS := 3
@@ -3325,7 +3334,7 @@ static func pinnacle(key: String) -> Dictionary:
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.
 ## Over-levelled (D9, 15 Oct, Matt; the D8 read: a level-50 Scrapper farmed the Bank at depth 1 in three-second runs at full
 ## pay): past OVER_LEVEL_FREE site levels under you a site pays OVER_LEVEL_STEP less XP and tins a level, to OVER_LEVEL_FLOOR.
-const OVER_LEVEL_FREE := 5.0
+const OVER_LEVEL_FREE := 3.0     # 5 to 3 (25 Oct, Matt: the campaign's levels track its gear; the bot was 4-8 over each site's)
 const OVER_LEVEL_STEP := 0.15
 const OVER_LEVEL_FLOOR := 0.1
 ## The level to wear an item level: WEAR_PER_ILVL x it - WEAR_OFFSET, at least 1 (19 Oct, Matt's playtest: at x2.5 - 1.5 he

@@ -442,6 +442,15 @@ static func _scaled(affixes: Array, ilvl_v: int) -> Array:
 	return out
 
 
+## What a piece is worth (25 Oct, the review: value never grew with item level, so the Fence, scrap and insurance went
+## flat while income grew): its value grown as its base's damage and armour are, past ILVL_GROW_FROM. Gear only.
+static func worth(it: Dictionary) -> float:
+	var v: float = float(it.get("value", 0))
+	if str(it.get("slot", "")) in Data.SLOTS:
+		v *= grow(ilvl(it))
+	return v
+
+
 static func ilvl(it: Dictionary) -> int:
 	return int(it.get("ilvl", it["tier"]))
 
@@ -806,7 +815,7 @@ static func is_melee(it: Dictionary) -> bool:
 ## A gun that never spends a round: the Council's Weed Burner, the Spare Key (18 Oct, Matt on Q5: its own thing, not
 ## Double tap's again).
 static func free_rounds(gun: Dictionary) -> bool:
-	return str(gun.get("rule", "")) in ["weed_burner", "spare_key"]
+	return str(gun.get("rule", "")) in ["spare_key"]     # the Weed Burner takes shells now (25 Oct, the review: no rounds and all fire and a spread was three rules)
 
 
 ## What a gun takes, by the standard box of its type: "Takes shells"; a bat, nothing.
@@ -996,7 +1005,7 @@ static func headline(it: Dictionary) -> Array:
 	if it["slot"] == Data.GRENADE:
 		return ["%.0f" % b["damage"], "%s to everyone on you" % b["type"]]
 	if b.has("damage"):
-		return ["%.0f" % dps(it), "damage/s"]
+		return ["%.0f" % dps(it), "dmg/s"]     # the style guide's form (25 Oct, the review)
 	if b.has("armour"):
 		return ["%.0f" % armour(it), "armour"]
 	if b.has("heal"):

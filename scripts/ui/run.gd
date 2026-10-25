@@ -292,6 +292,9 @@ func _skill_shift(on: bool) -> void:
 		_bar_place(_runner, Rect2(PAD, OVER_Y - lift, OVER_W, BAR_H))
 	_runner["key"].position.y = FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H - lift
 	_runner["chips"].position.y = FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H - lift
+	# lifted, the row runs beside the skills' buttons: it stops short of them, the rest drop (25 Oct: greed pushed a med's
+	# chip under 'Auto')
+	_runner["chips"].size.x = (VIEW_X + BOX_PAD + OVER_W + 20.0 - 8.0 - _runner["chips"].position.x) if on else float(INNER - KEY_W)
 
 
 ## The longest a skill holds the man in front (Collared's, Net every hole's), seconds; 0 when none does.
@@ -469,15 +472,17 @@ func show_state(s) -> void:
 		if float(m.get("my_dots", {}).get(ty, 0.0)) > 0.5:
 			on_you.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
 	for chip in sim.order_chips(true):
-		on_you.push_front(chip)                  # the Registrar's: red tape and a skill stamped are on the runner (the language pass)
+		on_you.push_front(chip)
 	if m["using"] != null:
 		on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
+	if sim.greed_gangs() > 0:
+		on_you.append([Words.GREED["short"] % roundi(sim.greed_quality() * 100.0), Pal.GOOD])     # staying pays (25 Oct): the short form, last, so a med in use is the chip kept when the row is short
 	var med_sig: String = ("using" if m["using"] != null else ("none" if sim.first_med().is_empty() else "use:" + sim.first_med()["base"]))
 	_runner["key"].visible = not on_you.is_empty()
 	_runner["chips"].visible = not on_you.is_empty()
 	_runner["note"].visible = false
 	if not on_you.is_empty():
-		_runner["chips"].show_chips(on_you)
+		_runner["chips"].show_chips(on_you, 1, true)     # short of room beside the skills, every chip its short form first (25 Oct)
 	# the take
 	UI.fit(_take_strip["tins"], Fmt.money_forms(m["cash"]))
 	var used_p: int = sim.pack_used(m)
@@ -732,8 +737,8 @@ func _build_six() -> void:
 func fire_forms(base: float) -> Array:
 	var p: float = sim.pace()
 	if absf(p - 1.0) < 0.005:
-		return ["%.0f/s" % base]
-	return ["%.0f/s ×%.2f" % [base, p], "%.0f/s" % base]
+		return ["%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base)]
+	return ["%s/s ×%.2f" % [Fmt.group(int(round(base))), p], "%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base)]     # never a digit cut (25 Oct, the review: 256,613 read 25661)
 
 
 ## The six's figures (17 Oct): the forms long to short, and the tone - red where it wants you to act (their fire

@@ -61,10 +61,10 @@ const JOB_H := 104                 # a job tile
 const JOB_GAP := 8
 @warning_ignore("integer_division")
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
-const JOBS := ["add", "socket", "strip", "bump", "scrap"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct)
-const JOB_NAMES := {"bump": "Item level +3", "scrap": "Scrap it", "strip": "Strip affixes"}
+const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct)
+const JOB_NAMES := {"bump": "Item level +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip affixes"}
 const JOB_WORDS := {"add": "One more affix, the rarity a step up", "socket": "Adds a socket, up to %d", "strip": "Every affix gone; it goes Common",
-	"bump": "The lowest affix tiers stop rolling", "scrap": "Broken down for scrap; gone for good"}
+	"bump": "The lowest affix tiers stop rolling", "temper": "Past the raise: damage and armour +5%", "scrap": "Broken down for scrap; gone for good"}
 const RE_ROLLS := ["values", "affixes"]
 const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
@@ -1042,7 +1042,10 @@ func _show_craft(it: Dictionary) -> void:
 		var can: bool = false
 		if cost >= 0:
 			can = on_bench and (true if kind == "scrap" else sim.can_craft(it["id"], kind))
-			t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
+			if kind == "temper":
+				UI.fit(t["price"], [Words.TEMPER["price"] % [Fmt.group(sim.temper_scrap(it)), Fmt.money(cost)], Words.TEMPER["price"] % [Fmt.short_num(sim.temper_scrap(it)), Fmt.money_k(cost)]])
+			else:
+				t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
 			_job_actions[k] = _do_craft.bind(it["id"], kind, "")          # scrap too: main runs it, toasts it
 		else:
 			t["price"].text = ""
