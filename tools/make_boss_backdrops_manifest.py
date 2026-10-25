@@ -39,6 +39,7 @@ PLATE_W, PLATE_H = kit.PLATE_W, kit.PLATE_H     # 744x320
 WALL_W, WALL_H = 744, 256                       # make_fight_walls_manifest.py's tall walls
 SEED0 = 105000      # clear of every other manifest's seeds (fight kit 97xxx, web 98xxx, walls 101xxx, generator 102xxx, skills 103xxx, chase 104xxx)
 OUT_DIR = "art/fight_boss"
+REROLL = {"The Quartermaster": 2000, "The Registrar": 2000}    # 25 Oct: covers came back inset twice (margin at the sides and bottom)
 OWN = ("pixellab_boss_backdrops_manifest.json", "pixellab_boss_backdrops_test_manifest.json")
 SITE_KEYS = [k for k, _s, _c in kit.SITES]      # by data.gd's site index (the kit's SITES are in the same order)
 
@@ -57,14 +58,15 @@ HEADS = [
     ("The Manager", "the_bank",
      "into the branch manager's office behind the bank's banking hall: a heavy wooden desk and a leather chair, filing "
      "cabinets with their drawers pulled out, the round steel vault door standing open on the left onto the dark, "
-     "safe-deposit boxes along the wall with their little doors hanging, loose banknotes and paper over the carpet, a "
-     "frosted glass partition, the blinds half down",
+     "safe-deposit boxes along the wall with their little doors hanging, loose banknotes and paper over the carpet, "
+     "the notes plain and blank with no faces or numbers on them, a frosted glass partition, the blinds half down",
      "the front of a heavy wooden manager's desk, its panels scuffed, a brass desk lamp and a wire tray of paper on its edge"),
     ("The Quartermaster", "the_barracks",
      "into the quartermaster's stores at an army barracks: a long brick storeroom, steel shelving of folded kit and "
      "boxed rations in olive drab, a mesh armoury cage with its gate open on the left onto the dark, empty rifle racks, "
      "plain unmarked ammunition boxes stacked on pallets, an issue counter with a hatch, one strip light hanging",
-     "a stack of olive steel ammunition boxes on a pallet, no markings on them, a coil of webbing over the top"),
+     "a stack of olive steel ammunition boxes on a pallet, no markings on them, a coil of webbing over the top, "
+     "running off the frame, cut off by its left, right and bottom edges"),
 ]
 # The true pinnacles: their den, their wall; who, where and the site they're fought on come from data.gd PINNACLES.
 PINNACLE_WORDS = {
@@ -75,7 +77,8 @@ PINNACLE_WORDS = {
     "archive": ("down the stacks of a records archive: tall steel shelving packed with bound ledgers and box files, "
                 "their spines blank, a rolling library ladder, a reading table with a green-shaded lamp, papers drifted "
                 "across the floor, a card-index cabinet, a dark aisle opening on the left, high windows grey with dust",
-                "a heaped barricade of bound ledgers and box files on a toppled book trolley, their spines blank"),
+                "a heaped barricade of bound ledgers and box files on a toppled book trolley, their spines blank, "
+                "running off the frame, cut off by its left, right and bottom edges"),
     "mint": ("across the floor of a mint: heavy printing presses in a row, sheets of uncut banknotes on drying racks, "
              "bundles of notes stacked on pallets and wrapped in film, a guillotine, ink drums, a caged dispatch door "
              "open on the left onto the dark, factory roof lights grey overhead; the notes plain grey-green, no faces "
@@ -121,11 +124,12 @@ def plate_job(boss, site, scene, seed, card=None):
 def wall_job(boss, site, cover, seed):
     cover = cover.replace("a low ", "a ")    # "low" fights "tall, filling the lower 85%" (make_fight_walls_manifest.py)
     return {"out": "%s/%s_cover.png" % (OUT_DIR, slug(boss)), "width": WALL_W, "height": WALL_H, "no_background": True,
-            "seed": seed, "endpoint": "generate-image-v2", "single": True, "style_options": kit.STYLE,
+            "seed": seed + REROLL.get(boss, 0), "endpoint": "generate-image-v2", "single": True, "style_options": kit.STYLE,
             "style_image": "res://art/fight_walls/%s_cover.png" % site,
             "description": ("Seen very close from behind, running unbroken across the whole width of the frame: " + cover +
                             ", as the cover a player crouches behind in a light-gun arcade game. One single continuous piece "
-                            "edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% "
+                            "edge to edge, no repeated sections, no seams, no tiles. It touches the left, right and bottom "
+                            "edges of the image: no margin or border on any side. The cover is tall and fills the lower 85% "
                             "of the image as one solid face, running all the way down to the bottom edge of the image with no "
                             "gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only "
                             "its uneven top edge sits above that, nothing above or behind it. Everything on it plain and "
