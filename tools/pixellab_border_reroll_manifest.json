@@ -1,0 +1,97 @@
+{
+ "_readme": [
+  "The fight art with a border, rerolled (25 Oct): tools/make_border_reroll_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_new/ransacked_streets_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 108000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_parade_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a ransacked terraced street: front doors kicked in, a sofa in the road, a car on its roof, washing still on a line between houses, a ginnel between two terraces. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos. The picture fills the whole frame to every edge: no border, no margin, no frame, no letterbox bands at the top, bottom or sides.",
+   "_where": "the border reroll (25 Oct): from tools/pixellab_fight_kit_manifest.json"
+  },
+  {
+   "out": "art/fight_new/the_bank_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 108001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/shopping_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a high-street bank's banking hall: teller windows with their glass starred, a queue rope fallen, loose paper on the floor, a plain staff door open onto the dark, the vault corridor beyond. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos. The picture fills the whole frame to every edge: no border, no margin, no frame, no letterbox bands at the top, bottom or sides.",
+   "_where": "the border reroll (25 Oct): from tools/pixellab_fight_kit_manifest.json"
+  },
+  {
+   "out": "art/fight_walls/shopping_centre_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 109002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_pleasure_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of upturned mall benches and a broken planter edge, running off the frame, cut off by its left, right and bottom edges, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos. Running off the frame, cut off by its left, right and bottom edges: it touches the left, right and bottom edges of the image, no margin or border on any side.",
+   "_where": "the border reroll (25 Oct): from tools/pixellab_fight_walls_manifest.json"
+  },
+  {
+   "out": "art/fight_walls/the_allotments_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 108003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/top_farm_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a raised vegetable bed built of old railway sleepers, weeds and a broken cane over the top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos. Running off the frame, cut off by its left, right and bottom edges: it touches the left, right and bottom edges of the image, no margin or border on any side.",
+   "_where": "the border reroll (25 Oct): from tools/pixellab_fight_walls_manifest.json"
+  },
+  {
+   "out": "art/fight_boss/the_registrar_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 108004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a heaped barricade of bound ledgers and box files on a toppled book trolley, their spines blank, running off the frame, cut off by its left, right and bottom edges, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. It touches the left, right and bottom edges of the image: no margin or border on any side. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos. Running off the frame, cut off by its left, right and bottom edges: it touches the left, right and bottom edges of the image, no margin or border on any side.",
+   "_where": "the border reroll (25 Oct): from tools/pixellab_boss_backdrops_manifest.json"
+  }
+ ]
+}
