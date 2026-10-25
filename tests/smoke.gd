@@ -1583,10 +1583,10 @@ func _narrative_checks(main) -> void:
 	_check(fv._band.title.text == "" and fv._band.unit.text.contains("tin") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
 	_check(fv._said[0].text != "" and fv._side.position.y + fv._said[0].position.y >= fv.BAND_H, "the Fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._side.position.y + fv._said[0].position.y])
 	var ftab_x := 0.0
-	for t in fv._tabs:
+	for t in fv._tabs.filter(func(x): return x.visible):     # the Issuer's tab only after the Issue (25 Oct)
 		_check(t.position.x >= fv._band.kicker.position.x + Pal.BAND_TEXT_W and t.position.x + t.size.x <= Pal.GRID_W - fv.PAD + 0.5 and t.position.x >= ftab_x, "a fence tab is not at the band's foot, right, in order: %s" % str(Rect2(t.position, t.size)))
 		ftab_x = t.position.x + t.size.x
-	for t in fv._tabs:
+	for t in fv._tabs.slice(0, 4):
 		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
 	# Fence A (19 Oct): a row a rarity, then the boxes; no old tiles
 	_check(fv._sell.visible and fv._sell.row_of(0)["name"].text == "Common" and fv._sell.row_of(Data.RARITIES.size() - 1)["name"].text == str(Data.RARITIES[Data.RARITIES.size() - 1]["name"]) and not fv._side_tiles.any(func(t): return t["button"].visible), "the Fence's rarity rows are off: %s" % str(range(Data.RARITIES.size()).map(func(r): return fv._sell.row_of(r)["name"].text)))
@@ -4690,6 +4690,7 @@ func _pinnacle_checks(main) -> void:
 	_collection_checks(main)
 	_loadout_checks(main)
 	_review_fix_checks(main)
+	_issue_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -9171,7 +9172,7 @@ func _fx_checks() -> void:
 		for nd in t["nodes"]:
 			if nd.has("effect"):
 				have["node"][str(nd["effect"])] = true
-	for u in Data.UNIQUES:
+	for u in Data.UNIQUES + Data.ISSUED:
 		if u.has("rule"):
 			have["rule"][str(u["rule"])] = true
 	for st in Data.SETS:
@@ -16813,7 +16814,7 @@ func _rebuild_checks(main) -> void:
 	_check(s.rebuild_place("mint") and int(s.key_items.get("grid_key", 0)) == 0 and s.mint_tins() > 0.0 and s.order_open("mint"), "the mint: %s, %.1f tins" % [s.rebuild_block("mint"), s.mint_tins()])
 	var tins: float = s.mint_tins()
 	s.key_items["fiat_note"] = 1
-	_check(is_equal_approx(s.mint_tins(), tins * 2.0), "the FIAT note did not double the mint")
+	_check(is_equal_approx(s.mint_tins(), tins), "the FIAT note still doubles the mint: the Issue is its job now (25 Oct)")
 	for k in ["substation", "pumping", "bus_depot", "library", "market_hall", "mint"]:
 		_check(not s.rebuild_words(k, 1).is_empty(), "%s has no words" % k)
 	# materials: a head's handful and the run's roll home, death included
@@ -19762,3 +19763,83 @@ func _skill_hit_expected(sim, m: Dictionary, mult: float, ty := "physical") -> f
 	r_ty *= 1.0 - sim._skill_pat(m)
 	var shock: float = (1.0 + sim.shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0
 	return sim._skill_base() * mult * (1.0 - r_ty) * shock
+
+
+## The Issue (25 Oct, docs/design/the_issue.md): the switch to fiat, hard on piles; prices by the circulation; the rate;
+## the burn; issued kit; the card and the Issuer's counter.
+func _issue_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	sim.issued = false
+	sim.elapsed = 30.0 * 3600.0
+	sim.cash = 48213906.0
+	sim._notes = 1240
+	var inf0: float = sim.inflation()
+	var pile: float = 48213906.0 + 1240.0 * Data.NOTE_TINS * inf0
+	sim.issue()
+	_check(sim.issued and absf(sim.cash - Data.FIAT_PILE_K * sqrt(pile)) < 1.0 and sim._notes == 0, "the Issue: ƒ%.0f from a pile of %.0f (want ƒ%.0f), notes %d" % [sim.cash, pile, Data.FIAT_PILE_K * sqrt(pile), sim._notes])
+	_check(is_equal_approx(sim.inflation(), inf0 * Data.FIAT_SCALE), "fiat prices don't start from the Issue's: ×%.6f against ×%.6f" % [sim.inflation(), inf0 * Data.FIAT_SCALE])
+	var big: float = Data.FIAT_PILE_K * sqrt(pile * 10.0)
+	_check(big < sim.cash * 3.5, "a pile ten times bigger isn't hard on it: ƒ%.0f against ƒ%.0f" % [big, sim.cash])
+	# prices follow the money
+	var m0: float = sim.circ_mult()
+	sim._earn(Data.FIAT_CIRC_SPAN * 0.5)
+	_check(is_equal_approx(sim.circ_mult(), m0 + 0.5) and sim.inflation_pct() == 50, "the circulation's prices: ×%.2f, %d%%" % [sim.circ_mult(), sim.inflation_pct()])
+	# a note reads as fiat: the crews' prices keep working
+	var c0: float = sim.cash
+	sim.notes -= 10
+	_check(absf((c0 - sim.cash) - 10.0 * sim.note_price()) < 0.01, "ten notes after the Issue took ƒ%.2f, not ƒ%.2f" % [c0 - sim.cash, 10.0 * sim.note_price()])
+	# the rate: a sale down, time back; a burn up and the circulation down
+	sim.fiat_rate = 1.0
+	sim._rate_after_sale(sim._rate_unit() * 5.0)
+	_check(is_equal_approx(sim.fiat_rate, 1.0 - 5.0 * Data.RATE_SALE_STEP), "a sale didn't move the rate: %.3f" % sim.fiat_rate)
+	var r0: float = sim.fiat_rate
+	sim.advance(3600.0)
+	_check(sim.fiat_rate > r0, "the rate didn't drift back: %.3f" % sim.fiat_rate)
+	sim.cash = 1e9
+	var circ0: float = sim.circulation
+	var rb: float = sim.fiat_rate
+	_check(sim.burn() and sim.circulation < circ0 and sim.fiat_rate > rb, "a burn: circulation %.0f from %.0f, the rate %.3f from %.3f" % [sim.circulation, circ0, sim.fiat_rate, rb])
+	# issued kit: a piece a slot, numbered, kept on a death
+	for u in Data.ISSUED:
+		var sl: String = str(u["slot"])
+		var before: int = sim.stash.size()
+		var shown: Dictionary = sim.issued_piece(sl)
+		_check(sim.buy_issued(sl) and sim.stash.size() == before + 1, "the Issuer didn't sell the %s: '%s'" % [sl, sim.issued_block(sl)])
+		var it: Dictionary = sim.stash.back()
+		_check(it.get("issued", false) and Items.full_name(it).contains("No.") and str(it["rule"]) == str(u["rule"]) and Items.ilvl(it) == Items.ilvl(shown), "the %s came without its stamp, rule or level: %s" % [sl, Items.full_name(it)])
+		_check(not load("res://scripts/ui/item_head.gd").unique_rule(it).is_empty(), "the %s's rule has no words" % sl)
+	# the money on screen: ƒ
+	main.refresh()
+	_check(Fmt.money(1234.0) == "ƒ1,234" and Fmt.notes(10).begins_with("ƒ"), "fiat on screen reads '%s', notes '%s'" % [Fmt.money(1234.0), Fmt.notes(10)])
+	# the card, once, then the Fence; the counter's tab
+	sim.met = sim.met.filter(func(x): return x != "issue")
+	main.show_issue_card()
+	_check(main._room_card != null and main._room_card.key == "issue", "the Issue's card didn't come up")
+	if main._room_card != null:
+		for l in main._room_card._lines:
+			_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "the Issue's card line runs off: '%s'" % l.text)
+		_check_fit(main, "the Issue's card")
+		main._room_card.finish()
+	_check("issue" in sim.met and main.room == main.MARKET, "after the Issue's card: met %s, the room %s" % ["issue" in sim.met, main.room])
+	main._fence._show("issuer")
+	main.refresh()
+	var ic = main._fence._issuer
+	_check(ic != null and ic.visible and main._fence._tabs[4].visible, "the Issuer's counter isn't up after the Issue")
+	var tx := 0.0
+	for t in main._fence._tabs:
+		_check(t.visible and t.position.x >= main._fence._band.kicker.position.x + Pal.BAND_TEXT_W and t.position.x + t.size.x <= Pal.GRID_W - main._fence.PAD + 0.5 and t.position.x >= tx, "five fence tabs don't sit in the band's foot, in order: %s" % str(Rect2(t.position, t.size)))
+		tx = t.position.x + t.size.x
+	if ic != null:
+		for l in ic.labels():
+			_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "the counter's words run off: '%s'" % l.text)
+		_check_fit(main, "the Issuer's counter")
+	main._fence._show("shelf")
+	sim.load_dict(hold)
+	main.refresh()
+	_check(not Fmt.fiat, "the money still reads fiat on a camp before the Issue")
+	_check(not sim.issued and not main._fence._tabs[4].visible, "the counter's tab stayed up on a camp before the Issue")
+	print("the Issue ok: hard on piles, prices by the circulation, notes as fiat, the rate, the burn, six issued pieces, the card, the counter")
+

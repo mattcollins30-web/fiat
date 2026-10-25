@@ -93,7 +93,25 @@ var met: Array = []                # the rooms whose first-visit card has been s
 var deeds_fate := ""               # what became of the deeds: burned, sold, held ("ending" in a save from before 15 Oct)
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
-var notes := 0                     # the old paper money: the crews still take it
+var _notes := 0                    # the old paper money: the crews still take it
+## The notes (25 Oct, the Issue: docs/design/the_issue.md): before the Issue a count of their own; after it the crews take
+## fiat, so a note reads as its fiat (note_price()) out of the cash - every "notes" price and pay keeps working.
+var notes: int:
+	get:
+		return int(floor(cash / note_price())) if issued else _notes
+	set(v):
+		if issued:
+			cash += float(v - (int(floor(cash / note_price())))) * note_price()     # not into circulation: a note reads back as paid (the reviewer)
+		else:
+			_notes = v
+## The Issue (25 Oct, Matt: "all currency then changes to fiat from that point forward"): one way, at the first Issuer
+## win. Tins and notes converted once, hard on piles; prices after it follow the fiat in circulation, not the clock.
+var issued := false
+var fiat_issue_inf := 1.0               # the clock's prices on the day of the Issue: fiat prices start from them
+var circulation := 0.0                 # fiat paid out since the Issue, less what's been burnt
+var fiat_rate := 1.0                   # the Issuer's rate: the Fence buys at it
+var issued_serial := 0                 # issued kit's numbers so far
+var issue_moment := {}                 # the Issue's figures for its card: {pile, notes, fiat}; met as "issue"
 var scrap := 0                     # the Bench's material (34): found, stripped, ditched for
 var takings := 0.0                 # what the Yard takes a run, averaged over the last few: the run's cash and the Fence's money (the pass, 6 Oct)
 var gamble_base := 0.0             # the gamble's own: the takings, but a run moves it GAMBLE_STEP at most (13 Oct, Matt: 305 to 2366 off one sale)
@@ -1050,7 +1068,7 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(Items.worth(it) * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
+	return int(round(Items.worth(it) * inflation() * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -1065,13 +1083,105 @@ func hp_shown() -> int:
 ## Money that goes off: what a pound of the opening day's price costs now.
 ## Every cash price and every cash income runs through it; the notes don't.
 func inflation() -> float:
+	if issued:
+		return fiat_issue_inf * Data.FIAT_SCALE * circ_mult()     # after the Issue: fiat, by the money about (the Issue)
 	var h: float = maxf(0.0, elapsed / 3600.0 - Data.INFLATION_GRACE_H)
 	return minf(Data.INFLATION_CAP, 1.0 + Data.INFLATION_RATE * h)
 
 
-## The rise, in percent, for the screens: "Prices up 42%".
+## After the Issue: prices by the fiat in circulation - the more about, the more it all costs.
+## The rate the Fence buys at after the Issue: the Issuer's, never under 1.0 with the issued cap worn.
+func fence_rate() -> float:
+	return maxf(fiat_rate, 1.0) if has_rule("issued_cap") else fiat_rate
+
+
+func circ_mult() -> float:
+	return minf(Data.FIAT_CIRC_CAP, 1.0 + maxf(0.0, circulation) / Data.FIAT_CIRC_SPAN)
+
+
+## The rise, in percent, for the screens: "Prices up 42%" (after the Issue, by the circulation's).
 func inflation_pct() -> int:
+	if issued:
+		return int(round((circ_mult() - 1.0) * 100.0))
 	return int(round((inflation() - 1.0) * 100.0))
+
+
+## A sum of the old day's tins as it stands now: as it is before the Issue, at the new money's after (Bung's, the bot's floors).
+func tins_now(x: float) -> float:
+	return x * Data.FIAT_SCALE * fiat_issue_inf if issued else x
+
+
+## A note's worth in fiat after the Issue (the crews' prices and pays read through it).
+func note_price() -> float:
+	return maxf(0.0001, Data.NOTE_TINS * inflation())
+
+
+## The Issue: the first Issuer win. Every tin and note held, converted once, hard on piles; tins and notes gone for good.
+func issue() -> void:
+	if issued:
+		return
+	var pile: float = maxf(0.0, cash) + float(_notes) * Data.NOTE_TINS * inflation()
+	fiat_issue_inf = inflation()
+	if mission != null:
+		mission["cash"] = float(mission.get("cash", 0.0)) * Data.FIAT_SCALE     # the run it happens on: its tins come home as fiat too (the reviewer)
+	takings *= Data.FIAT_SCALE                 # the averages prices are taken off, at the new money's (the reviewer)
+	gamble_base *= Data.FIAT_SCALE
+	_takings_run *= Data.FIAT_SCALE
+	var fiat: float = Data.FIAT_PILE_K * sqrt(pile)
+	issue_moment = {"pile": int(round(cash)), "notes": _notes, "fiat": int(round(fiat))}
+	_notes = 0
+	issued = true
+	cash = fiat
+	circulation = 0.0
+	fiat_rate = 1.0
+	log_event(Words.ISSUE["log"] % fiat_words(fiat))
+	chron("issue", issue_moment.duplicate())
+
+
+static func fiat_words(x: float) -> String:
+	var n := int(round(x))
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return "ƒ" + s + out
+
+
+## The Issuer's rate after a sale or a burn: a sale pushes it down, a burn up; back towards 1.0 with time.
+func _rate_unit() -> float:
+	return maxf(1.0, Data.RATE_SALE_UNIT * inflation())
+
+
+func _rate_after_sale(x: float) -> void:
+	if issued and x > 0.0:
+		fiat_rate = maxf(Data.RATE_MIN, fiat_rate - Data.RATE_SALE_STEP * x / _rate_unit())
+
+
+## Burn fiat at the Issuer's counter: out of circulation (twice the sum, the Seal four times), the rate up a little.
+func burn_price() -> int:
+	return maxi(1, _inf(Data.BURN_TINS))
+
+
+func can_burn() -> bool:
+	return issued and mission == null and cash >= float(burn_price())
+
+
+func burn() -> bool:
+	if not can_burn():
+		return false
+	var x := float(burn_price())
+	cash -= x
+	circulation = maxf(0.0, circulation - x * Data.BURN_MULT * (Data.FX["rule/issued_seal.burn"] if has_rule("issued_seal") else 1.0))
+	fiat_rate = minf(Data.RATE_MAX, fiat_rate + Data.RATE_SALE_STEP * x / _rate_unit())
+	chron("burn", {"fiat": int(x)})
+	return true
+
+
+## What a burn would bring the prices to, for its button.
+func circ_mult_after_burn() -> float:
+	var c: float = maxf(0.0, circulation - float(burn_price()) * Data.BURN_MULT * (Data.FX["rule/issued_seal.burn"] if has_rule("issued_seal") else 1.0))
+	return minf(Data.FIAT_CIRC_CAP, 1.0 + c / Data.FIAT_CIRC_SPAN)
 
 
 ## A cash price of the opening day, at today's: rounded to the pound, never below the original when it was positive.
@@ -1574,7 +1684,86 @@ func _unique_named(name: String) -> Dictionary:
 	for u in Data.UNIQUES:
 		if u["name"] == name:
 			return u
+	for u in Data.ISSUED:
+		if u["name"] == name:
+			return u                         # issued kit (25 Oct): the Issuer's, read as a unique
 	return {}
+
+
+# ------------------------------------------------------------------ issued kit (25 Oct, the Issue)
+
+func issued_def(slot: String) -> Dictionary:
+	for u in Data.ISSUED:
+		if str(u["slot"]) == slot:
+			return u
+	return {}
+
+
+## The piece the counter offers for a slot, at the reach: rolled fresh (no number till it's bought).
+func issued_piece(slot: String) -> Dictionary:
+	var u := issued_def(slot)
+	if u.is_empty():
+		return {}
+	var lv: int = maxi(1, reach) + Data.ISSUED_OVER
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([slot, lv, issued_serial])     # its own dice: what the counter shows is what's bought, and the run's dice don't move
+	var it := Items.roll_unique(u, r, lv)
+	it["ilvl"] = lv
+	it["lift"] = Data.ISSUED_LIFT
+	it["issued"] = true
+	it["affixes"] = Items._scaled(u["affixes"], lv)
+	return it
+
+
+func issued_price(slot: String) -> int:
+	var it := issued_piece(slot)
+	return -1 if it.is_empty() else maxi(1, _inf(Items.worth(it) * Data.ISSUED_PRICE))
+
+
+func issued_block(slot: String) -> String:
+	if not issued:
+		return Words.ISSUED["not_yet"]
+	if mission != null:
+		return Words.ISSUED["on_a_run"]
+	if cash < float(issued_price(slot)):
+		return Words.ISSUED["short"]
+	if not stash_room(Items.size(issued_piece(slot))):
+		return Words.ISSUED["no_room"]
+	return ""
+
+
+func buy_issued(slot: String) -> bool:
+	if issued_block(slot) != "":
+		return false
+	var paid := float(issued_price(slot))
+	var it := issued_piece(slot)
+	issued_serial += 1
+	it["serial"] = issued_serial
+	cash -= paid
+	stash.append(it)
+	_read(it)
+	chron("issued", {"slot": slot, "serial": issued_serial, "fiat": int(paid)})
+	log_event(Words.ISSUED["bought"] % [Items.full_name(it), fiat_words(paid)])
+	return true
+
+
+## Issued pieces worn (the County's zones want them).
+func issued_worn() -> int:
+	var n := 0
+	for sl in Data.SLOTS:
+		var it = equipped.get(sl)
+		if it != null and it.get("issued", false):
+			n += 1
+	return n
+
+
+## The issued plate: the order's and the County's fights hit you at a fifth less.
+func issued_plate_cut(m: Dictionary) -> float:
+	if not has_rule("issued_plate"):
+		return 1.0
+	var county: bool = m.has("t") and bool(m["t"].get("county", false))
+	var order: bool = not _sig.is_empty() and _sig.has("order")
+	return Data.FX["rule/issued_plate.cut"] if (county or order) else 1.0
 
 
 ## The Fence's mate: one of the loose uniques, for notes.
@@ -3615,6 +3804,8 @@ func _earn(x: float) -> void:
 	cash += x
 	_takings_run += x
 	cash_in += x
+	if issued and x > 0.0:
+		circulation += x                     # the Issue: every fiat paid out is more about
 
 
 ## What a run on the tier pays in kills, at its depth, before the day's prices.
@@ -5460,7 +5651,7 @@ func mint_tins() -> float:
 	var pay: float = town_stat("mint_pay")
 	if pay <= 0.0:
 		return 0.0
-	return town_worth() * pay * Data.MINT_TINS * inflation() * (2.0 if held_of("fiat_note") > 0 else 1.0)
+	return town_worth() * pay * Data.MINT_TINS * inflation()     # the note's doubling went with the Issue (25 Oct): fiat after it
 
 
 ## What a site's run can bring, as shares: the campaign site its own; a signal or the order's laid on it its crew's
@@ -5700,6 +5891,12 @@ func _order_done(won: bool) -> void:
 		key_items[f] = held_of(f) + 1
 		if f == "fiat_note":
 			log_event(Words.REBUILD["note"])
+			issue()                              # the Issue: the town on his money from here (25 Oct)
+	elif k == "mint" and issued:
+		var haul: float = float(_inf(Data.PRINT_HAUL))
+		_earn(haul)
+		circulation += haul * Data.PRINT_CIRC          # he prints: a haul, and the prices jump with it
+		log_event(Words.ISSUE["printed"] % fiat_words(haul))
 	log_event(Words.REBUILD["order_won"] % p["who"])
 
 
@@ -6777,6 +6974,8 @@ func deploy(i: int) -> void:
 func advance(seconds: float) -> void:
 	elapsed += seconds
 	_roll_weather()
+	if issued and fiat_rate != 1.0:
+		fiat_rate = move_toward(fiat_rate, 1.0, Data.RATE_RECOVER_H * seconds / 3600.0)     # the rate drifts back
 	if hp > max_hp():
 		hp = max_hp()                        # the max can drop when kit comes off
 	var left := seconds
@@ -6927,7 +7126,7 @@ func _time_out(m: Dictionary) -> void:
 	var insured: bool = m.get("insured", false)
 	var worn_v: Array = []
 	for s in Data.SLOTS:
-		if equipped[s] != null and not equipped[s].get("mythic", false):     # a mythic is never lost (16 Oct)
+		if equipped[s] != null and not equipped[s].get("mythic", false) and not equipped[s].get("issued", false):     # a mythic is never lost (16 Oct), nor issued kit
 			worn_v.append(s)
 	var lost: Array = []
 	var lost_slots: Array = []
@@ -7068,8 +7267,8 @@ var patterns: Array = []                   # [{"unique": name, "slot": slot, "ru
 
 
 func can_break(it: Dictionary) -> String:
-	if not it.has("unique") or it.get("mythic", false) or str(it.get("rule", "")) == "":
-		return Words.PATTERNS["not_unique"]
+	if not it.has("unique") or it.get("mythic", false) or it.get("issued", false) or str(it.get("rule", "")) == "":
+		return Words.PATTERNS["not_unique"]     # issued kit isn't broken into patterns (the reviewer)
 	if not stash.has(it):
 		return Words.PATTERNS["not_stashed"]
 	if mission != null:
@@ -7769,7 +7968,7 @@ func _joint_hit_mult(m: Dictionary, held: String) -> float:
 
 ## Their fire on you after the joints and Knuckles: a share, 1.0 with none. Runs Flattened's clock down.
 func _joints_on_incoming(m: Dictionary, chilled: bool, dt: float) -> float:
-	var f := 1.0
+	var f := issued_plate_cut(m)                 # the issued plate (25 Oct)
 	var held := gun_type()
 	if has_joint("paramedic_frost") and chilled:
 		f *= Data.FX["joint/paramedic_frost.taken"]                                  # chilled gangs do 30% less to you
@@ -8006,7 +8205,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		skfx["no_drop"] = false
 		return                                   # Barred: thrown out, counted (his XP), nothing from him - no tins, notes, salvage or find (the review)
 	var pay: float = 1.0 if not has_node("hit_and_run") else float(Data.FX["node/hit_and_run.kill_pay"])     # the XP's figure (25 Oct, the review)
-	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (Data.FX["rule/bookies_pencil.cash"] if has_rule("bookies_pencil") else 1.0) * (Data.FX["set/bank.kill_cash"] if has_set_rule("bank") else 1.0) \
+	m["cash"] += (Data.FX["rule/issued_rifle.kill"] if has_rule("issued_rifle") else 1.0) * (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (Data.FX["rule/bookies_pencil.cash"] if has_rule("bookies_pencil") else 1.0) * (Data.FX["set/bank.kill_cash"] if has_set_rule("bank") else 1.0) \
 		* (Data.FX["node/light_fingers.cash"] if has_node("light_fingers") else 1.0) * (Data.FX["rule/managers_coat"] if has_rule("managers_coat") else 1.0) * trait_mult("cash") * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t) * (int(Data.MYTHIC_PAY) if has_rule("freedom") else 1)
@@ -9078,8 +9277,8 @@ func _kia() -> void:
 		var pocket: bool = has_node("back_pocket")
 		for s in Data.SLOTS:
 			if equipped[s] != null:
-				if equipped[s].get("mythic", false):
-					stash.append(equipped[s])        # a mythic is never lost: it comes home (16 Oct)
+				if equipped[s].get("mythic", false) or equipped[s].get("issued", false):
+					stash.append(equipped[s])        # a mythic is never lost: it comes home (16 Oct); nor issued kit (25 Oct)
 				elif pocket:
 					pocket = false
 					stash.append(equipped[s])        # Back pocket (22 Oct): the Fence keeps one piece free
@@ -9946,8 +10145,10 @@ func sell(it: Dictionary) -> bool:
 		return false                          # the Fence is shut until the Carpet Man's ledger (13 Oct)
 	if not _remove(it):
 		return false
-	_earn(float(sell_price(it)))
-	if it.has("unique"):
+	var got := float(sell_price(it))
+	_earn(got)
+	_rate_after_sale(got)
+	if it.has("unique") and not it.get("issued", false):
 		_lose(it, "", "fence")                # he said someone would want it; later someone has it
 	if Items.is_deeds(it):
 		deeds_fate = "sold"
@@ -10703,7 +10904,7 @@ func _skill_fire(m: Dictionary, t: Dictionary, i: int) -> void:
 			sk["once"] = {}
 		sk["once"][id] = true
 	if float(d.get("cash", 0.0)) > 0.0 and not m.get("dry", false):
-		cash -= float(d["cash"])               # Bung's tins
+		cash -= tins_now(float(d["cash"]))     # Bung's tins (fiat after the Issue)
 	if has_node("cap_passing_out"):
 		sk["energy"] = minf(max_energy(), float(sk["energy"]) + 5.0)     # Passing-out parade: every skill gives 5 back
 	var stamped := false
@@ -11314,7 +11515,8 @@ func to_dict() -> Dictionary:
 
 func _state() -> Dictionary:
 	return {
-		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
+		"cash": cash, "issued": issued, "fiat_issue_inf": fiat_issue_inf, "circulation": circulation, "fiat_rate": fiat_rate, "issued_serial": issued_serial, "issue_moment": issue_moment,
+		"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
@@ -11325,7 +11527,7 @@ func _state() -> Dictionary:
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
+		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
@@ -11405,6 +11607,12 @@ func load_dict(d: Dictionary) -> void:
 	d = d.duplicate(true)                # the save's items stay the save's; the live ones are copies
 	_rename_old(d)                       # a save from before the caps pass (8 Oct) carries the old names
 	_shift_sites(d)                      # a save from before the Outskirts (12 Oct): every site up three, every zone up one
+	issued = bool(d.get("issued", false))
+	fiat_issue_inf = float(d.get("fiat_issue_inf", 1.0))
+	circulation = float(d.get("circulation", 0.0))
+	fiat_rate = float(d.get("fiat_rate", 1.0))
+	issued_serial = int(d.get("issued_serial", 0))
+	issue_moment = d.get("issue_moment", {})
 	cash = float(d.get("cash", Data.STARTING_CASH))
 	xp = float(d.get("xp", 0.0))
 	hp = float(d.get("hp", Data.BASE_HP))
@@ -11598,7 +11806,7 @@ func load_dict(d: Dictionary) -> void:
 	if mission != null and mission.get("signal", null) is Dictionary:
 		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it
 		_sig_ints(_sig)
-	notes = int(d.get("notes", 0))
+	_notes = int(d.get("notes", 0)) if not issued else 0
 	scrap = int(d.get("scrap", 0))
 	takings = float(d.get("takings", 0.0))
 	gamble_base = float(d.get("gamble_base", takings))     # an older save: from where its price stood

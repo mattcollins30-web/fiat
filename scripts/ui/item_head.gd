@@ -300,7 +300,7 @@ static func unique_rule(it: Dictionary) -> Array:
 	if not it.has("unique") and not it.has("pattern"):
 		return []
 	var named: String = str(it.get("unique", it.get("pattern", "")))     # a pattern carries its unique's rule (24 Oct)
-	for u in Data.UNIQUES:
+	for u in Data.UNIQUES + Data.ISSUED:
 		if u["name"] == named:
 			var long: String = str(u.get("words", ""))
 			return [long, str(u.get("short", long))] if long != "" else []

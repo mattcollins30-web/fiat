@@ -110,7 +110,9 @@ func show_state(s, purse: Dictionary) -> void:
 	UI.fit(_unit, ["upgrades built", "built"])
 	# the purse: cash in gold, notes and scrap, the salvage in their colours
 	var items := [{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT},
-		{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Pal.TEXT_2}, {"tag": "Scrap", "forms": ["%d" % sim.scrap], "colour": Pal.TEXT_2}]
+		{"tag": "Scrap", "forms": ["%d" % sim.scrap], "colour": Pal.TEXT_2}]
+	if not sim.issued:
+		items.insert(1, {"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Pal.TEXT_2})     # no notes after the Issue (25 Oct)
 	for kind in Data.SALVAGE:
 		items.append({"tag": Data.SALVAGE_NAMES[kind], "forms": ["%d" % int(sim.salvage.get(kind, 0))], "colour": salvage_colour(kind)})
 	_chips.show_chips(items, CHIPS_ROWS)

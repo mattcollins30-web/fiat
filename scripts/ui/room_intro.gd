@@ -75,8 +75,10 @@ var voice_on := true                   # the pause menu's Sound: off, the lines 
 var met_count := 0                     # for the hint: how many of the rooms have been met
 
 
-func _init(room_key: String) -> void:
+func _init(room_key: String, data := {}) -> void:
 	key = room_key
+	if not data.is_empty():
+		_data = data                         # a card made on the spot (the Issue's figures, 25 Oct)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_dim = ColorRect.new()
 	_dim.color = Pal.DIM
@@ -145,7 +147,9 @@ func _init(room_key: String) -> void:
 
 
 func _ready() -> void:
-	if is_class_card(key):
+	if _d().has("hint"):
+		_hint.text = str(_d()["hint"])
+	elif is_class_card(key):
 		_hint.text = Words.CLASS_CARD["hint"]
 	else:
 		_hint.text = "Click or Space · %d of %d rooms met" % [mini(met_count, Words.ROOM_INTROS.size()), Words.ROOM_INTROS.size()]

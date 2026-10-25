@@ -25,6 +25,7 @@ const ClinicBody := preload("res://scripts/ui/clinic_body.gd")
 const MedCards := preload("res://scripts/ui/med_cards.gd")
 const FenceSell := preload("res://scripts/ui/fence_sell.gd")
 const FenceList := preload("res://scripts/ui/fence_list.gd")
+const IssuerCounter := preload("res://scripts/ui/issuer_counter.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -48,6 +49,7 @@ const COL_W := (GRID_W - 3 * PAD) / 2
 const VERDICT_Y := 228               # the Kit's compare on the shelf (20 Oct): the verdict row, level with the pick's words
 const TAB_H := 40                                             # the tabs, along the band's foot, right
 const TAB_W := 160
+const ISSUE_TAB_W := 140                                      # five across once the Issuer's counter opens
 const FACE := Pal.BAND_FACE                                   # the portrait in the band
 const TOP := 44                                               # the side column's sections, under the vendor's line
 const TILE_GAP := 8
@@ -112,6 +114,7 @@ var _body                          # the Clinic's runner: the outline, the wound
 var _meds                          # the Clinic's meds as cards, in the grid's place (med_cards.gd, 19 Oct)
 var _sell                          # the Fence's side on the shelf and the stash: by rarity, the boxes (fence_sell.gd, 19 Oct)
 var _list                          # the Fence's side on the contracts: his list and his mate (fence_list.gd, 19 Oct)
+var _issuer                        # the Issuer's counter, the fifth tab after the Issue (issuer_counter.gd, 25 Oct)
 var _go := {}                      # contract index -> {c: the contract itself, ids: picked to go, kept: kept back} (Fence B's swap); none, the cheapest that fit
 
 
@@ -126,9 +129,9 @@ func _init() -> void:
 	_band.room_band()
 	_side = UI.panel(self, Rect2(0, BODY_Y, BODY_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_said.append(UI.label(_side, Rect2(PAD, 10, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
-	for k in range(4):
+	for k in range(5):
 		var b := UI.button(self, Rect2(_tab_x(k, 2), BAND_H - 16 - TAB_H, TAB_W, TAB_H), k == 0)
-		b.pressed.connect(_show.bind(["shelf", "stash", "contracts", "word"][k]))
+		b.pressed.connect(_show.bind(["shelf", "stash", "contracts", "word", "issuer"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
 	# the Fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
@@ -254,6 +257,8 @@ func setup(k: String) -> void:
 			_tabs[i].position.x = _tab_x(i, 4)
 			_tabs[i].visible = true
 			_tabs[i].add_theme_font_size_override("font_size", 16)     # four across: "Contracts ✓1" wants 146 at 18
+		_tabs[4].add_theme_font_size_override("font_size", 16)
+		_tabs[4].visible = false
 		# Fence A and B (19 Oct): the side by rarity and the boxes; on the contracts, his list - the stash at the right
 		_sell = FenceSell.new(INNER)
 		_sell.position = Vector2(PAD, TOP)
@@ -268,6 +273,11 @@ func setup(k: String) -> void:
 		_list.mate.connect(_buy_mate)
 		_list.pay_colour = _pay_colour
 		_side.add_child(_list)
+		_issuer = IssuerCounter.new(GRID_W, BODY_H)
+		_issuer.position = Vector2(GRID_X, BODY_Y)
+		_issuer.visible = false
+		_issuer.acted.connect(_on_acted)
+		add_child(_issuer)
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
@@ -311,12 +321,18 @@ func show_state(s) -> void:
 	_stash.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_shelf.visible = showing == "shelf"
 	_stash.visible = (showing == "stash" and kind != "clinic") or showing == "contracts"     # the contracts mark what goes in the stash (Fence B)
+	if showing == "issuer" and (kind != "fence" or not sim.issued):
+		showing = "shelf"                     # no counter before the Issue
 	_word.visible = showing == "word"
+	if _issuer != null:
+		_issuer.visible = showing == "issuer"
+		if _issuer.visible:
+			_issuer.show_state(sim)
 	if _meds != null:
 		_meds.visible = showing == "stash"
 		if _meds.visible:
 			_meds.show_state(sim)
-	_panel.visible = not (_word.visible or (_meds != null and _meds.visible))     # the contracts, the word and the meds take the grid's and the panel's place (Bands-U A)
+	_panel.visible = not (_word.visible or (_meds != null and _meds.visible) or (_issuer != null and _issuer.visible))     # the contracts, the word and the meds take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 	var sig := _signature()
@@ -339,6 +355,15 @@ func show_state(s) -> void:
 		UI.style_button(_tabs[2], showing == "contracts", "good" if (is_ready > 0 and showing != "contracts") else "")
 		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
 		UI.style_button(_tabs[3], showing == "word")
+		var n_tabs: int = 5 if sim.issued else 4     # the Issuer's tab once the town's on fiat (25 Oct)
+		var tw: float = TAB_W if n_tabs == 4 else ISSUE_TAB_W
+		for i in range(n_tabs):
+			_tabs[i].size.x = tw
+			_tabs[i].position.x = Pal.GRID_W - PAD - n_tabs * tw - (n_tabs - 1) * 8 + i * (tw + 8)
+		_tabs[4].visible = sim.issued
+		if sim.issued:
+			_tab_text(_tabs[4], [Words.ISSUED["tab"], "Issuer"])
+			UI.style_button(_tabs[4], showing == "issuer")
 		_show_word()
 	_show_side()
 	_show_panel()
@@ -549,8 +574,9 @@ func _show_side() -> void:
 	if showing == "contracts":
 		_band.set_words("The Fence · the contracts", "", "%d ready" % n_ready, ["of %d open" % sim.contracts.size()], Pal.GOOD if n_ready > 0 else Pal.TEXT_2)
 		var pc: int = sim.pass_cost()
-		chips.append({"forms": ["A pass is free this run", "A free pass"] if pc == 0 else ["The next pass: %d notes" % pc, "Pass: %d notes" % pc], "colour": Pal.TEXT_2})
-		chips.append({"forms": ["%s notes" % Fmt.group(sim.notes)], "colour": Pal.TEXT_2})
+		chips.append({"forms": ["A pass is free this run", "A free pass"] if pc == 0 else ["The next pass: %s" % Fmt.notes(pc), "Pass: %s" % Fmt.notes(pc)], "colour": Pal.TEXT_2})
+		if not sim.issued:
+			chips.append({"forms": ["%s notes" % Fmt.group(sim.notes)], "colour": Pal.TEXT_2})     # no notes held after the Issue
 	else:
 		_band.set_words("The Fence · pays full value, charges three times", "", Fmt.group(int(sim.cash)), ["tins in hand", "tins"], Pal.ACCENT)
 		if sim.inflation_pct() > 0:
@@ -749,7 +775,10 @@ func _show_panel() -> void:
 		else:
 			_left_title.text = "The Fence"
 			if sim.inflation_pct() > 0:
-				UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes keep their value" % sim.inflation_pct(), "Prices up %d%%; notes don't" % sim.inflation_pct()])
+				if sim.issued:
+					UI.fit(_left_lines[0], ["Prices up %d%% with the fiat about; the rate %.2f" % [sim.inflation_pct(), sim.fiat_rate], "Prices up %d%%" % sim.inflation_pct()])
+				else:
+					UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes keep their value" % sim.inflation_pct(), "Prices up %d%%; notes don't" % sim.inflation_pct()])
 			else:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays full value; charges three times"])
 			_right_title.text = "Their shelf"

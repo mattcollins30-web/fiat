@@ -123,7 +123,7 @@ func show_state(s, title_of: Callable) -> void:
 		r["hand"].disabled = not can
 		UI.style_button(r["hand"], false, "good" if can else "")
 		r["pass"].disabled = not sim.can_pass_contract(k)
-		r["pass"].tooltip_text = "Free this run" if pc == 0 else "%d notes" % pc
+		r["pass"].tooltip_text = "Free this run" if pc == 0 else Fmt.notes(pc)
 		y = r["panel"].position.y + ROW_H + ROW_GAP
 	_note.position.y = y
 	if n < Data.CONTRACTS_MAX:
@@ -142,7 +142,7 @@ func show_state(s, title_of: Callable) -> void:
 		UI.fit(_mate_name, [str(sim.mate["unique"])])
 		_mate_name.add_theme_color_override("font_color", Pal.tone_color(Pal.rarity_tone(4)))
 		UI.fit(_mate_sub, ["A unique%s" % mt, "Unique"])
-		_mate_price.text = "%s notes" % Fmt.group(int(sim.mate["notes"]))
+		_mate_price.text = Fmt.notes(int(sim.mate["notes"]))
 		_mate_buy.visible = true
 		var short: int = int(sim.mate["notes"]) - sim.notes
 		_mate_buy.text = "Buy" if short <= 0 else "Short %s" % Fmt.group(short)

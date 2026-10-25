@@ -892,9 +892,9 @@ func _show_decoder() -> void:
 	for k in range(_crew_buttons.size()):
 		var b: Button = _crew_buttons[k]
 		var z: int = k if k > 0 else -1
-		var nm: String = "Any crew" if z < 0 else "%s · %d" % [str(Data.ZONES[z]["name"]).trim_prefix("The "), Data.AIM_NOTES]
+		var nm: String = "Any crew" if z < 0 else "%s · %s" % [str(Data.ZONES[z]["name"]).trim_prefix("The "), Fmt.notes(Data.AIM_NOTES).trim_suffix(" notes")]
 		UI.fit_button(b, [nm, nm.get_slice(" ·", 0)] if z > 0 else [nm, "Any"])
-		b.tooltip_text = "A crew from anywhere" if z < 0 else "Kev tunes it to the %s's crew: %d notes, their area's materials, and their head if one comes" % [str(Data.ZONES[z]["name"]).trim_prefix("The ").to_lower(), Data.AIM_NOTES]
+		b.tooltip_text = "A crew from anywhere" if z < 0 else "Kev tunes it to the %s's crew: %s, their area's materials, and their head if one comes" % [str(Data.ZONES[z]["name"]).trim_prefix("The ").to_lower(), Fmt.notes(Data.AIM_NOTES)]
 		b.disabled = story_in or (z > 0 and sim.notes < Data.AIM_NOTES)
 		UI.style_button(b, z == crew_pick)
 	var why: String = sim.decrypt_block(chosen, crew_pick)
@@ -908,7 +908,7 @@ func _show_decoder() -> void:
 	_kev.disabled = kb != ""
 	var price: int = sim.kev_price()
 	if kb == "" or kb == "%d notes" % price:
-		UI.fit_button(_kev, ["Ask Kev · %d notes" % price, "Ask Kev"])
+		UI.fit_button(_kev, ["Ask Kev · %s" % Fmt.notes(price), "Ask Kev"])
 	else:
 		UI.fit_button(_kev, ["Ask Kev · %s" % kb, "Ask Kev"])
 
@@ -979,7 +979,7 @@ func _show_signals(od: Array) -> void:
 		var cd: Dictionary = Data.craft_of(c["key"])
 		var why: String = sim.signal_craft_block(selected, c["key"])
 		c["button"].disabled = why != ""
-		UI.fit(c["name"], ["%s · %d notes" % [cd["name"], sim.signal_craft_cost(selected, c["key"])], str(cd["name"])])
+		UI.fit(c["name"], ["%s · %s" % [cd["name"], Fmt.notes(sim.signal_craft_cost(selected, c["key"]))], str(cd["name"])])
 		UI.fit(c["words"], [str(cd["words"]).replace("the site", "it"), ""] if why == "" else [why, ""])
 	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
 	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking

@@ -6936,3 +6936,12 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   class:<name>, two lines in the class's own voice, its Training lines as the tiles, "To Training". The takes are
   Matt's by hand from docs/design/class_cards.md (voice briefs, lines, files) into art/intro/classes/; the lines come
   on the clock till then. The canvas: the class card, the Issue's moment and the Issuer's counter. Smoke 249 green.
+
+## The Issue and the County (25 Oct, Matt: "let's push and do the lot"; docs/design/the_issue.md)
+
+- Stage 1, the Issue: the first Issuer win at the Mint puts the town on fiat for good - tins and notes converted at
+  0.8 x the square root of the pile (hard on hoarders), every price and pay x FIAT_SCALE from there, prices by the fiat
+  in circulation (not the clock), the Issuer's rate the Fence buys at (a sale lowers it, time brings it back), the burn
+  (fiat out, prices down), a big print on every later Issuer win (the Mint's doubling gone). The Issuer's counter, the
+  Fence's fifth tab: six pieces of issued kit (stamped, numbered, a rule each; kept on a death, never broken into
+  patterns). The Issue's card once, then the Fence. Money reads ƒ after it. Smoke 250 green.

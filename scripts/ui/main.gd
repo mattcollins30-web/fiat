@@ -772,6 +772,8 @@ func _quit_to_title() -> void:
 # ------------------------------------------------------------------ the game
 
 func new_game(hardcore := false) -> void:
+	Fmt.fiat = false                        # the money's word, the camp's own (the reviewer: a fiat camp's leaked)
+	Fmt.note_fiat = 0.0
 	_archive_record()                    # the last game's record kept beside, this one's starts empty
 	sim = Sim.new()
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
@@ -840,6 +842,9 @@ func _maybe_room_intro() -> void:
 		return
 	if _opening_due or (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
 		return
+	if sim.issued and not ("issue" in sim.met) and not sim.on_mission():
+		show_issue_card()                     # the Issue's moment, once (25 Oct)
+		return
 	var cls_due := class_card_due()
 	if cls_due != "":
 		show_class_card(cls_due)              # a story beat: with the rooms' intros off too (Matt, 25 Oct)
@@ -877,6 +882,26 @@ func show_class_card(cls: String) -> void:
 		_room_card = null
 		_overlay_closed = Engine.get_process_frames()
 		show_room(BARRACKS))                   # "To Training": the class waits there
+	add_child(_room_card)
+
+
+## The Issue's card (25 Oct, docs/design/the_issue.md; the canvas 'The Issue'): the pile, his rate, what came out.
+func show_issue_card() -> void:
+	if _room_card != null and is_instance_valid(_room_card):
+		return
+	var mo: Dictionary = sim.issue_moment
+	var w: Dictionary = Words.ISSUE
+	var d := {"room": w["kicker"], "face": "the_issuer", "title": w["title"], "sub": w["sub"], "place": "The mint", "go": w["go"], "hint": w["hint"],
+		"lines": [w["line"], w["pile"] % [Fmt.group(int(mo.get("pile", 0))) + " tins", int(mo.get("notes", 0))], w["rate"], w["came"] % sim.fiat_words(float(mo.get("fiat", 0)))],
+		"tiles": w["tiles"], "cues": []}
+	_room_card = RoomIntro.new("issue", d)
+	_room_card.voice_on = _sound.vols["voice"] > 0.0
+	_room_card.done.connect(func():
+		if not ("issue" in sim.met):
+			sim.met.append("issue")
+		_room_card = null
+		_overlay_closed = Engine.get_process_frames()
+		show_room(MARKET))                     # the Issuer sets up beside the Fence
 	add_child(_room_card)
 
 
@@ -960,6 +985,8 @@ func save_game(path := "") -> void:
 
 
 func load_game(path := "") -> void:
+	Fmt.fiat = false                        # the money's word, the camp's own (the reviewer: a fiat camp's leaked)
+	Fmt.note_fiat = 0.0
 	if path == "":
 		path = save_file
 	var d := _read_save(path)
@@ -1076,7 +1103,9 @@ func refresh() -> void:
 	_maybe_room_intro()
 	_sound.follow(sim)
 	_maybe_mythic()
-	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins
+	Fmt.fiat = sim.issued                    # the Issue (25 Oct): every sum fiat from here
+	Fmt.note_fiat = sim.note_price() if sim.issued else 0.0
+	_top_labels["cash"].text = (Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)) if not sim.issued else Fmt.money(sim.cash)     # the glyph says tins; fiat says ƒ
 	_top_labels["notes"].text = Fmt.num(sim.notes)
 	_top_labels["scrap"].text = Fmt.num(sim.scrap)
 	for k in TOP_SALVAGE:
@@ -1246,8 +1275,8 @@ func _lay_top_right() -> void:
 		var x: float = 1920.0 - 2 * Pal.MARGIN - TOP_BTN - 16     # the cog at the end
 		var first_x: float = x
 		for k in TOP_RIGHT:
-			var shown: bool = not (k in TOP_SALVAGE) or int(sim.salvage.get(k, 0)) > 0
-			_top_glyphs[k].visible = shown
+			var shown: bool = (not (k in TOP_SALVAGE) or int(sim.salvage.get(k, 0)) > 0) and not (k == "notes" and sim.issued)     # no notes after the Issue
+			_top_glyphs[k].visible = shown and not (k == "cash" and sim.issued)     # fiat carries its ƒ
 			if k != "where":
 				_top_labels[k].visible = shown
 			if not shown:

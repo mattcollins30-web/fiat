@@ -292,6 +292,8 @@ static func rarity_name(it: Dictionary) -> String:
 ## The name a row or a title shows: the base, since rarity is the colour on
 ## the edge and the word on the figure line; a unique goes by its own name.
 static func full_name(it: Dictionary) -> String:
+	if it.has("serial"):
+		return "%s · No. %04d" % [it["unique"], int(it["serial"])]     # issued kit's number (25 Oct)
 	if it.has("unique"):
 		return it["unique"]
 	if it.has("piece"):

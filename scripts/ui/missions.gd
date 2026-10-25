@@ -463,9 +463,9 @@ func show_state(s) -> void:
 			c["note"].text = "The runner is under half HP"
 		elif c["boss"].visible and sim.boss_armed.get(i, false):
 			var cost: int = sim.boss_cost(i)
-			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %d notes, you have %d" % [boss["name"], cost, sim.notes]), "%s: %d notes" % [boss["name"], cost], boss["name"]])
+			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %s, you have %s" % [boss["name"], Fmt.notes(cost), Fmt.notes(sim.notes)]), "%s: %s" % [boss["name"], Fmt.notes(cost)], boss["name"]])
 		elif c["boss"].visible and not sim.boss_armed.get(i, false) and sim.boss_cost(i) > 0 and sim.notes < sim.boss_cost(i):
-			UI.fit(c["note"], ["%s wants %d notes; you have %d" % [boss["name"], sim.boss_cost(i), sim.notes], "%s: %d notes" % [boss["name"], sim.boss_cost(i)], "Not enough notes"])
+			UI.fit(c["note"], ["%s wants %s; you have %s" % [boss["name"], Fmt.notes(sim.boss_cost(i)), Fmt.notes(sim.notes)], "%s: %s" % [boss["name"], Fmt.notes(sim.boss_cost(i))], "Not enough notes"])
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")

@@ -1056,6 +1056,18 @@ const OPENS_AFTER := "Opens after"     # a locked class's card, over the head th
 ## A class's card when it opens (25 Oct, Matt: "a story beat for every class unlock"): two lines in their own voice, back
 ## at camp after the head falls (the Drifter after Kev's first story). The takes are Matt's (art/intro/classes/<voice>.mp3,
 ## docs/design/class_cards.md); "cues" go in with them, the lines on the clock till then.
+## The Issue (25 Oct): the day the money changes, and after.
+const ISSUE := {"log": "The Issue: the town runs on the Issuer's money now. Your pile came out at %s.",
+	"printed": "The Issuer printed again: %s, and every price up with it.",
+	"kicker": "THE ISSUE", "title": "Its value is as stated", "sub": "The Issuer's down. The town runs on his money now.",
+	"line": "\"Everything you've got is worth what I say it is. Today, that's this.\"",
+	"pile": "Your pile: %s and %d notes", "rate": "His rate: the square root of it, x0.8", "came": "What came out: %s, fiat from now on",
+	"tiles": [["Prices follow the money", "More fiat about, more it costs"], ["His rate moves", "The Fence buys at it"], ["Burn it", "Hand fiat back: prices fall"]],
+	"go": "Take it", "hint": "Tins and notes are gone for good · the Issuer sets up beside the Fence"}
+const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "short": "Short of fiat", "no_room": "No room in the stash",
+	"bought": "From the Issuer: %s, for %s.", "tab": "The Issuer", "head": "Issued kit", "rate": "HIS RATE TODAY", "circ": "IN CIRCULATION", "prices": "PRICES",
+	"burn": "Burn %s", "burn_line": "Out of circulation: prices x%.2f to x%.2f", "burn_go": "Burn", "said": "\"Its value is as stated.\"",
+	"want": "The County wants %d issued piece%s worn"}
 const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "hint": "Click or Space · the class waits in Training",
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {

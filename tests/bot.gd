@@ -733,7 +733,7 @@ func _bench_needs(sim) -> void:
 	if sim.elapsed - _bench_at < BENCH_EVERY:
 		return
 	_bench_at = sim.elapsed
-	var floor_cash := maxf(2000.0, _reserve(sim))
+	var floor_cash := maxf(sim.tins_now(2000.0), _reserve(sim))
 	_temper(sim, floor_cash)
 	var jobs := 0
 	for s in BENCH_SLOTS:
@@ -820,7 +820,7 @@ func _craft_toward(sim) -> void:
 	var inc := "%s_pct" % element
 	if Items.sockets(it) == 0:
 		var c: int = sim.craft_cost(it, "socket")
-		if c >= 0 and sim.cash - c >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "socket"):
+		if c >= 0 and sim.cash - c >= maxf(sim.tins_now(2000.0), _reserve(sim)) and sim.craft(it["id"], "socket"):
 			bought.append([sim.elapsed, "bench: a socket on the primary for £%d" % c])
 	var has_conv := false
 	var has_inc := false
@@ -841,7 +841,7 @@ func _craft_toward(sim) -> void:
 			kind = "affixes"
 			it["locks"] = []
 		var cost: int = sim.craft_cost(it, kind, stat)
-		if cost < 0 or sim.cash - cost < maxf(2000.0, _reserve(sim)) or not sim.craft(it["id"], kind, stat):
+		if cost < 0 or sim.cash - cost < maxf(sim.tins_now(2000.0), _reserve(sim)) or not sim.craft(it["id"], kind, stat):
 			return
 		bought.append([sim.elapsed, "bench: %s on the primary for £%d, after %s" % [Data.CRAFT[kind]["name"].to_lower(), cost, element]])
 		has_conv = false
@@ -1126,7 +1126,7 @@ func _build_yard(sim) -> void:
 				best_key = b["key"]
 				best_col = c
 				best_cost = sim.yard_pick_cost(b["key"], c)
-	if best_key != "" and sim.cash >= best_cost + 500 and sim.cash - best_cost >= _lorry_watch_saving(sim):
+	if best_key != "" and sim.cash >= best_cost + sim.tins_now(500.0) and sim.cash - best_cost >= _lorry_watch_saving(sim):
 		var side: String = "b" if best_col in PICK_B.get(best_key, []) else "a"
 		if sim.yard_pick(best_key, best_col, side):
 			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if side == "a" else 1]["id"], best_cost]])
@@ -1207,7 +1207,7 @@ func _restock_meds(sim) -> void:
 			continue
 		# a bandage only when the stash has no one-cell med (D13: a kit too big for the room left was tried, refused and
 		# a bandage bought for the stash, again and again - a hundred, the cash gone and the stash full, papers left lying)
-		if small or sim.cash < 200.0 or not sim.buy_med("Bandage"):
+		if small or sim.cash < sim.tins_now(200.0) or not sim.buy_med("Bandage"):
 			return
 
 
@@ -1357,7 +1357,7 @@ func _buy_upgrade(sim) -> void:
 	if element != "":
 		for i in range(sim.market.size()):
 			var it: Dictionary = sim.market[i]
-			if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0 and sim.cash >= sim.price(it) + 500 and _socket_wanting(sim) != "" and sim.buy(i):
+			if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0 and sim.cash >= sim.price(it) + sim.tins_now(500.0) and _socket_wanting(sim) != "" and sim.buy(i):
 				bought.append([sim.elapsed, "%s for £%d" % [it["base"].to_lower(), sim.price(it)]])
 				break
 	for i in range(sim.market.size()):
@@ -1368,7 +1368,7 @@ func _buy_upgrade(sim) -> void:
 		var g: float = sim.upgrade_gain(it) if sim.compare(it) == 1 else 0.0     # tried on (11 Oct), as the player's arrow
 		if element != "" and it["slot"] == "Primary":
 			g = ((_elem_score(it) - _elem_score(cur)) / maxf(_elem_score(cur), 0.01)) if cur != null else sim.EMPTY_GAIN   # a build weighs its gun its own way, as a share like the rest
-		if g > gain and sim.cash >= sim.price(it) + 100:
+		if g > gain and sim.cash >= sim.price(it) + sim.tins_now(100.0):
 			gain = g
 			pick = i
 	if pick >= 0:

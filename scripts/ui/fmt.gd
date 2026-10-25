@@ -57,11 +57,23 @@ static func group(n: int) -> String:
 
 
 ## 4,816 tins · −360 tins · 1 tin · 12.4M tins from ten million up.
+## After the Issue (25 Oct) every sum is fiat: "ƒ12,400" (main sets it from the sim each refresh).
+static var fiat := false
+static var note_fiat := 0.0           # a note's fiat after the Issue: the crews' prices read as money (main sets it)
+
+
+## A sum of notes as the screen says it: "120 notes"; after the Issue, its fiat.
+static func notes(n: int) -> String:
+	return money(n * note_fiat) if fiat and note_fiat > 0.0 else "%s notes" % group(n)
+
+
 static func money(x: float) -> String:
 	if not is_finite(x):
 		return "—"
 	var sgn := MINUS if x < -0.5 else ""
 	var a := absf(x)
+	if fiat:
+		return ("%sƒ%.1fM" % [sgn, a / 1e6]) if a >= 1e7 else ("%sƒ%s" % [sgn, group(int(round(a)))])
 	if a >= 1e7:
 		return "%s%.1fM %s" % [sgn, a / 1e6, UNIT]
 	var n := int(round(a))

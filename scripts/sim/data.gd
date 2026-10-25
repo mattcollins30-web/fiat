@@ -1175,7 +1175,10 @@ const FX := {
 	"node/cap_flattened": 2.0,     # Flattened: A kill with the plain staggers the next gang: they fire at half for two seconds
 	"node/cap_flattened.cut": 0.5,     # and by how much: the next of them at half (25 Oct: one man's share, not the gang's)
 	"rule/arsonists_rig.blast": 80.0,     # the Arsonist's Rig's blast, grown with the fight as a grenade's (25 Oct, the review)
-	"node/fire_pct.notable_s": 2.0,     # Lit, Dosed, Opened up: their dot lasts twice as long - fire, poison and bleed alike; named under fire_pct for the table's check (25 Oct, the review)
+	"node/fire_pct.notable_s": 2.0,
+	"rule/issued_seal.burn": 2.0,     # the issued seal: your burns count double
+	"rule/issued_rifle.kill": 1.5,     # the issued rifle: a kill pays half again
+	"rule/issued_plate.cut": 0.8,     # the issued plate: the order's and the Issuer's people hit you at this     # Lit, Dosed, Opened up: their dot lasts twice as long - fire, poison and bleed alike; named under fire_pct for the table's check (25 Oct, the review)
 	"node/cap_held": 0.1,     # Held: No second of their fire takes more than a tenth of you
 	"node/cap_iron": 0.1,     # Iron: Under half HP, every kill heals a tenth of you
 	"node/cap_jerry": 1.5,     # Jerry-rigged: Something improvised hits half again as hard
@@ -3291,6 +3294,43 @@ const REBUILDS := [
 const REBUILD_GROWTH := 1.35
 const REBUILD_FUSES := 2                 # fuses a rank past the first
 const REBUILD_KEY_RANK := 3              # from this rank, one of the place's rank_key
+## Issued kit (25 Oct, Matt's picks): sold only by the Issuer, in fiat, after the Issue. Stamped and numbered, a tier
+## past mythic: the deepest base of its slot, lifted ISSUED_LIFT, its item level the reach's + ISSUED_OVER, one rule each.
+## Never dropped, never lost (as a mythic). The County's sites want ISSUED_WANT of them worn.
+const ISSUED := [
+	{"name": "Issued rifle", "slot": "Primary", "base": "Anti-materiel rifle", "rule": "issued_rifle", "issued": true,
+		"words": "Every kill pays half again", "short": "Kills pay x1.5", "affixes": [{"stat": "damage_pct", "value": 25}]},
+	{"name": "Issued sidearm", "slot": "Secondary", "base": "Special issue pistol", "rule": "issued_sidearm", "issued": true,
+		"words": "Every fifth shot is printed twice: damage +20%", "short": "Every 5th shot twice", "affixes": [{"stat": "damage_pct", "value": 20}]},
+	{"name": "Issued cap", "slot": "Helmet", "base": "Command helmet", "rule": "issued_cap", "issued": true,
+		"words": "The Fence never pays you under the face rate", "short": "Rate never under 1.0", "affixes": [{"stat": "all_res", "value": 15}]},
+	{"name": "Issued plate", "slot": "Armour", "base": "Heavy armour suit", "rule": "issued_plate", "issued": true,
+		"words": "A fifth less from the order and the Issuer's people", "short": "-20% from the order, the County", "affixes": [{"stat": "hp", "value": 60}]},
+	{"name": "Issued webbing", "slot": "Rig", "base": "Command rig", "rule": "issued_webbing", "issued": true,
+		"words": "Meds heal half again; one med more", "short": "Meds +50%, +1 med", "affixes": [{"stat": "heal_pct", "value": 50}, {"stat": "med_cap", "value": 1}]},
+	{"name": "Issued seal", "slot": "Charm", "base": "Gold sovereign", "rule": "issued_seal", "issued": true,
+		"words": "Your burns count double; loot quality +20%", "short": "Burns x2, quality +20%", "affixes": [{"stat": "rarity_pct", "value": 20}]},
+]
+const ISSUED_LIFT := 1.5
+const ISSUED_OVER := 5
+const ISSUED_PRICE := 6.0              # an issued piece's price: its worth x this, at the day's (fiat) prices
+const ISSUED_WANT := [2, 3, 4, 6]      # issued pieces worn to stand in the County's zones, one a zone
+
+## The Issue (25 Oct, docs/design/the_issue.md): the first Issuer win puts the town on fiat for good.
+const FIAT_SCALE := 0.0005             # a fiat's worth against the day's tins: every price and pay after the Issue is the tins' x this
+const FIAT_PILE_K := 0.8               # the conversion, hard on piles: fiat = this x the square root of tins held (and notes at NOTE_TINS)
+const NOTE_TINS := 500.0               # a note's worth in the day's tins at the Issue (the crews' prices read through it after)
+const FIAT_CIRC_SPAN := 100000.0       # every this-much fiat in circulation adds 100% to prices
+const FIAT_CIRC_CAP := 4.0             # prices never past x4 the Issue's
+const RATE_MIN := 0.6                  # the Issuer's rate: the Fence buys at it
+const RATE_MAX := 1.25
+const RATE_SALE_STEP := 0.01           # a sale of RATE_SALE_UNIT (tins of the opening day, at today's prices) takes 1% off the rate
+const RATE_SALE_UNIT := 600000.0
+const RATE_RECOVER_H := 0.05           # the rate drifts back to 1.0 this much an hour
+const BURN_TINS := 2000000.0           # a burn: this many of the opening day's tins, at today's prices
+const BURN_MULT := 2.0                 # a burn takes twice its sum out of circulation
+const PRINT_HAUL := 20000000.0         # the Issuer beaten again: he prints - this many of the opening day's tins in fiat
+const PRINT_CIRC := 1.0                # and it goes into circulation again on top (the prices jump)
 const MINT_TINS := 2.0                   # a run's tins from the mint: the town's worth × this × mint_pay, at today's prices
 ## The true pinnacles: new people in new places, opened by a rebuild, fought on a host site's crew and drops (`site`,
 ## `zone`) under their own name and art; their level the reach + `over`, a level more every PINNACLE_WORTH of worth

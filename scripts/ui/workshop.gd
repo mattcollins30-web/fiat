@@ -944,7 +944,7 @@ func _show_craft(it: Dictionary) -> void:
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets"
 		_piece_words[1].text = "Worn gear: press Workshop on it in the Kit"
 		_piece_words[2].text = "Pick a piece to see what each job costs."
-		_pick.show_empty("Nothing picked", ["In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "Scrap comes from searches, scrapping here and ditching"])
+		_pick.show_empty("Nothing picked", [("In hand: %s and %d scrap" % [Fmt.money(sim.cash), sim.scrap]) if sim.issued else ("In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap]), "Scrap comes from searches, scrapping here and ditching"])
 		_set_pick_buttons([])
 	else:
 		var h := Items.headline(it)
@@ -1051,7 +1051,7 @@ func _show_craft(it: Dictionary) -> void:
 			elif kind == "temper":
 				UI.fit(t["price"], [Words.TEMPER["price"] % [Fmt.group(sim.temper_scrap(it)), Fmt.money(cost)], Words.TEMPER["price"] % [Fmt.short_num(sim.temper_scrap(it)), Fmt.money_k(cost)]])
 			else:
-				t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
+				t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (Fmt.notes(cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
 			_job_actions[k] = _do_craft.bind(it["id"], kind, "")          # scrap too: main runs it, toasts it
 		else:
 			t["price"].text = ""
