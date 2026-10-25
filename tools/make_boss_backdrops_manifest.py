@@ -40,6 +40,10 @@ WALL_W, WALL_H = 744, 256                       # make_fight_walls_manifest.py's
 SEED0 = 105000      # clear of every other manifest's seeds (fight kit 97xxx, web 98xxx, walls 101xxx, generator 102xxx, skills 103xxx, chase 104xxx)
 OUT_DIR = "art/fight_boss"
 REROLL = {"The Quartermaster": 2000, "The Registrar": 2000}    # 25 Oct: covers came back inset twice (margin at the sides and bottom)
+PLATE_REROLL = {"The Manager": 2000}    # 25 Oct: an 11 px blank band top and bottom, then a full border at +1000
+# the_bank_plate (and ransacked_streets_plate) has a 12/28 px border of its own, and the Manager copied it; the
+# Registrar's plate was styled on the Bank and came back clean, so it carries the palette without the border
+PLATE_STYLE = {"The Manager": "res://art/fight_boss/the_registrar_plate.png"}
 OWN = ("pixellab_boss_backdrops_manifest.json", "pixellab_boss_backdrops_test_manifest.json")
 SITE_KEYS = [k for k, _s, _c in kit.SITES]      # by data.gd's site index (the kit's SITES are in the same order)
 
@@ -110,14 +114,15 @@ def boss_names():
 def plate_job(boss, site, scene, seed, card=None):
     words = kit.POV + "looking " + scene + ". " + kit.EMPTY + " " + kit.LAYOUT + " "
     j = {"out": "%s/%s_plate.png" % (OUT_DIR, slug(boss)), "width": PLATE_W, "height": PLATE_H, "no_background": False,
-         "seed": seed, "endpoint": "generate-image-v2", "single": True, "style_options": kit.STYLE,
-         "style_image": "res://art/fight_new/%s_plate.png" % site}
+         "seed": seed + PLATE_REROLL.get(boss, 0), "endpoint": "generate-image-v2", "single": True,
+         "style_options": kit.STYLE,
+         "style_image": PLATE_STYLE.get(boss, "res://art/fight_new/%s_plate.png" % site)}
     if card:
         j["reference_images"] = [card]
         words += MAP_CARD + " "
     j["description"] = words + kit.TAIL
-    j["_where"] = "%s's fight, the plate: his den at %s (styled on art/fight_new/%s_plate.png%s)" % (
-        boss, site, site, (", the place from " + card.replace("res://", "")) if card else "")
+    j["_where"] = "%s's fight, the plate: his den at %s (styled on %s%s)" % (
+        boss, site, j["style_image"].replace("res://", ""), (", the place from " + card.replace("res://", "")) if card else "")
     return j
 
 

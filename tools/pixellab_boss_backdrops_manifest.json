@@ -84,7 +84,7 @@
    "width": 744,
    "height": 320,
    "no_background": false,
-   "seed": 105004,
+   "seed": 107004,
    "endpoint": "generate-image-v2",
    "single": true,
    "style_options": {
@@ -93,9 +93,9 @@
     "detail": true,
     "shading": true
    },
-   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "style_image": "res://art/fight_boss/the_registrar_plate.png",
    "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the branch manager's office behind the bank's banking hall: a heavy wooden desk and a leather chair, filing cabinets with their drawers pulled out, the round steel vault door standing open on the left onto the dark, safe-deposit boxes along the wall with their little doors hanging, loose banknotes and paper over the carpet, the notes plain and blank with no faces or numbers on them, a frosted glass partition, the blinds half down. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
-   "_where": "The Manager's fight, the plate: his den at the_bank (styled on art/fight_new/the_bank_plate.png)"
+   "_where": "The Manager's fight, the plate: his den at the_bank (styled on art/fight_boss/the_registrar_plate.png)"
   },
   {
    "out": "art/fight_boss/the_manager_cover.png",
