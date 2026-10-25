@@ -6928,3 +6928,6 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   The stall now waits on tins: tempers x8 priced the bot out (Recruit as physical at level 50 with its kit at item
   levels 25-30, 18,792 scrap held, one temper a pass); gate 15's new measure shows the scrap stranded behind it (2.3-13.4 h
   held on five builds). Gate 6 red at a 190 min stretch, Kev's story late on one read.
+- After the fourth pass (Matt, 25 Oct: "as you suggest"): TEMPER_CASH back to 4 (tempering on scrap again; the cash
+  held waits for the Issue), the XP taper kept, gate 4 to level 19-23 at the Quartermaster (so it and gate 16 can both
+  hold). The bot passes stop here: Matt's playtest next. Smoke 248 green.
