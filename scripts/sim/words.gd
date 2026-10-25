@@ -630,6 +630,9 @@ const UNIQUES := {
 	"The Lineman's Lamp": "He wore it up the poles when the lights went off for everyone but them. It still finds the live wire first.",
 	"The Registrar's Satchel": "Births, deeds, debts: she carried the town's paperwork about with her in case anyone asked. Nobody did.",
 	"The Issuer's Robes": "Cut for a man who signs money into being. Heavy, because it has to be.",
+	"The Lineman's Tool Bag": "Insulated pliers, a tester, a roll of tape. Everything he needed to decide whose street stayed lit.",
+	"The Registrar's Stamp": "Rubber, red ink, a worn handle. Three of anything and the third went through without her reading it.",
+	"The Issuer's Revolver": "He never fired it. He never had to. Whatever it was pointed at got paid for twice.",
 	"The Van Keys": "The Carpet Man's. The van's long gone, but the keys were in his pocket, and they're the kind that start anything.",
 	"The Manager's Pen": "His own, not the counter's. Everything he signed, he signed with this, right up to the last day. It still works.",
 	"The Quartermaster's Ledger": "Every round, every blanket, every name, in his hand. What's signed for is yours. He'd say so himself, now.",
@@ -1037,7 +1040,7 @@ const RECYCLE := {
 const COMBOS := {
 	"embers": "The fire's catching on itself.",
 	"clean_kills": "The cold's doing the work now.",
-	"overdose": "The dose is coming back round.",
+	"flatline": "The heart's going again.",
 	"opened_for_good": "They're not closing up.",
 	"live_load": "The current's building.",
 	"drilled": "The drill's taking over.",
@@ -1149,3 +1152,62 @@ const WOUNDS := {
 	"full": "Hurt again, and nowhere left to hurt: three wounds is the most a runner carries",
 	"treated": "%s seen to: %s back",
 }
+
+## The Pitch circle (24 Oct): an element shut till a Pitch point opens its starter.
+const ELEMENT_SHUT := "shut"
+const ELEMENTS_NOTE := "Each opens with a Pitch point"
+
+## The fight's breakdown (24 Oct, the endgame chase): the sources that aren't a gun or a skill.
+const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bleed", "dot:shock": "Shock", "dot:frost": "Frost",
+	"grenades": "Grenades", "fists": "Bare hands", "rule:arsonists_rig": "The Arsonist's Rig", "rule:issuers_revolver": "Repeat hits · The Issuer's Revolver", "other": "Everything else"}
+## What hit you, by type: frost on the runner is a chill (skills.md §11).
+const TOOK_WORDS := {"physical": "Physical", "fire": "Fire", "frost": "Chill", "poison": "Poison", "shock": "Shock", "bleed": "Bleed"}
+const FIGHT_BUTTON := "The fight ›"
+## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).
+const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "worn_now": "worn now", "ready": "ready to wear",
+	"short": "gone: %s", "wear": "Wear", "save": "Save worn", "save_sure": "Again: replace it", "worn": "Kit %d on", "worn_short": "Kit %d on; missing: %s",
+	"skill": "1 skill", "skills": "%d skills", "rig": "%d in the rig", "wear_tip": "Puts on its kit, tops up its rig and slots its skills"}
+const BUILD := {"copy": "Copy build", "paste": "Paste build", "copied": "Build code copied", "bad": "That isn't a build code", "old": "A build code from an older version: the web has changed since",
+	"out": "Not while the runner's out", "class": "A %s build: swap to them in Training first", "short": "Short of tins: the reset is %s",
+	"title": "A %s build · %d perks · %d skills", "plan": "Resets every perk for %s, then trains %d of %d", "plan_free": "Trains %d of %d perks, no reset",
+	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks"}
+const COLLECTION := {"button": "The collection ›", "title": "The collection", "sub": "Every runner's, for the record · it gives no power", "close": "Close",
+	"uniques": "Uniques found", "mythics": "Mythics found", "sites": "Sites with every mark", "classes": "Classes at level 50", "order": "The order's three beaten", "sets": "Sets complete",
+	"of": "of %d", "grid_head": "Every unique · the found ones in colour, the rest by slot", "sites_head": "Sites · a mark at levels %s",
+	"unfound": "? · %s", "level": "level %d", "none": "not yet"}
+const FIGHT_TITLE := "The fight · %s"
+const FIGHT_SUB := "%s fighting · %d kills · %d gangs after the clear"
+const FIGHT_HEADS := ["Damage", "dmg/s", "Damage taken", "Damage stopped", "Meds used"]
+const FIGHT_SRC := "Your damage, by where it came from"
+const FIGHT_TOOK := "What hit you"
+const FIGHT_SKILLS := "Your skills"
+const FIGHT_NONE := "No skills used"
+const FIGHT_CLOSE := "Close"
+
+## The true pinnacles' fights on screen (24 Oct): his chips "On them", the Registrar's "On you".
+const ORDER_CHIPS := {"shield": "Shield · break it in %d s", "stunned": "Stunned %d s", "taped": "Red tape · −30%% gun damage · %d s", "sealed": "A skill stamped",
+	"printed": "%d printed men"}
+const SKILL_SEALED := "Stamped"
+const SKILL_SEALED_TIP := "Stamped by the Registrar: it can't fire for %d s"
+
+## Patterns at the Workshop (24 Oct, the endgame chase).
+const PATTERNS := {"not_unique": "Only a unique has a pattern; a mythic has none", "not_stashed": "Take it off first: only a stashed unique breaks", "out": "Not while the runner's out",
+	"broken": "%s broken down: its pattern is kept at the Workshop", "no_pattern": "Pick a pattern", "has_one": "It has a power already: one a piece",
+	"too_plain": "Only Rare or better takes a pattern", "wrong_slot": "That pattern goes on: %s", "wants": "Short of: %s",
+	"wants_n": "Short of: %d %s", "short": "Short of tins", "put_on": "%s now carries %s's pattern",
+	"tab": "Patterns", "break_head": "1 · Break a unique down", "kept_head": "Patterns kept · %d", "put_head": "2 · Put it on a Rare or better, same slot",
+	"break": "Break it down", "break_sure": "Press again: it's gone for good", "gone": "The unique goes for good; its power stays here as one pattern", "put": "Put it on", "kept_note": "One use each. They sit here, not in the stash.",
+	"put_note": "Spends the pattern and the costs above; it can't come off",
+	"none_kept": "None kept yet: break a unique down", "pick_unique": "Pick a unique in the stash", "pick_rare": "Pick a Rare or better, same slot"}
+
+## The loot filter (24 Oct, the endgame chase).
+const LOOT_RULES := {"scrapped": "Loot rules scrapped %d find%s on the way in: +%d scrap", "special": "Uniques, set pieces, mythics",
+	"any_rarity": "Any rarity", "or_better": "%s or better", "upto": "Up to %s", "any_slot": "any slot", "tier": "a T%d+ affix", "tier_top": "a T%d affix",
+	"button": "Loot rules · %d on", "button_none": "Loot rules", "title": "Loot rules", "sub": "Checked top down when a run comes home · the first that fits wins",
+	"add": "Add a rule", "on": "Rules: on", "off": "Rules: off", "close": "Close",
+	"note": "Keep: never sold or binned. Highlight: an amber edge, kept too. Scrap: scrapped on the way in. No rule fits: as before.",
+	"keep": "Keep", "highlight": "Highlight", "scrap": "Scrap", "delete": "Delete", "edit_head": "Rule",
+	"rarity": "Rarity", "slot": "Slot", "gun": "Weapon", "affix": "Best affix", "then": "Then", "none": "No rules yet: add one", "any": "Any", "kinds": "Uniques, set pieces, mythics",
+	"kind": "Kind", "plain": "Everything else", "from": "From %s ▾", "to": "To %s ▾", "up": "↑", "up_tip": "Move up: checked before the one above",
+	"act_tip": "Press to change: keep, highlight, scrap", "never_tip": "Never scrapped by a rule", "body_tip": "Helmet, armour, charm", "bags_tip": "Rig, backpack",
+	"full": "8 rules at most", "pick": "Pick a rule to change it", "row_on": "On", "row_off": "Off"}

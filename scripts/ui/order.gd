@@ -123,8 +123,8 @@ func _show_col(c: Dictionary) -> void:
 		drop.append(en.call(sim.thing_label(str(p["first"]))))
 	if str(p.get("drop", "")) != "":
 		drop.append(en.call(sim.thing_label(str(p["drop"]))))
-	var u_words: String = "their unique" if beaten > 0 else en.call(str(p["unique"]))
-	UI.fit(c["drops"], [" · ".join(drop + [u_words]), " · ".join(drop + ["their unique"]), " · ".join(drop)])
+	var u_words: String = "one of their two uniques" if beaten > 0 else "%s or %s" % [en.call(str(p["unique"])), en.call(str(p.get("unique2", p["unique"])))]
+	UI.fit(c["drops"], [" · ".join(drop + [u_words]), " · ".join(drop + ["a unique of theirs"]), " · ".join(drop)])
 	var why: String = sim.order_block(k)
 	c["button"].visible = open and why == ""
 	c["note"].visible = not c["button"].visible

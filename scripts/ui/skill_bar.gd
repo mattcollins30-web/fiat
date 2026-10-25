@@ -7,6 +7,7 @@ extends Control
 ## Laid over the frame in the run's own space; the run places it (run.gd) and feeds it each refresh.
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const Words := preload("res://scripts/sim/words.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
@@ -164,17 +165,21 @@ func show_state(s) -> void:
 		if d.get("short", null) != short:
 			d["short"] = short
 			d["cost"].add_theme_color_override("font_color", Pal.BAD if short else Pal.ENERGY)     # set on a change only: each is a theme change (the review)
-		d["pic"].modulate = Color(0.45, 0.45, 0.45) if (short or not known) else Color.WHITE
+		var seal_s: float = float(m.get("sealed", {}).get(str(i), 0.0))     # the Registrar's seal (24 Oct)
+		d["pic"].modulate = Color(0.85, 0.35, 0.35) if seal_s > 0.0 else (Color(0.45, 0.45, 0.45) if (short or not known) else Color.WHITE)
+		if seal_s > 0.0:
+			d["secs"].text = "%d" % int(ceil(seal_s))
 		var auto_on: bool = bool(sim.skill_auto[i])
-		if d.get("auto", null) != auto_on:
-			d["auto"] = auto_on
-			d["pip"].text = "Auto" if auto_on else "Off"
-			d["pip"].add_theme_color_override("font_color", Pal.GOOD if auto_on else Pal.TEXT_3)
+		var pip_state: String = "sealed" if seal_s > 0.0 else ("auto" if auto_on else "off")
+		if d.get("auto", null) != pip_state:
+			d["auto"] = pip_state
+			d["pip"].text = Words.SKILL_SEALED if seal_s > 0.0 else ("Auto" if auto_on else "Off")
+			d["pip"].add_theme_color_override("font_color", Pal.BAD if seal_s > 0.0 else (Pal.GOOD if auto_on else Pal.TEXT_3))
 		var lit: bool = now < _flash_until and _flash_slot == i
 		if d.get("lit", null) != lit:
 			d["lit"] = lit
 			b.add_theme_stylebox_override("normal", _LIT if lit else _PLAIN)
-		b.tooltip_text = "%s\n%s\n%s\n%s\nRight-click to turn auto %s" % [info["name"], info["line"], chip(sim, id), Data.SKILL_RULES.get(str(info["rule"]), ""), "off" if auto_on else "on"]
+		b.tooltip_text = ((Words.SKILL_SEALED_TIP % int(ceil(seal_s)) + "\n") if seal_s > 0.0 else "") + "%s\n%s\n%s\n%s\nRight-click to turn auto %s" % [info["name"], info["line"], chip(sim, id), Data.SKILL_RULES.get(str(info["rule"]), ""), "off" if auto_on else "on"]
 
 
 ## The slot's chip: "25 energy · 8 s" (skills.md §11), the cooldown as it runs for this runner.

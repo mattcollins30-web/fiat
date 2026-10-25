@@ -808,6 +808,13 @@ const UNIQUES := [
 		"words": "Papers turn up twice as often", "short": "Papers ×2", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "loot_pct", "value": 15}]},
 	{"name": "The Issuer's Robes", "slot": "Armour", "base": "Heavy armour suit", "rule": "issuers_robes", "band": "chase", "range": [8, 9], "boss": true, "order": "mint",
 		"words": "A run's tins +1% for every point of the town's worth", "short": "Tins +1% a point of worth", "affixes": [{"stat": "armour", "value": 40}, {"stat": "hp", "value": 40}, {"stat": "cash_pct", "value": 10}]},
+	# a build to make of each (24 Oct, the endgame chase): beside the old one, the first win gives one of the two
+	{"name": "The Lineman's Tool Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "linemans_bag", "band": "chase", "range": [7, 9], "boss": true, "order": "grid",
+		"words": "Every shock you put on a man arcs to everyone else on you at half strength; shocked men take 20% more damage from your skills", "short": "Shock arcs to all; skills +20% on shocked", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "shock_pct", "value": 20}]},
+	{"name": "The Registrar's Stamp", "slot": "Charm", "base": "Bank's own pen", "rule": "registrars_stamp", "band": "chase", "range": [7, 9], "boss": true, "order": "archive",
+		"words": "Every third skill you use costs nothing and goes off twice", "short": "Every third skill: free, fires twice", "affixes": [{"stat": "cdr_pct", "value": 10}]},
+	{"name": "The Issuer's Revolver", "slot": "Secondary", "base": "Officer's revolver", "rule": "issuers_revolver", "band": "chase", "range": [8, 9], "boss": true, "order": "mint",
+		"words": "A kill lands the killing hit again on the next man; a kill from that hit does the same", "short": "A kill's hit lands again on the next", "affixes": [{"stat": "damage_pct", "value": 20}]},
 	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep;
 	# nine of them are a site's own (`site`, endgame part 3, 7 Oct): found only on that site, past SITE_UNIQUE_DEPTH for its
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
@@ -1022,6 +1029,7 @@ const SKILLS := {
 }
 
 const FX := {
+	"rule/linemans_bag.arc": 0.5, "rule/linemans_bag.skills": 1.2,     # the Lineman's Tool Bag (24 Oct): the arc at half, skills +20% on the shocked
 	# node
 	"node/bleed_more.med_time": 1.3,     # Blood up: Bleed does 40% more; your meds 30% slower
 	"node/buyers_market.buy": 2.0,     # Buyer's market: The Fence pays double; buying costs double
@@ -1504,14 +1512,20 @@ const ILVL_FROM := 15
 ## no top. The words never say so; docs/design/broken_builds.md says how each is built. "step" is a stack's worth;
 ## "recipe" the nodes it needs, by tree/name, the smoke walking each from nothing (24 Oct: the web had left the doc's paths behind).
 ##   embers - a burning kill: fire +step a stack. clean_kills - a chilled kill: the first shot's bonus holds on the
-##   next, +step a stack. overdose - poison's ticks heal step of themselves; past full, a max HP of it a stack of poison
-##   (+100%). opened_for_good - the bleed has no cap; a kill carries it +step. live_load - a shocked kill: shock +step.
+##   next, +step a stack. flatline - the Paramedic's (joints B, 24 Oct; Overdose went with his poison): a shocked kill:
+##   shock +step and FLATLINE_HEAL of max HP. opened_for_good - the bleed has no cap; a kill carries it +step. live_load - a shocked kill: shock +step.
 ##   drilled - the Recruit's (24 Oct): a kill while a skill of his runs: physical +step a stack.
+const LOADOUTS := 3                 # a runner's (24 Oct, the endgame chase)
+const BUILD_PREFIX := "FIAT1-"      # a build code's head: the version of the lists it indexes
+const COLLECTION_LEVELS := [10, 25, 50, 75, 100]     # the collection's marks a site, by level (24 Oct): the last is the tile's
+const COLLECTION_CLASS_LEVEL := 50
+const BREAKDOWN_ROWS := 7          # the fight's breakdown (24 Oct): the biggest sources shown, the rest "Other"
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
+const FLATLINE_HEAL := 0.05        # Flatline: a shocked kill heals this share of max HP (joints B, 24 Oct)
 const COMBOS := {
 	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.04},
 	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "recipe": ["Snares/Cold snap", "The cold/Poacher's snare", "The cold/Frozen solid", "The cold/Shatter"], "step": 0.05},
-	"overdose": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "rat_mans_bag", "nodes": ["poison_stacks", "cap_lingers"], "recipe": ["Triage/Syringe", "The Rat Man/Paramedic's dose", "The Rat Man/Builds", "The Rat Man/Lingers"], "step": 0.05},
+	"flatline": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "linemans_bag", "nodes": ["shock_chain", "cap_arc"], "recipe": ["Shifts/Defib", "Live/Paramedic's paddles", "Live/Daisy chain", "Live/Arc"], "step": 0.05},     # joints B (24 Oct): Overdose went with the Paramedic's poison
 	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "recipe": ["Muscle/Glassing", "Blades/Doorman's glass", "Blades/Won't stop", "Blades/Bleed out"], "step": 0.25},
 	"live_load": {"class": "Scrapper", "set": "The Bank's", "pieces": 3, "rule": "jump_leads", "nodes": ["shock_chain", "cap_arc"], "recipe": ["Stripping/Live wire", "Live/Scrapper's mains", "Live/Daisy chain", "Live/Arc"], "step": 0.02},
 	"drilled": {"class": "Recruit", "set": "The Army's", "pieces": 3, "rule": "qm_rifle", "nodes": ["bust_them_up", "cap_flattened"], "recipe": ["Ordnance/Brute force", "Knuckles/Recruit's boots", "Knuckles/Bust them up", "Knuckles/Flattened"], "step": 0.03},
@@ -1629,7 +1643,7 @@ const TREES_SRC := [
 	# node can't be bought with a dip. A class tree's conversion notable is its half of a joint (column 4).
 	# Poacher
 	{"name": "Stalking", "class": "Poacher", "nodes": [
-		{"name": "Still hands", "col": 0, "row": 0, "effect": "first_pct", "value": 5},
+		{"name": "Clean shot", "col": 0, "row": 0, "effect": "skill_clean_shot", "skill": "clean_shot", "notable": true, "cost_fixed": 1, "words": "Your next shot does ×2.5 damage"},
 		{"name": "Breathing", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
 		{"name": "Patience", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
 		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Do double damage to the first of each gang with a rifle"},
@@ -1657,7 +1671,7 @@ const TREES_SRC := [
 	]},
 	# Doorman
 	{"name": "Muscle", "class": "Doorman", "nodes": [
-		{"name": "Heavy hands", "col": 0, "row": 0, "effect": "damage_pct", "value": 4},
+		{"name": "Shoulder charge", "col": 0, "row": 0, "effect": "skill_shoulder_charge", "skill": "shoulder_charge", "notable": true, "cost_fixed": 1, "words": "Hits the nearest man for ×3 damage and sends him to the back"},
 		{"name": "Gym", "col": 0, "row": 1, "effect": "hp", "value": 14},     # 4 + Bulk's 10 (24 Oct, step 4: its hang went to Shoulder charge),
 		{"name": "Broad shoulders", "col": 1, "row": 0, "effect": "armour_pct", "value": 17},     # 5 + Hard case's 12 (24 Oct, step 4: its hang went to Brace),
 		{"name": "Shotgunner", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "shotgun", "notable": true, "words": "Shotgun damage +25%"},
@@ -1686,7 +1700,7 @@ const TREES_SRC := [
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
-		{"name": "Steady pulse", "col": 0, "row": 0, "effect": "heal_pct", "value": 30},     # 10 + Good hands's 20 (24 Oct, step 4: its hang went to Tourniquet),
+		{"name": "Tourniquet", "col": 0, "row": 0, "effect": "skill_tourniquet", "skill": "tourniquet", "notable": true, "cost_fixed": 1, "words": "Clears bleed on you; no new bleed lands for 10 seconds"},     # 10 + Good hands's 20 (24 Oct, step 4: its hang went to Tourniquet),
 		{"name": "Fast hands", "col": 0, "row": 1, "effect": "med_speed_pct", "value": 35},     # 15 + Quick dressing's 20 (24 Oct, step 4: its hang went to Antidote),
 		{"name": "Kit bag", "col": 1, "row": 0, "effect": "heal_pct", "value": 10},
 		{"name": "Fast work", "col": 2, "row": 0, "effect": "triage", "notable": true, "words": "Meds take half the time"},
@@ -1694,7 +1708,7 @@ const TREES_SRC := [
 		{"name": "Stock take", "col": 2, "row": 1, "effect": "med_cap", "value": 2},     # 1 + Grab bag's 1 (24 Oct, step 4: its hang went to Adrenaline),
 		{"name": "Field surgery", "col": 4, "row": 0, "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
 		{"name": "Worst first", "col": 3, "row": 1, "effect": "worst_first", "notable": true, "words": "A med heals +50% under 50% HP"},     # moved off its hang for Major incident (24 Oct, step 4)
-		{"name": "Syringe", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "paramedic_poison", "words": "15% of every hit becomes poison"},
+		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "15% of every hit becomes frost, which slows their fire"},
 		{"name": "Walking wounded", "cost": true, "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Meds heal 50% less; damage +40% under half HP"},
 		{"name": "Pockets checked", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Clean hands", "col": 5, "row": 0, "effect": "cap_clean_hands", "capstone": true, "words": "A med clears burns, poison and bleeds on you, and you take no damage for 3 seconds"},
@@ -1708,14 +1722,14 @@ const TREES_SRC := [
 		{"name": "Clocking off", "col": 2, "row": 1, "effect": "clocking_off", "notable": true, "words": "The first search after a clear is instant"},     # moved off its hang for Code blue (24 Oct, step 4)
 		{"name": "Not today", "col": 4, "row": 0, "effect": "not_today", "keystone": true, "words": "Under 25% HP, you take 40% less damage"},
 		{"name": "Discount", "col": 3, "row": 1, "effect": "treat_pct", "value": 20},
-		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "15% of every hit becomes frost, which slows their fire"},
+		{"name": "Defib", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "paramedic_shock", "words": "15% of every hit becomes shock"},
 		{"name": "Second shift", "col": 4, "row": 1, "effect": "second_shift", "notable": true, "words": "The first med you use on a run isn't used up"},
 		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Guard holds twice as much, and a med fills it to the top"},     # Guard (12 Oct): was overflow as armour, two to one; the class does overflow now
 		{"name": "Double shift", "col": 5, "row": 1, "beside": true, "effect": "overtime", "notable": true, "words": "Guard holds 50% more; with Guard up, meds take half the time"},
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
-		{"name": "Nose for parts", "col": 0, "row": 0, "effect": "att_share", "value": 15},     # 5 + Socket set's 10 (24 Oct, step 4: its hang went to Ring main),
+		{"name": "Ring main", "col": 0, "row": 0, "effect": "skill_ring_main", "skill": "ring_main", "notable": true, "cost_fixed": 1, "words": "×1.5 shock damage that jumps through 3 men"},     # 5 + Socket set's 10 (24 Oct, step 4: its hang went to Ring main),
 		{"name": "Quick fingers", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
 		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Improvised gun damage +40%"},
@@ -1743,7 +1757,7 @@ const TREES_SRC := [
 	]},
 	# Drifter
 	{"name": "Moving on", "class": "Drifter", "nodes": [
-		{"name": "Light feet", "col": 0, "row": 0, "effect": "pace_pct", "value": 11},     # 5 + Tarmac's 6 (24 Oct, step 4: its hang went to Duck and weave),
+		{"name": "Duck and weave", "col": 0, "row": 0, "effect": "skill_duck_and_weave", "skill": "duck_and_weave", "notable": true, "cost_fixed": 1, "words": "The next 3 hits on you miss"},     # 5 + Tarmac's 6 (24 Oct, step 4: its hang went to Duck and weave),
 		{"name": "Road legs", "col": 0, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Head start", "col": 1, "row": 0, "effect": "patrol_pct", "value": 20},     # 10 + Thumb out's 10 (24 Oct, step 4: its hang went to Look lively),
 		{"name": "Spray", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "smg", "notable": true, "words": "SMG damage +25%"},
@@ -1765,14 +1779,14 @@ const TREES_SRC := [
 		{"name": "Spare change", "col": 2, "row": 1, "effect": "spare_change", "notable": true, "words": "20% chance a search finds a note"},     # moved off its hang for Jackpot (24 Oct, step 4)
 		{"name": "All or nothing", "col": 4, "row": 0, "effect": "all_or_nothing", "keystone": true, "words": "No Common finds, and half as many finds"},
 		{"name": "Four-leaf", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
-		{"name": "Jump start", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "drifter_shock", "words": "15% of every hit becomes shock"},
+		{"name": "Cut-throat", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "drifter_bleed", "words": "15% of every hit becomes bleed"},
 		{"name": "Light fingers", "cost": true, "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers turn up 3 times as often; tins from kills −20%"},
 		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice; you keep the better"},
 	]},
 	# Recruit (24 Oct, milestone 8: the sixth class, docs/design/skills.md §5): the class built round skills - Ordnance
 	# the throws, Drill the casting
 	{"name": "Ordnance", "class": "Recruit", "nodes": [
-		{"name": "Pull the pin", "col": 0, "row": 0, "effect": "grenade_pct", "value": 10},
+		{"name": "Lob one in", "col": 0, "row": 0, "effect": "skill_lob_one_in", "skill": "lob_one_in", "notable": true, "cost_fixed": 1, "words": "Throws a grenade at everyone on you without using one from your rig"},
 		{"name": "Cookhouse", "col": 0, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Spare pouch", "col": 1, "row": 0, "effect": "med_cap", "value": 1},
 		{"name": "Cook it off", "col": 2, "row": 0, "effect": "grenade_extra", "notable": true, "words": "Every grenade also hits a man who isn't on you yet"},
@@ -1794,7 +1808,7 @@ const TREES_SRC := [
 		{"name": "Kit inspection", "col": 2, "row": 1, "effect": "energy_max", "value": 10},
 		{"name": "Quick march", "col": 4, "row": 0, "effect": "on_the_double", "keystone": true, "words": "Cooldowns 30% shorter; skills cost 25% more"},
 		{"name": "Brasso", "col": 3, "row": 1, "effect": "energy_regen_pct", "value": 15},
-		{"name": "Fix bayonets", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "recruit_bleed", "words": "15% of every hit becomes bleed"},
+		{"name": "Tear gas", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "recruit_poison", "words": "15% of every hit becomes poison"},
 		{"name": "Double time", "cost": true, "col": 4, "row": 1, "effect": "double_time", "notable": true, "words": "Energy refills twice as quickly; max energy −30"},
 		{"name": "Spit and polish", "col": 5, "row": 1, "effect": "cdr_pct", "value": 4},
 		{"name": "Passing-out parade", "col": 5, "row": 0, "effect": "cap_passing_out", "capstone": true, "words": "Every skill you use gives 5 energy back"},
@@ -1846,7 +1860,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Poacher's bait", "col": 3, "row": 0, "effect": "poison_pct", "value": 25, "type": "rifle", "class": "Poacher", "notable": true, "joint": "poacher_poison", "words": "Rifles do 25% more poison damage"},
 		{"name": "Builds", "col": 4, "row": 0, "effect": "poison_stacks", "keystone": true, "words": "Poison stacks to 15, not 5"},
 		{"name": "Slow acting", "col": 2, "row": 1, "effect": "poison_pct", "value": 15},
-		{"name": "Paramedic's dose", "col": 3, "row": 1, "effect": "poison_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_poison", "words": "Poison damage +25%"},
+		{"name": "Recruit's gas", "col": 3, "row": 1, "effect": "poison_pct", "value": 20, "class": "Recruit", "notable": true, "joint": "recruit_poison", "words": "Poison damage +20%"},     # the Paramedic's dose's place (24 Oct, joints B: the Recruit takes poison)
 		{"name": "Rat's share", "col": 4, "row": 1, "effect": "poison_more", "notable": true, "words": "Poison damage +40%; loot quantity −20%"},
 		{"name": "Lingers", "col": 5, "row": 0, "effect": "cap_lingers", "capstone": true, "words": "Poison carries to the next man when one dies"},
 		{"name": "Immune", "col": 5, "row": 1, "beside": true, "effect": "proof_poison", "value": 1, "also": {"poison_res": 20}, "notable": true,
@@ -1858,7 +1872,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Off the mains", "col": 1, "row": 0, "effect": "conv_shock_pct", "value": 35},
 		{"name": "Current", "col": 2, "row": 0, "effect": "shock_pct", "value": 30, "notable": true, "words": "Shock damage +30%; shocked gangs take 40% more, not 25%"},
 		{"name": "Amps", "col": 1, "row": 1, "effect": "shock_pct", "value": 12},
-		{"name": "Drifter's leads", "col": 3, "row": 0, "effect": "shock_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_shock", "words": "Shock damage +25%; every gang takes 10% longer to arrive"},
+		{"name": "Paramedic's paddles", "col": 3, "row": 0, "effect": "shock_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_shock", "words": "Shock damage +25%"},     # the Drifter's leads' place (24 Oct, joints B: the Paramedic takes shock)
 		{"name": "Daisy chain", "col": 4, "row": 0, "effect": "shock_chain", "keystone": true, "words": "While the target is shocked, your shock damage hits everyone on you"},
 		{"name": "Volts", "col": 2, "row": 1, "effect": "shock_pct", "value": 15},
 		{"name": "Scrapper's mains", "col": 3, "row": 1, "effect": "shock_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_shock", "words": "Improvised guns do 25% more shock damage"},
@@ -1877,7 +1891,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 2,     # two under (the twenty-seventh read 3.1 h, the twenty-eighth 2.9, against the 2 h gate)
 		 "words": "Bleeds last until the target dies, and stack to 3"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
-		{"name": "Recruit's bayonet", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20, "class": "Recruit", "notable": true, "joint": "recruit_bleed", "words": "Bleed damage +20%"},     # Butcher's place (24 Oct: the Recruit's half)
+		{"name": "Drifter's razor", "col": 3, "row": 1, "effect": "bleed_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_bleed", "words": "Bleed damage +25%; every gang takes 10% longer to arrive"},     # the Recruit's bayonet's place (24 Oct, joints B: the Drifter takes bleed)
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed damage +40%; meds take 30% longer"},
 		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 2,     # two under (its capstone 8.9 h, then 5.8, against 5)
 		 "words": "Bleed damage +50%; a bleed carries to the next man when one dies"},
@@ -1942,25 +1956,26 @@ const WHEEL_BRIDGE_DEG := 168.0
 ## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
 const ELEMENT_METER := 1.5
+const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter costs a Pitch point; its meter fills from then
 const BRIDGE_LEVEL := 30
 const BRIDGE_COST := 3
-const BRIDGES := {"Drifter": ["Poacher", "Scrapper"], "Scrapper": ["Drifter", "Recruit"], "Recruit": ["Scrapper", "Doorman"], "Doorman": ["Recruit", "Paramedic"], "Paramedic": ["Doorman", "Poacher"], "Poacher": ["Paramedic", "Drifter"]}
+const BRIDGES := {"Poacher": ["Paramedic", "Recruit"], "Recruit": ["Poacher", "Doorman"], "Doorman": ["Recruit", "Drifter"], "Drifter": ["Doorman", "Scrapper"], "Scrapper": ["Drifter", "Paramedic"], "Paramedic": ["Scrapper", "Poacher"]}     # the ring's neighbours, joints B (24 Oct)
 ## The hung notables and the keystone choice a tree: "hang" [x, side] places one; the keystones carry "at" (the
 ## first lane's rows) and link by name ("links" in the tree, "xlinks" "Tree/Name").
 const WEB_EXTRA := {
 	"Ordnance": [
-		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
-		{"name": "Lob one in", "hang": [1.5, -1], "effect": "skill_lob_one_in", "skill": "lob_one_in", "notable": true, "words": "Throws a grenade at everyone on you without using one from your rig"},
+		{"name": "The second past", "bridge": "Doorman", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
+		{"name": "Pull the pin", "hang": [1.5, -1], "effect": "grenade_pct", "value": 10, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Flashbang", "hang": [2.5, -1], "effect": "skill_flashbang", "skill": "flashbang", "notable": true, "words": "Stuns everyone on you for 1.5 seconds; they do 50% less damage to you for 4 seconds"},
 		{"name": "Smoke", "hang": [3.5, -1], "effect": "skill_smoke", "skill": "smoke", "notable": true, "words": "Half their shots at you miss for 6 seconds"},
 		{"name": "Danger close", "hang": [4.5, -1], "effect": "skill_danger_close", "skill": "danger_close", "notable": true, "words": "×4 blast damage to everyone on you; you lose 10% of max HP"},
-		{"name": "Firing blanks", "at": [4, LANE_OFF], "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Fix bayonets"],
+		{"name": "Firing blanks", "at": [4, LANE_OFF], "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Tear gas"],
 		 "words": "Skills cost 25% less; you do 15% less damage"},
 	],
 	"Drill": [
-		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Poacher", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
 		{"name": "Suppressing fire", "hang": [1.5, 1], "effect": "skill_suppressing_fire", "skill": "suppressing_fire", "notable": true, "words": "Everyone on you fires 35% slower for 8 seconds"},
 		{"name": "Make ready", "hang": [2.5, 1], "effect": "skill_make_ready", "skill": "make_ready", "notable": true, "words": "+25% damage for your next 10 shots"},
 		{"name": "Stand to", "hang": [3.5, 1], "effect": "skill_stand_to", "skill": "stand_to", "notable": true, "words": "Gives 30 energy and takes 2 seconds off every cooldown"},
@@ -1975,9 +1990,9 @@ const WEB_EXTRA := {
 		{"name": "Word of mouth", "hang": [4.5, 1], "effect": "word_of_mouth", "notable": true, "words": "A note on each site's first clear"},
 	],
 	"Stripping": [
-		{"name": "The second past", "bridge": "Drifter", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
-		{"name": "Ring main", "hang": [1.5, -1], "effect": "skill_ring_main", "skill": "ring_main", "notable": true, "words": "×1.5 shock damage that jumps through 3 men"},
+		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
+		{"name": "Nose for parts", "hang": [1.5, -1], "effect": "att_share", "value": 15, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Hot work", "hang": [2.5, -1], "effect": "skill_hot_work", "skill": "hot_work", "notable": true, "words": "Sets the nearest man burning for ×2 fire damage over 4 seconds"},
 		{"name": "Breakdown", "hang": [3.5, -1], "effect": "skill_breakdown", "skill": "breakdown", "notable": true, "words": "The next man you kill drops 20 rounds for your gun"},
 		{"name": "Short circuit", "hang": [4.5, -1], "effect": "skill_short_circuit", "skill": "short_circuit", "notable": true, "words": "Shocks everyone on you and stuns them for 1.5 seconds. Your shock damage +30% for 6 seconds."},
@@ -1985,17 +2000,17 @@ const WEB_EXTRA := {
 		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
 	],
 	"Fencing": [
-		{"name": "The second past", "bridge": "Recruit", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Drifter", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
 		{"name": "Bung", "hang": [1.5, 1], "effect": "skill_bung", "skill": "bung", "notable": true, "words": "Pay 20 tins: the nearest man is stunned for 8 seconds"},
 		{"name": "Knock-off kit", "hang": [2.5, 1], "effect": "skill_knock_off_kit", "skill": "knock_off_kit", "notable": true, "words": "+30% gun damage for 8 seconds"},
 		{"name": "Back of the van", "hang": [3.5, 1], "effect": "skill_back_of_the_van", "skill": "back_of_the_van", "notable": true, "words": "Puts a grenade in your rig. Once a fight."},
 		{"name": "Everything must go", "hang": [4.5, 1], "effect": "skill_everything_must_go", "skill": "everything_must_go", "notable": true, "words": "For 5 seconds, every shot fires twice"},
 	],
 	"Stalking": [
-		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
-		{"name": "Clean shot", "hang": [1.5, -1], "effect": "skill_clean_shot", "skill": "clean_shot", "notable": true, "words": "Your next shot does ×2.5 damage"},     # the skills take the hung notables (24 Oct, milestone 8)
+		{"name": "The second past", "bridge": "Recruit", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
+		{"name": "Still hands", "hang": [1.5, -1], "effect": "first_pct", "value": 5, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)     # the skills take the hung notables (24 Oct, milestone 8)
 		{"name": "Flush them out", "hang": [2.5, -1], "effect": "skill_flush_them_out", "skill": "flush_them_out", "notable": true, "words": "Pulls the man at the back to the middle; he takes 20% more damage for 8 seconds"},
 		{"name": "Go to ground", "hang": [3.5, -1], "effect": "skill_go_to_ground", "skill": "go_to_ground", "notable": true, "words": "Out of sight for 3 seconds: nothing can hit you. Clears bleed and poison on you."},
 		{"name": "One for the pot", "hang": [4.5, -1], "effect": "skill_one_for_the_pot", "skill": "one_for_the_pot", "notable": true, "words": "A man on you under 25% HP dies at once. A head takes ×5 damage instead."},
@@ -2003,17 +2018,17 @@ const WEB_EXTRA := {
 		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
 	],
 	"Snares": [
-		{"name": "The second past", "bridge": "Drifter", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
 		{"name": "Collared", "hang": [1.5, 1], "effect": "skill_collared", "skill": "collared", "notable": true, "words": "The nearest man is stunned for 3 seconds: he can't fire"},
 		{"name": "Gin trap", "hang": [2.5, 1], "effect": "skill_gin_trap", "skill": "gin_trap", "notable": true, "words": "The next man to join the fight takes ×3 damage and starts to bleed"},
 		{"name": "Decoy", "hang": [3.5, 1], "effect": "skill_decoy", "skill": "decoy", "notable": true, "words": "Everyone on you does 30% less damage to you for 6 seconds"},
 		{"name": "Net every hole", "hang": [4.5, 1], "effect": "skill_net_every_hole", "skill": "net_every_hole", "notable": true, "words": "Everyone on you is stunned for 2 seconds and starts to bleed"},
 	],
 	"Muscle": [
-		{"name": "The second past", "bridge": "Recruit", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
-		{"name": "Shoulder charge", "hang": [1.5, -1], "effect": "skill_shoulder_charge", "skill": "shoulder_charge", "notable": true, "words": "Hits the nearest man for ×3 damage and sends him to the back"},
+		{"name": "The second past", "bridge": "Drifter", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
+		{"name": "Heavy hands", "hang": [1.5, -1], "effect": "damage_pct", "value": 4, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Headbutt", "hang": [2.5, -1], "effect": "skill_headbutt", "skill": "headbutt", "notable": true, "words": "Hits the nearest man for ×1.5 damage and stuns him for 2 seconds"},
 		{"name": "Brace", "hang": [3.5, -1], "effect": "skill_brace", "skill": "brace", "notable": true, "words": "+60% armour for 6 seconds"},
 		{"name": "Barred", "hang": [4.5, -1], "effect": "skill_barred", "skill": "barred", "notable": true, "words": "Throws the nearest man out: a kill, but he drops nothing. Not on a head."},
@@ -2021,44 +2036,44 @@ const WEB_EXTRA := {
 		 "words": "Guard of 25% as each gang arrives. −20% damage while it holds."},
 	],
 	"The door": [
-		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Recruit", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
 		{"name": "Not on the list", "hang": [1.5, 1], "effect": "skill_not_on_the_list", "skill": "not_on_the_list", "notable": true, "words": "One fewer on you for 10 seconds"},
 		{"name": "Shutters down", "hang": [2.5, 1], "effect": "skill_shutters_down", "skill": "shutters_down", "notable": true, "words": "Take 80% less damage for 4 seconds"},
 		{"name": "Pat down", "hang": [3.5, 1], "effect": "skill_pat_down", "skill": "pat_down", "notable": true, "words": "The nearest man loses his armour and resists for 10 seconds"},
 		{"name": "Chucking-out time", "hang": [4.5, 1], "effect": "skill_chucking_out_time", "skill": "chucking_out_time", "notable": true, "words": "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds"},
 	],
 	"Triage": [
-		{"name": "The second past", "bridge": "Doorman", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
-		{"name": "Tourniquet", "hang": [1.5, -1], "effect": "skill_tourniquet", "skill": "tourniquet", "notable": true, "words": "Clears bleed on you; no new bleed lands for 10 seconds"},
+		{"name": "The second past", "bridge": "Poacher", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
+		{"name": "Steady pulse", "hang": [1.5, -1], "effect": "heal_pct", "value": 30, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Antidote", "hang": [2.5, -1], "effect": "skill_antidote", "skill": "antidote", "notable": true, "words": "Clears poison and burns on you; neither lands again for 8 seconds"},
 		{"name": "Adrenaline", "hang": [3.5, -1], "effect": "skill_adrenaline", "skill": "adrenaline", "notable": true, "words": "+25% damage and rate of fire for 8 seconds"},
 		{"name": "Major incident", "hang": [4.5, -1], "effect": "skill_major_incident", "skill": "major_incident", "notable": true, "words": "Clears every ailment on you, and you take no wound this run"},
-		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Worst first"], "xlinks": ["Shifts/Ice pack"],
+		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Worst first"], "xlinks": ["Shifts/Defib"],
 		 "words": "+20% damage and pace for 8 seconds after a med. A med costs 5% max HP."},
 	],
 	"Shifts": [
-		{"name": "The second past", "bridge": "Poacher", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
 		{"name": "Two sugars", "hang": [1.5, 1], "effect": "skill_two_sugars", "skill": "two_sugars", "notable": true, "words": "Energy refills 50% quicker for 10 seconds"},
 		{"name": "Sedative dart", "hang": [2.5, 1], "effect": "skill_sedative_dart", "skill": "sedative_dart", "notable": true, "words": "One man on you sleeps for 4 seconds"},
 		{"name": "Strapped up", "hang": [3.5, 1], "effect": "skill_strapped_up", "skill": "strapped_up", "notable": true, "words": "The next hit that would wound you leaves no wound"},
 		{"name": "Code blue", "hang": [4.5, 1], "effect": "skill_code_blue", "skill": "code_blue", "notable": true, "words": "Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared"},
 	],
 	"Moving on": [
-		{"name": "The second past", "bridge": "Poacher", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
-		{"name": "Duck and weave", "hang": [1.5, -1], "effect": "skill_duck_and_weave", "skill": "duck_and_weave", "notable": true, "words": "The next 3 hits on you miss"},
+		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
+		{"name": "Light feet", "hang": [1.5, -1], "effect": "pace_pct", "value": 11, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Look lively", "hang": [2.5, -1], "effect": "skill_look_lively", "skill": "look_lively", "notable": true, "words": "+40% pace for 6 seconds"},
 		{"name": "Elbow room", "hang": [3.5, -1], "effect": "skill_elbow_room", "skill": "elbow_room", "notable": true, "words": "Everyone on you does 25% less damage to you and takes 15% more from you, for 8 seconds"},
 		{"name": "Gone", "hang": [4.5, -1], "effect": "skill_gone", "skill": "gone", "notable": true, "words": "Out of sight for 4 seconds: nothing can hit you. Your next shot does triple damage."},
-		{"name": "On a roll", "at": [4, LANE_OFF], "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Jump start"],
+		{"name": "On a roll", "at": [4, LANE_OFF], "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Cut-throat"],
 		 "words": "+5% find and loot quality a kill untouched, to +50%. A hit resets it."},
 	],
 	"Luck": [
-		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
+		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
 		{"name": "Coin toss", "hang": [1.5, 1], "effect": "skill_coin_toss", "skill": "coin_toss", "notable": true, "words": "A 50% chance of double damage for 8 seconds"},
 		{"name": "Close shave", "hang": [2.5, 1], "effect": "skill_close_shave", "skill": "close_shave", "notable": true, "words": "The next ailment that would land on you misses"},
 		{"name": "Chancer", "hang": [3.5, 1], "effect": "skill_chancer", "skill": "chancer", "notable": true, "words": "The next man you kill always drops something, at +50% loot quality"},
@@ -2151,7 +2166,8 @@ static func _web_build(src: Array) -> Array:
 			if cols[c].size() == 2:
 				nodes[cols[c][0]]["at"] = [float(c), -1.0]
 				nodes[cols[c][1]]["at"] = [float(c), 1.0]
-				_web_link(nodes, cols[c][0], cols[c][1])         # the rung
+				if t["name"] != COMMON_TREE or c == 0:
+					_web_link(nodes, cols[c][0], cols[c][1])     # the rung (the Pitch's circle has its first alone, 24 Oct)
 			elif halves.has(c):
 				var r: int = cols[c].keys()[0]
 				nodes[cols[c][r]]["at"] = [float(c), -1.0 if r == 0 else 1.0]     # on its rail: a half takes the other's place
@@ -2322,7 +2338,7 @@ static func _web_named(nodes: Array, nm: String) -> int:
 	return -1
 
 
-const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"], "Recruit": ["physical", "bleed"]}     # the Recruit: Knuckles and Blades, his joints (24 Oct)
+const AFFINITY := {"Drifter": ["fire", "bleed"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["shock", "frost"], "Recruit": ["physical", "poison"]}     # joints B (24 Oct, Matt): every element between the two classes that join it (the Recruit Knuckles and the Rat Man)     # the Recruit: Knuckles and Blades, his joints (24 Oct)
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
 ## The joints (9 Oct, docs/design/trees.md): one notable split across a class tree and an element tree of the
@@ -2331,17 +2347,17 @@ const OFF_AFFINITY_COST := 2       # an element off the class's pair costs doubl
 ## place on the Training screen: the first tree joins lane 2's element, the second lane 4's.
 const JOINTS := [
 	{"key": "drifter_fire", "class": "Drifter", "tree": "Moving on", "element_tree": "Petrol", "words": "With an SMG, your hits set them burning; burning gangs take 25% more SMG damage"},
-	{"key": "drifter_shock", "class": "Drifter", "tree": "Luck", "element_tree": "Live", "words": "Killing a shocked target: its drop rolls rarity twice, keeping the better"},
+	{"key": "drifter_bleed", "class": "Drifter", "tree": "Luck", "element_tree": "Blades", "words": "A bleeding man you kill rolls his drop's rarity twice and keeps the better"},
 	{"key": "scrapper_shock", "class": "Scrapper", "tree": "Stripping", "element_tree": "Live", "words": "Every hit from an improvised gun shocks the target"},
 	{"key": "scrapper_fire", "class": "Scrapper", "tree": "Fencing", "element_tree": "Petrol", "words": "A kill on a burning man always drops something; the Fence pays 20% more"},
 	{"key": "poacher_poison", "class": "Poacher", "tree": "Stalking", "element_tree": "The Rat Man", "words": "Your poison on the first of each gang goes on at full stacks"},
 	{"key": "poacher_frost", "class": "Poacher", "tree": "Snares", "element_tree": "The cold", "words": "Every gang arrives chilled for 2 seconds and one man short"},
-	{"key": "paramedic_poison", "class": "Paramedic", "tree": "Triage", "element_tree": "The Rat Man", "words": "Every med you use doses them with a full stack of poison"},
-	{"key": "paramedic_frost", "class": "Paramedic", "tree": "Shifts", "element_tree": "The cold", "words": "Chilled gangs do 30% less damage to you; meds heal 20% more while any are chilled"},
+	{"key": "paramedic_shock", "class": "Paramedic", "tree": "Shifts", "element_tree": "Live", "words": "Every med you use shocks the man you're fighting for 3 seconds"},
+	{"key": "paramedic_frost", "class": "Paramedic", "tree": "Triage", "element_tree": "The cold", "words": "Chilled men do 30% less damage to you; meds heal 20% more while any are chilled"},
 	{"key": "doorman_bleed", "class": "Doorman", "tree": "Muscle", "element_tree": "Blades", "words": "With a shotgun or melee, every hit opens a bleed; bleeding gangs do 20% less damage to you"},
 	{"key": "doorman_physical", "class": "Doorman", "tree": "The door", "element_tree": "Knuckles", "words": "With a shotgun or melee in hand, the gangs on you fire 25% slower"},
 	{"key": "recruit_physical", "class": "Recruit", "tree": "Ordnance", "element_tree": "Knuckles", "words": "Hits and throws from your skills do 25% more damage"},
-	{"key": "recruit_bleed", "class": "Recruit", "tree": "Drill", "element_tree": "Blades", "words": "Hits and throws from your skills open a bleed"},
+	{"key": "recruit_poison", "class": "Recruit", "tree": "Drill", "element_tree": "The Rat Man", "words": "Hits and throws from your skills poison the men they hit"},
 ]
 const JOINT_COL := 3               # the column both halves sit in (the fourth)
 const ELEMENT_GATED_COL := 4       # an element tree's columns from here want a closed joint
@@ -3266,13 +3282,29 @@ const MINT_TINS := 2.0                   # a run's tins from the mint: the town'
 ## `first` on the first win only.
 const PINNACLES := [
 	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2,
-		"drop": "grid_key", "unique": "The Lineman's Lamp"},
+		"drop": "grid_key", "unique": "The Lineman's Lamp", "unique2": "The Lineman's Tool Bag"},
 	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4,
-		"drop": "ledger_seal", "unique": "The Registrar's Satchel"},
+		"drop": "ledger_seal", "unique": "The Registrar's Satchel", "unique2": "The Registrar's Stamp"},
 	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6,
-		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes"},
+		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
+## Patterns (24 Oct, the endgame chase, phase 4): a unique's rule moved onto a rare or better of its slot.
+const PATTERN_RARITY := 2          # rare or better takes one
+const PATTERN_MATERIAL := 12       # of the material you hold most of
+const PATTERN_TINS := 20000        # tins at item level 1, at today's prices
+const PATTERN_GROW := 1.06         # and this much more an item level
+const STAMP_EVERY := 3             # the Registrar's Stamp: every this-many-th skill free and twice (24 Oct)
+## The true pinnacles' fights (24 Oct, the endgame chase; endgame_chase.md calls 5-7): each a different check.
+const ORDER_SHIELD := 0.3          # the Lineman: a shield of this share of his HP over it
+const ORDER_SHIELD_WINDOW := 6.0   # not broken in this many seconds, it fills again
+const ORDER_SHIELD_STUN := 3.0     # broken: he's stunned this long
+const ORDER_SHIELD_BACK := 8.0     # and it comes back up after this
+const ORDER_SEAL_EVERY := 12.0     # the Registrar: a skill sealed this often
+const ORDER_SEAL_FOR := 5.0        # for this long
+const ORDER_TAPE_CUT := 0.3        # with no skill to seal, your fire cut this much while it holds
+const ORDER_PRINT_EVERY := 8.0     # the Issuer: a man printed this often
+const ORDER_PRINT_MAX := 6         # and never more than this on you
 const PINNACLE_UNIQUE := 0.25
 
 

@@ -71,6 +71,7 @@ const ALSO_Y := LANES_Y + LANES_H + 6
 const ALSO_H := 40
 const ALSO_HEAD_W := 150
 const ALSO_MAX := 10
+const CODE_W := 150
 # the sum ("Add up to") in the band, under the class's line (Bands-U A: the strip's 54 px pay for the band)
 const SUM_Y := 76                                              # under the points; the class's line goes right, over the classes
 const SUM_H := 3 * Chips.CHIP_H + 2 * Chips.ROW_GAP
@@ -129,6 +130,16 @@ var _past_bar: Panel                # the second past's points, under way (15 Oc
 var _past_fill: Panel
 var _train: Button
 var _respec: Button
+var code_copy: Button               # the build code (24 Oct, the endgame chase): at the Also strip's end
+var code_paste: Button
+var code_panel: Panel               # a pasted code's plan over the detail strip, till it's taken or cancelled
+var _code_title: Label
+var _code_plan: Label
+var _code_go: Button
+var _code_cancel: Button
+var pending_build := {}             # the code read, waiting on Retrain
+var _code_str := ""                # the code shown, planned again whenever the screen changes under it
+var paste_text := ""                # the tests' clipboard: when set, Paste reads it instead of the system's
 
 
 func _init() -> void:
@@ -288,6 +299,14 @@ func _build_also() -> void:
 		b.pressed.connect(_pick_also_at.bind(k))
 		b.visible = false
 		_also.append({"button": b, "name": ""})
+	code_paste = UI.button(_also_panel, Rect2(Pal.GRID_W - PAD - CODE_W, 5, CODE_W, ALSO_H - 10), false)
+	code_paste.text = Words.BUILD["paste"]
+	code_paste.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	code_paste.pressed.connect(_paste_code)
+	code_copy = UI.button(_also_panel, Rect2(Pal.GRID_W - PAD - 2 * CODE_W - 8, 5, CODE_W, ALSO_H - 10), false)
+	code_copy.text = Words.BUILD["copy"]
+	code_copy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	code_copy.pressed.connect(_copy_code)
 
 
 func _build_pages() -> void:
@@ -467,6 +486,8 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
+	if code_panel != null and code_panel.visible and not pending_build.is_empty():
+		read_code(_code_str)                 # the tree, the tins or the class moved: the plan is read again (the review)
 	if alt != "" and not (alt in also_names()):
 		alt = ""                           # the chip went (a class change took that tree into a lane)
 	_show_head()
@@ -597,7 +618,7 @@ static func _halves(j: Dictionary) -> Array:
 func _show_also() -> void:
 	var names: Array = also_names()
 	var x: float = PAD + ALSO_HEAD_W
-	var right: float = Pal.GRID_W - PAD
+	var right: float = Pal.GRID_W - PAD - 2 * CODE_W - 16      # the build code's two buttons at the end
 	for k in range(ALSO_MAX):
 		var a: Dictionary = _also[k]
 		var b: Button = a["button"]
@@ -1161,3 +1182,83 @@ func text_nodes() -> Array:
 				if l.visible:
 					out.append(l)
 	return out
+
+
+# ------------------------------------------------------------------ the build code (24 Oct, the endgame chase, phase 7)
+
+func _build_code_panel() -> void:
+	code_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.ACCENT))
+	code_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_code_title = UI.label(code_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var by: float = PANEL_H - 12 - Pal.BUTTON_H
+	_code_plan = UI.label(code_panel, Rect2(PAD, by, Pal.GRID_W - 2 * PAD - 440, Pal.BUTTON_H), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_code_cancel = UI.button(code_panel, Rect2(Pal.GRID_W - PAD - 160, by, 160, Pal.BUTTON_H), false)
+	_code_cancel.text = Words.BUILD["cancel"]
+	_code_cancel.pressed.connect(cancel_build)
+	_code_go = UI.button(code_panel, Rect2(Pal.GRID_W - PAD - 160 - 12 - 260, by, 260, Pal.BUTTON_H), true)
+	_code_go.text = Words.BUILD["go"]
+	_code_go.pressed.connect(_retrain_build)
+	code_panel.visible = false
+
+
+func _copy_code() -> void:
+	var code: String = sim.build_code()
+	DisplayServer.clipboard_set(code)
+	sim.log_event(Words.BUILD["copied"])
+	acted.emit()
+
+
+func _paste_code() -> void:
+	read_code(paste_text if paste_text != "" else DisplayServer.clipboard_get())
+
+
+## A code read and its plan shown: what it takes, the reset's price, the nodes that'll train. Nothing changes yet.
+func read_code(code: String) -> void:
+	if code_panel == null:
+		_build_code_panel()
+	_code_str = code
+	pending_build = sim.build_read(code)
+	var plan: Dictionary = sim.build_plan(pending_build)
+	if pending_build.is_empty() or pending_build.has("old"):
+		UI.fit(_code_title, [Words.BUILD["old"] if pending_build.has("old") else Words.BUILD["bad"]])
+	else:
+		UI.fit(_code_title, [Words.BUILD["title"] % [str(pending_build["cls"]), pending_build["nodes"].size(), pending_build["skills"].size()], str(pending_build["cls"])])
+	var words: String = str(plan["block"])
+	if words == "":
+		words = Words.BUILD["plan"] % [Fmt.money(int(plan["cost"])), int(plan["trained"]), int(plan["of"])] if int(plan["cost"]) > 0 else Words.BUILD["plan_free"] % [int(plan["trained"]), int(plan["of"])]
+		if not plan["missed"].is_empty():
+			words += " · " + Words.BUILD["missed"] % plan["missed"].size()
+	UI.fit(_code_plan, [words])
+	_code_go.disabled = str(plan["block"]) != ""
+	code_panel.visible = true
+	move_child(code_panel, -1)
+
+
+func _retrain_build() -> void:
+	var r: Dictionary = sim.build_apply(pending_build)
+	if str(r["block"]) == "":
+		sim.log_event(Words.BUILD["done"] % [int(r["trained"]), int(r["of"])])
+		cancel_build()
+		acted.emit()
+	else:
+		UI.fit(_code_plan, [str(r["block"])])
+
+
+## Leaving the room drops a pasted code's plan.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and code_panel != null and code_panel.visible:
+		pending_build = {}
+		code_panel.visible = false
+
+
+func cancel_build() -> void:
+	pending_build = {}
+	if code_panel != null:
+		code_panel.visible = false
+	_shown = ""
+	show_state(sim)
+
+
+## For the tests: the code panel's words.
+func code_text_nodes() -> Array:
+	return [_code_title, _code_plan, _code_go, _code_cancel, code_copy, code_paste].filter(func(n): return n != null and n.visible)

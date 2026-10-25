@@ -39,14 +39,21 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## (The first cut sent a new class out every two hours: five level-1 runners and nobody at the reach.)
 const CREW_STAND := 7200.0
 const CREW_AHEAD := 5
-const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "poison", "Scrapper": "shock", "Recruit": "physical"}     # the Recruit (24 Oct)
+const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "shock", "Scrapper": "shock", "Recruit": "physical"}     # the Recruit (24 Oct); the Paramedic shock (joints B)
 var crew_on := true
 var crew_swaps := 0
+## The one-save read (25 Oct, the endgame chase step 8: Matt, "effectively a different game" a class): the read starts
+## as the Poacher, as a new game does, and takes its target build the moment that class opens; the crew's swaps after.
+var target_cls := ""
+var target_el := ""
+var _target_taken := false
 var builds := {}                  # class -> {element, keystones_first} as the bot plays it
 var _stood_from := -1.0
 
 
 func _crew_turn(sim) -> int:
+	if target_cls != "" and sim.cls == target_cls and sim.level() < Data.MAX_LEVEL:
+		return -1                         # the one save's target plays on till the cap: the Poacher it left doesn't come back over it (the review)
 	for name in sim.crew_played():
 		if name == sim.cls:
 			continue
@@ -68,6 +75,8 @@ func _crew_turn(sim) -> int:
 
 
 func _crew_out(sim, name: String) -> bool:
+	if not sim.class_open(name):
+		return false                      # shut till its head (or Kev's story): the game's own rule, which set_class leaves to Training
 	var from: String = sim.cls
 	builds[from] = {"element": element, "keystones_first": keystones_first}     # the class going in keeps its build (the review: the runner's, not the bot's own cls)
 	if not sim.set_class(name):
@@ -86,6 +95,11 @@ func _crew_out(sim, name: String) -> bool:
 
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
+	if not sim.on_mission() and target_cls != "" and not _target_taken and sim.cls != target_cls and sim.class_open(target_cls):
+		builds[target_cls] = {"element": target_el, "keystones_first": false}
+		if _crew_out(sim, target_cls):
+			_target_taken = true              # the build the read is for, from the hour its class opens
+			bought.append([sim.elapsed, "the target: %s as %s, opened" % [target_cls, target_el]])
 	if not sim.on_mission():
 		pick_skills(sim, sim.front_tier())     # its three, before the odds read the sites (milestone 8, step 3d)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
@@ -1007,6 +1021,13 @@ func _train_tree(sim) -> void:
 			break
 	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
+	if element != "" and not sim.element_opened(element) and sim.pitch_free() > 0:
+		var et0: Dictionary = Data.element_tree_of(element)
+		for i in range(et0["nodes"].size()):
+			var sid: String = "%s/%d" % [et0["name"], i]
+			if sim.is_element_starter(sid) and sim.can_train(sid):
+				sim.train_node(sid)            # the Pitch circle (24 Oct): the build's element opened with the first Pitch point
+				break
 	while sim.pitch_free() > 0:
 		var pid := _next_in(sim, pitch_t)
 		if pid == "" or not sim.can_train(pid):

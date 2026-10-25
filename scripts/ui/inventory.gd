@@ -329,7 +329,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected)
 		c.set_upgrade(ups[it["id"]])
 		c.set_locked(locks[it["id"]])
-		c.set_mark(str(marks.get(it["id"], "")))
+		c.set_mark(str(marks.get(it["id"], "hl" if it.get("hl", false) else "")))     # a rule's highlight where no contract marks it
 		k += 1
 	while k < _cells.size():
 		_cells[k].visible = false
@@ -486,6 +486,8 @@ func _pick(k: int) -> void:
 	var id: int = _cells[k].id
 	if id < 0:
 		return
+	if _item(id).erase("hl"):
+		_cells[k].set_mark(str(marks.get(id, "")))     # a rule's highlight goes once the piece is looked at, in any room (the review)
 	if many:
 		if id in chosen:
 			chosen.erase(id)

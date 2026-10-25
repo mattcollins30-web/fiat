@@ -49,6 +49,9 @@ const ELEMENT_RING_DIM := 0.55
 ## R_ELEMENT at an angle each (a class's pair side by side), the classes' two lanes out from R_CLASS between their
 ## elements, Data.LANE_OFF rows either side of the angle, their notables hung outward.
 const R_ELEMENT := 280.0
+const R_PITCH := 200.0              # the Pitch's circle, the elements' starters on it (24 Oct)
+const PITCH_CLEAR_DEG := 12.0        # the arc either side of an element's starter the Pitch's nodes leave clear
+const PITCH_END_DEG := 6.0           # and at the entry's and the capstone's ends of its rails
 const R_CLASS := 740.0
 ## The wheel (23 Oct, the canvas pass; Data.WHEEL_*): a class's two lanes round one ring whose centre sits WHEEL_OUT
 ## past R_CLASS along the class's angle, the starter at the near pole; the first lane runs round one way, the second
@@ -64,8 +67,8 @@ static var assume_pics := false   # the smoke: every node sized as if its pictur
 const R_ENTRY := 20.0
 const ENTRY_LABEL_ZOOM := 0.8     # the names move from the rim to the starters from here (23 Oct; 0.6 boxed the cold's name 150 px off its starter)              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
-const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
-const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Recruit": 0.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}     # the Recruit on the free spoke (24 Oct, milestone 8)
+const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The Rat Man": 150.0, "The cold": -150.0}     # joints B (24 Oct, Matt): every element between the two classes that join it
+const CLASS_LAY := {"Paramedic": -120.0, "Scrapper": -60.0, "Drifter": 0.0, "Doorman": 60.0, "Recruit": 120.0, "Poacher": 180.0}     # joints B (24 Oct): each class's first lane joins the element at its angle - 30, its bridge the class at - 60
 
 var sim
 var selected := ""
@@ -115,13 +118,16 @@ func lay_out() -> void:
 			by_class[t["class"]].append(t)
 	# the Pitch
 	var pitch: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	_lay_tree(pitch, Vector2(-2.5 * STEP, 0.0), Vector2.RIGHT, Pal.ACCENT)
+	_lay_pitch_circle(pitch)
 	for nm in ELEMENT_LAY:
 		var t: Dictionary = _trees.get(nm, {})
 		if t.is_empty():
 			continue
 		var d := Vector2.from_angle(deg_to_rad(ELEMENT_LAY[nm]))
 		_lay_tree(t, d * R_ELEMENT, d, Pal.ELEMENT_COLOURS.get(t["element"], Pal.TEXT))
+		for i in range(t["nodes"].size()):
+			if Data.web_entry(t["nodes"][i]):
+				layout["%s/%d" % [nm, i]] = d * R_PITCH          # the starter on the Pitch's circle (24 Oct, Matt)
 	for cls in CLASS_LAY:
 		var mine: Array = by_class.get(cls, [])
 		var d := Vector2.from_angle(deg_to_rad(CLASS_LAY[cls]))
@@ -341,6 +347,67 @@ func _lay_tree(t: Dictionary, at: Vector2, dir: Vector2, tone: Color) -> void:
 	# the name: over the Pitch's middle; past the end of a lane that runs out from the centre
 	var label_at: Vector2 = at + dir * (2.5 * STEP) + Vector2(0, top - 24.0) if dir == Vector2.RIGHT and at.x < 0.0 else at + dir * (5.0 * STEP + R_CAPSTONE + 34.0)
 	_axis[t["name"]] = {"at": at, "dir": dir, "tone": tone, "label_at": label_at}
+
+
+## The Pitch as a circle (24 Oct, Matt: "it would make more sense if the pitch was a circle in the middle ... each
+## element's starter node lives on the pitch"): its two rails run round from its entry on the left, the first over
+## the top and the second under, to the capstone on the right; a hung node sits out past the circle. A node near an
+## element's starter is nudged along clear of it.
+func _lay_pitch_circle(t: Dictionary) -> void:
+	var rails := {-1: [], 1: []}                  # each rail's nodes, in their order along it
+	var hung: Array = []
+	for i in range(t["nodes"].size()):
+		var a: Array = t["nodes"][i].get("at", [0, 0])
+		var y: float = float(a[1])
+		if absf(y) > 1.01:
+			hung.append(i)
+		elif absf(y) < 0.01:
+			layout["%s/%d" % [t["name"], i]] = Vector2.from_angle(0.0) * R_PITCH     # alone in its column: the capstone, where both rails meet
+		else:
+			rails[-1 if y < 0.0 else 1].append(i)
+	for side in rails:
+		var ids: Array = rails[side]
+		ids.sort_custom(func(p, q): return float(t["nodes"][p]["at"][0]) < float(t["nodes"][q]["at"][0]))
+		for k in range(ids.size()):
+			var deg: float = _pitch_rail_deg((k + 0.5) / float(ids.size()), side)
+			layout["%s/%d" % [t["name"], ids[k]]] = Vector2.from_angle(deg_to_rad(deg)) * R_PITCH
+	# a hung node: out past the circle, by the rail node at its column
+	for i in hung:
+		var a: Array = t["nodes"][i]["at"]
+		var side2: int = -1 if float(a[1]) < 0.0 else 1
+		var best: Vector2 = Vector2.ZERO
+		var best_d := INF
+		for j in rails[side2]:
+			var d: float = absf(float(t["nodes"][j]["at"][0]) - float(a[0]))
+			if d < best_d:
+				best_d = d
+				best = layout["%s/%d" % [t["name"], j]]
+		layout["%s/%d" % [t["name"], i]] = best.normalized() * (R_PITCH + (absf(float(a[1])) - 1.0) * ROW * 1.4)
+	_axis[t["name"]] = {"at": Vector2(-R_PITCH, 0.0), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(0.0, -R_PITCH * 0.35)}
+
+
+## A place along a rail of the Pitch's circle, 0 to 1 from its entry (the left) to the capstone (the right), over the
+## top for the first rail and under for the second, the arcs by the elements' starters left clear.
+func _pitch_rail_deg(u: float, side: int) -> float:
+	var lo := 180.0 + PITCH_END_DEG
+	var hi := 360.0 - PITCH_END_DEG
+	var clear: Array = []
+	for sd in ELEMENT_LAY.values():
+		var up: float = fposmod(float(sd), 360.0) if side < 0 else fposmod(-float(sd), 360.0)     # the second rail is the first mirrored
+		if up > lo and up < hi:
+			clear.append(up)
+	clear.sort()
+	var free: float = (hi - lo) - clear.size() * 2.0 * PITCH_CLEAR_DEG
+	var want: float = u * free
+	var at := lo
+	for c in clear:
+		var room: float = (float(c) - PITCH_CLEAR_DEG) - at
+		if want <= room:
+			break
+		want -= room
+		at = float(c) + PITCH_CLEAR_DEG
+	var deg: float = at + want
+	return deg if side < 0 else 360.0 - deg
 
 
 ## A class lane on its half of the class's wheel: a node's "wheel" [degrees along the half, radius in rows] turned

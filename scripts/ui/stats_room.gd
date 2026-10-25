@@ -14,6 +14,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const Words := preload("res://scripts/sim/words.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const W := Pal.GRID_W                      # 1536
@@ -43,6 +44,12 @@ var sim
 var band: Band
 var _band_face: TextureRect
 var cards := {}                            # name -> {panel, title, headline, unit, ...}: the tests read them by name
+var fight_button: Button                   # the Last run card's "The fight ›" (24 Oct, the breakdown)
+var fight_panel: Panel                     # the breakdown over the room; built on show
+var _fight_labels: Array = []              # every label the breakdown shows, for the fit checks
+var collection_button: Button              # the Record card's "The collection ›" (24 Oct, the endgame chase)
+var collection_panel: Panel                # the collection over the room; built on show
+var _coll_labels: Array = []
 
 
 func _init() -> void:
@@ -206,6 +213,10 @@ func _build_record() -> void:
 		t["key"] = UI.label(self, Rect2(tx + 12, ty + 56, tw - 24, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["tiles"].append(t)
 	c["status"] = _small(c, y + c["h"] - 30)
+	collection_button = UI.button(self, Rect2(c["x"] + c["w"] - PAD - COLL_BTN_W, y + 6, COLL_BTN_W, 30), false)
+	collection_button.text = Words.COLLECTION["button"]
+	collection_button.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	collection_button.pressed.connect(show_collection)
 
 
 func _build_last() -> void:
@@ -214,9 +225,13 @@ func _build_last() -> void:
 	c["edge"] = UI.panel(self, Rect2(c["x"], y + 1, 4, c["h"] - 2), UI.box(Pal.GOOD, 2))
 	c["headline"].add_theme_font_size_override("font_size", Pal.TITLE + 4)
 	c["rows"] = []
-	var keys := ["where", "skull", "pack", "cash", "clock"]
+	var keys := ["where", "skull", "dmg", "cash", "clock"]
 	for k in range(keys.size()):
 		c["rows"].append(_row(c, y + 88 + k * ROW_H, keys[k]))
+	fight_button = UI.button(self, Rect2(c["x"] + c["w"] - PAD - FIGHT_BTN_W, y + 8, FIGHT_BTN_W, 34), false)
+	fight_button.text = Words.FIGHT_BUTTON
+	fight_button.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	fight_button.pressed.connect(show_fight)
 	c["status"] = UI.label(self, Rect2(c["x"] + PAD, y + c["h"] - 32, c["w"] - 2 * PAD, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
@@ -464,6 +479,7 @@ func _show_last() -> void:
 			_set_row(row, "", [""])
 			row["glyph"].visible = false
 		c["status"].text = "The first run writes here"
+		fight_button.visible = false
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.CARD_LINE
 		return
 	var dead: bool = r["outcome"] == "Dead"
@@ -476,9 +492,12 @@ func _show_last() -> void:
 	var t: Dictionary = sim.tier(r["tier"])
 	_set_row(rows[0], "Where", [t["name"], str(t["name"]).trim_prefix("The ")])
 	_set_row(rows[1], "Kills · gangs", ["%d · %d" % [r["kills"], int(r.get("patrols", 0))]])
-	_set_row(rows[2], "Loot", ["%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]])
+	var fb: Dictionary = r.get("fight", {})
+	var per_s: float = float(fb.get("dealt", 0.0)) / maxf(float(fb.get("s", 0.0)), 1.0)
+	_set_row(rows[2], "Damage", ["%s · %s/s" % [Fmt.num(float(fb.get("dealt", r.get("dealt", 0.0)))), Fmt.num(per_s)], Fmt.num(float(fb.get("dealt", r.get("dealt", 0.0))))])
 	_set_row(rows[3], "Tins · scrap", ["%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]])
-	_set_row(rows[4], "Time", [Fmt.mss(r["time"])])
+	_set_row(rows[4], "Loot · time", ["%d item%s · %s" % [r["loot"], "" if int(r["loot"]) == 1 else "s", Fmt.mss(r["time"])], Fmt.mss(r["time"])])
+	fight_button.visible = not fb.is_empty()
 	var status: String = ""
 	if dead:
 		status = ("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])
@@ -532,3 +551,212 @@ func text_nodes() -> Array:
 							if e2 is Label:
 								out.append(e2)
 	return out
+
+
+# ------------------------------------------------------------------ the fight's breakdown (24 Oct, the endgame chase)
+
+const FIGHT_BTN_W := 150
+const FIGHT_W := 1100
+const FIGHT_H := 560
+const SRC_W := 560
+const SRC_LABEL_W := 230
+const SRC_VAL_W := 96
+const TOOK_LABEL_W := 96
+const TOOK_VAL_W := 78
+const PCT_W := 46
+
+
+## The last run's fight over the room: the damage by source, what hit you, the skills. Built fresh each time it opens.
+func show_fight() -> void:
+	hide_fight()
+	hide_collection()
+	var r = sim.last_report
+	if r == null or not (r is Dictionary) or not r.has("fight"):
+		return
+	var fb: Dictionary = r["fight"]
+	_fight_labels = []
+	var x0: float = (W - FIGHT_W) / 2.0
+	var y0: float = R1_Y + 20
+	fight_panel = UI.panel(self, Rect2(x0, y0, FIGHT_W, FIGHT_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	fight_panel.mouse_filter = Control.MOUSE_FILTER_STOP     # the room's cards under it take no click (the review)
+	var p := fight_panel
+	var t: Dictionary = sim.tier(int(r["tier"]))
+	_fl(p, Rect2(22, 16, 640, 34), [Words.FIGHT_TITLE % t["name"], str(t["name"])], "SemiBold", Pal.LINE, Pal.TEXT)
+	_fl(p, Rect2(560, 22, FIGHT_W - 582, 26), [Words.FIGHT_SUB % [Fmt.mss(float(fb.get("s", 0.0))), int(r["kills"]), int(r.get("patrols", 0))], "%s fighting" % Fmt.mss(float(fb.get("s", 0.0)))], "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
+	var dealt: float = float(fb.get("dealt", 0.0))
+	var took_total := 0.0
+	for ty in fb.get("took", {}):
+		took_total += float(fb["took"][ty])
+	var heads: Array = [Fmt.num(dealt), Fmt.num(dealt / maxf(float(fb.get("s", 0.0)), 1.0)), Fmt.num(took_total), "%d%%" % roundi(float(fb.get("stopped", 0.0)) * 100.0), "%d" % int(fb.get("meds", 0))]
+	for k in range(heads.size()):
+		_fl(p, Rect2(22 + k * 170, 58, 160, 20), [Words.FIGHT_HEADS[k]], "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+		_fl(p, Rect2(22 + k * 170, 76, 160, 32), [heads[k]], "SemiBold", Pal.FLOOR, Pal.TEXT)
+	# the sources
+	_fl(p, Rect2(22, 120, SRC_W, 20), [Words.FIGHT_SRC.to_upper()], "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+	var rows: Array = fb.get("src", [])
+	for k in range(rows.size()):
+		var y: float = 146 + k * 32
+		var amt: float = float(rows[k][1])
+		var frac: float = clampf(amt / maxf(dealt, 1.0), 0.0, 1.0)
+		_fight_bar(p, 22, y, SRC_W, SRC_LABEL_W, SRC_VAL_W, str(rows[k][0]), Fmt.num(amt), frac, _src_tone(str(rows[k][0])))
+	# what hit you
+	var tx: float = 22 + SRC_W + 40
+	var tw: float = FIGHT_W - tx - 22
+	_fl(p, Rect2(tx, 120, tw, 20), [Words.FIGHT_TOOK.to_upper()], "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+	var types: Array = fb.get("took", {}).keys()
+	types.sort_custom(func(a, b): return float(fb["took"][a]) > float(fb["took"][b]))
+	for k in range(mini(types.size(), 6)):
+		var ty: String = str(types[k])
+		var amt2: float = float(fb["took"][ty])
+		_fight_bar(p, tx, 146 + k * 32, tw, TOOK_LABEL_W, TOOK_VAL_W, str(Words.TOOK_WORDS.get(ty, ty.capitalize())), Fmt.num(amt2), clampf(amt2 / maxf(took_total, 1.0), 0.0, 1.0), Pal.tone_color(ty) if ty != "physical" else Pal.TEXT)
+	# the skills
+	var sy: float = 146 + maxi(3, mini(types.size(), 6)) * 32 + 14
+	_fl(p, Rect2(tx, sy, tw, 20), [Words.FIGHT_SKILLS.to_upper()], "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+	var sks: Array = fb.get("skills", [])
+	if sks.is_empty():
+		_fl(p, Rect2(tx, sy + 26, tw, 26), [Words.FIGHT_NONE], "Regular", Pal.CELL_TEXT, Pal.TEXT_3)
+	for k in range(mini(sks.size(), 3)):
+		_fl(p, Rect2(tx, sy + 26 + k * 28, tw * 0.5, 26), [str(sks[k][0])], "Regular", Pal.CELL_TEXT, Pal.TEXT)
+		_fl(p, Rect2(tx + tw * 0.4, sy + 26 + k * 28, tw * 0.6, 26), ["%d use%s · %s" % [int(sks[k][1]), "" if int(sks[k][1]) == 1 else "s", Fmt.num(float(sks[k][2]))], "%d · %s" % [int(sks[k][1]), Fmt.num(float(sks[k][2]))]], "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)
+	var close := UI.button(p, Rect2(FIGHT_W - 22 - 140, FIGHT_H - 22 - 46, 140, 46), false)
+	close.text = Words.FIGHT_CLOSE
+	close.pressed.connect(hide_fight)
+
+
+func hide_fight() -> void:
+	if fight_panel != null and is_instance_valid(fight_panel):
+		fight_panel.queue_free()
+	fight_panel = null
+	_fight_labels = []
+
+
+func _fl(parent: Node, rect: Rect2, options: Array, weight: String, fs: int, tone: Color, align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var l: Label = UI.label(parent, rect, str(options[0]), weight, fs, tone, align, false)
+	UI.fit(l, options)
+	_fight_labels.append(l)
+	return l
+
+
+func _fight_bar(p: Node, x: float, y: float, w: float, lw: float, vw: float, words: String, val: String, frac: float, tone: Color) -> void:
+	_fl(p, Rect2(x, y, lw, 26), [words, words.get_slice(" · ", 0)], "Regular", Pal.CELL_TEXT, Pal.TEXT)
+	var bx: float = x + lw + 8
+	var bw: float = w - lw - 8 - vw - PCT_W - 8
+	UI.panel(p, Rect2(bx, y + 9, bw, BAR_TH), UI.box(Pal.BG, 4))
+	if frac > 0.0:
+		UI.panel(p, Rect2(bx, y + 9, maxf(4.0, bw * frac), BAR_TH), UI.box(tone, 4))
+	_fl(p, Rect2(x + w - vw - PCT_W, y, vw, 26), [val], "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+	_fl(p, Rect2(x + w - PCT_W, y, PCT_W, 26), ["%d%%" % roundi(frac * 100.0)], "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
+
+
+## A source's bar colour: an element's damage over time in its colour, a skill amber, a gun plain.
+func _src_tone(words: String) -> Color:
+	for k in Words.BREAKDOWN:
+		if str(k).begins_with("dot:") and words == str(Words.BREAKDOWN[k]):
+			return Pal.tone_color(str(k).trim_prefix("dot:"))
+	if words.contains(" · ") and words.contains("use"):
+		return Pal.ACCENT
+	return Pal.TEXT
+
+
+## The breakdown's labels, for the fit checks.
+func fight_text_nodes() -> Array:
+	return _fight_labels.filter(func(l): return is_instance_valid(l))
+
+
+# ------------------------------------------------------------------ the collection (24 Oct, the endgame chase, phase 6)
+
+const COLL_BTN_W := 190
+const COLL_W := 1100
+const COLL_H := 880
+const COLL_TILE_H := 84
+const COLL_COLS := 4                        # the uniques' names, in columns
+const COLL_ROW := 26
+const COLL_MARK_W := 30
+
+
+## Over the room, as the fight's breakdown: six tiles, every unique (found in colour, the rest "?" and the slot), every
+## site's marks by depth. Nothing here gives power.
+func show_collection() -> void:
+	hide_collection()
+	hide_fight()
+	var col: Dictionary = sim.collection()
+	_coll_labels = []
+	collection_panel = UI.panel(self, Rect2((W - COLL_W) / 2.0, (H - COLL_H) / 2.0, COLL_W, COLL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	collection_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var p := collection_panel
+	var inner: float = COLL_W - 44
+	_cl(p, Rect2(22, 14, 500, 40), [Words.COLLECTION["title"]], "SemiBold", Pal.LINE, Pal.TEXT)
+	_cl(p, Rect2(22, 54, 600, 24), [Words.COLLECTION["sub"]], "Regular", Pal.CELL_TEXT, Pal.TEXT_3)
+	var close := UI.button(p, Rect2(COLL_W - 22 - 140, 16, 140, 44), false)
+	close.text = Words.COLLECTION["close"]
+	close.pressed.connect(hide_collection)
+	_coll_labels.append(close)
+	# the tiles: three a row
+	var tw: float = (inner - 2 * GAP) / 3.0
+	var tones := {"uniques": Pal.tone_color("unique"), "mythics": Pal.MYTHIC, "sites": Pal.ACCENT, "classes": Pal.GOOD, "order": Pal.ACCENT, "sets": Pal.tone_color("set")}
+	var tiles: Array = col["tiles"]
+	for k in range(tiles.size()):
+		var key: String = str(tiles[k][0])
+		var n: int = int(tiles[k][1])
+		var of: int = int(tiles[k][2])
+		@warning_ignore("integer_division")
+		var tx: float = 22 + (k % 3) * (tw + GAP)
+		@warning_ignore("integer_division")
+		var ty: float = 92 + (k / 3) * (COLL_TILE_H + GAP)
+		UI.panel(p, Rect2(tx, ty, tw, COLL_TILE_H), UI.box(Pal.BG, 6))
+		_cl(p, Rect2(tx + 12, ty + 6, tw - 24, 22), [Words.COLLECTION[key]], "Regular", Pal.CELL_TEXT, Pal.TEXT_3)
+		var num := _cl(p, Rect2(tx + 12, ty + 28, 90, 34), ["%d" % n], "SemiBold", Pal.LINE, Pal.TEXT)
+		num.size.x = ceilf(UI.text_width(num, num.text)) + 2
+		_cl(p, Rect2(tx + 12 + num.size.x + 6, ty + 36, 120, 24), [Words.COLLECTION["of"] % of], "Regular", Pal.CELL_TEXT, Pal.TEXT_3)
+		var track := UI.panel(p, Rect2(tx + 12, ty + COLL_TILE_H - 16, tw - 24, 6), UI.box(Pal.BUTTON, 3))
+		UI.panel(track, Rect2(0, 0, roundf((tw - 24) * clampf(float(n) / maxf(of, 1), 0.0, 1.0)), 6), UI.box(tones.get(key, Pal.ACCENT), 3))
+	# the uniques
+	var uq: Array = col["uniques"]
+	var gy: float = 92 + 2 * (COLL_TILE_H + GAP) + 12
+	_cl(p, Rect2(22, gy, inner, 22), [Words.COLLECTION["grid_head"].to_upper()], "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+	var cw: float = (inner - (COLL_COLS - 1) * 8) / COLL_COLS
+	@warning_ignore("integer_division")
+	var per_col: int = (uq.size() + COLL_COLS - 1) / COLL_COLS
+	for k in range(uq.size()):
+		@warning_ignore("integer_division")
+		var cx: float = 22 + (k / per_col) * (cw + 8)
+		var cy: float = gy + 28 + (k % per_col) * COLL_ROW
+		var found: bool = bool(uq[k][2])
+		var l := _cl(p, Rect2(cx, cy, cw, COLL_ROW), [str(uq[k][0])] if found else [Words.COLLECTION["unfound"] % str(uq[k][1])], "Regular", Pal.CELL_TEXT - 1, Pal.tone_color("unique") if found else Pal.TEXT_3)
+		l.tooltip_text = "" if found else str(uq[k][1])
+	# the sites: a mark at each depth, two columns
+	var sy: float = gy + 28 + per_col * COLL_ROW + 14
+	_cl(p, Rect2(22, sy, inner, 22), [(Words.COLLECTION["sites_head"] % ", ".join(Data.COLLECTION_LEVELS.map(func(x): return str(x)))).to_upper()], "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+	var sites: Array = col["sites"]
+	@warning_ignore("integer_division")
+	var half: int = (sites.size() + 1) / 2
+	var colw: float = (inner - 24) / 2.0
+	for k in range(sites.size()):
+		@warning_ignore("integer_division")
+		var sx: float = 22 + (k / half) * (colw + 24)
+		var ry: float = sy + 28 + (k % half) * COLL_ROW
+		var d: int = int(sites[k][1])
+		_cl(p, Rect2(sx, ry, 210, COLL_ROW), [str(sites[k][0])], "Regular", Pal.CELL_TEXT - 1, Pal.TEXT)
+		for m in range(Data.COLLECTION_LEVELS.size()):
+			UI.panel(p, Rect2(sx + 216 + m * (COLL_MARK_W + 4), ry + 6, COLL_MARK_W, COLL_ROW - 12), UI.box(Pal.ACCENT if d >= int(Data.COLLECTION_LEVELS[m]) else Pal.BUTTON, 3))
+		var dx: float = sx + 216 + Data.COLLECTION_LEVELS.size() * (COLL_MARK_W + 4) + 6
+		_cl(p, Rect2(dx, ry, colw - (dx - sx), COLL_ROW), [Words.COLLECTION["level"] % d if d > 0 else Words.COLLECTION["none"]], "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3)
+
+
+func hide_collection() -> void:
+	if collection_panel != null and is_instance_valid(collection_panel):
+		collection_panel.queue_free()
+	collection_panel = null
+	_coll_labels = []
+
+
+func _cl(parent: Node, rect: Rect2, options: Array, weight: String, fs: int, tone: Color) -> Label:
+	var l: Label = UI.label(parent, rect, str(options[0]), weight, fs, tone, HORIZONTAL_ALIGNMENT_LEFT, false)
+	UI.fit(l, options)
+	_coll_labels.append(l)
+	return l
+
+
+## For the tests: every label and button the collection shows.
+func collection_text_nodes() -> Array:
+	return _coll_labels.filter(func(l): return is_instance_valid(l))

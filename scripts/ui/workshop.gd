@@ -25,6 +25,7 @@ const Inventory := preload("res://scripts/ui/inventory.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const ItemHeadRef := preload("res://scripts/ui/item_head.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -33,9 +34,9 @@ const HEAD_H := Pal.BAND_H         # the rooms' one band across the top (10 Oct,
 const TOP := HEAD_H + 14           # the columns under it
 const VIEW_W := 144                # a view's tab (140 until "Weapons", 18 Oct)
 const VIEW_H := 40
-const VIEWS_X := Pal.GRID_W - PAD - 4 * VIEW_W - 18     # the views at the band's foot, right (Bands-U A); four since the Build view
-const VIEWS := ["guns", "sockets", "craft", "build"]
-const VIEW_NAMES := ["Weapons", "Sockets", "Craft", "Build"]
+const VIEWS := ["guns", "sockets", "craft", "build", "patterns"]
+const VIEW_NAMES := ["Weapons", "Sockets", "Craft", "Build", "Patterns"]     # Patterns (24 Oct, the endgame chase)
+const VIEWS_X := Pal.GRID_W - PAD - 5 * (VIEW_W + 6) + 6     # the views at the band's foot, right (Bands-U A): five since Patterns
 const CARD_PAD := 14
 const HEAD_LINE_H := 26            # a gun card's first line: the slot and the figure
 const NAME_H := 34                 # the gun's name under it
@@ -87,7 +88,14 @@ const KIND_W := (BODY_W - 2 * PAD - 4 * BUILD_GAP) / 5
 
 var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var sim
-var view := "guns"                 # "guns", "sockets", "craft" or "build"
+var view := "guns"                 # "guns", "sockets", "craft", "build" or "patterns"
+var sel_pattern := -1              # the Patterns view: the pattern kept that's picked
+var _pat: Panel                    # the Patterns view's column
+var _pat_labels := {}
+var _pat_rows: Array = []          # the patterns kept, as buttons
+var _pat_break: Button
+var _pat_put: Button
+var _pat_cost: Chips
 var build_kind := "med"            # the Build view's kind, and the build picked in it
 var sel_build := ""
 var build_page := 0
@@ -288,6 +296,7 @@ func _init() -> void:
 		y += SOCK_HEAD_H + ROW_GAP + UI.TILE_H + CARD_PAD + 10
 		_socks[slot] = g
 	_build_build_view()
+	_build_patterns_view()
 	_show_view()
 	# the grid: the stash's attachments, for the selected mount when one is; the gear in the Craft view
 	_inv = Inventory.new()
@@ -518,8 +527,14 @@ func show_state(s) -> void:
 				_inv.tab = str(tabs_with.keys()[0])
 				_inv.page = 0
 		_tab_turned_for = sel_build     # the grid turns to the tab that holds it (the build takes from any: the review)
-	_inv.fixed_kind = "" if view == "craft" else (takes_slot(build_kind) if view == "build" else Data.ATTACHMENT)
+	if view == "patterns":
+		source = sim.stash.filter(func(it): return (it.has("unique") and not it.get("mythic", false)) or (int(it.get("rarity", 0)) >= Data.PATTERN_RARITY and not it.has("set") and not it.has("pattern") and str(it.get("rule", "")) == "" and str(it.get("slot", "")) in Data.SLOTS))
+		what = Words.PATTERNS["tab"]
+	_inv.fixed_kind = "" if view in ["craft", "patterns"] else (takes_slot(build_kind) if view == "build" else Data.ATTACHMENT)
 	_inv.show_items(sim, source, sim.stash_used(), sim.stash_cap(), what)
+	if view == "patterns":
+		_show_patterns()
+		return
 	var sig := _signature()
 	if sig == _shown:
 		return
@@ -690,7 +705,7 @@ func _all_attachments(socketables: bool) -> Array:
 
 func _signature() -> String:
 	@warning_ignore("integer_division")
-	var parts := [view, sel_slot, sel_mount, str(sel_id), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
+	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sel_pattern), str(_break_armed), str(sim.patterns.size()), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", "")), build_kind, sel_build, str(build_page), str(sim.stash.size()), str(sim.stash_used()), str(sim.gun_types_held()), str(sim.deepest_site_level()), _inv.tab]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
@@ -1109,6 +1124,7 @@ func _set_view(v: String) -> void:
 	if v == view:
 		return
 	view = v
+	sel_pattern = -1
 	sel_slot = ""
 	sel_mount = ""
 	sel_id = -1
@@ -1126,6 +1142,9 @@ func _show_view() -> void:
 	_jobs.visible = view == "craft"
 	_kinds.visible = view == "build"
 	_builds.visible = view == "build"
+	_pat.visible = view == "patterns"
+	if _pick != null:
+		_pick.visible = view != "patterns"
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["card"].visible = view == "guns"
@@ -1261,4 +1280,123 @@ func line_pairs() -> Array:
 		for r in _affix_rows:
 			if r["button"].visible and r["tag"].text != "":
 				out.append([r["label"], r["tag"]])
+	return out
+
+
+# ------------------------------------------------------------------ Patterns (24 Oct, the endgame chase, phase 4)
+
+const PAT_ROWS := 5
+const PAT_ROW_H := 44
+
+
+func _build_patterns_view() -> void:
+	_pat = UI.panel(self, Rect2(0, TOP, BODY_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_pat.visible = false
+	var y := 14.0
+	_pat_labels["break_head"] = UI.label(_pat, Rect2(PAD, y, BODY_W - 2 * PAD, 22), Words.PATTERNS["break_head"].to_upper(), "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["unique"] = UI.label(_pat, Rect2(PAD, y + 26, BODY_W - 2 * PAD, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["power"] = UI.label(_pat, Rect2(PAD, y + 58, BODY_W - 2 * PAD, 52), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["power"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pat_break = UI.button(_pat, Rect2(PAD, y + 114, 290, 44), true)
+	_pat_break.text = Words.PATTERNS["break"]
+	_pat_break.pressed.connect(_do_break)
+	_pat_labels["gone"] = UI.label(_pat, Rect2(PAD + 302, y + 110, BODY_W - 2 * PAD - 302, 52), Words.PATTERNS["gone"], "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["gone"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART     # what's lost and what's kept, before the press (the language pass)
+	y += 176
+	_pat_labels["kept_head"] = UI.label(_pat, Rect2(PAD, y, 220, 22), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["kept_note"] = UI.label(_pat, Rect2(PAD + 230, y, BODY_W - 2 * PAD - 230, 22), Words.PATTERNS["kept_note"], "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	for k in range(PAT_ROWS):
+		var b := UI.button(_pat, Rect2(PAD, y + 28 + k * (PAT_ROW_H + 6), BODY_W - 2 * PAD, PAT_ROW_H), false)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+		b.pressed.connect(_pick_pattern.bind(k))
+		_pat_rows.append(b)
+	_pat_labels["none"] = UI.label(_pat, Rect2(PAD, y + 28, BODY_W - 2 * PAD, PAT_ROW_H), Words.PATTERNS["none_kept"], "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	y += 28 + PAT_ROWS * (PAT_ROW_H + 6) + 10
+	_pat_labels["put_head"] = UI.label(_pat, Rect2(PAD, y, BODY_W - 2 * PAD, 22), Words.PATTERNS["put_head"].to_upper(), "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["target"] = UI.label(_pat, Rect2(PAD, y + 26, BODY_W - 2 * PAD, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_cost = Chips.new(BODY_W - 2 * PAD, 4)
+	_pat_cost.position = Vector2(PAD, y + 62)
+	_pat.add_child(_pat_cost)
+	_pat_put = UI.button(_pat, Rect2(PAD, y + 100, 200, 44), true)
+	_pat_put.text = Words.PATTERNS["put"]
+	_pat_put.pressed.connect(_do_put)
+	_pat_labels["why"] = UI.label(_pat, Rect2(PAD + 212, y + 96, BODY_W - 2 * PAD - 212, 52), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pat_labels["why"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+func _show_patterns() -> void:
+	var it := _selected_item()
+	var is_u: bool = not it.is_empty() and it.has("unique")
+	UI.fit(_pat_labels["unique"], [Items.full_name(it) if is_u else Words.PATTERNS["pick_unique"]])
+	_pat_labels["unique"].add_theme_color_override("font_color", Pal.tone_color("unique") if is_u else Pal.TEXT_3)
+	var rule_words: Array = ItemHeadRef.unique_rule(it) if is_u else []
+	_pat_labels["power"].text = str(rule_words[0]) if not rule_words.is_empty() else ""
+	var why_b: String = sim.can_break(it) if is_u else Words.PATTERNS["pick_unique"]
+	_pat_break.disabled = why_b != ""
+	var armed: bool = is_u and _break_armed == int(it["id"])
+	_pat_break.text = Words.PATTERNS["break_sure"] if armed else Words.PATTERNS["break"]
+	UI.style_button(_pat_break, not armed, "bad" if armed else "")
+	_pat_labels["gone"].text = Words.PATTERNS["gone"] if why_b == "" else why_b
+	_pat_labels["kept_head"].text = (Words.PATTERNS["kept_head"] % sim.patterns.size()).to_upper()
+	if sel_pattern >= sim.patterns.size():
+		sel_pattern = -1
+	_pat_labels["none"].visible = sim.patterns.is_empty()
+	for k in range(PAT_ROWS):
+		var b: Button = _pat_rows[k]
+		b.visible = k < sim.patterns.size()
+		if not b.visible:
+			continue
+		var pt: Dictionary = sim.patterns[k]
+		UI.fit_button(b, ["%s · %s" % [pt["unique"], str(pt["slot"]).to_lower()], str(pt["unique"])])
+		_style(b, k == sel_pattern)
+	var target: bool = not it.is_empty() and not is_u
+	UI.fit(_pat_labels["target"], [Items.full_name(it) if target else Words.PATTERNS["pick_rare"]])
+	_pat_labels["target"].add_theme_color_override("font_color", Pal.TEXT if target else Pal.TEXT_3)
+	var why_p: String = sim.pattern_block(it, sel_pattern) if target else (Words.PATTERNS["no_pattern"] if sel_pattern < 0 else Words.PATTERNS["pick_rare"])
+	_pat_cost.visible = target and sel_pattern >= 0
+	if _pat_cost.visible:
+		var c: Dictionary = sim.pattern_cost(it)
+		_pat_cost.show_chips([["1 %s" % sim.thing_name(str(c["key"])), "unique"], ["%d %s" % [int(c["material_n"]), sim.thing_name(str(c["material"]))], "warn"], [Fmt.money(float(c["tins"])), Pal.ACCENT]])
+	_pat_put.disabled = why_p != ""
+	_pat_labels["why"].text = why_p if why_p != "" else Words.PATTERNS["put_note"]     # nothing in the way: what the press spends, and that it stays
+
+
+func _pick_pattern(k: int) -> void:
+	sel_pattern = -1 if sel_pattern == k else k
+	show_state(sim)
+
+
+## A unique's break asks twice, as the Kit's bin does (the review): the first press arms it, the second breaks it.
+var _break_armed := -1
+
+
+func _do_break() -> void:
+	var it := _selected_item()
+	if it.is_empty():
+		return
+	if _break_armed != int(it["id"]):
+		_break_armed = int(it["id"])
+		_show_patterns()
+		return
+	_break_armed = -1
+	if sim.break_unique(it):
+		sel_id = -1
+		sel_pattern = sim.patterns.size() - 1
+		acted.emit()
+
+
+func _do_put() -> void:
+	var it := _selected_item()
+	if sim.apply_pattern(it, sel_pattern):
+		sel_pattern = -1
+		acted.emit()
+
+
+## The Patterns view's words, for the fit checks.
+func pattern_text_nodes() -> Array:
+	var out: Array = _pat_labels.values().filter(func(l): return l.visible and l.text != "")
+	out.append_array(_pat_rows.filter(func(b): return b.visible))
+	out.append_array([_pat_break, _pat_put])
+	out.append_array(_pat_cost.text_nodes() if _pat_cost.visible else [])
 	return out

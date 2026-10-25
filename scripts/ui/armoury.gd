@@ -23,6 +23,7 @@ const Containers := preload("res://scripts/ui/containers.gd")
 const Body := preload("res://scripts/ui/body.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const People := preload("res://scripts/ui/people.gd")
+const RulesPanel := preload("res://scripts/ui/rules_panel.gd")
 
 const BODY_W := Body.WIDTH                                    # 608
 ## The runner strip over the loadout (10 Oct, Runner-R A): the face, the level, HP with its bar, the damage, the
@@ -41,6 +42,9 @@ const PANEL_LINES := 6             # figure, what it takes, three affixes with t
 const LINE_H := 26
 @warning_ignore("integer_division")
 const COL_W := (GRID_W - 3 * PANEL_PAD) / 2                   # each half of the compare panel
+const RULES_W := 200
+const LOADOUT_Y := 84               # under the empty panel's line
+const LOADOUT_H := 150
 
 var sim
 var selected := {}                 # {"kind": "stash", "id": n} or {"kind": "slot", "slot": s}, or {}
@@ -60,6 +64,9 @@ var _dps: Label
 var _armour: Label
 var _pace: Label
 var _carry: Label
+var rules_button: Button           # the loot filter's (24 Oct): on the stash's second bar, after Select
+var rules_panel                    # rules_panel.gd, over the stash and the pick panel while it's open
+var loadout_cards: Array = []      # the three loadouts (24 Oct, the endgame chase): in the pick panel while nothing's picked
 
 
 func _init() -> void:
@@ -103,6 +110,38 @@ func _init() -> void:
 	add_child(_pick)
 	for i in range(PickPanel.BUTTONS):
 		_actions.append(Callable())
+	# the loot filter: its button where Select-many's Sell goes (hidden while that shows), its panel over the right half
+	var rx: float = _inv._many_button.position.x + Inventory.MANY_W + 6
+	rules_button = UI.button(self, Rect2(GRID_X + rx, _inv._many_button.position.y, RULES_W, Inventory.BAR_H), false)
+	rules_button.add_theme_font_size_override("font_size", 18)
+	rules_button.pressed.connect(open_rules)
+	rules_panel = RulesPanel.new()
+	rules_panel.position = Vector2(GRID_X, 0)
+	rules_panel.visible = false
+	rules_panel.closed.connect(close_rules)
+	rules_panel.changed.connect(func(): acted.emit())
+	add_child(rules_panel)
+	# the loadouts: three cards across the empty pick panel, between its line and its toggles
+	var lw: float = (GRID_W - 2 * PANEL_PAD - 2 * 12) / 3.0
+	for i in range(Data.LOADOUTS):
+		var x: float = GRID_X + PANEL_PAD + i * (lw + 12)
+		var card := UI.panel(self, Rect2(x, PANEL_Y + LOADOUT_Y, lw, LOADOUT_H), UI.box(Pal.BG, 8, 1, Pal.CARD_LINE))
+		var c := {"panel": card}
+		c["name"] = UI.label(card, Rect2(12, 6, lw - 24, 26), "", "SemiBold", Pal.CELL_TEXT + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["state"] = UI.label(card, Rect2(12, 6, lw - 24, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		c["what"] = UI.label(card, Rect2(12, 34, lw - 24, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["more"] = UI.label(card, Rect2(12, 56, lw - 24, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var bw: float = (lw - 24 - 8) / 2.0
+		c["wear"] = UI.button(card, Rect2(12, LOADOUT_H - 12 - 38, bw, 38), true)
+		c["wear"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+		c["wear"].text = Words.LOADOUTS["wear"]
+		c["wear"].pressed.connect(_wear_loadout.bind(i))
+		c["save"] = UI.button(card, Rect2(12 + bw + 8, LOADOUT_H - 12 - 38, bw, 38), false)
+		c["save"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+		c["save"].text = Words.LOADOUTS["save"]
+		c["save"].pressed.connect(_save_loadout.bind(i))
+		card.visible = false
+		loadout_cards.append(c)
 
 
 ## For the tests: the panel's buttons, and the idle toggles (the same buttons, with nothing picked).
@@ -140,6 +179,14 @@ func show_state(s) -> void:
 	_show_strip()
 	_containers.selected = selected["id"] if selected.get("kind", "") == "rig" else -1
 	_containers.show_state(sim)
+	if rules_panel.visible and _inv.many:
+		rules_panel.visible = false          # Select-many works from the bar the panel covers (the review)
+	rules_button.visible = not _inv.many and not rules_panel.visible
+	var n_on: int = sim.loot_rules.filter(func(r): return bool(r.get("on", true))).size() if sim.loot_rules_on else 0
+	var rw: String = Words.LOOT_RULES["button"] % n_on if n_on > 0 else Words.LOOT_RULES["button_none"]
+	if rules_button.text != rw:
+		rules_button.text = rw
+		UI.style_button(rules_button, false, "warn" if n_on > 0 else "")
 	# main.gd refreshes ten times a second; rebuilding the buttons that often
 	# hides and shows them under the mouse, which drops presses. Redraw only
 	# when what's shown has changed.
@@ -167,7 +214,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
+	var parts := [str(sim.loadouts.get(sim.cls, [])), str(sim.skill_slots), str(sim.rig.size()), str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -187,12 +234,15 @@ func _show_panel() -> void:
 	var it := _selected_item()
 	if it.is_empty():
 		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right"])     # the rules read on their buttons (18 Oct: said twice)
+		_show_loadouts()
 		# the idle toggles and the junk rules (11 Oct) live where the buttons would be
 		_pick.set_buttons([
 			{"text": "Equip if better ✓" if sim.auto_equip else "Equip if better", "action": _toggle.bind(0), "enabled": true, "primary": false, "tone": "good" if sim.auto_equip else ""},
 			{"text": "Sell when home: " + SELL_WORDS[sim.junk_upto + 1], "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.junk_upto >= 0 else ""},
 			{"text": "Keep: " + KEEP_WORDS[sim.junk_keep], "action": _toggle.bind(2), "enabled": sim.junk_upto >= 0, "primary": false, "tone": ""}])
 		return
+	for c in loadout_cards:
+		c["panel"].visible = false
 	var buttons := []
 	var tail = ""
 	var extra = ""
@@ -347,6 +397,87 @@ func _show_medical(it: Dictionary) -> Array:
 ## Split: half a stack off into its own, beside it (12 Oct).
 func _split_button(it: Dictionary) -> Dictionary:
 	return {"text": "Split", "action": func(): _keep_pick = sim.split_stack(it["id"]), "enabled": sim.can_split(it["id"]), "primary": false}
+
+
+## Leaving the room shuts the rules panel: back in, the stash shows (the review).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and rules_panel != null and rules_panel.visible:
+		rules_panel.visible = false
+		_shown = ""
+
+
+## The three loadouts' cards: the name and its state, what it holds, what's gone, Wear and Save worn.
+func _show_loadouts() -> void:
+	for i in range(loadout_cards.size()):
+		var c: Dictionary = loadout_cards[i]
+		c["panel"].visible = not rules_panel.visible     # under the rules panel they'd only take its clicks
+		var e: Dictionary = sim.loadout(i)
+		var st: String = sim.loadout_state(i)
+		c["name"].text = Words.LOADOUTS["name"] % (i + 1)
+		var states := {"empty": "", "worn": Words.LOADOUTS["worn_now"], "ready": Words.LOADOUTS["ready"], "short": ""}
+		c["state"].text = states[st]
+		c["state"].add_theme_color_override("font_color", Pal.ACCENT if st == "worn" else (Pal.GOOD if st == "ready" else Pal.TEXT_3))
+		(c["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.ACCENT if st == "worn" else Pal.CARD_LINE
+		if e.is_empty():
+			UI.fit(c["what"], [Words.LOADOUTS["empty"], "Empty"])
+			c["more"].text = ""
+		else:
+			var guns: Array = []
+			for slot in ["Primary", "Secondary"]:
+				if e["names"].has(slot):
+					guns.append(str(e["names"][slot]))
+			var sk: int = e["skills"].filter(func(x): return str(x) != "").size()
+			UI.fit(c["what"], [" · ".join(guns), guns[0] if not guns.is_empty() else ""] if not guns.is_empty() else [""])
+			var gone: Array = sim.loadout_missing(i)
+			c["more"].add_theme_color_override("font_color", Pal.BAD if not gone.is_empty() else Pal.TEXT_3)
+			var rest: Array = [Words.LOADOUTS["skill"] if sk == 1 else Words.LOADOUTS["skills"] % sk, Words.LOADOUTS["rig"] % e["rig"].size()]
+			UI.fit(c["more"], [Words.LOADOUTS["short"] % ", ".join(gone), Words.LOADOUTS["short"] % ("%d" % gone.size())] if not gone.is_empty() else [" · ".join(rest), rest[0]])
+		c["wear"].disabled = st == "empty" or st == "worn" or sim.on_mission()
+		c["wear"].tooltip_text = Words.LOADOUTS["wear_tip"]
+		c["save"].disabled = sim.on_mission() or sim.cls == ""
+		var armed: bool = _save_armed == i and st != "empty"
+		c["save"].text = Words.LOADOUTS["save_sure"] if armed else Words.LOADOUTS["save"]
+		UI.style_button(c["save"], false, "bad" if armed else "")
+
+
+func _wear_loadout(i: int) -> void:
+	_save_armed = -1
+	if sim.loadout_wear(i):
+		acted.emit()
+	show_state(sim)
+
+
+## Saving over a kit asks twice: it's the one press here that loses something (the language pass).
+var _save_armed := -1
+
+
+func _save_loadout(i: int) -> void:
+	if sim.loadout_state(i) != "empty" and _save_armed != i:
+		_save_armed = i
+		_shown = ""
+		show_state(sim)
+		return
+	_save_armed = -1
+	if sim.loadout_save(i):
+		acted.emit()
+	_shown = ""
+	show_state(sim)
+
+
+## The loot filter's panel: open over the stash and the pick, shut back to them.
+func open_rules() -> void:
+	rules_panel.picked = 0 if not sim.loot_rules.is_empty() else -1
+	rules_panel.show_state(sim)
+	rules_panel.visible = true
+	move_child(rules_panel, -1)              # over the loadouts' cards too
+	_shown = ""
+	show_state(sim)
+
+
+func close_rules() -> void:
+	rules_panel.visible = false
+	_shown = ""
+	show_state(sim)
 
 
 ## The junk rules' buttons: the rarity the Fence takes up to (off, then each rarity to Rare), and the kind kept.

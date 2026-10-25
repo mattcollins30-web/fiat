@@ -457,6 +457,8 @@ func show_state(s) -> void:
 	var stun_s: float = _stunned_s(m) if m["remaining"] > 0 else 0.0     # a gang down mid-hold leaves no one stunned (the review)
 	if stun_s > 0.0:
 		them.push_front(["Stunned %d s" % int(ceil(stun_s)), "Stunned", Pal.ENERGY])     # a skill's hold on them (milestone 8; the pass's chip)
+	for chip in sim.order_chips():
+		them.push_front(chip)                    # a true pinnacle's own fight: his shield, his stun, his printed men (24 Oct)
 	_fight["key"].visible = not them.is_empty()
 	_fight["chips"].visible = not them.is_empty()
 	if not them.is_empty():
@@ -466,6 +468,8 @@ func show_state(s) -> void:
 	for ty in ["fire", "poison", "bleed"]:
 		if float(m.get("my_dots", {}).get(ty, 0.0)) > 0.5:
 			on_you.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
+	for chip in sim.order_chips(true):
+		on_you.push_front(chip)                  # the Registrar's: red tape and a skill stamped are on the runner (the language pass)
 	if m["using"] != null:
 		on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
 	var med_sig: String = ("using" if m["using"] != null else ("none" if sim.first_med().is_empty() else "use:" + sim.first_med()["base"]))
@@ -1048,6 +1052,7 @@ func _fig_bars() -> void:
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	var of: float = float(m["boss"]["hp"]) if boss_on else float(m["t"]["hp"])
 	_view.set_bars(clampf(float(m["target_hp"]) + held_hits(), 0.0, of), of, m.get("dots", {}), boss_on)
+	_view.set_shield(float(m.get("shield", 0.0)) / maxf(1.0, float(m.get("shield_max", 1.0))) if boss_on else 0.0)     # the Lineman's shield over his bar (24 Oct)
 
 
 ## Your hits not yet out as numbers: held on their bar till the shot lands.

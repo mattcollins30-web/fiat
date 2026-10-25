@@ -8,6 +8,7 @@ extends Control
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const KEY_W := 300.0
 const PAD := 14.0
@@ -46,7 +47,10 @@ func show_state(s) -> void:
 		var el: String = str(et["element"])
 		var free_v: int = maxi(0, sim.element_free(el))
 		var meter: float = clampf(float(sim.element_xp.get(el, 0.0)) / Data.ELEMENT_METER, 0.0, 1.0)
-		rows.append([str(et["name"]), el, (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else "", Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
+		var free_s: String = (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else ""
+		if not sim.element_opened(el):
+			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): a Pitch point on its starter opens it
+		rows.append([str(et["name"]), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
 	var sig := str(rows)
 	if sig == _sig:
 		return
@@ -94,7 +98,7 @@ func _draw() -> void:
 	y += HEAD_H - 4.0
 	draw_string(_font_bold, Vector2(x, y), "THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)     # the label in caps, the note after it in sentence case (the language pass: one role a string)
 	var hw: float = _font_bold.get_string_size("THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-	draw_string(_font, Vector2(x + hw + 10.0, y), "A point when the meter fills", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
+	draw_string(_font, Vector2(x + hw + 10.0, y), Words.ELEMENTS_NOTE, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
 	y += 4.0
 	for r in _rows.slice(3):
 		y += ROW_H
@@ -107,4 +111,4 @@ func _draw() -> void:
 			draw_rect(Rect2(bx, y - 12.0 - BAR_H / 2.0, bw * float(r[4]), BAR_H), tone)
 		var free_s: String = str(r[2]) if str(r[2]) != "" else "—"
 		var fw: float = _font.get_string_size(free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-		draw_string(_font, Vector2(size.x - PAD - fw, y - 7.0), free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Pal.GOOD if str(r[2]) != "" else Pal.TEXT_3)
+		draw_string(_font, Vector2(size.x - PAD - fw, y - 7.0), free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Pal.GOOD if (str(r[2]) != "" and str(r[2]) != Words.ELEMENT_SHUT) else Pal.TEXT_3)

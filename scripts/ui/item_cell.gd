@@ -154,6 +154,8 @@ func _draw_mark() -> void:
 					_mark.draw_line(a.lerp(b, float(k) / n), a.lerp(b, float(mini(k + 1, n)) / n), Pal.TEXT, 2.0)
 		"dim":
 			_mark.draw_rect(Rect2(Vector2.ZERO, size), Color(Pal.BG, 0.65))
+		"hl":
+			_mark.draw_rect(r, Pal.ACCENT, false, 3.0)      # the loot filter's highlight (24 Oct)
 
 
 ## The wash's gradient, once: the tone's own colour comes from the rect's modulate.

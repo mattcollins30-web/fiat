@@ -48,7 +48,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 8               # 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region - a Pitch or element opened from its second node strands; 5 (22 Oct): the web - the trees' ids, the elements' points; 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
+const SAVE_VERSION := 9               # 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -776,6 +776,7 @@ func new_game(hardcore := false) -> void:
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.hardcore = hardcore
 	sim.start()
+	sim.set_class(Data.CLASSES[0]["name"])      # every game starts as the Poacher (24 Oct, Matt: the others open through the campaign, so a pick here was one choice)
 	sim.chron("start", {"hardcore": hardcore, "version": SAVE_VERSION})
 	room = OVERVIEW
 	speed = 1.0
@@ -1369,5 +1370,3 @@ func _craft(id: int, kind: String, stat: String) -> void:
 		_juice.toast(sim.last_craft["words"], "good")
 	_menu.close()
 	refresh()
-
-

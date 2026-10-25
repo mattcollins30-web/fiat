@@ -1056,7 +1056,12 @@ func _process(dt: float) -> void:
 ## Their HP for the bars (run.gd, each look and each number out): `hp` the one you're hitting's as shown (the hits not
 ## yet out as numbers held on it), `of` a whole one's, `dots` {type: HP still to tick off}, `boss` the head's.
 func set_bars(hp: float, of: float, dots: Dictionary, boss: bool) -> void:
-	_bar_info = {"hp": hp, "of": maxf(1.0, of), "dots": dots, "boss": boss}
+	_bar_info = {"hp": hp, "of": maxf(1.0, of), "dots": dots, "boss": boss, "shield": float(_bar_info.get("shield", 0.0))}
+
+
+## The Lineman's shield (24 Oct, the endgame chase): what's left of it, 0 to 1, drawn over the head's bar.
+func set_shield(share: float) -> void:
+	_bar_info["shield"] = clampf(share, 0.0, 1.0)
 
 
 ## The bars over each of them, where they stand this frame: the one you're hitting picked if it went (any of them up),
@@ -1101,6 +1106,7 @@ func _lay_bars() -> void:
 				dots[ty] = maxf(0.0, float(_bar_info["dots"][ty])) / of
 				ticking += maxf(0.0, float(_bar_info["dots"][ty]))
 		fb.dots = dots
+		fb.shield = float(_bar_info.get("shield", 0.0)) if (hit and head) else 0.0
 		fb.hit = hit
 		fb.finish = hit and float(_bar_info["hp"]) > 0.0 and ticking >= float(_bar_info["hp"])     # the skull (11 Oct): the dots will finish them
 		fb.queue_redraw()
@@ -1130,6 +1136,7 @@ func hp_words() -> Label:
 ## One of them's bar: the track, their HP in the bad tone, the dots' shares at its end, amber round the one you're hitting.
 class FigBar extends Control:
 	var share := 1.0
+	var shield := 0.0
 	var dots := {}
 	var hit := false
 	var finish := false
@@ -1151,6 +1158,8 @@ class FigBar extends Control:
 			if sw >= 1.0:
 				draw_rect(Rect2(right - sw, 0, sw, size.y), Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3)
 				right -= sw
+		if shield > 0.0:
+			draw_rect(Rect2(0, -8.0, roundf(size.x * shield), 5.0), Pal.tone_color("frost"))     # the Lineman's shield, a strip over the bar: its share of its full
 		if finish:
 			var sk: float = size.y + 6.0
 			draw_texture_rect(NodeGlyphs.texture("skull"), Rect2(-sk - 4.0, (size.y - sk) * 0.5, sk, sk), false, Color(Pal.TEXT, 0.95))
