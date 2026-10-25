@@ -65,6 +65,7 @@ const R_FILLER_PIC := 10.0        # a filler with one: drawn from FILLER_PIC_ZOO
 const FILLER_PIC_ZOOM := 0.9
 static var assume_pics := false   # the smoke: every node sized as if its picture had landed, so the overlap checks hold before the art does
 const R_ENTRY := 20.0
+const LABEL_SLACK := 1.06          # the words measured a little wide when placed: Windows' shaping runs a few px wider than the cloud's (25 Oct, Knuckles)
 const ENTRY_LABEL_ZOOM := 0.8     # the names move from the rim to the starters from here (23 Oct; 0.6 boxed the cold's name 150 px off its starter)              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The Rat Man": 150.0, "The cold": -150.0}     # joints B (24 Oct, Matt): every element between the two classes that join it
@@ -146,8 +147,26 @@ func lay_out() -> void:
 ## their first node"): the label goes beside the region's one starter - below it, above, right or left, the first of
 ## those (and then a step further out) whose words cover no node and no name already placed, at full zoom's size.
 func _labels_by_entry() -> void:
+	# the order the names are placed in: one that ends up far from its starter goes first and the lot again, so the
+	# crowded ones (Knuckles under the Pitch's rails, 25 Oct) take the near places before a roomier neighbour does
+	var order: Array = _axis.keys()
+	for attempt in range(LABEL_TRIES):
+		var far_one: String = _labels_in(order)
+		if far_one == "":
+			return
+		order.erase(far_one)
+		order.push_front(far_one)
+
+
+const LABEL_TRIES := 6
+const LABEL_NEAR := 80.0            # a name within this of its starter is by it (the smoke's reach)
+
+
+## One placement in `order`; the first name that landed further than LABEL_NEAR from its starter, or none.
+func _labels_in(order: Array) -> String:
+	var far_one := ""
 	var placed: Array = []
-	for tn in _axis:
+	for tn in order:
 		if _axis[tn].get("hide_label", false) or not _trees.has(tn) or _trees[tn].get("ring", false):
 			continue
 		var t: Dictionary = _trees[tn]
@@ -164,8 +183,8 @@ func _labels_by_entry() -> void:
 		# the words are a fixed screen size, so they're measured at the closest zoom they show at (the review): there a
 		# screen pixel is 1/ENTRY_LABEL_ZOOM of the web's; further in they only take less
 		var k: float = 1.0 / ENTRY_LABEL_ZOOM
-		var es: float = EMBLEM * 0.7 if str(_axis[tn].get("class", "")) == "" else 0.0     # the emblem as drawn at that zoom (clamped to 0.7)
-		var w: float = (_font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + (es + 6.0 if es > 0.0 else 0.0)) * k
+		var es: float = EMBLEM * clampf(ENTRY_LABEL_ZOOM, 0.7, 1.2) if str(_axis[tn].get("class", "")) == "" else 0.0     # the emblem as drawn at that zoom (entry_label_rect's clamp: 0.7 left it 2 px small, 25 Oct)
+		var w: float = (_font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x * LABEL_SLACK + (es + 6.0 if es > 0.0 else 0.0)) * k
 		var top: float = maxf(14.0, es / 2.0 + 8.0) * k        # above the anchor: the cap height, or the emblem's top
 		var foot: float = maxf(10.0, es / 2.0 - 4.0) * k        # below it: the descenders, or the emblem's foot
 		var gap: float = 10.0 * k
@@ -194,6 +213,9 @@ func _labels_by_entry() -> void:
 		_axis[tn]["entry_align"] = best[1]
 		_axis[tn]["label_box"] = best[2]
 		placed.append(best[2])
+		if far_one == "" and not best[2].grow(LABEL_NEAR).has_point(p):
+			far_one = tn
+	return far_one
 
 
 ## A region's name on screen as it's drawn at this zoom (for the smoke): the words and the emblem, by the starter -
