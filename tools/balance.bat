@@ -1,25 +1,26 @@
 @echo off
-rem The balance pass, in one command: every gate read at once, then the summary.
-rem   tools\balance.bat           twenty-four simulated hours a build (the pass's gates, 15 Oct: retirement by 24)
-rem   tools\balance.bat 8         eight hours a build
-rem   tools\balance.bat 32 3      thirty-two hours, three reads a build (the final pass, 8 Oct)
-rem Runs thirty-eight Godot jobs side by side, twice each build (one run is a noisy
-rem read of when the bank falls; the summary takes the median): the twelve element
-rem builds - every class on each of its two affinities, the Recruit too (24 Oct) - which every gate judges
-rem (Matt, 11 Oct: the element builds are the game), the six plain classes to
-rem their keystones for at least twenty-four hours, which only have to beat the
-rem lorry (the plain floor: slow is fine, stuck isn't), and the loot probe. Each writes docs\balance\<build>-N.txt; the summary lands in
-rem docs\balance\summary.md.
+rem The balance pass, in one command: the one-save reads, the parity reads, then the summary (25 Oct, the endgame
+rem chase's step 8: Matt, the per-class reads were "effectively a different game" once the classes opened through
+rem the campaign and swapped freely).
+rem   tools\balance.bat           thirty-two simulated hours a one-save read (the chase's pass)
+rem   tools\balance.bat 8         eight hours a read
+rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
+rem First the checkpoint: one save from a new game (the Poacher) to the Radio's opening, written to
+rem docs\balance\radio_checkpoint.save. Then side by side:
+rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
+rem   beaten, or Kev's first story for the Drifter), the crew's swaps after - twice each (READS); every gate judges them;
+rem - the parity reads: every build four hours from the checkpoint, the same world (docs\balance\parity-*.txt);
+rem - the loot probe and the loot read.
+rem Each writes docs\balance\<build>-N.txt; the summary lands in docs\balance\summary.md.
 rem Godot: the path in tools\godot.txt if that file exists (point it at the
 rem _console.exe so the output reaches the files), else "godot" on the PATH.
 setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 set HOURS=%1
-if "%HOURS%"=="" set HOURS=24
+if "%HOURS%"=="" set HOURS=32
 set READS=%2
 if "%READS%"=="" set READS=2
-set PLAIN_HOURS=%HOURS%
-if %PLAIN_HOURS% lss 24 set PLAIN_HOURS=24
+set PARITY_HOURS=4
 set GODOT=godot
 if exist tools\godot.txt for /f "usebackq delims=" %%G in ("tools\godot.txt") do set "GODOT=%%~G"
 if not "%GODOT%"=="godot" if not exist "%GODOT%" (
@@ -27,19 +28,25 @@ if not "%GODOT%"=="godot" if not exist "%GODOT%" (
 	exit /b 1
 )
 if not exist docs\balance mkdir docs\balance
-del /q docs\balance\*.txt docs\balance\*.done 2>nul
+del /q docs\balance\*.txt docs\balance\*.done docs\balance\radio_checkpoint.save 2>nul
+
+echo The checkpoint: a new game to the Radio's opening, Matt's route (the Poacher, then the Drifter as fire).
+"%GODOT%" --headless --path . -s tests/balance.gd -- 40 one Drifter fire 0 checkpoint > docs\balance\checkpoint.txt 2>&1
+if not exist docs\balance\radio_checkpoint.save echo No checkpoint written (see docs\balance\checkpoint.txt): the parity reads will say so.
 
 set N=0
 for /l %%S in (1,1,%READS%) do (
-	for %%C in (Doorman Drifter Poacher Scrapper Paramedic Recruit) do (
-		set /a N+=1
-		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %PLAIN_HOURS% gate %%C > docs\balance\%%C-%%S.txt 2>&1 & echo done > docs\balance\%%C-%%S.done"
-	)
-	for %%E in ("fire Drifter" "shock Drifter" "frost Poacher" "poison Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "poison Paramedic" "frost Paramedic" "physical Recruit" "bleed Recruit") do (
+	for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			set /a N+=1
-			start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%B %%A > docs\balance\%%B-%%A-%%S.txt 2>&1 & echo done > docs\balance\%%B-%%A-%%S.done"
+			start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% one %%B %%A > docs\balance\%%B-%%A-%%S.txt 2>&1 & echo done > docs\balance\%%B-%%A-%%S.done"
 		)
+	)
+)
+for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
+	for /f "tokens=1,2" %%A in (%%E) do (
+		set /a N+=1
+		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %PARITY_HOURS% parity %%B %%A > docs\balance\parity-%%B-%%A.txt 2>&1 & echo done > docs\balance\parity-%%B-%%A.done"
 	)
 )
 set /a N+=1
@@ -48,7 +55,7 @@ rem the loot read (15 Oct): gates 12 and 13 read its tables, docs\balance\loot_r
 set /a N+=1
 start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/loot_read.gd > docs\balance\loot_read.log 2>&1 & echo done > docs\balance\loot_read.done"
 
-echo %N% reads running, %HOURS% simulated hours an element build (%PLAIN_HOURS% a plain one), %READS% reads each. Waiting.
+echo %N% reads running, %HOURS% simulated hours a one-save read, %READS% reads each, %PARITY_HOURS% h a parity read. Waiting.
 :wait
 timeout /t 10 /nobreak >nul
 set DONE=0

@@ -64,6 +64,7 @@ const TOP_SHARE := 0.02         # the probe: the top rarity at +35% quality (the
 const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]
 const LOOT_READ := "res://docs/balance/loot_read.md"
+const PARITY_BAND := 0.5        # build parity (25 Oct): every build's reach gained in the spell at least this share of the best's
 
 
 func _init() -> void:
@@ -75,8 +76,19 @@ func _init() -> void:
 		quit(1)
 		return
 	var names: Array = []
+	var parity: Array = []                # the parity reads (25 Oct): a PARITY line each, their own table and row
 	for f in dir.get_files():
-		if f.ends_with(".txt") and f != "smoke.txt":
+		if f.ends_with(".txt") and f.begins_with("parity-"):
+			var got := false
+			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
+				if line.begins_with("PARITY "):
+					var pp = JSON.parse_string(line.substr(7).strip_edges())
+					if pp is Dictionary:
+						parity.append(pp)
+						got = true
+			if not got:
+				parity.append({"build": f.substr(7, f.length() - 11).replace("-", " as "), "error": "no PARITY line (the read crashed or was cut off)"})     # counted, not dropped (the review)
+		elif f.ends_with(".txt") and f != "smoke.txt" and f != "checkpoint.txt":
 			names.append(f)
 	names.sort()
 	for f in names:
@@ -145,6 +157,17 @@ func _init() -> void:
 			else:
 				times.append(h)
 		rows.append(["The plain floor", "every read of a plain build beats the Quartermaster by hour %.0f (a plain read ends at him, 22 Oct: its rows above are to there)" % PLAIN_BY, ("every read (latest %s)" % _hours(times.max())) if stuck.is_empty() else "stuck: " + ", ".join(stuck), stuck.is_empty()])
+	# build parity: from the one checkpoint, the same spell, every build's reach gained against the best's
+	if not parity.is_empty():
+		var ok_p: Array = parity.filter(func(pp): return not pp.has("error"))
+		var gains: Array = ok_p.map(func(pp): return int(pp.get("reach_gain", 0)))
+		var best_g: int = gains.max() if not gains.is_empty() else 0
+		var behind: Array = ok_p.filter(func(pp): return float(pp.get("reach_gain", 0)) < PARITY_BAND * best_g).map(func(pp): return "%s +%d" % [pp["build"], int(pp.get("reach_gain", 0))])
+		for pp in ok_p:
+			if pp.get("cut_short", false):
+				behind.append("%s cut short at %.1f h" % [pp["build"], float(pp.get("played_h", 0.0))])
+		rows.append(["P. Build parity", "from the Radio's checkpoint, %.0f h each: every build's reach gained at least %.0f%% of the best's (+%d)" % [float(ok_p[0].get("hours", 0.0)) if not ok_p.is_empty() else 0.0, PARITY_BAND * 100.0, best_g],
+			("every build" if behind.is_empty() else "behind: " + ", ".join(behind)) + ("" if ok_p.size() == parity.size() else " (%d reads gave no figures: see the table)" % (parity.size() - ok_p.size())), behind.is_empty() and ok_p.size() == parity.size() and best_g > 0])
 	# shown, not judged: the playtest's (deaths, wounds) - the bot doesn't take a player's risks
 	var shown: Array = []
 	for bd in full:
@@ -194,6 +217,27 @@ func _init() -> void:
 			int(b.get("reach", 0)), int(b.get("level", 0)), int(b["runs"]), int(b.get("bails", 0)), wnd * 100.0, int(b.get("gang3_runs", 0)), int(b.get("left_by5", 0)),
 			int(b["cash_end"]), int(b["scrap_end"]), crafts_b, " ".join(odds), str(b.get("kit", ""))])
 	out.append("")
+	if reads.any(func(b): return b.get("one_save", false)):
+		out.append("The one save's classes (25 Oct): each read from the Poacher, the target build when its class opened, the crew's swaps after.")
+		out.append("")
+		for b in reads:
+			var route: Array = b.get("route", []).map(func(x): return "%.1f h %s" % [float(x[0]), str(x[1])])
+			out.append("- %s: %s" % [b["build"], "; ".join(route) if not route.is_empty() else "the Poacher throughout"])
+		out.append("")
+	if not parity.is_empty():
+		out.append("## Build parity")
+		out.append("")
+		out.append("| Build | From | Reach | Level | Damage | Runs | Deaths | Signals won | Kit |")
+		out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+		var ps: Array = parity.duplicate()
+		ps.sort_custom(func(a, b): return int(a.get("reach_gain", 0)) > int(b.get("reach_gain", 0)))
+		for pp in ps:
+			if pp.has("error"):
+				out.append("| %s | %s | | | | | | | |" % [pp["build"], pp["error"]])
+				continue
+			out.append("| %s | hour %.1f | %d to %d (+%d) | %d to %d | %.0f to %.0f | %d | %d | %d of %d | %s |" % [pp["build"], float(pp.get("from_h", 0.0)), int(pp["reach0"]), int(pp["reach1"]), int(pp["reach_gain"]),
+				int(pp["level0"]), int(pp["level1"]), float(pp["dps0"]), float(pp["dps1"]), int(pp["runs"]), int(pp["deaths"]), int(pp["signals_won"]), int(pp["signals_run"]), str(pp.get("kit", ""))])
+		out.append("")
 	out.append("Depth clears as [hour, tier, depth]:")
 	out.append("")
 	for b in reads:

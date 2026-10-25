@@ -17,6 +17,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Bot := preload("res://tests/bot.gd")
 const Feel := preload("res://tools/feel_gates.gd")
+const CHECKPOINT := "res://docs/balance/radio_checkpoint.save"     # the parity reads' start (25 Oct): the one save as the Radio opens
 
 
 func _init() -> void:
@@ -51,6 +52,15 @@ func _init() -> void:
 		# `-- 8 gate Doorman` or `-- 8 gate Poacher fire`: one build, every gate read, a GATES line at the end;
 		# a fifth argument seeds the yard's dice (`-- 8 gate Scrapper "" 7`), for reading a change against the same start
 		_gate(hours, args[2] if args.size() > 2 else "Doorman", args[3] if args.size() > 3 else "", int(args[4]) if args.size() > 4 else 0)
+		return
+	if cls == "one":
+		# `-- 32 one Drifter fire`: the one-save read (25 Oct, step 8): from the Poacher, the target build when its class
+		# opens, the crew's swaps after; the same gates as `gate`. `-- 32 one Drifter fire 0 checkpoint` also writes
+		# the Radio's checkpoint save as the Radio opens and stops there (the parity reads start from it)
+		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, args.size() > 5 and args[5] == "checkpoint")
+		return
+	if cls == "parity":
+		_parity(hours, args[2] if args.size() > 2 else "Poacher", args[3] if args.size() > 3 else "")
 		return
 	if cls == "probe":
 		_probe()
@@ -236,21 +246,28 @@ static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
+func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false) -> void:
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
 	if seed_v != 0:
 		sim.rng.seed = seed_v
-	sim.set_class(cls)
+	var start_cls: String = str(Data.CLASSES[0]["name"]) if one_save else cls     # a new game's the Poacher (24 Oct)
+	sim.set_class(start_cls)
 	sim.fast_memo = true                  # the run reads its kit once in thirty seconds, as a dry run does (8 Oct)
 	sim.odds_runs_max = 24                # and the odds at twenty-four dry runs a read, glasses or not (the verdict at PUSH is the same; the number shown is the player's)
 	var bot = Bot.new()
 	bot.element = element
 	bot.cls = cls
 	bot.keystones_first = element == ""
+	if one_save:
+		bot.cls = start_cls
+		bot.element = element if start_cls == cls else str(Bot.CREW_BUILDS.get(start_cls, ""))
+		bot.keystones_first = false
+		bot.target_cls = cls
+		bot.target_el = element
 	var build: String = cls + ((" as " + element) if element != "" else "")
-	print("Fiat gate read: %.0f h, %s" % [hours, build])
+	print("Fiat gate read: %.0f h, %s%s" % [hours, build, " (one save, from the %s)" % start_cls if one_save else ""])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
 		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0,
@@ -259,7 +276,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
-		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1}
+		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save}
 	var boss_uniques: Dictionary = {}
 	for u in Data.UNIQUES:
 		if u.get("boss", false):
@@ -338,6 +355,13 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		_gate_firsts(sim, g, loose_seen)
+		if checkpoint and sim.room_open("radio") and not sim.on_mission():
+			var cf := FileAccess.open(CHECKPOINT, FileAccess.WRITE)
+			cf.store_string(JSON.stringify({"sim": sim.to_dict(), "hour": snappedf(sim.elapsed / 3600.0, 0.01), "route": bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target"))}))
+			cf.close()
+			print("CHECKPOINT the Radio's open at %s, level %d, as the %s: %s" % [_hm(sim.elapsed), sim.level(), sim.cls, CHECKPOINT])
+			quit(0)
+			return
 		if element == "" and float(g["qm_at"]) >= 0.0:
 			print("  the plain floor's beaten at %s: the read ends here (22 Oct, the pass's wall)" % _hm(sim.elapsed))
 			break                           # a plain build's one gate is the Quartermaster by hour 24; past him its hours were the pass's slowest
@@ -436,6 +460,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
 	g["crew_swaps"] = bot.crew_swaps     # the crew (21 Oct, step 7): swaps, the classes played, the board's level
+	g["route"] = bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target")).map(func(x): return [snappedf(float(x[0]) / 3600.0, 0.01), str(x[1])])     # the one save's classes, when (25 Oct)
 	g["crew"] = sim.crew_played().map(func(c): return "%s %d" % [c, sim.crew_level(c)])
 	g["paragon"] = sim.paragon()
 	g["lorries"] = sim.lorries
@@ -631,3 +656,71 @@ func _kit(sim) -> String:
 func _hm(s: float) -> String:
 	@warning_ignore("integer_division")
 	return "%d:%02d" % [int(s) / 3600, (int(s) % 3600) / 60]
+
+
+## Build parity (25 Oct, step 8): one build for a fixed spell from the Radio's checkpoint - the same world, the same
+## kit in the stash, the class taken whether or not the save had opened it - and what it made of the spell: the reach
+## and the levels gained, the signals won, the deaths. One PARITY line; the summary sets the builds side by side.
+func _parity(hours: float, cls: String, element: String) -> void:
+	var text := FileAccess.get_file_as_string(CHECKPOINT)
+	var d = JSON.parse_string(text) if text != "" else null
+	if not (d is Dictionary) or not d.has("sim"):
+		print("PARITY " + JSON.stringify({"build": "%s as %s" % [cls, element], "error": "no checkpoint at " + CHECKPOINT}))
+		quit(0)
+		return
+	var sim = Sim.new()
+	sim.load_dict(d["sim"])
+	sim.loot_by_hand = false
+	sim.fast_memo = true
+	sim.odds_runs_max = 24
+	# every build starts alike (the review): the checkpoint runner's level, points and kit, the class's own trees empty
+	# and the points free for the build to spend - the checkpoint's own class included, so its tree is no head start
+	var xp0: float = float(sim.xp)
+	var pts0: int = int(sim.training_points)
+	var best0: int = int(sim.best_level)
+	var kit0: Dictionary = sim.equipped.duplicate(true)
+	var rig0: Array = sim.rig.duplicate(true)
+	if sim.cls != cls:
+		sim.set_class(cls)                   # a parity read takes the class whether the save had opened it or not
+	sim.xp = xp0
+	sim.training_points = pts0
+	sim.best_level = best0
+	sim.equipped = kit0
+	sim.rig = rig0
+	sim.tree = sim.tree.filter(func(id): return sim.is_camp(str(id)))
+	sim.skill_slots = ["", "", ""]
+	sim._dry_memo.clear()
+	sim.hp = sim.max_hp()
+	var start_s: float = sim.elapsed
+	var bot = Bot.new()
+	bot.cls = cls
+	bot.element = element
+	bot.crew_on = false                      # one class for the spell: the comparison is the build's own
+	var p := {"build": "%s as %s" % [cls, element], "class": cls, "element": element, "hours": hours, "from_h": float(d.get("hour", 0.0)),
+		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0, "signals_won": 0, "signals_run": 0}
+	var t_end: float = sim.elapsed + hours * 3600.0
+	var t0 := Time.get_ticks_msec()
+	while sim.elapsed < t_end and Time.get_ticks_msec() - t0 < 7200000:
+		var lost: int = sim.operators_lost
+		var t: int = bot.step(sim)
+		if t >= 0:
+			p["runs"] += 1
+			if sim.operators_lost > lost:
+				p["deaths"] += 1
+			bot.tidy(sim)
+	for e in sim.chronicle:
+		if str(e.get("k", "")) == "signal_done" and float(e.get("t", 0.0)) >= float(d["sim"].get("elapsed", 0.0)):
+			p["signals_run"] += 1
+			p["signals_won"] += 1 if e.get("won", false) else 0
+	p["reach1"] = sim.reach
+	p["level1"] = sim.level()
+	p["dps1"] = snappedf(float(sim.damage_split()["total"]), 0.1)
+	p["played_h"] = snappedf((sim.elapsed - start_s) / 3600.0, 0.01)     # a read the wall cut short says so (the review)
+	p["cut_short"] = sim.elapsed < t_end
+	p["reach_gain"] = int(p["reach1"]) - int(p["reach0"])
+	p["level_gain"] = int(p["level1"]) - int(p["level0"])
+	p["kit"] = _kit(sim)
+	@warning_ignore("integer_division")
+	p["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	print("PARITY " + JSON.stringify(p))
+	quit(0)
