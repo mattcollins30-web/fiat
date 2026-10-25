@@ -836,15 +836,48 @@ func play_air() -> void:
 ## A room's card the first time it's on screen (14 Oct): not over a menu, the opening or another card, and not the
 ## Map's while a run's on it (the run screen's in the Map's place then). The tests' camps (intro off) never see one.
 func _maybe_room_intro() -> void:
-	if not intro or not room_intros or sim == null or sim.camp_lost or _menu.visible or not ROOM_INTRO_KEY.has(room):
+	if not intro or sim == null or sim.camp_lost or _menu.visible:
 		return
 	if _opening_due or (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
+		return
+	var cls_due := class_card_due()
+	if cls_due != "":
+		show_class_card(cls_due)              # a story beat: with the rooms' intros off too (Matt, 25 Oct)
+		return
+	if not room_intros or not ROOM_INTRO_KEY.has(room):
 		return
 	if room == MISSIONS and sim.on_mission():
 		return
 	var key: String = ROOM_INTRO_KEY[room]
 	if not (key in sim.met):
 		show_room_intro(key)
+
+
+## A class's card once it's open (25 Oct, Matt: every unlock a story beat): back at camp, before any room's card;
+## once a class (sim.met keeps "class:<name>"). The Poacher has the opening.
+func class_card_due() -> String:
+	if sim == null or sim.on_mission() or sim.camp_lost:
+		return ""
+	for c in Data.CLASSES:
+		var nm: String = str(c["name"])
+		if Words.CLASS_CARDS.has(nm) and sim.class_open(nm) and not ("class:" + nm) in sim.met:
+			return nm
+	return ""
+
+
+func show_class_card(cls: String) -> void:
+	if _room_card != null and is_instance_valid(_room_card):
+		return
+	var k := "class:" + cls
+	_room_card = RoomIntro.new(k)
+	_room_card.voice_on = _sound.vols["voice"] > 0.0
+	_room_card.done.connect(func():
+		if not (k in sim.met):
+			sim.met.append(k)                  # met on its dismissal: a camp closed under the card sees it again (the reviewer)
+		_room_card = null
+		_overlay_closed = Engine.get_process_frames()
+		show_room(BARRACKS))                   # "To Training": the class waits there
+	add_child(_room_card)
 
 
 ## The card, met or not (the top bar's ?).
@@ -855,7 +888,7 @@ func show_room_intro(key: String) -> void:
 		sim.met.append(key)
 	_room_card = RoomIntro.new(key)
 	_room_card.voice_on = _sound.vols["voice"] > 0.0
-	_room_card.met_count = sim.met.size()
+	_room_card.met_count = sim.met.filter(func(m): return Words.ROOM_INTROS.has(m)).size()     # the rooms alone, not On the air or the classes (the reviewer)
 	_room_card.done.connect(func():
 		_room_card = null
 		_overlay_closed = Engine.get_process_frames()

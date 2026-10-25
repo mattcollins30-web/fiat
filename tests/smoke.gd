@@ -16477,8 +16477,69 @@ func _room_intro_checks(main) -> void:
 				_check(c.shown == 2, "%s's second line didn't come up as it's said" % k)
 		c.free()
 	print("room cards: %d of %d have their take" % [voiced, Words.ROOM_INTROS.size()])
+	# a class's card when it opens (25 Oct, Matt: every unlock a story beat): its lines fit, its tiles are Training's
+	# card lines, its face and place drawn; once a class, back at camp, then Training
+	var RI = load("res://scripts/ui/room_intro.gd")
+	for c in Data.CLASSES:
+		var cn: String = str(c["name"])
+		if not Words.CLASS_CARDS.has(cn):
+			continue
+		var cc = RI.new("class:" + cn)
+		main.add_child(cc)
+		cc._process(0.01)
+		for l in cc._lines:
+			_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "%s's card line runs off: '%s'" % [cn, l.text])
+		var shorts: Array = c.get("short", []).map(func(x): return str(x[0]))
+		for k in range(mini(3, shorts.size())):
+			_check(cc._tiles[k][2].text == shorts[k], "%s's tile %d reads '%s', not Training's '%s'" % [cn, k + 1, cc._tiles[k][2].text, shorts[k]])
+		for tl in cc._tiles:
+			_check(UI.text_width(tl[2], tl[2].text) <= tl[2].size.x + 0.5, "%s's tile runs off: '%s'" % [cn, tl[2].text])
+		_check(cc._face.visible and cc._art.texture != null and cc._go_on.text == Words.CLASS_CARD["go"], "%s's card has no face, no place or the wrong button" % cn)
+		cc.free()
+	var met_was: Array = sim.met.duplicate()
+	sim.met = sim.met.filter(func(x): return not str(x).begins_with("class:"))
+	if sim.on_mission():
+		sim.extract_now()
+	var seen_cls: Array = []
+	for n in range(6):
+		var due: String = main.class_card_due()
+		if due == "":
+			break
+		main.show_class_card(due)
+		_check(main._room_card != null and main._room_card.key == "class:" + due, "%s's card didn't come up" % due)
+		if n == 0:
+			_check_fit(main, "a class's card (%s)" % due)
+		seen_cls.append(due)
+		if main._room_card != null:
+			main._room_card.finish()
+	var open_n: int = Words.CLASS_CARDS.keys().filter(func(x): return sim.class_open(str(x))).size()
+	_check(seen_cls.size() == open_n and open_n > 0 and main.room == main.BARRACKS, "the class cards: %s of %d open, then the room %s" % [str(seen_cls), open_n, main.room])
+	_check(main.class_card_due() == "", "a class's card came up twice")
+	# with the rooms' intros off, a class's card still comes (Matt, 25 Oct: a story beat, not a tutorial)
+	var ri_was: bool = main.room_intros
+	var intro_was: bool = main.intro
+	var one: String = str(seen_cls[0]) if not seen_cls.is_empty() else ""
+	if one != "":
+		var met2: Array = sim.met.duplicate()
+		sim.met.erase("class:" + one)
+		if not ("air" in sim.met):
+			sim.met.append("air")              # On the air had its turn: the class's card is what's tested
+		main.room_intros = false
+		main.intro = true
+		main.refresh()
+		_check(main._room_card != null and main._room_card.key == "class:" + one, "with the rooms' intros off, %s's card didn't come" % one)
+		if main._room_card != null:
+			main._room_card.finish()
+		if main._opening != null and is_instance_valid(main._opening):
+			main._opening.finish()
+		sim.met = met2
+	main.room_intros = ri_was
+	main.intro = intro_was
+	sim.met = met_was
 	# the tests' camps (intro off) never see one
 	sim.met = ["air"]                          # every room open here: On the air (the Radio's) has had its turn
+	for cn2 in Words.CLASS_CARDS:
+		sim.met.append("class:" + cn2)         # and every class's card met, so the rooms' cards are what's tested here
 	main.show_room(main.ARMOURY)
 	_check(main._room_card == null, "a room's card came up with the intros off")
 	# a first visit: the card, the room met, the game held
@@ -16541,6 +16602,9 @@ func _room_intro_checks(main) -> void:
 		all_in = all_in and (k in sim.met)
 	_check(all_in, "an old save's open rooms weren't counted met: %s" % str(sim.met))
 	_check(sim.to_dict().has("met"), "the save doesn't keep the rooms met")
+	for cn3 in Words.CLASS_CARDS:
+		if not ("class:" + cn3) in sim.met:
+			sim.met.append("class:" + cn3)     # the classes' cards had their turn above: On the air's and the opening's tested alone
 	# a new camp: the opening alone, the Map's card only once it's done (14 Oct, Matt: the Map's take under the opening)
 	var old_sim = main.sim
 	main.new_game()

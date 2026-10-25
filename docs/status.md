@@ -6931,3 +6931,8 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
 - After the fourth pass (Matt, 25 Oct: "as you suggest"): TEMPER_CASH back to 4 (tempering on scrap again; the cash
   held waits for the Issue), the XP taper kept, gate 4 to level 19-23 at the Quartermaster (so it and gate 16 can both
   hold). The bot passes stop here: Matt's playtest next. Smoke 248 green.
+- The class cards (25 Oct, Matt: "a story beat for every class unlock"): each class that opens shows its card once,
+  back at camp (the Drifter after Kev's first story), with the rooms' intros off too - the room card keyed
+  class:<name>, two lines in the class's own voice, its Training lines as the tiles, "To Training". The takes are
+  Matt's by hand from docs/design/class_cards.md (voice briefs, lines, files) into art/intro/classes/; the lines come
+  on the clock till then. The canvas: the class card, the Issue's moment and the Issuer's counter. Smoke 249 green.

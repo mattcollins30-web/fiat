@@ -11,8 +11,19 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const People := preload("res://scripts/ui/people.gd")
+const Data := preload("res://scripts/sim/data.gd")
 
 const VOICE := "res://art/intro/rooms/%s.mp3"
+## A class's card when it opens (25 Oct, Matt: "a story beat for every class unlock"; the canvas 'A class opens'):
+## this card, keyed "class:<name>", its words Words.CLASS_CARDS, its take art/intro/classes/<voice>.mp3.
+const CLASS_VOICE := "res://art/intro/classes/%s.mp3"
+const CLASS_STRIPS := {
+	"Paramedic": [["people/paramedic", 0.5, 0.33, 1.0], ["places/the_clinic", 0.65, 0.5, 1.0], ["places/top_farm", 0.5, 0.55, 1.0]],
+	"Doorman": [["people/doorman", 0.5, 0.33, 1.0], ["places/the_retail_park", 0.5, 0.55, 1.0], ["places/the_estate", 0.5, 0.55, 1.0]],
+	"Scrapper": [["people/scrapper", 0.5, 0.33, 1.0], ["places/the_bank", 0.5, 0.55, 1.0], ["places/the_town", 0.5, 0.55, 1.0]],
+	"Recruit": [["people_new/recruit", 0.5, 0.33, 1.0], ["places/the_barracks", 0.5, 0.55, 1.0], ["places/the_city", 0.5, 0.55, 1.0]],
+	"Drifter": [["people/drifter", 0.5, 0.33, 1.0], ["places/the_services", 0.5, 0.55, 1.0], ["places/the_outskirts", 0.5, 0.55, 1.0]],
+}
 const VOICE_DB := -1.0
 const W := 1280
 const LINES := 4                       # the most lines a card has (the Clinic, 14 Oct)
@@ -134,7 +145,10 @@ func _init(room_key: String) -> void:
 
 
 func _ready() -> void:
-	_hint.text = "Click or Space · %d of %d rooms met" % [mini(met_count, Words.ROOM_INTROS.size()), Words.ROOM_INTROS.size()]
+	if is_class_card(key):
+		_hint.text = Words.CLASS_CARD["hint"]
+	else:
+		_hint.text = "Click or Space · %d of %d rooms met" % [mini(met_count, Words.ROOM_INTROS.size()), Words.ROOM_INTROS.size()]
 	if _vlen > 0.0 and voice_on:
 		_voice.play()
 	_place(get_viewport_rect().size)
@@ -149,8 +163,8 @@ func _place(s: Vector2) -> void:
 
 ## The room's words, art and take; the first line up at once.
 func _fill() -> void:
-	var d: Dictionary = Words.ROOM_INTROS[key]
-	_art.texture = UI.place_texture(_place_of(key))
+	var d: Dictionary = _d()
+	_art.texture = UI.place_texture(str(d["place"]) if d.has("place") else _place_of(key))
 	var faced := People.show(_face, str(d["face"])) if str(d["face"]) != "" else People.show(_face, "")
 	var tx: float = 40 + FACE + 24 if faced else PAD
 	for l in [_kicker, _title, _sub]:
@@ -158,7 +172,8 @@ func _fill() -> void:
 		l.size.x = W - tx - PAD
 	_kicker.text = str(d["room"]).to_upper()
 	_title.text = str(d["title"])
-	_sub.text = sub_of(key)
+	_sub.text = str(d["sub"]) if d.has("sub") else sub_of(key)
+	_go_on.text = str(d.get("go", "Go on"))
 	var all: Array = d["lines"]
 	for k in range(_lines.size()):
 		_lines[k].text = all[k] if k < all.size() else ""
@@ -189,7 +204,7 @@ static func strip_texture(room_key: String, k: int, box: Vector2) -> Texture2D:
 		ot.atlas = own
 		ot.region = Rect2(((Vector2(ow, oh) - c) / 2.0).floor(), c.floor())     # the middle: a sixteenth off the top and the bottom
 		return ot
-	var spec: Array = STRIPS.get(room_key, [])
+	var spec: Array = CLASS_STRIPS.get(room_key.substr(6), []) if is_class_card(room_key) else STRIPS.get(room_key, [])
 	if k >= spec.size():
 		return null
 	var src: Texture2D = art_texture(str(spec[k][0]))
@@ -231,7 +246,7 @@ static func sub_of(k: String) -> String:
 
 
 static func _voice_of(d: Dictionary) -> AudioStream:
-	var path: String = VOICE % str(d.get("voice", ""))
+	var path: String = (CLASS_VOICE if d.has("cls") else VOICE) % str(d.get("voice", ""))
 	if ResourceLoader.exists(path):
 		return load(path)
 	if FileAccess.file_exists(path):
@@ -242,12 +257,51 @@ static func _voice_of(d: Dictionary) -> AudioStream:
 
 
 func total() -> int:
-	return Words.ROOM_INTROS[key]["lines"].size()
+	return _d()["lines"].size()
+
+
+var _data: Dictionary = {}
+
+
+## This card's words, built once (the reviewer: a class's were rebuilt every frame for the cues).
+func _d() -> Dictionary:
+	if _data.is_empty():
+		_data = data_of(key)
+	return _data
+
+
+static func is_class_card(k: String) -> bool:
+	return k.begins_with("class:")
+
+
+## A card's words: a room's (Words.ROOM_INTROS), or a class's ("class:<name>": Words.CLASS_CARDS, its tiles its card's
+## own lines from Data.CLASSES, so they never drift from Training's; under three, the class's trees fill the rest).
+static func data_of(k: String) -> Dictionary:
+	if not is_class_card(k):
+		return Words.ROOM_INTROS[k]
+	var cls: String = k.substr(6)
+	var d: Dictionary = Words.CLASS_CARDS[cls].duplicate(true)
+	d["cls"] = cls
+	d["room"] = Words.CLASS_CARD["kicker"]
+	d["go"] = Words.CLASS_CARD["go"]
+	var tiles: Array = []
+	for c in Data.CLASSES:
+		if str(c["name"]) == cls:
+			for sh in c.get("short", []):
+				if tiles.size() < 3:
+					tiles.append([Words.CLASS_CARD["edge"], str(sh[0])])
+	if tiles.size() < 3:
+		var trees: Array = Data.TREES.filter(func(t): return str(t.get("class", "")) == cls).map(func(t): return str(t["name"]))
+		tiles.append([Words.CLASS_CARD["trees"], " · ".join(trees)])
+	while tiles.size() < 3:
+		tiles.append(["", ""])
+	d["tiles"] = tiles
+	return d
 
 
 ## On the take's cues: a take, and a cue a line.
 func voiced() -> bool:
-	var d: Dictionary = Words.ROOM_INTROS[key]
+	var d: Dictionary = _d()
 	return _vlen > 0.0 and d.has("cues") and d["cues"].size() >= total()
 
 
@@ -257,7 +311,7 @@ func _process(dt: float) -> void:
 	_line_t += dt
 	if voiced():
 		_vt += dt
-		var cues: Array = Words.ROOM_INTROS[key]["cues"]
+		var cues: Array = _d()["cues"]
 		while shown < total() and _vt >= float(cues[shown]) - 0.1:
 			_next_line()
 	elif shown < total() and _line_t >= LINE_S:
@@ -275,7 +329,7 @@ func _next_line() -> void:
 func advance() -> void:
 	if shown < total():
 		if voiced():
-			_vt = float(Words.ROOM_INTROS[key]["cues"][shown])
+			_vt = float(_d()["cues"][shown])
 			if _voice.playing:
 				_voice.seek(_vt)
 		_next_line()
