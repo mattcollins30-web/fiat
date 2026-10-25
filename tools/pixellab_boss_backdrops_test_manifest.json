@@ -1,0 +1,47 @@
+{
+ "_readme": [
+  "FIAT BOSS BACKDROPS, THE TEST (25 Oct): the Manager's office and desk. Judge them in the frame before the set.",
+  "Run: tools\\art.bat boss_backdrops_test   (the dry run first, then it asks; one that came out wrong: ++ --only <boss>_plate ++ --force; or godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_boss_backdrops_test_manifest.json)",
+  "Boss backdrops: art/fight_boss/<boss>_plate.png 744x320 and _cover.png 744x256 (the wall's body filling the lower 85% down to the bottom edge, as art/fight_walls/). A head's pair styled on his site's live pair; a pinnacle's on his host site's pair with his map card (art/places/) as a reference image. Nothing live is touched.",
+  "The code doesn't show them yet: RunView.tex() needs art/fight_boss/ in its folders and a boss's fight needs _site(<boss>) (Matt's go first).",
+  "Regenerate with python3 tools/make_boss_backdrops_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_boss/the_manager_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the branch manager's office behind the bank's banking hall: a heavy wooden desk and a leather chair, filing cabinets with their drawers pulled out, the round steel vault door standing open on the left onto the dark, safe-deposit boxes along the wall with their little doors hanging, loose banknotes and paper over the carpet, a frosted glass partition, the blinds half down. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manager's fight, the plate: his den at the_bank (styled on art/fight_new/the_bank_plate.png)"
+  },
+  {
+   "out": "art/fight_boss/the_manager_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a heavy wooden manager's desk, its panels scuffed, a brass desk lamp and a wire tray of paper on its edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manager's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_bank_cover.png)"
+  }
+ ]
+}

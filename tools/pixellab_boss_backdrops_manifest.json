@@ -1,0 +1,272 @@
+{
+ "_readme": [
+  "FIAT BOSS BACKDROPS, THE SET (25 Oct): every boss's plate and wall (14 jobs: four heads, three pinnacles). After the test reads; the test's Manager is skipped as made.",
+  "Run: tools\\art.bat boss_backdrops   (the dry run first, then it asks; one that came out wrong: ++ --only <boss>_plate ++ --force; or godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_boss_backdrops_manifest.json)",
+  "Boss backdrops: art/fight_boss/<boss>_plate.png 744x320 and _cover.png 744x256 (the wall's body filling the lower 85% down to the bottom edge, as art/fight_walls/). A head's pair styled on his site's live pair; a pinnacle's on his host site's pair with his map card (art/places/) as a reference image. Nothing live is touched.",
+  "The code doesn't show them yet: RunView.tex() needs art/fight_boss/ in its folders and a boss's fight needs _site(<boss>) (Matt's go first).",
+  "Regenerate with python3 tools/make_boss_backdrops_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_boss/the_gamekeeper_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/top_farm_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the gamekeeper's larder at the back of a stone farm barn, its big doors open onto a muddy yard: a rail of dead pheasants hung by their necks from a beam, rusted gin traps and wire snares on nails along the wall, a game cart, galvanised feed bins, straw bales, a chest freezer with its lid up, a torn pheasant pen in the yard beyond. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Gamekeeper's fight, the plate: his den at top_farm (styled on art/fight_new/top_farm_plate.png)"
+  },
+  {
+   "out": "art/fight_boss/the_gamekeeper_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/top_farm_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of rough wooden game crates with a pheasant feed hopper on its side against them, straw spilling out, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Gamekeeper's fight, the wall, tall enough for the full duck (styled on art/fight_walls/top_farm_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_carpet_man_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_retail_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down the inside of a carpet warehouse on a retail park: rolls of carpet stacked high on steel racking, offcuts heaped on the concrete floor, a forklift with a carpet pole, a sample stand of fanned plain swatches, a roller shutter half up on the grey car park, a dark lock-up door on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Carpet Man's fight, the plate: his den at the_retail_park (styled on art/fight_new/the_retail_park_plate.png)"
+  },
+  {
+   "out": "art/fight_boss/the_carpet_man_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_retail_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a stack of rolled carpets lying on their sides, bound with parcel tape, a roll of grey underlay over the top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Carpet Man's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_retail_park_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_manager_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the branch manager's office behind the bank's banking hall: a heavy wooden desk and a leather chair, filing cabinets with their drawers pulled out, the round steel vault door standing open on the left onto the dark, safe-deposit boxes along the wall with their little doors hanging, loose banknotes and paper over the carpet, a frosted glass partition, the blinds half down. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manager's fight, the plate: his den at the_bank (styled on art/fight_new/the_bank_plate.png)"
+  },
+  {
+   "out": "art/fight_boss/the_manager_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a heavy wooden manager's desk, its panels scuffed, a brass desk lamp and a wire tray of paper on its edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manager's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_bank_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_quartermaster_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the quartermaster's stores at an army barracks: a long brick storeroom, steel shelving of folded kit and boxed rations in olive drab, a mesh armoury cage with its gate open on the left onto the dark, empty rifle racks, plain unmarked ammunition boxes stacked on pallets, an issue counter with a hatch, one strip light hanging. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Quartermaster's fight, the plate: his den at the_barracks (styled on art/fight_new/the_barracks_plate.png)"
+  },
+  {
+   "out": "art/fight_boss/the_quartermaster_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_barracks_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a stack of olive steel ammunition boxes on a pallet, no markings on them, a coil of webbing over the top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Quartermaster's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_barracks_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_lineman_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_plate.png",
+   "reference_images": [
+    "res://art/places/the_grid.png"
+   ],
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a substation yard behind a high wire fence: grey transformers on concrete plinths, insulators and busbars overhead, big wooden cable drums stacked on their sides, a brick switch house with its steel door open on the left, pylons going away into the haze, gravel underfoot, one work lamp on a pole. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. The same place as the reference image, its buildings, materials and colours, from the viewpoint described. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Lineman's fight, the plate: his den at the_services (styled on art/fight_new/the_services_plate.png, the place from art/places/the_grid.png)"
+  },
+  {
+   "out": "art/fight_boss/the_lineman_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_services_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a pair of big wooden cable drums on their sides, thick black cable wound round them, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Lineman's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_services_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_registrar_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "reference_images": [
+    "res://art/places/the_archive.png"
+   ],
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down the stacks of a records archive: tall steel shelving packed with bound ledgers and box files, their spines blank, a rolling library ladder, a reading table with a green-shaded lamp, papers drifted across the floor, a card-index cabinet, a dark aisle opening on the left, high windows grey with dust. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. The same place as the reference image, its buildings, materials and colours, from the viewpoint described. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Registrar's fight, the plate: his den at the_bank (styled on art/fight_new/the_bank_plate.png, the place from art/places/the_archive.png)"
+  },
+  {
+   "out": "art/fight_boss/the_registrar_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a heaped barricade of bound ledgers and box files on a toppled book trolley, their spines blank, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Registrar's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_bank_cover.png)"
+  },
+  {
+   "out": "art/fight_boss/the_issuer_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 105012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_plate.png",
+   "reference_images": [
+    "res://art/places/the_mint.png"
+   ],
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across the floor of a mint: heavy printing presses in a row, sheets of uncut banknotes on drying racks, bundles of notes stacked on pallets and wrapped in film, a guillotine, ink drums, a caged dispatch door open on the left onto the dark, factory roof lights grey overhead; the notes plain grey-green, no faces or numbers on them. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. The same place as the reference image, its buildings, materials and colours, from the viewpoint described. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Issuer's fight, the plate: his den at the_barracks (styled on art/fight_new/the_barracks_plate.png, the place from art/places/the_mint.png)"
+  },
+  {
+   "out": "art/fight_boss/the_issuer_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 105013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_barracks_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a pallet of banknote bundles wrapped in clear film, the notes plain grey-green with no faces or numbers, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Issuer's fight, the wall, tall enough for the full duck (styled on art/fight_walls/the_barracks_cover.png)"
+  }
+ ]
+}

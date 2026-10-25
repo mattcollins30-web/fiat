@@ -57,6 +57,14 @@
    "prompt_influence": 0.35
   },
   {
+   "id": "rain_roof",
+   "sound": "rain_roof",
+   "text": "Heavy rain heard from inside a large empty building: drumming on a glass and metal roof high overhead, drips falling into puddles on a tiled floor, a hollow echo. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
    "id": "fog",
    "sound": "fog",
    "text": "Muffled stillness in thick fog, water dripping from gutters, a foghorn very far off. A continuous field recording, no single event dominating, no music, no voices speaking words.",
