@@ -589,3 +589,35 @@ doctor); Not today's new effect "Under 25% HP, you take 40% less damage" (figure
 lively "+40% pace for 6 seconds" (pace covers the rate of fire: its ×1.4 as it was); Sedative dart "One man on you
 sleeps for 4 seconds" (the sim holds one of them, not the man you're shooting). Kept: Ordnance↔Knuckles, Drill↔Blades;
 Barred pays his XP only; Smoke and Suppressing fire don't stack (the stronger holds).
+
+### The endgame chase's words (25 Oct)
+
+The same pass on everything the chase added: two reviewers (docs/language/review_chase_A.md, the style guide's;
+review_chase_B.md, a new player's), my call below. Everything below is in words.gd and data.gd.
+
+- **Banned words off screen.** *Loadout* became *Kit* ("Kit 1", "Kit 2 on; missing: …"). *Node* became *perk* in
+  every build code line. *Depth* came out of the collection: a site's marks are levels (10, 25, 50, 75, 100), and
+  the row shows "level 57". *Crew* left the collection's line.
+- **One meaning a word.** The Registrar's seal is *stamped* ("Stamped", "A skill stamped"), because *sealed* is the
+  Radio's. *Printed* is the Issuer's men alone; the Revolver's words say "lands again" and its breakdown row reads
+  "Repeat hits". It is always *build code*, never a bare *code* (the Radio's). The renamed notables don't echo their
+  pair or their lane: Paddles became **Defib** (beside Paramedic's paddles), and Gas drill became **Tear gas** (Mag drill's
+  fault, and beside Recruit's gas).
+- **Broken output fixed in code.** The pattern lines no longer lower-case names or put "the …'s" round a name that
+  carries it ("Short of: The Grid's key", "The Hiking pack now carries The Lineman's Tool Bag's pattern"). The cost
+  chip is the same. The reset's price goes through Fmt.money.
+- **Words that match the mechanics.** Red tape's chip says "−30% gun damage" and moved to On you with the stamp chip.
+  The printed men's chip counts those on you. "%d can't be trained yet" replaces "short of points" (a perk is refused
+  for more than points). "One use each" now shows under the patterns kept.
+- **Hidden consequences said before the press.** Break: "The unique goes for good; its power stays here as one
+  pattern", and the button lost "· free". Put it on: "Spends the pattern and the costs above; it can't come off".
+  Saving over a kit asks twice ("Again: replace it"). The loot rules read "Checked top down", and the rows' buttons
+  and the Scrap chip carry tooltips.
+- **Keep keeps (a code change one reviewer found).** A kept or highlighted find is never sold when home, and the
+  Bins pass it by: the rules now run before the Bins.
+- **Smaller.** The breakdown's heads read Damage, dmg/s, Damage taken, Damage stopped, Meds used, and its rows Fire and
+  Bleed (nouns, as the web's). What hit you uses Chill for frost on the runner. The joints' lines name the man ("the
+  man you're fighting", "the men they hit", "A bleeding man you kill"). "Chilled men" replaced "Chilled gangs". Two
+  unique lore lines were fixed for sense.
+- **Not taken.** "Pending" for the stamp (vague; *stamped* is the Registrar's own); "Retrain" alone for Retrain into
+  it; the Registrar's Stamp's base (Bank's own pen) and the Tool Bag's (a Hiking pack, a small one) left as data.

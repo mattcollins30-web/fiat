@@ -61,22 +61,25 @@ the stacks (Never there, Hit and run, Walking wounded). An asterisk (*) marks th
   (frost_pct, physical_pct). Stalking's Rifleman and the Poacher's own +40% are the first shot's bonus that carries.
 - **The log line.** "The cold's doing the work now."
 
-## Paramedic: Overdose (poison)
+## Paramedic: Flatline (shock)
 
-- **The loop.** Your poison's ticks heal you 5% of what they deal. Healing past full HP becomes stacks: a max HP's
-  worth is one stack, and each stack is +100% poison. More poison means more ticks, more healing and more stacks, a
-  loop that feeds itself. It wants you at full HP, so it's at its best where they hit you least.
+Joints B (24 Oct) took the Paramedic off poison, and Overdose went with it. Flatline is his loop on shock.
+
+- **The loop.** Every kill on a shocked man gives you a stack and heals you 5% of max HP. Each stack adds 5% to
+  your hits on shocked men. More damage means more shocked kills, which means more stacks and more healing: a loop that
+  feeds itself through every gang. The Lineman's Tool Bag spreads the shock: everyone on you is shocked, so every kill
+  counts.
 - **Gear.**
   - The Ambulance's, all 3: Ambulance rig, Green overalls, Crew helmet. From level 16.
-  - The Rat Man's Bag, Backpack, core. From level 14. Poison stacks without a top, and it carries to the next man.
-- **Points (42).**
-  - Triage: Steady pulse, Tough, Kit bag, Hardy, Fast work, Keen, Syringe*.
-  - The Rat Man: Under the sink, Nimble, Council issue, Hardened, Dosed, Slow acting, Hardened, Nimble, Paramedic's
-    dose*, Hardy, Rat's share, Builds* (keystone), Mending, Lingers* (capstone).
-- **Affixes.** Poison conversion (conv_poison_pct), poison increase (poison_pct), dot damage (dot_pct). Armour and
-  resists, so you stay full and every heal overflows. Healing increase (heal_pct) doesn't feed it: the dose is a
-  share of the tick, not of a heal.
-- **The log line.** "The dose is coming back round."
+  - The Lineman's Tool Bag, Backpack, from the Grid (one of the Lineman's two). Every shock you put on a man arcs to
+    everyone else on you at half strength, and shocked men take 20% more damage from your skills.
+- **Points.**
+  - Shifts: Defib* (the joint's half: 15% of every hit becomes shock).
+  - Live: Paramedic's paddles* (shock damage +25%), Daisy chain* (keystone: while the target is shocked, your shock
+    damage hits everyone on you), Arc* (capstone). The fillers between, as the web routes them.
+- **Affixes.** Shock conversion (conv_shock_pct), shock increase (shock_pct). Healing increase doesn't feed it: the
+  heal is a share of max HP.
+- **The log line.** "The heart's going again."
 
 ## Doorman: Opened for good (bleed)
 

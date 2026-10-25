@@ -46,3 +46,39 @@ words through the language pass; the art in one manifest at the end, once the sl
 ## Not in this plan (product, before any release)
 
 Onboarding, the sound redo (ElevenLabs), the settings (keys, text size).
+
+## The go (24 Oct, Matt): everything, then one pass
+
+Matt: "lets do everything plus a single balance pass after everything using the new balance method - then ill playtest
+earnestly. Produce mockups for everything now as well as any questions that need settling - you can then proceed with
+the lot + any art without my intervention." Joints: option B. The Pitch circle: as mocked. The parked four go in
+first. Mockups: the canvas "Fiat – The endgame chase and the web" (eight boards).
+
+### The calls I've taken (Matt can overrule any; each is what gets built otherwise)
+
+1. Joints B: the Paramedic poison to shock, the Recruit bleed to poison, the Drifter shock to bleed. The swapped
+   notables and element halves renamed (the language pass); the wheel reordered as on the board.
+2. The Pitch circle: an element's starter costs 1 Pitch point; it opens that element for every class (the camp's);
+   only an opened element's meter fills. Starters don't count towards the Pitch's columns.
+3. A new game starts as the Poacher; no pick.
+4. Each class's first skill comes with the first point in its tree (its hang moved to the entry's).
+5. The Lineman: a shield of 30% of his HP over it; not broken in 6 s, it fills again; broken, he's stunned 3 s.
+6. The Registrar: every 12 s she seals the skill you'd fire next for 5 s; with none slotted, your secondary.
+7. The Issuer: a man printed every 8 s (one of the host site's crew at his level), 6 on you at most.
+8. The uniques: the Lineman's Tool Bag (backpack, on a Hiking pack - the Ambulance set has the rig, 24 Oct: your
+   shock arcs to everyone else on you at half; shocked men take 20% more damage from your skills), the Registrar's Stamp (charm: every third skill free and twice), the Issuer's Revolver
+   (secondary: a kill lands the killing hit again on the next man; a kill from that hit does the same). Each beside the old
+   one; the first win gives one of the two.
+9. Patterns: breaking a unique is free and uses it up; putting a pattern on a rare of the same slot costs a ledger
+   seal (the Grid's key for a helmet or rig), 12 of the slot's zone material and tins by level; one pattern an item;
+   no mythics; a pattern is one use.
+10. The filter: off till a rule is added; applied as a run comes home; the first rule that fits wins; "scrap" scraps
+    for scrap; "highlight" is an amber edge.
+11. The collection: no power; every runner's for the crew; opened from the Stats room's Record.
+12. Loadouts: three a runner, guns, body, rig and the three skills; a missing piece left empty and named. The build
+    code: the class, the web's nodes, the skills; pasting shows the retrain's cost first.
+13. The harness: the main read plays its target build from the Poacher, switches to the next class when the reach
+    has stood 2 h; the parity reads run 4 h from the Radio's checkpoint save.
+14. Art: the three uniques, the renamed notables and halves, the collection's and patterns' icons only where a
+    picture is shown; checked against pixellab_lessons.md and run.
+15. VERSION 0.9.0, SAVE_VERSION 9.
