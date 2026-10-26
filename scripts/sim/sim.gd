@@ -7378,6 +7378,10 @@ func _tick(dt: float) -> void:
 				_time_out(m)
 				return
 		_search(m, t, dt)
+		if nothing_left(m):
+			log_event(Words.RUN_HOME_CLEAN % t["name"])     # picked clean and the next gang after the clock: home with the pack (Matt, 26 Oct)
+			extract_now()
+			return
 		if has_node("walk_it_off"):
 			_heal(m, dt)                         # through _heal: the Paramedic's overflow counts (12 Oct)
 		if has_node("breather"):
@@ -9175,6 +9179,17 @@ func crate_now(m: Dictionary) -> Dictionary:
 
 
 ## Every crate open: the site's picked over, nothing more to find.
+## Picked clean with nothing more before time's up (Matt, 26 Oct; the first review's 2(a)): every crate open, quiet,
+## and the next gang due after the clock runs out (or none comes at all). The runner comes home on their own.
+func nothing_left(m: Dictionary) -> bool:
+	if m == null or m.get("dry", false) or not m["cleared"] or m["remaining"] > 0 or m.get("way_out", false) or has_rule("bomb_suit") or not crates_done(m):
+		return false
+	if not can_extract():
+		return false
+	var next: float = INF if has_rule("freedom") else patrol_s(m["t"], m["patrols"] == 0) - float(m["patrol_timer"])
+	return next * Data.CLOCK_SEARCH_RATE > maxf(0.0, float(m.get("clock", 0.0)))
+
+
 func crates_done(m: Dictionary) -> bool:
 	return m.has("crates") and crate_now(m).is_empty() and not m.get("crates_off", false)
 

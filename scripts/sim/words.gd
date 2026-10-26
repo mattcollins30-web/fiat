@@ -1240,6 +1240,7 @@ const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bl
 const TOOK_WORDS := {"physical": "Physical", "fire": "Fire", "frost": "Chill", "poison": "Poison", "shock": "Shock", "bleed": "Bleed"}
 const TEMPER := {"done": "Tempered: item level %d → %d", "no_piece": "Only kit you wear tempers", "mythic": "A mythic takes no temper",
 	"raise_first": "Item level +3 first", "short": "Needs %s scrap", "no_grow": "Nothing on it grows", "too_high": "Past the level you can wear", "price": "%s scrap · %s", "job": "Temper +1"}
+const RUN_HOME_CLEAN := "%s picked clean, nothing more before time's up: home with the pack"
 const RUN_GANG_LATE := ["after time's up", "too late"]     # a gang due after the clock runs out (the first review's 15)
 const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% loot, from the patrols beaten since the site was cleared. Each one more adds to it."}
 const FENCE_SURE := "Sell %d?"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)

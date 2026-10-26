@@ -4693,6 +4693,7 @@ func _pinnacle_checks(main) -> void:
 	_review_fix_checks(main)
 	_issue_checks(main)
 	_county_checks(main)
+	_picked_clean_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -10683,6 +10684,7 @@ func _crates_checks(main) -> void:
 	main.refresh()
 	# all open: picked clean, nothing more found
 	m["patrol_timer"] = -1e9
+	m["clock"] = 1e12                # time for the gang that never comes: picked clean, it stays (the run home on its own is checked apart)
 	m["event_at"] = -1.0
 	for k in range(int((total + 2) * sim.search_s(m["t"])) + 4):
 		sim.hp = sim.max_hp()
@@ -10759,6 +10761,7 @@ func _crates_checks(main) -> void:
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
+	m["clock"] = 1e12                # time for the gang that never comes: picked clean, it stays (the run home on its own is checked apart)
 	m["event_at"] = -1.0
 	sim._roll_crates(m, m["t"])
 	_check(m["crates"].all(func(q): return q.has("held")), "a crate with nothing nosed in it")
@@ -10786,6 +10789,7 @@ func _crates_checks(main) -> void:
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
+	m["clock"] = 1e12                # time for the gang that never comes: picked clean, it stays (the run home on its own is checked apart)
 	m["event_at"] = -1.0
 	var tries := 0
 	while tries < 60 and not m["crates"].any(func(q): return q.get("locked", false)) if m.has("crates") else true:
@@ -10825,6 +10829,7 @@ func _crates_checks(main) -> void:
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
+	m["clock"] = 1e12                # time for the gang that never comes: picked clean, it stays (the run home on its own is checked apart)
 	m["event_at"] = -1.0
 	tries = 0
 	while tries < 60 and not m["crates"].any(func(q): return q.get("locked", false)) if m.has("crates") else true:
@@ -20471,3 +20476,40 @@ func _county_checks(main) -> void:
 			_check(RV.tex_from(pk + "_plate") == RV.COUNTY_DIR and RV.tex_from(pk + "_cover") == RV.COUNTY_DIR, "%s's pair isn't read from art/fight_county" % c["place"])
 			_check(RV.cover_reaches(RV.tex(pk + "_cover")), "%s's wall doesn't reach the frame's foot at the full duck" % c["place"])
 	print("the County ok: four zones of three, issued kit wanted, places in turn, the heads' fights, the board, the remix")
+
+
+## A run picked clean with the next gang after the clock comes home on its own, pack and all (Matt, 26 Oct; the first
+## review's 2(a)); with time for a gang, it stays out.
+func _picked_clean_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	for late in [true, false]:
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		if sim.mission == null:
+			_check(false, "the picked-clean check couldn't deploy")
+			break
+		var m: Dictionary = sim.mission
+		m["remaining"] = 0
+		m["cleared"] = true
+		m["clock"] = 1e6
+		sim.advance(0.1)
+		if sim.mission == null or not m.has("crates"):
+			_check(false, "the picked-clean check's run has no crates")
+			break
+		m["crate_i"] = m["crates"].size()
+		m["patrol_timer"] = 0.0
+		m["clock"] = 0.5 if late else 1e6
+		var found_n: int = m["found"].size()
+		sim.advance(0.2)
+		if late:
+			_check(sim.mission == null and sim.events.any(func(line): return str(line).contains("home with the pack")), "a picked-clean run with no gang before time's up didn't come home (pack %d)" % found_n)
+		else:
+			_check(sim.mission != null and not sim.nothing_left(sim.mission), "a picked-clean run with a gang to come went home early")
+			sim.extract_now()
+	sim.load_dict(hold)
+	main.refresh()
+	print("picked clean ok: home on its own when nothing comes before time's up, out when a gang will")
+
