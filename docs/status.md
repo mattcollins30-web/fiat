@@ -6964,3 +6964,8 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   runner's and the crew's worn kit at their sale worth, each piece selling after at the pile's rate. The County's art
   manifest written (tools/make_county_art_manifest.py: 4-job test, 54-job set); the test run (07:55, $0.46) for Matt's
   eye in the frame. Smoke 253 green.
+- The County's art in (26 Oct, Matt's go): every place's fight plate and wall (art/fight_county/, read on its runs by
+  RunView; the smoke holds each drawn wall to the duck), its map card (the County board), the four heads (portrait,
+  stand, fire, down) and the six pieces of issued kit. Rerolls: the Treasury's wall (inset), the Treasurer's fire (her
+  rifle), the Truck Stop's wall four times (flat counter fronts keyed out with the background; tipped tables held).
+  About $7.40 in all. Smoke 255 green. Next: the County's drawn map on Matt's painting (docs/design/county_map_brief.md).

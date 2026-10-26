@@ -30,7 +30,7 @@
    "width": 744,
    "height": 256,
    "no_background": true,
-   "seed": 106007,
+   "seed": 116007,
    "endpoint": "generate-image-v2",
    "single": true,
    "style_options": {
@@ -40,7 +40,7 @@
     "shading": true
    },
    "style_image": "res://art/fight_walls/the_services_cover.png",
-   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a long cafe counter in chipped formica, a tea urn and stacked mugs on top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a barricade of cafe tables tipped onto their sides in a row, their scuffed undersides and steel legs towards the viewer, plastic chairs piled and jammed between and against them, the barricade running straight off the left and right edges of the image with no frame or border round it, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. It touches the left, right and bottom edges of the image: no margin or border on any side. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "The Truck Stop's fight, the wall (styled on art/fight_walls/the_services_cover.png)"
   },
   {

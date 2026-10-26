@@ -20046,4 +20046,12 @@ func _county_checks(main) -> void:
 	sim.load_dict(hold)
 	main.refresh()
 	_check(not main._missions._county_btn.visible and not main._missions._county.visible, "the County's button stayed up on a camp before the Issue")
+	# the County's own fight art (26 Oct): a run on a place reads its pair once drawn, and its wall hides the duck
+	var RV = load("res://scripts/ui/run_view.gd")
+	_check(RV.county_key({"signal": {"order": "truck_stop"}}) == "the_truck_stop" and RV.county_key({"signal": {"county": "manor"}}) == "the_manor" and RV.county_key({}) == "", "the run's County place key: '%s'" % RV.county_key({"signal": {"order": "truck_stop"}}))
+	for c in Data.COUNTY:
+		var pk: String = RV.site_key(str(c["place"]))
+		if RV._pair_in(RV.COUNTY_DIR, pk):
+			_check(RV.tex_from(pk + "_plate") == RV.COUNTY_DIR and RV.tex_from(pk + "_cover") == RV.COUNTY_DIR, "%s's pair isn't read from art/fight_county" % c["place"])
+			_check(RV.cover_reaches(RV.tex(pk + "_cover")), "%s's wall doesn't reach the frame's foot at the full duck" % c["place"])
 	print("the County ok: four zones of three, issued kit wanted, places in turn, the heads' fights, the board, the remix")

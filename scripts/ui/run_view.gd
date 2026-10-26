@@ -37,6 +37,8 @@ const WALLS_DIR := "res://art/fight_walls/%s.png"
 ## A boss's own den (25 Oct, Matt: "unique fight art backdrops for each boss including pinnacles";
 ## tools/make_boss_backdrops_manifest.py): a plate and a cover a head or a pinnacle, read first while he's out.
 const BOSS_DIR := "res://art/fight_boss/%s.png"
+## The County's places (26 Oct, tools/make_county_art_manifest.py): a plate and a cover a place, read on its runs.
+const COUNTY_DIR := "res://art/fight_county/%s.png"
 const DUCK_REACH_SLACK := 6.0                     # the jolt's most (3 px x1.5) under a ducked wall
 const PLATE_VIEW_W := 688.0                       # a plate's width in the frame's space, whatever its picture's
 const COVER_VIEW_W := 688.0
@@ -206,7 +208,7 @@ static func tex(nm: String) -> Texture2D:
 		return _tex[nm]
 	var t: Texture2D = null
 	var scene: bool = nm.ends_with("_plate") or nm.ends_with("_cover")
-	var dirs: Array = ([BOSS_DIR] if scene else []) + ([WALLS_DIR] if nm.ends_with("_cover") else []) + ([KIT_DIR] if scene else []) + [FULL_DIR, DIR]
+	var dirs: Array = ([BOSS_DIR, COUNTY_DIR] if scene else []) + ([WALLS_DIR] if nm.ends_with("_cover") else []) + ([KIT_DIR] if scene else []) + [FULL_DIR, DIR]
 	for dir in dirs:
 		var path: String = dir % nm
 		if ResourceLoader.exists(path):
@@ -569,11 +571,22 @@ static func kit_pair(key: String) -> bool:
 
 ## A boss's own plate and cover are both on disk (art/fight_boss).
 static func boss_pair(key: String) -> bool:
+	return _pair_in(BOSS_DIR, key) or _pair_in(COUNTY_DIR, key)     # a County place's pair is drawn at the kit's size too
+
+
+static func _pair_in(dir: String, key: String) -> bool:
 	for nm in [key + "_plate", key + "_cover"]:
-		var path: String = BOSS_DIR % nm
+		var path: String = dir % nm
 		if not (ResourceLoader.exists(path) or FileAccess.file_exists(path)):
 			return false
 	return true
+
+
+## The County place a run is on (its own, or a remixed signal's), "" for none.
+static func county_key(m: Dictionary) -> String:
+	var sg: Dictionary = m.get("signal", {})
+	var k: String = str(sg.get("county", sg.get("order", "")))
+	return site_key(str(Data.county(k)["place"])) if not Data.county(k).is_empty() else ""
 
 
 ## A figure's picture for a pose: the head's when he's out, else the zone's member it was given, else the slice's.
@@ -749,7 +762,8 @@ func show_state(sim, m: Dictionary) -> void:
 	# the site's own art, its zone's gang, the head when he's out
 	var site: Dictionary = Data.TIERS[int(m["tier"])]
 	_boss_key = site_key(str(m["boss"]["name"])) if boss_on else ""
-	var scene_key: String = _boss_key if _boss_key != "" and boss_pair(_boss_key) else site_key(str(site["name"]))     # his den while he's out, when it's drawn
+	var place_key: String = county_key(m)
+	var scene_key: String = _boss_key if _boss_key != "" and _pair_in(BOSS_DIR, _boss_key) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else site_key(str(site["name"])))     # his den while he's out, when it's drawn; a County place's own (26 Oct)
 	if scene_key != _site_key:
 		_site(scene_key)
 	_zone_key = ZONE_KEYS[mini(int(site["zone"]), ZONE_KEYS.size() - 1)]

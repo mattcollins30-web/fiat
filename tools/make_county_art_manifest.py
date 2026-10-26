@@ -43,13 +43,16 @@ SEED0 = 106000      # clear of the others (fight kit 97xxx, web 98xxx, walls 101
 OWN = ("pixellab_county_manifest.json", "pixellab_county_test_manifest.json")
 SITE_KEYS = [k for k, _s, _c in kit.SITES]
 TEST = ("truck_stop", "The Bailiff")
+# 26 Oct: the Truck Stop's wall rerolled (its face only the lower 58%); a fixed seed gives near-identical rerolls, so
+# it moves - by 3000, as 107xxx holds the boss walls' rerolls
+WALL_REROLL = {"The Truck Stop": 10000, "The Treasury": 3000}    # 26 Oct: the Truck Stop rerolled four times (two flat fronts keyed out, the barricade inset with a frame); the Treasury came inset with a frame
 
 # A place: its den (the plate's view), its wall (the cover) and its card (a wide view at dusk). The words keep the
 # lessons: nobody in the plate, the wall a foreground cover, nothing printed on anything.
 PLACES = {
     "toll_plaza": (
         "across a motorway toll plaza: a row of booths under a long concrete canopy, the barriers down, cones and a "
-        "jack-knifed lorry trailer across two lanes, the tarmac wet, a lane of sodium lamps going off into the haze",
+        "jack-knifed lorry trailer in plain faded paint with no lettering across two lanes, the tarmac wet, a lane of sodium lamps going off into the haze",
         "a row of orange plastic traffic barriers filled with water, linked end to end, scuffed and dirty",
         "a motorway toll plaza at dusk, a long concrete canopy over a row of booths, the barriers down, a single "
         "lorry stopped at them, sodium lamps along the empty carriageway"),
@@ -65,7 +68,7 @@ PLACES = {
         "glass cake stand, a bailiff's clipboard with a blank sheet and a box of confiscated keys on the counter, the "
         "window onto a lorry park full of parked cabs in plain faded paint with no lettering on them, a door open on "
         "the left onto the dark",
-        "the front of a long cafe counter in chipped formica, a tea urn and stacked mugs on top",
+        "a barricade of cafe tables tipped onto their sides in a row, their scuffed undersides and steel legs towards the viewer, plastic chairs piled and jammed between and against them, the barricade running straight off the left and right edges of the image with no frame or border round it",     # third try 26 Oct (Matt): two flat counter fronts were keyed out with the background     # rerolled 26 Oct: the urn and mugs stood above a 58% face
         "a truck stop at dusk, a low cafe with lit windows beside a lorry park of parked cabs and trailers in plain "
         "faded paint with no lettering on them, a fuel canopy, rain on the tarmac"),
     "container_port": (
@@ -90,29 +93,29 @@ PLACES = {
         "a customs shed at dusk on a dock, a long corrugated building with a lit roller door, a lorry inside being "
         "unloaded, a security gate and a guard hut"),
     "golf_club": (
-        "across a golf club's terrace and the eighteenth green beyond: patio tables with parasols folded, a putting "
-        "flag leaning, golf buggies parked in a row, the clubhouse's glass doors on the left, a sand bunker and the "
+        "across a golf club's terrace and the last green beyond: patio tables with parasols folded, a plain putting "
+        "flag with no number on it leaning, golf buggies parked in a row, the clubhouse's glass doors on the left, a sand bunker and the "
         "fairway going away into mist, the grass cut short and neat",
         "a row of parked golf buggies side by side, their white roofs dirty, a golf bag in the back of one",
-        "a golf club at dusk, a long low clubhouse with lit windows and a terrace, a rolling fairway and a flag on "
-        "the green, a high fence along the road"),
+        "a golf club at dusk, a long low clubhouse with lit windows and a terrace, a rolling fairway and a plain flag with "
+        "no number on the green, a high fence along the road"),
     "gated_close": (
         "down a private gated close of big new houses: block-paved drive, matching double garages, neat hedges and "
         "lollipop trees, a black wrought-iron gate standing open on the left, a security camera on a post, a parked "
-        "4x4 with its door open, everything tidy and quiet",
+        "4x4 with its door open and no number plate, everything tidy and quiet",
         "a low wall of reconstituted stone with a hedge along its top and a stone ball on the gate pier",
         "a gated close at dusk, six large new houses round a turning circle, black iron gates and a gatehouse with a "
         "light on, cameras on posts"),
     "manor": (
         "into a country manor's long hall: dark wood panelling, oil paintings with their faces blank and dark, a "
-        "huge stone fireplace, a long dining table piled with ledgers, deeds and boxed papers, a grand staircase on "
+        "huge stone fireplace, a long dining table piled with ledgers, deeds and boxed papers, every page blank, a grand staircase on "
         "the left going up into the dark, a chandelier unlit",
         "the side of a long heavy oak dining table tipped onto its edge, its carved legs towards the viewer",
         "a country manor at dusk, a big stone house at the end of a long drive between trees, a few lit windows, a "
         "line of parked cars on the gravel"),
     "counting_house": (
         "down a counting house's long room: rows of clerks' desks with adding machines and stacks of banknotes "
-        "bound in paper bands, ledgers open, green-shaded lamps, a tall window of small panes, a barred cashier's "
+        "bound in paper bands, ledgers open on blank pages, green-shaded lamps, a tall window of small panes, a barred cashier's "
         "cage on the left, the notes plain grey-green with no faces or numbers",
         "a row of heavy clerks' desks pushed together, ledgers and bound bundles of plain grey-green notes on top",
         "a counting house at dusk, a heavy stone building with tall barred windows lit from inside, guards at a door, "
@@ -126,9 +129,9 @@ PLACES = {
         "heavy steel gate, floodlights and a guard tower"),
     "treasury": (
         "across the Treasury's great hall: marble floor and columns, a long counter with brass grilles, a raised "
-        "desk on a dais at the back under a tall arched window, printing plates and stacks of new notes on a table, "
+        "desk on a dais at the back under a tall arched window, blank printing plates and stacks of new notes on a table, "
         "a pair of great doors open on the left, the notes plain grey-green with no faces or numbers",
-        "a long marble counter with brass grilles along its top, a stack of plain grey-green note bundles on it",
+        "a long grey marble counter with brass grilles along its top, its front running straight off the left and right edges of the image with no frame or border round it, a stack of plain grey-green note bundles on it",
         "the Treasury at dusk, a grand pillared stone building on a square, a flag on a pole, lit high windows, "
         "barricades and armoured vans across its steps"),
 }
@@ -149,14 +152,14 @@ HEADS = {
         "one arm, holding a compact machine pistol"),
     "The Collector": (
         "a heavy man in his sixties, debt collector, a camel overcoat over a cardigan, gold rings, a soft voice and "
-        "hard eyes, a little notebook of names in his top pocket",
-        "a heavy man in his sixties in a camel overcoat over a cardigan, gold rings, a notebook in his top pocket, "
+        "hard eyes, a small plain notebook in his top pocket",
+        "a heavy man in his sixties in a camel overcoat over a cardigan, gold rings, a small plain notebook in his top pocket, "
         "holding a revolver low at his side"),
     "The Treasurer": (
         "a tall cold woman in her fifties, the Treasurer, an immaculate black suit, a chain of office, silver hair "
         "cut short, a face that decides what money is worth",
-        "a tall woman in her fifties in an immaculate black suit with a chain of office, short silver hair, a riot "
-        "shield on one arm and a short rifle held in the other"),
+        "a tall woman in her fifties in an immaculate black suit with a chain of office, short silver hair, a plain "
+        "riot shield with no lettering on one arm and a short rifle held in the other"),
 }
 
 # Issued kit's pictures: stamped and numbered, the Issuer's.
@@ -212,11 +215,12 @@ def plate_job(place, site, scene, seed):
 
 def wall_job(place, site, cover, seed):
     return {"out": "art/fight_county/%s_cover.png" % slug(place), "width": WALL_W, "height": WALL_H, "no_background": True,
-            "seed": seed, "endpoint": "generate-image-v2", "single": True, "style_options": kit.STYLE,
-            "style_image": "res://art/fight_walls/%s_cover.png" % site,
+            "seed": seed + WALL_REROLL.get(place, 0), "endpoint": "generate-image-v2", "single": True,
+            "style_options": kit.STYLE, "style_image": "res://art/fight_walls/%s_cover.png" % site,
             "description": ("Seen very close from behind, running unbroken across the whole width of the frame: " + cover +
                             ", as the cover a player crouches behind in a light-gun arcade game. One single continuous piece "
-                            "edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% "
+                            "edge to edge, no repeated sections, no seams, no tiles. It touches the left, right and bottom "
+                            "edges of the image: no margin or border on any side. The cover is tall and fills the lower 85% "
                             "of the image as one solid face, running all the way down to the bottom edge of the image with no "
                             "gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only "
                             "its uneven top edge sits above that, nothing above or behind it. Everything on it plain and "
@@ -230,6 +234,11 @@ def card_job(place, site, view, seed):
             "style_image": "res://art/places/%s.png" % site,
             "description": "Pixel art, a wide view of " + view + ". " + CARD_TAIL,
             "_where": "the County board's card for %s (county.gd; today the host's, art/places/%s.png)" % (place, site)}
+
+
+# A pose that came back wrong (26 Oct): the Treasurer's fire lost her rifle, the flash from an empty hand.
+FIRE_WORDS = {"The Treasurer": ", the short rifle raised to her shoulder in her free hand and aimed straight at the viewer, "
+              "the shield still on her other arm, a bright muzzle flash at the rifle's barrel."}
 
 
 def head_jobs(who, seed):
@@ -248,8 +257,8 @@ def head_jobs(who, seed):
              "reference_images": [ref], "description": body + ", standing still. " + FIGURE_TAIL, "_where": "%s: standing" % s}
     after = [ref, "res://art/fight/head_%s_stand.png" % s]
     fire = dict(stand, out="art/fight/head_%s_fire.png" % s, reference_images=list(after), _where="%s: firing at you" % s,
-                description="The same person as the reference image: " + body + ", aiming straight at the viewer, a bright "
-                "muzzle flash. " + FIGURE_TAIL)
+                description="The same person as the reference image: " + body + FIRE_WORDS.get(who, ", aiming straight at the viewer, a bright "
+                "muzzle flash.") + " " + FIGURE_TAIL)
     down = dict(stand, out="art/fight/head_%s_down.png" % s, reference_images=list(after), _where="%s: beaten, going down" % s,
                 description="The same person as the reference image: " + body + ", hit and falling backwards, arms flung "
                 "out, what they held dropping. " + FIGURE_TAIL)
