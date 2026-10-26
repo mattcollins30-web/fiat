@@ -1103,7 +1103,7 @@ const ISSUE := {"log": "The Issue: the town runs on the Issuer's money now. Your
 	"printed": "The Issuer printed again: %s, and every price up with it.",
 	"kicker": "THE ISSUE", "title": "Its value is as stated", "sub": "The Issuer's down. The town runs on his money now.",
 	"line": "\"Everything you've got is worth what I say it is. Today, that's this.\"",
-	"pile": "Your pile: %s, %d notes and kit worth %s", "rate": "The Issue: 0.8 × the square root of your pile", "came": "What came out: %s; your kit sells at ×%s of the day's rate, as the pile did",
+	"pile": "Your pile: %s, %s notes and kit worth %s", "rate": "The Issue: 0.8 × the square root of your pile", "came": "What came out: %s; your kit sells at ×%s of the day's rate, as the pile did",
 	"tiles": [["Prices follow the money", "More fiat about, more it costs"], ["His rate moves", "The Fence buys at it"], ["Burn it", "Hand fiat back: prices fall"]],
 	"go": "Take it", "hint": "Tins and notes are gone · the Issuer's at the Fence"}
 const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "short": "Short of fiat", "no_room": "No room in the stash",
@@ -1240,7 +1240,8 @@ const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bl
 const TOOK_WORDS := {"physical": "Physical", "fire": "Fire", "frost": "Chill", "poison": "Poison", "shock": "Shock", "bleed": "Bleed"}
 const TEMPER := {"done": "Tempered: item level %d → %d", "no_piece": "Only kit you wear tempers", "mythic": "A mythic takes no temper",
 	"raise_first": "Item level +3 first", "short": "Needs %s scrap", "no_grow": "Nothing on it grows", "too_high": "Past the level you can wear", "price": "%s scrap · %s", "job": "Temper +1"}
-const GREED := {"chip": "Greed · +%d%% quality, +%d%% finds", "short": "Greed +%d%%"}
+const RUN_GANG_LATE := ["after time's up", "too late"]     # a gang due after the clock runs out (the first review's 15)
+const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% loot, from the patrols beaten since the site was cleared. Each one more adds to it."}
 const FENCE_SURE := "Sell %d?"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)
 const FIGHT_BUTTON := "The fight ›"
 ## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).

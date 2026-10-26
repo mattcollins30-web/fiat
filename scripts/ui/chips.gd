@@ -43,7 +43,7 @@ func _init(w: float, n := MAX) -> void:
 
 
 ## An item as a dictionary: {"forms": [long, shorter...], "colour": Color or tone,
-## "tag": "T3", "tail": "" or [long, shorter...]}. The array shapes still work:
+## "tag": "T3", "tail": "" or [long, shorter...], "tip": hover words}. The array shapes still work:
 ## [words, colour] or [long, short, colour].
 static func _item(it) -> Dictionary:
 	if it is Dictionary:
@@ -134,6 +134,9 @@ func show_rows(items: Array, rows := MAX) -> void:
 ## that fits; returns the chip's width (which may exceed the room when
 ## nothing short enough exists: the caller drops it).
 func _lay(k: int, d: Dictionary, room: float) -> float:
+	var tip: String = str(d.get("tip", ""))
+	_panels[k].tooltip_text = tip     # a chip with a tip takes the hover; the rest stay see-through to clicks
+	_panels[k].mouse_filter = Control.MOUSE_FILTER_PASS if tip != "" else Control.MOUSE_FILTER_IGNORE
 	var colour := _colour_of(d.get("colour", Pal.TEXT_2))
 	var l: Label = _labels[k]
 	var tg: Label = _tags[k]

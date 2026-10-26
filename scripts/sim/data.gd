@@ -1499,8 +1499,8 @@ const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, th
 ## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
 const PARAGON_COMPOUND := ["damage", "hp"]     # the rows that compound, each point on the last (25 Oct); the rest add
 const PARAGON_BOARD := [
-	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point, each on the last"},
-	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point, each on the last"},
+	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point, compounding"},
+	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point, compounding"},
 	{"key": "resists", "name": "Resists", "pct": 1.0, "words": "+1% to every resist a point, to the cap"},
 	{"key": "find", "name": "Find", "pct": 3.0, "words": "+3% loot quality a point"},
 	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point"},

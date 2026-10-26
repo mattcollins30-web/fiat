@@ -451,7 +451,7 @@ func _show_build() -> void:
 		var o: Dictionary = opts[k]
 		c["name_key"] = str(o["name"])
 		UI.fit(c["name"], [str(o["name"])])
-		c["cost"].text = "%d scrap" % int(o["scrap"])
+		c["cost"].text = "%s scrap" % Fmt.group(int(o["scrap"]))
 		c["words"].size.x = BUILD_CARD_W - 24 - ceilf(UI.text_width(c["cost"], c["cost"].text)) - 16     # the cost on the words' line, right: the name has the card's width
 		UI.fit(c["words"], build_words(o))
 		var ok: bool = bool(o["ok"])
@@ -464,7 +464,7 @@ func _show_build() -> void:
 	var picked: Dictionary = sim.build_option(build_kind, sel_build) if sel_build != "" else {}
 	if picked.is_empty():
 		sel_build = ""
-		_pick.show_empty("Pick a build", ["%d scrap in hand" % sim.scrap, "Scrap comes from searches, scrapping here and ditching"])
+		_pick.show_empty("Pick a build", ["%s scrap in hand" % Fmt.group(sim.scrap), "Scrap comes from searches, scrapping here and ditching"])
 		_set_pick_buttons([])
 		return
 	var made: Dictionary = sim._plain(build_slot(build_kind), str(picked["name"]))
@@ -475,8 +475,8 @@ func _show_build() -> void:
 		lines.append(("A box of %s: %d rounds in the stash" % [str(picked["from"]).to_lower(), have]) if build_kind == "grade" else ("%s: %d in the stash" % [str(picked["from"]), have]))
 	if not bool(picked["ok"]):
 		lines.append(str(picked["why"]))
-	_pick.show_right_words("It takes", "%d of %d scrap" % [int(picked["scrap"]), sim.scrap], lines)
-	_set_pick_buttons([{"text": "Build · %d scrap" % int(picked["scrap"]), "action": _do_build.bind(build_kind, str(picked["name"])), "enabled": bool(picked["ok"]), "primary": true}])
+	_pick.show_right_words("It takes", "%s of %s scrap" % [Fmt.group(int(picked["scrap"])), Fmt.group(sim.scrap)], lines)
+	_set_pick_buttons([{"text": "Build · %s scrap" % Fmt.group(int(picked["scrap"])), "action": _do_build.bind(build_kind, str(picked["name"])), "enabled": bool(picked["ok"]), "primary": true}])
 
 
 ## A tile's look: picked (ringed), with a part (edged in its tone), empty, dim
@@ -944,7 +944,7 @@ func _show_craft(it: Dictionary) -> void:
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets"
 		_piece_words[1].text = "Worn gear: press Workshop on it in the Kit"
 		_piece_words[2].text = "Pick a piece to see what each job costs."
-		_pick.show_empty("Nothing picked", [("In hand: %s and %d scrap" % [Fmt.money(sim.cash), sim.scrap]) if sim.issued else ("In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap]), "Scrap comes from searches, scrapping here and ditching"])
+		_pick.show_empty("Nothing picked", [("In hand: %s and %s scrap" % [Fmt.money(sim.cash), Fmt.group(sim.scrap)]) if sim.issued else ("In hand: %s, %s and %s scrap" % [Fmt.money(sim.cash), Fmt.notes(sim.notes), Fmt.group(sim.scrap)]), "Scrap comes from searches, scrapping here and ditching"])
 		_set_pick_buttons([])
 	else:
 		var h := Items.headline(it)
@@ -1088,7 +1088,7 @@ func _show_craft(it: Dictionary) -> void:
 		UI.fit(_foot, [w, w.get_slice(":", 0), w.get_slice(" · ", 0), w.get_slice(" ", 0)])     # down to its first word ("Added", "Re-rolled"): what was done, if not what to
 		_foot.add_theme_color_override("font_color", Pal.GOOD)
 	else:
-		UI.fit(_foot, ["Nothing in the Workshop yet" if it.is_empty() else "%d scrap in hand" % sim.scrap, "%d scrap in hand" % sim.scrap])
+		UI.fit(_foot, ["Nothing in the Workshop yet" if it.is_empty() else "%s scrap in hand" % Fmt.group(sim.scrap), "%s scrap in hand" % Fmt.group(sim.scrap)])
 		_foot.add_theme_color_override("font_color", Pal.TEXT_3)
 
 

@@ -11240,6 +11240,64 @@ func _six_checks(main, m: Dictionary) -> void:
 	m["last_incoming"] = 0.01
 	main.refresh()
 	_check(run._six[0]["value"].get_theme_color("font_color") == Pal.TEXT, "their fire at a trickle is red")
+	# endgame figures (the second review's 8): their fire, kills and rounds in the millions still fit, never cut
+	var inc_was: float = float(m["last_incoming"])
+	m["last_incoming"] = 1234567.0     # (not the kills: the view counts them to drop a figure)
+	main.refresh()
+	_check(str(run._six[0]["value"].text) in run.incoming_forms(1234567.0), "their fire at 1.2M reads '%s', none of its forms" % run._six[0]["value"].text)
+	for t in run._six:
+		var lv: Label = t["value"]
+		_check(UI.text_width(lv, lv.text) <= lv.size.x + 0.5 and not lv.text.ends_with("…"), "the six's %s at endgame figures doesn't fit: '%s' (%.0f in %.0f px)" % [t["key"].text, lv.text, UI.text_width(lv, lv.text), lv.size.x])
+	m["last_incoming"] = inc_was
+	_check(run.incoming_forms(3.25)[0] == "3.2/s" or run.incoming_forms(3.25)[0] == "3.3/s", "a trickle of fire lost its tenth: %s" % str(run.incoming_forms(3.25)))
+	# a gang due after the clock runs out says so, not a time that never comes (the first review's 2(b), 15)
+	if not sim.has_rule("bomb_suit"):
+		_check(run.gang_in_forms({"clock": 10.0}, 600.0) == Words.RUN_GANG_LATE and run.gang_in_forms({"clock": 1e6}, 60.0) == [Fmt.mss(60.0)], "the gang's time past the clock: %s, %s" % [str(run.gang_in_forms({"clock": 10.0}, 600.0)), str(run.gang_in_forms({"clock": 1e6}, 60.0))])
+	# the On you chips stay short of the skills' buttons (the second review's 10): skills on, greed and a med in use
+	var sk_ids: Dictionary = _skill_node_ids()
+	var mine_sk: Array = sk_ids.keys().filter(func(sid): return str(sim.skill(str(sid)).get("cls", "")) == sim.cls)
+	if not mine_sk.is_empty():
+		var slots_was: Array = sim.skill_slots.duplicate()
+		var tree_was: Array = sim.tree.duplicate()
+		var cleared_was: bool = bool(m.get("cleared", false))
+		var patrols_was: int = int(m.get("patrols", 0))
+		var using_was = m["using"]
+		var dots_was = m.get("my_dots", {})
+		for sid in mine_sk.slice(0, 3):
+			if not sim.tree.has(sk_ids[sid]):
+				sim.tree.append(sk_ids[sid])
+		sim.skill_slots = mine_sk.slice(0, 3).map(func(x): return str(x))
+		while sim.skill_slots.size() < 3:
+			sim.skill_slots.append("")
+		sim._dry_memo.clear()
+		m["cleared"] = true
+		m["patrols"] = 9
+		m["using"] = {"name": "Field surgery kit", "left": 12.0}
+		m["my_dots"] = {"fire": 5.0}
+		main.refresh()
+		var cr: Rect2 = run._runner["chips"].used_rect()
+		cr.position += run._runner["chips"].position
+		var keeps: Array = run._skills.keep_rects() if run._skills != null else []
+		_check(not keeps.is_empty(), "the skills' buttons didn't show for the On you check")
+		_check(not keeps.any(func(r): return r.intersects(cr)), "the On you chips run under the skills' buttons: %s against %s" % [str(cr), str(keeps)])
+		m["using"] = null
+		m["my_dots"] = {}
+		main.refresh()
+		_check(run._runner["chips"]._panels.any(func(p): return p.visible and p.tooltip_text.begins_with("Greed")), "the greed chip has no hover words")
+		# a chip with hover words takes the mouse: it mustn't sit over any button on the screen
+		var tipped: Array = run._runner["chips"]._panels.filter(func(p): return p.visible and p.tooltip_text != "")
+		var btns: Array = run.find_children("*", "BaseButton", true, false).filter(func(b): return b.is_visible_in_tree())
+		for p in tipped:
+			var over: Array = btns.filter(func(b): return b.get_global_rect().intersects(p.get_global_rect()))
+			_check(over.is_empty(), "a hover chip sits over a button: %s" % str(over.map(func(b): return b.name)))
+		sim.skill_slots = slots_was
+		sim.tree = tree_was
+		sim._dry_memo.clear()
+		m["cleared"] = cleared_was
+		m["patrols"] = patrols_was
+		m["using"] = using_was
+		m["my_dots"] = dots_was
+		main.refresh()
 	# your fire is the top bar's figure (19 Oct, Matt: 510 against 362), the pace beside it
 	var top_fire: String = main._top_labels["dps"].text.get_slice(" ", 0)
 	_check(run._six[1]["value"].text.begins_with(top_fire + "/s"), "your fire reads '%s', the top bar '%s'" % [run._six[1]["value"].text, main._top_labels["dps"].text])

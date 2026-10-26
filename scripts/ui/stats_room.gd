@@ -514,7 +514,7 @@ func _show_last() -> void:
 func _show_wall() -> void:
 	var c: Dictionary = cards["wall"]
 	_headline(c, "%d" % sim.operators_lost, "lost")
-	UI.fit(c["sub"], ["%d runs, every runner" % sim.runs_total, "%d runs in all" % sim.runs_total, "%d runs" % sim.runs_total])
+	UI.fit(c["sub"], ["%s runs, every runner" % Fmt.group(sim.runs_total), "%s runs in all" % Fmt.group(sim.runs_total), "%s runs" % Fmt.group(sim.runs_total)])
 	var plates: Array = c["plates"]
 	for k in range(PLATES):
 		var p: Dictionary = plates[k]
@@ -532,7 +532,7 @@ func _show_wall() -> void:
 		People.show(p["face"], str(past["class"]))
 		p["face"].modulate = Color(0.55, 0.55, 0.55) if lost else Color.WHITE
 		p["name"].text = "%s · %d" % [past["class"], int(past["level"])]
-		UI.fit(p["line"], ["%d runs · %s" % [int(past["runs"]), end], "%d runs · %s" % [int(past["runs"]), "lost" if lost else end.get_slice(" ", 0)], "%d runs" % int(past["runs"])])
+		UI.fit(p["line"], ["%s runs · %s" % [Fmt.group(int(past["runs"])), end], "%s runs · %s" % [Fmt.group(int(past["runs"])), "lost" if lost else end.get_slice(" ", 0)], "%s runs" % Fmt.group(int(past["runs"]))])
 		p["line"].add_theme_color_override("font_color", Pal.BAD if lost else Pal.GOOD)
 
 

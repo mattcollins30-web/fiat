@@ -399,24 +399,24 @@ func show_state(s) -> void:
 	_faces_off()
 	if boss_on:
 		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
-		_tiles(_fight["tiles"], [["On you", ["the head", "1"]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", fire_forms(fire_now)], ["Kills", ["%d" % m["kills"]]]])
+		_tiles(_fight["tiles"], [["On you", ["the head", "1"]], ["Their fire", incoming_forms(float(m["last_incoming"]))], ["Firing now", fire_forms(fire_now)], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif way_out:
 		var door_on: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = "THE FIGHT · THE WAY OUT"
-		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", fire_forms(fire_now)],
+		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Their fire", incoming_forms(float(m["last_incoming"]))], ["Firing now", fire_forms(fire_now)],
 			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT · THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
-			["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", fire_forms(fire_now)], ["Kills", ["%d" % m["kills"]]]])
+			["Their fire", incoming_forms(float(m["last_incoming"]))], ["Firing now", fire_forms(fire_now)], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		_tiles(_fight["tiles"], [["Next gang", (["held off", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
+		_tiles(_fight["tiles"], [["Next gang", (["held off", "held"] if sim.gang_held(m) else gang_in_forms(m, next))], ["Gangs", ["%d" % m["patrols"]]], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))]], ["Found", ["%d" % m["found"].size()]]])
 	var search_state: bool = not boss_on and not way_out and m["remaining"] <= 0
 	if _view != null:
 		# the run view: their bar over the frame in a fight; while it's searching the search's at the frame's foot,
@@ -437,8 +437,8 @@ func show_state(s) -> void:
 	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), hp_words, "bad" if low else "good", m.get("my_dots", {}), sim.max_hp(), g / maxf(1.0, sim.max_hp()))
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
-	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", fire_forms(fire_now)],
-		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
+	_tiles(_runner["tiles"], [["Armour", ["%s (%s)" % [Fmt.group(int(round(sim.armour()))), Fmt.pct(sim.mitigation())], Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())]], ["Damage", fire_forms(fire_now)],
+		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT)
 	if _view != null:
 		# the six under the frame: theirs, then yours
@@ -476,7 +476,7 @@ func show_state(s) -> void:
 	if m["using"] != null:
 		on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
 	if sim.greed_gangs() > 0:
-		on_you.append([Words.GREED["short"] % roundi(sim.greed_quality() * 100.0), Pal.GOOD])     # staying pays (25 Oct): the short form, last, so a med in use is the chip kept when the row is short
+		on_you.append({"forms": [Words.GREED["short"] % roundi(sim.greed_quality() * 100.0)], "colour": Pal.GOOD, "tip": Words.GREED["tip"] % [roundi(sim.greed_quality() * 100.0), roundi(sim.greed_quantity() * 100.0)]})     # staying pays (25 Oct): the short form, last, so a med in use is the chip kept when the row is short
 	var med_sig: String = ("using" if m["using"] != null else ("none" if sim.first_med().is_empty() else "use:" + sim.first_med()["base"]))
 	_runner["key"].visible = not on_you.is_empty()
 	_runner["chips"].visible = not on_you.is_empty()
@@ -734,11 +734,32 @@ func _build_six() -> void:
 
 ## Your fire's forms (19 Oct, Matt: the fight said 510, the top bar 362): the top bar's figure, and the pace that
 ## speeds the whole fight beside it while there's room - the fight lands the two multiplied.
+## Whether the next gang lands after the clock's run out (the first review's 2(b), 15): a time that never comes.
+func gang_after_clock(m: Dictionary, next: float) -> bool:
+	return not sim.has_rule("bomb_suit") and next * Data.CLOCK_SEARCH_RATE > maxf(0.0, float(m.get("clock", 0.0)))
+
+
+## The next gang's time, or "after time's up" when the clock goes first, or never.
+func gang_in_forms(m: Dictionary, next: float) -> Array:
+	if next >= 1e8:
+		return ["never"]
+	if gang_after_clock(m, next):
+		return [Words.RUN_GANG_LATE[0], Words.RUN_GANG_LATE[1]]
+	return [Fmt.mss(next)]
+
+
+## What's coming in, long to short: "1.5/s" under ten, grouped past it, "123k/s", then "123k" (the second review's 8).
+static func incoming_forms(x: float) -> Array:
+	if x < 10.0:
+		return ["%.1f/s" % x]
+	return ["%s/s" % Fmt.group(int(round(x))), "%s/s" % Fmt.short_num(x), Fmt.short_num(x)]     # the tile's key says it's a rate
+
+
 func fire_forms(base: float) -> Array:
 	var p: float = sim.pace()
 	if absf(p - 1.0) < 0.005:
-		return ["%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base)]
-	return ["%s/s ×%.2f" % [Fmt.group(int(round(base))), p], "%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base)]     # never a digit cut (25 Oct, the review: 256,613 read 25661)
+		return ["%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base), Fmt.short_num(base)]
+	return ["%s/s ×%.2f" % [Fmt.group(int(round(base))), p], "%s/s" % Fmt.group(int(round(base))), "%s/s" % Fmt.short_num(base), Fmt.short_num(base)]     # never a digit cut (25 Oct, the review: 256,613 read 25661)
 
 
 ## The six's figures (17 Oct): the forms long to short, and the tone - red where it wants you to act (their fire
@@ -749,12 +770,12 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 	var first: Array
 	if fighting:
 		var inc: float = float(m["last_incoming"])
-		first = ["Their fire", ["%.1f/s" % inc], Pal.BAD if inc > 0.0 and sim.hp / inc < SIX_FAST_S else Pal.TEXT]
+		first = ["Their fire", incoming_forms(inc), Pal.BAD if inc > 0.0 and sim.hp / inc < SIX_FAST_S else Pal.TEXT]
 	elif sim.gang_held(m):
 		first = ["Gang in", ["held off", "held"], Pal.TEXT_3]
 	else:
 		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		first = ["Gang in", [Fmt.mss(nx)] if nx < 1e8 else ["never"], Pal.TEXT if nx < 1e8 else Pal.TEXT_3]
+		first = ["Gang in", gang_in_forms(m, nx), Pal.TEXT if nx < 1e8 and not gang_after_clock(m, nx) else Pal.TEXT_3]
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	var r: Array
@@ -763,14 +784,14 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 	elif Items.ammo_type(gun) in ["", "none"]:
 		r = ["Rounds", ["melee"], Pal.TEXT_3]
 	elif Items.free_rounds(gun):
-		r = ["Rounds", ["∞"], Pal.TEXT_3]          # the Council's Weed Burner (17 Oct): a shotgun's base, never a round spent
+		r = ["Rounds", ["∞"], Pal.TEXT_3]          # a gun that never spends a round (Items.free_rounds)
 	elif rounds > 0:
-		r = ["Rounds", ["%d" % rounds], Pal.TEXT]
+		r = ["Rounds", [Fmt.group(rounds), Fmt.short_num(float(rounds))], Pal.TEXT]
 	else:
 		r = ["Rounds", ["dry"], Pal.BAD]
 	var meds: int = sim.meds_carried()
-	return [first, ["Your fire", fire_forms(fire_now), Pal.TEXT], ["Kills", ["%d" % m["kills"]], Pal.TEXT],
-		["Armour", ["%.0f" % sim.armour()], Pal.TEXT], ["Meds", ["%d" % meds] if meds > 0 else ["none"], Pal.TEXT if meds > 0 else Pal.BAD], r]
+	return [first, ["Your fire", fire_forms(fire_now), Pal.TEXT], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))], Pal.TEXT],
+		["Armour", [Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())], Pal.TEXT], ["Meds", ["%d" % meds] if meds > 0 else ["none"], Pal.TEXT if meds > 0 else Pal.BAD], r]
 
 
 func _tiles(tiles: Array, rows: Array) -> void:
