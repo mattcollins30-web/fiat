@@ -238,8 +238,11 @@ func _pick_order(sim) -> String:
 func _issued(sim) -> void:
 	if not sim.issued or sim.on_mission():
 		return
+	var slots: Array = issued_slots(sim)
 	for u in Data.ISSUED:
 		var sl: String = str(u["slot"])
+		if not (sl in slots):
+			continue                          # only what the next zone wants (Matt, 26 Oct: the build's gun stays on)
 		var worn = sim.equipped.get(sl)
 		var have_lv: int = Items.ilvl(worn) if worn != null and worn.get("issued", false) else -100
 		var offer: Dictionary = sim.issued_piece(sl)
@@ -340,9 +343,23 @@ func _roll_gun(sim, type: String, lv: int, tier: int) -> Dictionary:
 
 
 ## The newest issued piece of each slot worn (a broken build's slots kept for the build).
+## The slots issued kit goes in (Matt, 26 Oct, the third review: the bot wore all six from the Issue on, so every
+## post-Issue hour measured the issued kit): as many as the deepest open County zone wants, the helmet, rig, charm,
+## armour and sidearm before the gun; a held build's slots kept.
+const ISSUED_FIRST := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]
+func issued_slots(sim) -> Array:
+	var z := 0
+	for k in range(Data.COUNTY_ZONES.size()):
+		if sim.county_zone_open(k):
+			z = k
+	var want: int = sim.county_want(z)
+	return ISSUED_FIRST.filter(func(sl): return not (sl in broken_slots)).slice(0, want)
+
+
 func _wear_issued(sim) -> void:
+	var slots: Array = issued_slots(sim)
 	for sl in Data.SLOTS:
-		if sl in broken_slots:
+		if sl in broken_slots or not (sl in slots):
 			continue
 		var best = null
 		for it in sim.stash:

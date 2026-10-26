@@ -16857,11 +16857,8 @@ func _rebuild_checks(main) -> void:
 	# the order: a pinnacle as a signal, its head its own, its drops home
 	s.reach = 20
 	var lv: int = s.order_level("grid")
-	var want_lv: int = int(Data.pinnacle("grid")["level"]) + int(s.order_beaten.get("grid", 0))     # a set level (26 Oct, the sixth pass)
-	_check(lv == want_lv, "the Grid's level %d, not %d" % [lv, want_lv])
-	@warning_ignore("integer_division")
-	var arch_lv: int = 20 + int(Data.pinnacle("archive")["over"]) + s.town_worth() / Data.PINNACLE_WORTH + int(s.order_beaten.get("archive", 0))
-	_check(s.order_level("archive") == arch_lv, "the Archive's level %d, not the reach's %d" % [s.order_level("archive"), arch_lv])
+	_check(int(s.order_beaten.get("grid", 0)) == 0 and lv == int(Data.pinnacle("grid")["level"]), "the Grid's first level %d, not its set %d" % [lv, int(Data.pinnacle("grid")["level"])])     # a set level for the first win (26 Oct)
+	_check(int(s.order_beaten.get("archive", 0)) == 0 and s.order_level("archive") == int(Data.pinnacle("archive")["level"]), "the Archive's first level %d, not its set 40" % s.order_level("archive"))
 	var e: Dictionary = s.order_read("grid")
 	_check(e.has("boss") and str(e["boss"].get("order", "")) == "grid" and str(e["boss"]["name"]) == "The Lineman" and e["name"] == "The Grid" and int(e["level"]) == lv, "the Grid reads %s" % str(e.get("boss", {})))
 	_check(s._sig.is_empty() and s.order_block("archive").begins_with("Rebuild the library") == false, "the read left the Grid on its site, or the Archive shut")
@@ -16877,7 +16874,10 @@ func _rebuild_checks(main) -> void:
 		_check(mm["found"].any(func(x): return x.get("unique", "") in ["The Lineman's Lamp", "The Lineman's Tool Bag"]), "the Lineman's first kill dropped neither the Lamp nor the Tool Bag")      # two uniques now, one picked (24 Oct)
 		s.extract_now()
 		_check(s.mission == null and int(s.order_beaten.get("grid", 0)) == 1 and s.held_of("grid_key") == 1 and s.reach == reach0 and s._sig.is_empty(), "the Grid's win: beaten %d, key %d, reach %d from %d" % [int(s.order_beaten.get("grid", 0)), s.held_of("grid_key"), s.reach, reach0])
-		_check(s.order_level("grid") == lv + 1, "the Grid did not harden after a win")
+		_check(s.order_level("grid") == maxi(lv, s.reach + int(Data.pinnacle("grid")["over"])) + 1, "the Grid after a win isn't max(set, reach + over) + wins: %d" % s.order_level("grid"))
+		s.reach = 80
+		_check(s.order_level("grid") == 80 + int(Data.pinnacle("grid")["over"]) + 1, "the Grid after a win doesn't follow a deep reach: %d" % s.order_level("grid"))
+		s.reach = 20
 		_check(s.best_dig.is_empty() or str(s.best_dig.get("site", "")) != "The Grid", "the Grid's win set the best signal: %s" % str(s.best_dig))
 	# the order's odds read leaves the host site's own read where it was (the review)
 	var host: int = int(Data.pinnacle("grid")["site"])
@@ -19940,7 +19940,8 @@ func _issue_checks(main) -> void:
 	main.refresh()
 	_check(not Fmt.fiat, "the money still reads fiat on a camp before the Issue")
 	_check(not sim.issued and not main._fence._tabs[4].visible, "the counter's tab stayed up on a camp before the Issue")
-	_check(sim.order_level("mint") == int(Data.pinnacle("mint")["level"]) + int(sim.order_beaten.get("mint", 0)), "the Mint's level isn't its set one: %d" % sim.order_level("mint"))
+	_check(int(sim.order_beaten.get("mint", 0)) > 0 or sim.order_level("mint") == int(Data.pinnacle("mint")["level"]), "the Mint's first level isn't its set one: %d" % sim.order_level("mint"))
+	_check(absf(sim.print_haul(3) - sim.print_haul(2) * Data.PRINT_DECAY) <= 1.0 and sim.print_haul(2) > sim.print_haul(5), "the Mint's prints don't shrink: %.0f, %.0f" % [sim.print_haul(2), sim.print_haul(3)])
 	print("the Issue ok: hard on piles, prices by the circulation, notes as fiat, the rate, the burn, six issued pieces, the card, the counter")
 
 
@@ -20088,6 +20089,8 @@ func _county_checks(main) -> void:
 		mh["cleared"] = true
 		sim._boss_down(mh, mh["t"])
 		_check(mh["found"].any(func(x): return x.get("issued", false)) and sim.issued_serial == serial0 + Data.COUNTY_HEAD_ISSUED, "the Bailiff dropped no issued kit")
+		var head_its: Array = mh["found"].filter(func(x): return x.get("issued", false))
+		_check(head_its.is_empty() or Items.ilvl(head_its[0]) > Items.ilvl(sim.issued_piece("Armour")), "the Bailiff's issued piece isn't over the counter's: %d against %d" % [Items.ilvl(head_its[0]) if not head_its.is_empty() else 0, Items.ilvl(sim.issued_piece("Armour"))])
 		sim.extract_now()
 		_check(sim.county_zone_open(1) and sim.order_open("container_port") and sim.order_block("container_port") == Words.COUNTY["want"] % [3, 2], "the Bailiff's fall didn't open the Docks, wanting three: '%s'" % sim.order_block("container_port"))
 	# the head's issued kit comes home on a death after him, as a mythic does (the third review: it was in the pack)

@@ -5853,7 +5853,10 @@ func order_level(k: String) -> int:
 		return county_level(k)
 	var p: Dictionary = Data.pinnacle(k)
 	if p.has("level"):
-		return int(p["level"]) + int(order_beaten.get(k, 0))     # the Grid at 35 and the Mint at 45, set (Matt, 26 Oct, the sixth pass: at the reach + 2 + the worth no read won the Lineman, whose key the Mint wants)
+		# the Grid at 35, the Archive at 40 and the Mint at 45 for the first win (Matt, 26 Oct, the sixth pass: at the reach +
+		# 2 + the worth no read won the Lineman); after it, with the reach (the third review: a set Mint was a print farm)
+		var wins: int = int(order_beaten.get(k, 0))
+		return int(p["level"]) if wins == 0 else maxi(int(p["level"]), maxi(Data.REACH_START, reach) + int(p["over"])) + wins
 	@warning_ignore("integer_division")
 	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
 
@@ -5971,7 +5974,7 @@ func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	_head_materials(m)
 	if first or rng.randf() < Data.PINNACLE_UNIQUE:
 		var which: String = str(p["unique"]) if (not p.has("unique2") or rng.randf() < 0.5) else str(p["unique2"])     # one of the two (24 Oct)
-		var it := Items.roll_unique(_unique_named(which), rng, int(t.get("level", -1)), int(t["loot_tier"]))
+		var it := Items.roll_unique(_unique_named(which), rng, maxi(int(t.get("level", -1)), reach), int(t["loot_tier"]))     # at the reach if past the place (the third review)
 		m["found"].append(it)
 		_read(it)
 		log_event("%s is down. Found: %s." % [p["who"], it["unique"]])
@@ -6004,11 +6007,17 @@ func _order_done(won: bool) -> void:
 			log_event(Words.REBUILD["note"])
 			issue()                              # the Issue: the town on his money from here (25 Oct)
 	elif k == "mint" and issued:
-		var haul: float = float(_inf(Data.PRINT_HAUL))
+		var haul: float = print_haul(int(order_beaten.get(k, 0)))
 		_earn(haul)
 		circulation += haul * Data.PRINT_CIRC          # he prints: a haul, and the prices jump with it
 		log_event(Words.ISSUE["printed"] % fiat_words(haul))
 	log_event(Words.REBUILD["order_won"] % p["who"])
+
+
+## The Issuer's print on his `wins`th win (the first is the Issue): each smaller than the last (Matt, 26 Oct: "a
+## choice, not a farm").
+func print_haul(wins: int) -> float:
+	return float(_inf(Data.PRINT_HAUL * pow(Data.PRINT_DECAY, maxi(0, wins - 2))))
 
 
 # ------------------------------------------------------------------ the County (25 Oct, the Issue's second campaign)
@@ -6097,7 +6106,7 @@ func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	if not bool(b.get("remix", false)):
 		chron("county_head", {"key": k, "first": int(order_beaten.get(k, 0)) == 0, "level": int(t.get("level", 0))})
 	_head_materials(m)
-	var lv: int = int(t.get("level", reach)) + Data.ISSUED_OVER
+	var lv: int = maxi(int(t.get("level", reach)), reach) + Data.ISSUED_OVER + 2     # a tier over the counter's (the third review: a head's was always weaker)
 	var got: Array = []
 	for n in range(Data.COUNTY_HEAD_ISSUED):
 		var slot: String = str(Data.ISSUED[rng.randi_range(0, Data.ISSUED.size() - 1)]["slot"])

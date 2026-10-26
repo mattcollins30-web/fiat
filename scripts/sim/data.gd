@@ -3382,6 +3382,7 @@ const BURN_MULT := 2.0                 # and costs half of what it takes out
 const CIRC_HALF_H := 1.0               # the fiat in circulation halves every this many hours (Matt, 26 Oct: "it decays"; the pass's number)
 const PRINT_HAUL := 20000000.0         # the Issuer beaten again: he prints - this many of the opening day's tins in fiat
 const PRINT_CIRC := 1.0                # and it goes into circulation again on top (the prices jump)
+const PRINT_DECAY := 0.8               # each print this much of the last (Matt, 26 Oct: the Mint "a choice, not a farm")
 const MINT_TINS := 2.0                   # a run's tins from the mint: the town's worth × this × mint_pay, at today's prices
 ## The true pinnacles: new people in new places, opened by a rebuild, fought on a host site's crew and drops (`site`,
 ## `zone`) under their own name and art; their level the reach + `over`, a level more every PINNACLE_WORTH of worth
@@ -3390,7 +3391,7 @@ const MINT_TINS := 2.0                   # a run's tins from the mint: the town'
 const PINNACLES := [
 	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 35,
 		"drop": "grid_key", "unique": "The Lineman's Lamp", "unique2": "The Lineman's Tool Bag"},
-	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4,
+	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 40,
 		"drop": "ledger_seal", "unique": "The Registrar's Satchel", "unique2": "The Registrar's Stamp"},
 	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45,
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
