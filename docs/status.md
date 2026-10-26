@@ -6983,3 +6983,11 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   the combos are off in reads. Matt's calls: the Grid at a set 35 and the Mint at 45 (a level more a win; the Archive
   as was), the bot's Grid first win at FIRST before the Issue and the Mint built first once the key's in, the spread
   left. Smoke 258 green. The seventh pass next.
+- The seventh pass (26 Oct, on b38b255): 17 RED (6 design, 5 bot timing, 6 bot play); gate 18 green - the Issue on
+  most reads (5.4-31.6 h) now the Grid's at 35 and the Mint's at 45; gates 6 and 7 green again, the stall shorter,
+  parity one build behind. The County stalled at its first head on the two reads that got in: its places sat at the
+  reach + 2 to + 14 and nothing past + 3 was won (the Bailiff 0% at reach + 4 however soft he was made, 88% at reach -
+  6). Matt's calls: the County at set levels (50/52/55, 60/62/65, 70/72/75, 80/82/85, a level more a win); gate 3 left
+  for the playtest; and the broken builds read on their own in every pass - each of the six 16 h from the checkpoint
+  at level 50, the combos on for that read alone, its set and unique held at the reach (tests/balance.gd _broken,
+  bot.gd _hold_broken), what it beat and when in a table of the summary's own, outside the gates. Smoke 259 green.

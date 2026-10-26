@@ -66,6 +66,15 @@ for /l %%S in (1,1,2) do (
 		)
 	)
 )
+rem the broken builds (26 Oct, Matt: "test they are broken and can smash all content at least once"): outside the
+rem balance, each its own read from the checkpoint, the combos on for it alone (tests\balance.gd _broken); the summary
+rem lists what each beat and what it never did, no gate
+set BROKEN_HOURS=16
+for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
+	set /a N+=1
+	>>docs\balance\pass\expected.txt echo broken-%%K
+	start "" /b cmd /c tools\balance_read.bat broken-%%K 240 %BROKEN_HOURS% broken %%K
+)
 set /a N+=1
 >>docs\balance\pass\expected.txt echo probe
 start "" /b cmd /c tools\balance_read.bat probe 30 0 probe

@@ -19896,7 +19896,7 @@ func _county_checks(main) -> void:
 			sim.equipped[sl] = null
 	_check(sim.county_zone_open(0) and sim.order_open("toll_plaza") and not sim.order_open("distribution") and not sim.county_zone_open(1), "after the Issue: the Motorway's first place alone open")
 	_check(sim.order_block("toll_plaza") == Words.COUNTY["want"] % [2, 0], "the Toll Plaza doesn't want issued kit: '%s'" % sim.order_block("toll_plaza"))
-	_check(sim.order_level("toll_plaza") == 30 + int(Data.county("toll_plaza")["over"]), "the Toll Plaza's level %d" % sim.order_level("toll_plaza"))
+	_check(sim.order_level("toll_plaza") == int(Data.county("toll_plaza")["level"]), "the Toll Plaza's level %d, not its set one" % sim.order_level("toll_plaza"))
 	# two issued pieces worn
 	sim.cash = 1e12
 	for sl in ["Armour", "Helmet"]:

@@ -6030,10 +6030,10 @@ func county_block(k: String) -> String:
 	return ""
 
 
-## A County place's level: the reach, its own step past it, and a level more every time it's been taken.
+## A County place's level: its set level, and a level more every time it's been taken.
 func county_level(k: String) -> int:
 	var c: Dictionary = Data.county(k)
-	return maxi(Data.REACH_START, reach) + int(c["over"]) + int(order_beaten.get(k, 0))
+	return int(c["level"]) + int(order_beaten.get(k, 0))     # set levels (Matt, 26 Oct, the seventh pass)
 
 
 ## The Treasurer down: the County taken, and the Radio's remix open.

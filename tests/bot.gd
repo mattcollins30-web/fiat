@@ -48,6 +48,11 @@ var target_cls := ""
 var target_el := ""
 var _target_taken := false
 var builds := {}                  # class -> {element, keystones_first} as the bot plays it
+## A broken-build read (26 Oct, Matt: "test they are broken and can smash all content at least once"): the combo's key.
+## Its set pieces and unique are held on the runner, found again at the reach as it climbs (as a player who chases the
+## build keeps it); issued kit goes in the slots the build leaves free.
+var broken := ""
+var broken_slots: Array = []
 var _stood_from := -1.0
 
 
@@ -247,9 +252,41 @@ const BURN_EVERY := 3600.0
 var _burnt_at := -1e9
 
 
-## The newest issued piece of each slot worn.
+## The broken build's pieces on (a read of one): the set at its count and the unique, each rolled again at the item level
+## the runner can wear and the reach drops when the one worn falls RENEW_UNDER levels short.
+const RENEW_UNDER := 5
+func _hold_broken(sim) -> void:
+	var c: Dictionary = Data.COMBOS.get(broken, {})
+	if c.is_empty():
+		return
+	var lv: int = mini(Items.max_ilvl_for(sim.level()), maxi(1, sim.reach))
+	var want := {}                             # slot -> [kind, def]
+	var st: Dictionary = Items.set_named(str(c["set"]))
+	for k in range(int(c["pieces"])):
+		want[str(st["pieces"][k]["slot"])] = ["set", st["pieces"][k]]
+	for u in Data.UNIQUES:
+		if str(u.get("rule", "")) == str(c["rule"]):
+			want[str(u["slot"])] = ["unique", u]
+			break
+	broken_slots = want.keys()
+	for sl in want:
+		var worn = sim.equipped.get(sl)
+		var kind: String = want[sl][0]
+		var ok: bool = worn != null and ((kind == "set" and str(worn.get("set", "")) == str(c["set"])) or (kind == "unique" and str(worn.get("rule", "")) == str(c["rule"])))
+		if ok and Items.ilvl(worn) >= lv - RENEW_UNDER:
+			continue
+		var it: Dictionary = Items.roll_set_piece(str(st["name"]), want[sl][1], sim.rng, lv) if kind == "set" else Items.roll_unique(want[sl][1], sim.rng, lv)
+		sim.equipped[sl] = it
+		sim._dry_memo.clear()
+	if sim.equipped.get("Primary") == null:
+		sim.equip_best("Primary")
+
+
+## The newest issued piece of each slot worn (a broken build's slots kept for the build).
 func _wear_issued(sim) -> void:
 	for sl in Data.SLOTS:
+		if sl in broken_slots:
+			continue
 		var best = null
 		for it in sim.stash:
 			if it.get("issued", false) and str(it.get("slot", "")) == sl and sim.can_wear(it) and (best == null or Items.ilvl(it) > Items.ilvl(best)):
@@ -389,6 +426,8 @@ func _tidy_kit(sim) -> void:
 	if element != "":
 		_hold_the_element(sim)
 	_wear_issued(sim)                         # issued kit stays on (the County wants it worn)
+	if broken != "":
+		_hold_broken(sim)
 	t0 = _lap("fit", t0)
 	_train_tree(sim)
 	t0 = _lap("train", t0)
@@ -421,6 +460,8 @@ func _tidy_kit(sim) -> void:
 	_sell_spares(sim)
 	t0 = _lap("sell", t0)
 	_buy_upgrade(sim)
+	if broken != "":
+		_hold_broken(sim)                      # after the shop too (the review: its equip_best took the build off)
 	_lap("shop", t0)
 
 
@@ -1465,7 +1506,8 @@ func _buy_upgrade(sim) -> void:
 	if pick >= 0:
 		sim.buy(pick)
 		for s in Data.SLOTS:
-			sim.equip_best(s)
+			if not (s in broken_slots):
+				sim.equip_best(s)
 		if element != "":
 			_hold_the_element(sim)
 

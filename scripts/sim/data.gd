@@ -3318,7 +3318,8 @@ const ISSUED_WANT := [2, 3, 4, 6]      # issued pieces worn to stand in the Coun
 
 ## The County (25 Oct, the Issue's second campaign: docs/design/the_issue.md §4): four zones of three places past the
 ## City, each held by one of the Issuer's people. A place is fought as the order's are - laid on a host site's crew and
-## drops (`site`, `zone`), under its own name - at the reach + `over`, a level more every time it's beaten. A zone
+## drops (`site`, `zone`), under its own name - at its set `level` (26 Oct, the seventh pass: at the reach + 2 to + 14
+## nothing past + 3 was won), a level more every time it's beaten. A zone
 ## wants ISSUED_WANT issued pieces worn; its places open in turn; its last is its head's; the head down opens the next
 ## zone. The Treasurer down opens the Radio's remix. The art is the host site's plate until the County's is drawn.
 const COUNTY_ZONES := [
@@ -3328,21 +3329,21 @@ const COUNTY_ZONES := [
 	{"name": "The Treasury", "head": "The Treasurer", "words": "The Counting House, the Bullion Vault, the Treasury - where it's made to stick."},
 ]
 const COUNTY := [
-	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "over": 2},
-	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "over": 3},
-	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "over": 4,
+	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "level": 50},
+	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "level": 52},
+	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "level": 55,
 		"who": "The Bailiff", "mech": "bailiff", "hp": 14.0, "dps": 3.0},
-	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "over": 5},
-	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "over": 6},
-	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "over": 7,
+	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "level": 60},
+	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "level": 62},
+	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "level": 65,
 		"who": "The Auditor", "mech": "auditor", "hp": 16.0, "dps": 3.5},
-	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "over": 8},
-	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "over": 9},
-	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "over": 10,
+	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "level": 70},
+	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "level": 72},
+	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "level": 75,
 		"who": "The Collector", "mech": "collector", "hp": 18.0, "dps": 3.5},
-	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "over": 11},
-	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "over": 12},
-	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "over": 14,
+	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 80},
+	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 82},
+	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 85,
 		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 4.5},
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:

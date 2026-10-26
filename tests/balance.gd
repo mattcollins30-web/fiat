@@ -65,6 +65,10 @@ func _init() -> void:
 	if cls == "probe":
 		_probe()
 		return
+	if cls == "broken":
+		# `-- 16 broken embers`: a broken build (26 Oct, Matt) from the Radio's checkpoint, the combos on, its parts held
+		_broken(hours, args[2] if args.size() > 2 else "embers")
+		return
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
@@ -721,6 +725,135 @@ func _hm(s: float) -> String:
 ## Build parity (25 Oct, step 8): one build for a fixed spell from the Radio's checkpoint - the same world, the same
 ## kit in the stash, the class taken whether or not the save had opened it - and what it made of the spell: the reach
 ## and the levels gained, the signals won, the deaths. One PARITY line; the summary sets the builds side by side.
+## A broken build's read (26 Oct, Matt: "test they are broken and can smash all content at least once"): from the
+## Radio's checkpoint, the combo's class, its recipe trained, its set and unique on (found again at the reach as it
+## climbs, bot.gd _hold_broken), the combos switched on for this read alone; the bot plays it as any read. BROKEN {json}:
+## what it beat and when - the order's three, the Issue, the County's twelve - and what it never did.
+const BROKEN_ELEMENT := {"embers": "fire", "clean_kills": "frost", "flatline": "shock", "opened_for_good": "bleed", "live_load": "shock", "drilled": "physical"}
+func _broken(hours: float, key: String) -> void:
+	var c: Dictionary = Data.COMBOS.get(key, {})
+	var text := FileAccess.get_file_as_string(CHECKPOINT)
+	var d = JSON.parse_string(text) if text != "" else null
+	if c.is_empty() or not (d is Dictionary) or not d.has("sim"):
+		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build" if c.is_empty() else "no checkpoint at " + CHECKPOINT}))
+		quit(0)
+		return
+	Sim.combos_off = false                   # this read alone: the build's whole point
+	var sim = Sim.new()
+	sim.load_dict(d["sim"])
+	sim.loot_by_hand = false
+	sim.fast_memo = true
+	sim.odds_runs_max = 24
+	var cls: String = str(c["class"])
+	var kit0: Dictionary = sim.equipped.duplicate(true)
+	var rig0: Array = sim.rig.duplicate(true)
+	var xp0: float = float(sim.xp)
+	if sim.cls != cls:
+		sim.set_class(cls)
+	sim.xp = xp0
+	sim.equipped = kit0
+	sim.rig = rig0
+	sim.tree = sim.tree.filter(func(id): return sim.is_camp(str(id)))
+	sim.skill_slots = ["", "", ""]
+	# at level 50 (the build's keystone and capstone want it, as the smoke walks the recipes): the camp the checkpoint's,
+	# the runner the build's whole
+	sim.xp = maxf(float(sim.xp), Data.xp_for_level(50))
+	sim.best_level = maxi(int(sim.best_level), 50)
+	var walked: Array = []
+	for path in c.get("recipe", []):
+		var rid: String = Data.node_id_named(str(path))
+		var ok: bool = rid != "" and _walk(sim, rid)
+		walked.append([str(path), ok, "" if ok else (sim.train_block(rid) if rid != "" else "no such node")])
+	var bot = Bot.new()
+	bot.cls = cls
+	bot.element = str(BROKEN_ELEMENT.get(key, ""))
+	bot.crew_on = false
+	bot.broken = key
+	bot._hold_broken(sim)
+	sim._dry_memo.clear()
+	sim.hp = sim.max_hp()
+	var start_s: float = sim.elapsed
+	var b := {"build": key, "class": cls, "element": bot.element, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(key),
+		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0}
+	var t_end: float = sim.elapsed + hours * 3600.0
+	var t0 := Time.get_ticks_msec()
+	var next_mark: float = sim.elapsed + 1800.0
+	print("Fiat broken read: %s (%s as %s), %.0f h from the checkpoint; on: %s" % [key, cls, bot.element, hours, str(b["on_at_start"])])
+	while sim.elapsed < t_end and Time.get_ticks_msec() - t0 < 12600000:
+		var lost: int = sim.operators_lost
+		var on_going: bool = sim.combo_on(key)
+		var t: int = bot.step(sim)
+		if t >= 0:
+			b["runs"] += 1
+			b["runs_on"] = int(b.get("runs_on", 0)) + (1 if on_going else 0)     # the build on as the run set off (the review)
+			if sim.operators_lost > lost:
+				b["deaths"] += 1
+			bot.tidy(sim)
+		if sim.elapsed >= next_mark:
+			next_mark += 1800.0
+			print("%s | reach %d | level %d | dps %.0f | hp %.0f | on %s | fiat %s | county %d" % [_hm(sim.elapsed - start_s), sim.reach, sim.level(), sim.dps(), sim.max_hp(), str(sim.combo_on(key)), str(sim.issued), sim.county_taken_count()])
+	# what it beat, and when (hours from its start)
+	var beaten := {}
+	var top_signal := 0
+	for e in sim.chronicle:
+		if float(e.get("t", 0.0)) < start_s:
+			continue
+		var h: float = snappedf((float(e.get("t", 0.0)) - start_s) / 3600.0, 0.01)
+		match str(e.get("k", "")):
+			"order_done":
+				if e.get("won", false) and not beaten.has(str(e["key"])):
+					beaten[str(e["key"])] = h
+			"county_done":
+				if e.get("won", false) and not beaten.has(str(e["key"])):
+					beaten[str(e["key"])] = h
+			"issue":
+				if not beaten.has("issue"):
+					beaten["issue"] = h
+			"signal_done":
+				if e.get("won", false):
+					top_signal = maxi(top_signal, int(e.get("level", 0)))
+	var content: Array = ["grid", "archive", "mint", "issue"]
+	for cc in Data.COUNTY:
+		content.append(str(cc["key"]))
+	b["beaten"] = beaten
+	b["missing"] = content.filter(func(k): return not beaten.has(k))
+	b["top_signal_won"] = top_signal
+	b["reach1"] = sim.reach
+	b["level1"] = sim.level()
+	b["dps1"] = snappedf(float(sim.damage_split()["total"]), 0.1)
+	b["on_at_end"] = sim.combo_on(key)
+	b["issued_worn"] = sim.issued_worn()
+	b["played_h"] = snappedf((sim.elapsed - start_s) / 3600.0, 0.01)
+	b["cut_short"] = sim.elapsed < t_end
+	b["kit"] = _kit(sim)
+	@warning_ignore("integer_division")
+	b["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	for x in bot.bought:
+		print("  %s at %s" % [x[1], _hm(x[0] - start_s)])
+	print("BROKEN " + JSON.stringify(b))
+	quit(0)
+
+
+## A node trained from nothing as the smoke walks a recipe: each step on its path, its points given if short.
+func _walk(sim, id: String) -> bool:
+	for k in range(60):
+		if sim.tree.has(id):
+			return true
+		var nxt: String = id if (sim.touches_trained(id) or Data.web_entry(sim.node(id))) else sim.path_next(id)
+		if nxt == "":
+			return false
+		if sim.free_for(nxt) < sim.node_cost(nxt):
+			if sim.is_pitch(nxt):
+				sim.best_level += sim.node_cost(nxt)
+			elif sim.element_of(nxt) != "":
+				sim.element_points[sim.element_of(nxt)] = int(sim.element_points.get(sim.element_of(nxt), 0)) + sim.node_cost(nxt)
+			else:
+				sim.training_points += sim.node_cost(nxt)
+		if not sim.train_node(nxt):
+			return false
+	return false
+
+
 func _parity(hours: float, cls: String, element: String) -> void:
 	var text := FileAccess.get_file_as_string(CHECKPOINT)
 	var d = JSON.parse_string(text) if text != "" else null
