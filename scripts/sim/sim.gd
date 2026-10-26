@@ -1004,7 +1004,10 @@ func order_chips(on_you := false) -> Array:
 				out.append([Words.ORDER_CHIPS["sealed"], "Stamped", "bleed"])
 		"bailiff":
 			if bool(m.get("seize_on", false)):
-				out.append([Words.COUNTY["chip_seized"] % str(m["seized"]).to_lower(), "Seized", "bleed"])
+				var sz: String = str(m["seized"])
+				var piece = equipped.get(sz)
+				var hit: String = ("−%d%% fire" % roundi(float(Data.BAILIFF_CUT[sz]) * 100.0)) if Data.BAILIFF_CUT.has(sz) else ("×%.2f taken" % Data.BAILIFF_TAKEN)
+				out.append([Words.COUNTY["chip_seized"] % ("your %s · %s" % [Items.full_name(piece) if piece != null else sz.to_lower(), hit]), "Seized: %s" % sz.to_lower(), "bleed"])     # the piece and what it costs (the third review)
 	return out
 
 
@@ -1154,7 +1157,7 @@ func issue() -> void:
 	var hard: float = clampf(k / Data.FIAT_SCALE, 0.0, 1.0)            # the stash sells at the pile's rate, not the day's
 	for it in kit_held:
 		it["issue_k"] = hard                   # every piece held: at the pile's rate, and at the Issue's prices for good (the review: a small pile's kit went unstamped)
-	issue_moment = {"pile": int(round(cash)), "notes": _notes, "stash": int(round(held)), "fiat": int(round(fiat))}
+	issue_moment = {"pile": int(round(cash)), "notes": _notes, "stash": int(round(held)), "fiat": int(round(fiat)), "kit_k": snappedf(hard, 0.01)}
 	_notes = 0
 	issued = true
 	cash = fiat
@@ -1805,9 +1808,45 @@ func issued_worn() -> int:
 	var n := 0
 	for sl in Data.SLOTS:
 		var it = equipped.get(sl)
-		if it != null and it.get("issued", false):
-			n += 1
+		if it != null and (it.get("issued", false) or it.get("stamped", false)):
+			n += 1                               # a piece of your own stamped at the Bench counts too (Matt, 26 Oct)
 	return n
+
+
+## Stamping (26 Oct, Matt: "something in crafting that allows the player to stamp a piece of gear they own for entry"):
+## at the Bench, a piece of your own kit stamped for the slot's issued price counts towards the County's want, as
+## issued kit does; nothing else about it changes. Why it can't be, or "".
+func stamp_block(it: Dictionary) -> String:
+	if not issued:
+		return Words.STAMP["not_yet"]
+	if mission != null:
+		return Words.STAMP["on_a_run"]
+	if it.is_empty() or not (str(it.get("slot", "")) in Data.SLOTS):
+		return Words.STAMP["not_kit"]
+	if it.get("issued", false):
+		return Words.STAMP["issued"]
+	if it.get("stamped", false):
+		return Words.STAMP["done"]
+	if cash < float(stamp_price(it)):
+		return Words.STAMP["short"]
+	return ""
+
+
+func stamp_price(it: Dictionary) -> int:
+	return issued_price(str(it.get("slot", "")))     # the slot's issued price: keep your own piece or take his, the same either way (Matt)
+
+
+func stamp(id: int) -> bool:
+	var it := item_by_id(id)
+	if stamp_block(it) != "":
+		return false
+	var cost := stamp_price(it)
+	cash -= float(cost)
+	it["stamped"] = true
+	_dry_memo.clear()
+	log_event(Words.STAMP["log"] % [Items.full_name(it), fiat_words(float(cost))])
+	chron("stamp", {"slot": str(it["slot"]), "fiat": cost})
+	return true
 
 
 ## The issued plate: the order's and the County's fights hit you at a fifth less.
@@ -4985,6 +5024,19 @@ func set_count(name: String) -> int:
 		return 0
 	# issued kit counts as a piece of the set you're wearing, in a slot the set has a piece for (Matt, 26 Oct: a broken
 	# build wears the Issuer's kit too) - one set a piece: the one with the most real pieces on, by name on a tie (the review)
+	for pc in Items.set_named(name).get("pieces", []):
+		var sl: String = str(pc["slot"])
+		var it = equipped.get(sl)
+		if it != null and it.get("issued", false) and _issued_set_for(sl) == name:
+			n += 1
+	return n
+
+
+## How many of a set's worn pieces are issued kit counted in (the Kit's set line says so).
+func set_issued(name: String) -> int:
+	var n := 0
+	if set_count(name) == 0:
+		return 0
 	for pc in Items.set_named(name).get("pieces", []):
 		var sl: String = str(pc["slot"])
 		var it = equipped.get(sl)

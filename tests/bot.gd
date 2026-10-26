@@ -244,6 +244,11 @@ func _issued(sim) -> void:
 		if not (sl in slots):
 			continue                          # only what the next zone wants (Matt, 26 Oct: the build's gun stays on)
 		var worn = sim.equipped.get(sl)
+		if sl in GUN_SLOTS and worn != null and not worn.get("issued", false):
+			# the build's own gun stamped at the Bench, not swapped for his (Matt, 26 Oct: stamping for entry)
+			if not worn.get("stamped", false) and sim.cash >= sim.stamp_price(worn) * 3.0 and sim.stamp(int(worn["id"])):
+				bought.append([sim.elapsed, "stamped %s for %d fiat" % [sl, sim.stamp_price(worn)]])
+			continue
 		var have_lv: int = Items.ilvl(worn) if worn != null and worn.get("issued", false) else -100
 		var offer: Dictionary = sim.issued_piece(sl)
 		if Items.ilvl(offer) - have_lv < 10 or not sim.can_wear(offer):
@@ -347,6 +352,7 @@ func _roll_gun(sim, type: String, lv: int, tier: int) -> Dictionary:
 ## post-Issue hour measured the issued kit): as many as the deepest open County zone wants, the helmet, rig, charm,
 ## armour and sidearm before the gun; a held build's slots kept.
 const ISSUED_FIRST := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]
+const GUN_SLOTS := ["Primary", "Secondary"]     # stamped rather than swapped
 func issued_slots(sim) -> Array:
 	var z := 0
 	for k in range(Data.COUNTY_ZONES.size()):
@@ -356,11 +362,21 @@ func issued_slots(sim) -> Array:
 	return ISSUED_FIRST.filter(func(sl): return not (sl in broken_slots)).slice(0, want)
 
 
+## A stamped piece in a slot the next zone wants stays on (the review: a better gun swapped it out, the County shut till
+## the bot paid to stamp again).
+func _keep_stamped(sim, sl: String) -> bool:
+	var w = sim.equipped.get(sl)
+	return w != null and w.get("stamped", false) and sl in issued_slots(sim)
+
+
 func _wear_issued(sim) -> void:
 	var slots: Array = issued_slots(sim)
 	for sl in Data.SLOTS:
 		if sl in broken_slots or not (sl in slots):
 			continue
+		var own = sim.equipped.get(sl)
+		if own != null and own.get("stamped", false):
+			continue                              # a stamped piece of its own stays on
 		var best = null
 		for it in sim.stash:
 			if it.get("issued", false) and str(it.get("slot", "")) == sl and sim.can_wear(it) and (best == null or Items.ilvl(it) > Items.ilvl(best)):
@@ -506,11 +522,11 @@ func tidy(sim) -> void:
 func _tidy_kit(sim) -> void:
 	var t0 := Time.get_ticks_usec()
 	for s in Data.SLOTS:
-		if not (s in broken_slots):           # a held build's slots stay its own (the review: the held gun rolled again every tidy)
+		if not (s in broken_slots) and not _keep_stamped(sim, s):     # a held build's slots stay its own (the review: the held gun rolled again every tidy); a stamped gun the zone needs stays on
 			sim.equip_best(s)
-	if keystones_first and TYPE_OF.has(sim.cls) and not ("Primary" in broken_slots):
+	if keystones_first and TYPE_OF.has(sim.cls) and not ("Primary" in broken_slots) and not _keep_stamped(sim, "Primary"):
 		_hold_the_type(sim, TYPE_OF[sim.cls])
-	if element != "" and not ("Primary" in broken_slots):
+	if element != "" and not ("Primary" in broken_slots) and not _keep_stamped(sim, "Primary"):
 		_hold_the_element(sim)
 	_wear_issued(sim)                         # issued kit stays on (the County wants it worn)
 	if holding():
@@ -1593,9 +1609,9 @@ func _buy_upgrade(sim) -> void:
 	if pick >= 0:
 		sim.buy(pick)
 		for s in Data.SLOTS:
-			if not (s in broken_slots):
+			if not (s in broken_slots) and not _keep_stamped(sim, s):
 				sim.equip_best(s)
-		if element != "" and not ("Primary" in broken_slots):
+		if element != "" and not ("Primary" in broken_slots) and not _keep_stamped(sim, "Primary"):
 			_hold_the_element(sim)
 
 

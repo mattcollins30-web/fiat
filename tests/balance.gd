@@ -928,6 +928,16 @@ func _gauntlet_issued(sim, bot, want: int) -> String:
 			sim._dry_memo.clear()
 		else:
 			why = sim.issued_block(sl)
+	# short still: the build's own held pieces stamped at the Bench (Matt, 26 Oct: stamping for entry)
+	for sl in bot.broken_slots:
+		if sim.issued_worn() >= want:
+			break
+		var held = sim.equipped.get(sl)
+		if held == null or held.get("stamped", false) or held.get("issued", false):
+			continue
+		sim.cash = maxf(sim.cash, float(sim.stamp_price(held)) * 2.0)
+		if not sim.stamp(int(held["id"])):
+			why = sim.stamp_block(held)
 	sim.cash = cash0
 	return why if sim.issued_worn() < want else ""
 

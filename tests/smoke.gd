@@ -19866,6 +19866,15 @@ func _issue_checks(main) -> void:
 		var it: Dictionary = sim.stash.back()
 		_check(it.get("issued", false) and Items.full_name(it).contains("No.") and str(it["rule"]) == str(u["rule"]) and Items.ilvl(it) == Items.ilvl(shown), "the %s came without its stamp, rule or level: %s" % [sl, Items.full_name(it)])
 		_check(not load("res://scripts/ui/item_head.gd").unique_rule(it).is_empty(), "the %s's rule has no words" % sl)
+	# stamping (Matt, 26 Oct): a piece of your own, stamped at the slot's issued price, counts towards the County's want
+	var own_gun = sim.equipped.get("Primary")
+	if own_gun != null and not own_gun.get("issued", false):
+		var worn0: int = sim.issued_worn()
+		var cash_s: float = sim.cash
+		var price_s: int = sim.stamp_price(own_gun)
+		_check(price_s == sim.issued_price("Primary") and sim.stamp(int(own_gun["id"])) and own_gun.get("stamped", false) and sim.issued_worn() == worn0 + 1 and is_equal_approx(sim.cash, cash_s - price_s), "stamping the gun: worn %d from %d, cash %.0f from %.0f" % [sim.issued_worn(), worn0, sim.cash, cash_s])
+		_check(not sim.stamp(int(own_gun["id"])) and sim.stamp_block(own_gun) == Words.STAMP["done"], "a piece stamped twice")
+		own_gun.erase("stamped")
 	var web = sim.stash.filter(func(x): return x.get("issued", false) and str(x.get("rule", "")) == "issued_webbing")
 	if not web.is_empty():
 		var rig_hold = sim.equipped["Rig"]
@@ -19888,6 +19897,9 @@ func _issue_checks(main) -> void:
 	if main._room_card != null:
 		for l in main._room_card._lines:
 			_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "the Issue's card line runs off: '%s'" % l.text)
+		var hint_l: Label = main._room_card._hint
+		_check(UI.text_width(hint_l, hint_l.text) <= hint_l.size.x + 0.5 and not hint_l.text.ends_with("…"), "the Issue's card hint is cut: '%s'" % hint_l.text)     # the third review
+		_check(main._room_card._lines.any(func(l): return l.text.contains("kit worth")), "the Issue's card leaves out the kit's worth")
 		_check_fit(main, "the Issue's card")
 		main._room_card.finish()
 	_check("issue" in sim.met and main.room == main.MARKET, "after the Issue's card: met %s, the room %s" % ["issue" in sim.met, main.room])
@@ -19939,6 +19951,8 @@ func _issue_checks(main) -> void:
 	sim.load_dict(hold)
 	main.refresh()
 	_check(not Fmt.fiat, "the money still reads fiat on a camp before the Issue")
+	var pre_gun = sim.equipped.get("Primary")
+	_check(pre_gun == null or (sim.stamp_block(pre_gun) == Words.STAMP["not_yet"] and not sim.stamp(int(pre_gun["id"]))), "a stamp before the Issue")
 	_check(not sim.issued and not main._fence._tabs[4].visible, "the counter's tab stayed up on a camp before the Issue")
 	_check(int(sim.order_beaten.get("mint", 0)) > 0 or sim.order_level("mint") == int(Data.pinnacle("mint")["level"]), "the Mint's first level isn't its set one: %d" % sim.order_level("mint"))
 	_check(absf(sim.print_haul(3) - sim.print_haul(2) * Data.PRINT_DECAY) <= 1.0 and sim.print_haul(2) > sim.print_haul(5), "the Mint's prints don't shrink: %.0f, %.0f" % [sim.print_haul(2), sim.print_haul(3)])
@@ -19999,6 +20013,7 @@ func _county_checks(main) -> void:
 	sim.equipped[str(army_slots[0])] = Items.roll_set_piece(army["name"], army["pieces"][0], sim.rng)
 	sim._dry_memo.clear()
 	_check(sim.set_count("The Army's") == 2, "an issued piece in the Army's slot didn't count with its piece: %d" % sim.set_count("The Army's"))
+	_check(sim.set_issued("The Army's") == 1, "the Kit's set line won't say the issued piece: set_issued %d" % sim.set_issued("The Army's"))     # "2 of 4 worn (1 issued)"
 	# one set a piece: another set sharing that slot, a piece of its own on, doesn't count it too (the review)
 	var shared := ""
 	for st2 in Data.SETS:
@@ -20030,6 +20045,30 @@ func _county_checks(main) -> void:
 	for n in cb.text_nodes():
 		if n is Label:
 			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
+	# the third review: the head's fight said before Go; where issued kit comes from, not the want twice; the came-back
+	# button on the board isn't dead
+	var ts_words: String = " ".join(cb.card("truck_stop")["words"].map(func(l): return l.text))
+	_check(ts_words.replace("  ", " ").contains("seizes your best piece"), "the Truck Stop's card doesn't say the Bailiff's fight: '%s'" % ts_words)
+	var off_kit: Dictionary = {}
+	for sl in Data.SLOTS:
+		var w = sim.equipped.get(sl)
+		if w != null and (w.get("issued", false) or w.get("stamped", false)):
+			off_kit[sl] = w
+			sim.equipped[sl] = null
+	cb._shown = ""
+	main.refresh()
+	var tp: Dictionary = cb.card("toll_plaza")
+	_check(not off_kit.is_empty() and tp["note"].visible and tp["note"].text != tp["want"].text and tp["note"].text.contains("Issuer"), "the Toll Plaza short of issued kit: note '%s', want '%s'" % [tp["note"].text, tp["want"].text])
+	for sl in off_kit:
+		sim.equipped[sl] = off_kit[sl]
+	cb._shown = ""
+	main.refresh()
+	main._missions._came_open = false
+	main._missions._toggle_came()
+	_check(not main._missions.county_on, "What came back on the County board did nothing")
+	main._missions._came_open = false
+	main._missions.set_county(true)
+	main.refresh()
 	# the drawn County (26 Oct, Matt's painting): every pin inside its own zone and clear of its edge, the pins far
 	# enough apart to click, a click on a pin picks it
 	var CM = load("res://scripts/ui/county.gd")
@@ -20157,7 +20196,7 @@ func _county_checks(main) -> void:
 	var m: Dictionary = head_run.call("bailiff")
 	sim._order_tick(m, m["t"], 0.1, "bailiff")
 	_check(str(m.get("seized", "")) != "" and bool(m["seize_on"]), "the Bailiff seized nothing")
-	_check(sim.order_chips(true).any(func(c): return str(c[0]).begins_with("Seized")), "no Seized chip on you: %s" % str(sim.order_chips(true)))
+	_check(sim.order_chips(true).any(func(c): return str(c[0]).begins_with("Seized: your ") and (str(c[0]).contains("fire") or str(c[0]).contains("taken"))), "the Seized chip doesn't name the piece and its cost: %s" % str(sim.order_chips(true)))
 	m["target_hp"] = 400.0
 	sim._order_tick(m, m["t"], 0.1, "bailiff")
 	_check(not bool(m["seize_on"]), "the Bailiff kept your piece under half")

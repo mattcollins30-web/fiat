@@ -741,7 +741,11 @@ func _show_came_back() -> void:
 
 
 func _toggle_came() -> void:
-	_came_open = not _came_open
+	if county_on:
+		_came_open = true                     # on the County board a press always shows it: back to the map (the third review: a dead button)
+		set_county(false)
+	else:
+		_came_open = not _came_open
 	_show_came_back()
 
 

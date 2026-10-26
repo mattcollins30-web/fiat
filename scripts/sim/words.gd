@@ -199,7 +199,10 @@ const COUNTY := {
 	"zone_opens": "The road's open to %s. It wants %d issued pieces worn.",
 	"remix": "The Treasurer's down. The Radio picks up both maps now: the remix is open.",
 	"head_down": "%s is down. Found: %s.", "let_go": "The Bailiff lets your %s go.",
-	"chip_owed": "Owed +%d%%", "chip_tax": "Skills taxed ×1.5", "chip_seized": "Seized: %s",
+	"chip_owed": "Owed: +%d%% taken", "chip_tax": "Skills taxed ×1.5", "chip_seized": "Seized: %s",
+	"want_how": "Issued kit: the Issuer, at the Fence; or stamp your own at the Bench",
+	"mech": {"bailiff": "He seizes your best piece till he's under half.", "auditor": "He taxes your skills ×1.5 and stamps one shut.",
+		"collector": "His bill grows while he's out; drop a debtor to cut it.", "treasurer": "He shields, and prints men to stand in front."},
 	"level": "Level %d", "beaten": "Taken %d", "head": "Its head: %s", "odds_reading": "Reading the odds",
 	"drops_head": "The host's crew and drops, paid in fiat", "drops_issued": "Issued kit off the head",
 	"progress": "%d of 12 taken",
@@ -1096,14 +1099,17 @@ const ISSUE := {"log": "The Issue: the town runs on the Issuer's money now. Your
 	"printed": "The Issuer printed again: %s, and every price up with it.",
 	"kicker": "THE ISSUE", "title": "Its value is as stated", "sub": "The Issuer's down. The town runs on his money now.",
 	"line": "\"Everything you've got is worth what I say it is. Today, that's this.\"",
-	"pile": "Your pile: %s and %d notes", "rate": "His rate: the square root of it, x0.8", "came": "What came out: %s, fiat from now on",
+	"pile": "Your pile: %s, %d notes and kit worth %s", "rate": "The Issue: 0.8 × the square root of your pile", "came": "What came out: %s; your kit sells at ×%s of the day's rate, as the pile did",
 	"tiles": [["Prices follow the money", "More fiat about, more it costs"], ["His rate moves", "The Fence buys at it"], ["Burn it", "Hand fiat back: prices fall"]],
-	"go": "Take it", "hint": "Tins and notes are gone for good · the Issuer sets up beside the Fence"}
+	"go": "Take it", "hint": "Tins and notes are gone · the Issuer's at the Fence"}
 const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "short": "Short of fiat", "no_room": "No room in the stash",
 	"bought": "From the Issuer: %s, for %s.", "tab": "The Issuer", "head": "Issued kit", "rate": "HIS RATE TODAY", "circ": "IN CIRCULATION", "prices": "PRICES",
 	"burn": "Burn %s", "burn_line": "Out of circulation: prices x%.2f to x%.2f", "burn_go": "Burn", "said": "\"Its value is as stated.\"",
 	"want": "The County wants %d issued piece%s worn", "wear_at": "Wear at level %d", "burn_nothing": "Nothing in circulation to burn",
 	"burn_sure": "Burn %s? – again"}
+const STAMP := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "not_kit": "Only a piece of kit", "issued": "Issued already",
+	"done": "Stamped already", "short": "Short of fiat", "log": "Stamped for the County: %s, for %s.", "tag": "Stamped · counts as issued for the County",
+	"tag_short": "Stamped"}
 const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "hint": "Click or Space · the class waits in Training",
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {

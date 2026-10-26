@@ -243,7 +243,7 @@ func _show_card() -> void:
 	UI.fit(_card["who"], [en.call(who)])
 	var line: String = str(Words.COUNTY_WORDS.get(k, ""))
 	if d.has("who"):
-		line = "%s %s" % [line, Words.COUNTY["drops_issued"] + "."]
+		line = "%s %s %s" % [line, str(Words.COUNTY["mech"].get(str(d.get("mech", "")), "")), Words.COUNTY["drops_issued"] + "."]     # his fight, before Go (the third review)
 	UI.wrap(_card["words"], line if zone_open else "")
 	var want: int = sim.county_want(z)
 	var worn: int = sim.issued_worn()
@@ -266,7 +266,8 @@ func _show_card() -> void:
 	_card["button"].visible = open and why == ""
 	_card["note"].visible = not _card["button"].visible
 	UI.fit_button(_card["button"], ["Go: %s" % Words.mid(str(d["place"])), "Go"])
-	UI.fit(_card["note"], [why, ""])
+	var want_line: bool = why == Words.COUNTY["want"] % [want, worn]
+	UI.fit(_card["note"], [Words.COUNTY["want_how"], "The Issuer, at the Fence"] if want_line else [why, ""])     # where it comes from, not the want twice (the third review)
 	(_card["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.ACCENT if open else Pal.CARD_LINE
 
 

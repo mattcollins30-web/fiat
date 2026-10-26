@@ -900,7 +900,8 @@ func show_issue_card() -> void:
 	var mo: Dictionary = sim.issue_moment
 	var w: Dictionary = Words.ISSUE
 	var d := {"room": w["kicker"], "face": "the_issuer", "title": w["title"], "sub": w["sub"], "place": "The mint", "go": w["go"], "hint": w["hint"],
-		"lines": [w["line"], w["pile"] % [Fmt.group(int(mo.get("pile", 0))) + " tins", int(mo.get("notes", 0))], w["rate"], w["came"] % sim.fiat_words(float(mo.get("fiat", 0)))],
+		"lines": [w["line"], w["pile"] % [Fmt.group(int(mo.get("pile", 0))) + " tins", int(mo.get("notes", 0)), Fmt.group(int(mo.get("stash", 0))) + " tins"], w["rate"],
+			w["came"] % [sim.fiat_words(float(mo.get("fiat", 0))), "%.2f" % float(mo.get("kit_k", 1.0))]],     # the kit's worth and its rate (the third review: the card left them out)
 		"tiles": w["tiles"], "cues": []}
 	_room_card = RoomIntro.new("issue", d)
 	_room_card.voice_on = _sound.vols["voice"] > 0.0

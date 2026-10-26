@@ -303,6 +303,8 @@ static func unique_rule(it: Dictionary) -> Array:
 	for u in Data.UNIQUES + Data.ISSUED:
 		if u["name"] == named:
 			var long: String = str(u.get("words", ""))
+			if it.get("issued", false) and long != "":
+				return [long + " · kept on a death · counts as a piece of your set", long, str(u.get("short", long))]     # the third review: the screen never said
 			return [long, str(u.get("short", long))] if long != "" else []
 	return []
 
