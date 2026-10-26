@@ -7,6 +7,9 @@ rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
 rem   tools\balance.bat 16 0 broken   the six broken builds alone, 16 h each with their plain baselines, from the pass's
 rem                                  checkpoint (made first if missing): docs\balance\broken.md, the pass's own files left
+rem   tools\balance.bat 2 0 hunt     the build hunt (26 Oct, Matt): stage 1 (every joint with every set or none), stage 2 (stage
+rem                                  1's best twenty with every unique that fits), each read 2 h; then stage 2's best six 16 h
+rem                                  each with their plain baselines: docs\balance\hunt.md, the pass's own files left
 rem First the checkpoint: one save from a new game (the Poacher) to the Radio's opening, written to
 rem docs\balance\radio_checkpoint.save. Then side by side:
 rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
@@ -35,6 +38,7 @@ if not "%GODOT%"=="godot" if not exist "%GODOT%" (
 if not exist docs\balance mkdir docs\balance
 if not exist docs\balance\pass mkdir docs\balance\pass
 if /i "%~3"=="broken" goto broken_only
+if /i "%~3"=="hunt" goto hunt
 del /q docs\balance\pass\*.* 2>nul
 rem and what the pass writes outside pass\ (25 Oct, the tools review: a failed loot read or summary left last pass's in place)
 del /q docs\balance\summary.md 2>nul
@@ -114,6 +118,48 @@ if errorlevel 1 (
 )
 echo Done: docs\balance\summary.md
 endlocal
+exit /b 0
+
+:hunt
+rem the build hunt (26 Oct, Matt: "cook some different builds up"): twelve shards a stage side by side, each stage waiting on
+rem the last (stage 2's list is made from stage 1's lines), then the finalists; the pass's own reads and summary left
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_limited.ps1 -Godot "%GODOT%" -GodotArgs "--headless --path . --import" -Log docs\balance\pass\import.log -Minutes 5 -Quiet 120
+del /q docs\balance\pass\hunt-*.* 2>nul
+del /q docs\balance\pass\broken-*.* 2>nul
+del /q docs\balance\hunt.md 2>nul
+for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The build hunt on %%C> docs\balance\pass\broken_commit.log
+if not exist docs\balance\pass\radio_checkpoint.save (
+	echo No checkpoint from a pass: making one first.
+	call tools\balance_read.bat checkpoint 90 40 one Drifter fire 0 checkpoint
+	ren docs\balance\pass\checkpoint.done checkpoint.end 2>nul
+)
+for %%G in (1 2) do (
+	for /l %%S in (0,1,11) do start "" /b cmd /c tools\balance_read.bat hunt-s%%G-%%S 300 %HOURS% hunt %%G %%S 12
+	echo Stage %%G of the hunt: 12 shards running, %HOURS% h a build.
+	call :waitfor "hunt-s%%G-*.done" 12 1900
+)
+for /l %%N in (0,1,5) do (
+	start "" /b cmd /c tools\balance_read.bat broken-hunt%%N 240 16 broken hunt%%N
+	start "" /b cmd /c tools\balance_read.bat broken-hunt%%N-plain 240 16 broken hunt%%N plain
+)
+echo The hunt's six finalists running, 16 h each with their baselines.
+call :waitfor "broken-*.done" 12 1800
+"%GODOT%" --headless --path . -s tools/balance_summary.gd -- hunt
+echo Done: docs\balance\hunt.md
+endlocal
+exit /b 0
+
+rem wait for <pattern> in pass\ to reach <count>, or <ticks> of ten seconds
+:waitfor
+set TICKS=0
+:wf_loop
+timeout /t 10 /nobreak >nul
+set /a TICKS+=1
+set DONE=0
+for %%F in (docs\balance\pass\%~1) do set /a DONE+=1
+echo   %DONE% of %~2 finished
+if %TICKS% geq %~3 exit /b 0
+if %DONE% lss %~2 goto wf_loop
 exit /b 0
 
 :broken_only

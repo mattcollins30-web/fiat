@@ -70,6 +70,10 @@ func _init() -> void:
 		# `-- 16 broken embers plain`: the same runner, start and pieces, the combos off (the baseline it must outrun)
 		_broken(hours, args[2] if args.size() > 2 else "embers", args.size() > 3 and args[3] == "plain")
 		return
+	if cls == "hunt":
+		# `-- 2 hunt 1 0 12`: the build hunt's stage 1, shard 0 of 12 (26 Oct, Matt); `-- 16 broken hunt0 [plain]` its finalists
+		_hunt(hours, int(args[2]) if args.size() > 2 else 1, int(args[3]) if args.size() > 3 else 0, int(args[4]) if args.size() > 4 else 1)
+		return
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
@@ -727,25 +731,146 @@ func _hm(s: float) -> String:
 ## kit in the stash, the class taken whether or not the save had opened it - and what it made of the spell: the reach
 ## and the levels gained, the signals won, the deaths. One PARITY line; the summary sets the builds side by side.
 ## A broken build's read (26 Oct, Matt: "test they are broken and can smash all content at least once"): from the
-## Radio's checkpoint, the combo's class, its recipe trained, its set and unique on (found again at the reach as it
-## climbs, bot.gd _hold_broken), the combos switched on for this read alone; the bot plays it as any read. BROKEN {json}:
-## what it beat and when - the order's three, the Issue, the County's twelve - and what it never did.
+## Radio's checkpoint, the build's class, its recipe trained, its pieces on (found again at the reach as it climbs,
+## bot.gd _hold_broken), the combos switched on for this read alone; the bot plays it staying out (bot.stay_out: the
+## stacks are the run's). BROKEN {json}: what it beat and when - the order's three, the Issue, the County's twelve -
+## what it never did, and the damage it really dealt a second fought. `key` a combo's, or "hunt<n>": the build hunt's
+## nth finalist (stage 2's lines, pass/hunt-s2-*.txt, ranked as _hunt_ranked does).
 const BROKEN_ELEMENT := {"embers": "fire", "clean_kills": "frost", "flatline": "shock", "opened_for_good": "bleed", "live_load": "shock", "drilled": "physical"}
+const STAY_OUT := 20                     # Matt, 26 Oct: "until HP bail or 20 patrols"
+const HUNT_DIR := "res://docs/balance/pass/"     # pass/hunt-s<stage>-<shard>.txt (tools\\balance.bat <hours> 0 hunt)
+const HUNT_TOP := 20                     # the first stage's builds the second tries every unique on (Matt, 26 Oct: two stages)
 func _broken(hours: float, key: String, plain := false) -> void:
-	var c: Dictionary = Data.COMBOS.get(key, {})
-	var text := FileAccess.get_file_as_string(CHECKPOINT)
-	var d = JSON.parse_string(text) if text != "" else null
-	if c.is_empty() or not (d is Dictionary) or not d.has("sim"):
-		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build" if c.is_empty() else "no checkpoint at " + CHECKPOINT}))
+	var spec: Dictionary = {}
+	if key.begins_with("hunt") and key.substr(4).is_valid_int():
+		var ranked: Array = _hunt_ranked(2)
+		var n: int = int(key.substr(4))
+		spec = _hunt_spec(ranked[n]) if n >= 0 and n < ranked.size() else {}
+	elif Data.COMBOS.has(key):
+		var c: Dictionary = Data.COMBOS[key]
+		spec = {"id": key, "class": str(c["class"]), "element": str(BROKEN_ELEMENT.get(key, "")), "recipe": c.get("recipe", []),
+			"set": str(c["set"]), "pieces": int(c["pieces"]), "rule": str(c["rule"]), "gun": "", "combo": key}
+	if spec.is_empty():
+		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build"}))
 		quit(0)
 		return
+	var b: Dictionary = _build_read(hours, spec, plain, true)
+	b["build"] = key
+	print("BROKEN " + JSON.stringify(b))
+	quit(0)
+
+
+## The build hunt (26 Oct, Matt: "cook some different builds up - the whole point is broken builds not these specific
+## builds being broken"): every class's two joints, each with every set at its count or none (stage 1); the stage's
+## best HUNT_TOP, each with every unique whose slot the set leaves free (stage 2). This shard's share of the stage's
+## list, a short read each, one HUNT {json} line a build; the summary ranks them (balance_summary.gd -- hunt).
+func _hunt(hours: float, stage: int, shard: int, shards: int) -> void:
+	var specs: Array = _hunt_specs(stage)
+	print("Fiat build hunt: stage %d, shard %d of %d, %d builds in the stage, %.1f h each" % [stage, shard, shards, specs.size(), hours])
+	for i in range(specs.size()):
+		if i % maxi(1, shards) != shard:
+			continue
+		var b: Dictionary = _build_read(hours, specs[i], false, false)
+		b["stage"] = stage
+		print("HUNT " + JSON.stringify(b))
+	quit(0)
+
+
+## A joint's build (the class's half of an element): its class, element, the four nodes (the class lane's joint half,
+## the element's class half, its keystone and capstone) and its gun type (the element half's, else the class's).
+func _joint_build(j: Dictionary) -> Dictionary:
+	var key := str(j["key"])
+	var et: Dictionary = Data.tree_named(str(j["element_tree"]))
+	var ct: Dictionary = Data.tree_named(str(j["tree"]))
+	var recipe: Array = []
+	var gun := ""
+	for nd in ct["nodes"]:
+		if str(nd.get("joint", "")) == key:
+			recipe.append("%s/%s" % [ct["name"], nd["name"]])
+	for nd in et["nodes"]:
+		if str(nd.get("joint", "")) == key:
+			recipe.append("%s/%s" % [et["name"], nd["name"]])
+			var ty = nd.get("type", "")
+			gun = str(ty[0]) if ty is Array and not ty.is_empty() else str(ty)
+	for flag in ["keystone", "capstone"]:
+		for nd in et["nodes"]:
+			if nd.get(flag, false):
+				recipe.append("%s/%s" % [et["name"], nd["name"]])
+	if gun == "":
+		gun = str(Bot.TYPE_OF.get(str(j["class"]), ""))
+	return {"joint": key, "class": str(j["class"]), "element": key.get_slice("_", 1), "recipe": recipe, "gun": gun}
+
+
+## A HUNT line's build again as a spec (its recipe from the tables: the line's own is the walk's [path, ok, why]).
+func _hunt_spec(row: Dictionary) -> Dictionary:
+	for j in Data.JOINTS:
+		if str(j["key"]) == str(row.get("joint", "")):
+			return _joint_build(j).merged({"id": str(row.get("id", "")), "set": str(row.get("set", "")), "pieces": int(row.get("pieces", 0)),
+				"rule": str(row.get("rule", "")), "unique": str(row.get("unique", "")), "combo": ""}, true)
+	return {}
+
+
+## The stage's list, the same in every shard: stage 1 from the tables, stage 2 from stage 1's lines on disk.
+func _hunt_specs(stage: int) -> Array:
+	var out: Array = []
+	if stage == 1:
+		for j in Data.JOINTS:
+			var jb: Dictionary = _joint_build(j)
+			out.append(jb.merged({"id": "%s" % jb["joint"], "set": "", "pieces": 0, "rule": "", "combo": ""}))
+			for st in Data.SETS:
+				out.append(jb.merged({"id": "%s+%s" % [jb["joint"], st["name"]], "set": str(st["name"]), "pieces": int(st["pieces"].size()), "rule": "", "combo": ""}))
+		return out
+	var top: Array = _hunt_ranked(1).slice(0, HUNT_TOP)
+	for sp in top:
+		var used := {}
+		if str(sp["set"]) != "":
+			for pc in Items.set_named(str(sp["set"]))["pieces"]:
+				used[str(pc["slot"])] = true
+		for u in Data.UNIQUES:
+			if str(u.get("rule", "")) == "" or used.has(str(u["slot"])):
+				continue
+			var s2: Dictionary = _hunt_spec(sp).merged({"rule": str(u["rule"]), "unique": str(u["name"]), "id": "%s+%s" % [sp["id"], u["name"]]}, true)
+			out.append(s2)
+	return out
+
+
+## A stage's HUNT lines on disk, best first: the damage really dealt a second fought, then the reach gained.
+func _hunt_ranked(stage: int) -> Array:
+	var rows: Array = []
+	for f in DirAccess.get_files_at(HUNT_DIR):
+		if not (f.begins_with("hunt-s%d-" % stage) and f.ends_with(".txt")):
+			continue
+		for line in FileAccess.get_file_as_string(HUNT_DIR + f).split("\n"):
+			if line.begins_with("HUNT {"):
+				var d = JSON.parse_string(line.substr(5))
+				if d is Dictionary and not d.has("error"):
+					rows.append(d)
+	rows.sort_custom(func(x, y):
+		if float(x.get("rate", 0.0)) != float(y.get("rate", 0.0)):
+			return float(x.get("rate", 0.0)) > float(y.get("rate", 0.0))
+		return str(x.get("id", "")) < str(y.get("id", "")))
+	return rows
+
+
+## One build's read from the Radio's checkpoint at level 50 (the broken reads' and the hunt's): the spec's class,
+## recipe walked, pieces held, the combos on unless `plain`, the runner staying out; `full` the half-hour lines and
+## the shop as the broken read prints them. What it beat, the reach, and the damage really dealt a second fought
+## (each run's fight breakdown: dealt over its seconds fighting) - over all runs, and over the long ones (ten
+## patrols or more) and the short apart: a build that runs away deals more the longer it's out.
+func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dictionary:
+	var text := FileAccess.get_file_as_string(CHECKPOINT)
+	var d = JSON.parse_string(text) if text != "" else null
+	var out := spec.duplicate(true)
+	if not (d is Dictionary) or not d.has("sim"):
+		out["error"] = "no checkpoint at " + CHECKPOINT
+		return out
 	Sim.combos_off = plain                   # this read alone: the build's whole point (the plain baseline keeps them off)
 	var sim = Sim.new()
 	sim.load_dict(d["sim"])
 	sim.loot_by_hand = false
 	sim.fast_memo = true
 	sim.odds_runs_max = 24
-	var cls: String = str(c["class"])
+	var cls: String = str(spec["class"])
 	var kit0: Dictionary = sim.equipped.duplicate(true)
 	var rig0: Array = sim.rig.duplicate(true)
 	var xp0: float = float(sim.xp)
@@ -761,38 +886,60 @@ func _broken(hours: float, key: String, plain := false) -> void:
 	sim.xp = maxf(float(sim.xp), Data.xp_for_level(50))
 	sim.best_level = maxi(int(sim.best_level), 50)
 	var walked: Array = []
-	for path in c.get("recipe", []):
+	for path in spec.get("recipe", []):
 		var rid: String = Data.node_id_named(str(path))
 		var ok: bool = rid != "" and _walk(sim, rid)
 		walked.append([str(path), ok, "" if ok else (sim.train_block(rid) if rid != "" else "no such node")])
 	var bot = Bot.new()
 	bot.cls = cls
-	bot.element = str(BROKEN_ELEMENT.get(key, ""))
+	bot.element = str(spec.get("element", ""))
 	bot.crew_on = false
-	bot.broken = key                         # the baseline holds the same pieces too, the combo off: the one difference (the review)
+	bot.stay_out = STAY_OUT
+	# the baseline holds the same pieces too, the combo off: the one difference (the review)
+	var combo := str(spec.get("combo", ""))
+	if combo != "":
+		bot.broken = combo
+	else:
+		bot.hold = {"set": str(spec.get("set", "")), "pieces": int(spec.get("pieces", 0)), "rule": str(spec.get("rule", "")), "gun": str(spec.get("gun", ""))}
 	bot._hold_broken(sim)
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp()
 	var start_s: float = sim.elapsed
-	var b := {"build": key, "plain": plain, "class": cls, "element": bot.element, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(key),
-		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0}
+	out.merge({"plain": plain, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(combo) if combo != "" else false,
+		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0, "patrols": 0}, true)
+	var dealt := [0.0, 0.0, 0.0]               # all, long runs, short runs
+	var fought := [0.0, 0.0, 0.0]
 	var t_end: float = sim.elapsed + hours * 3600.0
 	var t0 := Time.get_ticks_msec()
 	var next_mark: float = sim.elapsed + 1800.0
-	print("Fiat broken read: %s (%s as %s)%s, %.0f h from the checkpoint; on: %s" % [key, cls, bot.element, " - the plain baseline" if plain else "", hours, str(b["on_at_start"])])
+	if full:
+		print("Fiat broken read: %s (%s as %s)%s, %.0f h from the checkpoint; on: %s" % [spec.get("id", "?"), cls, bot.element, " - the plain baseline" if plain else "", hours, str(out["on_at_start"])])
 	while sim.elapsed < t_end and Time.get_ticks_msec() - t0 < 12600000:
 		var lost: int = sim.operators_lost
-		var on_going: bool = sim.combo_on(key)
+		var on_going: bool = combo != "" and sim.combo_on(combo)
 		var t: int = bot.step(sim)
 		if t >= 0:
-			b["runs"] += 1
-			b["runs_on"] = int(b.get("runs_on", 0)) + (1 if on_going else 0)     # the build on as the run set off (the review)
+			out["runs"] += 1
+			out["runs_on"] = int(out.get("runs_on", 0)) + (1 if on_going else 0)     # the build on as the run set off (the review)
 			if sim.operators_lost > lost:
-				b["deaths"] += 1
+				out["deaths"] += 1
+			var rep = sim.last_report
+			if rep is Dictionary and rep.has("fight"):
+				var fd: float = float(rep["fight"].get("dealt", 0.0))
+				var fs: float = float(rep["fight"].get("s", 0.0))
+				var long_run: bool = int(rep.get("patrols", 0)) >= 10
+				out["patrols"] += int(rep.get("patrols", 0))
+				var how: String = "timed out" if rep.get("timed_out", false) else str(rep.get("outcome", "?"))
+				out["ends"] = out.get("ends", {})
+				out["ends"][how] = int(out["ends"].get(how, 0)) + 1
+				for k in [0, 1 if long_run else 2]:
+					dealt[k] += fd
+					fought[k] += fs
 			bot.tidy(sim)
-		if sim.elapsed >= next_mark:
+		if full and sim.elapsed >= next_mark:
 			next_mark += 1800.0
-			print("%s | reach %d | level %d | dps %.0f | hp %.0f | on %s | fiat %s | county %d" % [_hm(sim.elapsed - start_s), sim.reach, sim.level(), sim.dps(), sim.max_hp(), str(sim.combo_on(key)), str(sim.issued), sim.county_taken_count()])
+			print("%s | reach %d | level %d | dps %.0f | dealt/s %.0f | hp %.0f | on %s | fiat %s | county %d" % [_hm(sim.elapsed - start_s), sim.reach, sim.level(), sim.dps(),
+				dealt[0] / maxf(1.0, fought[0]), sim.max_hp(), str(combo != "" and sim.combo_on(combo)), str(sim.issued), sim.county_taken_count()])
 	# what it beat, and when (hours from its start)
 	var beaten := {}
 	var top_signal := 0
@@ -816,23 +963,27 @@ func _broken(hours: float, key: String, plain := false) -> void:
 	var content: Array = ["grid", "archive", "mint", "issue"]
 	for cc in Data.COUNTY:
 		content.append(str(cc["key"]))
-	b["beaten"] = beaten
-	b["missing"] = content.filter(func(k): return not beaten.has(k))
-	b["top_signal_won"] = top_signal
-	b["reach1"] = sim.reach
-	b["level1"] = sim.level()
-	b["dps1"] = snappedf(float(sim.damage_split()["total"]), 0.1)
-	b["on_at_end"] = sim.combo_on(key)
-	b["issued_worn"] = sim.issued_worn()
-	b["played_h"] = snappedf((sim.elapsed - start_s) / 3600.0, 0.01)
-	b["cut_short"] = sim.elapsed < t_end
-	b["kit"] = _kit(sim)
+	out["beaten"] = beaten
+	out["missing"] = content.filter(func(k): return not beaten.has(k))
+	out["top_signal_won"] = top_signal
+	out["reach1"] = sim.reach
+	out["level1"] = sim.level()
+	out["dps1"] = snappedf(float(sim.damage_split()["total"]), 0.1)
+	out["rate"] = snappedf(dealt[0] / maxf(1.0, fought[0]), 0.1)            # the damage really dealt a second fought
+	out["rate_long"] = snappedf(dealt[1] / maxf(1.0, fought[1]), 0.1) if fought[1] > 0.0 else -1.0
+	out["rate_short"] = snappedf(dealt[2] / maxf(1.0, fought[2]), 0.1) if fought[2] > 0.0 else -1.0
+	out["on_at_end"] = sim.combo_on(combo) if combo != "" else false
+	out["combo_on"] = Data.COMBOS.keys().filter(func(k): return sim.combo_on(str(k)))     # a hunted build that is one of the six
+	out["issued_worn"] = sim.issued_worn()
+	out["played_h"] = snappedf((sim.elapsed - start_s) / 3600.0, 0.01)
+	out["cut_short"] = sim.elapsed < t_end
+	out["kit"] = _kit(sim)
 	@warning_ignore("integer_division")
-	b["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
-	for x in bot.bought:
-		print("  %s at %s" % [x[1], _hm(x[0] - start_s)])
-	print("BROKEN " + JSON.stringify(b))
-	quit(0)
+	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	if full:
+		for x in bot.bought:
+			print("  %s at %s" % [x[1], _hm(x[0] - start_s)])
+	return out
 
 
 ## A node trained from nothing as the smoke walks a recipe: each step on its path, its points given if short.

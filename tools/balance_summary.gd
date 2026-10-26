@@ -78,6 +78,8 @@ const PARITY_BAND := 0.5        # build parity (25 Oct): every build's reach gai
 
 const BROKEN_OUTRUN := 1.5     # a broken build's reach gained, at least this times its plain baseline's (Matt, 26 Oct: "both")
 const BROKEN_MD := "res://docs/balance/broken.md"
+const HUNT_MD := "res://docs/balance/hunt.md"
+const HUNT_ROWS := 30          # a stage's table: its best this many (every build's line stays in pass/hunt-s<stage>-*.txt)
 
 
 ## The broken builds' reads (26 Oct): a BROKEN line each in pass/broken-<key>[-plain].txt.
@@ -117,7 +119,7 @@ static func broken_table(all: Array) -> Array:
 	out.append("")
 	out.append("Each from the Radio's checkpoint at level 50, the combos on for it alone, its set and unique held at the depth's tier, issued kit in the set's other slots; its plain baseline the same runner, start and pieces with the combos off. Broken when it beat everything (the Grid, the Archive, the Mint, the Issue and the County's twelve) and its reach gained is at least %.1f times its baseline's." % BROKEN_OUTRUN)
 	out.append("")
-	out.append("| Build | Class | Played | Runs with it on | Reach (plain) | Dmg/s | Beaten (hour) | Never | Deaths | |")
+	out.append("| Build | Class | Played | Runs with it on | Reach (plain) | Dealt a second fought (plain) | Beaten (hour) | Never | Deaths | |")
 	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	broken.sort_custom(func(a, b): return str(a.get("build", "")) < str(b.get("build", "")))
 	for bb in broken:
@@ -133,16 +135,70 @@ static func broken_table(all: Array) -> Array:
 		var why_not: String = "no baseline" if pgain < 0 else ("its baseline gained nothing to judge by" if pgain == 0 else ("not %.1fx its baseline" % BROKEN_OUTRUN))
 		var bt: Dictionary = bb.get("beaten", {})
 		var bt_words: Array = bt.keys().map(func(k): return "%s %.1f" % [k, float(bt[k])])
-		out.append("| %s | %s as %s | %.1f of %.1f h%s | %d of %d | %d to %d (+%d; plain %s) | %s to %s | %s | %s | %d | %s |" % [bb["build"], bb.get("class", ""), bb.get("element", ""),
+		var label: String = str(bb["build"]) + ((" = " + str(bb["id"])) if str(bb.get("id", bb["build"])) != str(bb["build"]) else "")
+		out.append("| %s | %s as %s | %.1f of %.1f h%s | %d of %d | %d to %d (+%d; plain %s) | %s (%s) | %s | %s | %d | %s |" % [label, bb.get("class", ""), bb.get("element", ""),
 			float(bb.get("played_h", 0.0)), float(bb.get("hours", 0.0)), " (cut short)" if bb.get("cut_short", false) else "",
 			int(bb.get("runs_on", 0)), int(bb.get("runs", 0)), int(bb.get("reach0", 0)), int(bb.get("reach1", 0)), gain, ("+%d" % pgain) if pgain >= 0 else "none",
-			str(int(float(bb.get("dps0", 0.0)))), str(int(float(bb.get("dps1", 0.0)))), ", ".join(bt_words) if not bt_words.is_empty() else "nothing",
+			str(int(float(bb.get("rate", 0.0)))), str(int(float(pb.get("rate", 0.0)))) if not pb.is_empty() else "none", ", ".join(bt_words) if not bt_words.is_empty() else "nothing",
 			", ".join(missing) if not missing.is_empty() else "none - everything fell", int(bb.get("deaths", 0)),
 			"BROKEN" if (missing.is_empty() and outran) else ("RED: " + ("content left" if not missing.is_empty() else "") + (" and " if not missing.is_empty() and not outran else "") + (why_not if not outran else ""))])
 	return out
 
 
+## The build hunt's stage (26 Oct, Matt: "cook some different builds up"): its HUNT lines, best first by the damage
+## really dealt a second fought - over all its runs, the long ones (ten patrols or more) and the short apart.
+static func hunt_table(stage: int) -> Array:
+	var rows: Array = []
+	var bad: Array = []
+	var dir := DirAccess.open(FOLDER)
+	if dir != null:
+		for f in dir.get_files():
+			if not (f.begins_with("hunt-s%d-" % stage) and f.ends_with(".txt")):
+				continue
+			var got := 0
+			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
+				if line.begins_with("HUNT {"):
+					var d = JSON.parse_string(line.substr(5).strip_edges())
+					if d is Dictionary:
+						rows.append(d)
+						got += 1
+			if got == 0:
+				bad.append(f.get_basename())
+	rows.sort_custom(func(x, y): return float(x.get("rate", 0.0)) > float(y.get("rate", 0.0)))
+	var out: Array = ["", "## Stage %d: %d builds%s" % [stage, rows.size(), (" (no lines from %s)" % ", ".join(bad)) if not bad.is_empty() else ""], ""]
+	if rows.is_empty():
+		return out
+	out.append("| # | Build | Dealt a second fought | Long runs | Short runs | Reach | Beaten | Deaths | Timed out | One of the six |")
+	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	for i in range(mini(HUNT_ROWS, rows.size())):
+		var r: Dictionary = rows[i]
+		var rl := float(r.get("rate_long", -1.0))
+		var rs := float(r.get("rate_short", -1.0))
+		out.append("| %d | %s | %d | %s | %s | %d to %d | %s | %d | %d of %d | %s |" % [i + 1, r.get("id", "?"), int(float(r.get("rate", 0.0))),
+			str(int(rl)) if rl >= 0.0 else "-", str(int(rs)) if rs >= 0.0 else "-", int(r.get("reach0", 0)), int(r.get("reach1", 0)),
+			", ".join(r.get("beaten", {}).keys()) if not r.get("beaten", {}).is_empty() else "-", int(r.get("deaths", 0)), int(r.get("ends", {}).get("timed out", 0)), int(r.get("runs", 0)), ", ".join(r.get("combo_on", [])) if not r.get("combo_on", []).is_empty() else "-"])
+	return out
+
+
 func _init() -> void:
+	if "hunt" in OS.get_cmdline_user_args():
+		# `-- hunt`: the build hunt (tools\balance.bat <hours> 0 hunt), to docs/balance/hunt.md - the two stages, then the
+		# finalists' 16 h reads judged as the broken builds are
+		var hl: Array = ["# The build hunt", "", "Written %s from %s." % [Time.get_datetime_string_from_system(false, true), FileAccess.get_file_as_string(FOLDER + "/broken_commit.log").strip_edges()], "",
+			"Every class's two joints, each with every set at its count or none (stage 1); stage 1's best twenty, each with every unique whose slot the set leaves free (stage 2); stage 2's best six, 16 h each from the checkpoint against a plain baseline (the finalists). Every read from the Radio's checkpoint at level 50, the recipe walked, the pieces held at the depth's tier, the runner staying out till 20 patrols or the bail. Ranked by the damage really dealt a second fought."]
+		hl.append_array(hunt_table(1))
+		hl.append_array(hunt_table(2))
+		var fin: Array = read_broken()
+		if fin.is_empty():
+			hl.append_array(["", "## The finalists", "", "No finalist reads."])
+		else:
+			hl.append_array(broken_table(fin))
+		var hf := FileAccess.open(HUNT_MD, FileAccess.WRITE)
+		hf.store_string("\n".join(hl) + "\n")
+		hf.close()
+		print("-> docs/balance/hunt.md")
+		quit(0)
+		return
 	if "broken" in OS.get_cmdline_user_args():
 		# `-- broken`: the broken builds' reads alone (tools\balance.bat <hours> 0 broken), to docs/balance/broken.md
 		var lines: Array = ["# The broken builds", "", "Written %s from %s." % [Time.get_datetime_string_from_system(false, true), FileAccess.get_file_as_string(FOLDER + "/broken_commit.log").strip_edges()]]
@@ -164,7 +220,7 @@ func _init() -> void:
 	var parity: Array = []                # the parity reads (25 Oct): a PARITY line each, their own table and row
 	var broken: Array = read_broken()     # the broken builds' reads (26 Oct): a BROKEN line each, outside the gates
 	for f in dir.get_files():
-		if f.ends_with(".txt") and f.begins_with("broken-"):
+		if f.ends_with(".txt") and (f.begins_with("broken-") or f.begins_with("hunt-")):
 			continue
 		elif f.ends_with(".txt") and f.begins_with("parity-"):
 			var got := false

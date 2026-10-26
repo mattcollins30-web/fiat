@@ -53,6 +53,14 @@ var builds := {}                  # class -> {element, keystones_first} as the b
 ## build keeps it); issued kit goes in the slots the build leaves free.
 var broken := ""
 var broken_slots: Array = []
+## A hunted build (26 Oct, Matt: "cook some different builds up"): {set, pieces, rule, gun}, held as a combo's is - the
+## set at its count ("" none), a unique by its rule ("" none), a primary of the gun type ("" the bot's own). Set, it
+## stands in for `broken`'s combo.
+var hold := {}
+## Stay out (26 Oct, Matt): a build's stacks are the run's, so a read of one keeps farming patrols - past a full pack -
+## till this many, or the bail. 0: the two patrols a normal run leaves on.
+var stay_out := 0
+const STAY_CLOCK_MIN := 20.0      # seconds of clock a stay keeps at least, the kill rate unread
 var _stood_from := -1.0
 
 
@@ -255,39 +263,80 @@ var _burnt_at := -1e9
 ## The broken build's pieces on (a read of one): the set at its count and the unique, each rolled again at the item level
 ## the runner can wear and the reach drops when the one worn falls RENEW_UNDER levels short.
 const RENEW_UNDER := 5
+func holding() -> bool:
+	return broken != "" or not hold.is_empty()
+
+
 func _hold_broken(sim) -> void:
-	var c: Dictionary = Data.COMBOS.get(broken, {})
+	var c: Dictionary = hold if not hold.is_empty() else Data.COMBOS.get(broken, {})
 	if c.is_empty():
 		return
 	var lv: int = mini(Items.max_ilvl_for(sim.level()), maxi(1, sim.reach))
 	var want := {}                             # slot -> [kind, def]
-	var st: Dictionary = Items.set_named(str(c["set"]))
-	for k in range(int(c["pieces"])):
+	var set_name := str(c.get("set", ""))
+	var st: Dictionary = Items.set_named(set_name) if set_name != "" else {}
+	for k in range(int(c.get("pieces", 0)) if not st.is_empty() else 0):
 		want[str(st["pieces"][k]["slot"])] = ["set", st["pieces"][k]]
 	var unique_slot := ""
-	for u in Data.UNIQUES:
-		if str(u.get("rule", "")) == str(c["rule"]):
+	var rule := str(c.get("rule", ""))
+	for u in (Data.UNIQUES if rule != "" else []):
+		if str(u.get("rule", "")) == rule:
 			want[str(u["slot"])] = ["unique", u]
 			unique_slot = str(u["slot"])
 			break
+	var gun := str(c.get("gun", ""))
+	if gun != "" and not want.has("Primary"):
+		want["Primary"] = ["gun", gun]
 	# kept from issued kit: the unique's slot and one real piece of the set (issued kit counts as the set's rest, Matt 26 Oct)
-	var first_set := str(st["pieces"][0]["slot"]) if str(st["pieces"][0]["slot"]) != unique_slot else str(st["pieces"][1]["slot"])
-	broken_slots = [unique_slot, first_set]
+	var first_set := ""
+	for k in range(int(c.get("pieces", 0)) if not st.is_empty() else 0):
+		if str(st["pieces"][k]["slot"]) != unique_slot:
+			first_set = str(st["pieces"][k]["slot"])
+			break
+	broken_slots = [unique_slot, first_set] + (["Primary"] if want.has("Primary") and want["Primary"][0] == "gun" else [])
 	for sl in want:
 		var worn = sim.equipped.get(sl)
 		var kind: String = want[sl][0]
 		var issued_in: bool = kind == "set" and sl != first_set and worn != null and worn.get("issued", false)
 		if issued_in:
 			continue                              # an issued piece holds the set's place here
-		var ok: bool = worn != null and ((kind == "set" and str(worn.get("set", "")) == str(c["set"])) or (kind == "unique" and str(worn.get("rule", "")) == str(c["rule"])))
-		if ok and Items.ilvl(worn) >= lv - RENEW_UNDER:
+		var fits := func(cand) -> bool:
+			return cand != null and ((kind == "set" and str(cand.get("set", "")) == set_name and str(cand.get("slot", "")) == sl) or (kind == "unique" and str(cand.get("rule", "")) == rule)
+				or (kind == "gun" and str(cand.get("slot", "")) == "Primary" and str(Items.base_of(cand).get("type", "")) == gun))
+		if fits.call(worn) and Items.ilvl(worn) >= lv - RENEW_UNDER:
+			continue
+		# one in the stash first, the best of them still fresh (the review: a roll each time threw the fitted mounts away)
+		var kept = null
+		for st_it in sim.stash:
+			if fits.call(st_it) and sim.can_wear(st_it) and Items.ilvl(st_it) >= lv - RENEW_UNDER and (kept == null or Items.score(st_it) > Items.score(kept)):
+				kept = st_it
+		if kept != null:
+			sim.equip_item(kept["id"])
+			sim._dry_memo.clear()
 			continue
 		var tier: int = sim.loot_tier_at(lv)        # the depth's tier: a set piece or a unique found there is lifted to it (26 Oct: without it, the campaign's bases)
-		var it: Dictionary = Items.roll_set_piece(str(st["name"]), want[sl][1], sim.rng, lv, tier) if kind == "set" else Items.roll_unique(want[sl][1], sim.rng, lv, tier)
+		var it: Dictionary = {}
+		if kind == "set":
+			it = Items.roll_set_piece(set_name, want[sl][1], sim.rng, lv, tier)
+		elif kind == "unique":
+			it = Items.roll_unique(want[sl][1], sim.rng, lv, tier)
+		else:
+			it = _roll_gun(sim, gun, lv, tier)
+		if it.is_empty():
+			continue
 		sim.equipped[sl] = it
 		sim._dry_memo.clear()
 	if sim.equipped.get("Primary") == null:
 		sim.equip_best("Primary")
+
+
+## A hunted build's primary: one of its type, no common, rolled at the depth's tier and the item level (a find there).
+func _roll_gun(sim, type: String, lv: int, tier: int) -> Dictionary:
+	for k in range(200):
+		var it: Dictionary = Items.roll("Primary", tier, sim.rng, 0.0, true, false, "", type, 0.33, 0, lv)
+		if str(Items.base_of(it).get("type", "")) == type and sim.can_wear(it):
+			return it
+	return {}
 
 
 ## The newest issued piece of each slot worn (a broken build's slots kept for the build).
@@ -370,6 +419,18 @@ func should_leave(sim) -> bool:
 	var m: Dictionary = sim.mission
 	if m.has("boss") and m["boss"]["alive"]:
 		return false                      # a head or the lorry still standing: the run is for him, picked over or not (the eighteenth read left the convoy at 12 of 16 with the pack "full")
+	if stay_out > 0:
+		# a build's read: farm the patrols past a full pack, the stacks are the run's (26 Oct); home when the clock left after
+		# the clear is under twice the door's gang, or the next patrol's, at the kill rate (Matt, 26 Oct: "leave on a short clock" - a time-out
+		# loses the pack, two worn pieces and the win)
+		if m.has("clock") and int(m["remaining"]) <= 0 and not m.get("way_out", false):
+			var used: float = float(m.get("clock_used", 0.0))
+			var rate: float = float(m["kills"]) / used if used > 0.0 and int(m["kills"]) >= 4 else 0.0
+			var door: float = float(sim.door_gang(m["t"])) / rate if rate > 0.0 else STAY_CLOCK_MIN
+			var next_patrol: float = float(sim.PATROL_BASE + int(m["patrols"])) / rate if rate > 0.0 else STAY_CLOCK_MIN     # the next gang, a man bigger each time (the review)
+			if float(m["clock"]) < maxf(maxf(door * 2.0, next_patrol), STAY_CLOCK_MIN):
+				return true
+		return m["patrols"] >= stay_out
 	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.crates_done(m)
 
 
@@ -428,13 +489,14 @@ func tidy(sim) -> void:
 func _tidy_kit(sim) -> void:
 	var t0 := Time.get_ticks_usec()
 	for s in Data.SLOTS:
-		sim.equip_best(s)
-	if keystones_first and TYPE_OF.has(sim.cls):
+		if not (s in broken_slots):           # a held build's slots stay its own (the review: the held gun rolled again every tidy)
+			sim.equip_best(s)
+	if keystones_first and TYPE_OF.has(sim.cls) and not ("Primary" in broken_slots):
 		_hold_the_type(sim, TYPE_OF[sim.cls])
-	if element != "":
+	if element != "" and not ("Primary" in broken_slots):
 		_hold_the_element(sim)
 	_wear_issued(sim)                         # issued kit stays on (the County wants it worn)
-	if broken != "":
+	if holding():
 		_hold_broken(sim)
 	t0 = _lap("fit", t0)
 	_train_tree(sim)
@@ -468,7 +530,7 @@ func _tidy_kit(sim) -> void:
 	_sell_spares(sim)
 	t0 = _lap("sell", t0)
 	_buy_upgrade(sim)
-	if broken != "":
+	if holding():
 		_hold_broken(sim)                      # after the shop too (the review: its equip_best took the build off)
 	_lap("shop", t0)
 
@@ -1516,7 +1578,7 @@ func _buy_upgrade(sim) -> void:
 		for s in Data.SLOTS:
 			if not (s in broken_slots):
 				sim.equip_best(s)
-		if element != "":
+		if element != "" and not ("Primary" in broken_slots):
 			_hold_the_element(sim)
 
 
