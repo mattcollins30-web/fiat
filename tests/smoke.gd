@@ -19826,6 +19826,25 @@ func _issue_checks(main) -> void:
 	var circ0: float = sim.circulation
 	var rb: float = sim.fiat_rate
 	_check(sim.burn() and sim.circulation < circ0 and sim.fiat_rate > rb, "a burn: circulation %.0f from %.0f, the rate %.3f from %.3f" % [sim.circulation, circ0, sim.fiat_rate, rb])
+	# the money's calls (Matt, 26 Oct): circulation drains, a burn takes a share, notes paid are income, held kit's
+	# fiat is the Issue's
+	sim.circulation = Data.FIAT_CIRC_SPAN
+	sim.advance(Data.CIRC_HALF_H * 3600.0)
+	_check(absf(sim.circulation - Data.FIAT_CIRC_SPAN * 0.5) < Data.FIAT_CIRC_SPAN * 0.02, "circulation didn't halve in its half-life: %.0f" % sim.circulation)
+	var cb: float = sim.circulation
+	var seal: float = Data.FX["rule/issued_seal.burn"] if sim.has_rule("issued_seal") else 1.0
+	_check(sim.burn() and absf(sim.circulation - cb * (1.0 - Data.BURN_SHARE * seal)) < 2.0, "a burn didn't take its share: %.0f from %.0f" % [sim.circulation, cb])
+	var cn: float = sim.circulation
+	var cin: float = sim.cash_in
+	sim.notes += 10
+	_check(sim.circulation > cn and sim.cash_in > cin, "notes paid after the Issue aren't income: circulation %.0f from %.0f" % [sim.circulation, cn])
+	if a_piece != null:
+		var c_hold: float = sim.circulation
+		sim.circulation = 0.0
+		var at_one: int = sim.sell_price(a_piece)
+		sim.circulation = Data.FIAT_CIRC_SPAN * 2.0
+		_check(absi(sim.sell_price(a_piece) - at_one) <= 1, "a piece held through the Issue rides prices up: ƒ%d at ×1, ƒ%d at ×3" % [at_one, sim.sell_price(a_piece)])
+		sim.circulation = c_hold
 	# prices after the Issue: never ƒ0 for what cost something, the Clinic's shelf at today's (the third review)
 	for box in Data.BASES[Data.AMMO].filter(func(b): return not b.has("damage_pct")):
 		_check(sim.ammo_price(str(box["type"])) >= 1, "after the Issue %s costs ƒ%d" % [box["name"], sim.ammo_price(str(box["type"]))])
@@ -19910,6 +19929,9 @@ func _issue_checks(main) -> void:
 		var circ_a: float = sim.circulation
 		ic._on_burn()
 		_check(is_equal_approx(sim.cash, cash_a) and is_equal_approx(sim.circulation, circ_a), "one press of Burn spent: it should ask twice")
+		sim.advance(1.0)                          # the circulation drains between the presses (the review)
+		cash_a = sim.cash
+		circ_a = sim.circulation
 		ic._on_burn()
 		_check(sim.cash < cash_a and sim.circulation < circ_a, "the second press of Burn didn't burn")
 		sim.circulation = circ_was

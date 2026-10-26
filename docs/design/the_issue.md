@@ -166,3 +166,12 @@ fiat (gate 18).
 - The stash counts in the pile: at the Issue its sale worth joins the cash and notes under the root, and each piece held
   then sells after at the pile's rate (`issue_k`), so kit bought to dodge the root doesn't.
 - The County's art manifest written, not run: tools/make_county_art_manifest.py (docs/review/manifests.md).
+
+**Matt's calls, 26 Oct (the third review, docs/review/game3.md B1, B3, B4)**
+- Circulation decays: half of it gone every CIRC_HALF_H hours of play (1 h, the pass's number), so prices drift back
+  without a burn. A burn takes BURN_SHARE (a quarter) of what's in circulation out and costs half of that, so it always
+  moves the board; the issued seal doubles the share.
+- Notes paid after the Issue are fiat income: they go through `_earn`, into circulation and the takings. The pass sets
+  a note's worth (NOTE_TINS) so a run's notes come to about its cash.
+- Kit held through the Issue sells at the Issue's prices for good (`issue_k` x the Issue's inflation, the circulation's
+  rise left out), as the cash does: it no longer rides prices up.

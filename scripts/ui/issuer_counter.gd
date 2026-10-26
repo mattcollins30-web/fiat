@@ -111,8 +111,7 @@ func show_state(s) -> void:
 	_burn_title.text = Words.ISSUED["burn"] % Fmt.money(sim.burn_price())
 	UI.fit(_burn_line, [Words.ISSUED["burn_line"] % [sim.circ_mult(), sim.circ_mult_after_burn()], "Prices ×%.2f → ×%.2f" % [sim.circ_mult(), sim.circ_mult_after_burn()]])
 	_burn.disabled = not sim.can_burn()
-	var fp := "%d|%d" % [sim.burn_price(), int(sim.circulation)]
-	var armed: bool = _burn_arm.holds("burn", fp) and sim.can_burn()
+	var armed: bool = _burn_arm.holds("burn") and sim.can_burn()     # keyed on the burn alone: the circulation drains every frame (the review)
 	if not sim.burn_moves():
 		UI.fit(_burn_line, [Words.ISSUED["burn_nothing"]])
 	if armed:
@@ -134,7 +133,7 @@ func _on_burn() -> void:
 	if sim == null or not sim.can_burn():
 		return
 	_shown = ""
-	if not _burn_arm.press("burn", "%d|%d" % [sim.burn_price(), int(sim.circulation)]):
+	if not _burn_arm.press("burn"):
 		show_state(sim)
 		return
 	if sim.burn():

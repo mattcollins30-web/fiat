@@ -101,7 +101,11 @@ var notes: int:
 		return int(floor(cash / note_price())) if issued else _notes
 	set(v):
 		if issued:
-			cash += float(v - (int(floor(cash / note_price())))) * note_price()     # not into circulation: a note reads back as paid (the reviewer)
+			var d: float = float(v - (int(floor(cash / note_price())))) * note_price()
+			if d > 0.0:
+				_earn(d)                          # notes paid after the Issue are fiat income, into circulation (Matt, 26 Oct: "count them as income")
+			else:
+				cash += d                         # spent: a note reads back as paid (the reviewer)
 		else:
 			_notes = v
 ## The Issue (25 Oct, Matt: "all currency then changes to fiat from that point forward"): one way, at the first Issuer
@@ -1079,7 +1083,8 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(Items.worth(it) * float(it.get("issue_k", 1.0)) * inflation() * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
+	var inf: float = inflation() / circ_mult() if it.has("issue_k") and issued else inflation()     # held through the Issue: at the Issue's prices for good, as the cash (Matt, 26 Oct)
+	return int(round(Items.worth(it) * float(it.get("issue_k", 1.0)) * inf * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -1147,9 +1152,8 @@ func issue() -> void:
 	var k: float = whole / pile if pile > 0.0 else Data.FIAT_SCALE     # a tin's fiat at the Issue, the pile's
 	var fiat: float = money * k
 	var hard: float = clampf(k / Data.FIAT_SCALE, 0.0, 1.0)            # the stash sells at the pile's rate, not the day's
-	if hard < 1.0:
-		for it in kit_held:
-			it["issue_k"] = hard
+	for it in kit_held:
+		it["issue_k"] = hard                   # every piece held: at the pile's rate, and at the Issue's prices for good (the review: a small pile's kit went unstamped)
 	issue_moment = {"pile": int(round(cash)), "notes": _notes, "stash": int(round(held)), "fiat": int(round(fiat))}
 	_notes = 0
 	issued = true
@@ -1200,7 +1204,7 @@ func _rate_after_sale(x: float) -> void:
 
 ## Burn fiat at the Issuer's counter: out of circulation (twice the sum, the Seal four times), the rate up a little.
 func burn_price() -> int:
-	return maxi(1, _inf(Data.BURN_TINS))
+	return maxi(1, int(round(maxf(0.0, circulation) * Data.BURN_SHARE / Data.BURN_MULT)))     # a share of what's about (Matt, 26 Oct)
 
 
 func can_burn() -> bool:
@@ -7254,6 +7258,8 @@ func advance(seconds: float) -> void:
 	_roll_weather()
 	if issued and fiat_rate != 1.0:
 		fiat_rate = move_toward(fiat_rate, 1.0, Data.RATE_RECOVER_H * seconds / 3600.0)     # the rate drifts back
+	if issued and circulation > 0.0:
+		circulation *= pow(0.5, seconds / (Data.CIRC_HALF_H * 3600.0))     # the fiat about drains, and the prices drift back (Matt, 26 Oct)
 	if hp > max_hp():
 		hp = max_hp()                        # the max can drop when kit comes off
 	var left := seconds
@@ -9372,6 +9378,14 @@ func _extract() -> void:
 	m["cash"] += mint_tins()                                         # the mint (18 Oct): the town's worth pays on every run home
 	_bank_materials(m)
 	_earn(float(m["cash"]))
+	var run_notes: int = int(m.get("notes", 0))
+	if has_rule("lorrys_load"):
+		run_notes += maxi(0, capacity_raw() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
+	if has_rule("managers_pen"):
+		run_notes *= Data.FX["rule/managers_pen"]
+	if has_rule("drivers_log"):
+		run_notes *= Data.FX["rule/drivers_log"]
+	notes += run_notes                        # before the takings: after the Issue the notes are this run's income (the review)
 	var base0: float = a_gamble_base()
 	gamble_base = clampf(lerp(base0, _takings_run, 0.25), base0 * (1.0 - Data.GAMBLE_STEP), base0 * (1.0 + Data.GAMBLE_STEP))     # before takings moves: the first run starts from its stand-in
 	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
@@ -9380,14 +9394,6 @@ func _extract() -> void:
 	var sv: Dictionary = m.get("salvage", {})
 	for kind in sv:
 		salvage[kind] = int(salvage.get(kind, 0)) + int(sv[kind])      # and its salvage (9 Oct)
-	var run_notes: int = int(m.get("notes", 0))
-	if has_rule("lorrys_load"):
-		run_notes += maxi(0, capacity_raw() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
-	if has_rule("managers_pen"):
-		run_notes *= Data.FX["rule/managers_pen"]
-	if has_rule("drivers_log"):
-		run_notes *= Data.FX["rule/drivers_log"]
-	notes += run_notes
 	m["found"] = apply_loot_rules(m["found"])    # the loot filter (24 Oct): keep, highlight or scrap as it comes in - first, so a kept common skips the Bins
 	if yard_has("bins"):
 		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
