@@ -6959,3 +6959,8 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   level 160, past most builds' reach (41-80); no read reached the County. After the Issue that read earned 25-30M fiat a
   half hour and hit the price cap in an hour. Bot fixes from it: no issued kit it can't wear (140 bought for a level-1
   runner), a burn an hour (2,380). The Mint's level is Matt's call before any further pass. Smoke 252 green.
+- Matt's calls after the fifth pass (26 Oct): the Mint at a set level 60 (a level more a win), not past the reach; the
+  issued cap's rule kept (the Fence never under the face rate); the kit counted in the Issue's pile - the stash, the
+  runner's and the crew's worn kit at their sale worth, each piece selling after at the pile's rate. The County's art
+  manifest written (tools/make_county_art_manifest.py: 4-job test, 54-job set); the test run (07:55, $0.46) for Matt's
+  eye in the frame. Smoke 253 green.

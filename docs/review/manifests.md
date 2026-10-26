@@ -11,6 +11,7 @@ docs/art/handoff/art.flag, run by a Claude Code session on Matt's machine) or by
 |---|---|---|---|
 | tools/pixellab_chase_art_manifest.json | 23 | The Lineman's Tool Bag, the Registrar's Stamp, the Issuer's Revolver; 20 web nodes (Defib, Cut throat, Tear gas, the Recruit's fillers...) | about $1.84; flagged again 25 Oct 13:43 (docs/art/handoff/art.flag): the runner is a Claude Code session on Matt's machine, closed the first time |
 | tools/pixellab_order_glyphs_manifest.json | 9 | The Grid's key, ledger seals, a true fiat note; the materials paving, glass, ledgers, cable drums, army kit, fuses | the six materials show a plain cell today |
+| tools/pixellab_county_test_manifest.json, then tools/pixellab_county_manifest.json (26 Oct, tools/make_county_art_manifest.py, seeds 106000-106049) | 4 + 54 | The County: twelve places' fight plate and wall (art/fight_county/) and map card (art/places/), the four heads (portrait, three figures), the six pieces of issued kit | about $4.60 at $0.08 a job; the test (the Truck Stop's pair, the Bailiff's face and stand) first; RunView needs a line to read art/fight_county/ on a County run |
 | tools/pixellab_doom_test_manifest.json | 3 | the Parade "deeper" and "way out" plates | an old test; drop it unless the idea comes back |
 
 Partly run, with leftovers the game no longer reads (superseded): pixellab_campaign (11 of 16 unmade: ui_new room

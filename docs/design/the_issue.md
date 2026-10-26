@@ -159,8 +159,10 @@ County place or the Mint before the Issue at FIRST, the rest at PUSH); buys issu
 hand and wears it; burns when prices pass x1.5. The balance read reports the Issue's hour, the County's firsts and the
 fiat (gate 18).
 
-**Questions for Matt**
-- Kit bought before the Issue dodges the square root (buy the Fence's stock, sell it after). Start the rate at RATE_MIN
-  on the day, or count the stash's worth in the pile?
-- The cap's rule was approved as "the rate never falls on a run"; built as "the Fence never pays you under the face
-  rate" (the rate only moves at camp, so the first wording did nothing). Keep?
+**Matt's calls, 26 Oct (after the fifth pass)**
+- The Mint at a set level, 60 (`"level"` in its PINNACLES entry; a level more a win), not the reach + 6 + the worth:
+  the pass had it near level 160 and the Issue on 1 read of 24. The Grid and the Archive keep their reach-based levels.
+- The cap's rule stays as built: the Fence never pays you under the face rate.
+- The stash counts in the pile: at the Issue its sale worth joins the cash and notes under the root, and each piece held
+  then sells after at the pile's rate (`issue_k`), so kit bought to dodge the root doesn't.
+- The County's art manifest written, not run: tools/make_county_art_manifest.py (docs/review/manifests.md).

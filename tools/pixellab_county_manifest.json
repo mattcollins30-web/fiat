@@ -1,0 +1,1024 @@
+{
+ "_readme": [
+  "FIAT, THE COUNTY'S ART: THE SET (26 Oct): 54 jobs - twelve places (plate, wall, card), four heads (portrait, three figures), six pieces of issued kit. The test's 4 are skipped as made.",
+  "Run: tools\\art.bat county   (the dry run first, then it asks; one that came out wrong: ++ --only <name> ++ --force)",
+  "Fight pairs to art/fight_county/<place>_plate.png 744x320 and _cover.png 744x256, styled on the host site's pair; map cards to art/places/<place>.png 496x296; the heads' portraits to art/people/, their figures to art/fight/head_<head>_stand/_fire/_down.png; issued kit to art/items/issued_<piece>.png. Nothing live is overwritten.",
+  "Code once it's in (Matt's go): RunView reads art/fight_county/<place> on a County run. The cards, the heads and the items are read as they land.",
+  "Regenerate with python3 tools/make_county_art_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_county/the_toll_plaza_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a motorway toll plaza: a row of booths under a long concrete canopy, the barriers down, cones and a jack-knifed lorry trailer across two lanes, the tarmac wet, a lane of sodium lamps going off into the haze. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Toll Plaza's fight, the plate (styled on its host's, art/fight_new/the_services_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_toll_plaza_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_services_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of orange plastic traffic barriers filled with water, linked end to end, scuffed and dirty, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Toll Plaza's fight, the wall (styled on art/fight_walls/the_services_cover.png)"
+  },
+  {
+   "out": "art/places/the_toll_plaza.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106002,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_services.png",
+   "description": "Pixel art, a wide view of a motorway toll plaza at dusk, a long concrete canopy over a row of booths, the barriers down, a single lorry stopped at them, sodium lamps along the empty carriageway. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Toll Plaza (county.gd; today the host's, art/places/the_services.png)"
+  },
+  {
+   "out": "art/fight_county/the_distribution_centre_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_retail_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down the inside of a vast distribution warehouse: high steel racking of shrink-wrapped pallets in rows, a forklift parked across an aisle, roller doors along the left wall with one half up onto a grey loading yard, strip lights hanging, plain cardboard boxes with no labels. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Distribution Centre's fight, the plate (styled on its host's, art/fight_new/the_retail_park_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_distribution_centre_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_retail_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a stack of shrink-wrapped pallets of plain cardboard boxes, the film torn on one side, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Distribution Centre's fight, the wall (styled on art/fight_walls/the_retail_park_cover.png)"
+  },
+  {
+   "out": "art/places/the_distribution_centre.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106005,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_retail_park.png",
+   "description": "Pixel art, a wide view of a vast grey distribution warehouse beside a motorway at dusk, a row of loading bays, trailers backed up to them, floodlights on tall poles. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Distribution Centre (county.gd; today the host's, art/places/the_retail_park.png)"
+  },
+  {
+   "out": "art/places/the_truck_stop.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106008,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_services.png",
+   "description": "Pixel art, a wide view of a truck stop at dusk, a low cafe with lit windows beside a lorry park of parked cabs and trailers in plain faded paint with no lettering on them, a fuel canopy, rain on the tarmac. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Truck Stop (county.gd; today the host's, art/places/the_services.png)"
+  },
+  {
+   "out": "art/fight_county/the_container_port_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a corridor between stacks of shipping containers at a port, four high in faded reds, blues and greens, a straddle carrier parked at the end, a gantry crane over the quay beyond, puddles on the concrete, the containers plain with no writing on them. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Container Port's fight, the plate (styled on its host's, art/fight_new/the_barracks_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_container_port_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_barracks_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a line of concrete port barriers with a coil of mooring rope over them, rust streaks down the faces, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Container Port's fight, the wall (styled on art/fight_walls/the_barracks_cover.png)"
+  },
+  {
+   "out": "art/places/the_container_port.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106011,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_barracks.png",
+   "description": "Pixel art, a wide view of a container port at dusk, ship-to-shore gantry cranes over a quay, stacks of plain coloured containers, a ship tied up, sodium lights reflected in the water. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Container Port (county.gd; today the host's, art/places/the_barracks.png)"
+  },
+  {
+   "out": "art/fight_county/the_ferry_terminal_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_pleasure_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a ferry terminal's departure hall: rows of joined plastic seats, a closed cafe kiosk with its shutter down, a glass wall onto the linkspan and a ferry's open bow door beyond, luggage trolleys abandoned, a long check-in desk on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Ferry Terminal's fight, the plate (styled on its host's, art/fight_new/the_pleasure_park_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_ferry_terminal_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_pleasure_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of joined plastic airport-style seats knocked onto their backs, a holdall caught under them, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Ferry Terminal's fight, the wall (styled on art/fight_walls/the_pleasure_park_cover.png)"
+  },
+  {
+   "out": "art/places/the_ferry_terminal.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106014,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_pleasure_park.png",
+   "description": "Pixel art, a wide view of a ferry terminal at dusk, a low glass building beside the water, a ferry tied up with its bow door open onto a lit linkspan, gulls over the car lanes. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Ferry Terminal (county.gd; today the host's, art/places/the_pleasure_park.png)"
+  },
+  {
+   "out": "art/fight_county/the_customs_shed_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106015,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/shopping_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a customs examination shed: long steel benches with opened cases and boxes laid out on them, a big X-ray tunnel for parcels, a counting table stacked with seized goods and ledgers, a caged store on the left, strip lights, a roller door up onto the quay. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Customs Shed's fight, the plate (styled on its host's, art/fight_new/shopping_centre_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_customs_shed_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106016,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/shopping_centre_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a long steel examination bench, a cardboard box and an open suitcase on its edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Customs Shed's fight, the wall (styled on art/fight_walls/shopping_centre_cover.png)"
+  },
+  {
+   "out": "art/places/the_customs_shed.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106017,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/shopping_centre.png",
+   "description": "Pixel art, a wide view of a customs shed at dusk on a dock, a long corrugated building with a lit roller door, a lorry inside being unloaded, a security gate and a guard hut. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Customs Shed (county.gd; today the host's, art/places/shopping_centre.png)"
+  },
+  {
+   "out": "art/fight_county/the_golf_club_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106018,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/top_farm_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a golf club's terrace and the eighteenth green beyond: patio tables with parasols folded, a putting flag leaning, golf buggies parked in a row, the clubhouse's glass doors on the left, a sand bunker and the fairway going away into mist, the grass cut short and neat. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Golf Club's fight, the plate (styled on its host's, art/fight_new/top_farm_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_golf_club_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106019,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/top_farm_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of parked golf buggies side by side, their white roofs dirty, a golf bag in the back of one, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Golf Club's fight, the wall (styled on art/fight_walls/top_farm_cover.png)"
+  },
+  {
+   "out": "art/places/the_golf_club.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106020,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/top_farm.png",
+   "description": "Pixel art, a wide view of a golf club at dusk, a long low clubhouse with lit windows and a terrace, a rolling fairway and a flag on the green, a high fence along the road. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Golf Club (county.gd; today the host's, art/places/top_farm.png)"
+  },
+  {
+   "out": "art/fight_county/the_gated_close_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106021,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/ransacked_streets_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a private gated close of big new houses: block-paved drive, matching double garages, neat hedges and lollipop trees, a black wrought-iron gate standing open on the left, a security camera on a post, a parked 4x4 with its door open, everything tidy and quiet. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Gated Close's fight, the plate (styled on its host's, art/fight_new/ransacked_streets_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_gated_close_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106022,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/ransacked_streets_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a low wall of reconstituted stone with a hedge along its top and a stone ball on the gate pier, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Gated Close's fight, the wall (styled on art/fight_walls/ransacked_streets_cover.png)"
+  },
+  {
+   "out": "art/places/the_gated_close.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106023,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/ransacked_streets.png",
+   "description": "Pixel art, a wide view of a gated close at dusk, six large new houses round a turning circle, black iron gates and a gatehouse with a light on, cameras on posts. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Gated Close (county.gd; today the host's, art/places/ransacked_streets.png)"
+  },
+  {
+   "out": "art/fight_county/the_manor_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106024,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_hospital_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a country manor's long hall: dark wood panelling, oil paintings with their faces blank and dark, a huge stone fireplace, a long dining table piled with ledgers, deeds and boxed papers, a grand staircase on the left going up into the dark, a chandelier unlit. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manor's fight, the plate (styled on its host's, art/fight_new/the_hospital_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_manor_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106025,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_hospital_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the side of a long heavy oak dining table tipped onto its edge, its carved legs towards the viewer, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Manor's fight, the wall (styled on art/fight_walls/the_hospital_cover.png)"
+  },
+  {
+   "out": "art/places/the_manor.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106026,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_hospital.png",
+   "description": "Pixel art, a wide view of a country manor at dusk, a big stone house at the end of a long drive between trees, a few lit windows, a line of parked cars on the gravel. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Manor (county.gd; today the host's, art/places/the_hospital.png)"
+  },
+  {
+   "out": "art/fight_county/the_counting_house_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106027,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a counting house's long room: rows of clerks' desks with adding machines and stacks of banknotes bound in paper bands, ledgers open, green-shaded lamps, a tall window of small panes, a barred cashier's cage on the left, the notes plain grey-green with no faces or numbers. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Counting House's fight, the plate (styled on its host's, art/fight_new/the_bank_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_counting_house_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106028,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of heavy clerks' desks pushed together, ledgers and bound bundles of plain grey-green notes on top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Counting House's fight, the wall (styled on art/fight_walls/the_bank_cover.png)"
+  },
+  {
+   "out": "art/places/the_counting_house.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106029,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_bank.png",
+   "description": "Pixel art, a wide view of a counting house at dusk, a heavy stone building with tall barred windows lit from inside, guards at a door, a van backed up to it. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Counting House (county.gd; today the host's, art/places/the_bank.png)"
+  },
+  {
+   "out": "art/fight_county/the_bullion_vault_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106030,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a bullion vault: a round steel vault door standing open on the left, steel cages of empty shelving behind mesh, trolleys for gold bars standing empty, a single strip light, a concrete floor painted with plain lines, everything grey and steel and nothing of worth on it. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Bullion Vault's fight, the plate (styled on its host's, art/fight_new/the_bank_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_bullion_vault_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106031,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of empty steel bullion trolleys pushed together, their flat beds scuffed and bare, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Bullion Vault's fight, the wall (styled on art/fight_walls/the_bank_cover.png)"
+  },
+  {
+   "out": "art/places/the_bullion_vault.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106032,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_bank.png",
+   "description": "Pixel art, a wide view of a bullion vault's building at dusk, a windowless concrete block behind a double fence and razor wire, a heavy steel gate, floodlights and a guard tower. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Bullion Vault (county.gd; today the host's, art/places/the_bank.png)"
+  },
+  {
+   "out": "art/fight_county/the_treasury_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106033,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across the Treasury's great hall: marble floor and columns, a long counter with brass grilles, a raised desk on a dais at the back under a tall arched window, printing plates and stacks of new notes on a table, a pair of great doors open on the left, the notes plain grey-green with no faces or numbers. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Treasury's fight, the plate (styled on its host's, art/fight_new/the_bank_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_treasury_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106034,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a long marble counter with brass grilles along its top, a stack of plain grey-green note bundles on it, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Treasury's fight, the wall (styled on art/fight_walls/the_bank_cover.png)"
+  },
+  {
+   "out": "art/places/the_treasury.png",
+   "endpoint": "generate-image-v2",
+   "width": 496,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 106035,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_bank.png",
+   "description": "Pixel art, a wide view of the Treasury at dusk, a grand pillared stone building on a square, a flag on a pole, lit high windows, barricades and armoured vans across its steps. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "_where": "the County board's card for The Treasury (county.gd; today the host's, art/places/the_bank.png)"
+  },
+  {
+   "out": "art/fight/head_the_bailiff_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106037,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_bailiff.png",
+   "reference_images": [
+    "res://art/people/the_bailiff.png",
+    "res://art/fight/head_the_bailiff_stand.png"
+   ],
+   "description": "The same person as the reference image: a broad shaven-headed bailiff in his fifties in a plain hi-vis tabard with no lettering or badge over a stab vest, a body camera on his chest, a ring of keys on his belt, holding a pump shotgun across his body, aiming straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_bailiff: firing at you"
+  },
+  {
+   "out": "art/fight/head_the_bailiff_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106037,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_bailiff.png",
+   "reference_images": [
+    "res://art/people/the_bailiff.png",
+    "res://art/fight/head_the_bailiff_stand.png"
+   ],
+   "description": "The same person as the reference image: a broad shaven-headed bailiff in his fifties in a plain hi-vis tabard with no lettering or badge over a stab vest, a body camera on his chest, a ring of keys on his belt, holding a pump shotgun across his body, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_bailiff: beaten, going down"
+  },
+  {
+   "out": "art/people/the_auditor.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 106038,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/fence.png",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a thin precise woman in her forties, auditor, reading glasses on a chain, a grey suit and a lanyard with a blank card, a pencil behind her ear, a face that has already found the mistake. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+   "_where": "The Auditor's face: the County board, the fight's head"
+  },
+  {
+   "out": "art/fight/head_the_auditor_stand.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106039,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_auditor.png",
+   "reference_images": [
+    "res://art/people/the_auditor.png"
+   ],
+   "description": "a thin precise woman in her forties in a grey suit and reading glasses on a chain, a lanyard, a ledger under one arm, holding a compact machine pistol, standing still. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_auditor: standing"
+  },
+  {
+   "out": "art/fight/head_the_auditor_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106039,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_auditor.png",
+   "reference_images": [
+    "res://art/people/the_auditor.png",
+    "res://art/fight/head_the_auditor_stand.png"
+   ],
+   "description": "The same person as the reference image: a thin precise woman in her forties in a grey suit and reading glasses on a chain, a lanyard, a ledger under one arm, holding a compact machine pistol, aiming straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_auditor: firing at you"
+  },
+  {
+   "out": "art/fight/head_the_auditor_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106039,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_auditor.png",
+   "reference_images": [
+    "res://art/people/the_auditor.png",
+    "res://art/fight/head_the_auditor_stand.png"
+   ],
+   "description": "The same person as the reference image: a thin precise woman in her forties in a grey suit and reading glasses on a chain, a lanyard, a ledger under one arm, holding a compact machine pistol, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_auditor: beaten, going down"
+  },
+  {
+   "out": "art/people/the_collector.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 106040,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/fence.png",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a heavy man in his sixties, debt collector, a camel overcoat over a cardigan, gold rings, a soft voice and hard eyes, a little notebook of names in his top pocket. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+   "_where": "The Collector's face: the County board, the fight's head"
+  },
+  {
+   "out": "art/fight/head_the_collector_stand.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106041,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_collector.png",
+   "reference_images": [
+    "res://art/people/the_collector.png"
+   ],
+   "description": "a heavy man in his sixties in a camel overcoat over a cardigan, gold rings, a notebook in his top pocket, holding a revolver low at his side, standing still. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_collector: standing"
+  },
+  {
+   "out": "art/fight/head_the_collector_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106041,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_collector.png",
+   "reference_images": [
+    "res://art/people/the_collector.png",
+    "res://art/fight/head_the_collector_stand.png"
+   ],
+   "description": "The same person as the reference image: a heavy man in his sixties in a camel overcoat over a cardigan, gold rings, a notebook in his top pocket, holding a revolver low at his side, aiming straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_collector: firing at you"
+  },
+  {
+   "out": "art/fight/head_the_collector_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106041,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_collector.png",
+   "reference_images": [
+    "res://art/people/the_collector.png",
+    "res://art/fight/head_the_collector_stand.png"
+   ],
+   "description": "The same person as the reference image: a heavy man in his sixties in a camel overcoat over a cardigan, gold rings, a notebook in his top pocket, holding a revolver low at his side, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_collector: beaten, going down"
+  },
+  {
+   "out": "art/people/the_treasurer.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 106042,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/fence.png",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a tall cold woman in her fifties, the Treasurer, an immaculate black suit, a chain of office, silver hair cut short, a face that decides what money is worth. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+   "_where": "The Treasurer's face: the County board, the fight's head"
+  },
+  {
+   "out": "art/fight/head_the_treasurer_stand.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106043,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_treasurer.png",
+   "reference_images": [
+    "res://art/people/the_treasurer.png"
+   ],
+   "description": "a tall woman in her fifties in an immaculate black suit with a chain of office, short silver hair, a riot shield on one arm and a short rifle held in the other, standing still. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_treasurer: standing"
+  },
+  {
+   "out": "art/fight/head_the_treasurer_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106043,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_treasurer.png",
+   "reference_images": [
+    "res://art/people/the_treasurer.png",
+    "res://art/fight/head_the_treasurer_stand.png"
+   ],
+   "description": "The same person as the reference image: a tall woman in her fifties in an immaculate black suit with a chain of office, short silver hair, a riot shield on one arm and a short rifle held in the other, aiming straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_treasurer: firing at you"
+  },
+  {
+   "out": "art/fight/head_the_treasurer_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106043,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_treasurer.png",
+   "reference_images": [
+    "res://art/people/the_treasurer.png",
+    "res://art/fight/head_the_treasurer_stand.png"
+   ],
+   "description": "The same person as the reference image: a tall woman in her fifties in an immaculate black suit with a chain of office, short silver hair, a riot shield on one arm and a short rifle held in the other, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_treasurer: beaten, going down"
+  },
+  {
+   "out": "art/items/issued_rifle.png",
+   "endpoint": "generate-image-v2",
+   "width": 192,
+   "height": 64,
+   "no_background": true,
+   "seed": 106044,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_01.png",
+   "description": "A realistic painted pixel-art still-life of a single long heavy anti-materiel rifle, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, olive drab, a big muzzle brake, a bipod folded, a small stamped brass plate on the stock with no readable marks. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued rifle's picture: the Issuer's counter, the stash, the kit"
+  },
+  {
+   "out": "art/items/issued_sidearm.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 106045,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_01.png",
+   "description": "A realistic painted pixel-art still-life of a single heavy black service pistol, seen exactly side-on with the muzzle pointing left, a small stamped brass plate on the grip with no readable marks. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued sidearm's picture: the Issuer's counter, the stash, the kit"
+  },
+  {
+   "out": "art/items/issued_cap.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 106046,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single olive command helmet with a visor folded up, a small stamped brass plate riveted to the front with no readable marks. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued cap's picture: the Issuer's counter, the stash, the kit"
+  },
+  {
+   "out": "art/items/issued_plate.png",
+   "endpoint": "generate-image-v2",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 106047,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single heavy olive armour suit hung flat as if on a hook, seen from the front, thick plates in the chest and shoulders, a stamped brass plate stitched on with no readable marks. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued plate's picture: the Issuer's counter, the stash, the kit"
+  },
+  {
+   "out": "art/items/issued_webbing.png",
+   "endpoint": "generate-image-v2",
+   "width": 192,
+   "height": 192,
+   "no_background": true,
+   "seed": 106048,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single olive command chest rig laid flat, pouches in rows, a stamped brass plate stitched to the front with no readable marks. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued webbing's picture: the Issuer's counter, the stash, the kit"
+  },
+  {
+   "out": "art/items/issued_seal.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 106049,
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_04.png",
+   "description": "A realistic painted pixel-art still-life of a single heavy gold seal stamp with a short turned handle, its face plain and smooth with no design, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, no lettering.",
+   "_where": "Issued seal's picture: the Issuer's counter, the stash, the kit"
+  }
+ ]
+}

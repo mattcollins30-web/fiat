@@ -1,0 +1,86 @@
+{
+ "_readme": [
+  "FIAT, THE COUNTY'S ART: THE TEST (26 Oct): the Truck Stop's pair and the Bailiff (portrait, standing). Judge them in the frame before the set.",
+  "Run: tools\\art.bat county_test   (the dry run first, then it asks; one that came out wrong: ++ --only <name> ++ --force)",
+  "Fight pairs to art/fight_county/<place>_plate.png 744x320 and _cover.png 744x256, styled on the host site's pair; map cards to art/places/<place>.png 496x296; the heads' portraits to art/people/, their figures to art/fight/head_<head>_stand/_fire/_down.png; issued kit to art/items/issued_<piece>.png. Nothing live is overwritten.",
+  "Code once it's in (Matt's go): RunView reads art/fight_county/<place> on a County run. The cards, the heads and the items are read as they land.",
+  "Regenerate with python3 tools/make_county_art_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_county/the_truck_stop_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 106006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a motorway truck stop's drivers' cafe: formica tables and fixed stools, a counter with a tea urn and a glass cake stand, a bailiff's clipboard with a blank sheet and a box of confiscated keys on the counter, the window onto a lorry park full of parked cabs in plain faded paint with no lettering on them, a door open on the left onto the dark. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The painting fills the whole canvas right to all four edges: no border, no frame, no margin, no empty space around it. Any signs, boards or fascias are blank, with no lettering on them. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Truck Stop's fight, the plate (styled on its host's, art/fight_new/the_services_plate.png)"
+  },
+  {
+   "out": "art/fight_county/the_truck_stop_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 106007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_walls/the_services_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a long cafe counter in chipped formica, a tea urn and stacked mugs on top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "The Truck Stop's fight, the wall (styled on art/fight_walls/the_services_cover.png)"
+  },
+  {
+   "out": "art/people/the_bailiff.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 106036,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/fence.png",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a broad bailiff in his fifties, shaven head, a plain hi-vis tabard with no lettering or badge over a stab vest, a body camera on his chest, a clipboard of blank papers and a ring of other people's keys, a face that has heard every excuse. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+   "_where": "The Bailiff's face: the County board, the fight's head"
+  },
+  {
+   "out": "art/fight/head_the_bailiff_stand.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "single": true,
+   "seed": 106037,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/the_bailiff.png",
+   "reference_images": [
+    "res://art/people/the_bailiff.png"
+   ],
+   "description": "a broad shaven-headed bailiff in his fifties in a plain hi-vis tabard with no lettering or badge over a stab vest, a body camera on his chest, a ring of keys on his belt, holding a pump shotgun across his body, standing still. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted palette.",
+   "_where": "the_bailiff: standing"
+  }
+ ]
+}

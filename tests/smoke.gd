@@ -19778,9 +19778,26 @@ func _issue_checks(main) -> void:
 	sim.cash = 48213906.0
 	sim._notes = 1240
 	var inf0: float = sim.inflation()
-	var pile: float = 48213906.0 + 1240.0 * Data.NOTE_TINS * inf0
+	var money: float = 48213906.0 + 1240.0 * Data.NOTE_TINS * inf0
+	var held := 0.0
+	var a_piece = null
+	var worn_one: Dictionary = Items.roll("Armour", 5, RandomNumberGenerator.new()) if sim.equipped.get("Armour") == null else {}
+	if not worn_one.is_empty():
+		sim.equipped["Armour"] = worn_one     # the fixture wears a piece through the Issue
+	for it in sim._kit_held():
+		held += float(sim.sell_price(it))
+		if a_piece == null and sim.sell_price(it) > 0 and not sim.stash.has(it):
+			a_piece = it                     # a worn one: taken off after, it sells at the pile's rate too (the review)
+	_check(a_piece != null, "the Issue's fixture: no worn piece to sell after it")
+	var tins_was: int = sim.sell_price(a_piece) if a_piece != null else 0
+	var pile: float = money + held
+	var want: float = money * Data.FIAT_PILE_K * sqrt(pile) / pile
 	sim.issue()
-	_check(sim.issued and absf(sim.cash - Data.FIAT_PILE_K * sqrt(pile)) < 1.0 and sim._notes == 0, "the Issue: ƒ%.0f from a pile of %.0f (want ƒ%.0f), notes %d" % [sim.cash, pile, Data.FIAT_PILE_K * sqrt(pile), sim._notes])
+	_check(sim.issued and absf(sim.cash - want) < 1.0 and sim._notes == 0, "the Issue: ƒ%.0f from a pile of %.0f with the stash's %.0f (want ƒ%.0f), notes %d" % [sim.cash, pile, held, want, sim._notes])
+	if a_piece != null:
+		var hard: float = Data.FIAT_PILE_K * sqrt(pile) / pile
+		var expect: float = tins_was * hard     # its tins at the pile's rate, as the cash went
+		_check(absf(float(sim.sell_price(a_piece)) - expect) <= maxf(2.0, expect * 0.02), "a piece held through the Issue sells for ƒ%d, not the pile's ƒ%.0f" % [sim.sell_price(a_piece), expect])
 	_check(is_equal_approx(sim.inflation(), inf0 * Data.FIAT_SCALE), "fiat prices don't start from the Issue's: ×%.6f against ×%.6f" % [sim.inflation(), inf0 * Data.FIAT_SCALE])
 	var big: float = Data.FIAT_PILE_K * sqrt(pile * 10.0)
 	_check(big < sim.cash * 3.5, "a pile ten times bigger isn't hard on it: ƒ%.0f against ƒ%.0f" % [big, sim.cash])
@@ -19842,6 +19859,7 @@ func _issue_checks(main) -> void:
 	main.refresh()
 	_check(not Fmt.fiat, "the money still reads fiat on a camp before the Issue")
 	_check(not sim.issued and not main._fence._tabs[4].visible, "the counter's tab stayed up on a camp before the Issue")
+	_check(sim.order_level("mint") == int(Data.pinnacle("mint")["level"]) + int(sim.order_beaten.get("mint", 0)), "the Mint's level isn't its set one: %d" % sim.order_level("mint"))
 	print("the Issue ok: hard on piles, prices by the circulation, notes as fiat, the rate, the burn, six issued pieces, the card, the counter")
 
 

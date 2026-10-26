@@ -60,7 +60,8 @@ func _init(rect: Rect2) -> void:
 			art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 			art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			art.texture = UI.place_texture(str(Data.TIERS[int(Data.county(k)["site"])]["name"]))     # the host's plate, the County's to come
+			var own: Texture2D = UI.place_texture(str(Data.county(k)["place"]))     # its own card once drawn (tools/make_county_art_manifest.py)
+			art.texture = own if own != null else UI.place_texture(str(Data.TIERS[int(Data.county(k)["site"])]["name"]))     # till then the host's
 			p.add_child(art)
 			c["art"] = art
 			c["place"] = UI.label(p, Rect2(PAD, ART_H - 40, inner, 36), "", "SemiBold", Pal.FLOOR + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)

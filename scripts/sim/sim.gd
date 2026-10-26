@@ -1079,7 +1079,7 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(Items.worth(it) * inflation() * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
+	return int(round(Items.worth(it) * float(it.get("issue_k", 1.0)) * inflation() * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -1131,15 +1131,26 @@ func note_price() -> float:
 func issue() -> void:
 	if issued:
 		return
-	var pile: float = maxf(0.0, cash) + float(_notes) * Data.NOTE_TINS * inflation()
+	var money: float = maxf(0.0, cash) + float(_notes) * Data.NOTE_TINS * inflation()
+	var held := 0.0                            # the kit's sale worth joins the pile (Matt, 26 Oct): kit bought to dodge the root doesn't
+	var kit_held: Array = _kit_held()
+	for it in kit_held:
+		held += float(sell_price(it))
+	var pile: float = money + held
 	fiat_issue_inf = inflation()
 	if mission != null:
 		mission["cash"] = float(mission.get("cash", 0.0)) * Data.FIAT_SCALE     # the run it happens on: its tins come home as fiat too (the reviewer)
 	takings *= Data.FIAT_SCALE                 # the averages prices are taken off, at the new money's (the reviewer)
 	gamble_base *= Data.FIAT_SCALE
 	_takings_run *= Data.FIAT_SCALE
-	var fiat: float = Data.FIAT_PILE_K * sqrt(pile)
-	issue_moment = {"pile": int(round(cash)), "notes": _notes, "fiat": int(round(fiat))}
+	var whole: float = Data.FIAT_PILE_K * sqrt(pile)
+	var k: float = whole / pile if pile > 0.0 else Data.FIAT_SCALE     # a tin's fiat at the Issue, the pile's
+	var fiat: float = money * k
+	var hard: float = clampf(k / Data.FIAT_SCALE, 0.0, 1.0)            # the stash sells at the pile's rate, not the day's
+	if hard < 1.0:
+		for it in kit_held:
+			it["issue_k"] = hard
+	issue_moment = {"pile": int(round(cash)), "notes": _notes, "stash": int(round(held)), "fiat": int(round(fiat))}
 	_notes = 0
 	issued = true
 	cash = fiat
@@ -1147,6 +1158,24 @@ func issue() -> void:
 	fiat_rate = 1.0
 	log_event(Words.ISSUE["log"] % fiat_words(fiat))
 	chron("issue", issue_moment.duplicate())
+
+
+## Every piece held at the Issue, worn or not: the stash, the runner's kit, every other runner's in the crew (the review:
+## worn kit taken off after sold at the day's rate).
+func _kit_held() -> Array:
+	var out: Array = []
+	var kits: Array = [equipped]
+	for nm in roster:
+		kits.append(Dictionary(roster[nm]).get("equipped", {}))
+	for it in stash:
+		if it is Dictionary and not it.get("issued", false):
+			out.append(it)
+	for kit in kits:
+		for sl in kit:
+			var it = kit[sl]
+			if it is Dictionary and not it.get("issued", false) and not out.has(it):
+				out.append(it)
+	return out
 
 
 static func fiat_words(x: float) -> String:
@@ -5783,6 +5812,8 @@ func order_level(k: String) -> int:
 	if is_county(k):
 		return county_level(k)
 	var p: Dictionary = Data.pinnacle(k)
+	if p.has("level"):
+		return int(p["level"]) + int(order_beaten.get(k, 0))     # the Mint at a set level (Matt, 26 Oct: the Issue at hour 12-16, not past the reach)
 	@warning_ignore("integer_division")
 	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
 
