@@ -1204,7 +1204,12 @@ func burn_price() -> int:
 
 
 func can_burn() -> bool:
-	return issued and mission == null and cash >= float(burn_price())
+	return issued and mission == null and cash >= float(burn_price()) and burn_moves()
+
+
+## A burn takes something out of circulation (the third review: at none in it, a burn spent ƒ3,030 for nothing).
+func burn_moves() -> bool:
+	return circulation > 0.0          # the review: at the price cap both multipliers read ×4, and a burn still takes fiat out
 
 
 func burn() -> bool:
@@ -1226,7 +1231,8 @@ func circ_mult_after_burn() -> float:
 
 ## A cash price of the opening day, at today's: rounded to the pound, never below the original when it was positive.
 func _inf(x: float) -> int:
-	return int(round(x * inflation()))
+	var v := int(round(x * inflation()))
+	return maxi(1, v) if x > 0.0 else v      # never under one when it cost something (the third review: after the Issue, ammo and meds rounded to ƒ0, free)
 
 
 # ------------------------------------------------------------------ the class
@@ -1765,6 +1771,9 @@ func issued_block(slot: String) -> String:
 		return Words.ISSUED["not_yet"]
 	if mission != null:
 		return Words.ISSUED["on_a_run"]
+	var wl: int = wear_lock(issued_piece(slot))
+	if wl > 0:
+		return Words.ISSUED["wear_at"] % wl          # the third review: six item-level-60 pieces sold to a level-50 runner, none wearable
 	if cash < float(issued_price(slot)):
 		return Words.ISSUED["short"]
 	if not stash_room(Items.size(issued_piece(slot))):
@@ -4579,7 +4588,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	if yard_built_side(key, col, side):
 		return "Built"
 	if cash < yard_pick_cost(key, col):
-		return "Short of tins"
+		return "Short of " + money_word()
 	if int(salvage.get(b["salvage"], 0)) < yard_pick_salvage(key, col):
 		return "Wants %d %s" % [yard_pick_salvage(key, col), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
 	return ""
@@ -4644,7 +4653,7 @@ func yard_rank_block(key: String) -> String:
 	if yard_cols() < Data.YARD_COLS:
 		return Data.yard_gate(Data.YARD_COLS - 1)
 	if cash < yard_rank_cost(key):
-		return "Short of tins"
+		return "Short of " + money_word()
 	if int(salvage.get(b["salvage"], 0)) < yard_rank_salvage(key):
 		return "Wants %d %s" % [yard_rank_salvage(key), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
 	return ""
@@ -7223,7 +7232,11 @@ func deploy(i: int) -> void:
 		mate = roll_mate()
 	var intel: String = ", ".join(t["intel"]).to_lower()
 	var at_lv: String = (", level %d" % int(t.get("level", 0))) if not _sig.is_empty() else ""     # a signal says its level; a campaign run says nothing (18 Oct: no depth on screen)
-	log_event("Out to %s, %s%s%s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), at_lv, (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
+	var zn: String = zone_name(i)
+	var ck: Dictionary = Data.county(str(_sig.get("order", _sig.get("county", "")))) if bool(t.get("county", false)) and not _sig.is_empty() else {}
+	if not ck.is_empty():
+		zn = str(Data.COUNTY_ZONES[int(ck["cz"])]["name"])     # a County place's own zone, not its host's (the third review); a remixed one's too
+	log_event("Out to %s, %s%s%s" % [Words.mid(t["name"]), Words.mid(zn), at_lv, (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
 	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
@@ -7584,7 +7597,7 @@ func pattern_block(it: Dictionary, k: int) -> String:
 	if int(materials.get(str(c["material"]), 0)) < int(c["material_n"]):
 		return Words.PATTERNS["wants_n"] % [int(c["material_n"]), thing_name(str(c["material"]))]
 	if cash < float(c["tins"]):
-		return Words.PATTERNS["short"]
+		return str(Words.PATTERNS["short"]).replace("tins", money_word())
 	return ""
 
 
@@ -8349,7 +8362,7 @@ func dot_fill_stacks(ty: String) -> int:
 ## What a med heals this runner, before the max HP caps it: its own figure through the past, the trait, the trees,
 ## the nodes, the rules, the set and the Yard. The rig's hover, the pick panel and the heal itself all read this.
 func med_heal(it: Dictionary) -> float:
-	return Items.heal(it) * fight_grow() * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (Data.FX["node/walking_wounded.heal"] if has_node("walking_wounded") else 1.0) * (Data.FX["rule/ladle.med_heal"] if has_rule("ladle") else 1.0) * (Data.FX["set/ambulance.heal"] if has_set_rule("ambulance") else 1.0) * (Data.FX["yard/med_lab"] if yard_has("med_lab") else 1.0) * (Data.FX["rule/paramedics_bumbag"] if has_rule("paramedics_bumbag") else 1.0)
+	return Items.heal(it) * fight_grow() * cm("heal") * trait_mult("heal") * (1.0 + (tree_sum("heal_pct") + _affix_sum("heal_pct")) / 100.0) * (Data.FX["node/walking_wounded.heal"] if has_node("walking_wounded") else 1.0) * (Data.FX["rule/ladle.med_heal"] if has_rule("ladle") else 1.0) * (Data.FX["set/ambulance.heal"] if has_set_rule("ambulance") else 1.0) * (Data.FX["yard/med_lab"] if yard_has("med_lab") else 1.0) * (Data.FX["rule/paramedics_bumbag"] if has_rule("paramedics_bumbag") else 1.0)
 
 
 ## A med in words: "+42 HP over 3 s" (at once with Field surgery).
@@ -9412,8 +9425,8 @@ func _extract() -> void:
 				log_event(Words.DEEDS["held"])
 		elif stash_put(it):
 			stashed += 1
-		elif it.get("mythic", false):
-			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct)
+		elif it.get("mythic", false) or it.get("issued", false):
+			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct); a head's issued piece too (the third review)
 			stashed += 1
 		else:
 			continue
@@ -9555,7 +9568,7 @@ static func _renamed(x: String) -> String:
 ## home as one in the pack does: into the pack first, over its size if need be, so each ending's own rule takes it.
 func _floor_mythics_in(m: Dictionary) -> void:
 	var fl: Array = m.get("floor", [])
-	for it in fl.filter(func(x): return x.get("mythic", false)):
+	for it in fl.filter(func(x): return x.get("mythic", false) or x.get("issued", false)):
 		fl.erase(it)
 		m["found"].append(it)
 
@@ -9624,8 +9637,8 @@ func _kia() -> void:
 				stash.append(it)                 # the dog's share: the rig comes home
 			log_event("The dog came home with the rig: %d pouch%s" % [rig.size(), "" if rig.size() == 1 else "es"])
 	if not m.get("pack_kept", false):
-		for it in m["found"].filter(func(x): return x.get("mythic", false)):
-			stash.append(it)                     # a mythic found on the run comes home, whatever (16 Oct)
+		for it in m["found"].filter(func(x): return x.get("mythic", false) or x.get("issued", false)):
+			stash.append(it)                     # a mythic found on the run comes home, whatever (16 Oct); a head's issued piece too (the third review)
 			m["found"].erase(it)
 	if yard_has("fetch") and not m["found"].is_empty() and not m.get("pack_kept", false):
 		# the kennel's top level (31): the dog carries the best thing in the pack home
@@ -9699,7 +9712,14 @@ func _cash_words(x: float) -> String:
 	while s.length() > 3:
 		out = "," + s.substr(s.length() - 3) + out
 		s = s.substr(0, s.length() - 3)
+	if issued:
+		return "%sƒ%s%s" % ["−" if n < 0 else "", s, out]     # after the Issue, fiat (the third review: the log still said tins)
 	return "%s%s%s tin%s" % ["−" if n < 0 else "", s, out, "" if n == 1 else "s"]     # grouped as the screens say it
+
+
+## The money's name as the screens say it: tins, then fiat after the Issue (the third review).
+func money_word() -> String:
+	return "fiat" if issued else "tins"
 
 
 # ------------------------------------------------------------------ the armoury
@@ -10820,7 +10840,7 @@ func _restock_clinic() -> void:
 
 
 func clinic_price(it: Dictionary) -> int:
-	return int(round(it["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0)))     # the pumping station (18 Oct)
+	return _inf(it["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0))     # the pumping station (18 Oct); at today's prices, as the list's (the third review: after the Issue it read opening-day tins as fiat)
 
 
 func buy_clinic(id: int) -> bool:

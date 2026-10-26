@@ -15,6 +15,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const PAD := 20
 const ROW_H := 62
@@ -32,6 +33,7 @@ var _burn_line: Label
 var _burn: Button
 var _want: Label
 var _shown := ""
+var _burn_arm := Arm.new()             # the burn asks twice (the third review: the one spend over ƒ1,000 that didn't)
 
 
 func _init(w: float, h: float) -> void:
@@ -84,7 +86,7 @@ func show_state(s) -> void:
 	sim = s
 	if sim == null:
 		return
-	var sig := "%d|%.3f|%d|%d|%d|%d" % [int(sim.cash), sim.fiat_rate, int(sim.circulation), sim.reach, sim.stash.size(), sim.issued_worn()]
+	var sig := "%d|%.3f|%d|%d|%d|%d|%d|%s" % [int(sim.cash), sim.fiat_rate, int(sim.circulation), sim.reach, sim.stash.size(), sim.issued_worn(), sim.level(), _burn_arm.sig()]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -97,7 +99,9 @@ func show_state(s) -> void:
 		var u: Dictionary = sim.issued_def(row["slot"])
 		var it: Dictionary = sim.issued_piece(row["slot"])
 		row["icon"].show_item(it, false, Vector2(64, 48))
-		UI.fit(row["name"], ["%s · %s · item level %d" % [u["name"], row["slot"], Items.ilvl(it)], "%s · %s" % [u["name"], row["slot"]], str(u["name"])])
+		var wl: int = sim.wear_lock(it)
+		row["icon"].set_locked(wl)                    # over the runner's level: the padlock, as everywhere else (the third review)
+		UI.fit(row["name"], ["%s · %s · item level %d%s" % [u["name"], row["slot"], Items.ilvl(it), (" · wear at %d" % wl) if wl > 0 else ""], "%s · %s" % [u["name"], row["slot"]], str(u["name"])])
 		UI.fit(row["rule"], [str(u["words"]), str(u.get("short", u["words"]))])
 		var block: String = sim.issued_block(row["slot"])
 		var price: int = sim.issued_price(row["slot"])
@@ -107,6 +111,15 @@ func show_state(s) -> void:
 	_burn_title.text = Words.ISSUED["burn"] % Fmt.money(sim.burn_price())
 	UI.fit(_burn_line, [Words.ISSUED["burn_line"] % [sim.circ_mult(), sim.circ_mult_after_burn()], "Prices ×%.2f → ×%.2f" % [sim.circ_mult(), sim.circ_mult_after_burn()]])
 	_burn.disabled = not sim.can_burn()
+	var fp := "%d|%d" % [sim.burn_price(), int(sim.circulation)]
+	var armed: bool = _burn_arm.holds("burn", fp) and sim.can_burn()
+	if not sim.burn_moves():
+		UI.fit(_burn_line, [Words.ISSUED["burn_nothing"]])
+	if armed:
+		UI.fit_button(_burn, [Words.ISSUED["burn_sure"] % Fmt.money(sim.burn_price()), "Burn?"])
+	else:
+		_burn.text = Words.ISSUED["burn_go"]
+	UI.style_button(_burn, false, "bad" if armed else "")
 	var want: int = int(Data.ISSUED_WANT[0])
 	UI.fit(_want, [Words.ISSUED["want"] % [want, "" if want == 1 else "s"] + " · %d worn" % sim.issued_worn(), Words.ISSUED["want"] % [want, "" if want == 1 else "s"]])
 
@@ -118,9 +131,34 @@ func _buy(slot: String) -> void:
 
 
 func _on_burn() -> void:
-	if sim != null and sim.burn():
+	if sim == null or not sim.can_burn():
+		return
+	_shown = ""
+	if not _burn_arm.press("burn", "%d|%d" % [sim.burn_price(), int(sim.circulation)]):
+		show_state(sim)
+		return
+	if sim.burn():
 		_shown = ""
 		acted.emit()
+
+
+## Out of the room, the burn's arm goes (as the Fence's Sell).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_burn_arm.clear()
+		_shown = ""
+
+
+## For the tests: the counter's buttons, in row order, then the burn.
+func buttons() -> Array:
+	var out: Array = _rows.map(func(r): return r["buy"])
+	out.append(_burn)
+	return out
+
+
+## For the tests: the row's padlock shown.
+func row_locked(k: int) -> bool:
+	return _rows[k]["icon"]._lock.visible
 
 
 ## For the tests: every label's words fit its box.

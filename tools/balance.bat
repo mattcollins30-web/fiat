@@ -37,6 +37,11 @@ if not "%GODOT%"=="godot" if not exist "%GODOT%" (
 )
 if not exist docs\balance mkdir docs\balance
 if not exist docs\balance\pass mkdir docs\balance\pass
+rem a flag it can't read deletes nothing (the third review: a typo fell through to the full pass and wiped pass\)
+del /q docs\balance\flag_error.txt 2>nul
+echo %HOURS%| findstr /r "^[0-9][0-9]*$ ^[0-9][0-9]*\.[0-9][0-9]*$" >nul || goto badflag
+echo %READS%| findstr /r "^[0-9][0-9]*$" >nul || goto badflag
+if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" goto badflag
 if /i "%~3"=="broken" goto broken_only
 if /i "%~3"=="hunt" goto hunt
 del /q docs\balance\pass\*.* 2>nul
@@ -161,6 +166,12 @@ echo   %DONE% of %~2 finished
 if %TICKS% geq %~3 exit /b 0
 if %DONE% lss %~2 goto wf_loop
 exit /b 0
+
+:badflag
+echo Bad flag: "%*" - expected ^<hours^> [reads] [broken^|hunt]. Nothing was run or deleted.
+>docs\balance\flag_error.txt echo bad flag: "%*" - expected ^<hours^> [reads] [broken^|hunt]; nothing run or deleted
+endlocal
+exit /b 1
 
 :broken_only
 rem the broken builds alone (26 Oct, Matt): each with its plain baseline, from the pass's checkpoint; the pass's own reads

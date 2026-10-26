@@ -1130,7 +1130,7 @@ func refresh() -> void:
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
-	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
+	_top_labels["where"].text = ("Out: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()

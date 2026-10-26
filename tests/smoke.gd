@@ -19819,9 +19819,25 @@ func _issue_checks(main) -> void:
 	sim.advance(3600.0)
 	_check(sim.fiat_rate > r0, "the rate didn't drift back: %.3f" % sim.fiat_rate)
 	sim.cash = 1e9
+	var circ_hold: float = sim.circulation
+	sim.circulation = 0.0
+	_check(not sim.burn_moves() and not sim.can_burn() and not sim.burn(), "a burn with nothing in circulation still spends (the third review)")
+	sim.circulation = circ_hold
 	var circ0: float = sim.circulation
 	var rb: float = sim.fiat_rate
 	_check(sim.burn() and sim.circulation < circ0 and sim.fiat_rate > rb, "a burn: circulation %.0f from %.0f, the rate %.3f from %.3f" % [sim.circulation, circ0, sim.fiat_rate, rb])
+	# prices after the Issue: never ƒ0 for what cost something, the Clinic's shelf at today's (the third review)
+	for box in Data.BASES[Data.AMMO].filter(func(b): return not b.has("damage_pct")):
+		_check(sim.ammo_price(str(box["type"])) >= 1, "after the Issue %s costs ƒ%d" % [box["name"], sim.ammo_price(str(box["type"]))])
+	var shelf_kit: Dictionary = sim._plain(Data.MEDICAL, "First aid kit")
+	_check(sim.med_price(shelf_kit) >= 1 and sim.clinic_price(shelf_kit) <= sim.med_price(shelf_kit) * 2, "after the Issue the Clinic's shelf reads ƒ%d against the list's ƒ%d" % [sim.clinic_price(shelf_kit), sim.med_price(shelf_kit)])
+	# issued kit over the runner's level: shown, not sold (the third review)
+	var xp_hold: float = sim.xp
+	sim.xp = 0.0
+	for u in Data.ISSUED:
+		var sl0: String = str(u["slot"])
+		_check(sim.wear_lock(sim.issued_piece(sl0)) == 0 or (sim.issued_block(sl0).begins_with("Wear at") and not sim.buy_issued(sl0)), "the Issuer sells a level-1 runner a %s it can't wear: '%s'" % [sl0, sim.issued_block(sl0)])
+	sim.xp = maxf(xp_hold, Data.xp_for_level(Data.MAX_LEVEL))
 	# issued kit: a piece a slot, numbered, kept on a death
 	for u in Data.ISSUED:
 		var sl: String = str(u["slot"])
@@ -19831,9 +19847,21 @@ func _issue_checks(main) -> void:
 		var it: Dictionary = sim.stash.back()
 		_check(it.get("issued", false) and Items.full_name(it).contains("No.") and str(it["rule"]) == str(u["rule"]) and Items.ilvl(it) == Items.ilvl(shown), "the %s came without its stamp, rule or level: %s" % [sl, Items.full_name(it)])
 		_check(not load("res://scripts/ui/item_head.gd").unique_rule(it).is_empty(), "the %s's rule has no words" % sl)
+	var web = sim.stash.filter(func(x): return x.get("issued", false) and str(x.get("rule", "")) == "issued_webbing")
+	if not web.is_empty():
+		var rig_hold = sim.equipped["Rig"]
+		sim.equipped["Rig"] = null
+		sim._dry_memo.clear()
+		var h0: float = sim.med_heal(shelf_kit)
+		sim.equipped["Rig"] = web[0]
+		sim._dry_memo.clear()
+		_check(sim.med_heal(shelf_kit) > h0 * 1.4, "the issued webbing's meds +50%% does nothing: %.1f against %.1f" % [sim.med_heal(shelf_kit), h0])
+		sim.equipped["Rig"] = rig_hold
+		sim._dry_memo.clear()
 	# the money on screen: ƒ
 	main.refresh()
 	_check(Fmt.money(1234.0) == "ƒ1,234" and Fmt.notes(10).begins_with("ƒ"), "fiat on screen reads '%s', notes '%s'" % [Fmt.money(1234.0), Fmt.notes(10)])
+	_check(Fmt.money_k(4800.0).begins_with("ƒ") and Fmt.money_forms(48000.0).all(func(f): return not str(f).contains("tin")) and Fmt.unit() == "fiat" and sim.money_word() == "fiat" and not sim._cash_words(1200.0).contains("tin"), "after the Issue the short money still says tins: '%s'" % Fmt.money_k(4800.0))
 	# the card, once, then the Fence; the counter's tab
 	sim.met = sim.met.filter(func(x): return x != "issue")
 	main.show_issue_card()
@@ -19844,6 +19872,10 @@ func _issue_checks(main) -> void:
 		_check_fit(main, "the Issue's card")
 		main._room_card.finish()
 	_check("issue" in sim.met and main.room == main.MARKET, "after the Issue's card: met %s, the room %s" % ["issue" in sim.met, main.room])
+	main._fence._show("shelf")
+	main.refresh()
+	var band_words: String = " ".join(main._fence._band.text_nodes().filter(func(n): return n is Label and n.is_visible_in_tree()).map(func(n): return n.text))
+	_check(not band_words.contains("tins") and not band_words.contains("full value"), "the Fence's band after the Issue still says tins or full value: '%s'" % band_words)
 	main._fence._show("issuer")
 	main.refresh()
 	var ic = main._fence._issuer
@@ -19856,6 +19888,31 @@ func _issue_checks(main) -> void:
 		for l in ic.labels():
 			_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "the counter's words run off: '%s'" % l.text)
 		_check_fit(main, "the Issuer's counter")
+		# a runner under the pieces' level: each row padlocked, its Buy off (the third review)
+		var xp_was: float = sim.xp
+		sim.xp = 0.0
+		ic.show_state(sim)
+		for k in range(Data.ISSUED.size()):
+			var lockd: bool = sim.wear_lock(sim.issued_piece(str(Data.ISSUED[k]["slot"]))) > 0
+			_check(not lockd or (ic.row_locked(k) and ic.buttons()[k].disabled), "the counter's %s row isn't padlocked and off for a runner under it" % Data.ISSUED[k]["slot"])
+		sim.xp = xp_was
+		# the burn asks twice; with nothing in circulation it's off
+		sim.cash = 1e9
+		var circ_was: float = sim.circulation
+		sim.circulation = 0.0
+		ic._shown = ""
+		ic.show_state(sim)
+		_check(ic.buttons().back().disabled, "the Burn is live with nothing in circulation (the third review)")
+		sim.circulation = maxf(circ_was, Data.FIAT_CIRC_SPAN)
+		ic._shown = ""
+		ic.show_state(sim)
+		var cash_a: float = sim.cash
+		var circ_a: float = sim.circulation
+		ic._on_burn()
+		_check(is_equal_approx(sim.cash, cash_a) and is_equal_approx(sim.circulation, circ_a), "one press of Burn spent: it should ask twice")
+		ic._on_burn()
+		_check(sim.cash < cash_a and sim.circulation < circ_a, "the second press of Burn didn't burn")
+		sim.circulation = circ_was
 	main._fence._show("shelf")
 	sim.load_dict(hold)
 	main.refresh()
@@ -19999,6 +20056,10 @@ func _county_checks(main) -> void:
 	_check(eh.has("boss") and str(eh["boss"]["name"]) == "The Bailiff" and str(eh["boss"].get("mech", "")) == "bailiff", "the Truck Stop's head reads %s" % str(eh.get("boss", {})))
 	_check(sim.deploy_order("truck_stop") and sim.mission != null and sim.mission.has("boss"), "the Truck Stop would not set off: %s" % sim.order_block("truck_stop"))
 	if sim.mission != null:
+		main.refresh()
+		var outs: Array = sim.events.filter(func(line): return str(line[1]).begins_with("Out to"))
+		var out_line: String = str(outs.back()[1]) if not outs.is_empty() else ""
+		_check(main._top_labels["where"].text.contains("Truck Stop") and out_line.contains("Motorway") and not out_line.contains("the City"), "a County run tells the top bar '%s' and the log '%s' (the third review: the host site's)" % [main._top_labels["where"].text, out_line])
 		var mh: Dictionary = sim.mission
 		var serial0: int = sim.issued_serial
 		mh["remaining"] = 0
@@ -20007,6 +20068,19 @@ func _county_checks(main) -> void:
 		_check(mh["found"].any(func(x): return x.get("issued", false)) and sim.issued_serial == serial0 + Data.COUNTY_HEAD_ISSUED, "the Bailiff dropped no issued kit")
 		sim.extract_now()
 		_check(sim.county_zone_open(1) and sim.order_open("container_port") and sim.order_block("container_port") == Words.COUNTY["want"] % [3, 2], "the Bailiff's fall didn't open the Docks, wanting three: '%s'" % sim.order_block("container_port"))
+	# the head's issued kit comes home on a death after him, as a mythic does (the third review: it was in the pack)
+	var hold_k: Dictionary = sim.to_dict()
+	sim.order_beaten["truck_stop"] = 0
+	sim.hp = sim.max_hp()
+	if sim.deploy_order("truck_stop"):
+		var md: Dictionary = sim.mission
+		md["remaining"] = 0
+		md["cleared"] = true
+		sim._boss_down(md, md["t"])
+		var n_iss: int = sim.stash.filter(func(x): return x.get("issued", false)).size()
+		sim._kia()
+		_check(sim.stash.filter(func(x): return x.get("issued", false)).size() >= n_iss + Data.COUNTY_HEAD_ISSUED, "the Bailiff's issued kit was lost on a death after him")
+	sim.load_dict(hold_k)
 	# a County run saved mid-fight and loaded finishes as the County's (the review)
 	sim.order_beaten["truck_stop"] = 0
 	sim.hp = sim.max_hp()
@@ -20101,6 +20175,35 @@ func _county_checks(main) -> void:
 		if sg.has("county_head"):
 			away = true
 	_check(on_county and away, "sixty remixed signals: on the County %s, a head away %s" % [on_county, away])
+	# a remixed signal on a County place sets off and names its zone (the review: its "Out to" line read a key it hasn't)
+	for k in range(60):
+		var sg2 := {"id": 900 + k, "site": 4, "zone": 1, "depth": 1, "codes": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 0}
+		sim._remix(sg2, 0)
+		if sg2.has("county") and not sg2.has("county_head"):
+			if sim.on_mission():
+				sim.extract_now()
+			sim.hp = sim.max_hp()
+			var sig_hold: Array = sim.signals.duplicate(true)
+			sim.signals = [sg2]
+			_check(sim.deploy_signal(0) and sim.on_mission(), "a remixed County signal would not set off")
+			var outs2: Array = sim.events.filter(func(line): return str(line[1]).begins_with("Out to"))
+			var zone_of: String = str(Data.COUNTY_ZONES[int(Data.county(str(sg2["county"]))["cz"])]["name"]).trim_prefix("The ")
+			_check(not outs2.is_empty() and str(outs2.back()[1]).contains(zone_of), "a remixed County signal's log: '%s'" % (str(outs2.back()[1]) if not outs2.is_empty() else ""))
+			if sim.on_mission():
+				sim.extract_now()
+			sim.signals = sig_hold
+			break
+	# a burn at the price cap still burns (the review: both multipliers read ×4 there)
+	var circ_cap_hold: float = sim.circulation
+	var cash_cap_hold: float = sim.cash
+	var was_issued: bool = sim.issued
+	sim.issued = true
+	sim.circulation = Data.FIAT_CIRC_SPAN * (Data.FIAT_CIRC_CAP - 1.0) * 3.0
+	sim.cash = 1e12
+	_check(sim.burn_moves() and sim.can_burn(), "no burn at the price cap: circulation %.0f" % sim.circulation)
+	sim.issued = was_issued
+	sim.circulation = circ_cap_hold
+	sim.cash = cash_cap_hold
 	main._missions.set_county(false)
 	sim.load_dict(hold)
 	main.refresh()

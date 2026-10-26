@@ -578,7 +578,10 @@ func _show_side() -> void:
 		if not sim.issued:
 			chips.append({"forms": ["%s notes" % Fmt.group(sim.notes)], "colour": Pal.TEXT_2})     # no notes held after the Issue
 	else:
-		_band.set_words("The Fence · pays full value, charges three times", "", Fmt.group(int(sim.cash)), ["tins in hand", "tins"], Pal.ACCENT)
+		if sim.issued:
+			_band.set_words("The Fence · buys at his rate, charges three times", "", Fmt.group(int(sim.cash)), ["fiat in hand", "fiat"], Pal.ACCENT)     # the third review: tins after the Issue
+		else:
+			_band.set_words("The Fence · pays full value, charges three times", "", Fmt.group(int(sim.cash)), ["tins in hand", "tins"], Pal.ACCENT)
 		if sim.inflation_pct() > 0:
 			chips.append({"forms": ["Prices up %d%%" % sim.inflation_pct()], "colour": Pal.TEXT_2})
 		chips.append({"forms": ["Your stash sells for %s" % Fmt.group(worth_all), "Stash: %s" % Fmt.short_num(worth_all)], "colour": Pal.TEXT_2})
@@ -780,7 +783,7 @@ func _show_panel() -> void:
 				else:
 					UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes keep their value" % sim.inflation_pct(), "Prices up %d%%; notes don't" % sim.inflation_pct()])
 			else:
-				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays full value; charges three times"])
+				UI.fit(_left_lines[0], ["Pays the Issuer's rate on what a thing is worth; asks three times that", "Buys at his rate; charges three times"] if sim.issued else ["Pays what a thing is worth; asks three times that", "Pays full value; charges three times"])
 			_right_title.text = "Their shelf"
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick an item on the shelf or in the stash"

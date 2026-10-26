@@ -401,6 +401,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			g["reach_log"].append([snappedf(sim.elapsed / 3600.0, 0.01), sim.reach])
 		if scrap_16 < 0.0 and sim.elapsed >= 16.0 * 3600.0:
 			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
+		if sim.issued and not g.has("cash_in_at_issue"):
+			g["cash_in_at_issue"] = sim.cash_in       # the money in from here is fiat (the third review: gate 14 added tins to fiat)
 		if sim.elapsed >= next_mark:
 			var tt: int = maxi(t, 0)
 			mark_cash = sim.cash_in - mark_cash_from     # every pound in since the last mark: the runs' cash and the fence's money (read here, after the tidy's sales)
@@ -532,6 +534,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	g["county_taken"] = sim.county_taken_count()
 	g["issued_worn"] = sim.issued_worn()
 	g["issued_bought"] = sim.issued_serial
+	if g.has("cash_in_at_issue"):
+		g["fiat_per_h"] = snappedf((sim.cash_in - float(g["cash_in_at_issue"])) / maxf(0.01, sim.elapsed / 3600.0 - float(g["issue_at"])), 0.01)
 	g["fiat"] = {"cash": int(sim.cash), "circulation": int(sim.circulation), "prices": snappedf(sim.circ_mult(), 0.01), "rate": snappedf(sim.fiat_rate, 0.01)} if sim.issued else {}
 	var stand_to: float = sim.elapsed / 3600.0 if moved.is_empty() else float(moved[0][0]) / 3600.0     # to the first move: the move is the stall's answer, and the campaign again isn't a stand
 	g["reach_stand_h"] = _longest_gap(float(g["radio_at"]), stand_to, g["reach_log"].map(func(x): return float(x[0]))) if float(g["radio_at"]) >= 0.0 else -1.0

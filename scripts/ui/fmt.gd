@@ -93,9 +93,18 @@ static func short_num(x: float) -> String:
 	return "%s%d" % [sgn, int(round(a))]
 
 
-## Money short: "4.8k tins"; under a thousand as money() says it.
+## Money short: "4.8k tins"; under a thousand as money() says it. After the Issue "ƒ4.8k" (the third review).
 static func money_k(x: float) -> String:
-	return money(x) if absf(x) < 1e3 else "%s %s" % [short_num(x), UNIT]
+	if absf(x) < 1e3:
+		return money(x)
+	if fiat:
+		return "%sƒ%s" % [MINUS if x < -0.5 else "", short_num(absf(x))]
+	return "%s %s" % [short_num(x), UNIT]
+
+
+## The money's name: tins, or fiat after the Issue.
+static func unit() -> String:
+	return "fiat" if fiat else UNIT
 
 
 ## Money long to short, for UI.fit: "4,816 tins", "4.8k tins", "4.8k".

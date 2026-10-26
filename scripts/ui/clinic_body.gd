@@ -169,10 +169,10 @@ func show_state(s) -> void:
 	elif n == 1 and full:
 		var a1: String = sim.wounds.keys()[0]
 		var nm: String = str(Data.WOUND_AREA[a1]["name"]).to_lower()
-		UI.fit_button(_all, ["Treat the %s · %s tins" % [nm, Fmt.group(cost)], "Treat the %s · %s" % [nm, Fmt.money(cost)], "Treat · %s" % Fmt.money(cost)])
+		UI.fit_button(_all, ["Treat the %s · %s" % [nm, Fmt.money(cost)], "Treat the %s · %s" % [nm, Fmt.money_k(cost)], "Treat · %s" % Fmt.money_k(cost)])
 		_all.disabled = sim.cash < cost
 	else:
-		UI.fit_button(_all, ["Treat everything · %s tins" % Fmt.group(cost), "Treat everything · %s" % Fmt.group(cost), "Treat everything · %s" % Fmt.short_num(cost), "Treat all · %s" % Fmt.short_num(cost)])
+		UI.fit_button(_all, ["Treat everything · %s" % Fmt.money(cost), "Treat everything · %s" % Fmt.money_k(cost), "Treat everything · %s" % Fmt.short_num(cost), "Treat all · %s" % Fmt.short_num(cost)])
 		_all.disabled = sim.cash < cost
 	UI.style_button(_all, not _all.disabled)
 	var picks: int = 0

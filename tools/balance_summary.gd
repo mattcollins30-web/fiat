@@ -787,11 +787,14 @@ func _economy_rows(rows: Array, full: Array) -> void:
 	var over: Array = []
 	var most := 0.0
 	for bd in full:
-		var per_h := float(bd.get("cash_per_h", 0.0))
-		var held: float = (float(bd["cash_end"]) / per_h) if per_h > 0.0 else 0.0
-		most = maxf(most, held)
-		if held > CASH_HOURS:
-			over.append("%s holds %d tins, %.1f hours' income" % [bd["build"], int(bd["cash_end"]), held])
+		# on fiat at the end: the fiat held against the fiat in since the Issue (the third review: tins and fiat were added);
+		# a build whose reads split on the Issue is judged read by read, the worst kept
+		var each: Array = bd.get("held_split", []) if bool(bd.get("fiat_split", false)) else [[float(bd.get("issue_at", -1.0)) >= 0.0 and bd.has("fiat_per_h"), float(bd["cash_end"]), float(bd.get("fiat_per_h", 0.0)) if (float(bd.get("issue_at", -1.0)) >= 0.0 and bd.has("fiat_per_h")) else float(bd.get("cash_per_h", 0.0))]]
+		for r in each:
+			var held: float = (float(r[1]) / float(r[2])) if float(r[2]) > 0.0 else 0.0
+			most = maxf(most, held)
+			if held > CASH_HOURS:
+				over.append("%s holds %s %d, %.1f hours' income" % [bd["build"], "fiat" if bool(r[0]) else "tins", int(r[1]), held])
 	rows.append(["14. Cash sink", "cash in hand at the end no more than %.0f hours' income" % CASH_HOURS, "; ".join(over) if not over.is_empty() else "every build under (most %.1f)" % most, over.is_empty()])
 	var off: Array = []
 	var most_s := 0.0
@@ -877,7 +880,11 @@ func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
-	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk", "odds_median", "farm_odds_median"]:
+	# one read on fiat and another not: their cash is in two currencies, so gate 14 reads each alone (the review)
+	var on_fiat: Array = gs.map(func(g): return float(g.get("issue_at", -1.0)) >= 0.0)
+	m["fiat_split"] = on_fiat.has(true) and on_fiat.has(false)
+	m["held_split"] = gs.map(func(g): return [float(g.get("issue_at", -1.0)) >= 0.0 and g.has("fiat_per_h"), float(g.get("cash_end", 0)), float(g.get("fiat_per_h", 0.0)) if (float(g.get("issue_at", -1.0)) >= 0.0 and g.has("fiat_per_h")) else float(g.get("cash_per_h", 0.0))])
+	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk", "odds_median", "farm_odds_median", "issue_at"]:     # issue_at (the third review: gate 18 read the first read alone)
 		if not gs[0].has(key):
 			continue
 		# by their median, a never counted as later than any (the review, 15 Oct: one read of two that never got there
@@ -888,7 +895,7 @@ func _merged(gs: Array) -> Dictionary:
 	# the reach's pace (gate 6): a read whose Radio never opened by hour 12 makes the build's never; else the median
 	var rates: Array = gs.map(func(g): return float(g.get("reach_rate", -1.0)))
 	m["reach_rate"] = -1.0 if rates.any(func(v): return v < 0.0) else snappedf(_median(rates), 0.01)
-	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s", "county_taken", "issued_bought", "fiat_per_h"]:
 		if not gs[0].has(key):
 			continue                      # an older read without the key keeps lacking it (the rows read the lack)
 		var total := 0.0

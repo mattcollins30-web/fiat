@@ -1102,7 +1102,8 @@ const ISSUE := {"log": "The Issue: the town runs on the Issuer's money now. Your
 const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "short": "Short of fiat", "no_room": "No room in the stash",
 	"bought": "From the Issuer: %s, for %s.", "tab": "The Issuer", "head": "Issued kit", "rate": "HIS RATE TODAY", "circ": "IN CIRCULATION", "prices": "PRICES",
 	"burn": "Burn %s", "burn_line": "Out of circulation: prices x%.2f to x%.2f", "burn_go": "Burn", "said": "\"Its value is as stated.\"",
-	"want": "The County wants %d issued piece%s worn"}
+	"want": "The County wants %d issued piece%s worn", "wear_at": "Wear at level %d", "burn_nothing": "Nothing in circulation to burn",
+	"burn_sure": "Burn %s? – again"}
 const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "hint": "Click or Space · the class waits in Training",
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {
