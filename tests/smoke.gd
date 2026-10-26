@@ -19905,6 +19905,34 @@ func _county_checks(main) -> void:
 		sim.stash.erase(it)
 		sim.equipped[sl] = it
 	_check(sim.issued_worn() == 2 and sim.order_block("toll_plaza") == "", "two worn, the Toll Plaza still shut: '%s'" % sim.order_block("toll_plaza"))
+	# issued kit counts as a piece of the set you wear, in a slot the set has a piece for (26 Oct)
+	var army: Dictionary = Items.set_named("The Army's")
+	var army_slots: Array = army["pieces"].map(func(pc): return str(pc["slot"]))
+	var kit_was: Dictionary = sim.equipped.duplicate()
+	for sl in Data.SLOTS:
+		sim.equipped[sl] = null
+	sim._dry_memo.clear()
+	var issued_one: Dictionary = sim.issued_piece(str(army_slots[1]))
+	sim.equipped[str(army_slots[1])] = issued_one
+	sim._dry_memo.clear()
+	_check(sim.set_count("The Army's") == 0, "issued kit alone counted as a set: %d" % sim.set_count("The Army's"))
+	sim.equipped[str(army_slots[0])] = Items.roll_set_piece(army["name"], army["pieces"][0], sim.rng)
+	sim._dry_memo.clear()
+	_check(sim.set_count("The Army's") == 2, "an issued piece in the Army's slot didn't count with its piece: %d" % sim.set_count("The Army's"))
+	# one set a piece: another set sharing that slot, a piece of its own on, doesn't count it too (the review)
+	var shared := ""
+	for st2 in Data.SETS:
+		if st2["name"] != army["name"] and st2["pieces"].any(func(pc): return str(pc["slot"]) == str(army_slots[1])):
+			var free_pc = st2["pieces"].filter(func(pc): return not (str(pc["slot"]) in [str(army_slots[0]), str(army_slots[1])]))
+			if not free_pc.is_empty():
+				sim.equipped[str(free_pc[0]["slot"])] = Items.roll_set_piece(st2["name"], free_pc[0], sim.rng)
+				shared = str(st2["name"])
+				break
+	sim._dry_memo.clear()
+	if shared != "":
+		_check(sim.set_count("The Army's") + sim.set_count(shared) == 3, "one issued piece counted for two sets: %s %d, %s %d" % [army["name"], sim.set_count("The Army's"), shared, sim.set_count(shared)])
+	sim.equipped = kit_was
+	sim._dry_memo.clear()
 	# the Map's County board
 	main.show_room(main.MISSIONS)
 	main.refresh()
@@ -20079,6 +20107,7 @@ func _county_checks(main) -> void:
 	_check(not main._missions._county_btn.visible and not main._missions._county.visible, "the County's button stayed up on a camp before the Issue")
 	# the County's own fight art (26 Oct): a run on a place reads its pair once drawn, and its wall hides the duck
 	var RV = load("res://scripts/ui/run_view.gd")
+	_check(RV.county_gang({"signal": {"order": "truck_stop"}}) == "the_motorway" and RV.county_gang({"signal": {"county": "treasury"}}) == "the_treasury" and RV.county_gang({}) == "", "the County's crew key: '%s'" % RV.county_gang({"signal": {"order": "truck_stop"}}))
 	_check(RV.county_key({"signal": {"order": "truck_stop"}}) == "the_truck_stop" and RV.county_key({"signal": {"county": "manor"}}) == "the_manor" and RV.county_key({}) == "", "the run's County place key: '%s'" % RV.county_key({"signal": {"order": "truck_stop"}}))
 	for c in Data.COUNTY:
 		var pk: String = RV.site_key(str(c["place"]))

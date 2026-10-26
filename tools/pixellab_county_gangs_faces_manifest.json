@@ -1,0 +1,82 @@
+{
+ "_readme": [
+  "FIAT, THE COUNTY'S CREWS (26 Oct), step 1 of 3: the four faces: 4 jobs.",
+  "Run: tools\\art.bat county_gangs_faces (the dry run first, then it asks)",
+  "The County's crews: a face a zone (art/people/gang_<zone>.png) and two members' standing, firing and going-down figures (art/fight/gang_<zone>_<a|b>_<pose>.png). RunView draws them on a County run (run_view.gd county_gang), else the host site's crew.",
+  "Regenerate with python3 tools/make_county_gangs_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/people/gang_the_motorway.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 120000,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of an enforcement agent of the Issuer's road gangs: a plain hi-vis tabard with no lettering over a stab vest, a body camera, a shaved head and a two-day beard, the look of a man who's clamped a thousand cars. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, no text, no border, no lettering or badges, plain dark background.",
+   "_where": "the the_motorway crew's face"
+  },
+  {
+   "out": "art/people/gang_the_docks.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 120003,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a port customs officer working for the Issuer: a plain dark uniform jacket, a flat cap with no badge, reading glasses pushed up, a face weighing up whoever stands in front of it. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, no text, no border, no lettering or badges, plain dark background.",
+   "_where": "the the_docks crew's face"
+  },
+  {
+   "out": "art/people/gang_the_big_houses.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 120006,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a private security man from the big houses: a black suit, an earpiece, close-cropped grey hair, a signet ring, a face that has thrown people off driveways. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, no text, no border, no lettering or badges, plain dark background.",
+   "_where": "the the_big_houses crew's face"
+  },
+  {
+   "out": "art/people/gang_the_treasury.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 120009,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a Treasury guard: a dark high-collared tunic with plain brass buttons, a peaked cap with no badge, a neat moustache, a face that has stood very still for a long time. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, no text, no border, no lettering or badges, plain dark background.",
+   "_where": "the the_treasury crew's face"
+  }
+ ]
+}

@@ -264,14 +264,21 @@ func _hold_broken(sim) -> void:
 	var st: Dictionary = Items.set_named(str(c["set"]))
 	for k in range(int(c["pieces"])):
 		want[str(st["pieces"][k]["slot"])] = ["set", st["pieces"][k]]
+	var unique_slot := ""
 	for u in Data.UNIQUES:
 		if str(u.get("rule", "")) == str(c["rule"]):
 			want[str(u["slot"])] = ["unique", u]
+			unique_slot = str(u["slot"])
 			break
-	broken_slots = want.keys()
+	# kept from issued kit: the unique's slot and one real piece of the set (issued kit counts as the set's rest, Matt 26 Oct)
+	var first_set := str(st["pieces"][0]["slot"]) if str(st["pieces"][0]["slot"]) != unique_slot else str(st["pieces"][1]["slot"])
+	broken_slots = [unique_slot, first_set]
 	for sl in want:
 		var worn = sim.equipped.get(sl)
 		var kind: String = want[sl][0]
+		var issued_in: bool = kind == "set" and sl != first_set and worn != null and worn.get("issued", false)
+		if issued_in:
+			continue                              # an issued piece holds the set's place here
 		var ok: bool = worn != null and ((kind == "set" and str(worn.get("set", "")) == str(c["set"])) or (kind == "unique" and str(worn.get("rule", "")) == str(c["rule"])))
 		if ok and Items.ilvl(worn) >= lv - RENEW_UNDER:
 			continue

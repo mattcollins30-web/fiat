@@ -6991,3 +6991,10 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   for the playtest; and the broken builds read on their own in every pass - each of the six 16 h from the checkpoint
   at level 50, the combos on for that read alone, its set and unique held at the reach (tests/balance.gd _broken,
   bot.gd _hold_broken), what it beat and when in a table of the summary's own, outside the gates. Smoke 259 green.
+- The eighth pass (26 Oct, on d48618c): 19 RED; the Issue on 8 of 12 builds (7.7-29.4 h), the County entered by 3 (the
+  Doorman as bleed 7 of 12, past the Bailiff and the Auditor); gate 7 red (the Recruit as poison never finished Kev's
+  story). The broken builds weak - my fixture's: their set pieces and unique were rolled with no tier, so on the
+  campaign's bases (55 armour against a deep suit's 260). Matt's calls: issued kit counts as a piece of the set you
+  wear (one set a piece, the one with the most real pieces on); the County's own crews drawn (28 jobs, $2.24; RunView
+  draws a County run's crew once all six of its figures are on disk); the broken builds re-run alone on his machine,
+  each beside a plain baseline, broken when it beats everything and gains 1.5x its baseline's reach. Smoke 260 green.

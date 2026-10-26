@@ -1,0 +1,346 @@
+{
+ "_readme": [
+  "FIAT, THE COUNTY'S CREWS (26 Oct), step 3 of 3: the sixteen poses (each references its standing figure - run once the stands are on disk): 16 jobs.",
+  "Run: tools\\art.bat county_gangs_poses (the dry run first, then it asks)",
+  "The County's crews: a face a zone (art/people/gang_<zone>.png) and two members' standing, firing and going-down figures (art/fight/gang_<zone>_<a|b>_<pose>.png). RunView draws them on a County run (run_view.gd county_gang), else the host site's crew.",
+  "Regenerate with python3 tools/make_county_gangs_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120100,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_motorway.png",
+   "out": "art/fight/gang_the_motorway_a_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_motorway_a_stand.png"
+   ],
+   "_where": "the the_motorway crew, a: firing at you",
+   "description": "The same person as the reference image: an enforcement agent of the Issuer's road gangs: a plain hi-vis tabard with no lettering over a stab vest, a body camera, a shaved head, cargo trousers, work boots, aiming a pump shotgun straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120101,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_motorway.png",
+   "out": "art/fight/gang_the_motorway_a_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_motorway_a_stand.png"
+   ],
+   "_where": "the the_motorway crew, a: hit, going down",
+   "description": "The same person as the reference image: an enforcement agent of the Issuer's road gangs: a plain hi-vis tabard with no lettering over a stab vest, a body camera, a shaved head, cargo trousers, work boots, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120102,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_motorway.png",
+   "out": "art/fight/gang_the_motorway_b_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_motorway_b_stand.png"
+   ],
+   "_where": "the the_motorway crew, b: firing at you",
+   "description": "The same person as the reference image: a tow-truck driver turned enforcer: a quilted plain hi-vis jacket with no lettering, a plain hard hat with no markings, heavy gloves, a crowbar through his belt, aiming a heavy revolver straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120103,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_motorway.png",
+   "out": "art/fight/gang_the_motorway_b_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_motorway_b_stand.png"
+   ],
+   "_where": "the the_motorway crew, b: hit, going down",
+   "description": "The same person as the reference image: a tow-truck driver turned enforcer: a quilted plain hi-vis jacket with no lettering, a plain hard hat with no markings, heavy gloves, a crowbar through his belt, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120104,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_docks.png",
+   "out": "art/fight/gang_the_docks_a_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_docks_a_stand.png"
+   ],
+   "_where": "the the_docks crew, a: firing at you",
+   "description": "The same person as the reference image: a port customs officer working for the Issuer: a plain dark uniform jacket and trousers, a flat cap with no badge, a plain clipboard with blank pages, no writing, clipped to his belt, aiming a compact pistol straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120105,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_docks.png",
+   "out": "art/fight/gang_the_docks_a_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_docks_a_stand.png"
+   ],
+   "_where": "the the_docks crew, a: hit, going down",
+   "description": "The same person as the reference image: a port customs officer working for the Issuer: a plain dark uniform jacket and trousers, a flat cap with no badge, a plain clipboard with blank pages, no writing, clipped to his belt, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120106,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_docks.png",
+   "out": "art/fight/gang_the_docks_b_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_docks_b_stand.png"
+   ],
+   "_where": "the the_docks crew, b: firing at you",
+   "description": "The same person as the reference image: a docker turned guard: a donkey jacket, a woolly hat, ear defenders round the neck, rigger boots, a hi-vis vest with no lettering, aiming a submachine gun straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120107,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_docks.png",
+   "out": "art/fight/gang_the_docks_b_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_docks_b_stand.png"
+   ],
+   "_where": "the the_docks crew, b: hit, going down",
+   "description": "The same person as the reference image: a docker turned guard: a donkey jacket, a woolly hat, ear defenders round the neck, rigger boots, a hi-vis vest with no lettering, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120108,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_big_houses.png",
+   "out": "art/fight/gang_the_big_houses_a_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_big_houses_a_stand.png"
+   ],
+   "_where": "the the_big_houses crew, a: firing at you",
+   "description": "The same person as the reference image: a private security man from the big houses: a black suit, an earpiece, a plain black tie, polished shoes, a holster under the jacket, aiming a pistol straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120109,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_big_houses.png",
+   "out": "art/fight/gang_the_big_houses_a_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_big_houses_a_stand.png"
+   ],
+   "_where": "the the_big_houses crew, a: hit, going down",
+   "description": "The same person as the reference image: a private security man from the big houses: a black suit, an earpiece, a plain black tie, polished shoes, a holster under the jacket, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120110,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_big_houses.png",
+   "out": "art/fight/gang_the_big_houses_b_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_big_houses_b_stand.png"
+   ],
+   "_where": "the the_big_houses crew, b: firing at you",
+   "description": "The same person as the reference image: an estate keeper for the big houses: a wax jacket, a tweed flat cap, a checked shirt, breeches and boots, aiming a side-by-side shotgun straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120111,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_big_houses.png",
+   "out": "art/fight/gang_the_big_houses_b_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_big_houses_b_stand.png"
+   ],
+   "_where": "the the_big_houses crew, b: hit, going down",
+   "description": "The same person as the reference image: an estate keeper for the big houses: a wax jacket, a tweed flat cap, a checked shirt, breeches and boots, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120112,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_treasury.png",
+   "out": "art/fight/gang_the_treasury_a_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_treasury_a_stand.png"
+   ],
+   "_where": "the the_treasury crew, a: firing at you",
+   "description": "The same person as the reference image: a Treasury guard: a dark high-collared tunic with plain brass buttons, a peaked cap with no badge, white gloves, polished boots, aiming a bolt-action rifle straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120113,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_treasury.png",
+   "out": "art/fight/gang_the_treasury_a_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_treasury_a_stand.png"
+   ],
+   "_where": "the the_treasury crew, a: hit, going down",
+   "description": "The same person as the reference image: a Treasury guard: a dark high-collared tunic with plain brass buttons, a peaked cap with no badge, white gloves, polished boots, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120114,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_treasury.png",
+   "out": "art/fight/gang_the_treasury_b_fire.png",
+   "reference_images": [
+    "res://art/fight/gang_the_treasury_b_stand.png"
+   ],
+   "_where": "the the_treasury crew, b: firing at you",
+   "description": "The same person as the reference image: a Treasury riot officer: plain black body armour with no lettering or patches, a visored helmet with no markings, a clear riot shield with no lettering on one arm, aiming a short carbine straight at the viewer, the weapon held firmly in both hands, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  },
+  {
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 120115,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/gang_the_treasury.png",
+   "out": "art/fight/gang_the_treasury_b_down.png",
+   "reference_images": [
+    "res://art/fight/gang_the_treasury_b_stand.png"
+   ],
+   "_where": "the the_treasury crew, b: hit, going down",
+   "description": "The same person as the reference image: a Treasury riot officer: plain black body armour with no lettering or patches, a visored helmet with no markings, a clear riot shield with no lettering on one arm, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering or badges on any clothing."
+  }
+ ]
+}

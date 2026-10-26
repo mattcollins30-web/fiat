@@ -4968,7 +4968,34 @@ func set_count(name: String) -> int:
 	for s in Data.SLOTS:
 		if equipped[s] != null and equipped[s].get("set", "") == name:
 			n += 1
+	if n == 0:
+		return 0
+	# issued kit counts as a piece of the set you're wearing, in a slot the set has a piece for (Matt, 26 Oct: a broken
+	# build wears the Issuer's kit too) - one set a piece: the one with the most real pieces on, by name on a tie (the review)
+	for pc in Items.set_named(name).get("pieces", []):
+		var sl: String = str(pc["slot"])
+		var it = equipped.get(sl)
+		if it != null and it.get("issued", false) and _issued_set_for(sl) == name:
+			n += 1
 	return n
+
+
+## The set an issued piece in `slot` counts for: of the sets with a piece for that slot and a real piece worn, the one
+## with the most real pieces on (by name on a tie); "" for none.
+func _issued_set_for(slot: String) -> String:
+	var best := ""
+	var best_n := 0
+	for st in Data.SETS:
+		if not st["pieces"].any(func(pc): return str(pc["slot"]) == slot):
+			continue
+		var real := 0
+		for s in Data.SLOTS:
+			if equipped[s] != null and equipped[s].get("set", "") == st["name"]:
+				real += 1
+		if real > best_n or (real == best_n and real > 0 and str(st["name"]) < best):
+			best = str(st["name"])
+			best_n = real
+	return best
 
 
 ## The set bonuses in force: every threshold at or under the count.
