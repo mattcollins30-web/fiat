@@ -747,7 +747,8 @@ func _shelf_branch() -> Dictionary:
 		func(nm): return gaps[nm] if gaps.has(nm) else _shelf_words(nm), 3)
 	for nd in branch["nodes"]:
 		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
-	branch["found"] = sim.shelf.size()
+	var shelf_of: Array = Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).map(func(u): return str(u["name"]))
+	branch["found"] = sim.shelf.filter(func(nm): return str(nm) in shelf_of).size()     # of the shelf's own, never past its "of N" (the third review)
 	return branch
 
 

@@ -10845,12 +10845,12 @@ func _crates_checks(main) -> void:
 	sim.deploy(3)
 	m = sim.mission
 	var shallow: int = sim.thin_after(m["t"])
-	var expect := func(d: int) -> int: return int(roundf((Data.THIN_AFTER + Data.THIN_PER_DEPTH * d) * (1.0 + maxf(0.0, sim.loot_bonus()))))
+	var expect := func(d: int) -> int: return int(roundf(Data.THIN_AFTER + Data.THIN_PER_DEPTH * d))     # quantity is more a search, not more searches (Matt, 26 Oct)
 	_check(shallow == expect.call(int(m["t"]["depth"])), "thin_after reads %d, not %d" % [shallow, expect.call(int(m["t"]["depth"]))])
 	var heavy: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"][0]["name"])
 	heavy["affixes"] = [{"stat": "loot_pct", "value": 100, "tier": 5}]
 	sim.equipped["Backpack"] = heavy
-	_check(sim.thin_after(m["t"]) > shallow, "+100%% quantity did not push the searches: %d from %d" % [sim.thin_after(m["t"]), shallow])
+	_check(sim.thin_after(m["t"]) == shallow, "+100%% quantity pushed the searches as well as the finds: %d from %d" % [sim.thin_after(m["t"]), shallow])
 	var deeper: Dictionary = m["t"].duplicate()
 	deeper["depth"] = int(m["t"]["depth"]) + 3
 	_check(sim.thin_after(deeper) > sim.thin_after(m["t"]), "depth did not push the searches")
@@ -19858,15 +19858,37 @@ func _issue_checks(main) -> void:
 		var sl0: String = str(u["slot"])
 		_check(sim.wear_lock(sim.issued_piece(sl0)) == 0 or (sim.issued_block(sl0).begins_with("Wear at") and not sim.buy_issued(sl0)), "the Issuer sells a level-1 runner a %s it can't wear: '%s'" % [sl0, sim.issued_block(sl0)])
 	sim.xp = maxf(xp_hold, Data.xp_for_level(Data.MAX_LEVEL))
-	# issued kit: a piece a slot, numbered, kept on a death
+	# issued kit: a piece a slot, numbered, kept on a death (an empty stash, so a full one from the run so far can't refuse)
+	var stash_hold: Array = sim.stash.duplicate()
+	sim.stash.clear()
+	var bought: Array = []
 	for u in Data.ISSUED:
 		var sl: String = str(u["slot"])
 		var before: int = sim.stash.size()
 		var shown: Dictionary = sim.issued_piece(sl)
 		_check(sim.buy_issued(sl) and sim.stash.size() == before + 1, "the Issuer didn't sell the %s: '%s'" % [sl, sim.issued_block(sl)])
 		var it: Dictionary = sim.stash.back()
+		bought.append(it)
 		_check(it.get("issued", false) and Items.full_name(it).contains("No.") and str(it["rule"]) == str(u["rule"]) and Items.ilvl(it) == Items.ilvl(shown), "the %s came without its stamp, rule or level: %s" % [sl, Items.full_name(it)])
 		_check(not load("res://scripts/ui/item_head.gd").unique_rule(it).is_empty(), "the %s's rule has no words" % sl)
+	sim.stash.assign(stash_hold + bought)     # the bought pieces kept: the webbing check below wants one
+	# the third review's A9, C5, C6, M2: loot once a search; the counter's piece one roll; issued kit off the shelf; a
+	# death past 50 keeps 50 and takes the paragon
+	_check(sim.thin_after({"depth": 3}) == int(roundf(Data.THIN_AFTER + Data.THIN_PER_DEPTH * 3)), "a site's searches still grow with loot quantity: %d" % sim.thin_after({"depth": 3}))
+	var ip_a: Dictionary = sim.issued_piece("Helmet")
+	var ip_b: Dictionary = sim.issued_piece("Helmet")
+	var ip_c: Dictionary = sim.issued_piece("Helmet", -1, true)
+	_check(int(ip_a["id"]) == int(ip_b["id"]) and int(ip_c["id"]) != int(ip_a["id"]), "the counter's piece rolls afresh each read, or a bought one shares its id")
+	_check(not sim.shelf.any(func(nm): return str(nm).begins_with("Issued")), "issued kit went on the uniques shelf: %s" % str(sim.shelf.filter(func(nm): return str(nm).begins_with("Issued"))))
+	var hold_d: Dictionary = sim.to_dict()
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 3) - Data.xp_for_level(Data.MAX_LEVEL)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	if sim.mission != null:
+		sim._kia()
+		_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 0 and sim.ring.is_empty() and not sim.tree.any(func(id): return sim.is_ring(str(id))), "a death past 50: level %d, paragon %d, ring nodes in the tree %s" % [sim.level(), sim.paragon(), str(sim.tree.filter(func(id): return sim.is_ring(str(id))))])
+	sim.load_dict(hold_d)
 	# stamping (Matt, 26 Oct): a piece of your own, stamped at the slot's issued price, counts towards the County's want
 	var own_gun = sim.equipped.get("Primary")
 	if own_gun != null and not own_gun.get("issued", false):
@@ -19893,6 +19915,7 @@ func _issue_checks(main) -> void:
 		_check(own_gun.get("stamped", false) and st_t["name"].text == Words.STAMP["tag_short"] and st_t["button"].disabled, "the stamp tile didn't stamp: '%s'" % st_t["name"].text)
 		own_gun.erase("stamped")
 	var web = sim.stash.filter(func(x): return x.get("issued", false) and str(x.get("rule", "")) == "issued_webbing")
+	_check(not web.is_empty(), "no issued webbing in the stash to test its meds")
 	if not web.is_empty():
 		var rig_hold = sim.equipped["Rig"]
 		sim.equipped["Rig"] = null
@@ -20010,11 +20033,14 @@ func _county_checks(main) -> void:
 	_check(sim.order_level("toll_plaza") == int(Data.county("toll_plaza")["level"]), "the Toll Plaza's level %d, not its set one" % sim.order_level("toll_plaza"))
 	# two issued pieces worn
 	sim.cash = 1e12
+	var stash_was: Array = sim.stash.duplicate()
+	sim.stash.clear()     # room for the buys, whatever the run so far left
 	for sl in ["Armour", "Helmet"]:
 		_check(sim.buy_issued(sl), "the fixture: no issued %s" % sl)
 		var it: Dictionary = sim.stash.back()
 		sim.stash.erase(it)
 		sim.equipped[sl] = it
+	sim.stash.assign(stash_was)
 	_check(sim.issued_worn() == 2 and sim.order_block("toll_plaza") == "", "two worn, the Toll Plaza still shut: '%s'" % sim.order_block("toll_plaza"))
 	# issued kit counts as a piece of the set you wear, in a slot the set has a piece for (26 Oct)
 	var army: Dictionary = Items.set_named("The Army's")
@@ -20031,6 +20057,13 @@ func _county_checks(main) -> void:
 	sim._dry_memo.clear()
 	_check(sim.set_count("The Army's") == 2, "an issued piece in the Army's slot didn't count with its piece: %d" % sim.set_count("The Army's"))
 	_check(sim.set_issued("The Army's") == 1, "the Kit's set line won't say the issued piece: set_issued %d" % sim.set_issued("The Army's"))     # "2 of 4 worn (1 issued)"
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury._pick_slot(str(army_slots[0]))
+	main.refresh()
+	var pick_words: String = " ".join(main._armoury._pick.text_nodes().filter(func(n): return n is Label and n.visible).map(func(n): return n.text))
+	_check(pick_words.contains("issued)"), "the Kit's set line doesn't say the issued piece: '%s' (room up %s, on a run %s)" % [pick_words.left(300), main._armoury.is_visible_in_tree(), sim.on_mission()])
+	main.show_room(main.MISSIONS)
 	# one set a piece: another set sharing that slot, a piece of its own on, doesn't count it too (the review)
 	var shared := ""
 	for st2 in Data.SETS:
@@ -20064,6 +20097,12 @@ func _county_checks(main) -> void:
 			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
 	# the canvas 'The County board' (26 Oct): the slots worn, a tick a taken pin, the key inside the map, a shut zone's
 	# card, the two links to their rooms
+	for z in range(Data.COUNTY_ZONES.size()):
+		if not sim.county_zone_open(z):
+			var zl: Label = cb._zone_labels[z]
+			_check(zl.text != str(Data.COUNTY_ZONES[z]["name"]), "a shut zone's name isn't scrambled: '%s'" % zl.text)
+			for k in sim.county_places(z):
+				_check(not str(cb._pin_labels[str(k)].text).contains(str(Data.county(str(k))["place"]).trim_prefix("The ")), "a shut zone's place reads plain: '%s'" % cb._pin_labels[str(k)].text)
 	var sw: Array = cb.slot_words()
 	_check(sw.size() == 6 and sw.filter(func(w): return str(w).begins_with("✓")).size() == mini(6, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])
 	for c in Data.COUNTY:
@@ -20226,6 +20265,24 @@ func _county_checks(main) -> void:
 	else:
 		_check(false, "the fixture: the Truck Stop wouldn't set off again: %s" % sim.order_block("truck_stop"))
 	sim.order_beaten["truck_stop"] = 1
+	var RVc = load("res://scripts/ui/run_view.gd")
+	# the County's art (tools3): every crew whole and its face, every head's three poses and his face, all twelve
+	# places' plates and walls once any are, the issued kit's pictures
+	for z in range(Data.COUNTY_ZONES.size()):
+		var ckey: String = RVc.county_gang({"signal": {"order": str(sim.county_places(z)[0])}})
+		var missing: Array = []
+		for w in ["a", "b"]:
+			for ps in ["stand", "fire", "down"]:
+				if RVc.tex("gang_%s_%s_%s" % [ckey, w, ps]) == null:
+					missing.append("%s %s" % [w, ps])
+		_check(missing.is_empty() and People.portrait("gang_" + ckey) != null, "the %s crew isn't whole: missing %s, face %s" % [ckey, str(missing), People.portrait("gang_" + ckey) != null])
+		var who: String = str(Data.COUNTY_ZONES[z]["head"])
+		var hk: String = RVc.site_key(who)
+		_check(["stand", "fire", "down"].all(func(ps): return RVc.tex("head_%s_%s" % [hk, ps]) != null) and People.portrait(who) != null, "%s isn't drawn for his fight: %s" % [who, hk])
+	var pairs_in: Array = Data.COUNTY.filter(func(c): return RVc._pair_in(RVc.COUNTY_DIR, RVc.site_key(str(c["place"]))))
+	_check(pairs_in.is_empty() or pairs_in.size() == Data.COUNTY.size(), "only %d of the County's 12 plates and walls drawn" % pairs_in.size())
+	for u in Data.ISSUED:
+		_check(Items.art(sim.issued_piece(str(u["slot"]))) != null, "no picture for the %s" % u["name"])
 	# a remix head: one of the Issuer's people on a plain signal - his issued kit, no County run counted
 	_check(sim.signal_head_name({"county_head": "manor", "zone": 1}) == "The Collector" and sim.signal_head_name({"zone": 1}) == "The Carpet Man", "the Radio names a remix head '%s'" % sim.signal_head_name({"county_head": "manor", "zone": 1}))
 	sim.hp = sim.max_hp()
@@ -20269,8 +20326,10 @@ func _county_checks(main) -> void:
 	sim._order_absorb(m, m["t"], 1000.0, "collector")
 	_check(is_equal_approx(sim.county_taken(m), 1.0), "a debtor down didn't clear the bill: ×%.2f" % sim.county_taken(m))
 	m = head_run.call("auditor")
-	sim.skill_slots = [str(sim.skill_slots[0]), "", ""] if not sim.skill_slots.is_empty() else ["", "", ""]
+	var slots_was: Array = sim.skill_slots.duplicate()
+	sim.skill_slots = ["make_ready", "", ""]          # one slotted, so the tax is read (tools3: it sat under an if that never ran)
 	var id0: String = str(sim.skill_slots[0])
+	_check(id0 != "" and sim.skill(id0).size() > 0, "the Auditor's fixture: no skill to tax")
 	if id0 != "":
 		var taxed: float = sim.skill_cost_now(0)
 		var mbk = sim.mission
@@ -20278,14 +20337,26 @@ func _county_checks(main) -> void:
 		var plain: float = sim.skill_cost_now(0)
 		sim.mission = mbk
 		_check(is_equal_approx(taxed, plain * Data.AUDITOR_TAX), "the Auditor's tax: %.1f against %.1f" % [taxed, plain])
+		for k in range(int(Data.ORDER_SEAL_EVERY / 0.5) + 2):
+			sim._order_tick(m, m["t"], 0.5, "auditor")
+		_check(not m.get("sealed", {}).is_empty() or float(m.get("taped_t", 0.0)) > 0.0, "the Auditor never stamped a skill in %.0f s" % Data.ORDER_SEAL_EVERY)
+	sim.skill_slots = slots_was
 	m = head_run.call("treasurer")
 	for k in range(int(Data.ORDER_PRINT_EVERY / 0.5) + 1):
 		sim._order_tick(m, m["t"], 0.5, "treasurer")
 	_check(float(m.get("shield", 0.0)) > 0.0 and int(m.get("printed", 0)) >= 1, "the Treasurer: shield %.0f, printed %d" % [float(m.get("shield", 0.0)), int(m.get("printed", 0))])
 	if sim.on_mission():
 		sim.extract_now()
-	# the remix: the Treasurer down, signals on the County's places, its heads away from home
+	# the remix: nothing before the Treasurer (tools3)
 	_check(not sim.county_done(), "the County done before the Treasurer")
+	for k in range(20):
+		var sg0 := {"id": 0, "site": 4, "zone": 1, "depth": 1, "head": true}
+		sim._remix(sg0, 0)
+		_check(not sg0.has("county") and not sg0.has("county_head"), "the remix laid a signal on the County before the Treasurer")
+	var ser_r: int = sim.issued_serial
+	sim._remix_issued(sim.reach + 5)
+	_check(sim.issued_serial == ser_r, "the remix brought issued kit before the Treasurer")
+	# the remix: the Treasurer down, signals on the County's places, its heads away from home
 	sim.order_beaten["treasury"] = 1
 	_check(sim.county_done(), "the Treasurer down and the County not done")
 	var on_county := false

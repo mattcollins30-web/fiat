@@ -107,6 +107,9 @@ func _show_col(c: Dictionary) -> void:
 	var chips: Array = [{"forms": ["Level %d" % sim.order_level(k)], "colour": Pal.TEXT_2}]
 	if beaten > 0:
 		chips.append({"forms": ["Beaten %d" % beaten], "colour": "good"})
+	var share: float = sim.over_level_share(sim.order_level(k))
+	if share < 0.999:
+		chips.append({"forms": ["Pays ×%.2f: you're past it" % share, "Pays ×%.2f" % share], "colour": "warn"})     # its set level under you (the third review's C8)
 	c["chips"].visible = open
 	c["chips"].show_chips(chips if open else [], 1)
 	if open:

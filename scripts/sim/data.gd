@@ -1175,10 +1175,10 @@ const FX := {
 	"node/cap_flattened": 2.0,     # Flattened: A kill with the plain staggers the next gang: they fire at half for two seconds
 	"node/cap_flattened.cut": 0.5,     # and by how much: the next of them at half (25 Oct: one man's share, not the gang's)
 	"rule/arsonists_rig.blast": 80.0,     # the Arsonist's Rig's blast, grown with the fight as a grenade's (25 Oct, the review)
-	"node/fire_pct.notable_s": 2.0,
+	"node/fire_pct.notable_s": 2.0,     # Lit, Dosed, Opened up: their dot lasts twice as long - fire, poison and bleed alike; named under fire_pct for the table's check (25 Oct, the review)
 	"rule/issued_seal.burn": 2.0,     # the issued seal: your burns count double
 	"rule/issued_rifle.kill": 1.5,     # the issued rifle: a kill pays half again
-	"rule/issued_plate.cut": 0.8,     # the issued plate: the order's and the Issuer's people hit you at this     # Lit, Dosed, Opened up: their dot lasts twice as long - fire, poison and bleed alike; named under fire_pct for the table's check (25 Oct, the review)
+	"rule/issued_plate.cut": 0.8,     # the issued plate: the order's and the County's people hit you at this
 	"node/cap_held": 0.1,     # Held: No second of their fire takes more than a tenth of you
 	"node/cap_iron": 0.1,     # Iron: Under half HP, every kill heals a tenth of you
 	"node/cap_jerry": 1.5,     # Jerry-rigged: Something improvised hits half again as hard
@@ -3296,20 +3296,21 @@ const REBUILD_FUSES := 2                 # fuses a rank past the first
 const REBUILD_KEY_RANK := 3              # from this rank, one of the place's rank_key
 ## Issued kit (25 Oct, Matt's picks): sold only by the Issuer, in fiat, after the Issue. Stamped and numbered, a tier
 ## past mythic: the deepest base of its slot, lifted ISSUED_LIFT, its item level the reach's + ISSUED_OVER, one rule each.
-## Never dropped, never lost (as a mythic). The County's sites want ISSUED_WANT of them worn.
+## Off the counter, and off a County head (a tier over the counter's); never lost (as a mythic). The County's sites want
+## ISSUED_WANT of them worn (a piece of your own stamped at the Bench counts too).
 const ISSUED := [
 	{"name": "Issued rifle", "slot": "Primary", "base": "Anti-materiel rifle", "rule": "issued_rifle", "issued": true,
-		"words": "Every kill pays half again", "short": "Kills pay x1.5", "affixes": [{"stat": "damage_pct", "value": 25}]},
+		"words": "Every kill pays half again", "short": "Kills pay ×1.5", "affixes": [{"stat": "damage_pct", "value": 25}]},
 	{"name": "Issued sidearm", "slot": "Secondary", "base": "Special issue pistol", "rule": "issued_sidearm", "issued": true,
-		"words": "Every fifth shot is printed twice: damage +20%", "short": "Every 5th shot twice", "affixes": [{"stat": "damage_pct", "value": 20}]},
+		"words": "The Issuer's own make: its damage grows with its level", "short": "Damage by its level", "affixes": [{"stat": "damage_pct", "value": 20}]},
 	{"name": "Issued cap", "slot": "Helmet", "base": "Command helmet", "rule": "issued_cap", "issued": true,
 		"words": "The Fence never pays you under the face rate", "short": "Rate never under 1.0", "affixes": [{"stat": "all_res", "value": 15}]},
 	{"name": "Issued plate", "slot": "Armour", "base": "Heavy armour suit", "rule": "issued_plate", "issued": true,
-		"words": "A fifth less from the order and the Issuer's people", "short": "-20% from the order, the County", "affixes": [{"stat": "hp", "value": 60}]},
+		"words": "A fifth less from the order and the County's people", "short": "−20% from the order, the County", "affixes": [{"stat": "hp", "value": 60}]},
 	{"name": "Issued webbing", "slot": "Rig", "base": "Command rig", "rule": "issued_webbing", "issued": true,
-		"words": "Meds heal half again; one med more", "short": "Meds +50%, +1 med", "affixes": [{"stat": "heal_pct", "value": 50}, {"stat": "med_cap", "value": 1}]},
+		"words": "Meds heal more, and one more is carried", "short": "Meds heal more, +meds", "affixes": [{"stat": "heal_pct", "value": 50}, {"stat": "med_cap", "value": 1}]},
 	{"name": "Issued seal", "slot": "Charm", "base": "Gold sovereign", "rule": "issued_seal", "issued": true,
-		"words": "Your burns count double; loot quality +20%", "short": "Burns x2, quality +20%", "affixes": [{"stat": "rarity_pct", "value": 20}]},
+		"words": "Your burns count double; finds come better", "short": "Burns ×2, better finds", "affixes": [{"stat": "rarity_pct", "value": 20}]},
 ]
 const ISSUED_LIFT := 1.5
 const ISSUED_OVER := 5
@@ -3385,8 +3386,8 @@ const PRINT_CIRC := 1.0                # and it goes into circulation again on t
 const PRINT_DECAY := 0.8               # each print this much of the last (Matt, 26 Oct: the Mint "a choice, not a farm")
 const MINT_TINS := 2.0                   # a run's tins from the mint: the town's worth × this × mint_pay, at today's prices
 ## The true pinnacles: new people in new places, opened by a rebuild, fought on a host site's crew and drops (`site`,
-## `zone`) under their own name and art; their level the reach + `over`, a level more every PINNACLE_WORTH of worth
-## and every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
+## `zone`) under their own name and art; their first fight at their set `level` (the Grid 35, the Archive 40, the Mint 45),
+## after it max(the set level, the reach + `over`) and a level more every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
 ## `first` on the first win only.
 const PINNACLES := [
 	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 35,
@@ -3408,9 +3409,9 @@ const ORDER_SHIELD := 0.3          # the Lineman: a shield of this share of his 
 const ORDER_SHIELD_WINDOW := 6.0   # not broken in this many seconds, it fills again
 const ORDER_SHIELD_STUN := 3.0     # broken: he's stunned this long
 const ORDER_SHIELD_BACK := 8.0     # and it comes back up after this
-const ORDER_SEAL_EVERY := 12.0     # the Registrar: a skill sealed this often
+const ORDER_SEAL_EVERY := 10.0     # the Registrar: a skill sealed this often (12 to 10, Matt 26 Oct: red tape with a bite)
 const ORDER_SEAL_FOR := 5.0        # for this long
-const ORDER_TAPE_CUT := 0.3        # with no skill to seal, your fire cut this much while it holds
+const ORDER_TAPE_CUT := 0.5        # with no skill to seal, your fire cut this much while it holds (0.3 to 0.5, Matt 26 Oct)
 const ORDER_PRINT_EVERY := 8.0     # the Issuer: a man printed this often
 const ORDER_PRINT_MAX := 6         # and never more than this on you
 const PINNACLE_UNIQUE := 0.25

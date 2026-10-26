@@ -1127,7 +1127,7 @@ func inflation_pct() -> int:
 
 ## A sum of the old day's tins as it stands now: as it is before the Issue, at the new money's after (Bung's, the bot's floors).
 func tins_now(x: float) -> float:
-	return x * Data.FIAT_SCALE * fiat_issue_inf if issued else x
+	return x * inflation() if issued else x     # at today's prices, the circulation's rise in (the third review: the Issue's alone)
 
 
 ## A note's worth in fiat after the Issue (the crews' prices and pays read through it).
@@ -1753,19 +1753,29 @@ func issued_def(slot: String) -> Dictionary:
 
 
 ## The piece the counter offers for a slot, at the reach: rolled fresh (no number till it's bought).
-func issued_piece(slot: String, at := -1) -> Dictionary:
+## The piece the counter (or a head) has for `slot`: the same one every read; `fresh` a copy of its own to keep.
+func issued_piece(slot: String, at := -1, fresh := false) -> Dictionary:
 	var u := issued_def(slot)
 	if u.is_empty():
 		return {}
 	var lv: int = (maxi(1, reach) + Data.ISSUED_OVER) if at < 0 else at     # a County head's at his level (25 Oct)
-	var r := RandomNumberGenerator.new()
-	r.seed = hash([slot, lv, issued_serial])     # its own dice: what the counter shows is what's bought, and the run's dice don't move
-	var it := Items.roll_unique(u, r, lv)
-	it["ilvl"] = lv
-	it["lift"] = Data.ISSUED_LIFT
-	it["issued"] = true
-	it["affixes"] = Items._scaled(u["affixes"], lv)
-	return it
+	var key := "%s|%d|%d" % [slot, lv, issued_serial]
+	var it: Dictionary = _issued_cache.get(key, {})
+	if it.is_empty():
+		var r := RandomNumberGenerator.new()
+		r.seed = hash([slot, lv, issued_serial])     # its own dice: what the counter shows is what's bought, and the run's dice don't move
+		it = Items.roll_unique(u, r, lv)
+		it["ilvl"] = lv
+		it["lift"] = Data.ISSUED_LIFT
+		it["issued"] = true
+		it["affixes"] = Items._scaled(u["affixes"], lv)
+		if _issued_cache.size() > 64:
+			_issued_cache.clear()
+		_issued_cache[key] = it                  # read once a key (the third review: a fresh roll and a new id on every price check)
+	return Items.one_of(it) if fresh else it
+
+
+var _issued_cache := {}
 
 
 func issued_price(slot: String) -> int:
@@ -1792,7 +1802,7 @@ func buy_issued(slot: String) -> bool:
 	if issued_block(slot) != "":
 		return false
 	var paid := float(issued_price(slot))
-	var it := issued_piece(slot)
+	var it := issued_piece(slot, -1, true)
 	issued_serial += 1
 	it["serial"] = issued_serial
 	cash -= paid
@@ -1854,7 +1864,7 @@ func issued_plate_cut(m: Dictionary) -> float:
 	if not has_rule("issued_plate"):
 		return 1.0
 	var county: bool = (m.has("t") and bool(m["t"].get("county", false))) or _order_mech(m) in ["bailiff", "auditor", "collector", "treasurer"]
-	var order: bool = not _sig.is_empty() and _sig.has("order")
+	var order: bool = (m.has("signal") and m["signal"] is Dictionary and m["signal"].has("order")) or (m.has("boss") and str(m["boss"].get("order", "")) != "")     # the run's own, not whatever's laid on a site (the third review: another site's odds read mid-run took the cut)
 	return Data.FX["rule/issued_plate.cut"] if (county or order) else 1.0
 
 
@@ -2169,7 +2179,7 @@ func _read(it: Dictionary, quiet := false) -> void:
 		var taught := word_taught_by(str(it["base"]))
 		if taught != "" and not _dry_on and not quiet:
 			log_event("%s: a code on it. The Radio has %s now." % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper carries its code (13 Oct: codes, not words)
-	if it.has("unique") and not (it["unique"] in shelf):
+	if it.has("unique") and not it.get("issued", false) and not (it["unique"] in shelf):     # issued kit isn't a find for the shelf (the third review: the count ran past its "of N")
 		shelf.append(it["unique"])
 		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size(), "tier": int(it.get("tier", 0))})
 	if it.has("set") and it.has("piece") and not (str(it["piece"]) in sets_seen):
@@ -2374,7 +2384,7 @@ func _craft_cost_raw(it: Dictionary, kind: String, _stat := "") -> int:
 
 ## Tempering (25 Oct, the review: nothing on the runner's side compounded, so the reach ran away or stood): a piece past
 ## the Bench's raise (a unique or a set piece at any level, never a mythic) one item level up, for scrap that grows
-## TEMPER_GROW a level past the raise and tins by item level. Not past what the runner can wear.
+## TEMPER_GROW a level past the raise and money by its worth (the second review). Not past what the runner can wear.
 func temper_over(it: Dictionary) -> int:
 	return int(it.get("tempered", 0))         # the tempers it has had (the review: a unique rolled deep started 30 "over")
 
@@ -6162,7 +6172,7 @@ func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	var got: Array = []
 	for n in range(Data.COUNTY_HEAD_ISSUED):
 		var slot: String = str(Data.ISSUED[rng.randi_range(0, Data.ISSUED.size() - 1)]["slot"])
-		var it := issued_piece(slot, lv)
+		var it := issued_piece(slot, lv, true)
 		issued_serial += 1
 		it["serial"] = issued_serial
 		m["found"].append(it)
@@ -6470,7 +6480,7 @@ func _remix_issued(d: int) -> void:
 	if not county_done() or d < reach or rng.randf() >= Data.REMIX_ISSUED_ODDS:
 		return
 	var slot: String = str(Data.ISSUED[rng.randi_range(0, Data.ISSUED.size() - 1)]["slot"])
-	var it := issued_piece(slot, d + Data.ISSUED_OVER)
+	var it := issued_piece(slot, d + Data.ISSUED_OVER, true)
 	if not stash_room(Items.size(it)):
 		return
 	issued_serial += 1
@@ -9060,7 +9070,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 ## The searches a cleared site's crates add up to (29; the crates since 13 Oct): by depth, and quantity pushes it.
 func thin_after(t: Dictionary) -> int:
 	var n: float = Data.THIN_AFTER + Data.THIN_PER_DEPTH * int(t["depth"])
-	return int(roundf(n * (1.0 + maxf(0.0, loot_bonus() - greed_quantity()))))     # greed's finds come on the search's extra, not more searches too (the second review)
+	return int(roundf(n))     # loot quantity is more a search, not more searches too (Matt, 26 Oct: the third review's A9, counted twice)
 
 
 ## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
@@ -9725,7 +9735,16 @@ func _kia() -> void:
 		equipped[s] = null
 	rig = []
 	operators_lost += 1
-	xp = 0.0
+	if level() >= Data.MAX_LEVEL:
+		# past the cap the next runner starts at it, and the crew's paragon goes instead (Matt, 26 Oct: the third
+		# review's M2 - a death sent a level-50 runner to 1, and shut the County till 50 again)
+		xp = Data.xp_for_level(Data.MAX_LEVEL)
+		if paragon_xp > 0.0:
+			log_event(Words.YARD["paragon_lost"] % paragon())
+		paragon_xp = 0.0
+		paragon_reset_free()                     # the ring's points and its nodes both (the review: the nodes stayed trained)
+	else:
+		xp = 0.0
 	wounds = {}                          # theirs, gone with them
 	hp = Data.BASE_HP
 	_signal_done(m, true)
@@ -12023,6 +12042,7 @@ static func _shift_sites(d: Dictionary) -> void:
 
 
 func load_dict(d: Dictionary) -> void:
+	_issued_cache.clear()                        # its pieces' ids were the old run of ids (the review)
 	_els_key = -1                         # the build's elements read again from the loaded tree
 	_rules_key = []                       # and the rules in play (22 Oct), and the pile's ids
 	_pile_ids_key = []

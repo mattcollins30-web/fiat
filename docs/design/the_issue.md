@@ -137,7 +137,7 @@ broken into patterns.
 
 **Stages 2-3, the County.** Data.COUNTY_ZONES and Data.COUNTY: four zones, three places each, the last the head's. A
 place runs through the order's plumbing (its key in `_sig["order"]`, Data.pinnacle falls back to Data.county), laid on a
-host site's crew and drops, at the reach + `over` + a level a win. A zone wants ISSUED_WANT [2, 3, 4, 6] issued pieces
+host site's crew and drops, at set levels (50/52/55, 60/62/65, 70/72/75, 80/82/85) + a level a win. A zone wants ISSUED_WANT [2, 3, 4, 6] issued pieces
 worn; its places open in turn; its head down opens the next. A head drops COUNTY_HEAD_ISSUED issued pieces at his level.
 
 | Zone | Places (host site) | Head and fight |
@@ -160,7 +160,7 @@ hand and wears it; burns when prices pass x1.5. The balance read reports the Iss
 fiat (gate 18).
 
 **Matt's calls, 26 Oct (after the fifth pass)**
-- The Mint at a set level, 60 (`"level"` in its PINNACLES entry; a level more a win), not the reach + 6 + the worth:
+- The Mint at a set level, 60 (later 45, the Grid 35, the Archive 40; after the first win they follow the reach), not the reach + 6 + the worth:
   the pass had it near level 160 and the Issue on 1 read of 24. The Grid and the Archive keep their reach-based levels.
 - The cap's rule stays as built: the Fence never pays you under the face rate.
 - The stash counts in the pile: at the Issue its sale worth joins the cash and notes under the root, and each piece held

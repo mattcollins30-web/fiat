@@ -1138,6 +1138,7 @@ const CLASS_UNLOCK := {
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The Pitch is set. One runner, a hammer, the estate outside.",
+	"paragon_lost": "The crew's %d paragon levels went with them; the next runner starts at level 50.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
 	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Pitch by morning.",
@@ -1264,7 +1265,7 @@ const FIGHT_NONE := "No skills used"
 const FIGHT_CLOSE := "Close"
 
 ## The true pinnacles' fights on screen (24 Oct): his chips "On them", the Registrar's "On you".
-const ORDER_CHIPS := {"shield": "Shield · break it in %d s", "stunned": "Stunned %d s", "taped": "Red tape · −30%% gun damage · %d s", "sealed": "A skill stamped",
+const ORDER_CHIPS := {"shield": "Shield · break it in %d s", "stunned": "Stunned %d s", "taped": "Red tape · −50%% gun damage · %d s", "sealed": "A skill stamped",
 	"printed": "%d printed men"}
 const SKILL_SEALED := "Stamped"
 const SKILL_SEALED_TIP := "Stamped by the Registrar: it can't fire for %d s"

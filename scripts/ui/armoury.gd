@@ -272,8 +272,9 @@ func _show_panel() -> void:
 			if int(k) > n and next_words == "":
 				next_words = st["bonuses"][k]["words"]
 		var iss: int = sim.set_issued(it["set"])
-		var line: String = "%s · %d of %d worn%s" % [it["set"], n, st["pieces"].size(), (" (%d issued)" % iss) if iss > 0 else ""]     # issued kit counts as a set piece: says so (the third review)
-		extra = [("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line, line, "%d of %d worn" % [n, st["pieces"].size()]]
+		var iss_words: String = (" (%d issued)" % iss) if iss > 0 else ""
+		var line: String = "%s · %d of %d worn%s" % [it["set"], n, st["pieces"].size(), iss_words]     # issued kit counts as a set piece: says so (the third review), in every form
+		extra = [("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line, line, "%d of %d worn%s" % [n, st["pieces"].size(), iss_words]]
 	var where: String = {"stash": "in the stash", "rig": "in the rig", "slot": "fitted"}.get(selected["kind"], "")
 	_pick.show_pick(it, sim, "The pick · " + where, tail, extra)
 	if Items.rig_item(it):
