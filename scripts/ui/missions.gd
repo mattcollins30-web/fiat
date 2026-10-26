@@ -5,6 +5,8 @@ extends Control
 ## the runner is out, main.gd shows the live cards instead. Fixed geometry in the card grid's 1536 x 916.
 
 signal acted
+signal to_issuer                       # the County card's links (the canvas 'The County board')
+signal to_bench
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -207,6 +209,8 @@ func _init() -> void:
 	_county = County.new(Rect2(0, TOP, Pal.GRID_W, Pal.ROOM_H - TOP))
 	_county.visible = false
 	_county.acted.connect(func(): acted.emit())
+	_county.to_issuer.connect(func(): to_issuer.emit())
+	_county.to_bench.connect(func(): to_bench.emit())
 	add_child(_county)
 	_came = CameBack.new()
 	_came.visible = false
@@ -531,8 +535,16 @@ func select(i: int) -> void:
 
 
 ## The County over the map, or the map back (25 Oct).
+## Off the Map, the County's shut card goes (the review: it outlived the board).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and _county != null:
+		_county.hide_shut()
+
+
 func set_county(on: bool) -> void:
 	county_on = on and sim != null and sim.issued
+	if not county_on and _county != null:
+		_county.hide_shut()
 	_shown = ""
 	_county._shown = ""
 	if sim != null:

@@ -9,12 +9,15 @@ extends Control
 ## Signals: `acted` after a run sets off.
 
 signal acted
+signal to_issuer                       # the card's "The Issuer, at the Fence" (the third review, the canvas 'The County board')
+signal to_bench                        # its "Stamp your own, at the Bench"
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Sim := preload("res://scripts/sim/sim.gd")
 
 const COL_GAP := 16
 @warning_ignore("integer_division")
@@ -32,6 +35,10 @@ const LABEL_H := 24.0
 const MAP_AT := Vector2(-3, -2)          # the painting drawn x2 from here, as the first map
 const PAINTING := "res://art/map/county.png"
 const LIT := Color(1.0, 0.86, 0.6, 0.08)
+const SLOT_ORDER := ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]
+const SLOT_WORDS := {"Helmet": "Helmet", "Armour": "Armour", "Rig": "Rig", "Charm": "Charm", "Secondary": "Sidearm", "Primary": "Gun"}
+const CHIP_H := 40.0
+const LINK_H := 46.0
 
 ## The zones, in the painting's own 512 x 424 (26 Oct, a first pass off the painting), in Data.COUNTY_ZONES' order:
 ## the Motorway along the top, the Docks down the right, the Big Houses the country west and south, the Treasury the town.
@@ -59,6 +66,11 @@ var _pin_labels := {}               # key -> Label
 var _zone_labels: Array = []        # a Label a zone
 var _card := {}                     # the picked place's card: panel, art, state, place, who, words, want, status, button, note
 var _shown := ""
+var _slots: Array = []              # the card's issued slots worn: [panel, label] a slot, ISSUED_FIRST's order
+var _key: Panel                     # the map's key strip, bottom left
+var _shut: Panel                    # a shut zone's card where it was clicked
+var _shut_lines: Array = []
+var _shut_zone := -1
 static var _painting = null
 static var _painting_read := false
 
@@ -89,6 +101,46 @@ func _init(rect: Rect2) -> void:
 	for k in PLACE_AT:
 		_pin_labels[k] = _pin_label(_px(PLACE_AT[k][0]), int(PLACE_AT[k][1]))
 	_build_card()
+	_build_key()
+	_shut = UI.panel(_map, Rect2(0, 0, 430, 130), UI.box(Color(Pal.BG, 0.95), 8, 2, Pal.CARD_LINE))
+	_shut.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shut.visible = false
+	_shut_lines.append(UI.label(_shut, Rect2(16, 12, 398, 20), Words.COUNTY["shut_kicker"], "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_shut_lines.append(UI.label(_shut, Rect2(16, 34, 398, 32), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
+	for n in range(2):
+		_shut_lines.append(UI.label(_shut, Rect2(16, 70 + n * 24, 398, 24), "", "Regular", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
+
+
+## The key strip (the canvas 'The County board', A): the pins' colours, shut and taken, bottom left of the map.
+func _build_key() -> void:
+	_key = UI.panel(_map, Rect2(12, size.y - 50, 10, 38), UI.box(Color("0f1214", 0.86), 6))
+	_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var x := 14.0
+	for e in [["safe", Pal.GOOD], ["risky", Pal.WARN], ["bad", Pal.BAD], ["shut", Color.TRANSPARENT], ["taken", Pal.GOOD]]:
+		var dot := Control.new()
+		dot.position = Vector2(x, 12)
+		dot.size = Vector2(15, 15)
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var kind: String = e[0]
+		var col: Color = e[1]
+		dot.draw.connect(func():
+			if kind == "shut":
+				dot.draw_arc(Vector2(7.5, 7.5), 5.5, 0.0, TAU, 20, Pal.TEXT_3, 2.0)
+			else:
+				dot.draw_circle(Vector2(7.5, 7.5), 6.5 if kind != "taken" else 7.5, col)
+				if kind == "taken":
+					_tick(dot, Vector2(7.5, 7.5), 7.5))
+		_key.add_child(dot)
+		x += 22
+		var l := UI.label(_key, Rect2(x, 7, 200, 24), Words.COUNTY["key"][kind], "Medium", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		l.size.x = ceilf(UI.text_width(l, l.text)) + 2.0
+		x += l.size.x + 18
+	_key.size.x = x - 4
+
+
+## A tick in a pin (a taken place, the key's Taken).
+static func _tick(c: CanvasItem, at: Vector2, r: float) -> void:
+	c.draw_polyline(PackedVector2Array([at + Vector2(-0.45, 0.0) * r, at + Vector2(-0.1, 0.38) * r, at + Vector2(0.5, -0.38) * r]), Pal.BG, maxf(2.0, r * 0.28))
 
 
 func _build_card() -> void:
@@ -119,6 +171,24 @@ func _build_card() -> void:
 	_card["want"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	y += 34
 	_card["status"] = UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	y += 44
+	# the issued kit worn, slot by slot, then the two ways to meet the want (the canvas 'The County board', A)
+	_card["slots_head"] = UI.label(panel, Rect2(PAD, y, INNER, 22), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	y += 30
+	var cw: float = (INNER - 2 * 12.0) / 3.0
+	for k in range(SLOT_ORDER.size()):
+		@warning_ignore("integer_division")
+		var r := Rect2(PAD + (k % 3) * (cw + 12.0), y + (k / 3) * (CHIP_H + 8.0), cw, CHIP_H)
+		var cp := UI.panel(panel, r, UI.box(Pal.PANEL, 6, 2, Pal.CARD_LINE))
+		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var cl := UI.label(cp, Rect2(12, 0, cw - 16, CHIP_H), "", "SemiBold", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_slots.append([cp, cl])
+	y += 2 * CHIP_H + 8 + 26
+	_card["to_issuer"] = UI.button(panel, Rect2(PAD, y, INNER, LINK_H), false)
+	_card["to_issuer"].pressed.connect(func(): to_issuer.emit())
+	y += LINK_H + 10
+	_card["to_bench"] = UI.button(panel, Rect2(PAD, y, INNER, LINK_H), false)
+	_card["to_bench"].pressed.connect(func(): to_bench.emit())
 	var fy: float = size.y - PAD - Pal.BUTTON_H
 	_card["button"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
 	_card["button"].pressed.connect(func(): _go(selected))
@@ -185,6 +255,8 @@ func show_state(s) -> void:
 	for c in Data.COUNTY:
 		reads += str(sim.order_odds_now(str(c["key"])))
 	var sig := "%s|%s|%s|%d|%d|%d|%s|%d" % [selected, str(sim.order_beaten), reads, sim.reach, sim.issued_worn(), int(sim.on_mission()), str(sim.can_deploy()), int(sim.issued)]
+	if _shut_zone >= 0 and sim.county_zone_open(_shut_zone):
+		hide_shut()                              # its zone opened: the card's wrong now
 	if sig == _shown:
 		return
 	_shown = sig
@@ -262,6 +334,19 @@ func _show_card() -> void:
 			bits.append(Words.COUNTY["odds_reading"])
 	UI.fit(_card["status"], [" · ".join(bits), " · ".join(bits.slice(0, 1))] if zone_open else [""])
 	_card["status"].add_theme_color_override("font_color", tone)
+	_card["slots_head"].visible = zone_open
+	UI.fit(_card["slots_head"], [Words.COUNTY["slots_head"] % [worn, want, str(zone["name"]).to_upper().trim_prefix("THE "), want], Words.COUNTY["slots_short"] % [worn, want]])
+	for n in range(SLOT_ORDER.size()):
+		var it = sim.equipped.get(SLOT_ORDER[n])
+		var on: bool = it != null and (it.get("issued", false) or it.get("stamped", false))
+		_slots[n][0].visible = zone_open
+		(_slots[n][0].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if on else Pal.CARD_LINE
+		UI.fit(_slots[n][1], ["%s %s" % ["✓" if on else "—", SLOT_WORDS[SLOT_ORDER[n]]]])
+		_slots[n][1].add_theme_color_override("font_color", Pal.TEXT if on else Pal.TEXT_3)
+	for b in ["to_issuer", "to_bench"]:
+		_card[b].visible = zone_open
+		UI.fit_button(_card[b], [Words.COUNTY[b], Words.COUNTY[b + "_short"]])
+		UI.style_button(_card[b], false, "")
 	var why: String = sim.order_block(k)
 	_card["button"].visible = open and why == ""
 	_card["note"].visible = not _card["button"].visible
@@ -311,6 +396,8 @@ func _draw_pins() -> void:
 		else:
 			_pins.draw_circle(c, r + 3.0, Pal.BG)
 			_pins.draw_circle(c, r, col)
+		if pin_state(k) == "taken":
+			_tick(_pins, c, r)                    # taken: a tick on its pin (the canvas 'The County board', A)
 		if not sim.order_open(k):
 			_pins.draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if known else Color("5a6068"), 2.0)
 
@@ -360,8 +447,56 @@ func _map_input(ev: InputEvent) -> void:
 		if dist <= best and sim.county_zone_open(zone_of(k)):
 			best = dist
 			hit = k
+	hide_shut()
 	if hit != "":
 		select(hit)
+		return
+	var z := zone_at(ev.position)
+	if z >= 0 and not sim.county_zone_open(z):
+		show_shut(z, ev.position)
+
+
+## The zone under a point of the map (its painting space), or -1.
+func zone_at(at: Vector2) -> int:
+	var p: Vector2 = (at - MAP_AT) / 2.0
+	for z in range(ZONE_SHAPES.size()):
+		if Geometry2D.is_point_in_polygon(p, PackedVector2Array(ZONE_SHAPES[z])):
+			return z
+	return -1
+
+
+## A shut zone clicked (the canvas 'The County board', B): its card where it was clicked - its name still scrambled,
+## the head to take first, the issued kit it'll want.
+func show_shut(z: int, at: Vector2) -> void:
+	var nm: String = Fmt.scramble(str(Data.COUNTY_ZONES[z]["name"]))
+	var prev: int = maxi(0, z - 1)
+	var head_k: String = str(Sim.county_places(prev)[2])
+	var known: bool = sim.county_zone_open(prev)
+	var place: String = str(Data.county(head_k)["place"])
+	var who: String = str(Data.county(head_k)["who"])
+	var line: String = Words.COUNTY["shut_line"] % [Words.mid(place) if known else Fmt.scramble(place), Words.mid(who) if known else Fmt.scramble(who), sim.county_want(z)]
+	UI.fit(_shut_lines[1], [nm])
+	UI.wrap([_shut_lines[2], _shut_lines[3]], line)
+	_shut.position = Vector2(clampf(at.x - 40.0, 8.0, _map.size.x - _shut.size.x - 8.0), clampf(at.y - 20.0, 8.0, _map.size.y - _shut.size.y - 60.0))
+	_shut.visible = true
+	_shut_zone = z
+	_shut.move_to_front()
+	_cover_labels()
+
+
+## The shut card down (the review: it outlived the board, a select and its zone's opening).
+func hide_shut() -> void:
+	_shut.visible = false
+	_shut_zone = -1
+	_cover_labels()
+
+
+
+## The map's names under the shut card hidden while it's up (it sits over them), shown again after.
+func _cover_labels() -> void:
+	var r := Rect2(_shut.position, _shut.size)
+	for l in _zone_labels + _pin_labels.values():
+		l.visible = not (_shut.visible and r.intersects(Rect2(l.position, l.size)))
 
 
 ## A place picked: its card at the right (a place in a shut zone doesn't pick).
@@ -369,6 +504,7 @@ func select(k: String) -> void:
 	if sim == null or Data.county(k).is_empty() or not sim.county_zone_open(zone_of(k)):
 		return
 	selected = k
+	hide_shut()
 	_shown = ""
 	show_state(sim)
 
@@ -390,6 +526,28 @@ func pin_at(k: String) -> Vector2:
 	return _px(PLACE_AT[k][0])
 
 
+## A pin as drawn: "taken", "open", "known" (its zone open, the place not yet) or "shut".
+func pin_state(k: String) -> String:
+	if int(sim.order_beaten.get(k, 0)) > 0:
+		return "taken"
+	if sim.order_open(k):
+		return "open"
+	return "known" if sim.county_zone_open(zone_of(k)) else "shut"
+
+
+## For the tests: the card's slot chips' words, the shut card, the key.
+func slot_words() -> Array:
+	return _slots.filter(func(s): return s[0].visible).map(func(s): return s[1].text)
+
+
+func shut_card() -> Panel:
+	return _shut
+
+
+func key_strip() -> Panel:
+	return _key
+
+
 func text_nodes() -> Array:
 	var out: Array = []
 	for l in _zone_labels:
@@ -398,4 +556,12 @@ func text_nodes() -> Array:
 		out.append(_pin_labels[k])
 	out.append_array([_card["state"], _card["place"], _card["who"], _card["want"], _card["status"]] + _card["words"])
 	out.append(_card["button"] if _card["button"].visible else _card["note"])
+	out.append(_card["slots_head"])
+	for sl in _slots:
+		out.append(sl[1])
+	for c in _key.get_children():
+		if c is Label:
+			out.append(c)
+	if _shut.visible:
+		out.append_array(_shut_lines)
 	return out

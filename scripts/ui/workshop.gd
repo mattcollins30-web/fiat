@@ -57,15 +57,15 @@ const PIECE_H := 372               # the Craft view's piece card: five affix row
 const AFFIX_H := 38                # an affix row
 const AFFIX_ROWS := 5              # a Legendary's five (20 Oct, Matt: "i can only ever see 3 out of the 5 affixes")
 const AFFIX_BTN_H := 46            # the two re-rolls, a row under the affixes
-const JOB_COLS := 3
+const JOB_COLS := 4                 # four across with the stamp (26 Oct, the canvas 'The stamp at the Bench', A)
 const JOB_H := 104                 # a job tile
 const JOB_GAP := 8
 @warning_ignore("integer_division")
-const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
-const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct)
-const JOB_NAMES := {"bump": "Item level +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip affixes"}
-const JOB_WORDS := {"add": "One more affix, the rarity a step up", "socket": "Adds a socket, up to %d", "strip": "Every affix gone; it goes Common",
-	"bump": "The lowest affix tiers stop rolling", "temper": "+1 item level: damage, armour, HP grow", "scrap": "Broken down for scrap; gone for good"}
+const JOB_W := (BODY_W - 2 * PAD - JOB_GAP * (JOB_COLS - 1)) / JOB_COLS        # 136
+const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap", "stamp"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct); the stamp (26 Oct)
+const JOB_NAMES := {"add": "Add an affix", "socket": "Socket", "bump": "Item lvl +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip", "stamp": "Stamp"}
+const JOB_WORDS := {"add": "One more affix, rarer", "socket": "Up to %d sockets", "strip": "Every affix gone",
+	"bump": "Lowest tiers stop rolling", "temper": "+1 item level, it grows", "scrap": "To scrap, gone for good", "stamp": "Counts as issued kit"}
 const RE_ROLLS := ["values", "affixes"]
 const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
@@ -1034,7 +1034,10 @@ func _show_craft(it: Dictionary) -> void:
 		var kind: String = JOBS[k]
 		var t: Dictionary = _job_tiles[k]
 		var b: Button = t["button"]
-		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind))])
+		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind)), str(JOB_NAMES.get(kind, kind)).replace("Add an affix", "Add affix")])
+		if kind == "stamp":
+			_stamp_tile(k, it, on_bench)
+			continue
 		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
 		if kind == "temper" and not it.is_empty() and sim.temper_block(it) != "":
 			jw = sim.temper_block(it)                  # why it can't, in its words: nothing grows, a mythic, Item level +3 first, past your level (the second review)
@@ -1051,7 +1054,12 @@ func _show_craft(it: Dictionary) -> void:
 			elif kind == "temper":
 				UI.fit(t["price"], [Words.TEMPER["price"] % [Fmt.group(sim.temper_scrap(it)), Fmt.money(cost)], Words.TEMPER["price"] % [Fmt.short_num(sim.temper_scrap(it)), Fmt.money_k(cost)]])
 			else:
-				t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (Fmt.notes(cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
+				if kind == "scrap":
+					UI.fit(t["price"], ["+%s scrap" % Fmt.group(cost), "+%s scrap" % Fmt.short_num(cost), "+%s" % Fmt.short_num(cost)])     # the tiles four across (26 Oct): the short forms
+				elif sim.craft_in_notes(kind):
+					UI.fit(t["price"], [Fmt.notes(cost), "%s notes" % Fmt.short_num(cost)])
+				else:
+					UI.fit(t["price"], Fmt.money_forms(cost))
 			_job_actions[k] = _do_craft.bind(it["id"], kind, "")          # scrap too: main runs it, toasts it
 		else:
 			t["price"].text = ""
@@ -1082,6 +1090,33 @@ func _show_craft(it: Dictionary) -> void:
 	else:
 		UI.fit(_foot, ["Nothing in the Workshop yet" if it.is_empty() else "%d scrap in hand" % sim.scrap, "%d scrap in hand" % sim.scrap])
 		_foot.add_theme_color_override("font_color", Pal.TEXT_3)
+
+
+## The stamp's tile (26 Oct, Matt: a piece of your own stamped for the County): the slot's issued price in fiat; why
+## not in its words (before the Issue, issued already, stamped already, short of fiat).
+func _stamp_tile(k: int, it: Dictionary, on_bench: bool) -> void:
+	var t: Dictionary = _job_tiles[k]
+	var b: Button = t["button"]
+	var why: String = sim.stamp_block(it) if not it.is_empty() else ""
+	var stamped: bool = not it.is_empty() and it.get("stamped", false)
+	UI.fit(t["name"], [Words.STAMP["tag_short"] if stamped else JOB_NAMES["stamp"]])
+	UI.wrap(t["words"], JOB_WORDS["stamp"] if (why == "" or why == Words.STAMP["short"] or stamped) else why)
+	var priced: bool = not it.is_empty() and sim.issued and not stamped and not it.get("issued", false) and str(it.get("slot", "")) in Data.SLOTS
+	t["price"].text = Fmt.money(sim.stamp_price(it)) if priced else ""
+	var can: bool = on_bench and not it.is_empty() and why == ""
+	_job_actions[k] = _do_craft.bind(it["id"], "stamp", "") if can else Callable()
+	var state := "on" if can else ("off" if priced else "none")
+	t["price"].add_theme_color_override("font_color", Pal.ACCENT if can else Pal.TEXT_2)
+	t["name"].add_theme_color_override("font_color", Pal.TEXT if state != "none" else Pal.TEXT_3)
+	for l in t["words"]:
+		l.add_theme_color_override("font_color", Pal.TEXT_2 if state != "none" else Pal.TEXT_3)
+	b.disabled = not can
+	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var bg: Color = Pal.CARD if state != "none" else Color.TRANSPARENT
+		if state == "on" and st in ["hover", "hover_pressed"]:
+			bg = Pal.BUTTON_HOVER
+		b.add_theme_stylebox_override(st, UI.box(bg, 7, 1, Pal.CARD_LINE if state != "none" else Pal.RAIL_RULE))
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 7, 2, Pal.TEXT))
 
 
 func _do_craft(id: int, kind: String, stat: String) -> void:

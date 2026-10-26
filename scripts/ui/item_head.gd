@@ -13,6 +13,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const TITLE_H := 36
 const CHIP_H := 26
@@ -189,6 +190,8 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	var rule := unique_rule(it)
 	if not rule.is_empty():
 		chips_a.append({"forms": rule, "colour": Pal.MYTHIC if it.get("mythic", false) else Pal.UNIQUE, "tag": "★"})
+	if it.get("stamped", false):
+		chips_a.append({"forms": [Words.STAMP["tag"], Words.STAMP["tag_short"]], "colour": Pal.ACCENT})     # stamped at the Bench for the County (26 Oct)
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})

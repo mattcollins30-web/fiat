@@ -42,6 +42,7 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const Missions := preload("res://scripts/ui/missions.gd")
 const Workshop := preload("res://scripts/ui/workshop.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const CountyRef := preload("res://scripts/ui/county.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 
 var _misfits := 0
@@ -19875,6 +19876,22 @@ func _issue_checks(main) -> void:
 		_check(price_s == sim.issued_price("Primary") and sim.stamp(int(own_gun["id"])) and own_gun.get("stamped", false) and sim.issued_worn() == worn0 + 1 and is_equal_approx(sim.cash, cash_s - price_s), "stamping the gun: worn %d from %d, cash %.0f from %.0f" % [sim.issued_worn(), worn0, sim.cash, cash_s])
 		_check(not sim.stamp(int(own_gun["id"])) and sim.stamp_block(own_gun) == Words.STAMP["done"], "a piece stamped twice")
 		own_gun.erase("stamped")
+		# the Bench's stamp tile (the canvas 'The stamp at the Bench', A): priced, pressed, then Stamped
+		sim.cash = maxf(sim.cash, float(price_s) * 2.0)
+		main.open_stamp()
+		main.refresh()
+		var wsp = main._workshop
+		var sk: int = wsp.JOBS.find("stamp")
+		var st_t: Dictionary = wsp._job_tiles[sk]
+		_check(main.room == main.WORKSHOP and wsp.view == "craft" and st_t["price"].text == Fmt.money(float(price_s)) and not st_t["button"].disabled, "the Bench's stamp tile: room %s, price '%s', off %s" % [main.room, st_t["price"].text, st_t["button"].disabled])
+		_check_fit(main, "the Bench with the stamp")
+		for jt in wsp._job_tiles:
+			for jl in jt["words"]:
+				_check(not str(jl.text).ends_with("…"), "a job tile's words cut, four across: '%s'" % jl.text)
+		wsp._press_job(sk)
+		main.refresh()
+		_check(own_gun.get("stamped", false) and st_t["name"].text == Words.STAMP["tag_short"] and st_t["button"].disabled, "the stamp tile didn't stamp: '%s'" % st_t["name"].text)
+		own_gun.erase("stamped")
 	var web = sim.stash.filter(func(x): return x.get("issued", false) and str(x.get("rule", "")) == "issued_webbing")
 	if not web.is_empty():
 		var rig_hold = sim.equipped["Rig"]
@@ -20045,6 +20062,49 @@ func _county_checks(main) -> void:
 	for n in cb.text_nodes():
 		if n is Label:
 			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
+	# the canvas 'The County board' (26 Oct): the slots worn, a tick a taken pin, the key inside the map, a shut zone's
+	# card, the two links to their rooms
+	var sw: Array = cb.slot_words()
+	_check(sw.size() == 6 and sw.filter(func(w): return str(w).begins_with("✓")).size() == mini(6, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])
+	for c in Data.COUNTY:
+		_check((cb.pin_state(str(c["key"])) == "taken") == (int(sim.order_beaten.get(str(c["key"]), 0)) > 0), "%s's pin reads %s" % [c["place"], cb.pin_state(str(c["key"]))])
+	var kp: Panel = cb.key_strip()
+	_check(kp.position.x >= 0.0 and kp.position.y >= 0.0 and kp.position.x + kp.size.x <= cb._map.size.x and kp.position.y + kp.size.y <= cb._map.size.y, "the County's key runs off the map: %s" % str(Rect2(kp.position, kp.size)))
+	var shut_z := -1
+	for z in range(Data.COUNTY_ZONES.size()):
+		if not sim.county_zone_open(z):
+			shut_z = z
+	if shut_z >= 0:
+		var cen := Vector2.ZERO
+		for v in CountyRef.ZONE_SHAPES[shut_z]:
+			cen += v
+		cen /= float(CountyRef.ZONE_SHAPES[shut_z].size())
+		var clk := InputEventMouseButton.new()
+		clk.button_index = MOUSE_BUTTON_LEFT
+		clk.pressed = true
+		clk.position = CountyRef.MAP_AT + cen * 2.0
+		cb._map_input(clk)
+		var sc: Panel = cb.shut_card()
+		var sct: String = " ".join(sc.get_children().filter(func(n): return n is Label).map(func(n): return n.text))
+		_check(sc.visible and sct.contains("first") and sct.contains("issued"), "a click on a shut zone: card %s, '%s'" % [sc.visible, sct])
+		for n in sc.get_children():
+			if n is Label:
+				_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the shut zone's card runs off: '%s'" % n.text)
+		cb._map_input(clk)
+		cb._map_input(clk)
+		_check(cb.shut_card().visible, "the shut card didn't come back on a second click")
+		main.show_room(main.MARKET)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var hidden_names: Array = cb.text_nodes().filter(func(n): return n is Label and not n.visible and n.get_parent() == cb._map)
+		_check(not cb.shut_card().visible and hidden_names.is_empty(), "the shut card outlived the board: card %s, %d names hidden" % [cb.shut_card().visible, hidden_names.size()])
+		main._missions.set_county(true)
+		main.refresh()
+	cb.card("toll_plaza")["to_issuer"].pressed.emit()
+	_check(main.room == main.MARKET and main._fence._issuer != null and main._fence._issuer.visible, "the County card's Issuer link didn't open his counter")
+	main.show_room(main.MISSIONS)
+	main._missions.set_county(true)
+	main.refresh()
 	# the third review: the head's fight said before Go; where issued kit comes from, not the want twice; the came-back
 	# button on the board isn't dead
 	var ts_words: String = " ".join(cb.card("truck_stop")["words"].map(func(l): return l.text))

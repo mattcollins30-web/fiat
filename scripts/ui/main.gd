@@ -292,6 +292,8 @@ func _build() -> void:
 	add_child(_barracks)
 	_missions = Missions.new()
 	_missions.acted.connect(refresh)
+	_missions.to_issuer.connect(open_issuer)
+	_missions.to_bench.connect(open_stamp)
 	_missions.visible = false
 	add_child(_missions)
 	_workshop = Workshop.new()
@@ -1434,6 +1436,24 @@ func _build_one(kind: String, nm: String) -> void:
 		_juice.toast("Built: %s" % nm.to_lower(), "good")
 
 
+## The County card's links (the canvas 'The County board'): the Issuer's counter at the Fence; the Bench with the first
+## worn piece that could be stamped picked (the guns first), else the Craft view as it was.
+func open_issuer() -> void:
+	show_room(MARKET)
+	_fence._show("issuer")
+	refresh()
+
+
+func open_stamp() -> void:
+	for sl in ["Primary", "Secondary", "Armour", "Helmet", "Rig", "Charm", "Backpack"]:
+		var it = sim.equipped.get(sl)
+		if it != null and not it.get("issued", false) and not it.get("stamped", false):
+			_open_workshop(int(it["id"]))
+			return
+	show_room(WORKSHOP)
+	refresh()
+
+
 ## The Runner room's Workshop button on a piece (9 Oct): the Workshop's Craft view with it picked, worn or
 ## not - the old menu went (Matt: "it opens the old menu - need to just remove the old one").
 func _open_workshop(id: int) -> void:
@@ -1445,6 +1465,12 @@ func _open_workshop(id: int) -> void:
 
 
 func _craft(id: int, kind: String, stat: String) -> void:
+	if kind == "stamp":
+		if sim.stamp(id) and _juice != null:
+			_juice.toast(Words.STAMP["log"] % [Items.full_name(sim.item_by_id(id)), Fmt.money(float(sim.stamp_price(sim.item_by_id(id))))], "good")     # the Bench's stamp (26 Oct)
+		_menu.close()
+		refresh()
+		return
 	var done: bool = sim.scrap_item(id) if kind == "scrap" else sim.craft(id, kind, stat)     # the Bench's scrap tile comes through here too (8 Oct)
 	if done and _juice != null:
 		_juice.toast(sim.last_craft["words"], "good")
