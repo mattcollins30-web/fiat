@@ -16857,9 +16857,11 @@ func _rebuild_checks(main) -> void:
 	# the order: a pinnacle as a signal, its head its own, its drops home
 	s.reach = 20
 	var lv: int = s.order_level("grid")
-	@warning_ignore("integer_division")
-	var want_lv: int = 20 + int(Data.pinnacle("grid")["over"]) + s.town_worth() / Data.PINNACLE_WORTH
+	var want_lv: int = int(Data.pinnacle("grid")["level"]) + int(s.order_beaten.get("grid", 0))     # a set level (26 Oct, the sixth pass)
 	_check(lv == want_lv, "the Grid's level %d, not %d" % [lv, want_lv])
+	@warning_ignore("integer_division")
+	var arch_lv: int = 20 + int(Data.pinnacle("archive")["over"]) + s.town_worth() / Data.PINNACLE_WORTH + int(s.order_beaten.get("archive", 0))
+	_check(s.order_level("archive") == arch_lv, "the Archive's level %d, not the reach's %d" % [s.order_level("archive"), arch_lv])
 	var e: Dictionary = s.order_read("grid")
 	_check(e.has("boss") and str(e["boss"].get("order", "")) == "grid" and str(e["boss"]["name"]) == "The Lineman" and e["name"] == "The Grid" and int(e["level"]) == lv, "the Grid reads %s" % str(e.get("boss", {})))
 	_check(s._sig.is_empty() and s.order_block("archive").begins_with("Rebuild the library") == false, "the read left the Grid on its site, or the Archive shut")

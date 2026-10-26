@@ -6975,3 +6975,11 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   dark and hatched with its names scrambled, the picked zone lit, the place's card at the right. The smoke: each pin in
   its zone and clear of its edge, the pins apart enough to click, a click picks, every name inside the map. Smoke 257
   green. Ready for Matt's playtest.
+- The sixth pass (26 Oct, 32 h, on 73365bd): 20 RED (8 design, 6 bot timing, 6 bot play); gates 2 and 6 tipped red at
+  their edges (bot timing), the rest as the fifth. The Issue on none of 24: the Grid at the reach + 2 + the worth read
+  0% on every save, so its key - which the Mint's rebuild wants - never dropped (3 reads built the Mint off an early
+  Grid win); and the Issuer at level 60 read 0% under reach ~70 (100% at 50 for a reach-70 Recruit). The Doorman as
+  physical's 1.8M dmg/s was the no-top ladder at reach 120 (kit at item level 120, paragon x3.3), not a broken build -
+  the combos are off in reads. Matt's calls: the Grid at a set 35 and the Mint at 45 (a level more a win; the Archive
+  as was), the bot's Grid first win at FIRST before the Issue and the Mint built first once the key's in, the spread
+  left. Smoke 258 green. The seventh pass next.

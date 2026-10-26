@@ -209,8 +209,8 @@ func _pick_order(sim) -> String:
 			continue
 		var county: bool = sim.is_county(k)
 		var first: bool = int(sim.order_beaten.get(k, 0)) == 0
-		var need: float = FIRST if (first and (county or k == "mint")) else PUSH
-		var rank: int = (2000 if county and first else (1000 if k == "mint" and not sim.issued else 0)) + sim.order_level(k)
+		var need: float = FIRST if (first and (county or k == "mint" or (k == "grid" and not sim.issued))) else PUSH     # the Grid's key opens the Mint (the sixth pass)
+		var rank: int = (2000 if county and first else (1000 if (k == "mint" or (k == "grid" and first)) and not sim.issued else 0)) + sim.order_level(k)
 		if rank <= best_rank:
 			continue
 		if float(sim.order_odds(k)[0]) >= need:
@@ -443,10 +443,20 @@ func _endgame(sim) -> void:
 				var pay: String = sim.contract_pay_words(c)
 				sim.hand_in(k)
 				bought.append([sim.elapsed, "contract: %s" % pay])
-	# the rebuild (18 Oct, docs/design/rebuild.md §7): the cheapest place it can build, by the materials it wants
+	# the rebuild (18 Oct, docs/design/rebuild.md §7): the cheapest place it can build, by the materials it wants - the
+	# Mint first once the Grid's key is in hand (Matt, 26 Oct, the sixth pass: 3 reads of 24 built it, the cheaper places
+	# taking its ledgers and army kit), nothing else spending what it wants till it stands
+	var mint_wants := {}
+	if sim.rebuild_rank("mint") == 0 and sim.held_of("grid_key") > 0:
+		if sim.can_rebuild("mint") and sim.rebuild_place("mint"):
+			bought.append([sim.elapsed, "rebuilt mint to rank 1"])
+		else:
+			mint_wants = sim.rebuild_cost("mint")
 	var cheapest := ""
 	var least := 1 << 30
 	for r in Data.REBUILDS:
+		if not mint_wants.is_empty() and sim.rebuild_cost(r["key"]).keys().any(func(m): return mint_wants.has(m)):
+			continue
 		if sim.can_rebuild(r["key"]):
 			var n := 0
 			var cost: Dictionary = sim.rebuild_cost(r["key"])

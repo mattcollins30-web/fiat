@@ -5813,7 +5813,7 @@ func order_level(k: String) -> int:
 		return county_level(k)
 	var p: Dictionary = Data.pinnacle(k)
 	if p.has("level"):
-		return int(p["level"]) + int(order_beaten.get(k, 0))     # the Mint at a set level (Matt, 26 Oct: the Issue at hour 12-16, not past the reach)
+		return int(p["level"]) + int(order_beaten.get(k, 0))     # the Grid at 35 and the Mint at 45, set (Matt, 26 Oct, the sixth pass: at the reach + 2 + the worth no read won the Lineman, whose key the Mint wants)
 	@warning_ignore("integer_division")
 	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
 
