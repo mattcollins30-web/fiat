@@ -76,72 +76,82 @@ const LOOT_READ := "res://docs/balance/loot_read.md"
 const PARITY_BAND := 0.5        # build parity (25 Oct): every build's reach gained in the spell at least this share of the best's
 
 
-const BROKEN_OUTRUN := 1.5     # a broken build's reach gained, at least this times its plain baseline's (Matt, 26 Oct: "both")
 const BROKEN_MD := "res://docs/balance/broken.md"
 const HUNT_MD := "res://docs/balance/hunt.md"
 const HUNT_ROWS := 30          # a stage's table: its best this many (every build's line stays in pass/hunt-s<stage>-*.txt)
 
 
-## The broken builds' reads (26 Oct): a BROKEN line each in pass/broken-<key>[-plain].txt.
+## The gauntlet's reads (26 Oct): a BROKEN line each in pass/broken-<key>.txt (a broken build's pieces on a one-save
+## end state) and a GAUNTLET line each in pass/gauntlet-<Class>-<element>.txt (the end state as played).
 static func read_broken() -> Array:
+	return _read_lines("broken-", "BROKEN ")
+
+
+static func read_gauntlet() -> Array:
+	return _read_lines("gauntlet-", "GAUNTLET ")
+
+
+static func _read_lines(prefix: String, tag: String) -> Array:
 	var out: Array = []
 	var dir := DirAccess.open(FOLDER)
 	if dir == null:
 		return out
 	for f in dir.get_files():
-		if f.ends_with(".txt") and f.begins_with("broken-"):
+		if f.ends_with(".txt") and f.begins_with(prefix):
 			var got := false
 			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
-				if line.begins_with("BROKEN "):
-					var bp = JSON.parse_string(line.substr(7).strip_edges())
+				if line.begins_with(tag):
+					var bp = JSON.parse_string(line.substr(tag.length()).strip_edges())
 					if bp is Dictionary:
 						out.append(bp)
 						got = true
 			if not got:
-				var nm: String = f.get_basename().substr(7)
-				out.append({"build": nm.trim_suffix("-plain"), "plain": nm.ends_with("-plain"), "error": "no BROKEN line (the read crashed or was cut off)"})
+				out.append({"build": f.get_basename().substr(prefix.length()), "error": "no %sline (the read crashed or was cut off)" % tag})
 	return out
 
 
-## The broken builds' table (26 Oct, Matt: broken is "both" - every piece of content beaten once, and the reach well past
-## the same runner, start and pieces, the combos off): a row a build, its plain baseline beside it, judged.
-static func broken_table(all: Array) -> Array:
+## The gauntlet's table (26 Oct, Matt: "a gauntlet"; its kit "the final pass's end states"): a row a read, each place
+## of the endgame in order - ✓ won (the try it fell on), ✗ lost three times, – never fought (and why). `title` heads it.
+## A broken build: every place won.
+static func gauntlet_table(all: Array, title: String, judge: bool) -> Array:
 	var out: Array = []
-	var broken: Array = all.filter(func(b): return not b.get("plain", false))
-	if broken.is_empty():
+	if all.is_empty():
 		return out
-	var plain := {}
-	for b in all:
-		if b.get("plain", false):
-			plain[str(b.get("build", ""))] = b
 	out.append("")
-	out.append("## The broken builds (outside the balance)")
+	out.append("## " + title)
 	out.append("")
-	out.append("Each from the Radio's checkpoint at level 50, the combos on for it alone, its set and unique held at the depth's tier, issued kit in the set's other slots; its plain baseline the same runner, start and pieces with the combos off. Broken when it beat everything (the Grid, the Archive, the Mint, the Issue and the County's twelve) and its reach gained is at least %.1f times its baseline's." % BROKEN_OUTRUN)
+	out.append("Each from a one-save read's end state (its 32 h kit; a broken build's set, unique and recipe put on it), the campaign done and the order's places rebuilt; then the endgame in order, each place at its own level, three tries, the issued kit each County zone wants bought and worn in the slots the build leaves free; a death puts the camp back as it was before the try. ✓ won (on try N), ✗ lost three times, – not fought." + (" Broken: every place won." if judge else ""))
 	out.append("")
-	out.append("| Build | Class | Played | Runs with it on | Reach (plain) | Dealt a second fought (plain) | Beaten (hour) | Never | Deaths | |")
-	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-	broken.sort_custom(func(a, b): return str(a.get("build", "")) < str(b.get("build", "")))
-	for bb in broken:
+	var keys: Array = ["grid", "archive", "mint"]
+	for c in Data.COUNTY:
+		keys.append(str(c["key"]))
+	out.append("| Build | Start (level, reach) | Won | " + " | ".join(keys.map(func(k): return str(Data.pinnacle(k).get("place", k)).trim_prefix("The "))) + " | Deaths | Not fought: why | |")
+	out.append("| --- | --- | --- | " + " | ".join(keys.map(func(_k): return "---")) + " | --- | --- | --- |")
+	all.sort_custom(func(x, y): return str(x.get("build", "")) < str(y.get("build", "")))
+	for bb in all:
 		if bb.has("error"):
-			out.append("| %s | | | | | | %s | | | RED |" % [bb.get("build", "?"), bb["error"]])
+			out.append("| %s | | | " % bb.get("build", "?") + " | ".join(keys.map(func(_k): return "")) + " | | %s | |" % bb["error"])
 			continue
-		var pb: Dictionary = plain.get(str(bb["build"]), {})
-		var gain: int = int(bb.get("reach1", 0)) - int(bb.get("reach0", 0))
-		var pgain: int = (int(pb.get("reach1", 0)) - int(pb.get("reach0", 0))) if not pb.is_empty() and not pb.has("error") else -1
-		var missing: Array = bb.get("missing", [])
-		# outran: a gain of its own, and 1.5x a baseline that gained something (a baseline at +0 can't be outrun by ratio: the review)
-		var outran: bool = pgain > 0 and gain > 0 and gain >= BROKEN_OUTRUN * pgain
-		var why_not: String = "no baseline" if pgain < 0 else ("its baseline gained nothing to judge by" if pgain == 0 else ("not %.1fx its baseline" % BROKEN_OUTRUN))
-		var bt: Dictionary = bb.get("beaten", {})
-		var bt_words: Array = bt.keys().map(func(k): return "%s %.1f" % [k, float(bt[k])])
+		var by := {}
+		for r in bb.get("gauntlet", []):
+			by[str(r["key"])] = r
+		var cells: Array = []
+		var whys: Array = []
+		for k in keys:
+			var r: Dictionary = by.get(k, {})
+			if r.is_empty() or int(r.get("tries", 0)) == 0:
+				cells.append("–")
+				var w: String = str(r.get("why", ""))
+				if w != "" and not (w in whys):
+					whys.append(w)
+			elif bool(r.get("won", false)):
+				cells.append("✓%s" % ("" if int(r["tries"]) == 1 else str(int(r["tries"]))))
+			else:
+				cells.append("✗")
 		var label: String = str(bb["build"]) + ((" = " + str(bb["id"])) if str(bb.get("id", bb["build"])) != str(bb["build"]) else "")
-		out.append("| %s | %s as %s | %.1f of %.1f h%s | %d of %d | %d to %d (+%d; plain %s) | %s (%s) | %s | %s | %d | %s |" % [label, bb.get("class", ""), bb.get("element", ""),
-			float(bb.get("played_h", 0.0)), float(bb.get("hours", 0.0)), " (cut short)" if bb.get("cut_short", false) else "",
-			int(bb.get("runs_on", 0)), int(bb.get("runs", 0)), int(bb.get("reach0", 0)), int(bb.get("reach1", 0)), gain, ("+%d" % pgain) if pgain >= 0 else "none",
-			str(int(float(bb.get("rate", 0.0)))), str(int(float(pb.get("rate", 0.0)))) if not pb.is_empty() else "none", ", ".join(bt_words) if not bt_words.is_empty() else "nothing",
-			", ".join(missing) if not missing.is_empty() else "none - everything fell", int(bb.get("deaths", 0)),
-			"BROKEN" if (missing.is_empty() and outran) else ("RED: " + ("content left" if not missing.is_empty() else "") + (" and " if not missing.is_empty() and not outran else "") + (why_not if not outran else ""))])
+		var all_won: bool = int(bb.get("won", 0)) == int(bb.get("of", -1))
+		out.append("| %s | %d, %d | %d of %d | %s | %d | %s | %s |" % [label, int(bb.get("level0", 0)), int(bb.get("reach0", 0)), int(bb.get("won", 0)), int(bb.get("of", 0)),
+			" | ".join(cells), int(bb.get("deaths", 0)), "; ".join(whys), ("BROKEN" if all_won else "not broken") if judge else ("all of it" if all_won else "")])
 	return out
 
 
@@ -185,14 +195,14 @@ func _init() -> void:
 		# `-- hunt`: the build hunt (tools\balance.bat <hours> 0 hunt), to docs/balance/hunt.md - the two stages, then the
 		# finalists' 16 h reads judged as the broken builds are
 		var hl: Array = ["# The build hunt", "", "Written %s from %s." % [Time.get_datetime_string_from_system(false, true), FileAccess.get_file_as_string(FOLDER + "/broken_commit.log").strip_edges()], "",
-			"Every class's two joints, each with every set at its count or none (stage 1); stage 1's best twenty, each with every unique whose slot the set leaves free (stage 2); stage 2's best six, 16 h each from the checkpoint against a plain baseline (the finalists). Every read from the Radio's checkpoint at level 50, the recipe walked, the pieces held at the depth's tier, the runner staying out till 20 patrols or the bail. Ranked by the damage really dealt a second fought."]
+			"Every class's two joints, each with every set at its count or none (stage 1); stage 1's best twenty, each with every unique whose slot the set leaves free (stage 2); stage 2's best six through the gauntlet from their class's one-save end state (the finalists). The stages' reads from the Radio's checkpoint at level 50, the recipe walked, the pieces held at the depth's tier, the runner staying out till 20 patrols or the bail; ranked by the damage really dealt a second fought."]
 		hl.append_array(hunt_table(1))
 		hl.append_array(hunt_table(2))
 		var fin: Array = read_broken()
 		if fin.is_empty():
 			hl.append_array(["", "## The finalists", "", "No finalist reads."])
 		else:
-			hl.append_array(broken_table(fin))
+			hl.append_array(gauntlet_table(fin, "The finalists: the gauntlet with their pieces on", true))
 		var hf := FileAccess.open(HUNT_MD, FileAccess.WRITE)
 		hf.store_string("\n".join(hl) + "\n")
 		hf.close()
@@ -202,7 +212,7 @@ func _init() -> void:
 	if "broken" in OS.get_cmdline_user_args():
 		# `-- broken`: the broken builds' reads alone (tools\balance.bat <hours> 0 broken), to docs/balance/broken.md
 		var lines: Array = ["# The broken builds", "", "Written %s from %s." % [Time.get_datetime_string_from_system(false, true), FileAccess.get_file_as_string(FOLDER + "/broken_commit.log").strip_edges()]]
-		lines.append_array(broken_table(read_broken()))
+		lines.append_array(gauntlet_table(read_broken(), "The broken builds: the gauntlet with their pieces on", true))
 		var bf := FileAccess.open(BROKEN_MD, FileAccess.WRITE)
 		bf.store_string("\n".join(lines) + "\n")
 		bf.close()
@@ -220,7 +230,7 @@ func _init() -> void:
 	var parity: Array = []                # the parity reads (25 Oct): a PARITY line each, their own table and row
 	var broken: Array = read_broken()     # the broken builds' reads (26 Oct): a BROKEN line each, outside the gates
 	for f in dir.get_files():
-		if f.ends_with(".txt") and (f.begins_with("broken-") or f.begins_with("hunt-")):
+		if f.ends_with(".txt") and (f.begins_with("broken-") or f.begins_with("hunt-") or f.begins_with("gauntlet-")):
 			continue
 		elif f.ends_with(".txt") and f.begins_with("parity-"):
 			var got := false
@@ -398,7 +408,8 @@ func _init() -> void:
 	for r in rows:
 		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	var head := out.size()
-	out.append_array(broken_table(broken))
+	out.append_array(gauntlet_table(read_gauntlet(), "The gauntlet: each build's end state as played", false))
+	out.append_array(gauntlet_table(broken, "The broken builds (outside the balance): the gauntlet with their pieces on", true))
 	out.append("")
 	out.append("## The builds")
 	out.append("")

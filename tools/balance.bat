@@ -5,11 +5,13 @@ rem the campaign and swapped freely).
 rem   tools\balance.bat           thirty-two simulated hours a one-save read (the chase's pass)
 rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
-rem   tools\balance.bat 16 0 broken   the six broken builds alone, 16 h each with their plain baselines, from the pass's
-rem                                  checkpoint (made first if missing): docs\balance\broken.md, the pass's own files left
+rem   tools\balance.bat 0 0 broken    the six broken builds' gauntlets alone, from the last pass's end states (a pass
+rem                                  first): docs\balance\broken.md, the pass's own files left
 rem   tools\balance.bat 2 0 hunt     the build hunt (26 Oct, Matt): stage 1 (every joint with every set or none), stage 2 (stage
-rem                                  1's best twenty with every unique that fits), each read 2 h; then stage 2's best six 16 h
-rem                                  each with their plain baselines: docs\balance\hunt.md, the pass's own files left
+rem                                  1's best twenty with every unique that fits), each read 2 h; then stage 2's best six
+rem                                  through the gauntlet from the last pass's end states: docs\balance\hunt.md
+rem After the one-save reads, the gauntlet (26 Oct, Matt): each build's end state through the endgame in order, as played
+rem and with the six broken builds' pieces on (tests\balance.gd _gauntlet); the summary's two tables.
 rem First the checkpoint: one save from a new game (the Poacher) to the Radio's opening, written to
 rem docs\balance\radio_checkpoint.save. Then side by side:
 rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
@@ -64,7 +66,7 @@ for /l %%S in (1,1,%READS%) do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			set /a N+=1
 			>>docs\balance\pass\expected.txt echo %%B-%%A-%%S
-			start "" /b cmd /c tools\balance_read.bat %%B-%%A-%%S 240 %HOURS% one %%B %%A
+			start "" /b cmd /c tools\balance_read.bat %%B-%%A-%%S 240 %HOURS% one %%B %%A 0 read%%S
 		)
 	)
 )
@@ -77,17 +79,6 @@ for /l %%S in (1,1,2) do (
 			start "" /b cmd /c tools\balance_read.bat parity-%%B-%%A-%%S 60 %PARITY_HOURS% parity %%B %%A
 		)
 	)
-)
-rem the broken builds (26 Oct, Matt: "test they are broken and can smash all content at least once"): outside the
-rem balance, each its own read from the checkpoint, the combos on for it alone (tests\balance.gd _broken); the summary
-rem lists what each beat and what it never did, no gate
-set BROKEN_HOURS=16
-for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
-	set /a N+=2
-	>>docs\balance\pass\expected.txt echo broken-%%K
-	>>docs\balance\pass\expected.txt echo broken-%%K-plain
-	start "" /b cmd /c tools\balance_read.bat broken-%%K 240 %BROKEN_HOURS% broken %%K
-	start "" /b cmd /c tools\balance_read.bat broken-%%K-plain 240 %BROKEN_HOURS% broken %%K plain
 )
 set /a N+=1
 >>docs\balance\pass\expected.txt echo probe
@@ -111,9 +102,25 @@ if %TICKS% geq 1800 (
 	echo The pass ran past five hours: summarising what finished.
 	rem the summary names the reads still going (no .done) as still going at the deadline
 	>docs\balance\pass\deadline.log echo The pass ran past five hours at %date% %time%
-	goto summary
+	goto gauntlets
 )
 if %DONE% lss %N% goto wait
+:gauntlets
+rem the gauntlet (26 Oct, Matt: "test they are broken and can smash all content at least once"; its kit "the final
+rem pass's end states"): each build's end state as played, and the six broken builds' pieces on their class's
+for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
+	for /f "tokens=1,2" %%A in (%%E) do (
+		>>docs\balance\pass\expected.txt echo gauntlet-%%B-%%A
+		start "" /b cmd /c tools\balance_read.bat gauntlet-%%B-%%A 60 0 gauntlet %%B %%A
+	)
+)
+for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
+	>>docs\balance\pass\expected.txt echo broken-%%K
+	start "" /b cmd /c tools\balance_read.bat broken-%%K 60 0 broken %%K
+)
+echo The gauntlet: 18 reads running.
+call :waitfor "gauntlet-*.done" 12 400
+call :waitfor "broken-*.done" 6 400
 :summary
 
 "%GODOT%" --headless --path . -s tools/balance_summary.gd
@@ -143,12 +150,9 @@ for %%G in (1 2) do (
 	echo Stage %%G of the hunt: 12 shards running, %HOURS% h a build.
 	call :waitfor "hunt-s%%G-*.done" 12 1900
 )
-for /l %%N in (0,1,5) do (
-	start "" /b cmd /c tools\balance_read.bat broken-hunt%%N 240 16 broken hunt%%N
-	start "" /b cmd /c tools\balance_read.bat broken-hunt%%N-plain 240 16 broken hunt%%N plain
-)
-echo The hunt's six finalists running, 16 h each with their baselines.
-call :waitfor "broken-*.done" 12 1800
+for /l %%N in (0,1,5) do start "" /b cmd /c tools\balance_read.bat broken-hunt%%N 60 0 broken hunt%%N
+echo The hunt's six finalists through the gauntlet.
+call :waitfor "broken-*.done" 6 400
 "%GODOT%" --headless --path . -s tools/balance_summary.gd -- hunt
 echo Done: docs\balance\hunt.md
 endlocal
@@ -174,35 +178,21 @@ endlocal
 exit /b 1
 
 :broken_only
-rem the broken builds alone (26 Oct, Matt): each with its plain baseline, from the pass's checkpoint; the pass's own reads
-rem and summary stay as they were
-rem the import once first, as the full pass does (concurrent imports race: the review)
+rem the broken builds' gauntlets alone (26 Oct, Matt): from the last pass's end states; the pass's own reads and summary
+rem stay as they were
+if not exist docs\balance\pass\Drifter-fire-1.save if not exist docs\balance\pass\Drifter-fire-2.save (
+	echo No end states from a pass: run a full pass first.
+	>docs\balance\flag_error.txt echo no end states in pass\ for the broken builds' gauntlets: run a full pass first
+	endlocal
+	exit /b 1
+)
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_limited.ps1 -Godot "%GODOT%" -GodotArgs "--headless --path . --import" -Log docs\balance\pass\import.log -Minutes 5 -Quiet 120
 del /q docs\balance\pass\broken-*.* 2>nul
 del /q docs\balance\broken.md 2>nul
-for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The broken reads on %%C> docs\balance\pass\broken_commit.log
-if not exist docs\balance\pass\radio_checkpoint.save (
-	echo No checkpoint from a pass: making one first.
-	call tools\balance_read.bat checkpoint 90 40 one Drifter fire 0 checkpoint
-	ren docs\balance\pass\checkpoint.done checkpoint.end 2>nul
-)
-set N=0
-for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
-	set /a N+=2
-	start "" /b cmd /c tools\balance_read.bat broken-%%K 240 %HOURS% broken %%K
-	start "" /b cmd /c tools\balance_read.bat broken-%%K-plain 240 %HOURS% broken %%K plain
-)
-echo %N% broken-build reads running, %HOURS% h each. Waiting.
-set TICKS=0
-:bwait
-timeout /t 10 /nobreak >nul
-set /a TICKS+=1
-set DONE=0
-for %%F in (docs\balance\pass\broken-*.done) do set /a DONE+=1
-echo   %DONE% of %N% finished
-if %TICKS% geq 1800 goto bsummary
-if %DONE% lss %N% goto bwait
-:bsummary
+for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The broken builds' gauntlets on %%C> docs\balance\pass\broken_commit.log
+for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do start "" /b cmd /c tools\balance_read.bat broken-%%K 60 0 broken %%K
+echo Six gauntlets running.
+call :waitfor "broken-*.done" 6 400
 "%GODOT%" --headless --path . -s tools/balance_summary.gd -- broken
 echo Done: docs\balance\broken.md
 endlocal

@@ -57,7 +57,9 @@ func _init() -> void:
 		# `-- 32 one Drifter fire`: the one-save read (25 Oct, step 8): from the Poacher, the target build when its class
 		# opens, the crew's swaps after; the same gates as `gate`. `-- 32 one Drifter fire 0 checkpoint` also writes
 		# the Radio's checkpoint save as the Radio opens and stops there (the parity reads start from it)
-		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, args.size() > 5 and args[5] == "checkpoint")
+		# `-- 32 one Drifter fire 0 read2`: the pass's second read of the build, its end state saved as its own (the review)
+		var tag: String = args[5] if args.size() > 5 else ""
+		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, tag == "checkpoint", tag.trim_prefix("read") if tag.begins_with("read") else "")
 		return
 	if cls == "parity":
 		_parity(hours, args[2] if args.size() > 2 else "Poacher", args[3] if args.size() > 3 else "")
@@ -66,9 +68,16 @@ func _init() -> void:
 		_probe()
 		return
 	if cls == "broken":
-		# `-- 16 broken embers`: a broken build (26 Oct, Matt) from the Radio's checkpoint, the combos on, its parts held;
-		# `-- 16 broken embers plain`: the same runner, start and pieces, the combos off (the baseline it must outrun)
-		_broken(hours, args[2] if args.size() > 2 else "embers", args.size() > 3 and args[3] == "plain")
+		# `-- 0 broken embers`: a broken build's gauntlet (26 Oct, Matt) from its class's one-save end state, its pieces
+		# and recipe on; `-- 0 broken hunt0`: the hunt's best
+		_broken(hours, args[2] if args.size() > 2 else "embers")
+		return
+	if cls == "gauntlet":
+		# `-- 0 gauntlet Drifter fire`: the build's one-save end state as played, through the gauntlet (26 Oct, Matt)
+		var gb: Dictionary = _gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", {})
+		gb["build"] = "%s-%s" % [gb["class"], gb["element"]]
+		print("GAUNTLET " + JSON.stringify(gb))
+		quit(0)
 		return
 	if cls == "hunt":
 		# `-- 2 hunt 1 0 12`: the build hunt's stage 1, shard 0 of 12 (26 Oct, Matt); `-- 16 broken hunt0 [plain]` its finalists
@@ -255,7 +264,7 @@ static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false) -> void:
+func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false, read_n := "") -> void:
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
@@ -577,7 +586,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
-	var save_path := "res://docs/balance/pass/%s.save" % build.replace(" as ", "-")
+	var save_path := "res://docs/balance/pass/%s%s.save" % [build.replace(" as ", "-"), ("-" + read_n) if read_n != "" else ""]
 	var sf := FileAccess.open(save_path, FileAccess.WRITE)
 	if sf != null:
 		sf.store_string(JSON.stringify({"sim": sim.to_dict()}))
@@ -734,17 +743,15 @@ func _hm(s: float) -> String:
 ## Build parity (25 Oct, step 8): one build for a fixed spell from the Radio's checkpoint - the same world, the same
 ## kit in the stash, the class taken whether or not the save had opened it - and what it made of the spell: the reach
 ## and the levels gained, the signals won, the deaths. One PARITY line; the summary sets the builds side by side.
-## A broken build's read (26 Oct, Matt: "test they are broken and can smash all content at least once"): from the
-## Radio's checkpoint, the build's class, its recipe trained, its pieces on (found again at the reach as it climbs,
-## bot.gd _hold_broken), the combos switched on for this read alone; the bot plays it staying out (bot.stay_out: the
-## stacks are the run's). BROKEN {json}: what it beat and when - the order's three, the Issue, the County's twelve -
-## what it never did, and the damage it really dealt a second fought. `key` a combo's, or "hunt<n>": the build hunt's
-## nth finalist (stage 2's lines, pass/hunt-s2-*.txt, ranked as _hunt_ranked does).
+## A broken build (26 Oct, Matt: "test they are broken and can smash all content at least once"): the gauntlet (below)
+## from its class's one-save end state, its pieces and recipe on and its combos counting. BROKEN {json}: each place
+## won or not. `key` a combo's, or "hunt<n>": the build hunt's nth best (stage 2's lines, pass/hunt-s2-*.txt, ranked
+## as _hunt_ranked does).
 const BROKEN_ELEMENT := {"embers": "fire", "clean_kills": "frost", "flatline": "shock", "opened_for_good": "bleed", "live_load": "shock", "drilled": "physical"}
 const STAY_OUT := 20                     # Matt, 26 Oct: "until HP bail or 20 patrols"
 const HUNT_DIR := "res://docs/balance/pass/"     # pass/hunt-s<stage>-<shard>.txt (tools\\balance.bat <hours> 0 hunt)
 const HUNT_TOP := 20                     # the first stage's builds the second tries every unique on (Matt, 26 Oct: two stages)
-func _broken(hours: float, key: String, plain := false) -> void:
+func _broken(_hours: float, key: String, _plain := false) -> void:
 	var spec: Dictionary = {}
 	if key.begins_with("hunt") and key.substr(4).is_valid_int():
 		var ranked: Array = _hunt_ranked(2)
@@ -758,10 +765,171 @@ func _broken(hours: float, key: String, plain := false) -> void:
 		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build"}))
 		quit(0)
 		return
-	var b: Dictionary = _build_read(hours, spec, plain, true)
+	var b: Dictionary = _gauntlet(str(spec["class"]), str(spec["element"]), spec)
 	b["build"] = key
 	print("BROKEN " + JSON.stringify(b))
 	quit(0)
+
+
+## The gauntlet (26 Oct, Matt: "a gauntlet" - is it broken, can it smash all content at least once; its kit "the final
+## pass's end states"): a one-save read's end (pass/<Class>-<element>.save, its 32 h kit), as played or with a build's
+## pieces and recipe put on; the campaign done and the order's places rebuilt; then every piece of the endgame once, in
+## order - the Grid, the Archive, the Mint (whose first win is the Issue), the County's twelve zone by zone - each at
+## its own level, GAUNTLET_TRIES tries. Before each County zone the issued kit it wants is bought and worn in the slots
+## the build leaves free. A death puts the camp back as it was before the try (the kit is the question, not one life).
+## A place not won is opened anyway (`forced`), so every later one still gets its fight. Broken: every one won.
+const GAUNTLET_TRIES := 3
+const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
+func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
+	var out := spec.duplicate(true)
+	out["class"] = cls
+	out["element"] = element
+	var d = null
+	var path := ""
+	for n in ["-1", "-2", ""]:                 # the pass's first read, else its second (the review: one file both wrote)
+		path = "res://docs/balance/pass/%s-%s%s.save" % [cls, element, n]
+		var text := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
+		d = JSON.parse_string(text) if text != "" else null
+		if d is Dictionary and d.has("sim"):
+			break
+	if not (d is Dictionary) or not d.has("sim"):
+		out["error"] = "no end state for %s as %s (its read unfinished, or no pass yet)" % [cls, element]
+		return out
+	out["end_state"] = path.get_file()
+	Sim.combos_off = spec.is_empty()         # as played: the balance's own rule; with a build on, its combos count
+	var sim = Sim.new()
+	sim.load_dict(d["sim"])
+	sim.loot_by_hand = false
+	sim.fast_memo = true
+	sim.odds_runs_max = 24
+	if sim.on_mission():
+		sim.extract_now()
+	if sim.cls != cls:
+		sim.set_class(cls)
+	var bot = Bot.new()
+	bot.cls = cls
+	bot.element = element
+	bot.crew_on = false
+	var walked: Array = []
+	for rp in spec.get("recipe", []):
+		var rid: String = Data.node_id_named(str(rp))
+		var ok: bool = rid != "" and _walk(sim, rid)
+		walked.append([str(rp), ok, "" if ok else (sim.train_block(rid) if rid != "" else "no such node")])
+	out["recipe"] = walked
+	var combo := str(spec.get("combo", ""))
+	if combo != "":
+		bot.broken = combo
+	elif not spec.is_empty():
+		bot.hold = {"set": str(spec.get("set", "")), "pieces": int(spec.get("pieces", 0)), "rule": str(spec.get("rule", "")), "gun": str(spec.get("gun", ""))}
+	if bot.holding():
+		bot._hold_broken(sim)
+	var t0 := Time.get_ticks_msec()
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done, as the order's camp would be
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	for k in ["grid", "archive", "mint"]:
+		var ob: String = str(Data.pinnacle(k)["opened_by"])
+		sim.rebuilt[ob] = maxi(1, sim.rebuild_rank(ob))
+	out["level0"] = sim.level()
+	out["reach0"] = sim.reach
+	out["kit0"] = _kit(sim)
+	out["on_at_start"] = sim.combo_on(combo) if combo != "" else false
+	var content: Array = ["grid", "archive", "mint"]
+	for z in range(Data.COUNTY_ZONES.size()):
+		content.append_array(Sim.county_places(z))
+	var rows: Array = []
+	var deaths := 0
+	for k in content:
+		var no_kit := ""
+		if Sim.is_county(k):
+			no_kit = _gauntlet_issued(sim, bot, sim.county_want(int(Data.county(k)["cz"])))
+		var row := {"key": k, "level": sim.order_level(k), "won": false, "tries": 0, "forced": false, "why": "", "ends": []}
+		for n in range(GAUNTLET_TRIES):
+			bot.tidy(sim)
+			sim.hp = sim.max_hp()
+			var why: String = sim.order_block(k)
+			if why != "":
+				row["why"] = why + ((" (the Issuer: %s)" % no_kit) if no_kit != "" else "")
+				break
+			var before: Dictionary = sim.to_dict()
+			row["tries"] = n + 1
+			row["hp"] = int(sim.max_hp())
+			row["dps"] = int(sim.dps())
+			var lost: int = sim.operators_lost
+			if not sim.deploy_order(k):
+				row["why"] = "would not set off"
+				break
+			var guard := 0
+			while sim.on_mission() and guard < 20000:
+				sim.advance(1.0)
+				if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
+					sim.use_med(sim.first_med()["id"])
+				if sim.on_mission() and bot.should_leave(sim) and not sim.mission.get("way_out", false):
+					sim.get_out()
+				guard += 1
+			if sim.on_mission():
+				sim.extract_now()
+			var rep = sim.last_report
+			if rep is Dictionary:
+				row["ends"].append("%s %d/%d %.0fs" % [("timed out" if rep.get("timed_out", false) else str(rep.get("outcome", "?"))), int(rep.get("kills", 0)), int(rep.get("of", 0)), float(rep.get("time", 0.0))])
+			var last: Dictionary = {}
+			for e in sim.chronicle:
+				if str(e.get("k", "")) in ["order_done", "county_done"] and str(e.get("key", "")) == k:
+					last = e
+			if bool(last.get("won", false)):
+				row["won"] = true
+				break
+			if sim.operators_lost > lost:
+				deaths += 1
+			sim.load_dict(before)                 # the camp as it was, whatever the loss (a death, a time-out's kit, a bail): the next try is the same kit's (the review)
+			if bot.holding():
+				bot._hold_broken(sim)
+		if not row["won"]:
+			row["forced"] = true                  # opened anyway: the places after it get their fight
+			sim.order_beaten[k] = maxi(1, int(sim.order_beaten.get(k, 0)))
+			if k == "mint" and not sim.issued:
+				sim.issue()
+		rows.append(row)
+	out["gauntlet"] = rows
+	out["won"] = rows.filter(func(r): return r["won"]).size()
+	out["of"] = rows.size()
+	out["beaten"] = {}
+	for r in rows:
+		if r["won"]:
+			out["beaten"][str(r["key"])] = int(r["tries"])
+	out["missing"] = rows.filter(func(r): return not r["won"]).map(func(r): return str(r["key"]))
+	out["deaths"] = deaths
+	out["issued_worn"] = sim.issued_worn()
+	out["on_at_end"] = sim.combo_on(combo) if combo != "" else false
+	out["combo_on"] = Data.COMBOS.keys().filter(func(kk): return sim.combo_on(str(kk)))
+	out["kit"] = _kit(sim)
+	@warning_ignore("integer_division")
+	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	return out
+
+
+## Issued kit for a County zone: bought at the counter (the fixture's money) and worn, the slots the build holds kept,
+## till `want` are on. Why a piece wasn't bought, if one wasn't ("Wear at level 50": the runner's under the County).
+func _gauntlet_issued(sim, bot, want: int) -> String:
+	var why := ""
+	var cash0: float = sim.cash               # the fixture's money buys the issued kit alone (the review: the shop spent the rest)
+	for sl in ISSUED_ORDER:
+		if sim.issued_worn() >= want:
+			break
+		if sl in bot.broken_slots:
+			continue
+		var w = sim.equipped.get(sl)
+		if w != null and w.get("issued", false):
+			continue
+		sim.cash = maxf(sim.cash, float(sim.issued_price(sl)) * 2.0)
+		if sim.buy_issued(sl):
+			sim.equip_item(sim.stash.back()["id"])
+			sim._dry_memo.clear()
+		else:
+			why = sim.issued_block(sl)
+	sim.cash = cash0
+	return why if sim.issued_worn() < want else ""
 
 
 ## The build hunt (26 Oct, Matt: "cook some different builds up - the whole point is broken builds not these specific
@@ -856,18 +1024,13 @@ func _hunt_ranked(stage: int) -> Array:
 	return rows
 
 
-## One build's read from the Radio's checkpoint at level 50 (the broken reads' and the hunt's): the spec's class,
-## recipe walked, pieces held, the combos on unless `plain`, the runner staying out; `full` the half-hour lines and
-## the shop as the broken read prints them. What it beat, the reach, and the damage really dealt a second fought
-## (each run's fight breakdown: dealt over its seconds fighting) - over all runs, and over the long ones (ten
-## patrols or more) and the short apart: a build that runs away deals more the longer it's out.
-func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dictionary:
+## The build's start (the broken reads', the hunt's, the gauntlet's): the Radio's checkpoint at level 50, the spec's
+## class, its recipe walked, its pieces held, the combos on unless `plain`. {sim, bot, walked} or {error}.
+func _fixture(spec: Dictionary, plain: bool) -> Dictionary:
 	var text := FileAccess.get_file_as_string(CHECKPOINT)
 	var d = JSON.parse_string(text) if text != "" else null
-	var out := spec.duplicate(true)
 	if not (d is Dictionary) or not d.has("sim"):
-		out["error"] = "no checkpoint at " + CHECKPOINT
-		return out
+		return {"error": "no checkpoint at " + CHECKPOINT}
 	Sim.combos_off = plain                   # this read alone: the build's whole point (the plain baseline keeps them off)
 	var sim = Sim.new()
 	sim.load_dict(d["sim"])
@@ -898,7 +1061,6 @@ func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dic
 	bot.cls = cls
 	bot.element = str(spec.get("element", ""))
 	bot.crew_on = false
-	bot.stay_out = STAY_OUT
 	# the baseline holds the same pieces too, the combo off: the one difference (the review)
 	var combo := str(spec.get("combo", ""))
 	if combo != "":
@@ -908,6 +1070,26 @@ func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dic
 	bot._hold_broken(sim)
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp()
+	return {"sim": sim, "bot": bot, "walked": walked}
+
+
+## One build's read from the Radio's checkpoint at level 50 (the hunt's): the spec's class,
+## recipe walked, pieces held, the combos on unless `plain`, the runner staying out; `full` the half-hour lines and
+## the shop as the broken read prints them. What it beat, the reach, and the damage really dealt a second fought
+## (each run's fight breakdown: dealt over its seconds fighting) - over all runs, and over the long ones (ten
+## patrols or more) and the short apart: a build that runs away deals more the longer it's out.
+func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dictionary:
+	var out := spec.duplicate(true)
+	var fx: Dictionary = _fixture(spec, plain)
+	if fx.has("error"):
+		out["error"] = fx["error"]
+		return out
+	var sim = fx["sim"]
+	var bot = fx["bot"]
+	var walked: Array = fx["walked"]
+	var cls: String = str(spec["class"])
+	var combo := str(spec.get("combo", ""))
+	bot.stay_out = STAY_OUT
 	var start_s: float = sim.elapsed
 	out.merge({"plain": plain, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(combo) if combo != "" else false,
 		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0, "patrols": 0}, true)
