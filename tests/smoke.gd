@@ -19920,6 +19920,35 @@ func _county_checks(main) -> void:
 	for n in cb.text_nodes():
 		if n is Label:
 			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
+	# the drawn County (26 Oct, Matt's painting): every pin inside its own zone and clear of its edge, the pins far
+	# enough apart to click, a click on a pin picks it
+	var CM = load("res://scripts/ui/county.gd")
+	for c in Data.COUNTY:
+		var at: Vector2 = CM.PLACE_AT[str(c["key"])][0]
+		var shape := PackedVector2Array(CM.ZONE_SHAPES[int(c["cz"])])
+		var clear := INF
+		for n in range(shape.size()):
+			var a: Vector2 = shape[n]
+			var b: Vector2 = shape[(n + 1) % shape.size()]
+			if (a.x == 0 and b.x == 0) or (a.x == 512 and b.x == 512) or (a.y == 0 and b.y == 0) or (a.y == 424 and b.y == 424):
+				continue                         # the painting's own edge isn't a zone's
+			clear = minf(clear, at.distance_to(Geometry2D.get_closest_point_to_segment(at, a, b)))
+		_check(Geometry2D.is_point_in_polygon(at, shape) and clear >= 12.0, "%s's pin isn't inside its zone, 12 px clear: %.0f" % [c["place"], clear])
+		for c2 in Data.COUNTY:
+			if str(c2["key"]) > str(c["key"]):
+				_check(cb.pin_at(str(c["key"])).distance_to(cb.pin_at(str(c2["key"]))) >= 2.0 * CM.HIT_R, "%s and %s's pins too close to click apart" % [c["place"], c2["place"]])
+	for l in cb._zone_labels + cb._pin_labels.values():
+		var tx: float = l.position.x + (l.size.x - UI.text_width(l, l.text) if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0)
+		_check(tx >= 0.0 and tx + UI.text_width(l, l.text) <= cb._map.size.x and l.position.y + l.size.y <= cb._map.size.y, "the County's name '%s' runs off the map's edge (the review)" % l.text)
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = cb.pin_at("distribution")
+	cb._map_input(ev)
+	_check(cb.selected == "distribution", "a click on the Distribution Centre's pin picked '%s'" % cb.selected)
+	ev.position = cb.pin_at("container_port")
+	cb._map_input(ev)
+	_check(cb.selected == "distribution", "a pin in a shut zone picked")
 	_check_fit(main, "the County")
 	# a place run: its host's crew, no head; won, the next opens
 	sim.hp = sim.max_hp()

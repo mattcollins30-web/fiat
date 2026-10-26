@@ -6969,3 +6969,9 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   stand, fire, down) and the six pieces of issued kit. Rerolls: the Treasury's wall (inset), the Treasurer's fire (her
   rifle), the Truck Stop's wall four times (flat counter fronts keyed out with the background; tipped tables held).
   About $7.40 in all. Smoke 255 green. Next: the County's drawn map on Matt's painting (docs/design/county_map_brief.md).
+- The County's drawn map (26 Oct, Matt's painting art/map/county.png, 512 x 424 drawn x2): the four zones traced as a
+  first pass (the Motorway the top strip, the Docks the quay down the right, the Treasury the town, the Big Houses the
+  country west and south - Matt plays and corrects), a pin a place (a head's a diamond) in its odds' colour, a shut zone
+  dark and hatched with its names scrambled, the picked zone lit, the place's card at the right. The smoke: each pin in
+  its zone and clear of its edge, the pins apart enough to click, a click picks, every name inside the map. Smoke 257
+  green. Ready for Matt's playtest.
