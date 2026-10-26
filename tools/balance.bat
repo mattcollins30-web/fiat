@@ -5,6 +5,8 @@ rem the campaign and swapped freely).
 rem   tools\balance.bat           thirty-two simulated hours a one-save read (the chase's pass)
 rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
+rem   tools\balance.bat 16 0 broken   the six broken builds alone, 16 h each with their plain baselines, from the pass's
+rem                                  checkpoint (made first if missing): docs\balance\broken.md, the pass's own files left
 rem First the checkpoint: one save from a new game (the Poacher) to the Radio's opening, written to
 rem docs\balance\radio_checkpoint.save. Then side by side:
 rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
@@ -32,6 +34,7 @@ if not "%GODOT%"=="godot" if not exist "%GODOT%" (
 )
 if not exist docs\balance mkdir docs\balance
 if not exist docs\balance\pass mkdir docs\balance\pass
+if /i "%~3"=="broken" goto broken_only
 del /q docs\balance\pass\*.* 2>nul
 rem and what the pass writes outside pass\ (25 Oct, the tools review: a failed loot read or summary left last pass's in place)
 del /q docs\balance\summary.md 2>nul
@@ -71,9 +74,11 @@ rem balance, each its own read from the checkpoint, the combos on for it alone (
 rem lists what each beat and what it never did, no gate
 set BROKEN_HOURS=16
 for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
-	set /a N+=1
+	set /a N+=2
 	>>docs\balance\pass\expected.txt echo broken-%%K
+	>>docs\balance\pass\expected.txt echo broken-%%K-plain
 	start "" /b cmd /c tools\balance_read.bat broken-%%K 240 %BROKEN_HOURS% broken %%K
+	start "" /b cmd /c tools\balance_read.bat broken-%%K-plain 240 %BROKEN_HOURS% broken %%K plain
 )
 set /a N+=1
 >>docs\balance\pass\expected.txt echo probe
@@ -108,4 +113,39 @@ if errorlevel 1 (
 	exit /b 1
 )
 echo Done: docs\balance\summary.md
+endlocal
+exit /b 0
+
+:broken_only
+rem the broken builds alone (26 Oct, Matt): each with its plain baseline, from the pass's checkpoint; the pass's own reads
+rem and summary stay as they were
+rem the import once first, as the full pass does (concurrent imports race: the review)
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_limited.ps1 -Godot "%GODOT%" -GodotArgs "--headless --path . --import" -Log docs\balance\pass\import.log -Minutes 5 -Quiet 120
+del /q docs\balance\pass\broken-*.* 2>nul
+del /q docs\balance\broken.md 2>nul
+for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The broken reads on %%C> docs\balance\pass\broken_commit.log
+if not exist docs\balance\pass\radio_checkpoint.save (
+	echo No checkpoint from a pass: making one first.
+	call tools\balance_read.bat checkpoint 90 40 one Drifter fire 0 checkpoint
+	ren docs\balance\pass\checkpoint.done checkpoint.end 2>nul
+)
+set N=0
+for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
+	set /a N+=2
+	start "" /b cmd /c tools\balance_read.bat broken-%%K 240 %HOURS% broken %%K
+	start "" /b cmd /c tools\balance_read.bat broken-%%K-plain 240 %HOURS% broken %%K plain
+)
+echo %N% broken-build reads running, %HOURS% h each. Waiting.
+set TICKS=0
+:bwait
+timeout /t 10 /nobreak >nul
+set /a TICKS+=1
+set DONE=0
+for %%F in (docs\balance\pass\broken-*.done) do set /a DONE+=1
+echo   %DONE% of %N% finished
+if %TICKS% geq 1800 goto bsummary
+if %DONE% lss %N% goto bwait
+:bsummary
+"%GODOT%" --headless --path . -s tools/balance_summary.gd -- broken
+echo Done: docs\balance\broken.md
 endlocal

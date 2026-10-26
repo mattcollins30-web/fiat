@@ -76,7 +76,83 @@ const LOOT_READ := "res://docs/balance/loot_read.md"
 const PARITY_BAND := 0.5        # build parity (25 Oct): every build's reach gained in the spell at least this share of the best's
 
 
+const BROKEN_OUTRUN := 1.5     # a broken build's reach gained, at least this times its plain baseline's (Matt, 26 Oct: "both")
+const BROKEN_MD := "res://docs/balance/broken.md"
+
+
+## The broken builds' reads (26 Oct): a BROKEN line each in pass/broken-<key>[-plain].txt.
+static func read_broken() -> Array:
+	var out: Array = []
+	var dir := DirAccess.open(FOLDER)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		if f.ends_with(".txt") and f.begins_with("broken-"):
+			var got := false
+			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
+				if line.begins_with("BROKEN "):
+					var bp = JSON.parse_string(line.substr(7).strip_edges())
+					if bp is Dictionary:
+						out.append(bp)
+						got = true
+			if not got:
+				var nm: String = f.get_basename().substr(7)
+				out.append({"build": nm.trim_suffix("-plain"), "plain": nm.ends_with("-plain"), "error": "no BROKEN line (the read crashed or was cut off)"})
+	return out
+
+
+## The broken builds' table (26 Oct, Matt: broken is "both" - every piece of content beaten once, and the reach well past
+## the same runner, start and pieces, the combos off): a row a build, its plain baseline beside it, judged.
+static func broken_table(all: Array) -> Array:
+	var out: Array = []
+	var broken: Array = all.filter(func(b): return not b.get("plain", false))
+	if broken.is_empty():
+		return out
+	var plain := {}
+	for b in all:
+		if b.get("plain", false):
+			plain[str(b.get("build", ""))] = b
+	out.append("")
+	out.append("## The broken builds (outside the balance)")
+	out.append("")
+	out.append("Each from the Radio's checkpoint at level 50, the combos on for it alone, its set and unique held at the depth's tier, issued kit in the set's other slots; its plain baseline the same runner, start and pieces with the combos off. Broken when it beat everything (the Grid, the Archive, the Mint, the Issue and the County's twelve) and its reach gained is at least %.1f times its baseline's." % BROKEN_OUTRUN)
+	out.append("")
+	out.append("| Build | Class | Played | Runs with it on | Reach (plain) | Dmg/s | Beaten (hour) | Never | Deaths | |")
+	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	broken.sort_custom(func(a, b): return str(a.get("build", "")) < str(b.get("build", "")))
+	for bb in broken:
+		if bb.has("error"):
+			out.append("| %s | | | | | | %s | | | RED |" % [bb.get("build", "?"), bb["error"]])
+			continue
+		var pb: Dictionary = plain.get(str(bb["build"]), {})
+		var gain: int = int(bb.get("reach1", 0)) - int(bb.get("reach0", 0))
+		var pgain: int = (int(pb.get("reach1", 0)) - int(pb.get("reach0", 0))) if not pb.is_empty() and not pb.has("error") else -1
+		var missing: Array = bb.get("missing", [])
+		# outran: a gain of its own, and 1.5x a baseline that gained something (a baseline at +0 can't be outrun by ratio: the review)
+		var outran: bool = pgain > 0 and gain > 0 and gain >= BROKEN_OUTRUN * pgain
+		var why_not: String = "no baseline" if pgain < 0 else ("its baseline gained nothing to judge by" if pgain == 0 else ("not %.1fx its baseline" % BROKEN_OUTRUN))
+		var bt: Dictionary = bb.get("beaten", {})
+		var bt_words: Array = bt.keys().map(func(k): return "%s %.1f" % [k, float(bt[k])])
+		out.append("| %s | %s as %s | %.1f of %.1f h%s | %d of %d | %d to %d (+%d; plain %s) | %s to %s | %s | %s | %d | %s |" % [bb["build"], bb.get("class", ""), bb.get("element", ""),
+			float(bb.get("played_h", 0.0)), float(bb.get("hours", 0.0)), " (cut short)" if bb.get("cut_short", false) else "",
+			int(bb.get("runs_on", 0)), int(bb.get("runs", 0)), int(bb.get("reach0", 0)), int(bb.get("reach1", 0)), gain, ("+%d" % pgain) if pgain >= 0 else "none",
+			str(int(float(bb.get("dps0", 0.0)))), str(int(float(bb.get("dps1", 0.0)))), ", ".join(bt_words) if not bt_words.is_empty() else "nothing",
+			", ".join(missing) if not missing.is_empty() else "none - everything fell", int(bb.get("deaths", 0)),
+			"BROKEN" if (missing.is_empty() and outran) else ("RED: " + ("content left" if not missing.is_empty() else "") + (" and " if not missing.is_empty() and not outran else "") + (why_not if not outran else ""))])
+	return out
+
+
 func _init() -> void:
+	if "broken" in OS.get_cmdline_user_args():
+		# `-- broken`: the broken builds' reads alone (tools\balance.bat <hours> 0 broken), to docs/balance/broken.md
+		var lines: Array = ["# The broken builds", "", "Written %s from %s." % [Time.get_datetime_string_from_system(false, true), FileAccess.get_file_as_string(FOLDER + "/broken_commit.log").strip_edges()]]
+		lines.append_array(broken_table(read_broken()))
+		var bf := FileAccess.open(BROKEN_MD, FileAccess.WRITE)
+		bf.store_string("\n".join(lines) + "\n")
+		bf.close()
+		print("-> docs/balance/broken.md")
+		quit(0)
+		return
 	var builds: Array = []
 	var probe: Dictionary = {}
 	var dir := DirAccess.open(FOLDER)
@@ -86,18 +162,10 @@ func _init() -> void:
 		return
 	var names: Array = []
 	var parity: Array = []                # the parity reads (25 Oct): a PARITY line each, their own table and row
-	var broken: Array = []                # the broken builds' reads (26 Oct): a BROKEN line each, outside the gates
+	var broken: Array = read_broken()     # the broken builds' reads (26 Oct): a BROKEN line each, outside the gates
 	for f in dir.get_files():
 		if f.ends_with(".txt") and f.begins_with("broken-"):
-			var got_b := false
-			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
-				if line.begins_with("BROKEN "):
-					var bp = JSON.parse_string(line.substr(7).strip_edges())
-					if bp is Dictionary:
-						broken.append(bp)
-						got_b = true
-			if not got_b:
-				broken.append({"build": f.get_basename().substr(7), "error": "no BROKEN line (the read crashed or was cut off)"})
+			continue
 		elif f.ends_with(".txt") and f.begins_with("parity-"):
 			var got := false
 			for line in FileAccess.get_file_as_string(FOLDER + "/" + f).split("\n"):
@@ -274,27 +342,7 @@ func _init() -> void:
 	for r in rows:
 		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	var head := out.size()
-	if not broken.is_empty():
-		# the broken builds (26 Oct, Matt): outside the balance, no gate - did each smash everything at least once?
-		out.append("")
-		out.append("## The broken builds (outside the balance)")
-		out.append("")
-		out.append("Each from the Radio's checkpoint, the combos on for it alone, its set and unique held at the reach. Content: the Grid, the Archive, the Mint, the Issue and the County's twelve places; the hour each first fell.")
-		out.append("")
-		out.append("| Build | Class | Played | Runs with it on | Reach | Level | Dmg/s | Beaten (hour) | Never | Top signal won | Deaths |")
-		out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-		broken.sort_custom(func(a, b): return str(a.get("build", "")) < str(b.get("build", "")))
-		for bb in broken:
-			if bb.has("error"):
-				out.append("| %s | | | | | | | %s | | | |" % [bb.get("build", "?"), bb["error"]])
-				continue
-			var bt: Dictionary = bb.get("beaten", {})
-			var bt_words: Array = bt.keys().map(func(k): return "%s %.1f" % [k, float(bt[k])])
-			out.append("| %s | %s as %s | %.1f of %.1f h%s | %d of %d | %d to %d | %d | %s to %s | %s | %s | %d | %d |" % [bb["build"], bb.get("class", ""), bb.get("element", ""),
-				float(bb.get("played_h", 0.0)), float(bb.get("hours", 0.0)), " (cut short)" if bb.get("cut_short", false) else "",
-				int(bb.get("runs_on", 0)), int(bb.get("runs", 0)), int(bb.get("reach0", 0)), int(bb.get("reach1", 0)), int(bb.get("level1", 0)),
-				str(int(float(bb.get("dps0", 0.0)))), str(int(float(bb.get("dps1", 0.0)))), ", ".join(bt_words) if not bt_words.is_empty() else "nothing",
-				", ".join(bb.get("missing", [])) if not Array(bb.get("missing", [])).is_empty() else "none - everything fell", int(bb.get("top_signal_won", 0)), int(bb.get("deaths", 0))])
+	out.append_array(broken_table(broken))
 	out.append("")
 	out.append("## The builds")
 	out.append("")

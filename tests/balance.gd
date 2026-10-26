@@ -66,8 +66,9 @@ func _init() -> void:
 		_probe()
 		return
 	if cls == "broken":
-		# `-- 16 broken embers`: a broken build (26 Oct, Matt) from the Radio's checkpoint, the combos on, its parts held
-		_broken(hours, args[2] if args.size() > 2 else "embers")
+		# `-- 16 broken embers`: a broken build (26 Oct, Matt) from the Radio's checkpoint, the combos on, its parts held;
+		# `-- 16 broken embers plain`: the same runner, start and pieces, the combos off (the baseline it must outrun)
+		_broken(hours, args[2] if args.size() > 2 else "embers", args.size() > 3 and args[3] == "plain")
 		return
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
@@ -730,7 +731,7 @@ func _hm(s: float) -> String:
 ## climbs, bot.gd _hold_broken), the combos switched on for this read alone; the bot plays it as any read. BROKEN {json}:
 ## what it beat and when - the order's three, the Issue, the County's twelve - and what it never did.
 const BROKEN_ELEMENT := {"embers": "fire", "clean_kills": "frost", "flatline": "shock", "opened_for_good": "bleed", "live_load": "shock", "drilled": "physical"}
-func _broken(hours: float, key: String) -> void:
+func _broken(hours: float, key: String, plain := false) -> void:
 	var c: Dictionary = Data.COMBOS.get(key, {})
 	var text := FileAccess.get_file_as_string(CHECKPOINT)
 	var d = JSON.parse_string(text) if text != "" else null
@@ -738,7 +739,7 @@ func _broken(hours: float, key: String) -> void:
 		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build" if c.is_empty() else "no checkpoint at " + CHECKPOINT}))
 		quit(0)
 		return
-	Sim.combos_off = false                   # this read alone: the build's whole point
+	Sim.combos_off = plain                   # this read alone: the build's whole point (the plain baseline keeps them off)
 	var sim = Sim.new()
 	sim.load_dict(d["sim"])
 	sim.loot_by_hand = false
@@ -768,17 +769,17 @@ func _broken(hours: float, key: String) -> void:
 	bot.cls = cls
 	bot.element = str(BROKEN_ELEMENT.get(key, ""))
 	bot.crew_on = false
-	bot.broken = key
+	bot.broken = key                         # the baseline holds the same pieces too, the combo off: the one difference (the review)
 	bot._hold_broken(sim)
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp()
 	var start_s: float = sim.elapsed
-	var b := {"build": key, "class": cls, "element": bot.element, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(key),
+	var b := {"build": key, "plain": plain, "class": cls, "element": bot.element, "hours": hours, "recipe": walked, "on_at_start": sim.combo_on(key),
 		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0}
 	var t_end: float = sim.elapsed + hours * 3600.0
 	var t0 := Time.get_ticks_msec()
 	var next_mark: float = sim.elapsed + 1800.0
-	print("Fiat broken read: %s (%s as %s), %.0f h from the checkpoint; on: %s" % [key, cls, bot.element, hours, str(b["on_at_start"])])
+	print("Fiat broken read: %s (%s as %s)%s, %.0f h from the checkpoint; on: %s" % [key, cls, bot.element, " - the plain baseline" if plain else "", hours, str(b["on_at_start"])])
 	while sim.elapsed < t_end and Time.get_ticks_msec() - t0 < 12600000:
 		var lost: int = sim.operators_lost
 		var on_going: bool = sim.combo_on(key)

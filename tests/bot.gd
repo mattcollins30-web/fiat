@@ -282,7 +282,8 @@ func _hold_broken(sim) -> void:
 		var ok: bool = worn != null and ((kind == "set" and str(worn.get("set", "")) == str(c["set"])) or (kind == "unique" and str(worn.get("rule", "")) == str(c["rule"])))
 		if ok and Items.ilvl(worn) >= lv - RENEW_UNDER:
 			continue
-		var it: Dictionary = Items.roll_set_piece(str(st["name"]), want[sl][1], sim.rng, lv) if kind == "set" else Items.roll_unique(want[sl][1], sim.rng, lv)
+		var tier: int = sim.loot_tier_at(lv)        # the depth's tier: a set piece or a unique found there is lifted to it (26 Oct: without it, the campaign's bases)
+		var it: Dictionary = Items.roll_set_piece(str(st["name"]), want[sl][1], sim.rng, lv, tier) if kind == "set" else Items.roll_unique(want[sl][1], sim.rng, lv, tier)
 		sim.equipped[sl] = it
 		sim._dry_memo.clear()
 	if sim.equipped.get("Primary") == null:
