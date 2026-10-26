@@ -6953,3 +6953,9 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   places, its heads away from home, issued kit off the deepest. The bot runs the order and the County and buys and wears
   issued kit; the balance read reports the Issue and the County (gate 18). Art is the host sites' plates for now.
   Smoke 251 green. Then the full 32 h pass.
+- The fifth pass (25-26 Oct, 32 h, everything in): 18 RED (7 design, 5 bot timing, 6 bot play); the campaign's and
+  the Radio's gates read as the fourth pass did. New gate 18: the Issue on 1 of 24 reads (the Doorman as bleed, at
+  20.7 h, on a broken build at reach 154) - the Mint sits at the reach + 6 + a level every 4 of the town's worth, about
+  level 160, past most builds' reach (41-80); no read reached the County. After the Issue that read earned 25-30M fiat a
+  half hour and hit the price cap in an hour. Bot fixes from it: no issued kit it can't wear (140 bought for a level-1
+  runner), a burn an hour (2,380). The Mint's level is Matt's call before any further pass. Smoke 252 green.

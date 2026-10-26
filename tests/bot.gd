@@ -230,15 +230,21 @@ func _issued(sim) -> void:
 		var worn = sim.equipped.get(sl)
 		var have_lv: int = Items.ilvl(worn) if worn != null and worn.get("issued", false) else -100
 		var offer: Dictionary = sim.issued_piece(sl)
-		if Items.ilvl(offer) - have_lv < 10:
-			continue
+		if Items.ilvl(offer) - have_lv < 10 or not sim.can_wear(offer):
+			continue                          # nothing bought it can't wear (the pass, 26 Oct: 140 pieces for a level-1 runner)
 		var price: int = sim.issued_price(sl)
 		if sim.cash >= price * 3.0 and sim.buy_issued(sl):
 			bought.append([sim.elapsed, "issued %s for %d fiat" % [sl, price]])
 	_wear_issued(sim)
-	if sim.circ_mult() > 1.5 and sim.can_burn() and sim.cash >= sim.burn_price() * 4.0:
+	if sim.circ_mult() > 1.5 and sim.can_burn() and sim.cash >= sim.burn_price() * 4.0 and sim.elapsed - _burnt_at >= BURN_EVERY:
+		_burnt_at = sim.elapsed                # an hour between (the pass: 2,380 burns on one read)
+		var paid: float = sim.burn_price()
 		sim.burn()
-		bought.append([sim.elapsed, "burnt %d fiat" % int(sim.burn_price())])
+		bought.append([sim.elapsed, "burnt %d fiat" % int(paid)])
+
+
+const BURN_EVERY := 3600.0
+var _burnt_at := -1e9
 
 
 ## The newest issued piece of each slot worn.
