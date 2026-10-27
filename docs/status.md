@@ -7068,3 +7068,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   bigger kills; their tracer dropped); picked over as the crates across runs, the next crate yours to pick, a refill 20
   min after picked clean, the wear gone; the Workshop to the Carpet Man (docs/design/picked_over.md). Canvas: "Hit
   registers", "Picked over, as the crates".
+- Parked (27 Oct, Matt): the Kit room's Scrap button becomes "Bin", the piece gone for nothing (scrapping is the
+  Workshop's, and with the Workshop at the Carpet Man it opens soon enough); Select-many's bin likewise. A loot rule's
+  Scrap and the Stash's Bins keep paying scrap (Matt's call: automation set up and earned). The wear on cleared sites
+  stays for now (Matt: "I'll deal with it for now unless it really starts to annoy me").
