@@ -7026,3 +7026,10 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   stuck reads (Paramedic-frost-2, Recruit-physical-2 at reach 31-32: it never makes a one- or two-paper signal when
   Full reads 0%); the summary of the pass once its last read (Scrapper-fire-2, an overfull stash, slow) lands; the
   exploits (the design's step 3, six recipes in the doc).
+- Before the playtest after all (27 Oct, Matt): the six exploits and the bot's fix in (275b94a, smoke 281 green). The
+  pass on f8f53bd landed: 18 RED; the Issue on 22 of 24; P5 still red, though the long stands are the runaways sat
+  past the content (reach 160-310) and the two stuck reads; G1 from this pass's own end states weaker than the last
+  gauntlet's (drilled 9, Embers 9, live_load 12, opened_for_good 14 of 15) - the camp evens the reach, kit and paragon
+  but not the Yard's ranks, the town's rebuild or the trees, so the end states still differ. Parked: even those too
+  (or run the gauntlet from one shared camp per class), Embers, the next pass to read the bot's Clear and Faint
+  signals.
