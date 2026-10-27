@@ -332,11 +332,11 @@ func _show_panel() -> void:
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
 			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
-	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, for its scrap; a unique or a set piece asks twice
+	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, gone for nothing (27 Oct); a unique or a set piece asks twice
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
 		var precious: bool = it.has("unique") or it.has("set")
 		var armed: bool = _bin_arm.holds(int(it["id"]))
-		buttons.append({"text": (Words.ASK["again"] % ("Scrap for %s" % Fmt.group(sim.scrap_of(it)))) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
+		buttons.append({"text": (Words.ASK["again"] % "Bin it") if armed else "Bin", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
 	# the deeds held (27 Oct): burned at home, asked twice
 	if selected.get("kind", "") == "stash" and Items.is_deeds(it) and buttons.size() < PickPanel.BUTTONS:
 		var armed_d: bool = _bin_arm.holds(int(it["id"]))

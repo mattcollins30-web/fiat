@@ -6537,7 +6537,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Scrap"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("Carries"), "a read paper's line is off: %s / %s" % [main._armoury._pick._right_title.text, main._armoury._pick._right_lines[0].text])     # the Radio's, not the drawer's (15 Oct)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -6562,7 +6562,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._pick.button_texts().is_empty() or main._armoury._pick.button_texts() == ["Scrap"], "the Lock-up offers a paper a button but the bin (13 Oct): %s" % str(main._armoury._pick.button_texts()))
+	_check(main._armoury._pick.button_texts().is_empty() or main._armoury._pick.button_texts() == ["Bin"], "the Lock-up offers a paper a button but the bin (13 Oct): %s" % str(main._armoury._pick.button_texts()))
 	sim.sell(paper)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
@@ -11294,7 +11294,7 @@ func _bin_checks(main) -> void:
 	main.refresh()
 	var bin_i: int = -1
 	for k in range(main._armoury._pick._buttons.size()):
-		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Scrap":
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
 			bin_i = k
 	_check(bin_i >= 0, "a stash pick has no Bin")
 	_check_fit(main, "Lock-up (the bin)")
@@ -11302,18 +11302,18 @@ func _bin_checks(main) -> void:
 	if bin_i >= 0:
 		main._armoury._press(bin_i)
 		main.refresh()
-	_check(not sim.stash.has(junk) and int(sim.scrap) == scrap0 + sim.scrap_of(junk), "Bin did not throw the hard hat out for its scrap")
+	_check(not sim.stash.has(junk) and int(sim.scrap) == scrap0, "Bin did not throw the hard hat out, for nothing (27 Oct)")
 	# a unique asks twice
 	main._armoury._pick_cell(main._armoury._inv.cell_of(prize["id"]))
 	main.refresh()
 	bin_i = -1
 	for k in range(main._armoury._pick._buttons.size()):
-		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Scrap":
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
 			bin_i = k
 	if bin_i >= 0:
 		main._armoury._press(bin_i)
 		main.refresh()
-		_check(sim.stash.has(prize) and main._armoury._pick._buttons[bin_i].text.begins_with("Scrap for"), "a unique went in the bin on the first press")
+		_check(sim.stash.has(prize) and main._armoury._pick._buttons[bin_i].text.begins_with("Bin it"), "a unique went in the bin on the first press")
 		_check_fit(main, "Lock-up (the bin, asked)")
 		main._armoury._press(bin_i)
 		main.refresh()

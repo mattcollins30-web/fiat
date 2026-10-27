@@ -55,7 +55,7 @@ var past: Array = []               # the runners before this one: {class, level,
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
 var heard: Array = []                # the radio's lines heard, in order (12 Oct, the lore pass): voice/index keys
-var keepsakes: Array = []          # the heads' things kept (15 Oct): the vet's bag, the ledger, the radio, the tool roll
+var keepsakes: Array = []          # the heads' things kept (15 Oct): the vet's bag, the fitter's kit, the ledger, the radio
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
 var sets_seen: Array = []          # the set pieces found, by name (24 Oct, the collection): a set's complete once all its pieces are here
 var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
@@ -2248,8 +2248,7 @@ func _hear_gate(gate: String) -> void:
 			var key := "%s/%d" % [r["voice"], k]
 			if not (key in heard) and not _dry_on:
 				heard.append(key)
-				log_event(Words.RADIO_LEAD + str(r["text"]))
-			return
+				log_event(Words.RADIO_LEAD + str(r["text"]))     # every line at the gate (27 Oct: the Manager's opens two rooms, a line each)
 
 
 ## A gate's "before" line is done with once every room its head opens is open (13 Oct, Matt: the Clinic saved, the
@@ -2579,7 +2578,7 @@ func scrap_of(it: Dictionary) -> int:
 
 
 ## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash thing
-## thrown out for the scrap a ditch gives, at any time, gone for good. Never the deeds (theirs is a choice of its own).
+## thrown out, at any time, gone for good - for nothing (27 Oct, Matt: scrapping is the Workshop's). Never the deeds.
 func can_bin(it: Dictionary) -> bool:
 	return not it.is_empty() and not Items.is_deeds(it) and stash.has(it)
 
@@ -2589,11 +2588,9 @@ func bin(id: int) -> bool:
 		if int(it["id"]) == id:
 			if not can_bin(it):
 				return false
-			var bits: int = scrap_of(it)
-			_remove(it)
-			scrap += bits                     # gone for good: a binned unique isn't one of the gangs' to wear again (the review)
-			chron("bin", {"item": _chron_item(it), "scrap": bits})
-			log_event("Binned: %s%s" % [Items.full_name(it).to_lower() if not it.has("unique") else Items.full_name(it), (", %d scrap" % bits) if bits > 0 else ""])
+			_remove(it)                       # gone for good: a binned unique isn't one of the gangs' to wear again (the review)
+			chron("bin", {"item": _chron_item(it), "scrap": 0})
+			log_event("Binned: %s" % (Items.full_name(it).to_lower() if not it.has("unique") else Items.full_name(it)))
 			return true
 	return false
 
@@ -2772,7 +2769,7 @@ func _take_one(base_name: String) -> void:
 
 
 func can_craft(id: int, kind: String, stat := "") -> bool:
-	if mission != null or not room_open("workshop"):     # shut until the Quartermaster's tool roll (13 Oct)
+	if mission != null or not room_open("workshop"):     # shut until the Carpet Man's fitter's kit (27 Oct; the Quartermaster's tool roll before)
 		return false
 	var cost := craft_cost(item_by_id(id), kind, stat)
 	if cost < 0:

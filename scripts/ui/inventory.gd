@@ -79,7 +79,7 @@ var sort := 0
 var page := 0
 var fixed_kind := ""               # set by the Workshop: only this kind, bar hidden
 var ditching := false              # set by the Run screen: Select-many ditches instead of selling
-var binning := false               # the Kit room with the Fence shut (13 Oct): Select-many bins for scrap instead
+var binning := false               # the Kit room with the Fence shut (13 Oct): Select-many bins instead, for nothing (27 Oct)
 var buying := ""                   # a vendor's shelf (23 Oct, parked item 10, Matt: "single buying at a time is a chore"): Select-many buys - "clinic" or "fence"
 var can_many := true               # a shelf without the many: the Kit's compare shelf
 var _all_button: Button            # the shelf's "All n · price" beside Buy (23 Oct)
@@ -309,13 +309,11 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	elif ditching:
 		_sell_button.text = "Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]
 	elif binning:
-		var bits := 0
 		var n := 0
 		for id in chosen:
 			if _many_bins(_item(id)):
-				bits += sim.scrap_of(_item(id))
 				n += 1
-		UI.fit_button(_sell_button, ["Bin %d: %d scrap" % [n, bits], "Bin %d" % n])
+		_sell_button.text = "Bin %d" % n           # gone for nothing (27 Oct): scrapping's the Workshop's
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	if buying == "":

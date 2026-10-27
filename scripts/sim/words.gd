@@ -250,16 +250,18 @@ const RADIO := [
 	# the gates (13 Oct, Matt: a line before each room opens and one after; "gate": the head and when - never in the turn)
 	{"voice": "medic", "zone": 0, "gate": "The Gamekeeper/before", "text": "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't work with nothing."},
 	{"voice": "medic", "zone": 0, "gate": "The Gamekeeper/after", "text": "Got the bag. The Clinic's open. Come in hurt, not dead; I can't do anything about dead."},
-	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/before", "text": "The Carpet Man keeps a book of who buys what. Bring me that book and I'll open up shop."},
-	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/after", "text": "The book's here. I'm open. Tins only, and don't ask me where any of it came from."},
+	{"voice": "kev", "zone": 1, "gate": "The Carpet Man/before", "text": "The Carpet Man's got his fitter's kit at the warehouse. Knives, kicker, staple gun. That's a workshop, that is."},
+	{"voice": "kev", "zone": 1, "gate": "The Carpet Man/after", "text": "Somebody's got the Carpet Man's tools. There's a bench going on the Pitch."},
+	{"voice": "fence", "zone": 2, "gate": "The Manager/before", "text": "The Carpet Man banked his book with the Manager. Bring me that book and I'll open up shop."},
+	{"voice": "fence", "zone": 2, "gate": "The Manager/after", "text": "The book's here. I'm open. Tins only, and don't ask me where any of it came from."},
 	{"voice": "kev", "zone": 2, "gate": "The Manager/before", "text": "The Bank's got deeds in the vault. Every house on the estate. Somebody could set up somewhere with those."},
 	{"voice": "kev", "zone": 2, "gate": "The Manager/after", "text": "Somebody's got the deeds out of the Bank. Somebody's got themselves a pitch."},
 	# the deeds' fate (27 Oct, Matt): a line for each, in the turn once it's decided ("deeds")
 	{"voice": "kev", "zone": 2, "deeds": "burned", "text": "Somebody burned the deeds. Nobody on the estate owes a penny. The Bailiff's going to hate that."},
 	{"voice": "kev", "zone": 2, "deeds": "held", "text": "Whoever's got the deeds, hang on to them. Money comes and goes. Bricks don't."},
 	{"voice": "kev", "zone": 2, "deeds": "sold", "text": "The deeds went to the Fence, and the Fence sold them on. Somebody up the County will come for what's owed."},
-	{"voice": "net", "zone": 3, "gate": "The Quartermaster/before", "text": "Quartermaster to all stations: the set and the armourer's roll stay in stores. Nobody signs them out."},
-	{"voice": "kev", "zone": 3, "gate": "The Quartermaster/after", "text": "There's an army set on this frequency now. Hello, whoever you are. I hear you've a workshop, too."},
+	{"voice": "net", "zone": 3, "gate": "The Quartermaster/before", "text": "Quartermaster to all stations: the set stays in stores. Nobody signs them out."},
+	{"voice": "kev", "zone": 3, "gate": "The Quartermaster/after", "text": "There's an army set on this frequency now. Hello, whoever you are."},
 	# the Clinic's and the Fence's own (13 Oct, Matt): in the turn once their room is open ("room")
 	{"voice": "medic", "zone": 0, "room": "clinic", "text": "Bandages are boiled, not new. Don't ask."},
 	{"voice": "medic", "zone": 0, "room": "clinic", "text": "If it's bleeding, bring it in. If it's stopped, bring it in faster."},
@@ -279,7 +281,7 @@ const GATE_ITEMS := {
 	"The vet's bag": "The keeper's, for the dogs. Everything a vet carries, and the medic says that's most of what a doctor does.",
 	"The Carpet Man's ledger": "Who bought what, and who paid. The Carpet Man banked it with the Manager. The Fence will want this more than anyone.",
 	"A military radio": "Army issue, the set the lorry never delivered. It reaches further than Kev does.",
-	"The armourer's tool roll": "Punches, a hammer, a cleaning rod, and the gun oil gone into the canvas. A workshop in a roll.",
+	"The fitter's kit": "Knives, a knee kicker, a staple gun and a tin of tacks, in the Carpet Man's own roll. A workshop, near enough.",
 }
 
 ## A room opening, in the log (13 Oct): the head's thing home, the room with it.
@@ -288,8 +290,8 @@ const GATES := {
 	"fence": "The Fence has seen the ledger. He's open for business.",
 	"yard": "The deeds are the Pitch's. Build on it.",
 	"radio": "The set's in and working. The Radio's on the air.",
-	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
-	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the ledger in the Manager's vault", "yard": "the Manager's deeds", "radio": "the Quartermaster's military radio", "workshop": "the Quartermaster's tool roll"},
+	"workshop": "The fitter's kit goes on the bench. The Workshop's open.",
+	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the ledger in the Manager's vault", "yard": "the Manager's deeds", "radio": "the Quartermaster's military radio", "workshop": "the Carpet Man's fitter's kit"},
 }
 
 ## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.

@@ -63,7 +63,7 @@ const FOOTPRINTS := {
 	# medical
 	"First aid kit": [2, 1], "Trauma kit": [2, 1], "Surgeon's kit": [2, 2], "Hospital kit": [2, 2],
 	# the deeds, and what the other heads hold (13 Oct, the gates)
-	"The deeds": [2, 2], "The vet's bag": [2, 2], "The Carpet Man's ledger": [2, 2], "A military radio": [2, 2], "The armourer's tool roll": [2, 2],
+	"The deeds": [2, 2], "The vet's bag": [2, 2], "The Carpet Man's ledger": [2, 2], "A military radio": [2, 2], "The fitter's kit": [2, 2],
 	# optics
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 }
@@ -588,7 +588,7 @@ const BASES := {
 		{"name": "The vet's bag", "tier": 5, "value": 0},           # tier 5, as the deeds: never a paper's roll
 		{"name": "The Carpet Man's ledger", "tier": 8, "value": 0},
 		{"name": "A military radio", "tier": 5, "value": 0},
-		{"name": "The armourer's tool roll", "tier": 5, "value": 0},
+		{"name": "The fitter's kit", "tier": 5, "value": 0},     # the Carpet Man's, opening the Workshop (27 Oct: was the Quartermaster's armourer's tool roll, its picture kept)
 	],
 	## Medical: heals `heal` HP over `use` seconds, under fire the whole time.
 	"Medical": [
@@ -1480,15 +1480,15 @@ const BOSSES := [
 		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
 	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 8.0, "dps": 2.5, "notes": 20,     # D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
 		"words": "The crew in the carpet warehouse have a head. He had a van and a lock-up before; he has the car park now.",
-		"uniques": ["The Van's Spare", "Underlay"], "opens": {}},     # the Doorman his (24 Oct, milestone 8); the ledger went to the Manager's vault
+		"uniques": ["The Van's Spare", "Underlay"], "opens": {"workshop": "The fitter's kit"}},     # the Doorman his (24 Oct, milestone 8); the ledger went to the Manager's vault
 	{"zone": 2, "name": "The Manager", "tier": 8, "hp": 12.0, "dps": 3.5, "notes": 40,
 		"words": "The Bank's crew call themselves staff. He was. He's behind the vault, and he's not coming out for you.",
 		"uniques": ["The Manager's Coat", "The Branch Pistol"], "opens": {"yard": "The deeds", "fence": "The Carpet Man's ledger"}},     # the Fence with the Yard (24 Oct, milestone 8: skills.md §6) - the Carpet Man banked with him
 	{"zone": 3, "name": "The Quartermaster", "tier": 11, "hp": 6.0, "dps": 2.5, "notes": 60,     # the Barracks went up; he came down to match: the pool before him is the fight
 		"words": "The lorry that never reached the Barracks reached him. He's been issuing it ever since, to people he chooses.",
-		"uniques": ["The Quartermaster's Rifle", "Issue Webbing"], "opens": {"radio": "A military radio", "workshop": "The armourer's tool roll"}},
+		"uniques": ["The Quartermaster's Rifle", "Issue Webbing"], "opens": {"radio": "A military radio"}},     # the Workshop went to the Carpet Man (27 Oct, Matt: he opened nothing, this one two)
 ]
-const ROOMS_SHUT := ["clinic", "fence", "yard", "radio", "workshop"]     # the rooms a head opens, in the campaign's order
+const ROOMS_SHUT := ["clinic", "workshop", "fence", "yard", "radio"]     # the rooms a head opens, in the campaign's order
 ## Pinnacles: from PINNACLE_DEPTH a crew's head comes at full strength -
 ## harder, dearer, and with one more thing of theirs (a charm) in the pool.
 ## The convoy: the Services at CONVOY_DEPTH and up can take on all three
