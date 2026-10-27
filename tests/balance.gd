@@ -938,8 +938,8 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 ## The standard camp (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the reach at STANDARD_REACH, the paragon at
 ## STANDARD_PARAGON, and every slot's
 ## kit at its item level - a unique or a set piece worn rolled again as itself, the rest the best of STANDARD_ROLLS finds
-## of the slot (a gun of the type worn), no commons. The issued kit and the rig as they are; the build's held pieces
-## after, by _hold_broken.
+## of the slot (a gun of the type worn), no commons; issued kit as the counter sells it at the camp's reach, a stamped
+## piece stamped still. The rig as it is; the build's held pieces after, by _hold_broken.
 func _standard_camp(sim, bot) -> void:
 	sim.reach = STANDARD_REACH
 	# the paragon at STANDARD_PARAGON, spent again by the bot (Matt, 27 Oct: the two that cleared everything had 673 and 213)
@@ -947,16 +947,28 @@ func _standard_camp(sim, bot) -> void:
 	sim.paragon_reset_free()
 	var lv: int = mini(Items.max_ilvl_for(sim.level()), STANDARD_REACH)
 	var tier: int = sim.loot_tier_at(lv)
+	# the stash's kit past the camp's level goes: the bot's tidy wore it again (a read's ilvl-155 plate, 164k HP)
+	sim.stash = sim.stash.filter(func(x): return not (x is Dictionary and str(x.get("slot", "")) in Data.SLOTS and Items.ilvl(x) > lv))
 	for sl in Data.SLOTS:
-		if sl == "Rig":
-			continue
 		var worn = sim.equipped.get(sl)
-		if worn != null and (worn.get("issued", false) or worn.get("stamped", false)):
-			continue
 		var fresh: Dictionary = {}
-		if worn != null and worn.has("pattern") and not worn.has("unique"):
-			fresh = worn.duplicate(true)       # a patterned piece: its rule kept, its level raised (the review)
-			fresh["ilvl"] = maxi(Items.ilvl(worn), lv)
+		if worn != null and worn.get("issued", false):
+			fresh = sim.issued_piece(sl, -1, true)     # issued kit at the camp's reach too (a read's came in at item level 155)
+		elif worn != null and worn.has("pattern") and not worn.has("unique"):
+			# a patterned piece: the best find of the slot at the camp's level, with the pattern's rule put on it (the review)
+			var pb: Dictionary = {}
+			var pb_sc := -INF
+			for k in range(STANDARD_ROLLS):
+				var cand: Dictionary = Items.roll(sl, tier, sim.rng, sim.rarity_bonus(), true, false, "", "", 0.33, 0, lv)
+				if cand.is_empty() or not sim.can_wear(cand):
+					continue
+				var csc: float = sim.fit_value(cand, sl)
+				if csc > pb_sc:
+					pb = cand
+					pb_sc = csc
+			fresh = pb if not pb.is_empty() else worn.duplicate(true)
+			fresh["rule"] = worn["rule"]
+			fresh["pattern"] = worn["pattern"]
 		elif worn != null and worn.has("unique"):
 			fresh = Items.roll_unique(sim._unique_named(str(worn["unique"])), sim.rng, lv, tier)
 		elif worn != null and worn.has("set"):
@@ -978,13 +990,19 @@ func _standard_camp(sim, bot) -> void:
 					best = it
 					best_sc = sc
 			fresh = best
+		if not fresh.is_empty() and worn != null and worn.get("stamped", false):
+			fresh["stamped"] = true                # stamped at the Bench: it still counts for the County
 		if not fresh.is_empty():
 			# the old gun's parts on the new where a mount matches: the element's socketable with them (the review)
 			if worn != null and worn.has("attachments") and fresh.has("attachments") and fresh != worn:
 				for mount in worn["attachments"]:
-					if (fresh["attachments"].has(mount) or str(mount).begins_with("socket")) and worn["attachments"][mount] != null:     # its sockets as it had them
+					var part = worn["attachments"][mount]
+					# a part at or under the camp's level, or a socketable (its figure is its base's); a deeper part's mount left for the tidy
+					if (fresh["attachments"].has(mount) or str(mount).begins_with("socket")) and part != null and (Items.is_socketable(part) or Items.ilvl(part) <= lv):
 						fresh["attachments"][mount] = worn["attachments"][mount]
 			sim.equipped[sl] = fresh
+	while sim.rig_used() > sim.med_capacity() and not sim.rig.is_empty():
+		sim.rig.pop_back()                      # a new rig with fewer pouches: the last of its contents go
 	sim._dry_memo.clear()
 	bot._tidied_at = -1e9                     # a tidy now, whatever the lift's just did (the review: inside its minute it was a no-op)
 	bot.tidy(sim)
