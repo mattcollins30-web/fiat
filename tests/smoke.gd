@@ -1724,9 +1724,8 @@ func _run_screen(main) -> void:
 		_check(not sim.mission["found"].has(box) or Items.stack_size(box) < 10, "the rounds stayed whole in the pack")
 		main.refresh()
 	var m: Dictionary = sim.mission
-	# the grid is the container: a pack of N cells shows N outlines, no more,
-	# unless the packing reaches past them - and then exactly as far as it reached
-	_check_grid(main._run._inv, sim.capacity(), "the pack")
+	# the pack is the bag's own shape (27 Oct): its cells as outlines, every piece where the sim says it lies
+	_check_pack_grid(main._run._inv, sim, "the pack")
 	var first: Dictionary = m["found"][0]
 	var n_before: int = m["found"].size()
 	main._run._inv._pick(main._run._inv.cell_of(first["id"]))
@@ -7360,6 +7359,164 @@ func _check_grid(inv, cap: int, what: String) -> void:
 		_check(last < inv.outlines_shown(), "%s: %s is drawn past the last outline" % [what, str(r)])
 
 
+## The run's pack as drawn (27 Oct, the grid): the bag's columns and exactly its cells as outlines on the page, every
+## placed piece at its "pos" in its turned footprint, inside the bag and on no other's cell; the drawn cell its size.
+func _check_pack_grid(inv, sim, what: String) -> void:
+	var m: Dictionary = sim.mission
+	sim.pack_layout(m)
+	inv._shown = ""
+	inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
+	var w: int = sim.pack_w()
+	var cap: int = sim.capacity()
+	var top: int = inv.page * inv.page_rows
+	var want := 0
+	for row in range(inv.page_rows):
+		for col in range(w):
+			if (top + row) * w + col < cap:
+				want += 1
+	_check(inv.outlines_shown() == want, "%s shows %d outlines for the page's %d cells (%d across, %d in all)" % [what, inv.outlines_shown(), want, w, cap])
+	var placed: Dictionary = inv.placed()
+	var taken := {}
+	for it in m["found"]:
+		var r: Rect2i = placed.get(it["id"], Rect2i(-1, -1, 0, 0))
+		if it.get("strapped", false):
+			_check(r.position.y >= sim.pack_rows(), "%s: %s is strapped on but drawn in the pack: %s" % [what, it["base"], str(r)])
+			continue
+		_check(it.has("pos") and r.position == Vector2i(int(it["pos"][0]), int(it["pos"][1])) and r.size == inv.lies(it), "%s: %s drawn at %s, lying at %s" % [what, it["base"], str(r), str(it.get("pos"))])
+		for dy in range(r.size.y):
+			for dx in range(r.size.x):
+				var c := Vector2i(r.position.x + dx, r.position.y + dy)
+				_check(sim.pack_cell_in(c.x, c.y, w, cap) and not taken.has(c), "%s: %s at %s is off the bag or on another's cell" % [what, it["base"], str(c)])
+				taken[c] = true
+	for c in inv._cells:
+		if c.visible:
+			var r: Rect2i = placed.get(c.id, Rect2i())
+			_check(c.size == Vector2(inv.ItemCell.px(r.size.x), inv.ItemCell.px(r.size.y)), "%s: a cell drawn %s for a %s footprint" % [what, str(c.size), str(r.size)])
+
+
+## The pack as a grid (27 Oct, Matt: "true tetris"; the bag's own shape, turned pieces, a find with no place waits on
+## the floor, the bot packs with the same packer). The Plastic bag is 5 by 3.
+func _pack_grid_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var by_hand_was: bool = sim.loot_by_hand
+	sim.loot_by_hand = true
+	sim.equipped["Backpack"] = sim._plain("Backpack", "Plastic bag")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["crates"] = []                          # the search on: the floor's on screen
+	m["found"] = []
+	m["floor"] = []
+	var w: int = sim.pack_w()
+	var cap: int = sim.capacity()
+	_check(w == 5 and cap >= 15, "the Plastic bag is not 5 across: %d across, %d cells" % [w, cap])
+	var nid := [880000]
+	var mk := func(slot: String, base: String) -> Dictionary:
+		var it: Dictionary = sim._plain(slot, base)
+		nid[0] += 1
+		it["id"] = nid[0]
+		return it
+	# a rifle lies along the top row; a 3x3 finds no place in what's left of a 5x3 (two rows): to the floor
+	var rifle: Dictionary = mk.call("Primary", "Old .303")
+	sim._place_find(m, rifle)
+	_check(rifle.get("pos", []) == [0, 0] and not rifle.get("rot", true), "the rifle didn't lie along the top: %s %s" % [str(rifle.get("pos")), str(rifle.get("rot"))])
+	if cap == 15:
+		var vest: Dictionary = mk.call("Armour", "Stab vest")
+		sim._place_find(m, vest)
+		_check(not m["found"].has(vest) and m["floor"].has(vest), "a 3x3 went into two rows of a 5x3 (cells free %d): the floor %d" % [cap - sim.pack_used(m), m["floor"].size()])
+		_check(not sim.floor_fits(vest), "the floor says a 3x3 fits two rows")
+		# two helmets side by side, then a 2x1 only fits turned, up the last column
+		var h1: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+		var h2: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+		sim._place_find(m, h1)
+		sim._place_find(m, h2)
+		_check(h1.get("pos", []) == [0, 1] and h2.get("pos", []) == [2, 1], "the helmets didn't lie side by side: %s %s" % [str(h1.get("pos")), str(h2.get("pos"))])
+		var pistol: Dictionary = mk.call("Secondary", Data.BASES["Secondary"][0]["name"])
+		if Items.footprint(pistol) == Vector2i(2, 1):
+			sim._place_find(m, pistol)
+			_check(pistol.get("pos", []) == [4, 1] and pistol.get("rot", false), "a 2x1 didn't turn into the last column: %s %s" % [str(pistol.get("pos")), str(pistol.get("rot"))])
+			_check(sim.pack_used(m) == cap, "the 5x3 isn't full: %d of %d" % [sim.pack_used(m), cap])
+			# full: a drag onto a taken cell is refused; the pistol put down, a helmet moves into its place's column... no:
+			# a helmet can't go where the pistol was (one column), so the move is refused there and allowed nowhere taken
+			_check(not sim.pack_move(h1["id"], 3, 1, false), "a helmet moved onto another's cells")
+			_check(sim.put_down(pistol["id"]) and m["floor"].has(pistol) and not pistol.has("pos"), "the pistol wasn't put down onto the floor")
+			_check(sim.pack_move(h2["id"], 3, 1, false) and h2["pos"] == [3, 1], "a helmet didn't move a column right into the room made")
+			_check(not sim.take_floor(pistol["id"], [3, 1, true]), "the pistol was taken onto a helmet's cells")
+			_check(sim.take_floor(pistol["id"], [2, 1, true]) and pistol["pos"] == [2, 1] and pistol["rot"], "the pistol wasn't taken back where it was dropped, turned: %s" % str(pistol.get("pos")))
+			# the save keeps where it all lies
+			var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+			var back = Sim.new()
+			back.load_dict(d)
+			var bf: Array = back.mission["found"].filter(func(x): return int(x["id"]) == int(h2["id"]))
+			_check(bf.size() == 1 and bf[0]["pos"] == [3, 1] and typeof(bf[0]["pos"][0]) == TYPE_INT, "the save lost where the helmet lay: %s" % (str(bf[0].get("pos")) if bf.size() == 1 else "gone"))
+			back.pack_layout(back.mission)
+			_check(back.mission["found"].all(func(x): return x.has("pos")) and bf[0]["pos"] == [3, 1], "the loaded pack was repacked, not kept: %s" % str(bf[0].get("pos")))
+			# a bigger bag put on mid-run: the pack repacked in its shape, every piece placed
+			var school: Dictionary = mk.call("Backpack", "School bag")
+			m["floor"].append(school)
+			m["found"].erase(h1)
+			m["floor"].append(h1)
+			_check(sim.take_floor(school["id"]), "the school bag didn't fit the room made")
+			_check(sim.can_equip_from_pack(school["id"]) and sim.equip_from_pack(school["id"]), "a bigger bag couldn't go on from the pack")
+			_check(sim.pack_w() == 6 and m["found"].all(func(x): return x.has("pos") and not x.get("strapped", false)), "the pack wasn't repacked in the new bag's shape: %d across, %s" % [sim.pack_w(), str(m["found"].map(func(x): return x.get("pos")))])
+			# a smaller bag that can't hold what's carried won't go on
+			var tiny: Dictionary = mk.call("Backpack", "Plastic bag")
+			m["found"].append(tiny)
+			sim.pack_layout(m)
+			for k in range(4):
+				var j: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+				sim._place_find(m, j)
+			_check(not sim.can_equip_from_pack(tiny["id"]), "a 5x3 went on over a pack it can't hold (%d cells carried)" % sim.pack_used(m))
+	# auto (the bot's packer): a full pack's upgrade takes the place of the cheapest that frees room for it, by shape
+	sim.extract_now()
+	sim.loot_by_hand = false
+	sim.equipped["Backpack"] = sim._plain("Backpack", "Plastic bag")
+	sim.equipped["Helmet"] = null
+	sim.equipped["Armour"] = sim._plain("Armour", Data.BASES["Armour"].back()["name"])     # the vest below is junk beside it
+	sim._dry_memo.clear()
+	sim.deploy(0)
+	m = sim.mission
+	m["leave_full"] = true
+	m["found"] = []
+	var g := 0
+	while sim.pack_used(m) < sim.capacity() and g < 40:
+		var med: Dictionary = mk.call(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+		sim._place_find(m, med)
+		g += 1
+	_check(sim.pack_used(m) == sim.capacity() and m["found"].all(func(x): return x.has("pos")), "the bot's packer didn't fill the pack with 1x1s: %d of %d" % [sim.pack_used(m), sim.capacity()])
+	var up: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+	_check(sim.is_upgrade(up), "the fixture: a helmet with none worn isn't an upgrade")
+	var before: int = m["found"].size()
+	sim._place_find(m, up)
+	_check(not m["found"].has(up) and m["found"].size() == before, "a 2x2 swapped for a single 1x1: it can't lie in one cell")
+	# a big piece of junk at the front: its place is room for the upgrade
+	m["found"] = []
+	var junk: Dictionary = mk.call("Armour", "Stab vest")
+	junk["value"] = 0
+	sim._place_find(m, junk)
+	g = 0
+	while sim.pack_used(m) < sim.capacity() and g < 40:
+		var med2: Dictionary = mk.call(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+		med2["value"] = 100
+		sim._place_find(m, med2)
+		g += 1
+	var up2: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+	sim._place_find(m, up2)
+	_check(m["found"].has(up2) and not m["found"].has(junk) and up2.has("pos"), "the upgrade didn't take the junk vest's place")
+	# a mythic with no room made: strapped on, carried, no place
+	var myth: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
+	myth["mythic"] = true
+	for f in m["found"]:
+		f["mythic"] = true                  # every piece kept: nothing to swap out
+	sim._place_find(m, myth)
+	_check(m["found"].has(myth) and myth.get("strapped", false) and not myth.has("pos"), "a mythic with no room wasn't strapped on")
+	sim.extract_now()
+	sim.loot_by_hand = by_hand_was
+	sim.load_dict(saved)
+
+
 ## The body: a stash item dropped on its own slot's box is taken and equipped;
 ## on every other box it is refused; dragged off, the stash takes it back and
 ## the slot is empty. Every slot pair, with a plain item of each slot.
@@ -7907,6 +8064,7 @@ func _loot_roll_checks(main) -> void:
 	_keepsake_checks(main)
 	_vans_checks(main.sim)
 	_full_pack_checks(main.sim)
+	_pack_grid_checks(main.sim)
 	_loot_table_checks(main.sim)
 	_harder_gang_checks(main.sim)
 	_over_level_checks(main.sim)
@@ -9954,9 +10112,13 @@ func _full_pack_checks(sim) -> void:
 			_check(m["found"].any(func(x): return int(x["id"]) == 930000), "on auto an upgrade didn't swap into a full pack")
 			var u2: Dictionary = up.duplicate(true)
 			u2["id"] = 940000
-			var n_junk: int = m["found"].filter(func(x): return not sim.is_upgrade(x)).size()
+			# the grid (27 Oct): the second takes a junk piece's place only where that one piece's room holds it -
+			# here the first sits in the vest's hole and meds fill the rest, so it's passed over, the first kept
+			var room_for_u2: bool = m["found"].any(func(x): return not sim.is_upgrade(x) and Items.size(x) >= Items.size(u2))
+			var left1: int = int(m["left"])
 			sim._place_find(m, u2)
-			_check(m["found"].any(func(x): return int(x["id"]) == 930000) and (n_junk == 0 or m["found"].any(func(x): return int(x["id"]) == 940000)), "on auto an upgrade in the pack was swapped out, or the second didn't take the junk's place")
+			var u2_in: bool = m["found"].any(func(x): return int(x["id"]) == 940000)
+			_check(m["found"].any(func(x): return int(x["id"]) == 930000) and (u2_in or (not room_for_u2 and int(m["left"]) == left1 + 1)), "on auto an upgrade in the pack was swapped out, or the second didn't take a junk piece's place")
 			# a mythic (17 Oct): swaps into a full pack, and no upgrade swaps it out
 			m["found"] = []                       # full again, of junk and meds
 			var g2 := 0

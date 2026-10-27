@@ -68,6 +68,11 @@ const FOOTPRINTS := {
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 }
 
+## The pack as a grid (27 Oct): no bag wider than the screen's thirteen columns, and its rows in pages of seven - a
+## piece never lies across a page's edge, so every page is whole on screen.
+const PACK_MAX_W := 13
+const PACK_PAGE_ROWS := 7
+
 ## The stash in cells before the Yard's picks: one page, thirteen cells a row, seven rows.
 const STASH_CELLS := 91
 const CLASS_TAB_CELLS := 60          # a class's own stash tab (21 Oct, the crew): and a second as big with the Dry store
@@ -496,23 +501,26 @@ const BASES := {
 		{"name": "Breacher's rig", "tier": 8, "capacity": 13, "pace": 2, "value": 1000},
 		{"name": "Command rig", "tier": 9, "capacity": 15, "pace": -2, "value": 1300},
 	],
+	## a pack's "w" (Matt, 27 Oct, the pack as a real grid): its width in cells, never under 5 so a long gun lies flat;
+	## its capacity is its cells, row by row (the Plastic bag 9 to 15, 5x3: a rifle or a jacket; the School bag 12 to 18,
+	## the Carrier bags 10 to 16, 8x2, so no early pack is under the start); never over PACK_MAX_W, the grid's columns
 	"Backpack": [
-		{"name": "Plastic bag", "tier": 1, "capacity": 9, "value": 5, "start": true},     # the start: the worst there is, never found; nine cells, so a found vest (3×3) comes home
-		{"name": "School bag", "tier": 1, "capacity": 12, "value": 30},
-		{"name": "Carrier bags", "tier": 1, "capacity": 10, "pace": 3, "value": 15},
-		{"name": "Hiking pack", "tier": 2, "capacity": 24, "value": 60},
-		{"name": "Holdall", "tier": 2, "capacity": 20, "pace": 2, "value": 70},
-		{"name": "Bergen", "tier": 3, "capacity": 40, "value": 110},
-		{"name": "Framed pack", "tier": 3, "capacity": 48, "pace": -5, "value": 160},
-		{"name": "Expedition pack", "tier": 4, "capacity": 56, "pace": -3, "value": 260},
-		{"name": "Cargo frame", "tier": 5, "capacity": 72, "pace": -8, "value": 400},
-		{"name": "Patrol pack", "tier": 6, "capacity": 60, "value": 480},
-		{"name": "Full bergen", "tier": 6, "capacity": 80, "pace": -6, "value": 640},
+		{"name": "Plastic bag", "tier": 1, "capacity": 15, "w": 5, "value": 5, "start": true},     # the start: the worst there is, never found; 5x3, so a found vest (3×3) or a rifle (5×1) comes home
+		{"name": "School bag", "tier": 1, "capacity": 18, "w": 6, "value": 30},
+		{"name": "Carrier bags", "tier": 1, "capacity": 16, "w": 8, "pace": 3, "value": 15},     # two bags side by side, 8x2: long things, never a vest
+		{"name": "Hiking pack", "tier": 2, "capacity": 24, "w": 6, "value": 60},
+		{"name": "Holdall", "tier": 2, "capacity": 20, "w": 5, "pace": 2, "value": 70},
+		{"name": "Bergen", "tier": 3, "capacity": 40, "w": 8, "value": 110},
+		{"name": "Framed pack", "tier": 3, "capacity": 48, "w": 8, "pace": -5, "value": 160},
+		{"name": "Expedition pack", "tier": 4, "capacity": 56, "w": 8, "pace": -3, "value": 260},
+		{"name": "Cargo frame", "tier": 5, "capacity": 72, "w": 9, "pace": -8, "value": 400},
+		{"name": "Patrol pack", "tier": 6, "capacity": 60, "w": 10, "value": 480},
+		{"name": "Full bergen", "tier": 6, "capacity": 80, "w": 10, "pace": -6, "value": 640},
 		## the deep bases (10 Oct): tiers 7-9
-		{"name": "Assault pack", "tier": 7, "capacity": 72, "value": 820},
-		{"name": "Long-range bergen", "tier": 7, "capacity": 96, "pace": -6, "value": 860},
-		{"name": "Mountain-troop bergen", "tier": 8, "capacity": 112, "pace": -6, "value": 1100},
-		{"name": "Special forces bergen", "tier": 9, "capacity": 130, "pace": -6, "value": 1450},
+		{"name": "Assault pack", "tier": 7, "capacity": 72, "w": 9, "value": 820},
+		{"name": "Long-range bergen", "tier": 7, "capacity": 96, "w": 12, "pace": -6, "value": 860},
+		{"name": "Mountain-troop bergen", "tier": 8, "capacity": 104, "w": 13, "pace": -6, "value": 1100},
+		{"name": "Special forces bergen", "tier": 9, "capacity": 130, "w": 10, "pace": -6, "value": 1450},
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.

@@ -14,6 +14,11 @@ extends Control
 ## item is always on a drawn cell - and the player can see the bag is
 ## awkward, not just full.
 ##
+## The run's pack is the exception (27 Oct, Matt: "true tetris"): `pack_mode` draws the bag's own shape - the sim's
+## pack_w() columns, capacity() cells - and every piece where the sim says it lies ("pos", turned by "rot"). Pieces
+## drag about inside it (R or the right button turns the one in hand), green where it lies, red where it won't;
+## a piece strapped on (no place, but coming home) sits past the pack's rows with no outline under it.
+##
 ## Signals: `picked(id)` on a single selection, `acted` after a sell,
 ## `dropped(data)` for something dragged onto the grid from elsewhere.
 
@@ -99,6 +104,12 @@ var _cells: Array = []             # ItemCells, pooled; the first N are showing
 var _outlines: Array = []          # one empty cell drawn per cell of capacity, under the items
 var _placed := {}                  # id -> Rect2i in cells, after the last show
 var _shown := ""
+var pack_mode := false             # the run's pack (27 Oct): the bag's own shape, pieces where they lie
+var _pack_cols := COLS             # the bag's width in pack mode
+var _ghost: Panel                  # where the piece in hand would land: green, or red
+static var drag_rot := false       # the piece in hand turned (R, or the right button, while dragging)
+static var _live: Control          # the drag's picture, to turn
+static var _live_fp := Vector2i.ONE     # its footprint as it lies
 
 
 func _init() -> void:
@@ -157,6 +168,10 @@ func _init() -> void:
 		o.visible = false
 		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_outlines.append(o)
+	_ghost = UI.panel(self, Rect2(0, 0, CELL, CELL), UI.box(Color(Pal.GOOD, 0.25), 6, 2, Pal.GOOD))
+	_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ghost.visible = false
+	_ghost.z_index = 2
 
 
 ## Another cell for the pool: the k-th, made when first needed.
@@ -166,6 +181,7 @@ func _cell(k: int) -> Button:
 		var i := _cells.size()
 		c.pressed.connect(_pick.bind(i))
 		c.gui_input.connect(_cell_input.bind(i))
+		c.set_drag_forwarding(Callable(), func(at, data): return _can_drop_data(at + c.position, data), func(at, data): _drop_data(at + c.position, data))     # a drop over a piece is the grid's
 		c.visible = false
 		add_child(c)
 		_cells.append(c)
@@ -212,7 +228,9 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		if rarity >= 0 and it["rarity"] != rarity:
 			continue
 		items.append(it)
-	match SORTS[sort]:
+	match "Pack" if pack_mode else SORTS[sort]:
+		"Pack":
+			pass                               # the pack's pieces lie where they lie: no order to show them in
 		"Value":
 			items.sort_custom(func(a, b): return a["value"] > b["value"])
 		"New":
@@ -238,7 +256,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	for it in items:
 		ups[it["id"]] = _upgrade(it)
 		locks[it["id"]] = sim.wear_lock(it) if sim != null else 0
-		sig += ",%d:%d%s%d" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else "", locks[it["id"]]]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes
+		sig += ",%d:%d%s%d%s" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else "", locks[it["id"]], str(it.get("pos", "")) + str(it.get("rot", false)) if pack_mode else ""]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes; a piece as it moves
 	if sig == _shown:
 		return
 	_shown = sig
@@ -257,6 +275,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	_rarity_button.tooltip_text = "Rarity: click for the next"
 	UI.style_button(_rarity_button, rarity >= 0)
 	_lay_tabs(tabbed)
+	_sort_button.visible = not pack_mode
 	_sort_button.text = "↕"
 	_sort_button.tooltip_text = "Sorted by %s: click for %s" % [SORTS[sort].to_lower(), SORTS[(sort + 1) % SORTS.size()].to_lower()]
 	_many_button.visible = can_many
@@ -300,23 +319,10 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	if buying == "":
 		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id))))     # the Fence buys; shut till the Carpet Man (13 Oct)
-	# pack the items first-fit into the columns, never across a page's edge
-	_placed = _pack(items, page_rows)
-	var reach := 0
-	for id in _placed:
-		var r: Rect2i = _placed[id]
-		reach = maxi(reach, (r.position.y + r.size.y - 1) * COLS + r.position.x + r.size.x)
-	# the outlines are the container: exactly `cap` cells, or as far as the
-	# packing reached when it had to go further, so every item sits on an outline
-	var shown_cells := maxi(cap, reach)
-	var pages := maxi(1, ceili(float(ceili(float(shown_cells) / COLS)) / page_rows))
-	page = clampi(page, 0, pages - 1)
-	for k in range(_outlines.size()):
-		var cell_index := page * page_rows * COLS + k
-		_outlines[k].visible = cell_index < shown_cells and k < page_rows * COLS
-	_page_label.text = "%d/%d" % [page + 1, pages]
-	_page_prev.disabled = page == 0
-	_page_next.disabled = page >= pages - 1
+	if pack_mode:
+		_lay_pack(cap)
+	else:
+		_lay_grid(cap)
 	var k := 0
 	var top := page * page_rows
 	for it in items:
@@ -326,7 +332,9 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		var c := _cell(k)
 		c.visible = true
 		c.position = Vector2(r.position.x * (CELL + GAP), GRID_Y + (r.position.y - top) * (CELL + GAP))
-		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected)
+		var turned: bool = pack_mode and bool(it.get("rot", false)) and it.has("pos")
+		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected, Vector2(ItemCell.px(r.size.x), ItemCell.px(r.size.y)) if turned else Vector2.ZERO)
+		c.set_turned(turned)
 		c.set_upgrade(ups[it["id"]])
 		c.set_locked(locks[it["id"]])
 		c.set_mark(str(marks.get(it["id"], "hl" if it.get("hl", false) else "")))     # a rule's highlight where no contract marks it
@@ -335,6 +343,65 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		_cells[k].visible = false
 		_cells[k].id = -1
 		k += 1
+
+
+## The stash's grid and the shelves': first-fit into the columns, never across a page's edge; the outlines exactly
+## `cap` cells, or as far as the packing reached when it had to go further, so every item sits on an outline.
+func _lay_grid(cap: int) -> void:
+	_pack_cols = COLS
+	_placed = _pack(items, page_rows)
+	var reach := 0
+	for id in _placed:
+		var r: Rect2i = _placed[id]
+		reach = maxi(reach, (r.position.y + r.size.y - 1) * COLS + r.position.x + r.size.x)
+	var shown_cells := maxi(cap, reach)
+	var pages := maxi(1, ceili(float(ceili(float(shown_cells) / COLS)) / page_rows))
+	page = clampi(page, 0, pages - 1)
+	for k in range(_outlines.size()):
+		var cell_index := page * page_rows * COLS + k
+		_outlines[k].visible = cell_index < shown_cells and k < page_rows * COLS
+	_paged(pages)
+
+
+## The pack (27 Oct): the bag's own columns and cells, each piece where it lies; one strapped on (or not yet placed)
+## first-fit past the pack's last row, no outline under it.
+func _lay_pack(cap: int) -> void:
+	_pack_cols = sim.pack_w()
+	var rows: int = sim.pack_rows()
+	_placed = {}
+	var loose: Array = []
+	for it in items:
+		if it.has("pos"):
+			_placed[it["id"]] = Rect2i(int(it["pos"][0]), int(it["pos"][1]), lies(it).x, lies(it).y)
+		else:
+			loose.append(it)
+	var reach_rows := rows
+	if not loose.is_empty():
+		var extra := _pack(loose, page_rows, rows)
+		for id in extra:
+			_placed[id] = extra[id]
+			reach_rows = maxi(reach_rows, extra[id].end.y)
+	var pages := maxi(1, ceili(float(reach_rows) / page_rows))
+	page = clampi(page, 0, pages - 1)
+	var top := page * page_rows
+	for k in range(_outlines.size()):
+		@warning_ignore("integer_division")
+		var row: int = k / COLS
+		var col: int = k % COLS
+		_outlines[k].visible = col < _pack_cols and row < page_rows and (top + row) * _pack_cols + col < cap
+	_paged(pages)
+
+
+func _paged(pages: int) -> void:
+	_page_label.text = "%d/%d" % [page + 1, pages]
+	_page_prev.disabled = page == 0
+	_page_next.disabled = page >= pages - 1
+
+
+## A piece's footprint as it lies in the pack: turned, its sides swapped.
+static func lies(it: Dictionary, rot = null) -> Vector2i:
+	var f := Items.footprint(it)
+	return Vector2i(f.y, f.x) if (bool(it.get("rot", false)) if rot == null else bool(rot)) else f
 
 
 ## The upgrade's arrow (11 Oct, Matt's list): better than what's worn in its slot, wherever spares are shown - the
@@ -349,14 +416,14 @@ func _upgrade(it: Dictionary) -> bool:
 ## First-fit: each item in order takes the first free place, scanning rows
 ## then columns, that holds its footprint without crossing a page edge.
 ## Returns id -> Rect2i in cells.
-static func _pack(list: Array, rows_a_page: int) -> Dictionary:
+static func _pack(list: Array, rows_a_page: int, y0 := 0) -> Dictionary:
 	var taken := {}        # Vector2i -> true
 	var out := {}
 	for it in list:
 		var f := Items.footprint(it)
 		var w := mini(f.x, COLS)
 		var h := f.y
-		var y := 0
+		var y := y0
 		var placed_v := false
 		while not placed_v:
 			@warning_ignore("integer_division")
@@ -447,13 +514,16 @@ func _cell_input(event: InputEvent, k: int) -> void:
 		var id: int = _cells[k].id
 		_press_cell = -1
 		if id >= 0:
-			_cells[k].force_drag({"id": id, "src": drag_src}, drag_preview(_item(id)))
+			_cells[k].force_drag({"id": id, "src": drag_src}, drag_preview(_item(id), bool(_item(id).get("rot", false)) and pack_mode))
 
 
 ## What rides under the mouse during a drag: the item's picture if it has
-## one, its name if not.
-static func drag_preview(it: Dictionary) -> Control:
+## one, its name if not; turned when `rot` (a piece lying turned in the pack). R or the right button turns it.
+static func drag_preview(it: Dictionary, rot := false) -> Control:
+	var holder := Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tex := Items.art(it)
+	var inner: Control
 	if tex != null and not it.is_empty():
 		var t := TextureRect.new()
 		t.texture = tex
@@ -463,21 +533,84 @@ static func drag_preview(it: Dictionary) -> Control:
 		var f := Items.footprint(it)
 		t.size = Vector2(ItemCell.px(f.x), ItemCell.px(f.y))
 		t.modulate = Color(1, 1, 1, 0.85)
-		return t
-	var preview := Label.new()
-	preview.text = it.get("base", "")
-	preview.add_theme_font_override("font", UI.font("SemiBold"))
-	preview.add_theme_font_size_override("font_size", Pal.FLOOR)
-	preview.add_theme_color_override("font_color", Pal.TEXT)
-	return preview
+		inner = t
+	else:
+		var preview := Label.new()
+		preview.text = it.get("base", "")
+		preview.add_theme_font_override("font", UI.font("SemiBold"))
+		preview.add_theme_font_size_override("font_size", Pal.FLOOR)
+		preview.add_theme_color_override("font_color", Pal.TEXT)
+		inner = preview
+	holder.add_child(inner)
+	_live = holder
+	_live_fp = Items.footprint(it) if not it.is_empty() else Vector2i.ONE
+	drag_rot = false
+	if rot:
+		turn_live()
+	return holder
 
 
-func _can_drop_data(_at: Vector2, data: Variant) -> bool:
-	return data is Dictionary and data.get("src", "") in accepts
+## The piece in hand turned a quarter (R, or the right button, mid-drag).
+static func turn_live() -> void:
+	drag_rot = not drag_rot
+	if _live == null or not is_instance_valid(_live) or _live.get_child_count() == 0:
+		return
+	var inner: Control = _live.get_child(0)
+	inner.rotation_degrees = 90.0 if drag_rot else 0.0
+	inner.position = Vector2(float(ItemCell.px(_live_fp.y)) if drag_rot else 0.0, 0.0)
 
 
-func _drop_data(_at: Vector2, data: Variant) -> void:
-	dropped.emit(data)
+func _input(event: InputEvent) -> void:
+	if not pack_mode or not is_visible_in_tree() or not get_viewport().gui_is_dragging():
+		return
+	var turn: bool = (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R) or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT)
+	if turn:
+		turn_live()
+		get_viewport().set_input_as_handled()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and _ghost != null:
+		_ghost.visible = false
+
+
+## The pack's cell under a point, and the page's: [x, y] in the pack's cells.
+func cell_at(at: Vector2) -> Vector2i:
+	return Vector2i(floori(at.x / (CELL + GAP)), page * page_rows + floori((at.y - GRID_Y) / (CELL + GAP)))
+
+
+func _can_drop_data(at: Vector2, data: Variant) -> bool:
+	if not (data is Dictionary and data.get("src", "") in accepts):
+		return false
+	if pack_mode and sim != null and sim.mission != null:
+		var it: Dictionary = _drag_item(data)
+		if not it.is_empty():
+			var c := cell_at(at)
+			var fp := lies(it, drag_rot)
+			var ok: bool = sim.pack_free_at(sim.mission, it, c.x, c.y, drag_rot)
+			_ghost.position = Vector2(c.x * (CELL + GAP), GRID_Y + (c.y - page * page_rows) * (CELL + GAP))
+			_ghost.size = Vector2(ItemCell.px(fp.x), ItemCell.px(fp.y))
+			_ghost.add_theme_stylebox_override("panel", UI.box(Color(Pal.GOOD if ok else Pal.BAD, 0.25), 6, 2, Pal.GOOD if ok else Pal.BAD))
+			_ghost.visible = true
+	return true
+
+
+func _drop_data(at: Vector2, data: Variant) -> void:
+	_ghost.visible = false
+	var d: Dictionary = data.duplicate()
+	if pack_mode:
+		var c := cell_at(at)
+		d["at"] = [c.x, c.y, drag_rot]
+	dropped.emit(d)
+
+
+## The thing a drag carries: the pack's own piece, or one off the floor.
+func _drag_item(data: Dictionary) -> Dictionary:
+	var src: Array = sim.mission.get("floor", []) if str(data.get("src", "")) == "floor" else sim.mission["found"]
+	for it in src:
+		if int(it["id"]) == int(data.get("id", -1)):
+			return it
+	return {}
 
 
 # ------------------------------------------------------------------ acting

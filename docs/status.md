@@ -7033,3 +7033,15 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   but not the Yard's ranks, the town's rebuild or the trees, so the end states still differ. Parked: even those too
   (or run the gauntlet from one shared camp per class), Embers, the next pass to read the bot's Clear and Faint
   signals.
+- The pack as a real grid (27 Oct, Matt: "the slots are taken but there are two rows of slots showing - revisit the
+  inventory tetris idea properly"; docs/design/pack_grid.md). True tetris for the pack only (the stash stays a flow).
+  Each bag its own shape: a width "w" (5 to 13), its cells row by row in pages of seven, a piece never across a page's
+  edge; the Plastic bag 5x3 (15), the Carrier bags 8x2 (16), the School bag 6x3 (18) up to the Long-range bergen 12x8.
+  Pieces lie at "pos", turned by "rot": a find lands where it first fits, either way round; by hand one with no place
+  waits on the floor (in the fight too: the game never swaps for the player); the player drags pieces about the pack
+  (R or the right button turns the one in hand, green where it lies, red where it won't), from the floor to a cell, and
+  out of the pack onto the floor. Auto and the bot pack with the same packer; full, an upgrade takes the place of the
+  cheapest piece that frees room for it by shape. A head's unique, the first gun or a mythic with no room is strapped
+  on (carried, drawn past the pack's rows) and goes in when room is made. A bag swapped mid-run must hold what's
+  carried, packed afresh. Smoke: _pack_grid_checks and _check_pack_grid. A balance pass to follow (what comes home
+  changes).

@@ -1249,6 +1249,8 @@ const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% l
 const FENCE_SURE := "Sell %d"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)
 ## Every ask-twice press, one form (Matt, 26 Oct): what goes, then "press again"; "Again?" where there's no room.
 const ASK := {"again": "%s – press again", "short": "Again?"}
+## The pack as a grid (27 Oct): a find with no place, a piece let go where it won't lie.
+const PACK := {"no_room": "No room in the pack", "wont_lie": "It won't lie there", "move": "Drag a piece to move it; R or right-click turns it"}
 const FIGHT_BUTTON := "The fight ›"
 ## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).
 const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "worn_now": "worn now", "ready": "ready to wear",

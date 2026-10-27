@@ -3896,6 +3896,239 @@ func pack_used(m: Dictionary) -> int:
 	return n
 
 
+# ------------------------------------------------------------------ the pack as a grid (Matt, 27 Oct)
+# The pack is the bag's own shape: pack_w() cells across, capacity() cells laid row by row (the last row short when the
+# count runs out). Every piece in it has "pos" [x, y] and "rot" (turned a quarter: its footprint's sides swapped); a
+# find lands where it fits, tried both ways; one that doesn't waits on the floor. A piece that must come home whatever
+# the room (a head's unique, the first gun, a mythic) and finds none is "strapped" on: carried, no place. A piece in
+# found with no "pos" (an old save, a test's fixture) is settled into the first place it fits.
+
+## The pack's width: the bag's own (Data's "w"); no bag, two.
+func pack_w() -> int:
+	var bag = equipped.get("Backpack")
+	if bag == null:
+		return 2
+	return clampi(int(Items.base_of(bag).get("w", 5)), 1, Data.PACK_MAX_W)
+
+
+## Rows the pack's cells run to.
+func pack_rows() -> int:
+	var w := pack_w()
+	return ceili(float(capacity()) / float(w))
+
+
+## A piece's footprint as it lies: turned, its sides swapped.
+static func pack_fp(it: Dictionary, rot = null) -> Vector2i:
+	var f := Items.footprint(it)
+	var r: bool = bool(it.get("rot", false)) if rot == null else bool(rot)
+	return Vector2i(f.y, f.x) if r else f
+
+
+## Whether a cell is one of the pack's: inside its width and among its first capacity() cells.
+static func pack_cell_in(x: int, y: int, w: int, cap: int) -> bool:
+	return x >= 0 and y >= 0 and x < w and y * w + x < cap
+
+
+## Whether rows y to y + h - 1 sit on one page (a piece taller than a page can't help but cross).
+static func pack_one_page(y: int, h: int) -> bool:
+	return h > Data.PACK_PAGE_ROWS or floori(float(y) / Data.PACK_PAGE_ROWS) == floori(float(y + h - 1) / Data.PACK_PAGE_ROWS)
+
+
+## The cells taken, {y * w + x: id}, by every placed piece but `skip_id`'s.
+func _pack_taken(m: Dictionary, skip_id := -1) -> Dictionary:
+	var w := pack_w()
+	var out := {}
+	for f in m["found"]:
+		if not f.has("pos") or int(f["id"]) == skip_id:
+			continue
+		var fp := pack_fp(f)
+		var px: int = int(f["pos"][0])
+		var py: int = int(f["pos"][1])
+		for yy in range(fp.y):
+			for xx in range(fp.x):
+				out[(py + yy) * w + px + xx] = int(f["id"])
+	return out
+
+
+## Whether `it` lies at (x, y) as `rot` says, every cell the pack's and free.
+func pack_free_at(m: Dictionary, it: Dictionary, x: int, y: int, rot: bool, taken = null) -> bool:
+	var w := pack_w()
+	var cap := capacity()
+	var tk: Dictionary = taken if taken != null else _pack_taken(m, int(it.get("id", -1)))
+	var fp := pack_fp(it, rot)
+	if not pack_one_page(y, fp.y):
+		return false
+	for yy in range(fp.y):
+		for xx in range(fp.x):
+			if not pack_cell_in(x + xx, y + yy, w, cap) or tk.has((y + yy) * w + x + xx):
+				return false
+	return true
+
+
+## The first place `it` fits, row by row, lying as it is and then turned: [x, y, rot], or [] for none.
+func pack_spot(m: Dictionary, it: Dictionary, taken = null) -> Array:
+	_pack_settle(m)
+	return _pack_first(m, it, taken if taken != null else _pack_taken(m, int(it.get("id", -1))))
+
+
+func _pack_first(m: Dictionary, it: Dictionary, tk: Dictionary) -> Array:
+	var fp := Items.footprint(it)
+	var w := pack_w()
+	var rows := pack_rows()
+	for rot in ([false] if fp.x == fp.y else [false, true]):
+		for y in range(rows):
+			for x in range(w):
+				if pack_free_at(m, it, x, y, rot, tk):
+					return [x, y, rot]
+	return []
+
+
+## Into the pack at a spot from pack_spot.
+func _pack_put(m: Dictionary, it: Dictionary, spot: Array) -> void:
+	it["pos"] = [int(spot[0]), int(spot[1])]
+	it["rot"] = bool(spot[2])
+	it.erase("strapped")
+	if not m["found"].has(it):
+		m["found"].append(it)
+
+
+## Every piece in found with no place (an old save, a forced find, one strapped on) settled: placed where it fits,
+## else strapped on. A place that doesn't hold is forgotten first.
+func _pack_settle(m: Dictionary) -> void:
+	var key := [pack_w(), capacity()]
+	if m.get("pack_key", key) != key:
+		m["pack_key"] = key
+		_pack_repack(m)                       # the shape changed under it (a bag, the Removal Van, a node): packed afresh
+		return
+	m["pack_key"] = key
+	# a place that doesn't hold (a piece back in with an old "pos", a fixture): forgotten, and placed afresh below
+	var held := {}
+	for f in m["found"]:
+		if not f.has("pos"):
+			continue
+		var fp := pack_fp(f)
+		var ok := pack_one_page(int(f["pos"][1]), fp.y)
+		for yy in range(fp.y):
+			for xx in range(fp.x):
+				var cx: int = int(f["pos"][0]) + xx
+				var cy: int = int(f["pos"][1]) + yy
+				if not pack_cell_in(cx, cy, key[0], key[1]) or held.has(cy * key[0] + cx):
+					ok = false
+		if not ok:
+			pack_off(f)
+			continue
+		for yy in range(fp.y):
+			for xx in range(fp.x):
+				held[(int(f["pos"][1]) + yy) * key[0] + int(f["pos"][0]) + xx] = true
+	for f in m["found"]:
+		if f.has("pos"):
+			continue
+		var spot := _pack_first(m, f, _pack_taken(m, int(f["id"])))     # strapped on, tried again: room made, it goes in
+		if spot.is_empty():
+			f["strapped"] = true
+		else:
+			f["pos"] = [int(spot[0]), int(spot[1])]
+			f["rot"] = bool(spot[2])
+			f.erase("strapped")
+
+
+## Every piece placed, or strapped on, before the pack is drawn.
+func pack_layout(m: Dictionary) -> void:
+	_pack_settle(m)
+
+
+## The player's drag: a piece in the pack to (x, y), turned or not. False when it won't lie there.
+func pack_move(id: int, x: int, y: int, rot: bool) -> bool:
+	if mission == null:
+		return false
+	_pack_settle(mission)
+	for f in mission["found"]:
+		if int(f["id"]) == id:
+			if not pack_free_at(mission, f, x, y, rot):
+				return false
+			f["pos"] = [x, y]
+			f["rot"] = rot
+			f.erase("strapped")
+			return true
+	return false
+
+
+## Out of the pack onto the floor, by hand: room made for something else (the floor's the run's).
+func put_down(id: int) -> bool:
+	if mission == null or not by_hand(mission):
+		return false
+	for k in range(mission["found"].size()):
+		var f: Dictionary = mission["found"][k]
+		if int(f["id"]) == id:
+			if f.get("from_rig", false) or Items.is_deeds(f):
+				return false                     # the runner's own rounds, the deeds: not left behind by a drag
+			mission["found"].remove_at(k)
+			pack_off(f)
+			mission["floor"] = mission.get("floor", [])
+			mission["floor"].append(f)
+			return true
+	return false
+
+
+## A piece out of the pack (worn, into the rig, onto the floor): its place there is forgotten (the review: a piece worn
+## kept its "pos", and back in by a forced append it lay over whatever was there now).
+static func pack_off(it: Dictionary) -> void:
+	it.erase("pos")
+	it.erase("rot")
+	it.erase("strapped")
+
+
+## The run's over: the pack's places are the run's, not the piece's (home, the stash lays it out).
+func _pack_unmark(m: Dictionary) -> void:
+	for f in m["found"]:
+		pack_off(f)
+
+
+## Whether every piece of `items` lies in a pack `w` across and `cap` cells, packed afresh (the biggest first): a bag
+## swapped mid-run must hold what's carried.
+func _pack_all_fit(items: Array, w: int, cap: int) -> bool:
+	var taken := {}
+	var order: Array = items.filter(func(f): return not f.get("strapped", false))
+	order.sort_custom(func(a, b): return Items.size(a) > Items.size(b))
+	for f in order:
+		var fp0 := Items.footprint(f)
+		var placed := false
+		for rot in ([false] if fp0.x == fp0.y else [false, true]):
+			var fp := Vector2i(fp0.y, fp0.x) if rot else fp0
+			for y in range(ceili(float(cap) / float(w))):
+				for x in range(w):
+					if placed:
+						break
+					var ok := pack_one_page(y, fp.y)
+					for yy in range(fp.y):
+						for xx in range(fp.x):
+							if not pack_cell_in(x + xx, y + yy, w, cap) or taken.has((y + yy) * w + x + xx):
+								ok = false
+					if ok:
+						for yy in range(fp.y):
+							for xx in range(fp.x):
+								taken[(y + yy) * w + x + xx] = true
+						placed = true
+		if not placed:
+			return false
+	return true
+
+
+## The pack packed afresh, the biggest first (a bag swapped mid-run): what no longer fits is strapped on.
+func _pack_repack(m: Dictionary) -> void:
+	m["pack_key"] = [pack_w(), capacity()]
+	for f in m["found"]:
+		pack_off(f)
+	var order: Array = m["found"].duplicate()
+	order.sort_custom(func(a, b): return Items.size(a) > Items.size(b))
+	var keep: Array = m["found"].duplicate()
+	m["found"].clear()
+	for f in order:
+		m["found"].append(f)
+		_pack_settle(m)
+	m["found"].assign(keep)
+
+
 # ------------------------------------------------------------------ the camp's upgrades
 
 func rest_rate() -> float:
@@ -7547,6 +7780,7 @@ func _time_out(m: Dictionary) -> void:
 		prof["dry_timeouts"] = int(prof.get("dry_timeouts", 0)) + 1     # the bot and the balance gate count them
 		return
 	_floor_mythics_in(m)
+	_pack_unmark(m)                       # before the dog and the insurance send pieces home (the review)
 	var t := tier(m["tier"])
 	var insured: bool = m.get("insured", false)
 	var worn_v: Array = []
@@ -9020,7 +9254,7 @@ func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void
 
 ## A find into the pack: joined to a stack it fits, a cell of its own if there's room. Full (15 Oct, Matt: a 6-pouch rig,
 ## an upgrade on his bum bag, swapped out for an epic school bag worse than the one he wore): by hand, to the floor -
-## nothing's swapped without the player (in the fight, before the floor's on screen, the auto-run's rule); on an
+## nothing's swapped without the player (27 Oct, the grid: in the fight too - it waits for the floor to show); on an
 ## auto-run or "Fill up, then go", only an upgrade on what's worn (or a
 ## paper, the endgame's keys) swaps in, for the cheapest thing at least its size that isn't one; else passed over.
 func _place_find(m: Dictionary, it: Dictionary) -> void:
@@ -9032,26 +9266,34 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 				Items.set_stack(it, Items.stack_size(it) - moved)
 				if Items.stack_size(it) <= 0:
 					return                    # joined what was found already: no new cell
-	if pack_used(m) + Items.size(it) <= capacity():
-		m["found"].append(it)
+	var spot := pack_spot(m, it)
+	if not spot.is_empty():
+		_pack_put(m, it, spot)
 		_read(it)
 		return
-	if by_hand(m) and m.has("crates"):
+	if by_hand(m):
 		m["floor"] = m.get("floor", [])
-		m["floor"].append(it)                 # the player's to take, or leave - once the search is on and the floor's on screen (the review)
+		m["floor"].append(it)                 # the player's to take, or leave: on screen once the search is on (27 Oct: never swapped for him, the fight included)
 		return
 	if not _pack_keeps(it):
 		m["left"] += 1
 		return
-	# the cheapest thing its size that isn't kept: cheapest first, stopping at the first not kept (22 Oct, the pass's
-	# wall: a full pack of a hundred was tried on piece by piece for every find - the keep check is a try-on)
+	# the cheapest thing that isn't kept and, taken out, leaves a place it fits (27 Oct, the grid: where it lies counts,
+	# not its cells alone); PACK_SWAP_TRIES of the not-kept tried (22 Oct, the pass's wall: a full pack
+	# of a hundred was tried on piece by piece for every find - the keep check is a try-on)
 	var order: Array = []
 	for k in range(m["found"].size()):
 		var f: Dictionary = m["found"][k]
-		if Items.size(f) >= Items.size(it) and Items.opens(f) == "":
+		if Items.opens(f) == "" and not f.get("from_rig", false):
 			order.append(k)
-	order.sort_custom(func(a, b): return m["found"][a]["value"] < m["found"][b]["value"])
-	var cheapest := -1
+	# what's at least its size first (its place alone may hold it), then the smaller (beside a gap they may), each cheapest first
+	var need := Items.size(it)
+	order.sort_custom(func(a, b):
+		var fa: Dictionary = m["found"][a]
+		var fb: Dictionary = m["found"][b]
+		var ba: bool = Items.size(fa) >= need
+		var bb: bool = Items.size(fb) >= need
+		return fa["value"] < fb["value"] if ba == bb else ba)
 	# the pack's verdicts, kept while what they read stands: the kit, the level, the feed, the wounds, HP under half
 	# (the review: a gun runs dry, an upgrade goes on mid-run) - not the pack itself, which every find moves
 	var keeps: Dictionary = m.get("keeps", {})
@@ -9059,23 +9301,38 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 	if int(keeps.get("key", 0)) != kk:
 		keeps = {"key": kk}
 		m["keeps"] = keeps
+	var tries := 0
 	for k in order:
 		var f: Dictionary = m["found"][k]
 		var fid: int = int(f["id"])
 		if not keeps.has(fid):
 			keeps[fid] = _pack_keeps(f)
-		if not keeps[fid]:
-			cheapest = k
+		if keeps[fid]:
+			continue
+		tries += 1
+		if tries > PACK_SWAP_TRIES:
 			break
-	if cheapest >= 0:
-		m["found"][cheapest] = it
+		if f.get("strapped", false):
+			continue                          # strapped on, it holds no place to give
+		var tk := _pack_taken(m, fid)
+		var room := _pack_first(m, it, tk)
+		if room.is_empty():
+			continue
+		m["found"][k] = it
+		it["pos"] = [int(room[0]), int(room[1])]
+		it["rot"] = bool(room[2])
 		m["swapped"] = m.get("swapped", 0) + 1
 		_read(it)
-	elif it.get("mythic", false):
-		m["found"].append(it)                 # a mythic with nothing its size to make way (17 Oct): in over the pack's size, as a head's uniques come home
+		return
+	if it.get("mythic", false):
+		it["strapped"] = true
+		m["found"].append(it)                 # a mythic with no place to make (17 Oct): strapped on, as a head's uniques come home
 		_read(it)
 	else:
 		m["left"] += 1
+
+
+const PACK_SWAP_TRIES := 12
 
 
 ## What a full pack holds on to on an auto-run (15 Oct): an upgrade on what's worn, a paper, the deeds - and a mythic
@@ -9389,22 +9646,21 @@ func floor_items() -> Array:
 	return mission.get("floor", []) if mission != null else []
 
 
-## Whether a thing on the floor goes in the pack: a cell for it, or a stack it joins.
+## Whether a thing on the floor goes in the pack: a place it lies (either way round), or a stack it joins.
 func floor_fits(it: Dictionary) -> bool:
 	if mission == null:
 		return false
-	if pack_used(mission) + Items.size(it) <= capacity():
-		return true
 	if Items.stacks(it):
 		for f in mission["found"]:
 			if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
 				return true
-	return false
+	return not pack_spot(mission, it).is_empty()
 
 
 ## Off the floor into the pack: only if it fits (no swapping - the player chose it); a stack joins what it can, the rest
-## stays down. A thing ditched comes back with its scrap.
-func take_floor(id: int) -> bool:
+## stays down. `at` [x, y, rot] is where the player dropped it (the grid, 27 Oct); empty, the first place it lies.
+## A thing ditched comes back with its scrap.
+func take_floor(id: int, at: Array = []) -> bool:
 	if mission == null:
 		return false
 	var fl: Array = floor_items()
@@ -9412,22 +9668,29 @@ func take_floor(id: int) -> bool:
 		if int(fl[k]["id"]) != id:
 			continue
 		var it: Dictionary = fl[k]
-		if not floor_fits(it):
-			return false
+		var joined := false
 		if Items.stacks(it):
 			for f in mission["found"]:
 				if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
 					var moved: int = mini(Items.stack_cap(f) - Items.stack_size(f), Items.stack_size(it))
 					Items.set_stack(f, Items.stack_size(f) + moved)
 					Items.set_stack(it, Items.stack_size(it) - moved)
+					joined = joined or moved > 0
 			if Items.stack_size(it) <= 0:
 				fl.remove_at(k)
 				return true
-			if pack_used(mission) + Items.size(it) > capacity():
-				return true                       # some joined; the rest stays on the floor
+		var spot: Array = []
+		if at.is_empty():
+			spot = pack_spot(mission, it)
+		else:
+			_pack_settle(mission)
+			if pack_free_at(mission, it, int(at[0]), int(at[1]), bool(at[2])):
+				spot = [int(at[0]), int(at[1]), bool(at[2])]
+		if spot.is_empty():
+			return joined                      # no place: it stays down (what of a stack could join, did)
 		fl.remove_at(k)
 		it["spared"] = true                   # taken off the floor by hand: chosen, so no rule scraps it
-		mission["found"].append(it)
+		_pack_put(mission, it, spot)
 		_read(it)
 		return true
 	return false
@@ -9526,6 +9789,7 @@ func _extract() -> void:
 	var m: Dictionary = mission
 	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
 	_floor_mythics_in(m)
+	_pack_unmark(m)
 	var t := tier(m["tier"])
 	var timed_out: bool = m.get("timed_out", false)
 	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or crates_done(m)) and not timed_out:     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
@@ -9750,6 +10014,7 @@ func _kia() -> void:
 		return
 	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
 	_floor_mythics_in(m)
+	_pack_unmark(m)
 	var t := tier(m["tier"])
 	var dogs_share: bool = has_node("cap_dogs_share") and not m.get("insured", false) and not rig.is_empty()
 	var lost := loadout_value()
@@ -10355,11 +10620,18 @@ func can_equip_from_pack(id: int) -> bool:
 			var slot: String = it["slot"]
 			if not equipped.has(slot) or Items.is_deeds(it) or not can_wear(it):
 				return false
-			# the room is read with the found piece on: a smaller backpack or rig found must still hold what's carried
+			# the room is read with the found piece on: a backpack found must hold what's carried, packed afresh in its
+			# own shape; any other piece, what comes off needs a place with the found piece's cells freed (the grid)
+			_pack_settle(mission)
 			var was = equipped[slot]
+			var rest: Array = mission["found"].filter(func(f): return int(f["id"]) != id)
 			equipped[slot] = it
 			_dry_memo.clear()
-			var ok: bool = pack_used(mission) - Items.size(it) + (Items.size(was) if was != null else 0) <= capacity() and (slot != "Rig" or rig_used() <= med_capacity())
+			var ok: bool = slot != "Rig" or rig_used() <= med_capacity()
+			if ok and slot == "Backpack":
+				ok = _pack_all_fit(rest + ([was] if was != null else []), pack_w(), capacity())
+			elif ok and was != null:
+				ok = not _pack_swap_spot(mission, it, was).is_empty()
 			equipped[slot] = was
 			_dry_memo.clear()
 			return ok
@@ -10374,10 +10646,15 @@ func equip_from_pack(id: int) -> bool:
 		var it: Dictionary = m["found"][k]
 		if it["id"] == id:
 			var slot: String = it["slot"]
+			var spot: Array = [] if slot == "Backpack" or equipped[slot] == null else _pack_swap_spot(m, it, equipped[slot])
 			m["found"].remove_at(k)
+			pack_off(it)
 			if equipped[slot] != null:
 				equipped[slot]["spared"] = true      # what he had on: his, not loot
-				m["found"].append(equipped[slot])
+				if spot.is_empty():
+					m["found"].append(equipped[slot])     # a bag's swap: repacked below
+				else:
+					_pack_put(m, equipped[slot], spot)
 				log_event("%s on, %s into the pack" % [it["base"], equipped[slot]["base"].to_lower()])
 			else:
 				log_event("%s on" % it["base"])
@@ -10385,6 +10662,8 @@ func equip_from_pack(id: int) -> bool:
 			equipped[slot] = it
 			_read(it)
 			_dry_memo.clear()
+			if slot == "Backpack":
+				_pack_repack(m)                   # the new bag's own shape
 			if hp > max_hp():
 				hp = max_hp()
 			return true
@@ -10399,7 +10678,7 @@ func can_rig_to_pack(id: int) -> bool:
 		return false
 	for it in rig:
 		if int(it["id"]) == id:
-			return Items.is_ammo(it) and _pack_has_room(mission, Items.size(it))     # rounds only: a med is used, never stowed
+			return Items.is_ammo(it) and not pack_spot(mission, it).is_empty()     # rounds only: a med is used, never stowed
 	return false
 
 
@@ -10411,14 +10690,21 @@ func rig_to_pack(id: int) -> bool:
 			var it: Dictionary = rig[k]
 			rig.remove_at(k)
 			it["from_rig"] = true              # the runner's own: home to the rig, not counted as loot
-			mission["found"].append(it)
+			_pack_put(mission, it, pack_spot(mission, it))
 			log_event("%s into the pack" % it["base"])
 			return true
 	return false
 
 
-func _pack_has_room(m: Dictionary, cells: int) -> bool:
-	return pack_used(m) + cells <= capacity()
+## Where `was` (coming off) lies in the pack once `it` (going on) has left it: where `it` lay first, else anywhere.
+func _pack_swap_spot(m: Dictionary, it: Dictionary, was: Dictionary) -> Array:
+	_pack_settle(m)
+	var tk := _pack_taken(m, int(it["id"]))
+	if it.has("pos"):
+		for rot in [false, true]:
+			if pack_free_at(m, was, int(it["pos"][0]), int(it["pos"][1]), rot, tk):
+				return [int(it["pos"][0]), int(it["pos"][1]), rot]
+	return _pack_first(m, was, tk)
 
 
 func take_from_pack(id: int) -> bool:
@@ -10461,6 +10747,7 @@ func _take_from(src: Array, id: int) -> bool:
 			if not rig_room(Items.size(it)):
 				return false
 			src.erase(it)
+			pack_off(it)
 			rig.append(it)
 			return true
 	return false
@@ -12164,6 +12451,12 @@ func load_dict(d: Dictionary) -> void:
 	gamble = d.get("gamble", [])
 	clinic = d.get("clinic", [])
 	mission = d.get("mission", null)
+	if mission is Dictionary:
+		if mission.get("pack_key", null) is Array:
+			mission["pack_key"] = mission["pack_key"].map(func(v): return int(v))     # JSON's floats: the shape reads as itself
+		for f in mission.get("found", []):
+			if f.get("pos", null) is Array:
+				f["pos"] = [int(f["pos"][0]), int(f["pos"][1])]
 	last_report = d.get("last_report", null)
 	operators_lost = int(d.get("operators_lost", 0))
 	best_tier = int(d.get("best_tier", 0))

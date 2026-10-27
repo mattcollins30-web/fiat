@@ -309,6 +309,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	if tex != null:
 		_art.visible = true
 		_art.texture = tex
+		_art.rotation = 0.0
 		_art.position = Vector2(INSET, INSET)
 		_art.size = size - Vector2(2 * INSET, 2 * INSET)
 		# pixel art at its own pixels when it fits (a footprint's picture always
@@ -332,6 +333,20 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		return
 	_art.visible = false
 	_words(it, f)
+
+
+## A piece lying turned in the pack (27 Oct): its picture a quarter round, filling the cell show_item sized to the
+## turned footprint. Off, as it was.
+func set_turned(on: bool) -> void:
+	if not _art.visible:
+		return
+	_art.rotation_degrees = 90.0 if on else 0.0
+	_art.size = Vector2(size.y, size.x) - Vector2(2 * INSET, 2 * INSET) if on else size - Vector2(2 * INSET, 2 * INSET)
+	_art.position = Vector2(size.x - INSET, INSET) if on else Vector2(INSET, INSET)
+	if on:
+		var tex: Texture2D = _art.texture
+		var fits: bool = tex != null and tex.get_width() <= _art.size.x and tex.get_height() <= _art.size.y
+		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
 
 ## No picture: the words that stand in for it, by how much room there is.

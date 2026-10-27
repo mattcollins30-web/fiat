@@ -32,6 +32,7 @@ const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewel
 
 signal floor_picked(id: int)       # a thing on the floor pressed: its comparison (13 Oct, the floor)
 signal floor_take(id: int)         # double-clicked: into the pack
+signal floor_put(id: int)          # a piece dragged out of the pack onto the floor (27 Oct, the grid): room made by hand
 
 var _head: Label
 var _aside: Label
@@ -52,6 +53,7 @@ var _press_at := Vector2.ZERO
 var _press_cell := -1
 var _floor_items := {}             # id -> the thing, for the drag's picture
 var _w := 0.0
+var _drop_zone: Control
 
 
 func _init() -> void:
@@ -104,11 +106,18 @@ func build(w: float) -> void:
 	UI.label(_more, Rect2(0, 42, tw, 20), "more", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_more.visible = false
 	_finds_head = UI.head(self, Rect2(0, FINDS_HEAD_Y, w, UI.HEAD_H), "")
+	_drop_zone = Control.new()                 # the floor takes a piece put down out of the pack
+	_drop_zone.position = Vector2(0, FINDS_HEAD_Y)
+	_drop_zone.size = Vector2(w, HEIGHT - FINDS_HEAD_Y)
+	_drop_zone.mouse_filter = Control.MOUSE_FILTER_PASS
+	_drop_zone.set_drag_forwarding(Callable(), _can_put, _put)
+	add_child(_drop_zone)
 	for k in range(cells_fit(false)):
 		var c := ItemCell.new()
 		c.position = Vector2(k * (Pal.CELL + 8), FINDS_Y)
 		c.visible = false
 		c.gui_input.connect(_cell_input.bind(k))
+		c.set_drag_forwarding(Callable(), _can_put, _put)
 		add_child(c)
 		_cells.append(c)
 		_floor_ids.append(-1)
@@ -360,6 +369,14 @@ func _cell_input(event: InputEvent, k: int) -> void:
 	elif event is InputEventMouseMotion and _press_cell == k and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) and event.position.distance_to(_press_at) > 10.0:
 		_press_cell = -1
 		_cells[k].force_drag({"id": id, "src": "floor"}, Inventory.drag_preview(_floor_items.get(id, {})))
+
+
+func _can_put(_at: Vector2, data: Variant) -> bool:
+	return data is Dictionary and str(data.get("src", "")) == "pack"
+
+
+func _put(_at: Vector2, data: Variant) -> void:
+	floor_put.emit(int(data["id"]))
 
 
 func text_nodes() -> Array:

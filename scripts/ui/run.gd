@@ -228,8 +228,10 @@ func _init() -> void:
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.ditching = true
-	_inv.accepts = ["floor"]              # a thing dragged off the floor (13 Oct)
-	_inv.dropped.connect(func(data): if str(data.get("src", "")) == "floor": _take_floor(int(data["id"])))
+	_inv.accepts = ["floor", "pack"]      # a thing dragged off the floor (13 Oct); a piece moved about the pack (27 Oct)
+	_inv.pack_mode = true
+	_inv.drag_src = "pack"
+	_inv.dropped.connect(_inv_dropped)
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
@@ -237,6 +239,7 @@ func _init() -> void:
 	_crates.build(INNER)
 	_crates.floor_take.connect(_take_floor)
 	_crates.floor_picked.connect(_pick_floor)
+	_crates.floor_put.connect(_put_down)
 	_crates.position = Vector2(PAD, CRATES_Y)
 	_crates.visible = false
 	_left.add_child(_crates)
@@ -491,7 +494,7 @@ func show_state(s) -> void:
 	(_take_strip["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if used_p >= sim.capacity() else Pal.GOOD
 	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
-		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ""))
+		(("Pack full: drag one to the floor, or ditch" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ""))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
 	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
@@ -514,6 +517,7 @@ func show_state(s) -> void:
 			_runner["key"].visible = false
 			_runner["chips"].visible = false
 	# the pack
+	sim.pack_layout(m)                    # every piece placed (or strapped on) before it's drawn
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
@@ -812,9 +816,11 @@ func _show_pick(m: Dictionary) -> void:
 		# the pack's empty words (23 Oct, parked item 4 of the 21 Oct list; Matt: "it hasn't changed since the very first
 		# version and it needs to go"): what the card's for, in one line; the sizes gone, the cells free are the header's
 		var lines: Array = [Words.PACK_EMPTY if m["found"].is_empty() else Words.PACK_PICK]
+		if not m["found"].is_empty():
+			lines.append(Words.PACK["move"])     # the grid (27 Oct)
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
-			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: a find that beats what's worn replaces the pack's cheapest item")
+			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) else "Full: a find that beats what's worn takes the cheapest's place")
 			lines.append("Cheapest now: %s, %s" % [Words.mid_base(str(cheap["base"])), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
 		_pick.show_empty("The pack", lines)     # its fill is the grid's header and the cells free (18 Oct, said once)
 		_pick.set_buttons([])
@@ -1298,17 +1304,46 @@ func _on_pick_acted() -> void:
 
 
 ## Off the floor into the pack (13 Oct): dragged, double-clicked or Take; no room, it stays and says so.
-func _take_floor(id: int) -> void:
+## A drop on the pack (27 Oct, the grid): off the floor to where it was let go, or a piece of the pack moved.
+func _inv_dropped(data: Dictionary) -> void:
 	if sim == null or not sim.on_mission():
 		return
-	if sim.take_floor(id):
+	var at: Array = data.get("at", [])
+	match str(data.get("src", "")):
+		"floor":
+			_take_floor(int(data["id"]), at)
+		"pack":
+			if not at.is_empty() and not sim.pack_move(int(data["id"]), int(at[0]), int(at[1]), bool(at[2])):
+				_no_room(Words.PACK["wont_lie"])
+			_shown = ""
+			acted.emit()
+
+
+## Out of the pack onto the floor, by hand: room made for what's down there.
+func _put_down(id: int) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	if sim.put_down(id) and _inv.selected == id:
+		_inv.selected = -1
+	_shown = ""
+	acted.emit()
+
+
+func _no_room(words: String) -> void:
+	if juice != null:
+		juice.toast(words, "bad")
+	if sound != null:
+		sound.cue("no_room")
+
+
+func _take_floor(id: int, at: Array = []) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	if sim.take_floor(id, at):
 		if _floor_pick == id:
 			_floor_pick = -1
 	else:
-		if juice != null:
-			juice.toast("No room in the pack", "bad")
-		if sound != null:
-			sound.cue("no_room")
+		_no_room(Words.PACK["no_room"] if at.is_empty() else Words.PACK["wont_lie"])
 	_shown = ""
 	acted.emit()
 
