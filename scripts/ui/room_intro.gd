@@ -198,7 +198,7 @@ func _fill() -> void:
 ## A box's strip: its own picture (art/room_boxes/<room>_<n>.png, 384 x 96, 19 Oct) cut to the box across the middle;
 ## else the room's art cut where STRIPS says; null when neither is there (the plain ground shows).
 static func strip_texture(room_key: String, k: int, box: Vector2) -> Texture2D:
-	var own: Texture2D = art_texture("room_boxes/%s_%d" % [room_key, k + 1])
+	var own: Texture2D = art_texture("room_boxes/%s_%d" % [room_key.replace(":", "_"), k + 1])     # no colon in a path: Windows reads "class:x" as a stream of a file "class"
 	if own != null:
 		var ow: float = own.get_width()
 		var oh: float = own.get_height()

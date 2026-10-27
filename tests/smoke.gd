@@ -11,6 +11,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Arm := preload("res://scripts/ui/arm.gd")
+const RoomIntroRef := preload("res://scripts/ui/room_intro.gd")
 const Bot := preload("res://tests/bot.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const PlaytestRead := preload("res://tools/playtest_summary.gd")
@@ -16589,6 +16590,8 @@ func _room_intro_checks(main) -> void:
 		for tl in cc._tiles:
 			_check(UI.text_width(tl[2], tl[2].text) <= tl[2].size.x + 0.5, "%s's tile runs off: '%s'" % [cn, tl[2].text])
 		_check(cc._face.visible and cc._art.texture != null and cc._go_on.text == Words.CLASS_CARD["go"], "%s's card has no face, no place or the wrong button" % cn)
+		var blank: Array = range(3).filter(func(k): return RoomIntroRef.strip_texture("class:" + cn, k, Vector2(280, 84)) == null)
+		_check(blank.is_empty(), "%s's card's tiles have no picture: boxes %s" % [cn, str(blank)])     # 27 Oct, Matt's playtest: the three tiles plain
 		cc.free()
 	var met_was: Array = sim.met.duplicate()
 	sim.met = sim.met.filter(func(x): return not str(x).begins_with("class:"))
