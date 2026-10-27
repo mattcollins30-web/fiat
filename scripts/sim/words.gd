@@ -1110,7 +1110,7 @@ const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", 
 	"bought": "From the Issuer: %s, for %s.", "tab": "The Issuer", "head": "Issued kit", "rate": "HIS RATE TODAY", "circ": "IN CIRCULATION", "prices": "PRICES",
 	"burn": "Burn %s", "burn_line": "Out of circulation: prices x%.2f to x%.2f", "burn_go": "Burn", "said": "\"Its value is as stated.\"",
 	"want": "The County wants %d issued piece%s worn", "wear_at": "Wear at level %d", "burn_nothing": "Nothing in circulation to burn",
-	"burn_sure": "Burn %s? – again"}
+	"burn_sure": "Burn %s"}
 const STAMP := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "not_kit": "Only a piece of kit", "issued": "Issued already",
 	"done": "Stamped already", "short": "Short of fiat", "log": "Stamped for the County: %s, for %s.", "tag": "Stamped · counts as issued for the County",
 	"tag_short": "Stamped"}
@@ -1243,16 +1243,18 @@ const TEMPER := {"done": "Tempered: item level %d → %d", "no_piece": "Only kit
 const RUN_HOME_CLEAN := "%s picked clean, nothing more before time's up: home with the pack"
 const RUN_GANG_LATE := ["after time's up", "too late"]     # a gang due after the clock runs out (the first review's 15)
 const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% loot, from the patrols beaten since the site was cleared. Each one more adds to it."}
-const FENCE_SURE := "Sell %d?"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)
+const FENCE_SURE := "Sell %d"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)
+## Every ask-twice press, one form (Matt, 26 Oct): what goes, then "press again"; "Again?" where there's no room.
+const ASK := {"again": "%s – press again", "short": "Again?"}
 const FIGHT_BUTTON := "The fight ›"
 ## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).
 const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "worn_now": "worn now", "ready": "ready to wear",
-	"short": "gone: %s", "wear": "Wear", "save": "Save worn", "save_sure": "Again: replace it", "worn": "Kit %d on", "worn_short": "Kit %d on; missing: %s",
+	"short": "gone: %s", "wear": "Wear", "save": "Save worn", "save_sure": "Replace it", "worn": "Kit %d on", "worn_short": "Kit %d on; missing: %s",
 	"skill": "1 skill", "skills": "%d skills", "rig": "%d in the rig", "wear_tip": "Puts on its kit, tops up its rig and slots its skills"}
 const BUILD := {"copy": "Copy build", "paste": "Paste build", "copied": "Build code copied", "bad": "That isn't a build code", "old": "A build code from an older version: the web has changed since",
 	"out": "Not while the runner's out", "class": "A %s build: swap to them in Training first", "short": "Short of tins: the reset is %s",
 	"title": "A %s build · %d perks · %d skills", "plan": "Resets every perk for %s, then trains %d of %d", "plan_free": "Trains %d of %d perks, no reset",
-	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Again: reset for %s", "ring_sure": "Again: reset the ring for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
+	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Reset trees for %s", "ring_sure": "Reset the ring for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
 const COLLECTION := {"button": "The collection ›", "title": "The collection", "sub": "Every runner's, for the record · it gives no power", "close": "Close",
 	"uniques": "Uniques found", "mythics": "Mythics found", "sites": "Sites with every mark", "classes": "Classes at level 50", "order": "The order's three beaten", "sets": "Sets complete",
 	"of": "of %d", "grid_head": "Every unique · the found ones in colour, the rest by slot", "sites_head": "Sites · a mark at levels %s",
@@ -1278,7 +1280,7 @@ const PATTERNS := {"not_unique": "Only a unique has a pattern; a mythic has none
 	"too_plain": "Only Rare or better takes a pattern", "wrong_slot": "That pattern goes on: %s", "wants": "Short of: %s",
 	"wants_n": "Short of: %d %s", "short": "Short of tins", "put_on": "%s now carries %s's pattern",
 	"tab": "Patterns", "break_head": "1 · Break a unique down", "kept_head": "Patterns kept · %d", "put_head": "2 · Put it on a Rare or better, same slot",
-	"break": "Break it down", "break_sure": "Press again: it's gone for good", "gone": "The unique goes for good; its power stays here as one pattern", "put": "Put it on", "kept_note": "One use each. They sit here, not in the stash.",
+	"break": "Break it down", "break_sure": "Gone for good", "gone": "The unique goes for good; its power stays here as one pattern", "put": "Put it on", "kept_note": "One use each. They sit here, not in the stash.",
 	"put_note": "Spends the pattern and the costs above; it can't come off",
 	"none_kept": "None kept yet: break a unique down", "pick_unique": "Pick a unique in the stash", "pick_rare": "Pick a Rare or better, same slot"}
 
@@ -1288,7 +1290,7 @@ const LOOT_RULES := {"scrapped": "Loot rules scrapped %d find%s on the way in: +
 	"button": "Loot rules · %d on", "button_none": "Loot rules", "title": "Loot rules", "sub": "Checked top down when a run comes home · the first that fits wins",
 	"add": "Add a rule", "on": "Rules: on", "off": "Rules: off", "close": "Close",
 	"note": "Keep: never sold or binned. Highlight: an amber edge, kept too. Scrap: scrapped on the way in. No rule fits: as before.",
-	"keep": "Keep", "highlight": "Highlight", "scrap": "Scrap", "delete": "Delete", "edit_head": "Rule",
+	"keep": "Keep", "highlight": "Highlight", "scrap": "Scrap", "delete": "Delete", "delete_sure": "Delete it", "edit_head": "Rule",
 	"rarity": "Rarity", "slot": "Slot", "gun": "Weapon", "affix": "Best affix", "then": "Then", "none": "No rules yet: add one", "any": "Any", "kinds": "Uniques, set pieces, mythics",
 	"kind": "Kind", "plain": "Everything else", "from": "From %s ▾", "to": "To %s ▾", "up": "↑", "up_tip": "Move up: checked before the one above",
 	"act_tip": "Press to change: keep, highlight, scrap", "never_tip": "Never scrapped by a rule", "body_tip": "Helmet, armour, charm", "bags_tip": "Rig, backpack",

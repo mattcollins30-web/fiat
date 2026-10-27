@@ -22,6 +22,7 @@ extends Control
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const PANEL_W := 880
 const PANEL_H := 760
@@ -76,6 +77,7 @@ var _row_w := ROW_W
 var _row_x := PAD
 var _items: Array = []
 var _armed := -1                            # the row waiting for its second press
+var _armed_ms := 0                          # when it was armed: a press after the window arms again
 var _back := Callable()
 var _dock := Rect2()                        # the drawer's place when it has one
 var _shape := "card"                        # "card", "title" or "drawer"
@@ -361,9 +363,11 @@ func _on_pressed(i: int) -> void:
 	if i >= _items.size():
 		return
 	var it: Dictionary = _items[i]
-	if it.get("confirm", "") != "" and _armed != i:
+	var lapsed: bool = Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)     # the arm's window (Matt, 26 Oct)
+	if it.get("confirm", "") != "" and (_armed != i or lapsed):
 		var was := _armed
 		_armed = i
+		_armed_ms = Time.get_ticks_msec()
 		if was >= 0:
 			_show_detail(was)
 		_show_detail(i)

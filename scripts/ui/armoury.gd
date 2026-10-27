@@ -336,7 +336,7 @@ func _show_panel() -> void:
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
 		var precious: bool = it.has("unique") or it.has("set")
 		var armed: bool = _bin_arm.holds(int(it["id"]))
-		buttons.append({"text": ("Scrap it: %d scrap" % sim.scrap_of(it)) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
+		buttons.append({"text": (Words.ASK["again"] % ("Scrap for %s" % Fmt.group(sim.scrap_of(it)))) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
 	_set_buttons(buttons)
 
 
@@ -442,7 +442,10 @@ func _show_loadouts() -> void:
 		c["wear"].tooltip_text = Words.LOADOUTS["wear_tip"]
 		c["save"].disabled = sim.on_mission() or sim.cls == ""
 		var armed: bool = _save_arm.holds(i) and st != "empty"
-		c["save"].text = Words.LOADOUTS["save_sure"] if armed else Words.LOADOUTS["save"]
+		if armed:
+			UI.fit_button(c["save"], UI.ask_forms(Words.LOADOUTS["save_sure"]))
+		else:
+			c["save"].text = Words.LOADOUTS["save"]
 		UI.style_button(c["save"], false, "bad" if armed else "")
 
 

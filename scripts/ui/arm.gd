@@ -4,7 +4,7 @@ extends RefCounted
 ## same `what` (a fingerprint of what the press would act on - a count, the picked node). Another key, a changed
 ## `what`, the window running out, or the room hidden (`clear`) disarms it. Every ask-twice button uses one.
 
-const WINDOW_S := 8.0
+const WINDOW_S := 4.0                 # Matt, 26 Oct: four seconds, then it's a first press again
 
 var key = null
 var what := ""

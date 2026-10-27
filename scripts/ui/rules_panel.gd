@@ -11,6 +11,7 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const W := 904
 const H := 916
@@ -36,6 +37,7 @@ const ACT_TONE := {"keep": "good", "highlight": "warn", "scrap": "bad"}
 
 var sim
 var picked := -1                   # the rule the editor shows
+var _del_arm := Arm.new()          # Delete asks twice (the first review's 22; Matt, 26 Oct)
 var _title: Label
 var _sub: Label
 var _add: Button
@@ -184,6 +186,7 @@ func _show_editor() -> void:
 	var has: bool = picked >= 0 and picked < sim.loot_rules.size()
 	_hint.visible = not has
 	_delete.visible = has
+	_show_delete()
 	for l in _edit_labels:
 		l.visible = has
 	for group in [_kind_btns, _slot_btns, _gun_btns, _tier_btns, _act_btns, [_from, _to]]:
@@ -238,7 +241,32 @@ func _add_rule() -> void:
 	_done()
 
 
+## Delete, or its second form while armed on this rule.
+func _show_delete() -> void:
+	var armed: bool = picked >= 0 and picked < sim.loot_rules.size() and _del_arm.holds(picked, str(_rule()))
+	if armed:
+		UI.fit_button(_delete, UI.ask_forms(Words.LOOT_RULES["delete_sure"]))
+	else:
+		_delete.text = Words.LOOT_RULES["delete"]
+	UI.style_button(_delete, false, "bad" if armed else "")
+
+
+func _process(_delta: float) -> void:
+	if _del_arm.key != null and _del_arm.sig() == "":
+		_del_arm.clear()                  # the window ran out: back to Delete
+		_show_delete()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_del_arm.clear()
+
+
 func _delete_rule() -> void:
+	if not _rule().is_empty() and not _del_arm.press(picked, str(_rule())):
+		_show_delete()
+		return
+	_del_arm.clear()
 	if not _rule().is_empty():
 		sim.loot_rules.remove_at(picked)
 		picked = mini(picked, sim.loot_rules.size() - 1)

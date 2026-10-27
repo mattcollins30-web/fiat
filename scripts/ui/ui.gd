@@ -4,6 +4,7 @@ extends RefCounted
 ## predictable and tests/ui_check.gd can prove nothing overflows.
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 static var _fonts := {}
 
@@ -285,6 +286,11 @@ static func style_button(b: Button, primary: bool, tone := "") -> void:
 ## is the fallback. Lines that carry item words are built this way - long form,
 ## short form, a count - so nothing ever trails off into an ellipsis.
 ## A button's text: the first option that fits with its padding (the smoke's 32 px), else the last.
+## An armed ask-twice button's forms, long to short (Matt, 26 Oct: one form everywhere): "Sell 52 – press again", "Again?".
+static func ask_forms(what: String) -> Array:
+	return [Words.ASK["again"] % what, Words.ASK["short"]]
+
+
 static func fit_button(b: Button, options: Array) -> void:
 	for o in options:
 		if text_width(b, o) + 32.0 <= b.size.x:

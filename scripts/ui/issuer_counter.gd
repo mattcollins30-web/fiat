@@ -115,7 +115,7 @@ func show_state(s) -> void:
 	if not sim.burn_moves():
 		UI.fit(_burn_line, [Words.ISSUED["burn_nothing"]])
 	if armed:
-		UI.fit_button(_burn, [Words.ISSUED["burn_sure"] % Fmt.money(sim.burn_price()), "Burn?"])
+		UI.fit_button(_burn, UI.ask_forms(Words.ISSUED["burn_sure"] % Fmt.money(sim.burn_price())))
 	else:
 		_burn.text = Words.ISSUED["burn_go"]
 	UI.style_button(_burn, false, "bad" if armed else "")

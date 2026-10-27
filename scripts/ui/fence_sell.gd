@@ -115,7 +115,7 @@ func show_state(s) -> void:
 		row["sell"].disabled = n == 0
 		var armed: bool = _arm.holds(r, _spare_fp(r))     # armed on this row and the very pieces it showed
 		if armed:
-			UI.fit_button(row["sell"], [Words.FENCE_SURE % n, "Sell?"])
+			UI.fit_button(row["sell"], UI.ask_forms(Words.FENCE_SURE % n))
 		else:
 			row["sell"].text = "Sell"
 		UI.style_button(row["sell"], false, "bad" if armed else "")

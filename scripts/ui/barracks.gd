@@ -95,6 +95,7 @@ var selected := ""                 # a node id, or ""
 var alt := ""                      # the Also chip in the Yard's place: a tree's name, "The drawer", "The mantelpiece", or "" for the Yard
 var drawer_page := 0               # the drawer's (or the shelf's) page
 var _armed := ""                   # a class pressed once: the second press changes to it (the change costs, 9 Oct)
+var _armed_ms := 0                 # when, for the arm's window (arm.gd's WINDOW_S)
 var _armed_cls := ""               # the class it was armed from: a death, a move or a change elsewhere disarms it
 var _shown := ""
 
@@ -480,8 +481,8 @@ func _branch_for(nm: String) -> Dictionary:
 
 func show_state(s) -> void:
 	sim = s
-	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
-		_armed = ""
+	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
+		_armed = ""                            # a swap's arm runs out like every ask-twice (Matt, 26 Oct)
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
 		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
@@ -1012,10 +1013,10 @@ func _show_panel() -> void:
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
 	var armed: bool = respec_armed()
 	if selected != "" and sim.is_ring(selected):
-		_respec.text = (Words.BUILD["ring_sure"] if armed else "Reset the ring for %s") % Fmt.money(sim.paragon_reset_cost())
+		_respec.text = (Words.ASK["again"] % Words.BUILD["ring_sure"] if armed else Words.BUILD["ring_sure"]) % Fmt.money(sim.paragon_reset_cost())
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
 	else:
-		_respec.text = (Words.BUILD["reset_sure"] if armed else "Reset trees for %s") % Fmt.money(sim.respec_cost())
+		_respec.text = (Words.ASK["again"] % Words.BUILD["reset_sure"] if armed else Words.BUILD["reset_sure"]) % Fmt.money(sim.respec_cost())
 		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
 	UI.style_button(_respec, false, "bad" if armed else "")
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
@@ -1125,9 +1126,10 @@ func _pick_class(nm: String) -> void:
 		_armed = ""
 		show_state(sim)
 		return
-	if sim.cls != "" and _armed != nm:
+	if sim.cls != "" and (_armed != nm or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):     # a late second press arms again
 		_armed = nm                            # a swap (21 Oct, the crew): the first press shows them, the second sends them out
 		_armed_cls = sim.cls
+		_armed_ms = Time.get_ticks_msec()
 		selected = ""
 		show_state(sim)
 		return

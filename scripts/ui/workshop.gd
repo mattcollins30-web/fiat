@@ -1379,7 +1379,10 @@ func _show_patterns() -> void:
 	var why_b: String = sim.can_break(it) if is_u else Words.PATTERNS["pick_unique"]
 	_pat_break.disabled = why_b != ""
 	var armed: bool = is_u and _break_arm.holds(int(it["id"]))
-	_pat_break.text = Words.PATTERNS["break_sure"] if armed else Words.PATTERNS["break"]
+	if armed:
+		UI.fit_button(_pat_break, UI.ask_forms(Words.PATTERNS["break_sure"]))
+	else:
+		_pat_break.text = Words.PATTERNS["break"]
 	UI.style_button(_pat_break, not armed, "bad" if armed else "")
 	_pat_labels["gone"].text = Words.PATTERNS["gone"] if why_b == "" else why_b
 	_pat_labels["kept_head"].text = (Words.PATTERNS["kept_head"] % sim.patterns.size()).to_upper()
