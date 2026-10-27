@@ -7064,3 +7064,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   site's wear (kill drops -50%, cash -30%, fading over RECOVER_H 2 h of play; a new depth is fresh; the Atlas's Worn in
   speeds it), "picked clean" (every crate open on a run) and the Atlas's Picked over rank (a site's own things more of
   its finds). To talk through after the playtest.
+- Parked, designed (27 Oct, Matt's answers): hit registers take 2 (hit-stop, stagger, a spray, the bar's chunk flying,
+  bigger kills; their tracer dropped); picked over as the crates across runs, the next crate yours to pick, a refill 20
+  min after picked clean, the wear gone; the Workshop to the Carpet Man (docs/design/picked_over.md). Canvas: "Hit
+  registers", "Picked over, as the crates".
