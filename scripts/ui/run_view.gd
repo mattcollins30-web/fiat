@@ -90,6 +90,22 @@ const DOWN_S := 0.7                       # a kill's fall
 const POP_S := 0.35                       # a figure coming in: a fade where it stands (Matt, 13 Oct: rising up through the floor read wrong)
 const JOLT_S := 0.2
 const RED_S := 0.45
+## The hits (27 Oct, Matt: "more of a violent impact for hitting them"; the canvas's "Hit registers, take 2"): a solid
+## hit holds the frame, knocks the figure back and tilts it, sprays from the spot by type and knocks a chunk off its
+## bar; a kill holds longer, bursts bigger and throws the body back. A big hit on you jolts the frame.
+const STOP_S := 0.05                       # a solid hit's hold
+const STOP_KILL_S := 0.12
+const STOP_GAP := 0.3                      # a hold only this long after the last one ends: a stream of hits never slows the frame (the review)
+const KICK_S := 0.18                       # the knock-back's spring
+const KICK_PX := 10.0
+const KICK_DEG := 5.0
+const THROW_PX := 28.0                     # a kill's throw, over the fall
+const THROW_DEG := 18.0
+const FLASH_S := 0.12                      # a hit's white
+const SPRAY := {"physical": [Color("b3121b"), Color("8a0c12")], "bleed": [Color("d8262e"), Color("8a0c12")], "fire": [Color("ffb347"), Color("ff6a1a")],
+	"frost": [Color("cfe9ff"), Color("8fc6f0")], "poison": [Color("7ed07a"), Color("3f8f3a")], "shock": [Color("fff3a0"), Color("ffd84a")]}
+const BIG_HURT := 0.1                      # a hit on you this share of your max HP jolts the frame
+const LOW_RED := 0.3                       # under a third of your HP the red holds this much
 
 static var _tex := {}
 
@@ -129,6 +145,10 @@ var _on_you := 0
 var _kills_seen := -1
 var _hp_seen := -1.0
 var _jolt := 0.0
+var _stop_t := 0.0                         # the hit-stop: the frame held
+var _since_stop := 99.0                    # since the last hold ended
+var _last_hit := {}                        # the last shot's figure and spot, for its impact
+var _low_hp := false
 var _red_a := 0.0
 var _shot_t := 0.0
 var _rof := 1.0
@@ -800,13 +820,19 @@ func show_state(sim, m: Dictionary) -> void:
 			var pick: int = _target_k if _target_k in ups else ups[randi() % ups.size()]
 			ups.erase(pick)
 			_set_state(pick, "down")
+			_figs[pick]["kick_t"] = 0.0
+			_hold(STOP_KILL_S)
+			_burst(_chest_of(pick), "physical", 44, 1.5)
 			if pick == _target_k:
 				_target_k = -1
 		_kills_seen = int(m["kills"])
 	# a hit on you: the jolt and the red, a hundredth of your HP or more
+	_low_hp = sim.hp < sim.max_hp() / 3.0
 	if _hp_seen >= 0.0 and sim.hp < _hp_seen - sim.max_hp() * 0.01:
-		_jolt = JOLT_S
-		_red_a = 1.0
+		var hurt: float = (_hp_seen - sim.hp) / maxf(1.0, sim.max_hp())
+		if hurt >= BIG_HURT:
+			_jolt = JOLT_S                           # a big one: the frame jolts (27 Oct: not every scratch)
+		_red_a = maxf(_red_a, clampf(0.35 + hurt * 6.0, 0.35, 1.0))     # the red as strong as the hit
 		if sim.hp < _hp_seen - sim.max_hp() * 0.05 and _duck_t <= 0.0:
 			if _duck_t <= 0.0 and _firing:
 				ducked.emit()                         # only a duck you see (the review)
@@ -923,6 +949,14 @@ func _process(dt: float) -> void:
 	if placing:
 		_place_tick()
 		return
+	if _stop_t > 0.0 and dt > 0.0:
+		var held: float = minf(dt, _stop_t)      # a solid hit: the frame holds a beat, the rest of the step goes on
+		_stop_t -= held
+		dt -= held
+		_since_stop = 0.0
+		if dt <= 0.0:
+			return
+	_since_stop += dt
 	# the figures: as many up as are on you, popping in front first; each fires now and then while you're under fire
 	var up := 0
 	for f in _figs:
@@ -972,6 +1006,9 @@ func _process(dt: float) -> void:
 				r.texture = _fig_tex(f, "fire" if f["fire_t"] > 0.0 else "stand")
 			"down":
 				lift = -24.0 * clampf(f["t"] / DOWN_S, 0.0, 1.0)
+				var thr: float = ease(clampf(f["t"] / (DOWN_S * 0.6), 0.0, 1.0), 0.4)     # thrown back as it drops
+				f["kick_x"] = THROW_PX * thr * _away(k)
+				f["kick_r"] = THROW_DEG * thr * _away(k)
 				r.modulate.a = 1.0 - clampf((f["t"] - DOWN_S * 0.5) / (DOWN_S * 0.5), 0.0, 1.0)
 				if f["t"] >= DOWN_S:
 					_set_state(k, "")
@@ -980,7 +1017,17 @@ func _process(dt: float) -> void:
 		r.scale = Vector2(slot["scale"], slot["scale"])
 		var u: Rect2 = used_of(r.texture)                # the feet where the picture's drawn part ends, centred on what's drawn
 		var anchor: Vector2 = Vector2(u.get_center().x, u.end.y) if u.size.y > 0.0 else Vector2(r.size.x * 0.5, r.size.y)
-		r.position = slot["foot"] - anchor * slot["scale"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
+		if f["state"] in ["pop", "up"]:
+			f["kick_x"] = 0.0
+			f["kick_r"] = 0.0
+			if float(f.get("kick_t", 0.0)) > 0.0:
+				f["kick_t"] = maxf(0.0, float(f["kick_t"]) - dt)
+				var kk: float = sin(PI * float(f["kick_t"]) / KICK_S) if float(f["kick_t"]) > 0.0 else 0.0     # out and back
+				f["kick_x"] = KICK_PX * kk * _away(k)
+				f["kick_r"] = KICK_DEG * kk * _away(k)
+		r.pivot_offset = anchor
+		r.rotation = deg_to_rad(float(f.get("kick_r", 0.0)))
+		r.position = slot["foot"] - anchor * slot["scale"] + Vector2(_pan * -0.6 + float(f.get("kick_x", 0.0)), lift - DUCK_SCENE * _duck)
 		var lit: float = slot["lit"]
 		if float(f.get("hit_t", 0.0)) > 0.0:
 			f["hit_t"] = float(f["hit_t"]) - dt
@@ -1090,7 +1137,7 @@ func _process(dt: float) -> void:
 		var e: TextureRect = _edges[el]
 		var target: float = (0.55 + 0.25 * sin(_fx_t * 3.0 + float(FX_ELEMENTS.find(el)))) if _you_fx.get(el, false) else 0.0
 		e.modulate.a = move_toward(e.modulate.a, target, dt * 2.5)
-	_red_a = maxf(0.0, _red_a - dt / RED_S)
+	_red_a = maxf(LOW_RED if _low_hp and _firing else 0.0, _red_a - dt / RED_S)     # held under a third of your HP
 	_red.modulate.a = _red_a
 
 
@@ -1386,6 +1433,100 @@ class Flash extends Control:
 		draw_circle(Vector2.ZERO, wd * 0.45, Color(1.0, 0.97, 0.85, 0.9))
 
 
+## Which way figure k is knocked: away from the frame's middle.
+func _away(k: int) -> float:
+	return 1.0 if float(slot_of(k)["foot"].x) >= W * 0.5 else -1.0
+
+
+## A figure's chest in the frame, for a kill's burst.
+func _chest_of(k: int) -> Vector2:
+	var r: TextureRect = _figs[k]["rect"]
+	var u: Rect2 = used_of(r.texture) if r.texture != null else Rect2()
+	if u.size.y <= 0.0:
+		u = Rect2(Vector2.ZERO, r.size)
+	return r.position + Vector2(u.get_center().x, u.position.y + u.size.y * 0.3) * r.scale.x
+
+
+## The shot's impact, once its numbers are out (run.gd's _release_hits): `share` of the figure's HP it took. A solid
+## one (a twentieth) holds the frame, knocks the figure back, sprays by `ty` and knocks the chunk off its bar.
+func impact(ty: String, share: float) -> void:
+	if _last_hit.is_empty():
+		return
+	var k: int = int(_last_hit["k"])
+	var at: Vector2 = _last_hit["at"]
+	_last_hit = {}
+	var solid: bool = share >= 0.05
+	_burst(at, ty, 26 if solid else 10, 1.0 if solid else 0.6)
+	if not solid or k < 0 or k >= _figs.size() or not (_figs[k]["state"] in ["pop", "up"]):
+		return
+	_hold(STOP_S)
+	_figs[k]["kick_t"] = KICK_S
+	var fb: Control = _figs[k]["bar"]
+	if fb.visible and k == _target_k:
+		_chunk(fb, clampf(share, 0.0, 1.0))     # the bar that shows its HP: the one you're hitting (the review)
+	impacts += 1
+
+
+var impacts := 0                           # solid hits landed (for the tests)
+
+
+## The frame held `s`, unless a hold ended under STOP_GAP ago (or one's on).
+func _hold(s: float) -> void:
+	if _stop_t > 0.0 or _since_stop >= STOP_GAP:
+		_stop_t = maxf(_stop_t, s)
+var bursts := 0                            # sprays made (for the tests)
+
+
+## A spray from a hit: blood, embers, frost, a green spit or sparks, away from you.
+func _burst(at: Vector2, ty: String, n: int, size_k: float) -> void:
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 0.95
+	p.amount = maxi(1, n)
+	p.lifetime = 0.45
+	p.direction = Vector2(0, -1)
+	p.spread = 70.0
+	p.initial_velocity_min = 60.0 * size_k
+	p.initial_velocity_max = 170.0 * size_k
+	p.gravity = Vector2(0, 420)
+	p.scale_amount_min = 2.0 * size_k
+	p.scale_amount_max = 4.5 * size_k
+	var cols: Array = SPRAY.get(ty, SPRAY["physical"])
+	var g := Gradient.new()
+	g.set_color(0, cols[0])
+	g.set_color(1, Color(cols[1], 0.0))
+	p.color_ramp = g
+	p.z_index = 3
+	add_child(p)
+	p.emitting = true
+	bursts += 1
+	if is_inside_tree():
+		get_tree().create_timer(p.lifetime + 0.2).timeout.connect(p.queue_free)
+	else:
+		p.queue_free()
+
+
+## The chunk a solid hit knocks off a bar: it flies off the bar's end and fades.
+func _chunk(fb: Control, share: float) -> void:
+	var c := ColorRect.new()
+	c.color = Pal.BAD
+	var w: float = clampf(fb.size.x * share, 4.0, 40.0)
+	c.size = Vector2(w, fb.size.y)
+	c.position = fb.position + Vector2(fb.size.x * clampf(float(_bar_info.get("hp", 0.0)) / maxf(1.0, float(_bar_info.get("of", 1.0))), 0.0, 1.0), 0.0)
+	c.pivot_offset = c.size * 0.5
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bars_layer.add_child(c)
+	if not is_inside_tree():
+		c.queue_free()
+		return
+	var tw := c.create_tween().set_parallel(true)
+	tw.tween_property(c, "position", c.position + Vector2(22.0, -26.0), 0.45).set_ease(Tween.EASE_OUT)
+	tw.tween_property(c, "rotation", deg_to_rad(40.0), 0.45)
+	tw.tween_property(c, "modulate:a", 0.0, 0.45)
+	tw.chain().tween_callback(c.queue_free)
+
+
 ## A hit on figure k: the marker on them, their flash, and the number's cue (run.gd's _on_view_shot).
 func _land_hit(k: int) -> void:
 	var r: TextureRect = _figs[k]["rect"]
@@ -1395,7 +1536,8 @@ func _land_hit(k: int) -> void:
 	var hit: Vector2 = r.position + Vector2(u.get_center().x, u.position.y + u.size.y * randf_range(0.15, 0.45)) * r.scale.x
 	_marker.position = hit - Vector2(12, 12)
 	_marker_t = 0.12
-	_figs[k]["hit_t"] = 0.08
+	_figs[k]["hit_t"] = FLASH_S
+	_last_hit = {"k": k, "at": hit}
 	shot_fired.emit(hit)
 
 

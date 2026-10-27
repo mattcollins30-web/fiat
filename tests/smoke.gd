@@ -4702,6 +4702,7 @@ func _pinnacle_checks(main) -> void:
 	_next_checks(main)
 	_idle_checks(main)
 	_juice_checks(main)
+	_hit_register_checks(main)
 	_yard_checks(main)
 	_fight_breakdown_checks(main)
 	_order_fight_checks(main)
@@ -5561,10 +5562,84 @@ func _shoot(main) -> void:
 		v._figs[v._target_k]["state"] = "up"    # the one you're hitting still coming in: the kick, no hit (19 Oct, the flaky check: 0 shots, 3 up)
 	v._firing = true
 	v._swing = -1.0
+	v._stop_t = 0.0                  # no hit-stop left over from the last hit (27 Oct)
 	v._shot_t = 0.0
 	v._process(0.01)
 	if v._swing >= 0.0:
 		v._process(v._swing_len * RunView.SWING_CONTACT)     # a melee swing's hit lands on the chop
+
+
+## The hit registers (27 Oct, Matt; the canvas's "Hit registers, take 2"): a solid hit holds the frame, knocks the
+## figure back, sprays and knocks a chunk off its bar; a light one sprays alone; a kill holds longer; the numbers are
+## big, edged and pop; your bar keeps the lost chunk white a moment; a big hit on you jolts, a scratch doesn't.
+func _hit_register_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var v = main._run._view
+	if v == null:
+		sim.extract_now()
+		sim.load_dict(saved)
+		return
+	v._process(RunView.POP_S + 0.1)
+	if not v._figs.any(func(f): return f["state"] == "up"):
+		v._set_state(0, "up")
+	var k: int = range(v._figs.size()).filter(func(i): return v._figs[i]["state"] == "up")[0]
+	v._stop_t = 0.0
+	v._since_stop = 99.0
+	v._target_k = k
+	var b0: int = v.bursts
+	var i0: int = v.impacts
+	v._last_hit = {"k": k, "at": Vector2(300, 150)}
+	v.impact("physical", 0.01)
+	_check(v.bursts == b0 + 1 and v.impacts == i0 and is_equal_approx(v._stop_t, 0.0), "a light hit held the frame or sprayed nothing: %d bursts, stop %.2f" % [v.bursts - b0, v._stop_t])
+	v._last_hit = {"k": k, "at": Vector2(300, 150)}
+	v.impact("fire", 0.2)
+	_check(v.impacts == i0 + 1 and v._stop_t > 0.0 and float(v._figs[k].get("kick_t", 0.0)) > 0.0, "a solid hit didn't hold, knock or spray: stop %.2f, kick %.2f" % [v._stop_t, float(v._figs[k].get("kick_t", 0.0))])
+	v._process(0.02)
+	_check(v._stop_t > 0.0 and v._stop_t < RunView.STOP_S, "the hold didn't run down in part: %.3f" % v._stop_t)
+	v._process(RunView.STOP_S + RunView.KICK_S * 0.5)
+	_check(absf(float(v._figs[k].get("kick_x", 0.0))) > 1.0 and absf(v._figs[k]["rect"].rotation) > 0.0, "the hit didn't knock the figure back and tilt it: %.1f px" % float(v._figs[k].get("kick_x", 0.0)))
+	v._process(RunView.KICK_S)
+	v._last_hit = {"k": k, "at": Vector2(300, 150)}
+	v.impact("fire", 0.2)
+	_check(is_zero_approx(v._stop_t), "a hit straight after a hold held the frame again (a stream would slow it)")
+	v._process(RunView.KICK_S)
+	_check(is_zero_approx(float(v._figs[k].get("kick_x", 0.0))) and is_zero_approx(v._figs[k]["rect"].rotation), "the figure didn't spring back: %.1f px" % float(v._figs[k].get("kick_x", 0.0)))
+	# the numbers: big ones bigger, edged, popping in
+	main._juice.clear_numbers()
+	main._juice.number(Vector2(400, 300), "48", "physical", true)
+	main._juice._process(0.01)
+	var nl: Label = main._juice._numbers.back()["label"]
+	_check(nl.get_theme_constant("outline_size") >= 4 and nl.scale.x > 1.1 and not is_zero_approx(nl.rotation), "a big number isn't edged, popping and tilted: outline %d, scale %.2f" % [nl.get_theme_constant("outline_size"), nl.scale.x])
+	main._juice.clear_numbers()
+	# your bar: the lost chunk white, then drained
+	var rb: Dictionary = main._run._runner
+	main._run._bar(rb, 1.0, "x", "good")
+	main._run._bar(rb, 0.6, "x", "good")
+	_check(rb["ghost"].visible and rb["ghost"].size.x > rb["fill"].size.x, "your bar didn't keep the lost chunk")
+	rb["ghost_at"] = Time.get_ticks_msec() - 2000
+	for n in range(30):
+		main._run._bar(rb, 0.6, "x", "good")
+	_check(not rb["ghost"].visible, "the lost chunk didn't drain")
+	# a scratch on you: red, no jolt; a big one: the jolt
+	v._jolt = 0.0
+	v._hp_seen = sim.hp
+	sim.hp -= sim.max_hp() * 0.02
+	v.show_state(sim, sim.mission)
+	_check(v._red_a > 0.3 and is_zero_approx(v._jolt), "a scratch jolted the frame or showed no red: jolt %.2f, red %.2f" % [v._jolt, v._red_a])
+	v._hp_seen = sim.hp
+	sim.hp -= sim.max_hp() * 0.2
+	v.show_state(sim, sim.mission)
+	_check(v._jolt > 0.0 and v._red_a > 0.9, "a big hit didn't jolt the frame: jolt %.2f, red %.2f" % [v._jolt, v._red_a])
+	sim.hp = sim.max_hp()
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the hit registers ok: the hold, the knock, the spray, the chunk; the numbers; your bar's white; the red and the jolt")
 
 
 func _juice_checks(main) -> void:
@@ -5630,6 +5705,7 @@ func _juice_checks(main) -> void:
 	sim.mission["taken_by"] = sim.mission.get("taken_by", {})
 	sim.mission["taken_by"]["physical"] = float(sim.mission["taken_by"].get("physical", 0.0)) + 20.0
 	sim.mission["healed"] = float(sim.mission.get("healed", 0.0)) + 3.0
+	main._run._they_shot = true                 # in the frame what you took comes out as they fire (27 Oct): one just did
 	main.refresh()
 	var texts: Array = main._juice._numbers.map(func(n): return n["label"].text)
 	_check(texts.any(func(t): return str(t).begins_with("−2")) and texts.any(func(t): return str(t).begins_with("+")), "the red and the green do not both show for a second that took 20 and gave 3 back: %s" % str(texts))
@@ -12331,6 +12407,7 @@ func _full_art_checks(main, v) -> void:
 		v._jolt = 0.0
 		v._duck = 0.0
 		v._swing = -1.0
+		v._stop_t = 0.0                  # no hit-stop left over from the last hit (27 Oct)
 		v._process(0.0)
 		var drawn_br: Vector2 = v._hands.get_transform() * RunView.used_of(v._hands.texture).end
 		_check(drawn_br.distance_to(RunView.HANDS_CORNER) < 1.5, "the hammer's hands aren't drawn in the corner: %s" % str(drawn_br))
@@ -12345,6 +12422,7 @@ func _full_art_checks(main, v) -> void:
 		v._firing = true
 		v._figs[0]["state"] = "up"
 		v._swing = -1.0
+		v._stop_t = 0.0                  # no hit-stop left over from the last hit (27 Oct)
 		v._shot_t = 0.0
 		v._process(0.01)
 		_check(v._swing >= 0.0 and shots[0] == 0, "the swing hit as it began, or never began")

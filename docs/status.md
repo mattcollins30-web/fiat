@@ -7072,3 +7072,11 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   Workshop's, and with the Workshop at the Carpet Man it opens soon enough); Select-many's bin likewise. A loot rule's
   Scrap and the Stash's Bins keep paying scrap (Matt's call: automation set up and earned). The wear on cleared sites
   stays for now (Matt: "I'll deal with it for now unless it really starts to annoy me").
+- Built, out of the parked list (27 Oct, Matt: "the loot change needs to go in ... you may as well do the rest"):
+  picked over as the crates (249c0d2: a site keeps what you didn't open, a crate back every 3 min, the next crate
+  yours to pick, the wear gone, the Atlas's Local stock); the Workshop at the Carpet Man with the fitter's kit and the
+  Kit room's Bin for nothing (1e10b6a); the words pass (ce7bcd3: a capital after every ·, Level N, Knife equipped, the
+  class cards' headlines); the hit registers (the hold, the knock, the spray, the chunk, the kill's throw; bigger
+  edged numbers; your bar's white chunk; the red by the hit and the jolt on a big one). Smokes 288-291 green. Parked:
+  the Workshop's voiced room card still says "The armourer's roll" (a recorded line); the bot grinds one site, so the
+  next pass's search and scrap gates move; the bot's early scrap from binning is gone.

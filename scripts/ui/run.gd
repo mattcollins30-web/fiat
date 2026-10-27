@@ -139,6 +139,7 @@ var _view_seen_ms := 0             # and the real clock
 var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): its share in its own colour, not red
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
+var _they_shot := false            # a figure in the frame just fired: what you took comes out with it (27 Oct)
 var _found_seen: Array = []        # the finds the flashes have seen
 var _crates                        # the crates (crates_panel.gd): in the left column once the site's cleared, the rig under them
 var _rig_y: float = RIG_Y          # the rig's row: under the take in a fight, under the crates in the search
@@ -260,6 +261,7 @@ func _init() -> void:
 func _view_make() -> void:
 	_view = RunView.new()
 	_view.shot_fired.connect(_on_view_shot)
+	_view.they_fired.connect(func(_k): _they_shot = true)     # what they hit you with comes out as they fire (27 Oct)
 	_view.ducked.connect(func():
 		if sound != null:
 			sound.cue("duck"))
@@ -580,6 +582,9 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 	var track := UI.panel(_left, Rect2(x, y, w, BAR_H), UI.box(Pal.BG, 6))
 	d["track"] = track
 	d["w"] = w
+	# what a hit just took, white for a moment before it drains (27 Oct, the hit registers): under the fill
+	d["ghost"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Color(0.95, 0.95, 0.95, 0.9), 6))
+	d["ghost"].visible = false
 	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
 	# Guard (12 Oct, docs/design/shields.md): a pale steel band laid from the fill's right edge back over it, its
 	# width Guard over max HP - the part of the bar their fire takes first; under the dots' segments (the review)
@@ -612,6 +617,7 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0, guard_share := 0.0) -> void:
 	(d["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
 	d["fill"].size.x = roundf(float(d.get("w", INNER)) * clampf(fill, 0.0, 1.0))
+	_bar_ghost(d)
 	d["bar_text"].text = text
 	_bar_segments(d, pending, of)
 	if d.has("guard"):
@@ -620,6 +626,33 @@ func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dicti
 		d["guard"].size.x = gw
 		d["guard"].position.x = d["fill"].size.x - gw
 	d["skull"].visible = dots_finish(fill * of + guard_share * of, pending)     # the dots come off Guard first (the review)
+
+
+## The lost chunk: held white GHOST_HOLD_MS where the fill was, then drained to it; a heal takes it at once.
+func _bar_ghost(d: Dictionary) -> void:
+	var fw: float = d["fill"].size.x
+	if d != _runner:
+		d["ghost"].visible = false                # your HP alone (the review: the crates' bar read a drop as a hit)
+		d["ghost_w"] = fw
+		return
+	var gw: float = float(d.get("ghost_w", fw))
+	var now: int = Time.get_ticks_msec()
+	if fw < gw - 0.5:
+		if not d.has("ghost_at"):
+			d["ghost_at"] = now
+		if now - int(d["ghost_at"]) > GHOST_HOLD_MS:
+			gw = move_toward(gw, fw, maxf(3.0, (gw - fw) * 0.3))
+	else:
+		gw = fw
+	if gw <= fw + 0.5:
+		gw = fw
+		d.erase("ghost_at")
+	d["ghost_w"] = gw
+	d["ghost"].size.x = gw
+	d["ghost"].visible = gw > fw + 0.5
+
+
+const GHOST_HOLD_MS := 400
 
 
 ## Whether the dots still to tick off cover the HP that's left (and there's some left): the bar's skull.
@@ -980,7 +1013,9 @@ func _juice_tick(m: Dictionary) -> void:
 	# so a helmet's +1 a second shows among the hits even when the hits are winning
 	var taken: float = float(m.get("taken", 0.0))
 	var healed: float = float(m.get("healed", 0.0))
-	if juice != null and float(m["elapsed"]) - _hp_at >= 0.5:
+	var hp_beat: bool = (_they_shot or float(m["elapsed"]) - _hp_at >= 1.5) if _view != null else float(m["elapsed"]) - _hp_at >= 0.5     # in the frame: as they fire
+	if juice != null and hp_beat:
+		_they_shot = false
 		var shown := false
 		if taken - _taken_seen >= 1.0:
 			_numbers_by(m.get("taken_by", {}), _taken_seen_by, RUNNER_BAR_Y, "−", 40)
@@ -1069,15 +1104,37 @@ func _on_view_shot(at: Vector2) -> void:
 
 func _release_hits(spot: Vector2) -> void:
 	var k := 0
+	var of: float = _their_hp()
+	var total := 0.0
+	var top_ty := "physical"
+	var top_n := 0
 	for ty in Data.TYPES:
 		var n: int = int(floor(float(_hit_pending.get(ty, 0.0))))
 		if n >= 1:
-			juice.number(spot + Vector2(22.0 * k, -10.0 * k), "%d" % n, ty, n >= 100)
+			total += n
+			if n > top_n:
+				top_n = n
+				top_ty = ty
+	for ty in Data.TYPES:
+		var n: int = int(floor(float(_hit_pending.get(ty, 0.0))))
+		if n >= 1:
+			juice.number(spot + Vector2(26.0 * k, -12.0 * k), "%d" % n, ty, n >= 100 or float(n) >= of * 0.1)     # big: past a tenth of their HP (27 Oct)
 			_hit_pending[ty] = float(_hit_pending[ty]) - n
 			k += 1
 	if _hit_pending.values().all(func(v): return float(v) < 1.0):
 		_pending_at = -1.0
 	_fig_bars()                              # the bar drops by the number as it comes out (item 6)
+	if _view != null and total > 0.0:
+		_view.impact(top_ty, total / maxf(1.0, of))     # the shot's weight on them: the hold, the knock, the spray (27 Oct)
+
+
+## The one you're hitting's whole HP: the head's when he's out, else one of the gang's.
+func _their_hp() -> float:
+	if sim == null or not sim.on_mission():
+		return 1.0
+	var m: Dictionary = sim.mission
+	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	return float(m["boss"]["hp"]) if boss_on else float(m["t"]["hp"])
 
 
 ## Their HP to the bars over them (15 Oct, items 6 and 11): the one you're hitting's HP with your hits not yet out as

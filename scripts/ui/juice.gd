@@ -13,6 +13,7 @@ const TOAST_S := 3.2               # seconds a toast stays
 const TOAST_MAX := 3               # stacked under the top bar
 const NUMBER_S := 0.8              # a damage number's rise and fade
 const NUMBER_RISE := 44.0
+const POP_K := 0.15                # the share of a number's life it pops in over
 
 var _toasts: Array = []            # {panel, label, left}
 var _numbers: Array = []           # {label, left}
@@ -57,9 +58,17 @@ func _lay_toasts() -> void:
 
 ## A number off a hit: rises and fades from `at` (in this control's space).
 func number(at: Vector2, text: String, tone := "", big := false) -> void:
-	var l := UI.label(self, Rect2(at.x - 60, at.y, 120, 36), text, "SemiBold", Pal.TITLE if big else Pal.LINE, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	# bigger, a hard dark edge so it reads over any art, popping in and settling (27 Oct, the hit registers); a big one
+	# tilts and holds a beat longer
+	var fs: int = int(Pal.TITLE * 1.35) if big else Pal.TITLE
+	var l := UI.label(self, Rect2(at.x - 80, at.y, 160, 44), text, "Bold", fs, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	l.add_theme_constant_override("outline_size", 7)
+	l.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.06, 1.0))
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_numbers.append({"label": l, "left": NUMBER_S, "from": at.y, "drift": randf_range(-18.0, 18.0), "x": at.x - 60})
+	l.pivot_offset = l.size * 0.5
+	l.rotation = deg_to_rad(-6.0) if big else 0.0
+	var life: float = NUMBER_S * (1.4 if big else 1.0)
+	_numbers.append({"label": l, "left": life, "life": life, "from": at.y, "drift": randf_range(-18.0, 18.0), "x": at.x - 80})
 	if _numbers.size() > 12:
 		var old: Dictionary = _numbers.pop_front()
 		old["label"].queue_free()
@@ -91,9 +100,12 @@ func _process(delta: float) -> void:
 	var done := []
 	for n in _numbers:
 		n["left"] -= delta
-		var k: float = 1.0 - maxf(0.0, n["left"]) / NUMBER_S
+		var life: float = float(n.get("life", NUMBER_S))
+		var k: float = 1.0 - maxf(0.0, n["left"]) / life
 		n["label"].position.y = n["from"] - NUMBER_RISE * k
 		n["label"].position.x = n["x"] + n["drift"] * k          # a little sideways too, so two never share a path
+		var pop: float = 1.0 + 0.4 * maxf(0.0, 1.0 - k / POP_K)     # in at 1.4 and settling (27 Oct)
+		n["label"].scale = Vector2(pop, pop)
 		n["label"].modulate.a = 1.0 - k * k
 		if n["left"] <= 0.0:
 			done.append(n)
