@@ -120,7 +120,7 @@ static func gauntlet_table(all: Array, title: String, judge: bool) -> Array:
 	out.append("")
 	out.append("## " + title)
 	out.append("")
-	out.append("Each from a one-save read's end state (its 32 h kit; a broken build's set, unique and recipe put on it), the campaign done and the order's places rebuilt; then the endgame in order, each place at its own level, three tries, the issued kit each County zone wants bought and worn in the slots the build leaves free; a death puts the camp back as it was before the try. ✓ won (on try N), ✗ lost three times, – not fought." + (" Broken: every place won." if judge else ""))
+	out.append("Each from a one-save read's end state (its 32 h kit; a broken build's set, unique and recipe put on it), the campaign done and the order's places rebuilt; then the endgame in order, each place at its own level, three tries, the issued kit each County zone wants bought and worn in the slots the build leaves free; a death puts the camp back as it was before the try. ✓ won (on try N), ✗ lost three times, – not fought." + (" A pinnacle build passes on every place first try with no deaths (gate G1)." if judge else ""))
 	out.append("")
 	var keys: Array = ["grid", "archive", "mint"]
 	for c in Data.COUNTY:
@@ -151,7 +151,7 @@ static func gauntlet_table(all: Array, title: String, judge: bool) -> Array:
 		var label: String = str(bb["build"]) + ((" = " + str(bb["id"])) if str(bb.get("id", bb["build"])) != str(bb["build"]) else "")
 		var all_won: bool = int(bb.get("won", 0)) == int(bb.get("of", -1))
 		out.append("| %s | %d, %d | %d of %d | %s | %d | %s | %s |" % [label, int(bb.get("level0", 0)), int(bb.get("reach0", 0)), int(bb.get("won", 0)), int(bb.get("of", 0)),
-			" | ".join(cells), int(bb.get("deaths", 0)), "; ".join(whys), ("BROKEN" if all_won else "not broken") if judge else ("all of it" if all_won else "")])
+			" | ".join(cells), int(bb.get("deaths", 0)), "; ".join(whys), ("passes" if int(bb.get("first_try", -1)) == int(bb.get("of", 0)) and int(bb.get("deaths", 0)) == 0 else "short") if judge else ("all of it" if all_won else "")])
 	return out
 
 
@@ -364,6 +364,30 @@ func _init() -> void:
 		var wnd: float = (float(bd["wounded_runs"]) / float(bd["runs"])) if int(bd["runs"]) > 0 else 0.0
 		shown.append("%s: bails one in %s, wounded %.0f%%" % [bd["build"], ("%.0f" % every) if every < 999.0 else "never", wnd * 100.0])
 	rows.append(["Deaths and wounds (shown)", "the bails and wounds a build", "; ".join(shown), null])
+	# the endgame's gates (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the pinnacle builds (the six combos, their
+	# pieces on) take every place first try with no deaths; every other build takes every place inside three tries
+	if not broken.is_empty():
+		var off_p: Array = []
+		for bb in broken:
+			if bb.has("error"):
+				off_p.append("%s: %s" % [bb.get("build", "?"), bb["error"]])
+			elif int(bb.get("first_try", -1)) != int(bb.get("of", 0)) or int(bb.get("deaths", 0)) > 0:
+				off_p.append("%s %d of %d first try, %d won, %d deaths" % [bb.get("id", bb.get("build", "?")), int(bb.get("first_try", 0)), int(bb.get("of", 0)), int(bb.get("won", 0)), int(bb.get("deaths", 0))])
+		rows.append(["G1. The pinnacle builds", "each of the six, its pieces on: every place of the endgame on the first try, no deaths", "every one" if off_p.is_empty() else "off: " + "; ".join(off_p), off_p.is_empty()])
+	var gl: Array = read_gauntlet()
+	if not gl.is_empty():
+		var off_g: Array = []
+		var push: Array = []
+		for bb in gl:
+			if bb.has("error"):
+				off_g.append("%s: %s" % [bb.get("build", "?"), bb["error"]])
+				continue
+			if int(bb.get("won", 0)) != int(bb.get("of", -1)):
+				off_g.append("%s %d of %d" % [bb.get("build", "?"), int(bb.get("won", 0)), int(bb.get("of", 0))])
+			var tries_n: int = maxi(1, int(bb.get("tries", 1)))
+			push.append("%s %d deaths, %d wounded of %d tries%s" % [bb.get("build", "?"), int(bb.get("deaths", 0)), int(bb.get("wounds", 0)), tries_n, (" (from level %d)" % int(bb["lifted_from"])) if bb.has("lifted_from") else ""])
+		rows.append(["G2. The rest at a push", "every other build as played: every place of the endgame inside three tries", "every build" if off_g.is_empty() else "off: " + "; ".join(off_g), off_g.is_empty()])
+		rows.append(["G2. The push (shown)", "the deaths and wounds it took", "; ".join(push), null])
 	var reds := 0
 	var reds_by := {"design": 0, "bot timing": 0, "bot play": 0}
 	for r in rows:
@@ -380,7 +404,10 @@ func _init() -> void:
 					why = UNJUDGED_WHY[k]
 			unjudged.append("%s: %s" % [r[0], why])
 	# the commit the pass ran on (25 Oct, the tools review: balance.bat wrote it and nothing read it)
-	var commit := FileAccess.get_file_as_string(FOLDER + "/commit.log").strip_edges().trim_prefix("The pass on ")
+	var commit_lines: Array = Array(FileAccess.get_file_as_string(FOLDER + "/commit.log").strip_edges().split("\n", false)).map(func(l): return str(l).strip_edges())
+	var commit: String = str(commit_lines[0]).trim_prefix("The pass on ") if not commit_lines.is_empty() else ""
+	if commit_lines.size() > 1:
+		commit += " (%s)" % ", ".join(commit_lines.slice(1).map(func(l): return str(l).trim_prefix("The ").to_lower()))     # "the gauntlet on abc123", the retune's reruns
 	var out: Array = []
 	out.append("# Balance summary")
 	out.append("")
@@ -409,7 +436,7 @@ func _init() -> void:
 		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	var head := out.size()
 	out.append_array(gauntlet_table(read_gauntlet(), "The gauntlet: each build's end state as played", false))
-	out.append_array(gauntlet_table(broken, "The broken builds (outside the balance): the gauntlet with their pieces on", true))
+	out.append_array(gauntlet_table(broken, "The pinnacle builds: the gauntlet with their pieces on (gate G1)", true))
 	out.append("")
 	out.append("## The builds")
 	out.append("")

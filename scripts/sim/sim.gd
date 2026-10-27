@@ -5927,9 +5927,10 @@ func order_level(k: String) -> int:
 	var p: Dictionary = Data.pinnacle(k)
 	if p.has("level"):
 		# the Grid at 35, the Archive at 40 and the Mint at 45 for the first win (Matt, 26 Oct, the sixth pass: at the reach +
-		# 2 + the worth no read won the Lineman); after it, with the reach (the third review: a set Mint was a print farm)
+		# 2 + the worth no read won the Lineman); after it a set ladder over the County, 90/95/100 and 2 a win (Matt, 27 Oct,
+		# docs/design/pinnacle_and_exploits.md: with the reach they ran ahead of every build, a wall)
 		var wins: int = int(order_beaten.get(k, 0))
-		return int(p["level"]) if wins == 0 else maxi(int(p["level"]), maxi(Data.REACH_START, reach) + int(p["over"])) + wins
+		return int(p["level"]) if wins == 0 else int(p.get("again", p["level"])) + Data.ORDER_AGAIN_STEP * (wins - 1)
 	@warning_ignore("integer_division")
 	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
 

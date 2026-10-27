@@ -831,15 +831,28 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	for k in ["grid", "archive", "mint"]:
 		var ob: String = str(Data.pinnacle(k)["opened_by"])
 		sim.rebuilt[ob] = maxi(1, sim.rebuild_rank(ob))
+	if sim.level() < 50:
+		var before_lv: int = sim.level()
+		out["lifted_from"] = before_lv         # a read the bot left under 50 starts the endgame at 50: the bot's pace, not the build's (27 Oct)
+		var pts0: int = sim.training_points
+		sim.xp = maxf(float(sim.xp), Data.xp_for_level(50))
+		sim._earn_points(before_lv)           # the levels' points too, as a runner who got there would have
+		out["points_gained"] = sim.training_points - pts0
+		bot.tidy(sim)
 	out["level0"] = sim.level()
 	out["reach0"] = sim.reach
 	out["kit0"] = _kit(sim)
 	out["on_at_start"] = sim.combo_on(combo) if combo != "" else false
-	var content: Array = ["grid", "archive", "mint"]
+	# an order not yet won first, at its first-win level (the Mint opens the County); the County; then the orders won
+	# before, on their ladder over the Treasury (Matt, 27 Oct)
+	var content: Array = ["grid", "archive", "mint"].filter(func(k): return int(sim.order_beaten.get(k, 0)) == 0)
 	for z in range(Data.COUNTY_ZONES.size()):
 		content.append_array(Sim.county_places(z))
+	content.append_array(["grid", "archive", "mint"].filter(func(k): return not content.has(k)))
 	var rows: Array = []
 	var deaths := 0
+	var wounds := 0
+	var tries_all := 0
 	for k in content:
 		var no_kit := ""
 		if Sim.is_county(k):
@@ -871,6 +884,9 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 			if sim.on_mission():
 				sim.extract_now()
 			var rep = sim.last_report
+			tries_all += 1
+			if rep is Dictionary and bool(rep.get("wounded", false)):
+				wounds += 1
 			if rep is Dictionary:
 				row["ends"].append("%s %d/%d %.0fs" % [("timed out" if rep.get("timed_out", false) else str(rep.get("outcome", "?"))), int(rep.get("kills", 0)), int(rep.get("of", 0)), float(rep.get("time", 0.0))])
 			var last: Dictionary = {}
@@ -900,6 +916,9 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 			out["beaten"][str(r["key"])] = int(r["tries"])
 	out["missing"] = rows.filter(func(r): return not r["won"]).map(func(r): return str(r["key"]))
 	out["deaths"] = deaths
+	out["wounds"] = wounds
+	out["tries"] = tries_all
+	out["first_try"] = rows.filter(func(r): return r["won"] and int(r["tries"]) == 1).size()
 	out["issued_worn"] = sim.issued_worn()
 	out["on_at_end"] = sim.combo_on(combo) if combo != "" else false
 	out["combo_on"] = Data.COMBOS.keys().filter(func(kk): return sim.combo_on(str(kk)))
@@ -907,6 +926,19 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	@warning_ignore("integer_division")
 	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	return out
+
+
+## Room in the stash for an issued piece (27 Oct: a full stash kept a Recruit out of the County): the cheapest pieces
+## that aren't issued go to the Fence till there's room for the biggest piece.
+func _gauntlet_room(sim) -> void:
+	var guard := 0
+	while not sim.stash_room(6) and guard < 400:
+		var spare: Array = sim.stash.filter(func(x): return x is Dictionary and not x.get("issued", false) and not x.has("deeds"))
+		if spare.is_empty():
+			return
+		spare.sort_custom(func(a, b): return sim.sell_price(a) < sim.sell_price(b))
+		sim.stash.erase(spare[0])
+		guard += 1
 
 
 ## Issued kit for a County zone: bought at the counter (the fixture's money) and worn, the slots the build holds kept,
@@ -923,6 +955,7 @@ func _gauntlet_issued(sim, bot, want: int) -> String:
 		if w != null and w.get("issued", false):
 			continue
 		sim.cash = maxf(sim.cash, float(sim.issued_price(sl)) * 2.0)
+		_gauntlet_room(sim)
 		if sim.buy_issued(sl):
 			sim.equip_item(sim.stash.back()["id"])
 			sim._dry_memo.clear()

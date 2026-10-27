@@ -7,6 +7,8 @@ rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
 rem   tools\balance.bat 0 0 broken    the six broken builds' gauntlets alone, from the last pass's end states (a pass
 rem                                  first): docs\balance\broken.md, the pass's own files left
+rem   tools\balance.bat 0 0 gauntlet  the gauntlet alone (27 Oct, the retune): every build's as played and the six pinnacle
+rem                                  builds', from the last pass's end states, then the summary; the pass's other reads kept
 rem   tools\balance.bat 2 0 hunt     the build hunt (26 Oct, Matt): stage 1 (every joint with every set or none), stage 2 (stage
 rem                                  1's best twenty with every unique that fits), each read 2 h; then stage 2's best six
 rem                                  through the gauntlet from the last pass's end states: docs\balance\hunt.md
@@ -43,8 +45,9 @@ rem a flag it can't read deletes nothing (the third review: a typo fell through 
 del /q docs\balance\flag_error.txt 2>nul
 echo %HOURS%| findstr /r "^[0-9][0-9]*$ ^[0-9][0-9]*\.[0-9][0-9]*$" >nul || goto badflag
 echo %READS%| findstr /r "^[0-9][0-9]*$" >nul || goto badflag
-if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" goto badflag
+if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" if /i not "%~3"=="gauntlet" goto badflag
 if /i "%~3"=="broken" goto broken_only
+if /i "%~3"=="gauntlet" goto gauntlet_only
 if /i "%~3"=="hunt" goto hunt
 del /q docs\balance\pass\*.* 2>nul
 rem and what the pass writes outside pass\ (25 Oct, the tools review: a failed loot read or summary left last pass's in place)
@@ -105,6 +108,19 @@ if %TICKS% geq 1800 (
 	goto gauntlets
 )
 if %DONE% lss %N% goto wait
+:gauntlet_only
+if /i not "%~3"=="gauntlet" goto gauntlets
+if not exist docs\balance\pass\*.save (
+	>docs\balance\flag_error.txt echo No end states in docs\balance\pass: a full pass first.
+	exit /b 1
+)
+del /q docs\balance\pass\gauntlet-*.* 2>nul
+del /q docs\balance\pass\broken-*.* 2>nul
+if exist docs\balance\pass\expected.txt (
+	findstr /v /b "gauntlet- broken-" docs\balance\pass\expected.txt > docs\balance\pass\expected.tmp
+	move /y docs\balance\pass\expected.tmp docs\balance\pass\expected.txt >nul
+)
+for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The gauntlet on %%C>> docs\balance\pass\commit.log
 :gauntlets
 rem the gauntlet (26 Oct, Matt: "test they are broken and can smash all content at least once"; its kit "the final
 rem pass's end states"): each build's end state as played, and the six broken builds' pieces on their class's

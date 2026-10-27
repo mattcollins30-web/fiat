@@ -3390,14 +3390,15 @@ const MINT_TINS := 2.0                   # a run's tins from the mint: the town'
 ## after it max(the set level, the reach + `over`) and a level more every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
 ## `first` on the first win only.
 const PINNACLES := [
-	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 35,
+	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 35, "again": 90,
 		"drop": "grid_key", "unique": "The Lineman's Lamp", "unique2": "The Lineman's Tool Bag"},
-	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 40,
+	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 40, "again": 95,
 		"drop": "ledger_seal", "unique": "The Registrar's Satchel", "unique2": "The Registrar's Stamp"},
-	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45,
+	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45, "again": 100,
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
+const ORDER_AGAIN_STEP := 2     # an order won before: its "again" level, then this a win past the second (Matt, 27 Oct: a set ladder over the Treasury)
 ## Patterns (24 Oct, the endgame chase, phase 4): a unique's rule moved onto a rare or better of its slot.
 const PATTERN_RARITY := 2          # rare or better takes one
 const PATTERN_MATERIAL := 12       # of the material you hold most of

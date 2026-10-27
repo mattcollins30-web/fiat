@@ -16940,9 +16940,14 @@ func _rebuild_checks(main) -> void:
 		_check(mm["found"].any(func(x): return x.get("unique", "") in ["The Lineman's Lamp", "The Lineman's Tool Bag"]), "the Lineman's first kill dropped neither the Lamp nor the Tool Bag")      # two uniques now, one picked (24 Oct)
 		s.extract_now()
 		_check(s.mission == null and int(s.order_beaten.get("grid", 0)) == 1 and s.held_of("grid_key") == 1 and s.reach == reach0 and s._sig.is_empty(), "the Grid's win: beaten %d, key %d, reach %d from %d" % [int(s.order_beaten.get("grid", 0)), s.held_of("grid_key"), s.reach, reach0])
-		_check(s.order_level("grid") == maxi(lv, s.reach + int(Data.pinnacle("grid")["over"])) + 1, "the Grid after a win isn't max(set, reach + over) + wins: %d" % s.order_level("grid"))
-		s.reach = 80
-		_check(s.order_level("grid") == 80 + int(Data.pinnacle("grid")["over"]) + 1, "the Grid after a win doesn't follow a deep reach: %d" % s.order_level("grid"))
+		_check(s.order_level("grid") == int(Data.pinnacle("grid")["again"]), "the Grid after a win isn't on its ladder (%d): %d" % [int(Data.pinnacle("grid")["again"]), s.order_level("grid")])
+		s.reach = 140
+		_check(s.order_level("grid") == int(Data.pinnacle("grid")["again"]), "the Grid after a win follows the reach: %d at reach 140" % s.order_level("grid"))     # a set ladder (Matt, 27 Oct)
+		s.order_beaten["grid"] = 3
+		_check(s.order_level("grid") == int(Data.pinnacle("grid")["again"]) + 2 * Data.ORDER_AGAIN_STEP, "the Grid's third win isn't two steps up its ladder: %d" % s.order_level("grid"))
+		var last_county: int = Data.COUNTY.map(func(c): return int(c["level"])).max()
+		_check(["grid", "archive", "mint"].all(func(k): return int(Data.pinnacle(k)["again"]) > last_county), "an order's ladder starts under the County's top (%d)" % last_county)
+		s.order_beaten["grid"] = 1
 		s.reach = 20
 		_check(s.best_dig.is_empty() or str(s.best_dig.get("site", "")) != "The Grid", "the Grid's win set the best signal: %s" % str(s.best_dig))
 	# the order's odds read leaves the host site's own read where it was (the review)
