@@ -780,6 +780,7 @@ func _broken(_hours: float, key: String, _plain := false) -> void:
 ## A place not won is opened anyway (`forced`), so every later one still gets its fight. Broken: every one won.
 const STANDARD_REACH := 90        # the gauntlet's camp (Matt, 27 Oct): past the County's top, at the Grid's repeat
 const STANDARD_ROLLS := 30        # finds a slot, the best kept
+const STANDARD_PARAGON := 30      # the camp's paragon points (Matt, 27 Oct)
 const GAUNTLET_TRIES := 3
 const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
 func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
@@ -934,12 +935,16 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	return out
 
 
-## The standard camp (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the reach at STANDARD_REACH and every slot's
+## The standard camp (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the reach at STANDARD_REACH, the paragon at
+## STANDARD_PARAGON, and every slot's
 ## kit at its item level - a unique or a set piece worn rolled again as itself, the rest the best of STANDARD_ROLLS finds
 ## of the slot (a gun of the type worn), no commons. The issued kit and the rig as they are; the build's held pieces
 ## after, by _hold_broken.
 func _standard_camp(sim, bot) -> void:
 	sim.reach = STANDARD_REACH
+	# the paragon at STANDARD_PARAGON, spent again by the bot (Matt, 27 Oct: the two that cleared everything had 673 and 213)
+	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + STANDARD_PARAGON) - Data.xp_for_level(Data.MAX_LEVEL)
+	sim.paragon_reset_free()
 	var lv: int = mini(Items.max_ilvl_for(sim.level()), STANDARD_REACH)
 	var tier: int = sim.loot_tier_at(lv)
 	for sl in Data.SLOTS:
@@ -962,13 +967,16 @@ func _standard_camp(sim, bot) -> void:
 		else:
 			var want_type: String = str(Items.base_of(worn).get("type", "")) if worn != null and sl in ["Primary", "Secondary"] else ""
 			var best: Dictionary = {}
+			var best_sc := -INF
 			for k in range(STANDARD_ROLLS * (4 if want_type != "" else 1)):
 				var it: Dictionary = Items.roll(sl, tier, sim.rng, sim.rarity_bonus(), true, false, "", want_type, 0.33, 0, lv)
 				if it.is_empty() or not sim.can_wear(it) or (want_type != "" and str(Items.base_of(it).get("type", "")) != want_type):
 					continue
-				var sc: float = bot._elem_score(it) if bot.element != "" and sl == "Primary" else Items.score(it)     # the build's own gun (the review)
-				if best.is_empty() or sc > (bot._elem_score(best) if bot.element != "" and sl == "Primary" else Items.score(best)):
+				# as a player keeps: tried on, the slot's own read (HP and damage both, Matt 27 Oct); the build's own gun by its score
+				var sc: float = bot._elem_score(it) if bot.element != "" and sl == "Primary" else sim.fit_value(it, sl)
+				if best.is_empty() or sc > best_sc:
 					best = it
+					best_sc = sc
 			fresh = best
 		if not fresh.is_empty():
 			# the old gun's parts on the new where a mount matches: the element's socketable with them (the review)
@@ -978,6 +986,7 @@ func _standard_camp(sim, bot) -> void:
 						fresh["attachments"][mount] = worn["attachments"][mount]
 			sim.equipped[sl] = fresh
 	sim._dry_memo.clear()
+	bot._tidied_at = -1e9                     # a tidy now, whatever the lift's just did (the review: inside its minute it was a no-op)
 	bot.tidy(sim)
 
 
