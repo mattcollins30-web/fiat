@@ -7053,3 +7053,14 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   kit and drops the deeds once when down; held: he seizes the deeds instead and keeps them if the run ends in his hands;
   burned: his warrant's void) and by the Issue (held deeds out of the pile, unstamped); a Radio line each; Burn at home
   from the Kit room. Smoke: _deeds_bailiff_checks.
+- Parked from play (27 Oct evening, Matt: "park all 5 but we do the mockup and design work now so its ready"; the
+  canvas's "Hit registers" and "Words pass"): (1) Training's caps pass, and a locked class's level "Level N", not
+  "L4"; (2) "Knife on" -> "Knife equipped" (and "X equipped, Y into the pack"); (3) the caps pass on the search bar - a
+  capital after every "·" in running words, done once in the label helpers, small-caps heads as they are; (4) the class
+  cards' three headlines written per class (drafts on the board for Matt to edit); (5) hit registers: bigger outlined
+  numbers that pop, a white flash and a spark on them, their muzzle flash and a tracer, a red vignette and a white
+  lost-chunk on your bar, a frame jolt on a big hit.
+- Parked (27 Oct, Matt: "what does the picked over mechanic actually do?"): the name does three jobs - a cleared
+  site's wear (kill drops -50%, cash -30%, fading over RECOVER_H 2 h of play; a new depth is fresh; the Atlas's Worn in
+  speeds it), "picked clean" (every crate open on a run) and the Atlas's Picked over rank (a site's own things more of
+  its finds). To talk through after the playtest.
