@@ -7013,3 +7013,16 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   ask-twice "<what goes> - press again" / "Again?", four seconds, the Rules' Delete included (3b81b37); a remixed
   signal draws the crew the Radio named (E1) and the Mint's card warns what the win turns the pile into (A1(a)).
   Smokes 269-274 green. Then the final pass, 32 h with the gauntlet.
+- The pinnacle builds and the wall (27 Oct, docs/design/pinnacle_and_exploits.md). Matt: "There's no point my playing if
+  we know there's a wall." The orders on a set ladder after their first win (35/40/45, then 90/95/100 and 2 a win);
+  the gauntlet from a standard camp (level 50, reach 90, paragon 30, kit at its level) and as gates G1 (the six
+  pinnacle builds: every place first try, no deaths) and G2 (the rest inside three tries), run twice, the better
+  kept; the crews 7% a level from 35 (was 50); a pinnacle build's stacks guard 1% each to 60% and a run starts with
+  40; Embers 12%; the repeat orders' heads x0.65 (the Mint x0.55); the Treasurer 18 HP, 2.5 fire; HP on the Bank's
+  and the Fire Crew's pieces. Gauntlet 8: five pinnacle builds 15/15 first try, Embers 12; the rest 12-15. The full
+  pass on f8f53bd: the Issue on 22 of 24 reads (12 before), the County cleared on 8, the reach's longest stand 4-10 h
+  on most (6-21 before). Smokes 276-280 green. Matt plays.
+- Parked for after the playtest (27 Oct): Embers' last three places (the Archive, the Mint, the Treasury); the bot's
+  stuck reads (Paramedic-frost-2, Recruit-physical-2 at reach 31-32: it never makes a one- or two-paper signal when
+  Full reads 0%); the summary of the pass once its last read (Scrapper-fire-2, an overfull stash, slow) lands; the
+  exploits (the design's step 3, six recipes in the doc).
