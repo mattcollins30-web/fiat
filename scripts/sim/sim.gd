@@ -5132,6 +5132,14 @@ func _combo_raw(key: String) -> bool:
 	return true
 
 
+## A pinnacle build's defensive half (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): its stacks also take
+## COMBO_GUARD_STEP a stack off their fire, to COMBO_GUARD_CAP, so the loop keeps the runner standing. 1.0 with none on.
+func combo_guard(m: Dictionary) -> float:
+	if combo_stacks(m) <= 0.0 or not Data.COMBOS.keys().any(func(k): return combo_on(str(k))):
+		return 1.0
+	return 1.0 - minf(Data.COMBO_GUARD_CAP, Data.COMBO_GUARD_STEP * combo_stacks(m))
+
+
 ## A run's stacks of the build on, and a stack's worth.
 static func combo_stacks(m: Dictionary) -> float:
 	return float(m.get("combo", 0.0))
@@ -8300,6 +8308,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	incoming *= crowd_mult(on_you)
 	incoming *= low_hp_mult()
 	incoming *= _skill_in_mult(m, on_you)        # the skills: out of sight, stunned, the decoy (milestone 8)
+	incoming *= combo_guard(m)
 	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med

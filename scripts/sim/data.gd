@@ -1455,7 +1455,8 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five; D28 0.05: the strong builds out-earned the rest up the reach, level 50 from 9.3 h to never) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
 const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.08 to 0.12 (22 Oct, the web pass: the reach ran 11 to 70 in 1.4 h at 96% won at the reach, then 149; a probe at 0.12 held it to 39 by hour 6)
-const CURVE_LATE_FROM := 50       # past this level the crews grow CURVE_LATE_GROW a level, not CURVE's grow (24 Oct, Matt: an endgame "at least 30ish" hours -
+const CURVE_LATE_FROM := 35       # 50 to 35 (Matt, 27 Oct: the reach stood at 40-50 in the 12% band, kit at 5%; docs/design/pinnacle_and_exploits.md)
+                                  # past this level the crews grow CURVE_LATE_GROW a level, not CURVE's grow (24 Oct, Matt: an endgame "at least 30ish" hours -
 const CURVE_LATE_GROW := 0.07     # at 12% a level the kit's ~10% and the paragon's flat points fell behind by level 45-68 and the reach stood 7-19 h; a slope, not a wall)
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
@@ -1527,6 +1528,8 @@ const BUILD_PREFIX := "FIAT1-"      # a build code's head: the version of the li
 const COLLECTION_LEVELS := [10, 25, 50, 75, 100]     # the collection's marks a site, by level (24 Oct): the last is the tile's
 const COLLECTION_CLASS_LEVEL := 50
 const BREAKDOWN_ROWS := 7          # the fight's breakdown (24 Oct): the biggest sources shown, the rest "Other"
+const COMBO_GUARD_STEP := 0.01     # a pinnacle build's stack takes this off their fire (Matt, 27 Oct)
+const COMBO_GUARD_CAP := 0.6       # and no more than this
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
 const FLATLINE_HEAL := 0.05        # Flatline: a shocked kill heals this share of max HP (joints B, 24 Oct)
 const COMBOS := {

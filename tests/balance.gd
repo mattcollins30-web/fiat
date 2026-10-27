@@ -885,8 +885,8 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 				sim.advance(1.0)
 				if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
 					sim.use_med(sim.first_med()["id"])
-				if sim.on_mission() and bot.should_leave(sim) and not sim.mission.get("way_out", false):
-					sim.get_out()
+				if sim.on_mission() and bot.should_leave(sim) and not sim.mission.get("way_out", false) and (n < GAUNTLET_TRIES - 1 or sim.mission["cleared"]):
+					sim.get_out()                 # the last try fights to the end, then leaves on the clear (Matt, 27 Oct: a player at a head with nothing to lose)
 				guard += 1
 			if sim.on_mission():
 				sim.extract_now()

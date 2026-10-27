@@ -12927,7 +12927,11 @@ func _combo_checks(main) -> void:
 		_check(sim.combo_on(key), "%s's build is not on with every part: class %s, set %d, rule %s, nodes %s" % [key, sim.cls, sim.set_count(str(c["set"])), str(sim.has_rule(str(c["rule"]))), str(c["nodes"].map(func(n): return sim.has_node(str(n))))])
 		var others: Array = Data.COMBOS.keys().filter(func(k2): return k2 != key and sim.combo_on(k2))
 		_check(others.is_empty(), "%s's build turns on another's: %s" % [key, str(others)])
+		# its defensive half (Matt, 27 Oct): a stack takes COMBO_GUARD_STEP off their fire, to the cap; none with no stacks
+		_check(is_equal_approx(sim.combo_guard({"combo": 30.0}), 1.0 - 30.0 * Data.COMBO_GUARD_STEP) and is_equal_approx(sim.combo_guard({"combo": 1e6}), 1.0 - Data.COMBO_GUARD_CAP) and is_equal_approx(sim.combo_guard({}), 1.0),
+			"%s's stacks don't guard: %.2f at 30, %.2f at a million" % [key, sim.combo_guard({"combo": 30.0}), sim.combo_guard({"combo": 1e6})])
 		Sim.combos_off = true
+		_check(is_equal_approx(sim.combo_guard({"combo": 30.0}), 1.0), "%s's guard holds with the balance's switch off" % key)
 		_check(not sim.combo_on(key), "%s's build is on with the balance's switch off" % key)
 		Sim.combos_off = false
 		var piece_slot: String = st["pieces"][0]["slot"]
