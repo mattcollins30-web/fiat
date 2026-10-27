@@ -778,6 +778,8 @@ func _broken(_hours: float, key: String, _plain := false) -> void:
 ## its own level, GAUNTLET_TRIES tries. Before each County zone the issued kit it wants is bought and worn in the slots
 ## the build leaves free. A death puts the camp back as it was before the try (the kit is the question, not one life).
 ## A place not won is opened anyway (`forced`), so every later one still gets its fight. Broken: every one won.
+const STANDARD_REACH := 90        # the gauntlet's camp (Matt, 27 Oct): past the County's top, at the Grid's repeat
+const STANDARD_ROLLS := 30        # finds a slot, the best kept
 const GAUNTLET_TRIES := 3
 const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
 func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
@@ -839,6 +841,10 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 		sim._earn_points(before_lv)           # the levels' points too, as a runner who got there would have
 		out["points_gained"] = sim.training_points - pts0
 		bot.tidy(sim)
+	out["reach_played"] = sim.reach
+	_standard_camp(sim, bot)                   # every build from the same camp (Matt, 27 Oct: the reads' reach was the bot's luck)
+	if bot.holding():
+		bot._hold_broken(sim)
 	out["level0"] = sim.level()
 	out["reach0"] = sim.reach
 	out["kit0"] = _kit(sim)
@@ -926,6 +932,53 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	@warning_ignore("integer_division")
 	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	return out
+
+
+## The standard camp (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the reach at STANDARD_REACH and every slot's
+## kit at its item level - a unique or a set piece worn rolled again as itself, the rest the best of STANDARD_ROLLS finds
+## of the slot (a gun of the type worn), no commons. The issued kit and the rig as they are; the build's held pieces
+## after, by _hold_broken.
+func _standard_camp(sim, bot) -> void:
+	sim.reach = STANDARD_REACH
+	var lv: int = mini(Items.max_ilvl_for(sim.level()), STANDARD_REACH)
+	var tier: int = sim.loot_tier_at(lv)
+	for sl in Data.SLOTS:
+		if sl == "Rig":
+			continue
+		var worn = sim.equipped.get(sl)
+		if worn != null and (worn.get("issued", false) or worn.get("stamped", false)):
+			continue
+		var fresh: Dictionary = {}
+		if worn != null and worn.has("pattern") and not worn.has("unique"):
+			fresh = worn.duplicate(true)       # a patterned piece: its rule kept, its level raised (the review)
+			fresh["ilvl"] = maxi(Items.ilvl(worn), lv)
+		elif worn != null and worn.has("unique"):
+			fresh = Items.roll_unique(sim._unique_named(str(worn["unique"])), sim.rng, lv, tier)
+		elif worn != null and worn.has("set"):
+			var st: Dictionary = Items.set_named(str(worn["set"]))
+			for pc in st.get("pieces", []):
+				if str(pc["slot"]) == sl:
+					fresh = Items.roll_set_piece(str(worn["set"]), pc, sim.rng, lv, tier)
+		else:
+			var want_type: String = str(Items.base_of(worn).get("type", "")) if worn != null and sl in ["Primary", "Secondary"] else ""
+			var best: Dictionary = {}
+			for k in range(STANDARD_ROLLS * (4 if want_type != "" else 1)):
+				var it: Dictionary = Items.roll(sl, tier, sim.rng, sim.rarity_bonus(), true, false, "", want_type, 0.33, 0, lv)
+				if it.is_empty() or not sim.can_wear(it) or (want_type != "" and str(Items.base_of(it).get("type", "")) != want_type):
+					continue
+				var sc: float = bot._elem_score(it) if bot.element != "" and sl == "Primary" else Items.score(it)     # the build's own gun (the review)
+				if best.is_empty() or sc > (bot._elem_score(best) if bot.element != "" and sl == "Primary" else Items.score(best)):
+					best = it
+			fresh = best
+		if not fresh.is_empty():
+			# the old gun's parts on the new where a mount matches: the element's socketable with them (the review)
+			if worn != null and worn.has("attachments") and fresh.has("attachments") and fresh != worn:
+				for mount in worn["attachments"]:
+					if (fresh["attachments"].has(mount) or str(mount).begins_with("socket")) and worn["attachments"][mount] != null:     # its sockets as it had them
+						fresh["attachments"][mount] = worn["attachments"][mount]
+			sim.equipped[sl] = fresh
+	sim._dry_memo.clear()
+	bot.tidy(sim)
 
 
 ## Room in the stash for an issued piece (27 Oct: a full stash kept a Recruit out of the County): the cheapest pieces
