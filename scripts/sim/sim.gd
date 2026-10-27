@@ -91,6 +91,7 @@ var deeds_found := false           # the Bank's vault, opened once
 var unlocked: Array = Data.ROOMS_SHUT.duplicate()
 var met: Array = []                # the rooms whose first-visit card has been shown (14 Oct): Words.ROOM_INTROS keys
 var deeds_fate := ""               # what became of the deeds: burned, sold, held ("ending" in a save from before 15 Oct)
+var deeds_back := false            # the Bailiff has dropped the sold deeds once (27 Oct): sold again, sold for good
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
 var _notes := 0                    # the old paper money: the crews still take it
@@ -1005,6 +1006,9 @@ func order_chips(on_you := false) -> Array:
 		"bailiff":
 			if bool(m.get("seize_on", false)):
 				var sz: String = str(m["seized"])
+				if sz == DEEDS_SEIZED:
+					out.append([Words.COUNTY["chip_seized"] % "the deeds · get him under half", "Seized: the deeds", "bleed"])
+					return out
 				var piece = equipped.get(sz)
 				var hit: String = ("−%d%% fire" % roundi(float(Data.BAILIFF_CUT[sz]) * 100.0)) if Data.BAILIFF_CUT.has(sz) else ("×%.2f taken" % Data.BAILIFF_TAKEN)
 				out.append([Words.COUNTY["chip_seized"] % ("your %s · %s" % [Items.full_name(piece) if piece != null else sz.to_lower(), hit]), "Seized: %s" % sz.to_lower(), "bleed"])     # the piece and what it costs (the third review)
@@ -1186,7 +1190,7 @@ func _kit_held() -> Array:
 	for nm in roster:
 		kits.append(Dictionary(roster[nm]).get("equipped", {}))
 	for it in stash:
-		if it is Dictionary and not it.get("issued", false):
+		if it is Dictionary and not it.get("issued", false) and not Items.is_deeds(it):     # the deeds are property, not money: the Issue can't touch them (27 Oct, Matt)
 			out.append(it)
 	for kit in kits:
 		for sl in kit:
@@ -2216,7 +2220,7 @@ func _read_held() -> void:
 ## [title, line, line].
 func paper_lines(it: Dictionary) -> Array:
 	if Items.is_deeds(it):
-		return ["The deeds", "Held, sold or burned", ""]
+		return ["The deeds", "Held, sold or burned", "Bricks, not money: the Issue can't touch them"]
 	if str(it.get("rule", "")) != "":
 		return ["The drawer", "Works from the stash", "Keep it"]     # a unique's rule paper (the Lorry Driver's Log)
 	if story_of(it) >= 0:
@@ -6494,6 +6498,10 @@ func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 		_read(it)
 		got.append(Items.full_name(it))
 	log_event(Words.COUNTY["head_down"] % [str(c["who"]), ", ".join(got)])
+	if str(b.get("mech", "")) == "bailiff":     # the head itself: down, _order_mech reads nothing (the review)
+		if bool(m.get("seize_on", false)):
+			m["seize_on"] = false              # down in one blow from over half: what he held is let go all the same (the review)
+		_bailiff_drops_deeds(m)
 
 
 ## A County run over: won, the place is taken (and its next one opens, or the next zone with its head); either way
@@ -8075,9 +8083,62 @@ func collector_taken(m: Dictionary) -> float:
 	return 1.0 + Data.COLLECTOR_GROW * floorf(float(m.get("grow_t", 0.0)) / Data.COLLECTOR_EVERY)
 
 
+const DEEDS_SEIZED := "deeds"            # what m["seized"] reads when the Bailiff holds the deeds, not a slot
+
+
+## A run over with the Bailiff still holding the deeds (fled, timed out or dead): he keeps them - sold, to the County.
+func _bailiff_keeps_deeds(m: Dictionary) -> void:
+	if m.get("dry", false) or str(m.get("seized", "")) != DEEDS_SEIZED or not bool(m.get("seize_on", false)):
+		return
+	if m.get("boss") is Dictionary and not bool(m["boss"].get("alive", true)):
+		return                                    # he's down: nothing of yours is his
+	for src in [stash, m["found"]]:
+		for it in src.duplicate():
+			if Items.is_deeds(it):
+				src.erase(it)
+	deeds_fate = "sold"
+	deeds_back = true                         # his to sell on: they don't come round again
+	log_event(Words.DEEDS["taken"])
+
+
+## The Bailiff down with the deeds sold (27 Oct): they're in his case, sold on and come round again - once.
+func _bailiff_drops_deeds(m: Dictionary) -> void:
+	if m.get("dry", false) or deeds_fate != "sold" or deeds_back or _deeds_held(m):
+		return
+	var thing := _plain(Data.PAPER, "The deeds")
+	thing["deeds"] = true
+	deeds_back = true
+	deeds_fate = ""                           # the choice open again
+	m["found"].append(thing)
+	log_event(Words.DEEDS["back"])
+
+
+## The deeds burned at home (27 Oct): held, then let go of. Out of the stash; nobody owes anybody.
+func burn_deeds(id: int) -> bool:
+	if mission != null:
+		return false
+	for it in stash:
+		if int(it["id"]) == id and Items.is_deeds(it):
+			_remove(it)
+			deeds_fate = "burned"
+			log_event(Words.DEEDS["burned"])
+			return true
+	return false
+
+
 ## The Bailiff's hold: as he comes out he seizes your best piece worn (by its worth); under BAILIFF_FREE of his HP he
 ## lets it go.
 func _bailiff_tick(m: Dictionary, bhp: float) -> void:
+	if not m.has("seized") and deeds_fate == "burned":
+		m["seized"] = ""                       # the deeds burned (27 Oct, Matt): his warrant's paper is ash; he has nothing on you
+		m["seize_on"] = false
+		if not m.get("dry", false):
+			log_event(Words.DEEDS["void"])
+	elif not m.has("seized") and deeds_fate == "held" and _deeds_held(m):
+		m["seized"] = DEEDS_SEIZED             # held: it's the deeds he wants, not your kit - till you make him let go
+		m["seize_on"] = true
+		if not m.get("dry", false):
+			log_event(Words.DEEDS["seized"])
 	if not m.has("seized"):
 		var best := ""
 		var top := -1.0
@@ -8099,7 +8160,7 @@ func county_taken(m: Dictionary) -> float:
 	var mech: String = _order_mech(m)
 	if mech == "collector":
 		return collector_taken(m)
-	if mech == "bailiff" and bool(m.get("seize_on", false)) and not Data.BAILIFF_CUT.has(str(m.get("seized", ""))):
+	if mech == "bailiff" and bool(m.get("seize_on", false)) and not Data.BAILIFF_CUT.has(str(m.get("seized", ""))) and str(m.get("seized", "")) != DEEDS_SEIZED:
 		return Data.BAILIFF_TAKEN
 	return 1.0
 
@@ -9807,6 +9868,7 @@ func _extract() -> void:
 		return
 	var m: Dictionary = mission
 	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
+	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
 	_pack_unmark(m)
 	var t := tier(m["tier"])
@@ -10036,6 +10098,7 @@ func _kia() -> void:
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
 	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
+	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
 	_pack_unmark(m)
 	var t := tier(m["tier"])
@@ -12223,6 +12286,8 @@ func radio_next() -> Dictionary:
 			continue
 		if r.has("lorries") and lorries < int(r["lorries"]):
 			continue
+		if r.has("deeds") and deeds_fate != str(r["deeds"]):
+			continue                              # the deeds' fate's own line (27 Oct)
 		if r.has("gate") or (r.has("room") and not room_open(str(r["room"]))):
 			continue                              # a gate's line is said at its gate; a room's voice once it's open (13 Oct)
 		return {"key": key, "voice": r["voice"], "text": r["text"]}
@@ -12372,7 +12437,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -12634,6 +12699,7 @@ func load_dict(d: Dictionary) -> void:
 	else:
 		met = Words.ROOM_INTRO_FIRST + unlocked.duplicate()     # a save from before the room cards (14 Oct): it's met what it has open
 	deeds_fate = str(d.get("deeds_fate", d.get("ending", "")))     # the old saves' name for it
+	deeds_back = bool(d.get("deeds_back", false))
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
 	paragon_xp = float(d.get("paragon_xp", 0.0))

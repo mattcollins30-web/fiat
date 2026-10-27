@@ -337,7 +337,19 @@ func _show_panel() -> void:
 		var precious: bool = it.has("unique") or it.has("set")
 		var armed: bool = _bin_arm.holds(int(it["id"]))
 		buttons.append({"text": (Words.ASK["again"] % ("Scrap for %s" % Fmt.group(sim.scrap_of(it)))) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
+	# the deeds held (27 Oct): burned at home, asked twice
+	if selected.get("kind", "") == "stash" and Items.is_deeds(it) and buttons.size() < PickPanel.BUTTONS:
+		var armed_d: bool = _bin_arm.holds(int(it["id"]))
+		buttons.append({"text": (Words.ASK["again"] % "Burn the deeds") if armed_d else "Burn", "action": _burn_press.bind(int(it["id"])), "enabled": not sim.on_mission(), "primary": false, "tone": "bad" if armed_d else ""})
 	_set_buttons(buttons)
+
+
+func _burn_press(id: int) -> void:
+	if not _bin_arm.press(id):
+		_keep_pick = true
+		return
+	_bin_arm.clear()
+	sim.burn_deeds(id)
 
 
 var _bin_arm := Arm.new()               # a unique or set piece's first Bin press: the second bins it (a while, or out of the room, disarms)

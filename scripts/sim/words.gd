@@ -254,6 +254,10 @@ const RADIO := [
 	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/after", "text": "The book's here. I'm open. Tins only, and don't ask me where any of it came from."},
 	{"voice": "kev", "zone": 2, "gate": "The Manager/before", "text": "The Bank's got deeds in the vault. Every house on the estate. Somebody could set up somewhere with those."},
 	{"voice": "kev", "zone": 2, "gate": "The Manager/after", "text": "Somebody's got the deeds out of the Bank. Somebody's got themselves a pitch."},
+	# the deeds' fate (27 Oct, Matt): a line for each, in the turn once it's decided ("deeds")
+	{"voice": "kev", "zone": 2, "deeds": "burned", "text": "Somebody burned the deeds. Nobody on the estate owes a penny. The Bailiff's going to hate that."},
+	{"voice": "kev", "zone": 2, "deeds": "held", "text": "Whoever's got the deeds, hang on to them. Money comes and goes. Bricks don't."},
+	{"voice": "kev", "zone": 2, "deeds": "sold", "text": "The deeds went to the Fence, and the Fence sold them on. Somebody up the County will come for what's owed."},
 	{"voice": "net", "zone": 3, "gate": "The Quartermaster/before", "text": "Quartermaster to all stations: the set and the armourer's roll stay in stores. Nobody signs them out."},
 	{"voice": "kev", "zone": 3, "gate": "The Quartermaster/after", "text": "There's an army set on this frequency now. Hello, whoever you are. I hear you've a workshop, too."},
 	# the Clinic's and the Fence's own (13 Oct, Matt): in the turn once their room is open ("room")
@@ -634,6 +638,11 @@ const DEEDS := {
 	"burned": "Burned on the Pitch. Nobody on the estate owes anybody. Let it be done.",
 	"sold": "Sold on. Someone, somewhere, is owed the estate now. Let it be done.",
 	"held": "The Pitch holds the paper on every house on the estate. Let it be done.",
+	# the Bailiff reads the deeds' fate (27 Oct, Matt: "what can we do with the options we already have")
+	"void": "The Bailiff reads his warrant twice. The paper behind it is ash. He has nothing on you.",
+	"seized": "The Bailiff wants the deeds, not your kit. He holds them till you make him let go.",
+	"taken": "The Bailiff kept the deeds. Someone up the County owns the estate now.",
+	"back": "In the Bailiff's case: the deeds, sold on and come round again.",
 }
 
 

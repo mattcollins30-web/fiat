@@ -7596,6 +7596,91 @@ func _floor_all_run_checks(main) -> void:
 	main.refresh()
 
 
+## The deeds' fate read by the Bailiff and the Issue (27 Oct, Matt: "what can we do with the options we already have"):
+## burned, his warrant's void; held, he seizes the deeds, not your kit, and keeps them if the run ends in his hands;
+## sold, he drops them once when he's down; held deeds stay out of the Issue's pile.
+func _deeds_bailiff_checks(sim, head_run: Callable) -> void:
+	var deeds_of := func() -> Array: return sim.stash.filter(func(x): return Items.is_deeds(x))
+	for d in deeds_of.call():
+		sim.stash.erase(d)
+	# burned: nothing seized, nothing taken from the fire
+	sim.deeds_fate = "burned"
+	var m: Dictionary = head_run.call("bailiff")
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	_check(not bool(m.get("seize_on", true)) and is_equal_approx(sim.county_taken(m), 1.0), "the deeds burned, the Bailiff still seized: %s" % str(m.get("seized")))
+	# held: the deeds seized, no cost to the fight; the chip says so; let go under half
+	var deeds: Dictionary = sim._plain(Data.PAPER, "The deeds")
+	deeds["deeds"] = true
+	sim.extract_now()
+	sim.stash.append(deeds)
+	sim.deeds_fate = "held"
+	m = head_run.call("bailiff")
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	_check(str(m.get("seized", "")) == sim.DEEDS_SEIZED and bool(m["seize_on"]) and is_equal_approx(sim.county_taken(m), 1.0), "held, the Bailiff didn't take the deeds instead of your kit: %s, ×%.2f" % [str(m.get("seized")), sim.county_taken(m)])
+	_check(sim.order_chips(true).any(func(c): return str(c[0]).contains("the deeds")), "the Seized chip doesn't name the deeds: %s" % str(sim.order_chips(true)))
+	m["target_hp"] = 400.0
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	sim.extract_now()
+	_check(sim.stash.has(deeds) and sim.deeds_fate == "held", "the deeds let go under half weren't kept: %s" % sim.deeds_fate)
+	# held, and the run ends in his hands: he keeps them, sold, for good
+	m = head_run.call("bailiff")
+	sim._order_tick(m, m["t"], 0.1, "bailiff")
+	sim.extract_now()
+	_check(not sim.stash.has(deeds) and sim.deeds_fate == "sold" and sim.deeds_back, "left in the Bailiff's hands, the deeds weren't his: fate %s, in the stash %s" % [sim.deeds_fate, str(sim.stash.has(deeds))])
+	# a real Bailiff down (the review: down, the head's mech reads nothing): held, in one blow from over half - kept
+	var bailiff_down := func() -> Dictionary:
+		var mx: Dictionary = head_run.call("bailiff")
+		mx["boss"] = sim._boss_entry({"name": "The Bailiff", "hp": 1000.0, "dps": 1.0, "zone": 0, "order": "truck_stop", "mech": "bailiff", "remix": true})
+		mx["boss"]["started"] = true
+		mx["target_hp"] = 1000.0
+		sim._order_tick(mx, mx["t"], 0.1, "bailiff")
+		sim._boss_down(mx, mx["t"])
+		return mx
+	var d1: Dictionary = sim._plain(Data.PAPER, "The deeds")
+	d1["deeds"] = true
+	sim.stash.append(d1)
+	sim.deeds_fate = "held"
+	sim.deeds_back = false
+	m = bailiff_down.call()
+	_check(str(m.get("seized", "")) == sim.DEEDS_SEIZED and not bool(m.get("seize_on", true)), "the Bailiff down still holds the deeds")
+	sim.extract_now()
+	_check(sim.stash.has(d1) and sim.deeds_fate == "held", "the Bailiff killed in one blow kept the held deeds: fate %s" % sim.deeds_fate)
+	sim.stash.erase(d1)
+	# sold (not to him): down, he drops them once
+	sim.deeds_fate = "sold"
+	m = bailiff_down.call()
+	_check(m["found"].any(func(x): return Items.is_deeds(x)) and sim.deeds_fate == "" and sim.deeds_back, "the Bailiff down didn't drop the sold deeds: fate %s" % sim.deeds_fate)
+	sim.extract_now()
+	sim.stash = sim.stash.filter(func(x): return not Items.is_deeds(x))
+	sim.deeds_fate = "sold"
+	m = bailiff_down.call()
+	_check(not m["found"].any(func(x): return Items.is_deeds(x)), "the Bailiff dropped the deeds a second time")
+	sim.extract_now()
+	# held deeds stay out of the Issue's pile, and are burned at home
+	var d2: Dictionary = sim._plain(Data.PAPER, "The deeds")
+	d2["deeds"] = true
+	sim.stash.append(d2)
+	_check(not sim._kit_held().has(d2), "the deeds count in the Issue's pile")
+	sim.deeds_fate = "held"
+	_check(sim.burn_deeds(int(d2["id"])) and not sim.stash.has(d2) and sim.deeds_fate == "burned", "burning the held deeds at home didn't")
+	# the Radio's line for the fate: only the fate's own is said
+	var heard0: Array = sim.heard.duplicate()
+	var keys := {}
+	for k in range(Words.RADIO.size()):
+		var r: Dictionary = Words.RADIO[k]
+		var key := "%s/%d" % [r["voice"], k]
+		if str(r.get("deeds", "")) != "":
+			keys[str(r["deeds"])] = key
+		elif not (key in sim.heard):
+			sim.heard.append(key)                 # every other line heard: the deeds' are next
+	for f in keys:
+		sim.heard.erase(keys[f])                  # said earlier in the smoke, as a fate came and went: unheard for the check
+	for f in ["burned", "held", "sold"]:
+		sim.deeds_fate = f
+		_check(keys.has(f) and str(sim.radio_next().get("key", "")) == str(keys.get(f, "?")), "the Radio didn't say the deeds' %s line: %s" % [f, str(sim.radio_next())])
+	sim.heard = heard0
+
+
 ## The body: a stash item dropped on its own slot's box is taken and equipped;
 ## on every other box it is refused; dragged off, the stash takes it back and
 ## the slot is empty. Every slot pair, with a plain item of each slot.
@@ -16303,7 +16388,7 @@ func _lore_checks(main) -> void:
 	y.runs_total = 3 * Data.RADIO_EVERY
 	y._radio_after_run()
 	_check(y.heard == ["loop/0", "loop/1"] and y.radio_next().is_empty(), "the Outskirts' radio is past its gate: %s, next %s" % [str(y.heard), str(y.radio_next())])
-	var story: Array = Words.RADIO.filter(func(r): return not r.has("gate") and not r.has("room"))     # the gates' and the rooms' lines aren't the story (13 Oct)
+	var story: Array = Words.RADIO.filter(func(r): return not r.has("gate") and not r.has("room") and not r.has("deeds"))     # the gates', the rooms' and the deeds' lines aren't the story (13 Oct; 27 Oct)
 	var last: Dictionary = story.back()
 	_check(last.has("lorries") and str(last["text"]).contains("Let it be done"), "the radio's story doesn't close on the decree")
 	for r in Words.RADIO:
@@ -20691,6 +20776,9 @@ func _county_checks(main) -> void:
 		mx["target_hp"] = 1000.0
 		mx["dots"] = {}
 		return mx
+	var fate0: String = sim.deeds_fate
+	var back0: bool = sim.deeds_back
+	sim.deeds_fate = "sold"                   # the deeds sold: he takes your best piece, as before
 	var m: Dictionary = head_run.call("bailiff")
 	sim._order_tick(m, m["t"], 0.1, "bailiff")
 	_check(str(m.get("seized", "")) != "" and bool(m["seize_on"]), "the Bailiff seized nothing")
@@ -20698,6 +20786,9 @@ func _county_checks(main) -> void:
 	m["target_hp"] = 400.0
 	sim._order_tick(m, m["t"], 0.1, "bailiff")
 	_check(not bool(m["seize_on"]), "the Bailiff kept your piece under half")
+	_deeds_bailiff_checks(sim, head_run)
+	sim.deeds_fate = fate0
+	sim.deeds_back = back0
 	m = head_run.call("collector")
 	_check(is_equal_approx(sim.county_taken(m), 1.0), "the Collector's bill started above nothing")
 	for k in range(14):

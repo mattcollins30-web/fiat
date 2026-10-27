@@ -7049,3 +7049,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   row on screen all run at one height (the rig over it in a fight, under it in the search, one row either way); Ditch
   puts a piece down on the floor with no scrap and Fill up leaves it; Salvage moved to scrapping at the Workshop.
   Smoke: _floor_all_run_checks.
+- The deeds' fate (27 Oct, Matt; docs/design/deeds.md): sold, held and burned read by the Bailiff (sold: he takes your
+  kit and drops the deeds once when down; held: he seizes the deeds instead and keeps them if the run ends in his hands;
+  burned: his warrant's void) and by the Issue (held deeds out of the pile, unstamped); a Radio line each; Burn at home
+  from the Kit room. Smoke: _deeds_bailiff_checks.
