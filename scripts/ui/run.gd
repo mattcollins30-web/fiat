@@ -244,6 +244,7 @@ func _init() -> void:
 	_crates.floor_take.connect(_take_floor)
 	_crates.floor_picked.connect(_pick_floor)
 	_crates.floor_put.connect(_put_down)
+	_crates.crate_picked.connect(_pick_crate)
 	_crates.position = Vector2(PAD, CRATES_Y)
 	_crates.visible = false
 	_left.add_child(_crates)
@@ -1319,6 +1320,15 @@ func _turn_piece(id: int) -> void:
 		return
 	if not sim.pack_turn(id):
 		_no_room(Words.PACK["wont_lie"])
+	_shown = ""
+	acted.emit()
+
+
+## A crate tile clicked (27 Oct): that crate opens next.
+func _pick_crate(j: int) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	sim.crate_pick(j)
 	_shown = ""
 	acted.emit()
 

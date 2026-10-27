@@ -367,7 +367,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	if size.x < 48.0 or size.y < 48.0:     # a small pouch either way, 44 px included (12 Oct: a packed rig at 44 spilled a kit's lines) (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
 		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
 		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
-		fs = 11 if size.x >= 26.0 else 8          # the smallest pouch (22 px): the short word at 8
+		fs = 11 if size.x >= 34.0 else (9 if size.x >= 26.0 else 8)     # the smallest pouch (22 px): the short word at 8; a half cell (29 px, the run's rig of thirteen and more since 27 Oct) at 9
 		line_h = 14 if size.x >= 26.0 else 10
 	var y := (size.y - words.size() * line_h) / 2.0
 	for i in range(words.size()):

@@ -59,7 +59,8 @@ var keepsakes: Array = []          # the heads' things kept (15 Oct): the vet's 
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
 var sets_seen: Array = []          # the set pieces found, by name (24 Oct, the collection): a set's complete once all its pieces are here
 var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
-var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
+var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 (the wear on it went 27 Oct; the signals still carry it)
+var site_crates := {}              # a campaign site's crates left between runs (27 Oct, Matt: "going back for the safe ... feels like a chase"): str(tier) -> {"left", "at", "full"}
 var worn_depth: Array = []         # and the depth it was cleared at: another depth is another site, fresh (Matt, 7 Oct: "depth needs to reset the site being picked over"); the worn depth stays worn until it recovers
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
@@ -2014,16 +2015,90 @@ func fight_weather_of(i: int) -> String:
 	return "" if w == "Rain" and str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES else w
 
 
-## How picked over a site is, 0 to 1: full on the clear, gone RECOVER_H later.
-func wear(i: int) -> float:
-	if worn[i] < 0.0 or int(worn_depth[i]) != depth[i]:
-		return 0.0
-	return clampf(1.0 - (elapsed - worn[i]) / recover_s(), 0.0, 1.0)
+## A crate back on a picked-over site every this long (27 Oct, the trickle): half again as fast a rank of Worn in.
+func crate_trickle_s() -> float:
+	return Data.CRATE_TRICKLE_S / (1.0 + Data.FX["atlas/worn_in"] * atlas_rank("worn_in"))
 
 
-## How long a picked-over site takes to come back: RECOVER_H, half again as fast a rank of Worn in.
-func recover_s() -> float:
-	return Data.RECOVER_H * 3600.0 / (1.0 + Data.FX["atlas/worn_in"] * atlas_rank("worn_in"))
+## Whether a run's crates are the site's to remember: a campaign run, not a signal's, a dry read or the balance's.
+static func _site_keeps(m: Dictionary) -> bool:
+	return not m.get("dry", false) and not m.has("signal") and not m.get("crates_off", false)
+
+
+## The site's crates now, as the Map reads them: [what was left, crates back since, the full set] - [] for fresh.
+func site_stock(i: int) -> Array:
+	var e: Dictionary = site_crates.get(str(i), {})
+	if e.is_empty():
+		return []
+	var left: Array = e.get("left", [])
+	var full: int = int(e.get("full", left.size()))
+	var back: int = mini(maxi(0, full - left.size()), int(floor(maxf(0.0, elapsed - float(e.get("at", elapsed))) / crate_trickle_s())))
+	if left.size() + back >= full:
+		return []                             # all back: fresh
+	return [left, back, full]
+
+
+## The run's end at a campaign site: the crates it didn't open wait there, part-searched as they were, the dog's nose on
+## them (27 Oct). A locked one passed over without the Keys isn't kept.
+func _site_remember(m: Dictionary) -> void:
+	if not _site_keeps(m) or not m.has("crates"):
+		return
+	var cs: Array = m["crates"]
+	var i: int = int(m.get("crate_i", 0))
+	var left: Array = []
+	for j in range(i, cs.size()):
+		var q: Dictionary = cs[j]
+		if q.get("passed", false) or int(q["done"]) >= int(q["searches"]):
+			continue
+		var kept: Dictionary = q.duplicate(true)
+		kept["finds"] = []
+		left.append(kept)
+	site_crates[str(m["tier"])] = {"left": left, "at": elapsed, "full": maxi(int(m.get("crates_n", cs.size())), left.size())}
+
+
+## The search's crates from what the site kept: what was left, then a fresh crate a trickle since, up to the full set.
+## False when the site's fresh (no memory, or all back): the dice roll a full set as ever.
+func _site_resume(m: Dictionary, fresh: Array) -> bool:
+	if not _site_keeps(m):
+		return false
+	var key := str(m["tier"])
+	var st: Array = site_stock(int(m["tier"]))
+	site_crates.erase(key)                    # the run has them now; its end writes what's left again
+	if st.is_empty():
+		return false
+	var queue: Array = []
+	for q in st[0]:
+		var c: Dictionary = q.duplicate(true)
+		c["done"] = int(c["done"])
+		c["searches"] = int(c["searches"])
+		c.erase("passed")
+		queue.append(c)
+	for k in range(mini(int(st[1]), fresh.size())):
+		queue.append(fresh[k])
+	m["crates"] = queue
+	m["crates_n"] = int(st[2])
+	m["crate_i"] = 0
+	m["crates_none"] = queue.is_empty()       # picked clean already, nothing back yet: nothing for this run to open
+	return true
+
+
+## The player's pick of the next crate (27 Oct): the one clicked goes next - straight away if the one in hand isn't
+## started, else once it's done. Never one passed over, nor one already open.
+func crate_pick(j: int) -> bool:
+	if mission == null or not mission.has("crates"):
+		return false
+	var cs: Array = mission["crates"]
+	var i: int = int(mission.get("crate_i", 0))
+	if j <= i or j >= cs.size() or cs[j].get("passed", false) or (cs[j].get("locked", false) and not has_keys()):
+		return false
+	var to: int = i if i < cs.size() and int(cs[i]["done"]) == 0 else i + 1
+	if j != to:
+		var q: Dictionary = cs[j]
+		cs.remove_at(j)
+		cs.insert(to, q)
+	if to == i:
+		mission["search"] = 0.0               # a fresh start on the one picked
+	return true
 
 
 ## The item level the runner can wear now: the highest whose wear level is theirs or under (16 Oct).
@@ -2086,14 +2161,31 @@ func paper_odds(i: int) -> float:
 
 
 func site_state(i: int) -> String:
-	var w := wear(i)
-	if w <= 0.0:
-		return Words.SKY["fresh"]
-	var back: float = recover_s() - (elapsed - float(worn[i]))
-	var mins: int = int(ceil(back / 60.0))
-	@warning_ignore("integer_division")
-	var when := ("%dh%02d" % [mins / 60, mins % 60]) if mins >= 60 else ("%d min" % mins)
-	return (Words.SKY["worn"] if w > 0.5 else Words.SKY["settling"]) % when
+	return site_state_forms(i)[0]
+
+
+## The site's crates for the Map's tile (27 Oct): fresh; what's left there, the best first; or picked clean and when a
+## crate's back. Long to short.
+func site_state_forms(i: int) -> Array:
+	var st: Array = site_stock(i)
+	if st.is_empty():
+		return [Words.SKY["fresh"]]
+	var n: int = Array(st[0]).size() + int(st[1])
+	if n == 0:
+		var e: Dictionary = site_crates.get(str(i), {})
+		var wait: float = crate_trickle_s() - fmod(maxf(0.0, elapsed - float(e.get("at", elapsed))), crate_trickle_s())
+		var when := "%d min" % maxi(1, int(ceil(wait / 60.0)))
+		return [Words.SKY["clean"] % when, Words.SKY["clean_short"] % when]
+	var best: Array = Array(st[0]).duplicate()
+	best.sort_custom(func(a, b): return int(crate_def(str(a["key"])).get("searches", 1)) > int(crate_def(str(b["key"])).get("searches", 1)))
+	var top: String = str(crate_def(str(best[0]["key"])).get("short", best[0]["name"])) if not best.is_empty() else ""
+	var forms: Array = []
+	if top != "" and n > 1:
+		forms.append(Words.SKY["left_top"] % [top, n - 1])
+	elif top != "":
+		forms.append(top)
+	forms.append(Words.SKY["left"] % [n, "" if n == 1 else "s"])
+	return forms
 
 
 ## The sky over a site, in words: the clock, night or day, the weather.
@@ -5829,10 +5921,7 @@ func effective(i: int) -> Dictionary:
 		e["intel"].append("Roofed")          # the card says why it's dry: rain on the zone, none in here
 	if sky != "" and yard_has("forecast"):
 		e["cash"] *= Data.FX["yard/forecast"]                     # the Radio's forecast: a run under the weather pays
-	var w := wear(i)
-	if w > 0.0:
-		e["drop"] *= 1.0 - Data.WORN_DROP * w
-		e["cash"] *= 1.0 - Data.WORN_CASH * w
+	# no wear (27 Oct, Matt: "kill drops should remain the same really"): a cleared site's picked over in its crates alone
 	e["plain_pool"] = int(e["pool"])         # the clock reads the site as plain (9 Oct): the words bite through it; the heads are formed from the same
 	e["plain_hp"] = float(e["hp"])
 	var act: Array = active_words(i)
@@ -9554,9 +9643,14 @@ func _roll_crates(m: Dictionary, t: Dictionary) -> void:
 		if not locked:
 			total += int(c["searches"])       # a locked one is over and above the site's searches: the Keys' to open
 	m["crates"] = queue
+	m["crates_n"] = queue.size()
 	m["crate_i"] = 0
+	if _site_resume(m, queue):
+		queue = m["crates"]                   # what the site kept, then what's come back (27 Oct)
 	if dog_sniffs():
 		for q in queue:
+			if q.has("held") or int(q["done"]) > 0:
+				continue                      # nosed on an earlier run, or already open
 			var held: Dictionary = _find(m, t, false, crate_for(q), true)
 			if not held.is_empty():
 				q["held"] = held
@@ -9868,12 +9962,13 @@ func _extract() -> void:
 		return
 	var m: Dictionary = mission
 	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
+	_site_remember(m)                     # the crates left for next time (27 Oct)
 	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
 	_pack_unmark(m)
 	var t := tier(m["tier"])
 	var timed_out: bool = m.get("timed_out", false)
-	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or crates_done(m)) and not timed_out:     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
+	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or (crates_done(m) and not m.get("crates_none", false))) and not timed_out:     # a site left picked clean by an earlier run is no Ghost's clear (the review)     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack's full, and %s counts as cleared" % Words.mid(t["name"]))
@@ -10098,6 +10193,7 @@ func _kia() -> void:
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
 	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
+	_site_remember(m)                     # the crates left for next time (27 Oct)
 	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
 	_pack_unmark(m)
@@ -12437,7 +12533,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -12631,6 +12727,9 @@ func load_dict(d: Dictionary) -> void:
 	shelf_tier = {}
 	for k in d.get("shelf_tier", {}):
 		shelf_tier[str(k)] = int(d["shelf_tier"][k])
+	site_crates = {}
+	for k in d.get("site_crates", {}):
+		site_crates[str(k)] = Dictionary(d["site_crates"][k]).duplicate(true)
 	if d.has("worn"):
 		for i in range(mini(worn.size(), d["worn"].size())):
 			worn[i] = float(d["worn"][i])

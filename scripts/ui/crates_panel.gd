@@ -14,6 +14,7 @@ const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const SHOWN := 5                   # tiles in the row: past five, the last says how many more
 const TILE_GAP := 8
@@ -33,7 +34,8 @@ const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewel
 
 signal floor_picked(id: int)       # a thing on the floor pressed: its comparison (13 Oct, the floor)
 signal floor_take(id: int)         # double-clicked: into the pack
-signal floor_put(id: int)          # a piece dragged out of the pack onto the floor (27 Oct, the grid): room made by hand
+signal floor_put(id: int)
+signal crate_picked(j: int)        # a crate tile clicked (27 Oct): that crate opens next          # a piece dragged out of the pack onto the floor (27 Oct, the grid): room made by hand
 
 var _head: Label
 var _aside: Label
@@ -55,6 +57,7 @@ var _press_cell := -1
 var _floor_items := {}             # id -> the thing, for the drag's picture
 var _w := 0.0
 var _drop_zone: Control
+var _tile_j: Array = []            # the queue's index each crate tile shows, -1 for none
 var _by_hand := false              # the floor takes a piece put down only by hand
 var _drop_hl: Panel                # the floor lit while a piece of the pack is in hand: where it can go down
 
@@ -104,6 +107,9 @@ func build(w: float) -> void:
 		var pips := UI.label(p, Rect2(4, TILE_H - 23, tw - 8, 23), "", "SemiBold", 11, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
 		pips.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 		_tiles.append({"panel": p, "art": art, "name": nm, "pips": pips, "glass": glass, "lock": lock})
+		p.mouse_filter = Control.MOUSE_FILTER_STOP
+		p.gui_input.connect(_tile_input.bind(k))
+		_tile_j.append(-1)
 	_more = UI.panel(self, Rect2((SHOWN - 1) * (tw + TILE_GAP), ROW_Y, tw, TILE_H), UI.box(Pal.BG, 6, 1, Pal.CARD_LINE))
 	_more_n = UI.label(_more, Rect2(0, 6, tw, 36), "", "SemiBold", 28, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
 	UI.label(_more, Rect2(0, 42, tw, 20), "more", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
@@ -258,8 +264,8 @@ func show_crates(sim, m: Dictionary, floor_only := false) -> void:
 	var pack: String = "PACK %d OF %d" % [sim.pack_used(m), sim.capacity()]
 	UI.fit(_head, ["THE CRATES · %s%s · %s · %s" % [opens, locked_tail, tins, pack], "%s%s · %s · %s" % [opens, locked_tail, tins, pack],
 		"%s%s · %s" % [opens, locked_tail, pack], opens + locked_tail])
-	_aside.text = "the dog's nose on them" if sniffs else "in no order"
-	UI.fit(_aside, [_aside.text, "the dog's nose" if sniffs else "random"])
+	var order_w: String = "the dog's nose on them" if sniffs else "in no order"
+	UI.fit(_aside, ([Words.CRATE_PICK["long"] % order_w] if not all_open else []) + [order_w, "the dog's nose" if sniffs else "random"])     # a click picks the next (27 Oct), when it fits
 	# the row: a window on the queue from the one opened last, the rest as "+N more"
 	var start: int = clampi(i - 1, 0, maxi(0, n - SHOWN))
 	var more: int = n - start - SHOWN + 1 if n - start > SHOWN else 0
@@ -269,6 +275,8 @@ func show_crates(sim, m: Dictionary, floor_only := false) -> void:
 		var t: Dictionary = _tiles[k]
 		var j: int = start + k
 		t["panel"].visible = j < n and not (more > 0 and k == SHOWN - 1)
+		_tile_j[k] = j if t["panel"].visible and j > i else -1
+		t["panel"].mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if _tile_j[k] >= 0 else Control.CURSOR_ARROW
 		if not t["panel"].visible:
 			continue
 		var q: Dictionary = cs[j]
@@ -409,6 +417,16 @@ func _process(_dt: float) -> void:
 ## Whether the floor lights for a drag (for the tests).
 func drop_lit() -> bool:
 	return _drop_hl != null and _drop_hl.visible
+
+
+func _tile_input(event: InputEvent, k: int) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and k < _tile_j.size() and int(_tile_j[k]) >= 0:
+		crate_picked.emit(int(_tile_j[k]))
+
+
+## The queue's index a tile shows, -1 for one that can't be picked (for the tests).
+func tile_index(k: int) -> int:
+	return int(_tile_j[k]) if k < _tile_j.size() else -1
 
 
 func _can_put(_at: Vector2, data: Variant) -> bool:

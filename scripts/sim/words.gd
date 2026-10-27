@@ -1045,9 +1045,9 @@ const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay."
 const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
 const SKY := {
 	"night": "night", "day": "day", "rain": "rain", "fog": "fog", "clear": "clear",     # nouns, all four (the language pass: "fog down" was flavour among values)
-	"worn": "Picked over · back in %s",
 	"fresh": "Fresh",
-	"settling": "Settling · back in %s",
+	# a site's crates kept between runs (27 Oct): what's left, the best named; picked clean and the next crate's wait
+	"left": "%d crate%s left", "left_top": "%s +%d", "clean": "Picked clean · a crate in %s", "clean_short": "Clean · %s",
 }
 ## The first ten minutes: what's next, in the voice, on the Runner card and
 ## in the log when it changes. Nobody says objective.
@@ -1259,6 +1259,8 @@ const FENCE_SURE := "Sell %d"     # a rarity row's Sell, pressed once (25 Oct): 
 ## Every ask-twice press, one form (Matt, 26 Oct): what goes, then "press again"; "Again?" where there's no room.
 const ASK := {"again": "%s – press again", "short": "Again?"}
 ## The pack as a grid (27 Oct): a find with no place, a piece let go where it won't lie.
+## A crate tile clicked opens next (27 Oct): the crates' head's aside, long to short.
+const CRATE_PICK := {"long": "%s · click one: next", "short": "click one: next"}
 const PACK := {"no_room": "No room in the pack", "wont_lie": "It won't lie there", "move": "Drag a piece to move it; R or right-click turns it"}
 const FIGHT_BUTTON := "The fight ›"
 ## Loadouts (24 Oct): on screen a saved set of kit is a Kit, never a loadout (the glossary).

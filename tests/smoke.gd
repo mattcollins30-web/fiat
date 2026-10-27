@@ -5183,34 +5183,58 @@ func _places_checks(main) -> void:
 	sim.elapsed = 3600.0 * 2.0            # 11:00, day
 	_check(not sim.is_night() and sim.clock_words() == "11:00", "the clock reads %s at two hours in" % sim.clock_words())
 	var fresh: Dictionary = sim.effective(3)
-	_check(not ("Night" in fresh["intel"]) and sim.wear(3) == 0.0 and sim.site_state(3) == Words.SKY["fresh"], "a fresh site at 11:00 is not fresh: %s" % str(fresh["intel"]))
-	# a clear picks the site over; it comes back over RECOVER_H
+	_check(not ("Night" in fresh["intel"]) and sim.site_state(3) == Words.SKY["fresh"], "a fresh site at 11:00 is not fresh: %s" % str(fresh["intel"]))
+	# the crates kept between runs (27 Oct, Matt): two opened, the rest wait; drops and cash never thin
+	sim.site_crates = {}
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	sim._clear(m, m["t"])
+	var cs: Array = m["crates"]
+	var n_all: int = cs.size()
+	_check(n_all >= 3, "the fixture: %d crates" % n_all)
+	m["crate_i"] = 2
+	cs[2]["done"] = 0
+	var third: Dictionary = cs[2].duplicate(true)
 	sim.extract_now()
 	sim.words[3] = []                     # the extract re-rolled the radio's words; the site alone is read
-	_check(sim.wear(3) > 0.99 and sim.site_state(3).begins_with("Picked over"), "the clear did not pick the site over: %.2f %s" % [sim.wear(3), sim.site_state(3)])
+	var st: Array = sim.site_stock(3)
+	var kept_n: int = Array(st[0]).size() if not st.is_empty() else -1
+	_check(not st.is_empty() and kept_n <= n_all - 2 and int(st[1]) == 0 and sim.site_state(3) != Words.SKY["fresh"], "the crates left weren't kept: %s, '%s'" % [str(st), sim.site_state(3)])
 	var picked: Dictionary = sim.effective(3)
-	_check(absf(picked["drop"] - fresh["drop"] * (1.0 - Data.WORN_DROP)) < 0.01 and absf(picked["cash"] - fresh["cash"] * (1.0 - Data.WORN_CASH)) < 0.1, "picked over did not thin the drops and cash: %.2f / %.2f against %.2f / %.2f" % [picked["drop"], picked["cash"], fresh["drop"], fresh["cash"]])
-	# another depth is another site: fresh; back at the depth it was cleared at, still picked over (7 Oct)
-	var hold_done: Array = sim.bosses_beaten.duplicate()
-	var hold_best: Array = sim.best_depth.duplicate()
-	for z in range(Data.ZONES.size()):
-		sim.bosses_beaten[z] = true
-	for k in range(Data.TIERS.size()):
-		sim.best_depth[k] = maxi(sim.best_depth[k], 1)
-	sim.set_depth(3, 2)
-	_check(sim.depth[3] == 2 and sim.wear(3) == 0.0 and sim.site_state(3) == Words.SKY["fresh"], "a depth deeper did not read fresh: %.2f %s" % [sim.wear(3), sim.site_state(3)])
-	sim.set_depth(3, 1)
-	_check(sim.wear(3) > 0.99, "back at depth 1 the site is not still picked over: %.2f" % sim.wear(3))
-	sim.bosses_beaten = hold_done
-	sim.best_depth = hold_best
-	sim.elapsed += Data.RECOVER_H * 3600.0 * 0.6
-	_check(sim.wear(3) > 0.3 and sim.wear(3) < 0.5 and sim.site_state(3).begins_with("Settling"), "the site is not settling at 60%%: %.2f %s" % [sim.wear(3), sim.site_state(3)])
-	sim.elapsed += Data.RECOVER_H * 3600.0
-	_check(sim.wear(3) == 0.0 and is_equal_approx(sim.effective(3)["drop"], fresh["drop"]), "the site did not come back")
+	_check(is_equal_approx(picked["drop"], fresh["drop"]) and is_equal_approx(picked["cash"], fresh["cash"]), "a cleared site still thins its drops and cash: %.2f / %.2f against %.2f / %.2f" % [picked["drop"], picked["cash"], fresh["drop"], fresh["cash"]])
+	# a crate back a trickle later; the next run starts with what was left, then what's come back
+	sim.elapsed += sim.crate_trickle_s() + 1.0
+	_check(int(sim.site_stock(3)[1]) == 1, "no crate came back after a trickle: %s" % str(sim.site_stock(3)))
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	m = sim.mission
+	sim._clear(m, m["t"])
+	_check(m["crates"].size() == kept_n + 1 and str(m["crates"][0]["key"]) == str(third["key"]), "the run didn't start with the crates left, then one back: %d crates, first %s (was %s)" % [m["crates"].size(), str(m["crates"][0]["key"]), str(third["key"])])
+	# the player's pick: the clicked one goes next (straight away, nothing started)
+	if m["crates"].size() >= 3 and not m["crates"][2].get("locked", false):
+		var want: String = str(m["crates"][2]["key"]) + str(m["crates"][2].get("held", {}).hash())
+		_check(sim.crate_pick(2) and str(m["crates"][int(m["crate_i"])]["key"]) + str(m["crates"][int(m["crate_i"])].get("held", {}).hash()) == want, "the picked crate isn't next")
+	_check(not sim.crate_pick(0), "a crate behind the one in hand could be picked")
+	# picked clean: nothing left, a crate's wait on the tile; a full set later, fresh
+	m["crate_i"] = m["crates"].size()
+	sim.extract_now()
+	sim.words[3] = []
+	_check(sim.site_state(3).begins_with("Picked clean"), "a picked-clean site doesn't say so: '%s'" % sim.site_state(3))
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	sim._clear(sim.mission, sim.mission["t"])
+	_check(sim.crates_done(sim.mission) and sim.mission.get("crates_none", false), "a picked-clean site rolled crates straight away")
+	sim.mission["ghost_pending"] = true           # a Ghost there: nothing opened is no clear (the review)
+	var cleared0: bool = sim.mission["cleared"]
+	sim.mission["cleared"] = false
+	sim.worn[3] = -5.0
+	sim.extract_now()
+	_check(is_equal_approx(float(sim.worn[3]), -5.0), "a Ghost took a clear off a site already picked clean")
+	_check(cleared0, "the fixture: the run wasn't cleared")
+	sim.elapsed += sim.crate_trickle_s() * (n_all + 2)
+	_check(sim.site_state(3) == Words.SKY["fresh"], "the site didn't come back fresh: '%s'" % sim.site_state(3))
+	sim.site_crates = {}
 	# night by the clock
 	sim.elapsed = 3600.0 * 14.0           # 23:00
 	_check(sim.is_night() and sim.clock_words() == "23:00", "23:00 is not night: %s" % sim.clock_words())
@@ -5241,7 +5265,7 @@ func _places_checks(main) -> void:
 	# the Runs card: the sky's row and the clock line, the site's state; everything fits
 	sim.weather[1] = "Rain"
 	sim.elapsed = 3600.0 * 14.0
-	sim.worn[3] = sim.elapsed - 600.0
+	sim.site_crates = {"3": {"left": [{"key": "safe", "name": "Safe", "searches": 3, "done": 1, "finds": [], "locked": false}, {"key": "cardboard", "name": "Cardboard box", "searches": 1, "done": 0, "finds": [], "locked": false}], "at": sim.elapsed, "full": 6}}
 	main.show_room(main.MISSIONS)
 	main._missions._shown = ""
 	main.refresh()
@@ -5251,13 +5275,13 @@ func _places_checks(main) -> void:
 		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
 	_check(c["intel_head"].text.begins_with("CONDITIONS · 23:00, night") and not c["intel_head"].text.contains("rain"), "the card's clock line is off: %s" % c["intel_head"].text)
-	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
+	_check(c["tiles"][5]["key"].text == "The site" and (c["tiles"][5]["value"].text.begins_with("Safe") or c["tiles"][5]["value"].text.contains("left")), "the card does not say what's left at the site: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
-	var d: Dictionary = sim.to_dict()
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
-	_check(sim.weather[1] == "Rain" and sim.wear(3) > 0.9, "the sky and the wear did not save")
+	_check(sim.weather[1] == "Rain" and sim.site_stock(3).size() == 3 and Array(sim.site_stock(3)[0]).size() == 2, "the sky and the crates left did not save: %s" % str(sim.site_stock(3)))
 	sim.load_dict(saved)
-	print("the places changing ok: picked over and back, the clock's night, rain and fog by zone, never on the radio, the card")
+	print("the places changing ok: the crates kept and back, the clock's night, rain and fog by zone, never on the radio, the card")
 
 
 ## Faces for the people who matter: a line when a head is armed, his face on
@@ -10872,6 +10896,7 @@ func _search_layout(main, where: String) -> void:
 ## the rig under them and the pick panel beside, show it all and fit; the save keeps the crates.
 func _crates_checks(main) -> void:
 	var sim = main.sim
+	sim.site_crates = {}                      # fresh sites: the queue checks read a full roll (27 Oct)
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
@@ -11109,6 +11134,7 @@ func _crates_checks(main) -> void:
 	# the dog's nose (the Kennel's top rank): each crate's best find rolled at the clear, shown, and the crate's first
 	_yard_set(sim, "kennel", 4, "a")
 	_check(sim.dog_sniffs(), "the Kennel's top rank does not nose the crates")
+	sim.site_crates = {}                      # a fresh site's crates (27 Oct: the ones kept from the runs above aren't all nosed)
 	sim.deploy(3)
 	m = sim.mission
 	m["remaining"] = 0
@@ -11127,8 +11153,22 @@ func _crates_checks(main) -> void:
 			break
 	_check(sim.on_mission() and nosed_q["finds"].size() > 0 and int(nosed_q["finds"][0]["id"]) == held_id, "the nosed find was not the crate's first")
 	main.refresh()
-	_check(run._crates._aside.text == "the dog's nose on them", "the panel does not say the dog's on them: '%s'" % run._crates._aside.text)
+	_check(run._crates._aside.text.begins_with("the dog's nose on them"), "the panel does not say the dog's on them: '%s'" % run._crates._aside.text)
 	_check_fit(main, "Run (the dog's nose)")
+	# a crate tile clicked opens next (27 Oct): after the one in hand, once it's done
+	var tk := -1
+	for k in range(run._crates._tiles.size()):
+		if tk < 0 and run._crates.tile_index(k) > int(m["crate_i"]) + 1:
+			tk = k
+	if tk >= 0:
+		var j: int = run._crates.tile_index(tk)
+		var picked_q: Dictionary = m["crates"][j]
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		run._crates._tile_input(click, tk)
+		var at: int = m["crates"].find(picked_q)
+		_check(at == int(m["crate_i"]) + (1 if int(sim.crate_now(m)["done"]) > 0 else 0), "the clicked crate isn't next: at %d, in hand %d" % [at, int(m["crate_i"])])
 	sim.extract_now()
 	_yard_set(sim, "kennel", 4, "")
 	# locked crates (13 Oct): over and above the site's searches; passed over without the Caretaker's Keys, opened with
@@ -13639,7 +13679,7 @@ func _map_nodes_checks(main) -> void:
 	_check("Night" in e1["intel"] and float(e1["rarity"]) - float(e0["rarity"]) >= 0.5 * 1.5 - 0.001, "After dark did not make the run a night run with the dark's half again: %.2f" % (float(e1["rarity"]) - float(e0["rarity"])))
 	var ep1: int = sim.atlas_rank("easy_pickings")     # the Map's web (22 Oct): the way to After dark ranks Easy pickings on the rich way
 	take.call(["second_look", "second_look", "open_ground", "short_cuts", "short_cuts", "worn_in", "worn_in"])     # the quiet way in its order: a shortcut through the keystone would rank it
-	_check(is_equal_approx(sim.recover_s(), Data.RECOVER_H * 3600.0 / 2.0), "Worn in did not halve the recovery: %.0f" % sim.recover_s())
+	_check(is_equal_approx(sim.crate_trickle_s(), Data.CRATE_TRICKLE_S / 2.0), "Worn in did not halve the crates' trickle: %.0f" % sim.crate_trickle_s())
 	take.call(["easy_pickings", "easy_pickings", "local_knowledge", "every_penny", "every_penny"])
 	var e2: Dictionary = sim.effective(3)
 	_check(is_equal_approx(float(e2["drop"]) / float(e1["drop"]), (1.0 + 0.1 * 2.0) / (1.0 + 0.1 * ep1)), "Easy pickings is off: %.2f" % (float(e2["drop"]) / float(e1["drop"])))
@@ -15301,7 +15341,8 @@ func _chronicle_checks() -> void:
 	var page2: String = PlaytestRead.summarize(s.to_dict(), with_odds, "smoke")
 	with_odds.append({"k": "run", "site": "The Bank", "tier": 8, "depth": 1, "outcome": "Back", "time": 60.0, "kills": 4, "of": 4, "cash": 10, "xp": 5, "p": 300.0, "t": 300.0, "lv": 9, "cls": "Drifter",
 		"dealt": 1000, "ticked": 250, "ticked_by": {"fire": 250}, "split_total": 40.0, "split_dot": 10.0, "dot_gear": 0.0, "dot_tree": 20.0, "signal": false, "gear": 10, "gear_wearable": 3, "gear_at_mine": 2})
-	var page_dots: String = PlaytestRead.summarize(s.to_dict(), with_odds, "smoke")
+	var dots_only: Array = s.chronicle.filter(func(e): return str(e.get("k", "")) != "run") + [with_odds.back()]     # the one run read alone (27 Oct: the camp's own runs find gear now the wear's gone)
+	var page_dots: String = PlaytestRead.summarize(s.to_dict(), dots_only, "smoke")
 	_check(page_dots.contains("## The dots and the drops") and page_dots.contains("| 1 | 0%, 20% | 1000 | 25% (250) | 25% |") and page_dots.contains("30% (3) | 20% (2) |"), "the playtest read doesn't read the dots and the drops: %s" % page_dots.substr(page_dots.find("## The dots"), 600))
 	_check(page2.contains("## The odds set off at") and page2.contains("| Safe (90-100%) | 1 | 0 |") and page2.contains("| A coin toss (40-60%) | 1 | 1 |") and page2.contains("the lowest taken: 50%"), "the playtest read doesn't band the odds set off at: %s" % page2.substr(page2.find("## The odds"), 500))
 	# and the sim writes them: a run read at the gate carries its odds, the site's fire and HP, the regen

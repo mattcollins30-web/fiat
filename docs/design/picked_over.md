@@ -10,11 +10,15 @@ the campaign asks for a grind. Parked for after the playtest; the canvas's "Pick
 - The Map's site card lists what's left there ("Left here last run: Safe, Military crate, Toolbox, 2 boxes"), the
   searches left, and what the dog smelled.
 - On the run, a click on a crate tile makes it the next: the current one finishes first; unpicked, the queue's order.
-- Every crate open: picked clean. 20 minutes of play later the site restocks with a fresh roll.
+- The stock comes back as a trickle (Matt's call over "20 min after picked clean", 27 Oct: a grind always has
+  something to open): a fresh crate every CRATE_TRICKLE_S (3 min) of play, up to the site's full set; the Atlas's
+  Worn in speeds it. Built 27 Oct; the Map's "The site" tile reads Fresh, "Safe +3" / "4 crates left", or "Picked
+  clean · a crate in N min". A Ghost on a site already picked clean has nothing to open and no clear.
 - The wear goes: kill drops and cash on a cleared site stay whole (was drops -50%, cash -30%, back over RECOVER_H 2 h).
   With it go the old depth leftovers it still reads (worn_depth; `depth` is pinned at 1 in the campaign).
   The Atlas's "Picked over" rank (a site's own things more of its finds) is renamed so the term means one thing.
-- Balance: more drops through the campaign - wants the post-playtest pass.
+- Balance: more kill drops through the campaign; fewer searches for a bot that grinds one site (it doesn't rotate when
+  a site reads picked clean) - the next pass's search and scrap gates aren't comparable with the last.
 
 ## The Workshop to the Carpet Man
 

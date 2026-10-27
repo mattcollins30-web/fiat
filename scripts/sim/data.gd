@@ -1169,7 +1169,7 @@ const FX := {
 	"atlas/their_own_kit": 0.1,     # Their own kit: A kill drops something 10% more often a rank
 	"atlas/tip_offs": 0.05,     # Tip-offs: Rarer finds: +5% loot quality a rank
 	"atlas/wages": 0.1,     # Wages: XP +10% a rank
-	"atlas/worn_in": 0.5,     # Worn in: A picked-over site comes back half again as fast a rank
+	"atlas/worn_in": 0.5,     # Worn in: A picked-over site's crates come back half again as fast a rank
 	# the second pass: figures in a statement under an effect, and a ternary with more to its condition
 	"joint/doorman_bleed": 0.8,     # Every shell and swing opens a bleed; bleeding gangs do 20% less to you
 	"joint/doorman_physical": 0.75,     # Every shell and swing staggers: the gangs on you fire 25% slower
@@ -2513,7 +2513,7 @@ const MATE_NOTES := 400            # a unique from the mate, times the tier
 ## `figures` the panel's and the strip's figure at each rank (rank 0 first).
 const ATLAS := [
 	# the sites
-	{"key": "picked_over", "column": 0, "name": "Picked over", "max": 3, "words": "A site's own things make up more of its finds: 50%, then 67%, then 83% (33% without)",
+	{"key": "picked_over", "column": 0, "name": "Local stock", "max": 3, "words": "A site's own things make up more of its finds: 50%, then 67%, then 83% (33% without)",
 		"sum": "Own finds", "figures": ["33% of finds", "50% of finds", "67% of finds", "83% of finds"], "sentence": "A site's own things turn up more of the time."},
 	{"key": "deeper_pockets", "column": 0, "name": "Deeper pockets", "max": 3, "words": "Searches 10% quicker a rank",
 		"sum": "Searches", "figures": ["as they come", "10% quicker", "20% quicker", "30% quicker"], "sentence": "The picking-over goes quicker, on every site."},
@@ -2523,8 +2523,8 @@ const ATLAS := [
 		"sum": "Night", "figures": ["by the clock", "every site, rarer"], "sentence": "Every run counts as night, and night's loot quality bonus is 50% bigger (+75%). Night's pace −20% still applies."},
 	{"key": "second_look", "column": 0, "name": "Second look", "max": 2, "words": "+1 find every other search; every search at rank 2",
 		"sum": "Searches find", "figures": ["as they come", "+1 every other", "+1 every search"], "sentence": "The picking-over finds more: another every other search, then every search."},
-	{"key": "worn_in", "column": 0, "name": "Worn in", "max": 2, "words": "A picked-over site recovers 50% quicker a rank",
-		"sum": "Sites recover", "figures": ["in two hours", "in 80 minutes", "in an hour"], "sentence": "A picked-over site is fresh again sooner."},
+	{"key": "worn_in", "column": 0, "name": "Worn in", "max": 2, "words": "A picked-over site's crates come back 50% quicker a rank",
+		"sum": "Crates back", "figures": ["one in 3 min", "one in 2 min", "one in 90 s"], "sentence": "A picked-over site's crates come back sooner."},     # the trickle (27 Oct): was the wear's two hours
 	{"key": "easy_pickings", "column": 0, "name": "Easy pickings", "max": 2, "words": "Drops +10% a rank",
 		"sum": "Drops", "figures": ["as they come", "+10%", "+20%"], "sentence": "More of what they carry comes off them, on every site."},
 	{"key": "local_knowledge", "column": 0, "name": "Local knowledge", "max": 1, "notable": true, "words": "Finds roll one loot tier higher",
@@ -3163,13 +3163,12 @@ const INFLATION_CAP := 12.0
 const RECYCLE_RUNS := 3
 const RECYCLE_ODDS := 0.3
 const RECYCLE_KEEP := 12
-## The places changing. A cleared site is picked over for a while: its drops
-## and cash thin and come back over RECOVER_H yard hours. The clock: the Yard
+## The places changing. A cleared site is picked over in its crates (CRATE_TRICKLE_S below). The clock: the Yard
 ## opens at CLOCK_START; from NIGHT_FROM to NIGHT_TO every site is Night. The
 ## weather by zone, re-rolled every WEATHER_H: the odds of rain, then fog.
-const RECOVER_H := 2.0
-const WORN_DROP := 0.5             # drops lose this much at fully picked over
-const WORN_CASH := 0.3
+## A campaign site's crates kept between runs (27 Oct, Matt; docs/design/picked_over.md): what wasn't opened waits, and
+## a fresh crate comes back every CRATE_TRICKLE_S of play up to the site's full set. The wear on drops and cash is gone.
+const CRATE_TRICKLE_S := 180.0
 ## The crates (13 Oct, Matt; docs/design/search_crates.md): a cleared site's search is its crates, opened in the
 ## dice's order, each so many searches; all open, it's picked over. The crates' searches add up to THIN_AFTER +
 ## THIN_PER_DEPTH a depth (quantity pushes it), what the thinning gave in full before.
