@@ -1233,7 +1233,7 @@ const SETS := [
 	{"name": "The Fire Crew's", "depth": 9, "words": "Breathing kit and a tunic from the station that answered the last call.",
 		"pieces": [
 			{"name": "Station tunic", "slot": "Armour", "base": "Fireman's tunic", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 20}]},
-			{"name": "Station helmet", "slot": "Helmet", "base": "Station helmet, visored", "affixes": [{"stat": "armour", "value": 12}, {"stat": "fire_res", "value": 15}]},
+			{"name": "Station helmet", "slot": "Helmet", "base": "Station helmet, visored", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 15}, {"stat": "fire_res", "value": 15}]},     # HP as a helmet set piece carries it (Matt, 27 Oct)
 			{"name": "Breathing set", "slot": "Rig", "base": "Medic's harness", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "poison_res", "value": 25}]},
 		],
 		"bonuses": {2: {"stats": {"fire_res": 40}, "words": "Fire resist +40%"},
@@ -1257,9 +1257,9 @@ const SETS := [
 			3: {"rule": "ambulance", "words": "The first med on a run isn't used up; meds heal double"}}},
 	{"name": "The Bank's", "depth": 10, "words": "Staff, they called themselves. The blazers say so.",
 		"pieces": [
-			{"name": "Branch blazer", "slot": "Armour", "base": "Ballistic vest", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_pct", "value": 15}]},
+			{"name": "Branch blazer", "slot": "Armour", "base": "Ballistic vest", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 25}, {"stat": "cash_pct", "value": 15}]},     # HP as the body's pieces carry it (Matt, 27 Oct: live_load came in at 750 HP)
 			{"name": "Cashier's pen", "slot": "Charm", "base": "Bank's own pen", "affixes": [{"stat": "cash_pct", "value": 20}, {"stat": "rarity_pct", "value": 8}]},
-			{"name": "Branch holdall", "slot": "Backpack", "base": "Hiking pack", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "cash_per_cell", "value": 4}]},
+			{"name": "Branch holdall", "slot": "Backpack", "base": "Hiking pack", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "hp", "value": 10}, {"stat": "cash_per_cell", "value": 4}]},
 		],
 		"bonuses": {2: {"stats": {"cash_pct": 30}, "words": "Tins +30%"},
 			3: {"stats": {"sell_pct": 25}, "rule": "bank", "words": "Tins from kills doubled; the Fence pays 25% more"}}},
@@ -3348,7 +3348,7 @@ const COUNTY := [
 	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 80},
 	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 82},
 	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 85,
-		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 4.5},
+		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 3.6},     # fire 4.5 to 3.6 (Matt, 27 Oct, the gauntlet: the County's one wall)
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:
 const BAILIFF_CUT := {"Primary": 0.4, "Secondary": 0.15}   # the Bailiff seizes your best piece: a gun's share of your fire lost while he holds it
@@ -3401,6 +3401,7 @@ const PINNACLES := [
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
+const ORDER_AGAIN_SOFT := 0.8     # an order's head on its ladder: HP and fire this much (Matt, 27 Oct)
 const ORDER_AGAIN_STEP := 2     # an order won before: its "again" level, then this a win past the second (Matt, 27 Oct: a set ladder over the Treasury)
 ## Patterns (24 Oct, the endgame chase, phase 4): a unique's rule moved onto a rare or better of its slot.
 const PATTERN_RARITY := 2          # rare or better takes one

@@ -5954,7 +5954,10 @@ func order_sig(k: String) -> Dictionary:
 ## The head a true pinnacle fields, formed on the fight's figures as a crew's head is.
 func order_head(k: String, e: Dictionary) -> Dictionary:
 	var p: Dictionary = Data.pinnacle(k)
-	var b := boss_form({"name": p["who"], "hp": p["hp"], "dps": p["dps"], "zone": p["zone"]}, e, false)
+	# an order won before, on its ladder: its head softer (Matt, 27 Oct, the gauntlet: the repeats' fire was the wall);
+	# the first win as tuned, so the Issue's timing holds
+	var soft: float = Data.ORDER_AGAIN_SOFT if not is_county(k) and int(order_beaten.get(k, 0)) > 0 else 1.0
+	var b := boss_form({"name": p["who"], "hp": float(p["hp"]) * soft, "dps": float(p["dps"]) * soft, "zone": p["zone"]}, e, false)
 	b["order"] = k
 	b["mech"] = str(p.get("mech", k))     # the fight he brings: the order's own by key, a County head's by his (25 Oct)
 	return b

@@ -27,6 +27,7 @@ var _tails: Array[Label] = []
 var _shown := 0
 var _rows_used := 1
 var _n := MAX                      # chips this row can hold (the Caravan's sum wants eight)
+var asked := 0                     # chips the last show_chips was given (up to _n): the tests' "none dropped"
 
 
 func _init(w: float, n := MAX) -> void:
@@ -71,6 +72,7 @@ func show_chips(items: Array, rows := 1, shorten := false) -> void:
 
 
 func _place(items: Array, rows: int, shortest: bool) -> void:
+	asked = mini(items.size(), _n)
 	var x := 0.0
 	var row := 0
 	_shown = 0

@@ -3605,6 +3605,22 @@ func _melee_checks(main) -> void:
 	_check(chip_words.has("Gun part") and chip_words.has("Handguard") and chip_words.has("Uncommon") and chip_words.has("Rifles only") and not chip_words.has("1 cell"), "the part's chips are %s" % str(chip_words))
 	_check_fit(main, "Armoury (a bipod)")
 	sim.stash.erase(bipod)
+	# the set pieces with three affixes (27 Oct: HP on the Bank's and the Fire Crew's): every one a chip in the head
+	for sn in ["The Bank's", "The Fire Crew's"]:
+		for pc in Items.set_named(sn)["pieces"]:
+			if pc["affixes"].size() < 3:
+				continue
+			var sp: Dictionary = Items.roll_set_piece(sn, pc, sim.rng, 60)
+			while not sim.stash_room(6) and not sim.stash.is_empty():
+				sim.sell(sim.stash[0])
+			sim.stash.append(sp)
+			main.refresh()
+			main._armoury._pick_cell(main._armoury._inv.cell_of(sp["id"]))
+			main.refresh()
+			var ac = main._armoury._head._affixes
+			_check(ac.asked >= 3 and ac.shown() == ac.asked, "%s shows %d of its %d chips" % [pc["name"], ac.shown(), ac.asked])     # its 3 affixes and the rest: none dropped
+			sim.stash.erase(sp)
+	main.refresh()
 	# a gun with parts and a socketable on: the head's tail names them, the fitted gun's right column lists them
 	var kitted: Dictionary = sim._plain("Primary", "Workshop SMG")
 	kitted["attachments"]["optic"] = sim._plain(Data.ATTACHMENT, "Red dot")
@@ -16952,6 +16968,13 @@ func _rebuild_checks(main) -> void:
 		var last_county: int = Data.COUNTY.map(func(c): return int(c["level"])).max()
 		_check(["grid", "archive", "mint"].all(func(k): return int(Data.pinnacle(k)["again"]) > last_county), "an order's ladder starts under the County's top (%d)" % last_county)
 		s.order_beaten["grid"] = 1
+		# on its ladder the head is softer, the first win as tuned (Matt, 27 Oct)
+		var e_g: Dictionary = s.effective(int(Data.pinnacle("grid")["site"]))
+		var h_again: Dictionary = s.order_head("grid", e_g)
+		s.order_beaten["grid"] = 0
+		var h_first: Dictionary = s.order_head("grid", e_g)
+		s.order_beaten["grid"] = 1
+		_check(is_equal_approx(float(h_again["hp"]) / float(h_first["hp"]), Data.ORDER_AGAIN_SOFT) and is_equal_approx(float(h_again["dps"]) / float(h_first["dps"]), Data.ORDER_AGAIN_SOFT), "the Grid's head on its ladder isn't x%.1f: HP %.0f against %.0f" % [Data.ORDER_AGAIN_SOFT, float(h_again["hp"]), float(h_first["hp"])])
 		s.reach = 20
 		_check(s.best_dig.is_empty() or str(s.best_dig.get("site", "")) != "The Grid", "the Grid's win set the best signal: %s" % str(s.best_dig))
 	# the order's odds read leaves the host site's own read where it was (the review)
