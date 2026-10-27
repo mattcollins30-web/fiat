@@ -4695,6 +4695,7 @@ func _pinnacle_checks(main) -> void:
 	_issue_checks(main)
 	_county_checks(main)
 	_picked_clean_checks(main)
+	_esc_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -20541,4 +20542,59 @@ func _picked_clean_checks(main) -> void:
 	sim.load_dict(hold)
 	main.refresh()
 	print("picked clean ok: home on its own when nothing comes before time's up, out when a gang will")
+
+
+## Esc shuts the overlay on top before it pauses (the first review's 18): the collection, the rules, the Radio's book,
+## a build code's plan; with nothing open it pauses.
+func _esc_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	var press_esc := func():
+		main._overlay_closed = -1
+		main._unhandled_input(esc)
+	main.show_room(main.RUNNER)
+	main.refresh()
+	main._stats.show_collection()
+	press_esc.call()
+	_check(main._stats.collection_panel == null and not main._menu.visible, "Esc over the collection: still open %s, the pause up %s" % [main._stats.collection_panel != null, main._menu.visible])
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury.open_rules()
+	press_esc.call()
+	_check(not main._armoury.rules_panel.visible and not main._menu.visible, "Esc over the loot rules: still open %s, the pause up %s" % [main._armoury.rules_panel.visible, main._menu.visible])
+	main.show_room(main.COMMS)
+	main.refresh()
+	main._radio.open_book("filter")
+	if main._radio.book_kind != "":
+		press_esc.call()
+		_check(main._radio.book_kind == "" and not main._menu.visible, "Esc over the Radio's book: '%s', the pause up %s" % [main._radio.book_kind, main._menu.visible])
+	if main._menu.visible:
+		main._menu.close()
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	main._barracks.pending_build = {"plan": true}
+	press_esc.call()
+	_check(main._barracks.pending_build.is_empty() and not main._menu.visible, "Esc over a build code's plan didn't cancel it, or paused")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	main._missions._skill_pick.open(sim)
+	main._missions._skill_pick.visible = true
+	press_esc.call()
+	_check(not main._missions._skill_pick.visible and not main._menu.visible, "Esc over the skill picker: still open %s, the pause up %s" % [main._missions._skill_pick.visible, main._menu.visible])
+	main._missions._came_open = true
+	main._missions._came.visible = true
+	press_esc.call()
+	_check(not main._missions._came_open and not main._menu.visible, "Esc over the came-back card didn't shut it, or paused")
+	# nothing open: Esc pauses, and Esc again closes the pause
+	press_esc.call()
+	_check(main._menu.visible, "Esc with nothing open didn't pause")
+	press_esc.call()
+	_check(not main._menu.visible, "Esc didn't close the pause")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("Esc ok: the collection, the rules, the book and a code's plan shut first; then the pause")
 

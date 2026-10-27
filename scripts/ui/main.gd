@@ -575,13 +575,54 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			if _menu.visible:
 				_menu.back()
+			elif close_top_overlay():
+				pass                               # Esc shuts what's open first (the first review's 18)
 			elif sim != null:
 				show_pause()
-			get_viewport().set_input_as_handled()
+			if is_inside_tree():
+				get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_F8 and sim != null:
 			speed = 1.0 if speed > 1.0 else 10.0
 			_speed_label.visible = speed > 1.0
 			get_viewport().set_input_as_handled()
+
+
+## Esc's first job (the first review's 18): shut the overlay on top, if one's open. True when it shut one; then no pause.
+func close_top_overlay() -> bool:
+	if _room_card != null and is_instance_valid(_room_card):
+		return false                             # a room card handles its own Esc
+	if _stats != null and _stats.visible:
+		if _stats.fight_panel != null and is_instance_valid(_stats.fight_panel):
+			_stats.hide_fight()
+			return true
+		if _stats.collection_panel != null and is_instance_valid(_stats.collection_panel):
+			_stats.hide_collection()
+			return true
+	if _armoury != null and _armoury.visible and _armoury.rules_panel != null and _armoury.rules_panel.visible:
+		_armoury.close_rules()
+		return true
+	if _missions != null and _missions.visible:
+		if _missions._guide.visible:
+			_missions._guide.visible = false
+			_missions._guide.closed.emit()
+			return true
+		if _missions._skill_pick.visible:
+			_missions._skill_pick._done.pressed.emit()     # through Done's own path: the refresh and the save follow
+			return true
+		if _missions.county_on and _missions._county._shut.visible:
+			_missions._county.hide_shut()
+			return true
+		if _missions._came_open and _missions._came.visible:     # the card as shown, not just flagged (the County board, a pick hide it)
+			_missions._came_open = false
+			_missions._show_came_back()
+			return true
+	if _radio != null and _radio.visible and str(_radio.book_kind) != "":
+		_radio.close_book()
+		return true
+	if _barracks != null and _barracks.visible and not _barracks.pending_build.is_empty():
+		_barracks.cancel_build()
+		return true
+	return false
 
 
 func _notification(what: int) -> void:
