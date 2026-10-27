@@ -1496,8 +1496,9 @@ func _narrative_checks(main) -> void:
 		still = still or Items.is_deeds(it)
 	_check(still, "Ditch commons burned the deeds")
 	sim.ditch(deeds["id"])
-	_check(sim.deeds_fate == "burned", "burning the deeds did not end: %s" % sim.deeds_fate)
+	_check(sim.floor_items().has(deeds) and sim.deeds_fate == "", "ditched, the deeds weren't put down on the floor: fate %s" % sim.deeds_fate)
 	sim.extract_now()
+	_check(sim.deeds_fate == "burned", "the deeds left on the floor did not end: %s" % sim.deeds_fate)     # ditched and left (27 Oct)
 	# held: the same again, out with them
 	sim.deeds_found = false
 	sim.deeds_fate = ""
@@ -7517,6 +7518,84 @@ func _pack_grid_checks(sim) -> void:
 	sim.load_dict(saved)
 
 
+## The floor all run (27 Oct, Matt; the canvas's "The floor, all run"): its row at one height from deploy to the door, the
+## rig over it in a fight and under it in the search, the take under it; a selected piece turned by R or right-click
+## where it lies, refused when it won't; Salvage half again at the Workshop.
+func _floor_all_run_checks(main) -> void:
+	var sim = main.sim
+	var run = main._run
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var by_hand_was: bool = sim.loot_by_hand
+	# the geometry: the fight's rig over the floor, the take under it; the search's rig under it, over the buttons
+	var floor_y: float = run.CRATES_Y + CratesPanel.FINDS_HEAD_Y
+	_check(run.RIG_Y + run.RIG_ROOM + 4 <= floor_y and run.CRATES_Y + CratesPanel.HEIGHT + 4 <= run.TAKE_Y and run.RIG_SEARCH_Y + Pal.CELL <= run.BUTTON_Y,
+		"the floor's row overlaps the rig or the take: rig %d-%d, floor %d-%d, take %d" % [run.RIG_Y, run.RIG_Y + run.RIG_ROOM, floor_y, run.CRATES_Y + CratesPanel.HEIGHT, run.TAKE_Y])
+	sim.loot_by_hand = true
+	sim.equipped["Backpack"] = sim._plain("Backpack", "Plastic bag")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["found"] = []
+	main.show_room(main.MISSIONS)
+	var hat: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
+	m["floor"] = [hat]
+	main.refresh()
+	_check(not m["cleared"] and run._crates.visible and not run._crates._head.visible and not run._crates._tiles[0]["panel"].visible and run._crates._floor_ids.has(int(hat["id"])) and run._crates._finds_head.text.begins_with("ON THE FLOOR"),
+		"the floor isn't on screen in the fight, or the crates' row is: '%s'" % run._crates._finds_head.text)
+	_check(is_equal_approx(run._crates.position.y, run.CRATES_Y) and is_equal_approx(run._rig_y, run.RIG_Y), "the fight's floor or rig isn't where it sits: floor %.0f, rig %.0f" % [run._crates.position.y, run._rig_y])
+	_check_fit(main, "Run (the floor in the fight)")
+	# turned where it lies: a 2x1 at the top left, R picks it up a column; blocked below, refused
+	var pistol: Dictionary = sim._plain("Secondary", Data.BASES["Secondary"][0]["name"])
+	if Items.footprint(pistol) == Vector2i(2, 1):
+		sim._place_find(m, pistol)
+		_check(pistol.get("pos", []) == [0, 0] and not pistol.get("rot", true), "the fixture: the 2x1 isn't flat at the top left: %s" % str(pistol.get("pos")))
+		main.refresh()
+		run._inv.selected = int(pistol["id"])
+		var ev := InputEventKey.new()
+		ev.keycode = KEY_R
+		ev.pressed = true
+		run._inv._unhandled_key_input(ev)
+		_check(pistol.get("rot", false) and pistol["pos"] == [0, 0], "R didn't turn the selected piece where it lies: %s %s" % [str(pistol.get("pos")), str(pistol.get("rot"))])
+		run._inv._unhandled_key_input(ev)
+		_check(not pistol.get("rot", true), "R didn't turn it back")
+		var med: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+		sim._place_find(m, med)                  # the next cell along: [2, 0]; then one under the pistol's first cell
+		var med2: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+		_check(sim.pack_move(int(med["id"]), 0, 1, false), "the fixture: a med won't go under the pistol")
+		_check(not sim.pack_turn(int(pistol["id"])) and not pistol.get("rot", true), "a piece turned onto another's cell")
+		# the right button: picks and turns (the cell's own input)
+		sim.pack_move(int(med["id"]), 4, 2, false)
+		main.refresh()
+		run._inv.selected = -1
+		var k: int = run._inv.cell_of(int(pistol["id"]))
+		var rc := InputEventMouseButton.new()
+		rc.button_index = MOUSE_BUTTON_RIGHT
+		rc.pressed = true
+		if k >= 0:
+			run._inv._cell_input(rc, k)
+		_check(run._inv.selected == int(pistol["id"]) and pistol.get("rot", false), "a right-click didn't pick the piece and turn it")
+		m["found"].erase(med2)
+	# Salvage: half again at the Workshop, nothing from a ditch
+	sim.extract_now()
+	var sal: String = Data.node_id_named("Stripping/Salvage")
+	_set_cls(sim, "Scrapper")
+	if not sim.tree.has(sal):
+		sim.tree.append(sal)
+	sim._rules_key = []
+	var junk: Dictionary = sim._plain("Armour", "Riot suit")
+	sim.stash.append(junk)
+	var before: int = sim.scrap
+	if sim.has_node("salvage") and sim.room_open("workshop"):
+		_check(sim.scrap_item(int(junk["id"])) and sim.scrap == before + int(ceil(sim.scrap_of(junk) * Data.FX["node/salvage"])), "Salvage didn't pay half again at the Workshop: %d from %d" % [sim.scrap, before])
+	else:
+		_check(false, "the fixture: Salvage not on (%s) or the Workshop shut" % str(sim.has_node("salvage")))
+	sim.loot_by_hand = by_hand_was
+	sim.load_dict(saved)
+	main.refresh()
+
+
 ## The body: a stash item dropped on its own slot's box is taken and equipped;
 ## on every other box it is refused; dragged off, the stash takes it back and
 ## the slot is empty. Every slot pair, with a plain item of each slot.
@@ -8065,6 +8144,7 @@ func _loot_roll_checks(main) -> void:
 	_vans_checks(main.sim)
 	_full_pack_checks(main.sim)
 	_pack_grid_checks(main.sim)
+	_floor_all_run_checks(main)
 	_loot_table_checks(main.sim)
 	_harder_gang_checks(main.sim)
 	_over_level_checks(main.sim)
@@ -8335,9 +8415,9 @@ func _build_checks(main) -> void:
 	var vest: Dictionary = sim._plain("Armour", "Riot suit")
 	m["found"].append(vest)
 	sim.ditch(vest["id"])
-	_check(int(m.get("scrap", 0)) == run_scrap + sim.scrap_of(vest) and sim.scrap_of(vest) == int(vest["value"] / Data.SCRAP_PER_POUND), "the ditch did not pay its scrap: %d" % int(m.get("scrap", 0)))
+	_check(int(m.get("scrap", 0)) == run_scrap and sim.floor_items().has(vest) and vest.get("ditched", false), "a ditch paid scrap or didn't put it down (27 Oct: scrapping's the Workshop's alone): %d" % int(m.get("scrap", 0)))
 	sim.extract_now()
-	_check(sim.scrap == run_scrap + sim.scrap_of(vest), "the run's scrap did not come home: %d" % sim.scrap)
+	_check(sim.scrap == run_scrap, "the run's scrap did not come home: %d" % sim.scrap)
 	var junk: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
 	sim.stash.append(junk)
 	var before_scrap: int = sim.scrap
@@ -10807,7 +10887,7 @@ func _crates_checks(main) -> void:
 		_check(run._pick.visible and run._crates.visible, "a pick hid the crates or the pick panel")
 		run._inv.selected = -1
 	# the floor (13 Oct, Matt): by hand, a search's finds wait on the floor; taken into the pack only if they fit; a
-	# thing ditched is gone, its scrap paid (21 Oct, Matt: no taking it back); the row shows them; a click compares, Take
+	# thing ditched is put down there, no scrap, Fill up leaving it (27 Oct, Matt); the row shows them; a click compares, Take
 	# takes; "Fill up, then go" picks up what fits; what's left is passed over at the door; the bot takes as it goes
 	_check(sim.by_hand(m) and not sim.floor_items().is_empty(), "a search by hand left nothing on the floor")
 	_check(m["found"].all(func(x): return not m["crates"].any(func(q): return q["finds"].any(func(f): return int(f["id"]) == int(x["id"]) and not Items.stacks(x)))), "a search by hand put a find straight in the pack")
@@ -10828,8 +10908,13 @@ func _crates_checks(main) -> void:
 		var back: Dictionary = m["found"].back()
 		var scrap0: int = int(m.get("scrap", 0))
 		if not Items.is_deeds(back) and sim.ditch(int(back["id"])):
-			_check(not sim.floor_items().has(back) and not m["found"].has(back) and int(m.get("scrap", 0)) == scrap0 + sim.scrap_of(back), "a ditched thing wasn't destroyed with its scrap paid: on the floor %s, scrap %d from %d" % [str(sim.floor_items().has(back)), int(m.get("scrap", 0)), scrap0])
-			_check(not sim.take_floor(int(back["id"])) and not m["found"].has(back), "a ditched thing could be taken back")
+			_check(sim.floor_items().has(back) and not m["found"].has(back) and int(m.get("scrap", 0)) == scrap0 and back.get("ditched", false), "a ditched thing wasn't put down on the floor, no scrap: on the floor %s, scrap %d from %d" % [str(sim.floor_items().has(back)), int(m.get("scrap", 0)), scrap0])
+			main.refresh()
+			var dk: int = run._crates._floor_ids.find(int(back["id"]))
+			_check(dk < 0 or run._crates._cells[dk].modulate.a < 1.0, "a ditched thing isn't greyed on the floor")
+			sim.take_all()
+			_check(sim.floor_items().has(back), "Fill up's take-all picked up a thing the player ditched")
+			_check(sim.take_floor(int(back["id"])) and m["found"].has(back) and not back.get("ditched", false), "a ditched thing couldn't be dragged back")
 	# no room: it stays down
 	var hold_cap_pack = sim.equipped["Backpack"]
 	var floor_n: int = sim.floor_items().size()

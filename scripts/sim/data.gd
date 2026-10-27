@@ -1058,6 +1058,7 @@ const FX := {
 	"node/pack_mule": 6,     # Pack horse: The pack carries six cells more
 	"node/physical_more.pace": 0.85,     # Heavy: Physical does 40% more; pace −15%
 	"node/second_wind": 2.0,     # Second wind: Rest on the Pitch twice as fast
+	"node/salvage": 1.5,         # Salvage: scrapping at the Workshop gives half again (27 Oct: was a ditch's)
 	"node/squared_up": 15.0,     # Squared up: Every gang, as they arrive: Guard of 15% of your max HP
 	"node/stand": 2.0,     # Stand and fight: No leaving before the fight is won; the bonus for winning it is doubled
 	"node/trapline.heads": 1,     # Trapline: Every gang arrives one head short, the first included
@@ -1766,7 +1767,7 @@ const TREES_SRC := [
 		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Improvised gun damage +40%"},
 		{"name": "Spare parts", "col": 1, "row": 1, "effect": "att_share", "value": 5},
-		{"name": "Salvage", "col": 2, "row": 1, "effect": "salvage", "notable": true, "words": "+50% scrap from a ditch"},     # moved off its hang for Breakdown (24 Oct, step 4)
+		{"name": "Salvage", "col": 2, "row": 1, "effect": "salvage", "notable": true, "words": "+50% scrap from scrapping at the Workshop"},     # moved off its hang for Breakdown (24 Oct, step 4)
 		{"name": "Nothing wasted", "col": 4, "row": 0, "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
 		{"name": "Workbench", "col": 3, "row": 1, "effect": "workbench", "notable": true, "words": "One Bench job a day is free"},     # moved off its hang for Short circuit (24 Oct, step 4)
 		{"name": "Live wire", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "scrapper_shock", "words": "15% of every hit becomes shock"},
@@ -2450,8 +2451,8 @@ const BUMP_LEVELS := 3
 const BUMP_CAP := 20
 
 ## Crafting (34): one material, scrap, a count in hand. Found on a search
-## (SCRAP_SEARCH of them a handful), made by scrapping an item at the Bench or
-## ditching it on a run (its value over SCRAP_PER_POUND). The Build column:
+## (SCRAP_SEARCH of them a handful), made by scrapping an item at the Bench
+## (its value over SCRAP_PER_POUND; a ditch on a run gave it too, till 27 Oct). The Build column:
 ## a standard box of rounds for scrap; the grades, scrap plus the box below
 ## ("from"); a med, scrap plus the one below; an improvised gun of a type for
 ## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap

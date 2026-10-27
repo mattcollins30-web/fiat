@@ -7045,3 +7045,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   on (carried, drawn past the pack's rows) and goes in when room is made. A bag swapped mid-run must hold what's
   carried, packed afresh. Smoke: _pack_grid_checks and _check_pack_grid. A balance pass to follow (what comes home
   changes).
+- The pack grid's playtest tweaks (27 Oct, Matt): a selected piece turns in place with R or a right-click; the floor's
+  row on screen all run at one height (the rig over it in a fight, under it in the search, one row either way); Ditch
+  puts a piece down on the floor with no scrap and Fill up leaves it; Salvage moved to scrapping at the Workshop.
+  Smoke: _floor_all_run_checks.

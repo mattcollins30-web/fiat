@@ -2508,7 +2508,7 @@ func scrap_item(id: int) -> bool:
 		return false
 	for it in stash:
 		if it["id"] == id:
-			var bits: int = scrap_of(it)
+			var bits: int = int(ceil(scrap_of(it) * (Data.FX["node/salvage"] if has_node("salvage") else 1.0)))     # Salvage: half again (27 Oct: from the ditch to the Workshop)
 			_remove(it)
 			scrap += bits
 			if yard_has("salvage_line") and int(it.get("rarity", 0)) >= 2:
@@ -4053,6 +4053,25 @@ func pack_move(id: int, x: int, y: int, rot: bool) -> bool:
 	return false
 
 
+## The selected piece turned a quarter where it lies (27 Oct, Matt: "when you have an item selected fullstop it can be
+## rotated"): about its top-left cell; false, and it stays as it was, when the turned shape won't lie there.
+func pack_turn(id: int) -> bool:
+	if mission == null:
+		return false
+	_pack_settle(mission)
+	for f in mission["found"]:
+		if int(f["id"]) == id and f.has("pos"):
+			var to: bool = not bool(f.get("rot", false))
+			var fp := Items.footprint(f)
+			if fp.x == fp.y:
+				return true                    # a square turned is itself
+			if not pack_free_at(mission, f, int(f["pos"][0]), int(f["pos"][1]), to):
+				return false
+			f["rot"] = to
+			return true
+	return false
+
+
 ## Out of the pack onto the floor, by hand: room made for something else (the floor's the run's).
 func put_down(id: int) -> bool:
 	if mission == null or not by_hand(mission):
@@ -4076,6 +4095,7 @@ static func pack_off(it: Dictionary) -> void:
 	it.erase("pos")
 	it.erase("rot")
 	it.erase("strapped")
+	it.erase("ditched")                       # nor is it ditched once it's off the floor (the review: a ditched mythic came home marked)
 
 
 ## The run's over: the pack's places are the run's, not the piece's (home, the stash lays it out).
@@ -9611,15 +9631,13 @@ func ditch(id: int) -> bool:
 			var it: Dictionary = mission["found"][k]
 			mission["found"].remove_at(k)
 			mission["ditched"] = int(mission.get("ditched", 0)) + 1
-			if Items.is_deeds(it):
-				deeds_fate = "burned"
-				log_event(Words.DEEDS["burned"])
-			else:
-				var bits: int = int(ceil(scrap_of(it) * (1.5 if has_node("salvage") else 1.0)))     # Salvage (22 Oct): half again
-				mission["scrap"] = int(mission.get("scrap", 0)) + bits     # ditched for scrap (34): what comes home of it
-				log_event("Ditched: %s%s" % [it["base"].to_lower(), (", %d scrap" % bits) if bits > 0 else ""])
-				# gone (21 Oct, Matt's playtest: it lay on the floor to take back, "drop, get scrap and pick up again";
-				# a ditched piece is destroyed once its scrap's paid)
+			# down on the floor, no scrap (27 Oct, Matt: "scrapping should only be available in the workshop now - ditch
+			# should instead just ditch the item on the floor and if you leave it you leave it"); Fill up leaves it there
+			pack_off(it)
+			it["ditched"] = true
+			mission["floor"] = mission.get("floor", [])
+			mission["floor"].append(it)
+			log_event("Ditched: %s" % it["base"].to_lower())
 			return true
 	return false
 
@@ -9689,6 +9707,7 @@ func take_floor(id: int, at: Array = []) -> bool:
 		if spot.is_empty():
 			return joined                      # no place: it stays down (what of a stack could join, did)
 		fl.remove_at(k)
+		it.erase("ditched")                   # taken back: the player's again
 		it["spared"] = true                   # taken off the floor by hand: chosen, so no rule scraps it
 		_pack_put(mission, it, spot)
 		_read(it)
@@ -9699,7 +9718,7 @@ func take_floor(id: int, at: Array = []) -> bool:
 ## Everything on the floor that fits, the dearest first: "Fill up, then go" picks up what was left down.
 func take_all() -> int:
 	var n := 0
-	var fl: Array = floor_items().duplicate()
+	var fl: Array = floor_items().filter(func(x): return not x.get("ditched", false))     # what the player put down stays down
 	fl.sort_custom(func(a, b): return int(a["value"]) > int(b["value"]))
 	for it in fl:
 		if take_floor(int(it["id"])):
@@ -9797,6 +9816,9 @@ func _extract() -> void:
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack's full, and %s counts as cleared" % Words.mid(t["name"]))
 	m["left"] = int(m["left"]) + m.get("floor", []).size()     # what was left on the floor: passed over
+	if m.get("floor", []).any(func(x): return Items.is_deeds(x)) and deeds_fate == "":
+		deeds_fate = "burned"                 # ditched and left: gone, as a ditch burned them before (27 Oct)
+		log_event(Words.DEEDS["burned"])
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= Data.FX["node/cap_the_lot"]                      # The lot: a full pack pays double
@@ -10004,6 +10026,7 @@ func _floor_mythics_in(m: Dictionary) -> void:
 	var fl: Array = m.get("floor", [])
 	for it in fl.filter(func(x): return x.get("mythic", false) or x.get("issued", false)):
 		fl.erase(it)
+		it.erase("ditched")
 		m["found"].append(it)
 
 

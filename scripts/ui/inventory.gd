@@ -25,6 +25,7 @@ extends Control
 signal picked(id: int)
 signal acted
 signal dropped(data: Dictionary)   # {"id", "src"}
+signal turn_asked(id: int)         # pack mode: the selected piece turned where it lies (R or right-click, 27 Oct)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -502,6 +503,15 @@ func set_rows(n: int) -> void:
 ## A press that moves far enough becomes a drag of the cell's item, if this
 ## grid lets its items out. The drop goes to whichever control accepts it.
 func _cell_input(event: InputEvent, k: int) -> void:
+	if pack_mode and not many and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and not _dragging():
+		var rid: int = _cells[k].id
+		if rid >= 0:
+			if selected != rid:
+				_pick(k)                       # a right-click picks the piece and turns it
+			turn_asked.emit(rid)
+			if is_inside_tree():
+				accept_event()
+		return
 	if drag_src == "" or many:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -561,12 +571,26 @@ static func turn_live() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not pack_mode or not is_visible_in_tree() or not get_viewport().gui_is_dragging():
+	if not pack_mode or (is_inside_tree() and not is_visible_in_tree()):     # out of the tree: the smoke's own calls
 		return
-	var turn: bool = (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R) or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT)
-	if turn:
+	var key_r: bool = event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R
+	if _dragging() and (key_r or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT)):
 		turn_live()
 		get_viewport().set_input_as_handled()
+
+
+## R with a piece picked and nothing in hand: after the GUI, so a menu or card over the run takes it first (the review).
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not pack_mode or (is_inside_tree() and not is_visible_in_tree()) or _dragging():
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R and selected >= 0 and not many:
+		turn_asked.emit(selected)              # the piece picked turns where it lies (27 Oct, Matt: "selected fullstop")
+		if is_inside_tree():
+			get_viewport().set_input_as_handled()
+
+
+func _dragging() -> bool:
+	return is_inside_tree() and get_viewport().gui_is_dragging()
 
 
 func _notification(what: int) -> void:

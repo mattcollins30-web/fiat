@@ -3,7 +3,7 @@ extends Control
 ## real grid. Left, three panels - Them (the fight, or the picking-over),
 ## the Runner (HP, a med), and the run itself (the clock, the cash, Get out).
 ## Right, the pack as cells, the same grid as the Lock-up: pick an item for
-## its figures and Ditch it, or Select many and ditch the lot. Under the grid
+## its figures and Ditch it (down on the floor), or Select many and ditch the lot. Under the grid
 ## a panel for the pick, and what a full pack will do with the next find.
 ## Fixed geometry inside the card grid's 1536 x 864.
 
@@ -61,8 +61,6 @@ const RUNNER_BAR_Y := RUNNER_Y + UI.HEAD_H + 2
 const RUNNER_TILES_Y := RUNNER_BAR_Y + BAR_H + 6
 const RUNNER_NOTE_Y := RUNNER_TILES_Y + UI.TILE_H + 2
 const RUNNER_BOX_H := RUNNER_NOTE_Y + LINE_H + BOX_PAD - RUNNER_BOX_Y
-const RIG_HEAD_Y := FIGHT_BOX_Y + 430 + SECTION_GAP              # under the frame and the six (VIEW_ROW_Y + TILE_H; the boxes, without the art, end above it)
-const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
 const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 # the take down by the button, the rig taking the room between (16 Oct, Matt: the rig "too small to see"; the take
 # "less spread"; RunPanel mockup): the take's strip over the button, its head over that, the run's own line at the
@@ -70,7 +68,6 @@ const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 const STRIP_H := 50
 const STRIP_Y := BUTTON_Y - 6 - STRIP_H
 const TAKE_Y := STRIP_Y - 2 - UI.HEAD_H
-const RIG_ROOM := TAKE_Y - SECTION_GAP - RIG_Y                # the rig's height in a fight: two rows of full cells
 const ICON := 36                                              # a tile's painted icon, its figure beside it
 const TILE_ICON := 40                                         # the six's (17 Oct, Matt: stat-tile mockup A): the icon near the tile's height, the figure beside it the hero
 const TILE_KEY := 14                                          # the six's key, small over the figure
@@ -97,6 +94,12 @@ const OVER_W := 300                                           # a bar laid over 
 const CRATES_Y := VIEW_SEARCH_Y - 2
 const RIG_SEARCH_HEAD_Y := CRATES_Y + CratesPanel.HEIGHT + 4
 const RIG_SEARCH_Y := RIG_SEARCH_HEAD_Y + UI.HEAD_H + 2
+# the floor all run (27 Oct, Matt: "where the floor appears during a search should be visible all the time"; the canvas's
+# "The floor, all run"): its row at the same height from deploy to the door; in a fight the rig takes the crates' row
+# above it, in the search the crates do and the rig goes under it - one row of pouches either way
+const RIG_HEAD_Y := CRATES_Y
+const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 2                     # the pouches' row in a fight
+const RIG_ROOM := Pal.CELL                                    # the rig's height: one row (small cells past eight, two rows of half cells past twelve)
 const OVER_Y := FIGHT_BOX_Y + VIEW_H - BAR_H - 10            # the bar at the frame's foot: your HP, or the search
 
 var sim
@@ -232,6 +235,7 @@ func _init() -> void:
 	_inv.pack_mode = true
 	_inv.drag_src = "pack"
 	_inv.dropped.connect(_inv_dropped)
+	_inv.turn_asked.connect(_turn_piece)
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
@@ -494,21 +498,21 @@ func show_state(s) -> void:
 	(_take_strip["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if used_p >= sim.capacity() else Pal.GOOD
 	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
-		(("Pack full: drag one to the floor, or ditch" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ""))
+		(("Pack full: drag one to the floor, or ditch" if sim.by_hand(m) else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ""))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
 	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
 	# them; the pick panel stays the pick's, so a thing on the floor compares against what's worn
 	var crates_on: bool = m.has("crates") and not m.get("crates_off", false) and not way_out
-	_crates.visible = crates_on
+	_crates.visible = true                # the floor's row all run; the crates' row only while they're up
 	_take_head.visible = not crates_on
 	_take_strip["panel"].visible = not crates_on
 	_note.visible = not crates_on
 	_rig_y = RIG_SEARCH_Y if crates_on else RIG_Y
 	_rig_head.position.y = RIG_SEARCH_HEAD_Y if crates_on else RIG_HEAD_Y
 	_show_rig()
+	_crates.show_crates(sim, m, not crates_on)
 	if crates_on:
-		_crates.show_crates(sim, m)
 		_crates.warn("HP low: get out or lose it all" if low else "")     # the note's warning, on the crates' head while the note's folded away (the review)
 	if _view == null:
 		# the boxes without the frame's art: the runner box's foot (its outline, the "On you" chips) would sit under the crates
@@ -1200,16 +1204,6 @@ func _show_rig() -> void:
 	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
 	@warning_ignore("integer_division")
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
-	if is_equal_approx(_rig_y, RIG_Y):
-		# in a fight the rig has the room down to the take (16 Oct, Matt: "too small to see"): full cells, a row or two
-		@warning_ignore("integer_division")
-		var full_row: int = maxi(1, int((INNER + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP)))
-		rows = 1 if cap <= full_row else 2
-		per_row = full_row if cap <= 2 * full_row else ceili(float(cap) / 2.0)
-		@warning_ignore("integer_division")
-		cell = mini(Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
-		@warning_ignore("integer_division")
-		cell = mini(cell, int((RIG_ROOM - Pal.CELL_GAP) / 2) if rows == 2 else cell)
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
 	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the
 	# gap a wide kit left at a row's end. 20 Oct (Matt: two pouches shown empty on a full rig): first fit in the rig's
@@ -1317,6 +1311,16 @@ func _inv_dropped(data: Dictionary) -> void:
 				_no_room(Words.PACK["wont_lie"])
 			_shown = ""
 			acted.emit()
+
+
+## The selected piece turned where it lies (R or right-click, 27 Oct): refused when the turned shape won't lie there.
+func _turn_piece(id: int) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	if not sim.pack_turn(id):
+		_no_room(Words.PACK["wont_lie"])
+	_shown = ""
+	acted.emit()
 
 
 ## Out of the pack onto the floor, by hand: room made for what's down there.

@@ -464,7 +464,7 @@ func _show_build() -> void:
 	var picked: Dictionary = sim.build_option(build_kind, sel_build) if sel_build != "" else {}
 	if picked.is_empty():
 		sel_build = ""
-		_pick.show_empty("Pick a build", ["%s scrap in hand" % Fmt.group(sim.scrap), "Scrap comes from searches, scrapping here and ditching"])
+		_pick.show_empty("Pick a build", ["%s scrap in hand" % Fmt.group(sim.scrap), "Scrap comes from searches and scrapping here"])
 		_set_pick_buttons([])
 		return
 	var made: Dictionary = sim._plain(build_slot(build_kind), str(picked["name"]))
@@ -944,7 +944,7 @@ func _show_craft(it: Dictionary) -> void:
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets"
 		_piece_words[1].text = "Worn gear: press Workshop on it in the Kit"
 		_piece_words[2].text = "Pick a piece to see what each job costs."
-		_pick.show_empty("Nothing picked", [("In hand: %s and %s scrap" % [Fmt.money(sim.cash), Fmt.group(sim.scrap)]) if sim.issued else ("In hand: %s, %s and %s scrap" % [Fmt.money(sim.cash), Fmt.notes(sim.notes), Fmt.group(sim.scrap)]), "Scrap comes from searches, scrapping here and ditching"])
+		_pick.show_empty("Nothing picked", [("In hand: %s and %s scrap" % [Fmt.money(sim.cash), Fmt.group(sim.scrap)]) if sim.issued else ("In hand: %s, %s and %s scrap" % [Fmt.money(sim.cash), Fmt.notes(sim.notes), Fmt.group(sim.scrap)]), "Scrap comes from searches and scrapping here"])
 		_set_pick_buttons([])
 	else:
 		var h := Items.headline(it)

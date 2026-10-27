@@ -65,3 +65,16 @@ drawn under it. The pack counted cells but the grid placed them, so the two disa
   - A piece dragged from the floor to a cell is taken there.
   - A double-click takes a piece to its first place.
 - The sort button hides in pack mode, because the pack's pieces lie where they lie.
+
+## The floor all run, turning in place, ditch to the floor (27 Oct, Matt's next playtest; the canvas's "The floor, all run")
+
+- A selected piece turns where it lies (R, or a right-click, which picks it too), about its top-left cell; refused with
+  "It won't lie there" when the turned shape won't fit. R is read after the GUI (`_unhandled_key_input`); mid-drag R and
+  the right button still turn the piece in hand.
+- The floor's row is on screen from deploy to the door at one height (`CratesPanel.show_crates(sim, m, floor_only)`):
+  in the fight the rig takes the crates' row above it, in the search the crates do and the rig sits under it. The rig
+  is one row tall either way (small cells past eight pouches, two rows of half cells past twelve) - the fight's two rows
+  of full cells (16 Oct) gave way to the floor. The floor lights amber while a piece of the pack is in hand.
+- Ditch puts a piece down on the floor, no scrap: greyed there, "Fill up, then go" leaves it, a drag takes it back.
+  The deeds ditched and left are burned at the extract. Scrapping is the Workshop's alone; Salvage (the Scrapper's)
+  is half again there.

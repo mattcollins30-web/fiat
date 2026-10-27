@@ -25,6 +25,7 @@ const FINDS_Y := FINDS_HEAD_Y + UI.HEAD_H + 2
 const ARROW := 44
 const PAGE_W := 56
 const HEIGHT := FINDS_Y + Pal.CELL    # 190
+const DITCHED_A := 0.5            # a piece the player ditched, greyed on the floor (27 Oct)
 const WORDS := ["no", "one", "two", "three", "four", "five", "six"]
 ## A crate's colour until its art is painted (art/crates/<key>.png, <key>_open.png).
 const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewellery": Color("c9a0c8"), "toolbox": Color("b4483c"),
@@ -54,6 +55,8 @@ var _press_cell := -1
 var _floor_items := {}             # id -> the thing, for the drag's picture
 var _w := 0.0
 var _drop_zone: Control
+var _by_hand := false              # the floor takes a piece put down only by hand
+var _drop_hl: Panel                # the floor lit while a piece of the pack is in hand: where it can go down
 
 
 func _init() -> void:
@@ -112,6 +115,9 @@ func build(w: float) -> void:
 	_drop_zone.mouse_filter = Control.MOUSE_FILTER_PASS
 	_drop_zone.set_drag_forwarding(Callable(), _can_put, _put)
 	add_child(_drop_zone)
+	_drop_hl = UI.panel(self, Rect2(-4, FINDS_Y - 4, w + 8, Pal.CELL + 8), UI.box(Color(Pal.ACCENT, 0.08), 8, 2, Pal.ACCENT))
+	_drop_hl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drop_hl.visible = false
 	for k in range(cells_fit(false)):
 		var c := ItemCell.new()
 		c.position = Vector2(k * (Pal.CELL + 8), FINDS_Y)
@@ -222,7 +228,16 @@ static func bar_forms(sim, m: Dictionary, opened: Dictionary = {}) -> Array:
 	return [fill, [search + " · next: " + then, search], ""]
 
 
-func show_crates(sim, m: Dictionary) -> void:
+## The crates' row and the floor's; `floor_only` (the fight, the way out: 27 Oct, the floor all run) the floor's alone.
+func show_crates(sim, m: Dictionary, floor_only := false) -> void:
+	_head.visible = not floor_only
+	_aside.visible = not floor_only
+	if floor_only:
+		for t in _tiles:
+			t["panel"].visible = false
+		_more.visible = false
+		_show_floor(sim, m, false, true)
+		return
 	var cs: Array = m.get("crates", [])
 	var i: int = int(m.get("crate_i", 0))
 	var n: int = cs.size()
@@ -280,8 +295,18 @@ func show_crates(sim, m: Dictionary) -> void:
 			edge = Pal.tone_color(Pal.item_tone(q["held"]["it"]))      # the dog's nose: the best find's rarity on the shut crate
 		(t["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = edge
 		(t["panel"].get_theme_stylebox("panel") as StyleBoxFlat).set_border_width_all(2 if (current or held != "") else 1)
-	var searching_now: bool = not all_open and not gang_on
+	_show_floor(sim, m, not all_open and not gang_on, false)
+
+
+## The floor's row: what's down there, by hand; on an auto-run the crate last searched, straight into the pack (none
+## in the fight). `searching_now`: the query cell after the finds.
+func _show_floor(sim, m: Dictionary, searching_now: bool, fight: bool) -> void:
+	var cs: Array = m.get("crates", [])
+	var i: int = int(m.get("crate_i", 0))
+	var n: int = cs.size()
+	var all_open: bool = i >= n
 	var by_hand: bool = sim.by_hand(m)
+	_by_hand = by_hand
 	var finds: Array = []
 	var full: bool = sim.pack_used(m) >= sim.capacity()
 	if by_hand:
@@ -289,14 +314,14 @@ func show_crates(sim, m: Dictionary) -> void:
 		finds = sim.floor_items().duplicate()
 		finds.reverse()
 		var th: String = _things(finds.size())
-		UI.fit(_finds_head, (["ON THE FLOOR · %s · PACK FULL: DITCH TO TAKE FROM IT" % th, "ON THE FLOOR · %s · PACK FULL" % th] if full and not finds.is_empty() else []) +
-			["ON THE FLOOR · %s · DRAG TO THE PACK, OR DOUBLE-CLICK" % th, "ON THE FLOOR · %s · DRAG TO THE PACK" % th, "ON THE FLOOR · %s" % th])
+		UI.fit(_finds_head, (["ON THE FLOOR · %s · PACK FULL: DRAG ONE DOWN TO TAKE FROM IT" % th, "ON THE FLOOR · %s · PACK FULL" % th] if full and not finds.is_empty() else []) +
+			["ON THE FLOOR · %s · DRAG TO THE PACK, OR BACK DOWN" % th, "ON THE FLOOR · %s · DRAG TO THE PACK" % th, "ON THE FLOOR · %s" % th])
 	else:
 		# the auto-run, "Fill up, then go", away: straight into the pack; the row shows the crate last searched
 		var shown_i: int = i if (not all_open and int(cs[i]["done"]) > 0) else i - 1
 		while shown_i >= 0 and cs[shown_i].get("passed", false):
 			shown_i -= 1                   # a locked one passed over gave nothing
-		finds = cs[shown_i]["finds"] if shown_i >= 0 and shown_i < n else []
+		finds = cs[shown_i]["finds"] if shown_i >= 0 and shown_i < n and not fight else []
 		var nm: String = str(cs[shown_i]["name"]).to_upper() if shown_i >= 0 and shown_i < n else ""
 		UI.fit(_finds_head, ["STRAIGHT INTO THE PACK · OUT OF THE %s" % nm, "STRAIGHT INTO THE PACK"] if nm != "" else ["STRAIGHT INTO THE PACK"])
 	var q_n: int = 1 if searching_now else 0
@@ -311,7 +336,7 @@ func show_crates(sim, m: Dictionary) -> void:
 	_prev.disabled = _page == 0
 	_next_page.disabled = _page >= pages - 1
 	_page_label.text = "%d / %d" % [_page + 1, pages]
-	var sig: String = "%d|%d|%s|%d|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x_in): return [int(x_in["id"]), Items.stack_size(x_in)]).hash(), sim.equipped.hash(), sim.level()]     # the counts and the arrows too (the review); the locks as the level comes
+	var sig: String = "%d|%d|%s|%d|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x_in): return [int(x_in["id"]), Items.stack_size(x_in), x_in.get("ditched", false)]).hash(), sim.equipped.hash(), sim.level()]     # the counts and the arrows too (the review); the locks as the level comes
 	var x: float = 0.0
 	_floor_items = {}
 	for k in range(_cells.size()):
@@ -326,6 +351,7 @@ func show_crates(sim, m: Dictionary) -> void:
 				if by_hand:
 					c.set_upgrade(sim.is_upgrade(finds[f]))     # the arrow: better than what's worn
 					c.set_locked(sim.wear_lock(finds[f]))       # or the padlock: over the runner's level (15 Oct)
+				c.modulate = Color(1, 1, 1, DITCHED_A) if finds[f].get("ditched", false) else Color.WHITE     # put down by the player: Fill up leaves it
 			c.position.x = x
 			x += Pal.CELL + 8
 			if by_hand:
@@ -371,8 +397,22 @@ func _cell_input(event: InputEvent, k: int) -> void:
 		_cells[k].force_drag({"id": id, "src": "floor"}, Inventory.drag_preview(_floor_items.get(id, {})))
 
 
+func _process(_dt: float) -> void:
+	if _drop_hl == null:
+		return
+	var d = get_viewport().gui_get_drag_data() if is_inside_tree() and is_visible_in_tree() and get_viewport().gui_is_dragging() else null
+	var on: bool = _by_hand and d is Dictionary and str(d.get("src", "")) == "pack"
+	if _drop_hl.visible != on:
+		_drop_hl.visible = on
+
+
+## Whether the floor lights for a drag (for the tests).
+func drop_lit() -> bool:
+	return _drop_hl != null and _drop_hl.visible
+
+
 func _can_put(_at: Vector2, data: Variant) -> bool:
-	return data is Dictionary and str(data.get("src", "")) == "pack"
+	return _by_hand and data is Dictionary and str(data.get("src", "")) == "pack"
 
 
 func _put(_at: Vector2, data: Variant) -> void:
