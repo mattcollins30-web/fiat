@@ -5116,6 +5116,35 @@ func has_set_rule(rule: String) -> bool:
 ## A broken build (21 Oct, Data.COMBOS): the class, its set at its count, the unique's rule, both nodes. Outside the
 ## balance passes, as the mythics: the balance read can switch them off.
 static var combos_off := false
+static var exploits_off := false     # the balance reads: an exploit never meets a read (Matt, 27 Oct)
+
+
+## An exploit on (Data.EXPLOITS): the class, its two nodes trained, its unique's rule worn.
+func exploit_on(key: String) -> bool:
+	if exploits_off or not Data.EXPLOITS.has(key):
+		return false
+	return _memo("exploit/" + key, _exploit_raw.bind(key))
+
+
+func _exploit_raw(key: String) -> bool:
+	var x: Dictionary = Data.EXPLOITS[key]
+	if cls != str(x["class"]) or not has_rule(str(x["rule"])):
+		return false
+	for path in x["nodes"]:
+		if not (Data.node_id_named(str(path)) in tree):
+			return false
+	return true
+
+
+## The run's exploit figure: what every hit is multiplied by, 1 with none (First of many, Last orders again, Never trips).
+static func exploit_x(m: Dictionary) -> float:
+	return float(m.get("ex_x", 1.0))
+
+
+func _exploit_grow(m: Dictionary, key: String, times := 1.0) -> void:
+	m["ex_x"] = minf(Data.COMBO_CEILING, exploit_x(m) * pow(float(Data.EXPLOITS[key]["grow"]), times))
+
+
 func combo_on(key: String) -> bool:
 	if combos_off or not Data.COMBOS.has(key):
 		return false
@@ -8129,6 +8158,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			r_ty = phys_resist(r_ty)                  # Knuckles: the Doorman's knuckles and Bust them up get through their jackets
 		r_ty *= 1.0 - _skill_pat(m)                   # Pat down: their armour and resists off (milestone 8)
 		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * _skill_type_mult(m, ty) * ((1.0 + shock_amount() + (combo_step("live_load") * combo_stacks(m) if combo_on("live_load") else 0.0) + (combo_step("flatline") * combo_stacks(m) if combo_on("flatline") else 0.0)) if shocked else 1.0)
+		landed *= exploit_x(m)
 		if ty == "fire" and combo_on("embers"):
 			landed *= 1.0 + combo_step("embers") * combo_stacks(m)          # Embers
 		if ty == "physical" and combo_on("drilled"):
@@ -8255,6 +8285,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			carried["poison"] = m["dots"]["poison"]  # the Rat Man's Bag, or Lingers: poison carries to the next
 		if (has_rule("butchers_steel") or has_rule("butchers_apron") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
 			carried["bleed"] = m["dots"]["bleed"]
+			if exploit_on("bad_blood") and hp < max_hp() * 0.5:
+				carried["bleed"] = minf(Data.COMBO_CEILING, float(carried["bleed"]) * float(Data.EXPLOITS["bad_blood"]["grow"]))     # the tick's own under-half-HP share taken again
 		if (has_node("cap_spread") or has_node("backdraught")) and m.get("dots", {}).has("fire"):
 			carried["fire"] = m["dots"]["fire"]      # Spread, or Backdraught: the burn carries
 		if has_node("catching") and m.get("dots", {}).has("poison"):
@@ -8263,6 +8295,10 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["chill_t"] = 0.0
 		m["shock_t"] = 0.0
 		_kill(m, t)
+		if exploit_on("first_of_many"):
+			_exploit_grow(m, "first_of_many")     # the Pistol's shot opens every man: each one the first, and Clocked never let go
+		if exploit_on("last_orders_again"):
+			_exploit_grow(m, "last_orders_again")     # the Revolver's hit carries its Last orders on into the next
 		if has_rule("issuers_revolver") and last_hit > 0.0 and m["remaining"] > 0:
 			var printed_hit: float = minf(last_hit, float(t["hp"]))
 			m["target_hp"] -= printed_hit          # the Issuer's Revolver: the killing shot again on the next; a kill from it does the same
@@ -8326,6 +8362,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	incoming *= low_hp_mult()
 	incoming *= _skill_in_mult(m, on_you)        # the skills: out of sight, stunned, the decoy (milestone 8)
 	incoming *= combo_guard(m)
+	if exploit_on("never_trips") and float(m.get("shock_t", 0.0)) > 0.0:
+		_exploit_grow(m, "never_trips", dt)     # the Ring main's jump lands on a man the Tester keeps shocked, and goes again
 	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
@@ -8501,6 +8539,8 @@ func use_med(id: int) -> bool:
 				return false                   # full, and nowhere for it to go: kept (the review: its end-of-heal work came free)
 			if has_rule("ambulance_bag"):
 				pass                           # the Ambulance's Bag (a mythic): never used up
+			elif exploit_on("second_opinion"):
+				pass                           # the Bag's own use clears the first-med flag: never spent
 			elif (has_node("second_shift") or has_set_rule("ambulance")) and not mission.get("free_med", false):
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
@@ -11084,6 +11124,8 @@ func cooldown_cut() -> float:
 
 
 func skill_cooldown(id: String) -> float:
+	if exploit_on("overdrawn"):
+		return Data.EXPLOIT_CD                  # the wrap: past the cap and costed as a credit
 	return float(skill(id).get("cd", 0.0)) * (1.0 - cooldown_cut() / 100.0) * (0.7 if has_node("on_the_double") else 1.0)     # Quick march: past the cap, its own
 
 
@@ -11177,6 +11219,8 @@ func skill_cost_now(i: int) -> float:
 
 ## What every skill costs, as a share: the Recruit's 10% off, Firing blanks' 25% off, Quick march's 25% on.
 func skill_cost_mult() -> float:
+	if exploit_on("overdrawn"):
+		return 0.0
 	return float(class_data().get("skill_cost", 1.0)) * (0.75 if has_node("live_firing") else 1.0) * (1.25 if has_node("on_the_double") else 1.0)
 
 

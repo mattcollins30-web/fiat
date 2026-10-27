@@ -259,6 +259,7 @@ const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of 
 
 
 func _init() -> void:
+	Sim.exploits_off = true     # no other check meets an exploit by chance (the review); _exploit_checks turns them on
 	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
 	var si := args.find("seed")
@@ -4712,6 +4713,7 @@ func _pinnacle_checks(main) -> void:
 	_county_checks(main)
 	_picked_clean_checks(main)
 	_esc_checks(main)
+	_exploit_checks(main)
 	_sound_checks(main)
 	_dress_checks(main)
 	_mythic_moment_checks(main)
@@ -20633,4 +20635,75 @@ func _esc_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	print("Esc ok: the collection, the rules, the book and a code's plan shut first; then the pause")
+
+
+
+
+## The exploits (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): each on with its two nodes and its unique, off a
+## piece short or with the balance's switch, and what it does.
+func _exploit_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	Sim.exploits_off = false
+	for key in Data.EXPLOITS:
+		var x: Dictionary = Data.EXPLOITS[key]
+		var u: Dictionary = {}
+		for uu in Data.UNIQUES:
+			if str(uu.get("rule", "")) == str(x["rule"]):
+				u = uu
+		_check(not u.is_empty(), "%s: no unique has its rule %s" % [key, x["rule"]])
+		if u.is_empty():
+			continue
+		sim.load_dict(hold)
+		sim.cls = str(x["class"])
+		var ids: Array = x["nodes"].map(func(pth): return Data.node_id_named(str(pth)))
+		_check(not ids.has(""), "%s names a node the web hasn't: %s" % [key, str(x["nodes"])])
+		for id in ids:
+			if not sim.tree.has(id):
+				sim.tree.append(id)
+		sim.equipped[str(u["slot"])] = Items.roll_unique(u, sim.rng)
+		sim._dry_memo.clear()
+		_check(sim.exploit_on(key), "%s isn't on with its nodes and %s" % [key, u["name"]])
+		var others: Array = Data.EXPLOITS.keys().filter(func(k2): return k2 != key and sim.exploit_on(str(k2)))
+		_check(others.is_empty(), "%s turns on another: %s" % [key, str(others)])
+		Sim.exploits_off = true
+		_check(not sim.exploit_on(key), "%s is on with the balance's switch off" % key)
+		Sim.exploits_off = false
+		sim._dry_memo.clear()
+		sim.tree.erase(ids[0])
+		sim._dry_memo.clear()
+		_check(not sim.exploit_on(key), "%s is on without %s" % [key, x["nodes"][0]])
+		sim.tree.append(ids[0])
+		var worn = sim.equipped[str(u["slot"])]
+		sim.equipped[str(u["slot"])] = null
+		sim._dry_memo.clear()
+		_check(not sim.exploit_on(key), "%s is on without %s" % [key, u["name"]])
+		sim.equipped[str(u["slot"])] = worn
+		sim._dry_memo.clear()
+		# what it does
+		if x.has("grow") and key != "bad_blood":
+			var m := {}
+			for k in range(5):
+				sim._exploit_grow(m, key)
+			_check(is_equal_approx(Sim.exploit_x(m), pow(float(x["grow"]), 5.0)), "%s doesn't run away: x%.2f after five" % [key, Sim.exploit_x(m)])
+		if key == "overdrawn":
+			_check(is_equal_approx(sim.skill_cooldown("smoke"), Data.EXPLOIT_CD) and sim.skill_cost_mult() == 0.0, "Overdrawn: a skill's cooldown %.2f, its cost x%.2f" % [sim.skill_cooldown("smoke"), sim.skill_cost_mult()])
+		if key == "second_opinion":
+			sim.hp = sim.max_hp()
+			sim.deploy(0)
+			if sim.mission != null:
+				var med: Dictionary = sim._plain(Data.MEDICAL, "First aid kit")
+				sim.rig.append(med)
+				for k in range(3):
+					sim.mission["using"] = null
+					sim.hp = sim.max_hp() * 0.3
+					sim.use_med(int(med["id"]))
+				_check(sim.rig.has(med), "Second opinion spent its med")
+				sim.extract_now()
+	sim.load_dict(hold)
+	Sim.exploits_off = true
+	main.refresh()
+	print("the exploits ok: each on with its three pieces, off a piece short or switched off, each running away")
 

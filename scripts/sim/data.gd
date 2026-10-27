@@ -1532,6 +1532,19 @@ const COMBO_GUARD_STEP := 0.01     # a pinnacle build's stack takes this off the
 const COMBO_GUARD_CAP := 0.6       # and no more than this
 const COMBO_WARM := 40.0           # a pinnacle build's stacks at a run's start (Matt, 27 Oct)
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
+## The exploits (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): one a class, two nodes of its own trees and one
+## unique, and the code behaves like a bug - a runaway inside one run, gone at home. No screen names one and nothing logs
+## it; the balance reads switch them off (Sim.exploits_off) and the bot never aims at one. "grow": what a kill (or a
+## second, for Never trips) multiplies the run's exploit figure by.
+const EXPLOITS := {
+	"bad_blood": {"class": "Drifter", "nodes": ["Luck/Dead man's shoes", "Luck/Cut-throat"], "rule": "butchers_apron", "grow": 1.2},
+	"first_of_many": {"class": "Poacher", "nodes": ["Stalking/Clocked", "Stalking/One shot"], "rule": "starting_pistol", "grow": 1.1},
+	"second_opinion": {"class": "Paramedic", "nodes": ["Shifts/Second shift", "Triage/Field surgery"], "rule": "paramedics_bumbag"},
+	"last_orders_again": {"class": "Doorman", "nodes": ["The door/Last orders", "The door/Through the lot"], "rule": "issuers_revolver", "grow": 1.4},
+	"never_trips": {"class": "Scrapper", "nodes": ["Stripping/Ring main", "Stripping/Live wire"], "rule": "tester", "grow": 1.5},
+	"overdrawn": {"class": "Recruit", "nodes": ["Drill/Quick march", "Drill/Passing-out parade"], "rule": "registrars_stamp"},
+}
+const EXPLOIT_CD := 0.25           # Overdrawn: a skill's cooldown, seconds (every skill, every tick or so)
 const FLATLINE_HEAL := 0.05        # Flatline: a shocked kill heals this share of max HP (joints B, 24 Oct)
 const COMBOS := {
 	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.12},     # 0.04 to 0.08 to 0.12 with the warm start (Matt, 27 Oct, the gauntlet)

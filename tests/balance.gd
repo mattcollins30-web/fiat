@@ -22,6 +22,7 @@ const CHECKPOINT := "res://docs/balance/pass/radio_checkpoint.save"     # the pa
 
 func _init() -> void:
 	Sim.combos_off = true                  # the broken builds sit outside the balance (21 Oct, Matt): the read never meets one
+	Sim.exploits_off = true                # and the exploits (27 Oct, Matt) always
 	# the A/B switches (12 Oct): docs/balance/ab.cfg (not .txt: balance.bat clears those), a word a line - "fixed_uniques" (every unique on its own base, as
 	# before the tiers), "no_lorry_mult" (the lorries beaten multiply nothing). No file, no switch.
 	var ab := FileAccess.open("res://docs/balance/ab.cfg", FileAccess.READ)

@@ -764,6 +764,11 @@ func _make_signals(sim) -> void:
 		if worst >= 0:
 			bought.append([sim.elapsed, "binned a signal: level %d at %.0f%%%s" % [sim.signal_level(sim.signal_at(worst)), wo * 100.0, _sig_tags(sim.signal_at(worst))]])
 			sim.bin_signal(worst)
+			_bin_streak += 1
+	if sim.reach > _reach_seen:
+		_reach_seen = sim.reach
+		_bin_streak = 0                           # the reach moved: back to full signals
+	var n_papers: int = _papers_now()
 	var guard := 0
 	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
 		guard += 1
@@ -785,12 +790,25 @@ func _make_signals(sim) -> void:
 					break
 				bought.append([sim.elapsed, "off Kev's pile: %s for %d notes" % [str(got["base"]).to_lower(), price]])
 				plain = _pile_of(sim)["plain"]
-			if plain.size() < Data.SIGNAL_PAPERS and not sim.signals.is_empty():     # plain holds every plain paper when there are under PILE_TOP
+			if plain.size() < n_papers and not sim.signals.is_empty():     # plain holds every plain paper when there are under PILE_TOP
 				break                         # short of three with a signal held: wait for the rest (20 Oct: one or two only when there's nothing to run)
-			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
+			ids = plain.slice(0, n_papers).map(func(x): return int(x["id"]))
 		if sim.decrypt(ids).is_empty():
 			break
+		if ids.size() == 1 and _bin_streak > STUCK_BINS:
+			_bin_streak -= 1                       # a Faint one made: after a few, Clear ones again (the kit's had its chance to catch up)
 		bought.append([sim.elapsed, "a signal from %d paper%s: level %d" % [ids.size(), "" if ids.size() == 1 else "s", sim.signal_level(sim.signals.back())]])
+
+
+## Papers a signal (Matt, 27 Oct: the bot stuck at reach 31 binned 1,100 Full signals at 0%): three, as a player makes
+## them; after STUCK_BINS binned in a row with the reach standing, two (Clear: the reach to five under); after twice
+## that, one (Faint: under the reach, for the kit and the papers home). The reach moving resets it.
+func _papers_now() -> int:
+	if _bin_streak >= STUCK_BINS * 2:
+		return 1
+	if _bin_streak >= STUCK_BINS:
+		return 2
+	return Data.SIGNAL_PAPERS
 
 
 ## The held signal to run: the deepest that reads PUSH (Kev's at a head's odds, FIRST); -1 for none - the campaign's
@@ -1501,6 +1519,9 @@ const AMMO_STACKS_KEPT := 6
 
 const HELD_READ_S := 1200.0
 const ELEM_DPS_FLOOR := 0.8
+const STUCK_BINS := 6                # Full signals binned in a row, the reach standing, before the bot makes Clear ones (27 Oct)
+var _bin_streak := 0
+var _reach_seen := 0
 var _held_at := {}
 
 
