@@ -566,7 +566,7 @@ func _show_card(k: int) -> void:
 	c["face"].modulate = Color(1, 1, 1, 1.0 if lit else 0.75)
 	c["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_2)
 	var who: String = str(Words.CLASS_UNLOCK.get(nm, {}).get("who", ""))
-	c["tag"].text = "✓ your past" if mine else ("press again" if armed else (_crew_tag(nm) if open else who))
+	UI.fit(c["tag"], ["✓ your past"] if mine else (["press again"] if armed else (_crew_tag(nm) if open else [who])))
 	c["lock"].visible = not open                # a locked class: the lock and the head that opens it (24 Oct, option B)
 	c["tag"].position.x = float(c["tag_x"]) + (16.0 if not open else 0.0)
 	c["tag"].size.x = CLASS_W - float(c["tag_x"]) - 6.0 - (16.0 if not open else 0.0)
@@ -574,17 +574,18 @@ func _show_card(k: int) -> void:
 	cb.tooltip_text = "%s: %s" % [nm, cd["words"]] + ("" if open else "\n%s %s" % [Words.OPENS_AFTER, who])     # the perks in the sentence (the card's lines went, option B)
 
 
-## A class's card when it isn't out (21 Oct, the crew): its level and element, wounded, or new.
-func _crew_tag(nm: String) -> String:
+## A class's card when it isn't out (21 Oct, the crew): its level and element, wounded, or new - long to short ("Level N",
+## 27 Oct, Matt: not "L4").
+func _crew_tag(nm: String) -> Array:
 	if sim.cls == "":
-		return ""
+		return [""]
 	var lv: int = sim.crew_level(nm)
 	if lv <= 0:
-		return "new"
+		return ["new"]
 	var r: Dictionary = sim.crew_runner(nm)
 	var el: String = sim.crew_element(nm)
 	var bit: String = "wounded" if not Dictionary(r.get("wounds", {})).is_empty() else el
-	return ("L%d · %s" % [lv, bit]) if bit != "" else "L%d" % lv
+	return (["Level %d · %s" % [lv, bit]] if bit != "" else []) + ["Level %d" % lv]
 
 
 ## The class's line and the notice, bottom up: a lone line sits just over the classes, where the notice would; each
@@ -636,7 +637,7 @@ func _show_also() -> void:
 		if t.has("element"):
 			words = "%s · %s" % [nm, t["element"]]
 		elif t.get("class", "") != "":
-			words = "%s · %s" % [nm, t["class"].to_lower()]
+			words = "%s · %s" % [nm, t["class"]]
 		elif _is_pages(nm):
 			# the drawer and the shelf carry their counts, and the page when one's open over the lanes
 			var br0: Dictionary = _branch_for(nm)
@@ -648,6 +649,7 @@ func _show_also() -> void:
 				if int(br["pages"]) > 1:
 					words += " · page %d of %d" % [int(br["page"]) + 1, int(br["pages"])]
 			short = "%s %d/%d" % [nm.get_slice(" ", 1).capitalize(), found, total]
+		words = UI.dots(words)                    # the caps pass (27 Oct)
 		var w: float = ceilf(UI.text_width(b, words)) + 36.0
 		if x + w > right:
 			words = short
@@ -920,7 +922,7 @@ func _show_panel() -> void:
 		var lv: int = sim.crew_level(_armed)
 		var el: String = sim.crew_element(_armed)
 		var r: Dictionary = sim.crew_runner(_armed)
-		_title.text = ("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed
+		_title.text = UI.dots(("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed)
 		if el != "":
 			_title.text += " · " + el
 		after_title.call()
@@ -967,6 +969,7 @@ func _show_panel() -> void:
 			is_taken = int(sim.ring.get(selected, 0)) >= int(nd["stack"])
 		elif is_taken:
 			_title.text += " · trained" if sim.node_active(selected) else " · trained, idle"
+		_title.text = UI.dots(_title.text)            # the caps pass (27 Oct)
 		var items := [{"forms": [_chip_words(nd)], "colour": _effect_tone(nd)}]
 		if nd.has("type"):
 			items.append({"forms": [type_words(nd)], "colour": Pal.TEXT_2})

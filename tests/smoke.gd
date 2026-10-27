@@ -2652,7 +2652,7 @@ func _webs_traits(main) -> void:
 	var ms = main._missions
 	_check(ms._pick.visible and not ms._cols[0]["panel"].visible and main._menu.visible == menu_was, "the trait pick isn't on the Map")
 	_check(ms._pick_cards[1]["name"].text == "Wary" and ms._pick_cards[1]["chips"].shown() >= 1 and ms._pick_go.disabled, "the pick's cards or its shut Set off are off: '%s'" % ms._pick_cards[1]["name"].text)
-	_check(ms._pick_kicker.text.contains("back at level 1") and ms._pick_lost.shown() >= 4, "the pick doesn't say what the death took: '%s', %d chips" % [ms._pick_kicker.text, ms._pick_lost.shown()])
+	_check(ms._pick_kicker.text.to_lower().contains("back at level 1") and ms._pick_lost.shown() >= 4, "the pick doesn't say what the death took: '%s', %d chips" % [ms._pick_kicker.text, ms._pick_lost.shown()])
 	_check(Missions.trait_chips("Tins +15%, max HP −10%").map(func(c): return c["colour"]) == [Pal.GOOD, Pal.BAD], "a trait's cost isn't in the bad tone")
 	_check_fit(main, "The Map (back at level 1)")
 	# away with a death: the tally's card open doesn't cover the pick (the review); the Radio's Set off waits for it
@@ -3461,7 +3461,7 @@ func _capstone_checks(main) -> void:
 	_check_fit(main, "Caravan (capstone)")
 	main._barracks._pick(cap_id)
 	main.refresh()
-	_check(main._barracks._title.text.ends_with("capstone · trained"), "the capstone's panel title is off: '%s'" % main._barracks._title.text)
+	_check(main._barracks._title.text.to_lower().ends_with("capstone · trained"), "the capstone's panel title is off: '%s'" % main._barracks._title.text)
 	_check_fit(main, "Caravan (capstone picked)")
 	sim.deploy(3)
 	main.show_room(main.MISSIONS)
@@ -4454,7 +4454,7 @@ func _contracts_checks(main) -> void:
 				main.refresh()
 				var tt: String = main._fence._list.row_of(0)["title"].text
 				var tight: String = str(main._fence.AFFIX_TIGHT.get(str(a["stat"]), a["short"]))     # the glossary's word where the short won't fit (22 Oct); the slot alone never passes
-				_check(tt.contains(sim.contract_affix_phrase(a["stat"])) or tt.ends_with(str(a["short"])) or tt.ends_with(tight), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
+				_check(tt.to_lower().contains(sim.contract_affix_phrase(a["stat"]).to_lower()) or tt.to_lower().ends_with(str(a["short"]).to_lower()) or tt.to_lower().ends_with(tight.to_lower()), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
 				# and the tight form fits the row whatever the RNG rolls (the review): the widest slot's name with every affix's word
 				var lbl: Label = main._fence._list.row_of(0)["title"]
 				var wide_slot := ""
@@ -5086,7 +5086,7 @@ func _book_checks(main) -> void:
 	# a page holds what the lanes' area takes; twenty papers are that many pages
 	var per_page: int = bk._cells.filter(func(n): return n["button"].visible).size()
 	var n_pages: int = ceili(float(pages.size()) / per_page)
-	_check(per_page >= 3 and (n_pages == 1 or bk.also_button("The drawer").text.contains("page 1 of %d" % n_pages)), "a full drawer's pages are off: %s (%d a page)" % [bk.also_button("The drawer").text, per_page])
+	_check(per_page >= 3 and (n_pages == 1 or bk.also_button("The drawer").text.to_lower().contains("page 1 of %d" % n_pages)), "a full drawer's pages are off: %s (%d a page)" % [bk.also_button("The drawer").text, per_page])
 	_check_fit(main, "Caravan (the drawer, full)")
 	bk._turn_page()
 	_check(bk.drawer_page == 1 and (n_pages == 1 or bk._cells[0]["name"].text.begins_with("%d. " % (per_page + 1))), "a click did not turn the page: %d, %s" % [bk.drawer_page, bk._cells[0]["name"].text])
@@ -5157,7 +5157,7 @@ func _book_checks(main) -> void:
 		main._armoury._shown = ""
 		main.refresh()
 		said = " | ".join(_texts(main._armoury))
-		_check(said.contains("read · the Radio has %s" % str(pw["name"]).to_lower()) and said.contains("Carries %s" % str(pw["name"]).to_lower()), "a read paper's panel doesn't say it's known and the code it carries: %s" % said.left(300))
+		_check(said.to_lower().contains("read · the radio has %s" % str(pw["name"]).to_lower()) and said.to_lower().contains("carries %s" % str(pw["name"]).to_lower()), "a read paper's panel doesn't say it's known and the code it carries: %s" % said.left(300))
 		_check_fit(main, "Lock-up (a read paper)")
 		main._armoury.selected = {}
 	var log_it: Dictionary = Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
@@ -6411,7 +6411,7 @@ func _playtest_checks(main) -> void:
 	var band0 = c["band"]
 	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
 	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.contains(" · Tier "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
-	_check(c["tiles"][0]["key"].text == "Gang" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
+	_check(c["tiles"][0]["key"].text == "Gang" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · Clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
 	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
 	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
 	if yard_note != null and yard_note.text != "":
@@ -6537,7 +6537,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.to_lower().contains("read · the radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("Carries"), "a read paper's line is off: %s / %s" % [main._armoury._pick._right_title.text, main._armoury._pick._right_lines[0].text])     # the Radio's, not the drawer's (15 Oct)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -7023,7 +7023,7 @@ func _damage_model_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": shown["id"]}
 	main.refresh()
-	_check(main._armoury._head._tail.text.contains("takes shells") or main._armoury._head._tail.text.contains("shotgun rounds"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._head._tail.text)
+	_check(main._armoury._head._tail.text.to_lower().contains("takes shells") or main._armoury._head._tail.text.to_lower().contains("shotgun rounds"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._head._tail.text)
 	_check_fit(main, "Armoury (ammo words)")
 	sim.sell(shown)
 	print("ammo words ok")
@@ -8057,6 +8057,9 @@ func _check_widths(nodes: Array, where: String) -> int:
 		var w: float = UI_v.text_width(n, n.text) + (32.0 if n is Button else 0.0)
 		if w > n.size.x + 0.5:
 			push_error("%s: '%s' needs %.0f px, has %.0f (%s)" % [where, n.text, w, n.size.x, _chain(n)])
+			bad += 1
+		if UI_v.dots(n.text) != n.text:
+			push_error("%s: '%s' wants a capital after the · (the caps pass, 27 Oct) (%s)" % [where, n.text, _chain(n)])
 			bad += 1
 	return bad
 
@@ -9448,7 +9451,7 @@ func _wound_checks(main) -> void:
 	body.row("chest")["treat"].pressed.emit()
 	main.refresh()
 	_check(not sim.wounds.has("chest") and sim.wounds.size() == 2 and is_equal_approx(cash0 - sim.cash, float(each)), "the chest's Treat: %s left, %.0f paid" % [str(sim.wounds.keys()), cash0 - sim.cash])
-	_check(not body.row("chest")["treat"].visible and body.row("chest")["empty"].text == "Chest · nothing", "the chest's row after: '%s'" % body.row("chest")["empty"].text)
+	_check(not body.row("chest")["treat"].visible and body.row("chest")["empty"].text == "Chest · Nothing", "the chest's row after: '%s'" % body.row("chest")["empty"].text)
 	_check_fit(main, "Clinic (two wounds)")
 	# the lot: the HP and both wounds
 	cash0 = sim.cash
@@ -12462,7 +12465,7 @@ func _yard_wide_checks(main) -> void:
 	yt._press("kennel", 0, "b")
 	main.refresh()
 	var c2: int = sim.yard_pick_cost("kennel", 0)
-	_check(yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(c2)) and absi(c2 - int(round(c1 * Data.YARD_SECOND))) <= 100 and yt._other.text.contains("is built · this one costs ×2.5"), "the other side isn't offered at 2.5 times: '%s', '%s', %d from %d" % [yt._build.text, yt._other.text, c2, c1])
+	_check(yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(c2)) and absi(c2 - int(round(c1 * Data.YARD_SECOND))) <= 100 and yt._other.text.to_lower().contains("is built · this one costs ×2.5"), "the other side isn't offered at 2.5 times: '%s', '%s', %d from %d" % [yt._build.text, yt._other.text, c2, c1])
 	_check_fit(main, "Yard (a column's other side)")
 	sim.cash = maxf(sim.cash, float(c2) + 10.0)
 	var cash2: float = sim.cash
@@ -12505,7 +12508,7 @@ func _yard_wide_checks(main) -> void:
 	yt._press_rank("stash")
 	yt._shown = ""
 	main.refresh()
-	_check(yt._build.text == "Buy (%s)" % Fmt.money(sim.yard_rank_cost("stash")) and yt._title.text.contains("rank 1"), "the rank's strip is off: '%s' / '%s'" % [yt._title.text, yt._build.text])
+	_check(yt._build.text == "Buy (%s)" % Fmt.money(sim.yard_rank_cost("stash")) and yt._title.text.to_lower().contains("rank 1"), "the rank's strip is off: '%s' / '%s'" % [yt._title.text, yt._build.text])
 	_check_fit(main, "Yard (a rank)")
 	# every buy button on the Pitch says what it costs (24 Oct, Matt: "the buy button doesn't list the cost"): each
 	# building's rank and its first column's unbuilt side, in tins
@@ -13472,7 +13475,7 @@ func _growth_checks(main) -> void:
 	_check(sim.train_block(off_id).begins_with("wants a path"), "a ring node three on from an entry took a point with nothing before it: '%s'" % sim.train_block(off_id))
 	wv.pick(entry_id)
 	main.refresh()
-	_check(bk._title.text.contains("the ring") and bk._title.text.contains("0 of %d" % Data.RING_STACK) and bk._train.visible and bk._train.text.contains("paragon point"), "a ring node picked reads '%s' / '%s'" % [bk._title.text, bk._train.text])
+	_check(bk._title.text.to_lower().contains("the ring") and bk._title.text.contains("0 of %d" % Data.RING_STACK) and bk._train.visible and bk._train.text.contains("paragon point"), "a ring node picked reads '%s' / '%s'" % [bk._title.text, bk._train.text])
 	_check_fit(main, "Caravan (a ring node picked)")
 	bk._on_train()
 	main.refresh()
@@ -13835,7 +13838,7 @@ func _map_screen_checks(main) -> void:
 		var last: Dictionary = Data.atlas_of(t["nodes"][3]["key"])
 		_check(keys.size() == (12 if t["column"] != 2 else 11) and last.get("keystone", false), "%s is not its nodes with the keystone at the spine's end" % t["name"])
 	at._pick("lie_of_the_land")
-	_check((at._title.text.contains("wants a path") or at._title.text.contains("opens at %d points" % Data.MAP_KEYSTONE_POINTS) or sim.can_rank_atlas("lie_of_the_land")) and (at._take.disabled or sim.can_rank_atlas("lie_of_the_land")), "a shut node's panel does not say what it needs: '%s'" % at._title.text)
+	_check((at._title.text.to_lower().contains("wants a path") or at._title.text.to_lower().contains("opens at %d points" % Data.MAP_KEYSTONE_POINTS) or sim.can_rank_atlas("lie_of_the_land")) and (at._take.disabled or sim.can_rank_atlas("lie_of_the_land")), "a shut node's panel does not say what it needs: '%s'" % at._title.text)
 	for b in at._web_buttons:
 		_check(b.visible, "a Dial web button is hidden")
 	at._web_buttons[3].pressed.emit()
@@ -13845,10 +13848,10 @@ func _map_screen_checks(main) -> void:
 	var rank0: int = sim.atlas_rank("quiet_roads")
 	sim.atlas_points += 1
 	at._pick("quiet_roads")
-	_check(at._title.text.begins_with("Quiet roads · rank %d of 3" % rank0) and at._take.visible and not at._take.disabled and at._words.text.ends_with("."), "the map's panel after a pick is off: '%s' / '%s'" % [at._title.text, at._words.text])
+	_check(at._title.text.to_lower().begins_with("quiet roads · rank %d of 3" % rank0) and at._take.visible and not at._take.disabled and at._words.text.ends_with("."), "the map's panel after a pick is off: '%s' / '%s'" % [at._title.text, at._words.text])
 	_check(at._words.position.y >= at._chips.position.y + Chips.CHIP_H, "the map panel's sentence sits on its chips")
 	at._on_take()
-	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.begins_with("Quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
+	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.to_lower().begins_with("quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
 	_check_fit(main, "Runs (the map, picked)")
 	sim.atlas_points -= 1                 # the point lent above goes back: the save check after counts them
 
@@ -14013,7 +14016,7 @@ func _yard_checks(main) -> void:
 	var col: Dictionary = main._missions._cols[0]
 	var chip_texts: Array = col["chips"].text_nodes().map(func(l): return l.text)
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
-		_check(chip_texts.any(func(t): return str(t).to_lower().contains("fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
+		_check(chip_texts.any(func(t): return str(t).to_lower().contains("fire")) and chip_texts.any(func(t): return str(t).to_lower().contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
 	# the odds in words, the figure small beside them; every band fits the card
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
 		_check(Words.ODDS.any(func(b): return b[1] == col["band"].headline.text) and col["band"].unit.text.ends_with("to clear") or col["band"].unit.text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["band"].headline.text, col["band"].unit.text])
@@ -14704,13 +14707,13 @@ func _radio_juice_checks(main) -> void:
 	_check(sim.atlas_rank("relay") == 1, "the air lane did not open to the Relay")
 	main.refresh()
 	_check(rd._stand_head.visible and rd._stand[0]["button"].visible and not rd._stand[0]["button"].disabled and not rd._stand[2]["button"].disabled, "the Radio has no standing code or filter slot")
-	_check(rd._stand[1]["button"].disabled and rd._stand[1]["top"].text.contains("not open yet"), "standing 2 isn't shut before the whole band: '%s'" % rd._stand[1]["top"].text)
+	_check(rd._stand[1]["button"].disabled and rd._stand[1]["top"].text.to_lower().contains("not open yet"), "standing 2 isn't shut before the whole band: '%s'" % rd._stand[1]["top"].text)
 	# the code book (21 Oct, the canvas): over the decoder and the signals, None then the known codes, the rest scrambled
 	var menu_was: bool = main._menu.visible
 	rd._stand[0]["button"].pressed.emit()
 	main.refresh()
 	_check(rd._book.visible and not rd._decoder_box.visible and not rd._signals_box.visible and main._menu.visible == menu_was, "the code book did not open over the decoder and the signals")
-	_check(rd._book_title.text == "The code book · standing 1" and rd._stand[0]["top"].text.contains("picking"), "the book's title or its slot is off: '%s' / '%s'" % [rd._book_title.text, rd._stand[0]["top"].text])
+	_check(rd._book_title.text == "The code book · Standing 1" and rd._stand[0]["top"].text.to_lower().contains("picking"), "the book's title or its slot is off: '%s' / '%s'" % [rd._book_title.text, rd._stand[0]["top"].text])
 	var bk: Array = rd.book_entries()
 	var known_n: int = sim.words_known().size()
 	_check(bk[0]["code"] == "" and bk.filter(func(e): return e["known"]).size() == known_n + 1, "the book's cards aren't None and the %d known codes" % known_n)
@@ -14732,7 +14735,7 @@ func _radio_juice_checks(main) -> void:
 	_check(sim.standing.size() > 0 and sim.standing[0] == "Ex-army" and not rd._book.visible and rd._decoder_box.visible, "picking a code didn't set it and shut the book: %s" % str(sim.standing))
 	rd._stand[2]["button"].pressed.emit()
 	main.refresh()
-	_check(rd._book.visible and rd._book_title.text.ends_with("the filter"), "the filter's book is off: '%s'" % rd._book_title.text)
+	_check(rd._book.visible and rd._book_title.text.to_lower().ends_with("the filter"), "the filter's book is off: '%s'" % rd._book_title.text)
 	rd._book_done.pressed.emit()
 	main.refresh()
 	_check(not rd._book.visible and rd._signals_box.visible, "Done did not shut the book")
@@ -14917,7 +14920,7 @@ func _backdrop_checks(main) -> void:
 	body.show_state(sim)
 	# the strip over it: who, HP, damage, armour, inside the strip and above the loadout
 	var arm = main._armoury
-	_check(arm._hp.text.contains("HP") and arm._dps.text.contains("dmg/s") and arm._who.text.contains("level") and arm.BODY_Y >= arm.STRIP_H and arm.CONTAINERS_Y + arm._containers.size.y <= Pal.ROOM_H, "the runner strip or the column's stack is off: '%s' '%s' '%s'" % [arm._who.text, arm._hp.text, arm._dps.text])
+	_check(arm._hp.text.contains("HP") and arm._dps.text.contains("dmg/s") and arm._who.text.to_lower().contains("level") and arm.BODY_Y >= arm.STRIP_H and arm.CONTAINERS_Y + arm._containers.size.y <= Pal.ROOM_H, "the runner strip or the column's stack is off: '%s' '%s' '%s'" % [arm._who.text, arm._hp.text, arm._dps.text])
 	print("the loadout ok: the strip, the cards in Matt's order, the kit room under it, glass cards")
 
 
@@ -16376,7 +16379,8 @@ func _class_card_checks(bk) -> void:
 		_check(UI.text_width(c["tag"], c["tag"].text) <= c["tag"].size.x + 0.5 and UI.text_width(c["name"], c["name"].text) <= c["name"].size.x + 0.5, "%s's card's words run past it: '%s' '%s'" % [cd["name"], c["name"].text, c["tag"].text])
 		_check(is_equal_approx(c["face"].modulate.a, 1.0 if lit else 0.75), "%s's face is not %s beside the picked past" % [cd["name"], "lit" if lit else "dimmed"])
 		_check(cb.tooltip_text.contains(str(cd["words"])), "%s's card does not carry its sentence" % cd["name"])
-		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else (bk._crew_tag(cd["name"]) if open else who))), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
+		var tag_forms: Array = ["✓ your past"] if sim.cls == cd["name"] else (["press again"] if bk._armed == cd["name"] else (bk._crew_tag(cd["name"]) if open else [who]))
+		_check(tag_forms.map(func(x): return UI.dots(str(x))).has(c["tag"].text) and not c["tag"].text.begins_with("L1") and not RegEx.create_from_string("^L\\d").search(c["tag"].text), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
 		if k > 0:
 			_check(not Rect2(cb.position, cb.size).intersects(Rect2(bk._class_buttons[k - 1].position, bk._class_buttons[k - 1].size)), "the pasts' cards overlap")
 	_check(bk._face_q.visible == (sim.cls == ""), "the ? in the face's place shows with a past, or not without one")
@@ -16962,6 +16966,9 @@ func _room_intro_checks(main) -> void:
 			_check(cc._tiles[k][2].text == shorts[k], "%s's tile %d reads '%s', not Training's '%s'" % [cn, k + 1, cc._tiles[k][2].text, shorts[k]])
 		for tl in cc._tiles:
 			_check(UI.text_width(tl[2], tl[2].text) <= tl[2].size.x + 0.5, "%s's tile runs off: '%s'" % [cn, tl[2].text])
+			_check(UI.text_width(tl[1], tl[1].text) <= tl[1].size.x + 0.5, "%s's tile headline runs off: '%s'" % [cn, tl[1].text])
+		var heads_n: Array = cc._tiles.map(func(tl): return str(tl[1].text).to_lower())
+		_check(not heads_n.has(str(Words.CLASS_CARD["edge"]).to_lower()) and heads_n[0] != heads_n[1], "%s's tiles still read the plain headline: %s (27 Oct: one of its own each)" % [cn, str(heads_n)])
 		_check(cc._face.visible and cc._art.texture != null and cc._go_on.text == Words.CLASS_CARD["go"], "%s's card has no face, no place or the wrong button" % cn)
 		var blank: Array = range(3).filter(func(k): return RoomIntroRef.strip_texture("class:" + cn, k, Vector2(280, 84)) == null)
 		_check(blank.is_empty(), "%s's card's tiles have no picture: boxes %s" % [cn, str(blank)])     # 27 Oct, Matt's playtest: the three tiles plain
@@ -17412,7 +17419,7 @@ func _rebuild_checks(main) -> void:
 	var tw = main._radio._town
 	for c in tw._cards:
 		_check(c["chips"].shown() == int(c["items"]), "%s shows %d of its %d wants" % [c["key"], c["chips"].shown(), int(c["items"])])
-	_check(tw.card("pumping")["button"].visible and tw.card("substation")["button"].text.contains("rank 5"), "the town's Rebuild buttons are off: '%s'" % tw.card("substation")["button"].text)
+	_check(tw.card("pumping")["button"].visible and tw.card("substation")["button"].text.to_lower().contains("rank 5"), "the town's Rebuild buttons are off: '%s'" % tw.card("substation")["button"].text)
 	_check_fit(main, "Radio town (built)")
 	# the caps pass (19 Oct, Matt): every card's name whole and capitalised, its rank in sentence case, a name after
 	# the dot capitalised ("Opens the Grid · The Lineman")

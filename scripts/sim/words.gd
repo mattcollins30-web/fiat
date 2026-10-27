@@ -1129,14 +1129,19 @@ const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {
 	"Paramedic": {"face": "paramedic", "title": "The Paramedic", "sub": "Out of the Clinic, after the Gamekeeper fell", "place": "The Clinic", "voice": "paramedic",
+		"heads": ["Knows where it hurts", "Proper dressings", "Patches herself up"],     # the tiles' headlines (27 Oct, Matt: "something more interesting than the class")
 		"lines": ["Half of what's in the vet's bag works on people. I checked.", "The doctor keeps the Clinic. Somebody has to go out to them."]},
 	"Doorman": {"face": "doorman", "title": "The Doorman", "sub": "Free of the Carpet Man's door, now he's down", "place": "The retail park", "voice": "doorman",
+		"heads": ["Hits like a door", "Twelve years standing", "In no hurry"],     # the tiles' headlines (27 Oct, Matt: "something more interesting than the class")
 		"lines": ["Twelve years on his door. Near the end he paid me in rugs.", "Nobody got past me then. Nobody gets past me now."]},
 	"Scrapper": {"face": "scrapper", "title": "The Scrapper", "sub": "Out of the Bank's basement, after the Manager", "place": "The bank", "voice": "scrapper",
+		"heads": ["Knows where to look", "Nothing left behind", "Bin-bag guns"],     # the tiles' headlines (27 Oct, Matt: "something more interesting than the class")
 		"lines": ["I kept the Bank's lifts running till there was nothing left to lift.", "Give me a bin bag and an afternoon. I'll give you a gun."]},
 	"Recruit": {"face": "recruit", "title": "The Recruit", "sub": "Walked out of the Barracks with the Quartermaster gone", "place": "The barracks", "voice": "recruit",
+		"heads": ["Drilled", "Never tires", "What he was taught"],     # the tiles' headlines (27 Oct, Matt: "something more interesting than the class")
 		"lines": ["Nobody signed me out. I took the stores and I walked.", "I can drill you. I can drill the lot of you. Show me where."]},
 	"Drifter": {"face": "drifter", "title": "The Drifter", "sub": "Found on the road, in Kev's first story", "place": "The services", "voice": "drifter",
+		"heads": ["Quick hands", "Hard to pin down", "Never stops"],     # the tiles' headlines (27 Oct, Matt: "something more interesting than the class")
 		"lines": ["Kev found me on the ring road, walking the way the lorries go.", "I don't stop anywhere long. Lucky for you, I'm quick."]},
 }
 const CLASS_UNLOCK := {

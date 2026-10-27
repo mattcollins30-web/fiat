@@ -34,12 +34,41 @@ static func track(l: Label, px: int) -> void:
 	l.add_theme_font_override("font", fv)
 
 
+## The caps pass (27 Oct, Matt): a capital after every "·" in running words - "Ammo tin · Search 1 of 1 · Next: a toolbox".
+## ASCII letters only (never "ƒ"); the small-caps heads are capitals already.
+static var _dot_re: RegEx
+
+
+static func dots(t: String) -> String:
+	if not t.contains("· "):
+		return t
+	if _dot_re == null:
+		_dot_re = RegEx.create_from_string("· ([a-z])")
+	var out := t
+	for m in _dot_re.search_all(t):
+		out = out.substr(0, m.get_start(1)) + m.get_string(1).to_upper() + out.substr(m.get_end(1))
+	return out
+
+
+## The caps pass over a screen as it's shown: every visible label and button's words (the ones set straight, not
+## through fit or label). Hidden branches are skipped.
+static func dots_under(n: Node) -> void:
+	if n is CanvasItem and not n.visible:
+		return
+	if (n is Label or n is Button) and n.text.contains("· "):
+		var d := dots(n.text)
+		if d != n.text:
+			n.text = d
+	for c in n.get_children():
+		dots_under(c)
+
+
 static func label(parent: Node, rect: Rect2, text: String, weight: String, size: int,
 		color: Color, align := HORIZONTAL_ALIGNMENT_LEFT, tabular := true) -> Label:
 	var l := Label.new()
 	l.position = rect.position
 	l.size = rect.size
-	l.text = text
+	l.text = dots(text)
 	l.horizontal_alignment = align
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -292,19 +321,21 @@ static func ask_forms(what: String) -> Array:
 
 
 static func fit_button(b: Button, options: Array) -> void:
-	for o in options:
+	for o0 in options:
+		var o := dots(str(o0))
 		if text_width(b, o) + 32.0 <= b.size.x:
 			b.text = o
 			return
-	b.text = options.back() if not options.is_empty() else ""
+	b.text = dots(str(options.back())) if not options.is_empty() else ""
 
 
 static func fit(l: Label, options: Array) -> void:
-	for o in options:
+	for o0 in options:
+		var o := dots(str(o0))
 		if text_width(l, o) <= l.size.x:
 			l.text = o
 			return
-	l.text = options.back() if not options.is_empty() else ""
+	l.text = dots(str(options.back())) if not options.is_empty() else ""
 
 
 ## A sentence over several labels, a line each: words go on the first label
@@ -313,7 +344,7 @@ static func fit(l: Label, options: Array) -> void:
 ## tests will say so - a sentence that needs more lines than it has needs
 ## shorter words, not an ellipsis. Labels not needed are cleared.
 static func wrap(labels: Array, text: String) -> void:
-	var words := text.split(" ", false)
+	var words := dots(text).split(" ", false)
 	var k := 0
 	var line := ""
 	for w in words:
@@ -374,7 +405,7 @@ static func tile(parent: Node, rect: Rect2, key := "", value := "") -> Dictionar
 ## The tile's words and the figure's tone. `options` offers the figure's
 ## forms long to short; the first that fits is shown.
 static func set_tile(t: Dictionary, key: String, options: Array, tone := Pal.TEXT) -> void:
-	t["key"].text = key
+	t["key"].text = dots(key)
 	fit(t["value"], options)
 	t["value"].add_theme_color_override("font_color", tone)
 

@@ -98,9 +98,9 @@ func _init(w: float, h: float, tone := 0, fade_to := Pal.CARD) -> void:
 ## The words. `u` is the unit, a string or its forms long to short; `headline_colour` is the odds' tone, the accent by default.
 var _unit_forms: Array = []
 func set_words(k: String, t: String, h: String, u, headline_colour := Pal.ACCENT) -> void:
-	kicker.text = k
+	kicker.text = UI.dots(k)
 	title.text = "" if _room else t       # a room's band has no title line: the kicker names the room
-	headline.text = h
+	headline.text = UI.dots(h)
 	_unit_forms = u if u is Array else [str(u)]
 	unit.text = str(_unit_forms[0])
 	headline.add_theme_color_override("font_color", headline_colour)
@@ -280,7 +280,7 @@ func _lay_slim() -> void:
 func set_right(lines: Array) -> void:
 	var any := false
 	for k in range(RIGHT_LINES):
-		right[k].text = str(lines[k]) if k < lines.size() else ""
+		right[k].text = UI.dots(str(lines[k])) if k < lines.size() else ""
 		any = any or right[k].text != ""
 	# with no right-hand lines the kicker and the title take the width
 	_right_any = any
@@ -307,7 +307,7 @@ func set_bar(fraction: float, words: String) -> void:
 	bar.visible = true
 	chips.visible = false
 	_bar_fill.size.x = bar.size.x * clampf(fraction, 0.0, 1.0)
-	_bar_label.text = words
+	_bar_label.text = UI.dots(words)
 
 
 ## The chip row along the foot. See Chips.show_chips for the items.

@@ -10834,9 +10834,9 @@ func equip_from_pack(id: int) -> bool:
 					m["found"].append(equipped[slot])     # a bag's swap: repacked below
 				else:
 					_pack_put(m, equipped[slot], spot)
-				log_event("%s on, %s into the pack" % [it["base"], equipped[slot]["base"].to_lower()])
+				log_event("%s equipped, %s into the pack" % [it["base"], equipped[slot]["base"].to_lower()])
 			else:
-				log_event("%s on" % it["base"])
+				log_event("%s equipped" % it["base"])
 			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(equipped[slot])})
 			equipped[slot] = it
 			_read(it)

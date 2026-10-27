@@ -145,7 +145,7 @@ func _lay(k: int, d: Dictionary, room: float) -> float:
 	var tl: Label = _tails[k]
 	l.add_theme_color_override("font_color", colour)
 	tg.add_theme_color_override("font_color", colour)
-	tg.text = str(d.get("tag", ""))
+	tg.text = UI.dots(str(d.get("tag", "")))
 	tg.visible = tg.text != ""
 	var bg: Color = colour.darkened(0.72) if colour != Pal.TEXT_2 else Pal.BUTTON
 	_panels[k].add_theme_stylebox_override("panel", UI.box(bg, 6))
@@ -154,16 +154,16 @@ func _lay(k: int, d: Dictionary, room: float) -> float:
 	var w := 0.0
 	var tails: Array = d.get("tail", [""])
 	for words_v in d["forms"]:
-		l.text = str(words_v)
+		l.text = UI.dots(str(words_v))
 		var lw := ceilf(UI.text_width(l, l.text))
 		# the tail: its first form that fits beside the words; none when none does
 		tl.text = ""
 		for t in tails:
 			if str(t) == "":
 				continue
-			var tw := ceilf(UI.text_width(tl, str(t))) + 8.0
+			var tw := ceilf(UI.text_width(tl, UI.dots(str(t)))) + 8.0
 			if 2 * CHIP_PAD + tag_w + lw + tw <= room:
-				tl.text = str(t)
+				tl.text = UI.dots(str(t))
 				break
 		var tail_w: float = (ceilf(UI.text_width(tl, tl.text)) + 8.0) if tl.text != "" else 0.0
 		w = 2 * CHIP_PAD + tag_w + lw + tail_w

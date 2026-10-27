@@ -289,14 +289,15 @@ static func data_of(k: String) -> Dictionary:
 	d["room"] = Words.CLASS_CARD["kicker"]
 	d["go"] = Words.CLASS_CARD["go"]
 	var tiles: Array = []
+	var heads: Array = d.get("heads", [])      # each tile's headline, the class's own (27 Oct); the plain words without
 	for c in Data.CLASSES:
 		if str(c["name"]) == cls:
 			for sh in c.get("short", []):
 				if tiles.size() < 3:
-					tiles.append([Words.CLASS_CARD["edge"], str(sh[0])])
+					tiles.append([str(heads[tiles.size()]) if tiles.size() < heads.size() else Words.CLASS_CARD["edge"], str(sh[0])])
 	if tiles.size() < 3:
 		var trees: Array = Data.TREES.filter(func(t): return str(t.get("class", "")) == cls).map(func(t): return str(t["name"]))
-		tiles.append([Words.CLASS_CARD["trees"], " · ".join(trees)])
+		tiles.append([str(heads[tiles.size()]) if tiles.size() < heads.size() else Words.CLASS_CARD["trees"], " · ".join(trees)])
 	while tiles.size() < 3:
 		tiles.append(["", ""])
 	d["tiles"] = tiles

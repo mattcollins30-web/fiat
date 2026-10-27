@@ -1260,6 +1260,7 @@ func refresh() -> void:
 		# no form fits whole (the Legion's smoke caught one that slipped the fit by ten pixels): it goes rather than trails off
 		_prev_label.text = ""
 		_prev_time.text = ""
+	UI.dots_under(self)                       # the caps pass (27 Oct, Matt): a capital after every "·", whatever set the words
 
 
 ## A line's shorter forms: the whole, then fewer sentences, then the first clause - never trailing off.
