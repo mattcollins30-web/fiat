@@ -585,7 +585,7 @@ static func _pair_in(dir: String, key: String) -> bool:
 ## The County zone's crew a run meets (its place's zone's: "the_motorway"...), "" off the County.
 static func county_gang(m: Dictionary) -> String:
 	var sg: Dictionary = m.get("signal", {})
-	var k: String = str(sg.get("county", sg.get("order", "")))
+	var k: String = str(sg.get("order", ""))     # a County run's own crew; a remixed signal brings the crew it was aimed with (the third review's E1)
 	var c: Dictionary = Data.county(k)
 	return site_key(str(Data.COUNTY_ZONES[int(c["cz"])]["name"])) if not c.is_empty() else ""
 
@@ -774,7 +774,7 @@ func show_state(sim, m: Dictionary) -> void:
 	var scene_key: String = _boss_key if _boss_key != "" and _pair_in(BOSS_DIR, _boss_key) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else site_key(str(site["name"])))     # his den while he's out, when it's drawn; a County place's own (26 Oct)
 	if scene_key != _site_key:
 		_site(scene_key)
-	_zone_key = ZONE_KEYS[mini(int(site["zone"]), ZONE_KEYS.size() - 1)]
+	_zone_key = ZONE_KEYS[mini(int(m.get("signal", {}).get("zone", site["zone"])), ZONE_KEYS.size() - 1)]     # the signal's crew, the one the Radio names
 	var ck: String = county_gang(m)
 	if ck != "" and ["a", "b"].all(func(w): return ["stand", "fire", "down"].all(func(ps): return tex("gang_%s_%s_%s" % [ck, w, ps]) != null)):     # the whole crew drawn, not half (the review)
 		_zone_key = ck                         # the County's own crew once drawn (26 Oct, tools/make_county_gangs_manifest.py), else the host's

@@ -1241,6 +1241,9 @@ const TOOK_WORDS := {"physical": "Physical", "fire": "Fire", "frost": "Chill", "
 const TEMPER := {"done": "Tempered: item level %d → %d", "no_piece": "Only kit you wear tempers", "mythic": "A mythic takes no temper",
 	"raise_first": "Item level +3 first", "short": "Needs %s scrap", "no_grow": "Nothing on it grows", "too_high": "Past the level you can wear", "price": "%s scrap · %s", "job": "Temper +1"}
 const RUN_HOME_CLEAN := "%s picked clean, nothing more before time's up: home with the pack"
+## The Mint's card before the Issue (the third review's A1(a)): what the win would turn the camp's money into.
+const MINT_WARN := {"forms": ["Beat him: you come out at ≈ƒ%s", "Comes out ≈ƒ%s", "≈ƒ%s"],
+	"tip": "Beat him and the town goes on his money. What you hold now, tins, notes and kit, comes out at about ƒ%s, plus what the run brings, and your kit sells at ×%.2f of its worth after."}
 const RUN_GANG_LATE := ["after time's up", "too late"]     # a gang due after the clock runs out (the first review's 15)
 const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% loot, from the patrols beaten since the site was cleared. Each one more adds to it."}
 const FENCE_SURE := "Sell %d"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)

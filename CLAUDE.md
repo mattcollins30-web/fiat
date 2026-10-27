@@ -23,6 +23,11 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   the 19th's files while the smoke hung). A run that writes no done file within run.sh's wait has hung: find where
   `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
 - The watcher runs one job at a time: no smoke while a balance pass runs.
+- The gauntlet (26 Oct, in every full pass after the one-save reads): each build's end state
+  (`pass/<Class>-<element>-<N>.save`) fights the Grid, the Archive, the Mint and the County's 12 in order, 3 tries each,
+  the camp restored after every lost try; the six broken builds' pieces on too. The summary's `gauntlet_table`. Flags:
+  `0 0 broken` (the broken builds' gauntlets alone, from the last pass's end states), `2 0 hunt` (the build hunt).
+  A bad flag writes `docs\balance\flag_error.txt` and runs nothing.
 - With the watcher off, a cloud session runs the full smoke in the cloud on a snapshot of its copy (xvfb, opengl3). Its
   known cloud-only reds are art the cloud copy lacks: gang faces, muzzle flashes, the Recruit's portraits, item
   pictures (a cell's words standing in, e.g. 'AMO'); every other red is real.

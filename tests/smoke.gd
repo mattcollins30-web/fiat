@@ -19873,6 +19873,20 @@ func _issue_checks(main) -> void:
 	var tins_was: int = sim.sell_price(a_piece) if a_piece != null else 0
 	var pile: float = money + held
 	var want: float = money * Data.FIAT_PILE_K * sqrt(pile) / pile
+	# the Mint's card says what the win turns the pile into, before it (the third review's A1(a))
+	var pv: Dictionary = sim.issue_preview()
+	_check(absf(float(pv["fiat"]) - want) < 1.0, "the Mint's preview says ƒ%.0f, the Issue gives ƒ%.0f" % [float(pv["fiat"]), want])
+	var mint_was: int = sim.rebuild_rank("mint")
+	sim.rebuilt["mint"] = maxi(1, mint_was)
+	var od_m = main._missions._order
+	od_m._shown = ""
+	od_m.show_state(sim)
+	var mc: Dictionary = od_m.col("mint")
+	var tipped_m: Array = mc["chips"]._panels.filter(func(p): return p.visible and p.tooltip_text.contains("his money"))
+	_check(not tipped_m.is_empty() and mc["chips"]._labels.any(func(l): return l.get_parent().visible and l.text.contains("≈ƒ")), "the Mint's card doesn't warn what the win turns the pile into")
+	if mint_was == 0:
+		sim.rebuilt.erase("mint")
+	od_m._shown = ""
 	sim.issue()
 	_check(sim.issued and absf(sim.cash - want) < 1.0 and sim._notes == 0, "the Issue: ƒ%.0f from a pile of %.0f with the stash's %.0f (want ƒ%.0f), notes %d" % [sim.cash, pile, held, want, sim._notes])
 	if a_piece != null:
@@ -20483,7 +20497,7 @@ func _county_checks(main) -> void:
 	_check(not main._missions._county_btn.visible and not main._missions._county.visible, "the County's button stayed up on a camp before the Issue")
 	# the County's own fight art (26 Oct): a run on a place reads its pair once drawn, and its wall hides the duck
 	var RV = load("res://scripts/ui/run_view.gd")
-	_check(RV.county_gang({"signal": {"order": "truck_stop"}}) == "the_motorway" and RV.county_gang({"signal": {"county": "treasury"}}) == "the_treasury" and RV.county_gang({}) == "", "the County's crew key: '%s'" % RV.county_gang({"signal": {"order": "truck_stop"}}))
+	_check(RV.county_gang({"signal": {"order": "truck_stop"}}) == "the_motorway" and RV.county_gang({"signal": {"county": "treasury", "zone": 1}}) == "" and RV.county_gang({}) == "", "the County's crew key: '%s'" % RV.county_gang({"signal": {"order": "truck_stop"}}))
 	_check(RV.county_key({"signal": {"order": "truck_stop"}}) == "the_truck_stop" and RV.county_key({"signal": {"county": "manor"}}) == "the_manor" and RV.county_key({}) == "", "the run's County place key: '%s'" % RV.county_key({"signal": {"order": "truck_stop"}}))
 	for c in Data.COUNTY:
 		var pk: String = RV.site_key(str(c["place"]))

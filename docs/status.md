@@ -6998,3 +6998,18 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   wear (one set a piece, the one with the most real pieces on); the County's own crews drawn (28 jobs, $2.24; RunView
   draws a County run's crew once all six of its figures are on disk); the broken builds re-run alone on his machine,
   each beside a plain baseline, broken when it beats everything and gains 1.5x its baseline's reach. Smoke 260 green.
+- The third review (26 Oct, the same three passes as the second: game3, tools3, ui3 in docs/review) and its batches. The
+  hunt and the build-stage gauntlet before it (tests/balance.gd _gauntlet: each build's end state through the Grid,
+  the Archive, the Mint and the County's 12, 3 tries each). Matt's calls, money first: circulation halves every
+  CIRC_HALF_H and a burn takes a quarter of it; notes after the Issue are income; held kit is stamped at the Issue's
+  rate for good; an order's set level for its first win only; the Archive at 40; the bot wears only what the next
+  zone wants; stamping your own piece at the Bench for the slot's issued price (it counts towards the County's want).
+  Batch 1 (the plain bugs: loot once a search, the counter's piece one roll, issued kit off the shelf, a death past 50
+  keeps 50 and takes the paragon, red tape -50% every 10 s, the order card's "Pays xN") and batch 2 (the smoke's
+  gaps: the Auditor, the remix before the Treasurer, the County's art, the shut names, the Kit's set line) 9f32ab6.
+  Batch 3, the open UI items: endgame figures on the run screen never cut; chips can carry hover words (greed's);
+  "Gang in: after time's up"; grouped scrap, runs and notes; the paragon rows say compounding (1d5dad2). Matt asleep,
+  my recommendations taken: a picked-clean run with nothing before time's up comes home on its own (3e6c812); every
+  ask-twice "<what goes> - press again" / "Again?", four seconds, the Rules' Delete included (3b81b37); a remixed
+  signal draws the crew the Radio named (E1) and the Mint's card warns what the win turns the pile into (A1(a)).
+  Smokes 269-274 green. Then the final pass, 32 h with the gauntlet.

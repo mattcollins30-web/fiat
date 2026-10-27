@@ -1136,6 +1136,17 @@ func note_price() -> float:
 
 
 ## The Issue: the first Issuer win. Every tin and note held, converted once, hard on piles; tins and notes gone for good.
+## What the Issue would give now: {"fiat", "kit_k", "money", "held"} (the third review's A1(a): the Mint's card warns before the win).
+func issue_preview() -> Dictionary:
+	var money: float = maxf(0.0, cash) + float(_notes) * Data.NOTE_TINS * inflation()
+	var held := 0.0                            # the kit's sale worth joins the pile (Matt, 26 Oct): kit bought to dodge the root doesn't
+	for it in _kit_held():
+		held += float(sell_price(it))
+	var pile: float = money + held
+	var k: float = (Data.FIAT_PILE_K * sqrt(pile)) / pile if pile > 0.0 else Data.FIAT_SCALE
+	return {"fiat": money * k, "kit_k": clampf(k / Data.FIAT_SCALE, 0.0, 1.0), "money": money, "held": held}
+
+
 func issue() -> void:
 	if issued:
 		return

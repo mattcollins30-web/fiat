@@ -82,6 +82,7 @@ func show_state(s) -> void:
 		reads += str(sim.order_odds_now(p["key"]))
 	var sig := "%s|%s|%s|%d|%d|%d|%s" % [str(sim.rebuilt), str(sim.order_beaten), reads, sim.reach, int(sim.on_mission()), int(sim.hp), str(sim.can_deploy())]
 	sig += "|" + str(Data.PINNACLES.map(func(pn): return sim.order_known(str(pn["key"]))))     # the names scramble with it (20 Oct)
+	sig += "|%d" % (-1 if sim.issued else roundi(float(sim.issue_preview()["fiat"])))     # the Mint's warning follows the pile, its inflation and the kit
 	if sig == _shown:
 		return
 	_shown = sig
@@ -105,6 +106,10 @@ func _show_col(c: Dictionary) -> void:
 	UI.wrap(c["words"], en.call(str(Words.PINNACLE_WORDS.get(k, ""))))
 	var beaten: int = int(sim.order_beaten.get(k, 0))
 	var chips: Array = [{"forms": ["Level %d" % sim.order_level(k)], "colour": Pal.TEXT_2}]
+	if k == "mint" and not sim.issued:
+		var pv: Dictionary = sim.issue_preview()
+		var fx: String = Fmt.group(int(round(float(pv["fiat"]))))
+		chips.append({"forms": Words.MINT_WARN["forms"].map(func(f): return f % fx), "colour": "warn", "tip": Words.MINT_WARN["tip"] % [fx, float(pv["kit_k"])]})     # the Issue converts everything (the third review's A1(a))
 	if beaten > 0:
 		chips.append({"forms": ["Beaten %d" % beaten], "colour": "good"})
 	var share: float = sim.over_level_share(sim.order_level(k))
