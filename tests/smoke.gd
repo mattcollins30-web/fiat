@@ -12946,7 +12946,11 @@ func _combo_checks(main) -> void:
 		# its defensive half (Matt, 27 Oct): a stack takes COMBO_GUARD_STEP off their fire, to the cap; none with no stacks
 		_check(is_equal_approx(sim.combo_guard({"combo": 30.0}), 1.0 - 30.0 * Data.COMBO_GUARD_STEP) and is_equal_approx(sim.combo_guard({"combo": 1e6}), 1.0 - Data.COMBO_GUARD_CAP) and is_equal_approx(sim.combo_guard({}), 1.0),
 			"%s's stacks don't guard: %.2f at 30, %.2f at a million" % [key, sim.combo_guard({"combo": 30.0}), sim.combo_guard({"combo": 1e6})])
+		var warm_m := {}
+		_check(sim._combo_warm(warm_m) == key and is_equal_approx(float(warm_m.get("combo", 0.0)), Data.COMBO_WARM), "%s's run doesn't start warm: %s" % [key, str(warm_m)])     # Matt, 27 Oct
 		Sim.combos_off = true
+		var cold_m := {}
+		_check(sim._combo_warm(cold_m) == "" and not cold_m.has("combo"), "%s starts warm with the balance's switch off" % key)
 		_check(is_equal_approx(sim.combo_guard({"combo": 30.0}), 1.0), "%s's guard holds with the balance's switch off" % key)
 		_check(not sim.combo_on(key), "%s's build is on with the balance's switch off" % key)
 		Sim.combos_off = false
@@ -12997,7 +13001,7 @@ func _combo_checks(main) -> void:
 				sim.advance(1.0)
 				if sim.mission == null:
 					break
-			_check(sim.mission != null and int(sim.mission["kills"]) > 0 and Sim.combo_stacks(sim.mission) == 0.0, "Drilled stacked with no skill of his running: %s" % (str(Sim.combo_stacks(sim.mission)) if sim.mission != null else "no run"))
+			_check(sim.mission != null and int(sim.mission["kills"]) > 0 and Sim.combo_stacks(sim.mission) == Data.COMBO_WARM, "Drilled stacked with no skill of his running: %s" % (str(Sim.combo_stacks(sim.mission)) if sim.mission != null else "no run"))
 			if sim.on_mission():
 				sim.extract_now()
 	# their figures on screen: past an int's top, a figure in e-notation that fits its tile (the review)

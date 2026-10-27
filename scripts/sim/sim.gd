@@ -5140,6 +5140,16 @@ func combo_guard(m: Dictionary) -> float:
 	return 1.0 - minf(Data.COMBO_GUARD_CAP, Data.COMBO_GUARD_STEP * combo_stacks(m))
 
 
+## A pinnacle build's warm start (Matt, 27 Oct, the gauntlet: a kill-stack build died before its stacks came against the
+## County's twenty-man crews): every run opens with COMBO_WARM stacks. The key of the build on, "" for none.
+func _combo_warm(m: Dictionary) -> String:
+	for k in Data.COMBOS:
+		if combo_on(str(k)):
+			m["combo"] = maxf(float(m.get("combo", 0.0)), Data.COMBO_WARM)
+			return str(k)
+	return ""
+
+
 ## A run's stacks of the build on, and a stack's worth.
 static func combo_stacks(m: Dictionary) -> float:
 	return float(m.get("combo", 0.0))
@@ -7211,6 +7221,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
 	}
+	_combo_warm(m)                            # the odds read the warm start too
 	if t.has("boss"):
 		m["boss"] = _boss_entry(t["boss"])
 		m["boss_queue"] = []
@@ -7303,6 +7314,9 @@ func deploy(i: int) -> void:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
+	var warm_key := _combo_warm(mission)
+	if warm_key != "":
+		log_event(Words.COMBOS[warm_key])       # the build's on: its one line, at the start now the loop starts warm
 	if has_node("cap_ghost") and not t.has("boss"):
 		mission["remaining"] = 0              # Ghost: the first gang never comes; the run starts at the search
 		mission["target_hp"] = 0.0

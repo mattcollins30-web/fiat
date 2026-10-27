@@ -1530,10 +1530,11 @@ const COLLECTION_CLASS_LEVEL := 50
 const BREAKDOWN_ROWS := 7          # the fight's breakdown (24 Oct): the biggest sources shown, the rest "Other"
 const COMBO_GUARD_STEP := 0.01     # a pinnacle build's stack takes this off their fire (Matt, 27 Oct)
 const COMBO_GUARD_CAP := 0.6       # and no more than this
+const COMBO_WARM := 40.0           # a pinnacle build's stacks at a run's start (Matt, 27 Oct)
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
 const FLATLINE_HEAL := 0.05        # Flatline: a shocked kill heals this share of max HP (joints B, 24 Oct)
 const COMBOS := {
-	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.04},
+	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.08},     # 0.04 to 0.08 with the warm start (Matt, 27 Oct, the gauntlet)
 	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "recipe": ["Snares/Cold snap", "The cold/Poacher's snare", "The cold/Frozen solid", "The cold/Shatter"], "step": 0.05},
 	"flatline": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "linemans_bag", "nodes": ["shock_chain", "cap_arc"], "recipe": ["Shifts/Defib", "Live/Paramedic's paddles", "Live/Daisy chain", "Live/Arc"], "step": 0.05},     # joints B (24 Oct): Overdose went with the Paramedic's poison
 	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "recipe": ["Muscle/Glassing", "Blades/Doorman's glass", "Blades/Won't stop", "Blades/Bleed out"], "step": 0.25},
@@ -3348,7 +3349,7 @@ const COUNTY := [
 	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 80},
 	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 82},
 	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 85,
-		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 3.6},     # fire 4.5 to 3.6 (Matt, 27 Oct, the gauntlet: the County's one wall)
+		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 3.0},     # fire 4.5 to 3.6 to 3.0 (Matt, 27 Oct, the gauntlet: the County's one wall)
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:
 const BAILIFF_CUT := {"Primary": 0.4, "Secondary": 0.15}   # the Bailiff seizes your best piece: a gun's share of your fire lost while he holds it
@@ -3401,7 +3402,7 @@ const PINNACLES := [
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
-const ORDER_AGAIN_SOFT := 0.8     # an order's head on its ladder: HP and fire this much (Matt, 27 Oct)
+const ORDER_AGAIN_SOFT := 0.65    # an order's head on its ladder: HP and fire this much (Matt, 27 Oct)
 const ORDER_AGAIN_STEP := 2     # an order won before: its "again" level, then this a win past the second (Matt, 27 Oct: a set ladder over the Treasury)
 ## Patterns (24 Oct, the endgame chase, phase 4): a unique's rule moved onto a rare or better of its slot.
 const PATTERN_RARITY := 2          # rare or better takes one
