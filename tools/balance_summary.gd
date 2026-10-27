@@ -84,11 +84,24 @@ const HUNT_ROWS := 30          # a stage's table: its best this many (every buil
 ## The gauntlet's reads (26 Oct): a BROKEN line each in pass/broken-<key>.txt (a broken build's pieces on a one-save
 ## end state) and a GAUNTLET line each in pass/gauntlet-<Class>-<element>.txt (the end state as played).
 static func read_broken() -> Array:
-	return _read_lines("broken-", "BROKEN ")
+	return _best_of(_read_lines("broken-", "BROKEN "))
 
 
 static func read_gauntlet() -> Array:
-	return _read_lines("gauntlet-", "GAUNTLET ")
+	return _best_of(_read_lines("gauntlet-", "GAUNTLET "))
+
+
+## The gauntlet runs each build twice (27 Oct, Matt): the better of its reads - the most places won, then the most on
+## the first try, then the fewest deaths; a read that errored only when it's all there is.
+static func _best_of(rows: Array) -> Array:
+	var best := {}
+	for r in rows:
+		var k: String = str(r.get("id", r.get("build", "?")))
+		var cur: Dictionary = best.get(k, {})
+		var score := func(x: Dictionary) -> Array: return [0 if x.has("error") else 1, int(x.get("won", 0)), int(x.get("first_try", 0)), -int(x.get("deaths", 0))]
+		if cur.is_empty() or score.call(r) > score.call(cur):
+			best[k] = r
+	return best.values()
 
 
 static func _read_lines(prefix: String, tag: String) -> Array:
@@ -106,7 +119,9 @@ static func _read_lines(prefix: String, tag: String) -> Array:
 						out.append(bp)
 						got = true
 			if not got:
-				out.append({"build": f.get_basename().substr(prefix.length()), "error": "no %sline (the read crashed or was cut off)" % tag})
+				var nm: String = f.get_basename().substr(prefix.length())
+				var tail := RegEx.create_from_string("-\\d+$")
+				out.append({"build": tail.sub(nm, ""), "error": "no %sline (the read crashed or was cut off)" % tag})     # its twin's name (the review)
 	return out
 
 

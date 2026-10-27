@@ -124,19 +124,22 @@ for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The gauntlet on %%C>
 :gauntlets
 rem the gauntlet (26 Oct, Matt: "test they are broken and can smash all content at least once"; its kit "the final
 rem pass's end states"): each build's end state as played, and the six broken builds' pieces on their class's
-for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
-	for /f "tokens=1,2" %%A in (%%E) do (
-		>>docs\balance\pass\expected.txt echo gauntlet-%%B-%%A
-		start "" /b cmd /c tools\balance_read.bat gauntlet-%%B-%%A 60 0 gauntlet %%B %%A
+rem each twice (27 Oct, Matt): the summary takes the better of the two, a build's run of luck either way read out
+for /l %%S in (1,1,2) do (
+	for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
+		for /f "tokens=1,2" %%A in (%%E) do (
+			>>docs\balance\pass\expected.txt echo gauntlet-%%B-%%A-%%S
+			start "" /b cmd /c tools\balance_read.bat gauntlet-%%B-%%A-%%S 60 0 gauntlet %%B %%A
+		)
+	)
+	for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
+		>>docs\balance\pass\expected.txt echo broken-%%K-%%S
+		start "" /b cmd /c tools\balance_read.bat broken-%%K-%%S 60 0 broken %%K
 	)
 )
-for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
-	>>docs\balance\pass\expected.txt echo broken-%%K
-	start "" /b cmd /c tools\balance_read.bat broken-%%K 60 0 broken %%K
-)
-echo The gauntlet: 18 reads running.
-call :waitfor "gauntlet-*.done" 12 400
-call :waitfor "broken-*.done" 6 400
+echo The gauntlet: 36 reads running.
+call :waitfor "gauntlet-*.done" 24 400
+call :waitfor "broken-*.done" 12 400
 :summary
 
 "%GODOT%" --headless --path . -s tools/balance_summary.gd

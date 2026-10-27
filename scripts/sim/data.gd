@@ -1534,7 +1534,7 @@ const COMBO_WARM := 40.0           # a pinnacle build's stacks at a run's start 
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
 const FLATLINE_HEAL := 0.05        # Flatline: a shocked kill heals this share of max HP (joints B, 24 Oct)
 const COMBOS := {
-	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.08},     # 0.04 to 0.08 with the warm start (Matt, 27 Oct, the gauntlet)
+	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.12},     # 0.04 to 0.08 to 0.12 with the warm start (Matt, 27 Oct, the gauntlet)
 	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "recipe": ["Snares/Cold snap", "The cold/Poacher's snare", "The cold/Frozen solid", "The cold/Shatter"], "step": 0.05},
 	"flatline": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "linemans_bag", "nodes": ["shock_chain", "cap_arc"], "recipe": ["Shifts/Defib", "Live/Paramedic's paddles", "Live/Daisy chain", "Live/Arc"], "step": 0.05},     # joints B (24 Oct): Overdose went with the Paramedic's poison
 	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "recipe": ["Muscle/Glassing", "Blades/Doorman's glass", "Blades/Won't stop", "Blades/Bleed out"], "step": 0.25},
@@ -3349,7 +3349,7 @@ const COUNTY := [
 	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 80},
 	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 82},
 	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 85,
-		"who": "The Treasurer", "mech": "treasurer", "hp": 22.0, "dps": 3.0},     # fire 4.5 to 3.6 to 3.0 (Matt, 27 Oct, the gauntlet: the County's one wall)
+		"who": "The Treasurer", "mech": "treasurer", "hp": 18.0, "dps": 2.5},     # fire 4.5 to 3.6 to 3.0 to 2.5, HP 22 to 18 (Matt, 27 Oct, the gauntlet: the County's one wall)
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:
 const BAILIFF_CUT := {"Primary": 0.4, "Secondary": 0.15}   # the Bailiff seizes your best piece: a gun's share of your fire lost while he holds it
@@ -3398,7 +3398,7 @@ const PINNACLES := [
 		"drop": "grid_key", "unique": "The Lineman's Lamp", "unique2": "The Lineman's Tool Bag"},
 	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 40, "again": 95,
 		"drop": "ledger_seal", "unique": "The Registrar's Satchel", "unique2": "The Registrar's Stamp"},
-	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45, "again": 100,
+	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45, "again": 100, "again_soft": 0.55,
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
