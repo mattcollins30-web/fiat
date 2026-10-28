@@ -33,11 +33,22 @@ voice. File: `art/intro/classes/<voice>.mp3`.
 | The Recruit | `recruit.mp3` | Nobody signed me out. I took the stores and I walked. | I can drill you. I can drill the lot of you. Show me where. |
 | The Drifter | `drifter.mp3` | Kev found me on the road, walking the way the lorries go. | I don't stop anywhere long. Lucky for you, I'm quick. |
 
-## 4. To come: written once the tutorial's agreed
+## 4. Record fresh: the tutorial and the Poacher (drafts, 28 Oct; docs/design/tutorial.md - change any words)
 
-- The Poacher's card (he has none: he's open from the start). Draft below; it waits on the tutorial's design.
-- The tutorial's lines.
-
-Poacher, draft (file `art/intro/classes/poacher.mp3`):
+The Poacher's card. File: `art/intro/classes/poacher.mp3`.
 1. I had the village in rabbits before anyone knew they'd need them.
 2. Quiet's the trick. You don't hear me coming, and neither do they.
+
+The tutorial: one take a beat, the narrator (the room cards' voice) unless marked. Files: `art/intro/tutorial/<take>.mp3`.
+
+| Take | Line |
+|---|---|
+| `1_arrive.mp3` | The garages behind the camp. Nothing on you but a coat. Someone's in there. |
+| `2_one_man.mp3` | He's seen you. You hit what you can; he hits back. Watch your HP, not his. |
+| `3_med.mp3` | A bandage. In the rig it's used when it gets bad. Click it to use it now. |
+| `4_move.mp3` | Throw a brick. It costs energy and takes a while to come back. The one in front can't fire while he's seeing stars. |
+| `5_gang.mp3` | More of them. The number over a man is the one you're hitting. Two can fire on you; the rest wait their turn. |
+| `6_crate.mp3` | Cleared. Now you search, a crate at a time. What it gives lands on the floor. |
+| `7_pack.mp3` | Drag it into the pack. It has a shape, and so does the pack. R turns what you're holding. |
+| `8_way_out.mp3` | Another gang's coming. Get out now, or stay and lose it all. |
+| `9_poacher.mp3` | A shot from the hedge. Then another. *(narrator)* / Up. You're not built for this, and I'm not carrying you. *(the Poacher)* |
