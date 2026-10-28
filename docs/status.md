@@ -7145,3 +7145,8 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
   (Drifter as fire and Scrapper as shock never beat the Bank). Deaths and bails back with the heals packed; faint
   signals won 70% (target 85%+); the gauntlet's live_load fell to 3 of 15 first try. Next, agreed with Matt: the
   iterating flag at 16 h with a per-read cap and no gauntlet (~25 min), then his playtest from fresh.
+- The first quick pass (`16 1 quick`, 23c71d1): 24 min (23:15-23:39), four reads capped. 22 red. Drifter as fire now
+  beats the Bank (the fists wall gone); Scrapper as shock, Doorman as physical and Recruit as physical don't by hour 16:
+  no collapse, a slow climb (about 100 damage a second at level 20, farming tiers 4-6, the loadout's worth flat). Bot
+  timing, not tuned before a playtest (Matt's rule); one read a build, so a single unlucky read reads the same way.
+  Faint signals 90%. Next: Matt plays 23c71d1 from fresh.
