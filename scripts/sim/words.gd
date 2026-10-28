@@ -95,8 +95,8 @@ const ROOM_INTROS := {
 	"fence": {"room": "The Fence", "face": "fence", "title": "The Fence", "voice": "fence", "cues": [0.0, 5.44, 9.10], "lines": [
 		"Everything's for sale. That's the one thing that hasn't changed.",
 		"You bring, I price. The price is the price.",
-		"Want steady work? I've got contracts."],
-		"tiles": [["The stash", "Yours to sell, for tins"], ["The shelf", "His stock, and sealed lots"], ["Contracts", "What he wants, what he pays"]]},
+		"Notes, tins, scrap. I'll change any of it. At a price."],     # the exchange (28 Oct): was the contracts' line - the voice wants recording again
+		"tiles": [["The stash", "Yours to sell, for tins"], ["The shelf", "His stock, and sealed lots"], ["The exchange", "Notes, tins, scrap, at his rate"]]},
 	"workshop": {"room": "Workshop", "face": "", "title": "The bench", "voice": "workshop", "cues": [0.0, 6.46], "lines": [
 		"The armourer's roll, laid out on the bench. Proper tools, for once.",
 		"Guns get better here, part by part."],
@@ -368,7 +368,7 @@ const FENCE := {
 	"sold": ["That'll do.", "I've had worse through here.", "Someone will want that.", "Tins. Count them if you like."],
 	"bought": ["It's yours. It was someone's.", "No returns.", "Mind how you go with that."],
 	"shelf": "More shelf. Same stock, more of it.",
-	"contract": ["That's what I asked for. Here's what I said.", "Good. Someone's waiting on these.", "Done. I'll have another for you."],
+	"exchange": ["Done. Count it if you like.", "That's the rate. Don't look at me like that.", "Pleasure. Mostly mine.", "Rates move. Mine don't go down."],     # the exchange (28 Oct)
 	"gamble": ["He had one. Don't ask where.", "That's what came. No returns.", "Sealed when I got it. Sealed when you did."],
 	"insured": "I'll hold the paper on it. If they don't come back, the kit does.",
 	"paid_out": "Insured. The Fence held the paper; the kit's back on the Pitch. The runner isn't.",
@@ -1028,8 +1028,6 @@ const EVENTS := {
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
 
-## The voice where the UI used to explain itself: the
-## fence's contracts, the cards' notes.
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
 const FIRST_GUN := "Behind the till, wrapped in a bin bag: %s, and a box of %s."     # the Garden Centre's first clear (17 Oct)
@@ -1043,8 +1041,6 @@ static func odds_words(odds: float) -> String:
 	return ODDS.back()[1]
 
 
-const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay.", "Don't ask who for."]
-const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
 const SKY := {
 	"night": "night", "day": "day", "rain": "rain", "fog": "fog", "clear": "clear",     # nouns, all four (the language pass: "fog down" was flavour among values)
 	"fresh": "Fresh",
@@ -1056,7 +1052,6 @@ const SKY := {
 const NEXT := {
 	"past": "The runner's waiting in Training. Ask what they were, before.",
 	"first": "The Allotments are out past the ring road. Go and see what's left.",
-	"contract": "The Fence has a contract you can fill. Hand it in on his Contracts tab.",
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
@@ -1066,7 +1061,6 @@ const NEXT := {
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
 	"first": "Next: the Allotments",
-	"contract": "A contract's ready",
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
 	"done": "The Radio's the game now",

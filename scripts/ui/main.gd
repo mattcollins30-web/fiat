@@ -1393,7 +1393,7 @@ func _rail_status(nm: String) -> Dictionary:
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
 	match nm:
 		OVERVIEW:
-			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
+			# the Yard's jobs were easy to miss: the rail says when one is affordable
 			return {"badge": "Can build" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
@@ -1403,13 +1403,7 @@ func _rail_status(nm: String) -> Dictionary:
 		MEDIC:
 			var fine: bool = sim.hp >= sim.max_hp() * MEDIC_HURT_UNDER and sim.wounds.is_empty()     # hurt under 90% or wounded (25 Oct, the review: "Hurt" at 1087 of 1088)
 			return {"badge": "" if fine or sim.on_mission() else "Hurt", "badge_tone": "warn"}
-		MARKET:
-			# the contracts were easy to miss as a tab: the rail says when one's ready (they pay currency only, 9 Oct)
-			var is_ready := 0
-			for k in range(sim.contracts.size()):
-				if sim.can_hand_in(k):
-					is_ready += 1
-			return {"badge": "Ready" if is_ready > 0 else "", "badge_tone": "good"}
+		# the Fence: no badge since the contracts went for the exchange (28 Oct) - nothing there waits on a decision
 	return {}
 
 

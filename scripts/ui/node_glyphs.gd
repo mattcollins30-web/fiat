@@ -132,7 +132,7 @@ const PICK_GLYPH := {
 	"lock_up": "pack", "filing_cabinet": "pen", "dry_store": "forever", "annex": "pack",
 	"beds": "hp", "shelf": "med", "ward": "hp", "stockroom": "med", "surgery": "cash", "physio": "med", "drip": "hp", "field_kit": "med",
 	"theatre": "hp", "med_lab": "med",
-	"stall": "quantity", "haggling": "cash", "shopfront": "quantity", "orders": "pen", "back_room": "gem", "fixer": "pen",
+	"stall": "quantity", "haggling": "cash", "shopfront": "quantity", "contacts": "cash", "back_room": "gem", "fixer": "cash",     # the exchange's two (28 Oct)
 	"gamblers_table": "dice", "insurance_desk": "armour", "arms_dealer": "dmg", "dealers_cut": "cash",
 	"weather_set": "half", "night_set": "quiet", "forecast": "cash", "dead_air": "clock", "scanner": "wrench", "two_channels": "dice",
 	"lorry_watch": "pen", "long_range": "loud", "jammer": "half", "military_band": "cash",

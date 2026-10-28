@@ -53,7 +53,7 @@ const SOUNDS := {
 ## What the sim's chronicle says happened, as a sound (the camp's moments).
 const CHRON := {"equip": "equip", "level": "level_up", "train": "point_spent", "heal": "heal_clinic", "treat": "heal_clinic",
 	"craft": "craft", "build": "build", "yard_rank": "build", "gamble": "buy", "open": "gate_open", "boss": "head_down",
-	"word": "radio_code", "bin": "ditch", "contract": "sell"}
+	"word": "radio_code", "bin": "ditch", "exchange": "sell"}
 ## The crates' keys to their sound.
 const CRATE_SOUND := {"cardboard": "crate_cardboard", "ammo_tin": "crate_ammo_tin", "jewellery": "crate_jewellery",
 	"toolbox": "crate_toolbox", "medicine": "crate_medicine", "filing": "crate_filing", "safe": "crate_safe", "military": "crate_military"}

@@ -568,25 +568,11 @@ func _tidy_kit(sim) -> void:
 	_lap("shop", t0)
 
 
-## The endgame's business: contracts handed in when ready, the map's points
+## The endgame's business: the exchange for what a build is short of, the map's points
 ## spent, the mate's unique when the notes are there twice over, the bench
 ## adding an affix to what's worn when notes are spare.
 func _endgame(sim) -> void:
-	for k in range(sim.contracts.size()):
-		if sim.can_hand_in(k):
-			var c: Dictionary = sim.contracts[k]
-			# only when the items that go aren't what's worn or the best spare
-			var ok := true
-			for it in sim.contract_items(c):
-				if not (it["slot"] in Data.SLOTS):
-					continue                      # meds and papers: nothing worn to keep
-				var best: Dictionary = sim.best_in_stash(it["slot"])
-				if not best.is_empty() and best["id"] == it["id"] and sim.equipped.get(it["slot"], null) == null:
-					ok = false
-			if ok:
-				var pay: String = sim.contract_pay_words(c)
-				sim.hand_in(k)
-				bought.append([sim.elapsed, "contract: %s" % pay])
+	_exchange_short(sim)
 	# the rebuild (18 Oct, docs/design/rebuild.md §7): the cheapest place it can build, by the materials it wants - the
 	# Mint first once the Grid's key is in hand (Matt, 26 Oct, the sixth pass: 3 reads of 24 built it, the cheaper places
 	# taking its ledgers and army kit), nothing else spending what it wants till it stands
@@ -1269,6 +1255,61 @@ func pick_tier(sim) -> int:
 ## What the bot keeps back from the bench, the gamble and the words: the clinic's price three times over (the
 ## sixteenth read: a wounded Poacher spent every run's take on affixes, never had the treatment's price when
 ## the next run came, and ran the services hurt and wounded for seven hours at £3k a run), and £2,000.
+## The exchange (28 Oct: the Fence's contracts gone for it), used sparingly: the salvage a Yard pick or rank is short
+## of when its tins are there, and the materials the nearest rebuild is short of, bought with tins - only what's short,
+## only out of a quarter of the cash, never into the reserve or the build's own price.
+const EXCHANGE_CASH_SHARE := 0.25
+func _exchange_short(sim) -> void:
+	if sim.on_mission() or not sim.room_open("fence"):
+		return
+	var wants: Array = []                     # [currency, short, tins the build itself still needs]
+	for b in Data.YARD:
+		var key: String = b["key"]
+		var kind: String = b["salvage"]
+		for c in range(sim.yard_cols()):
+			for side in ["a", "b"]:
+				if sim.yard_pick_block(key, c, side).begins_with("Wants"):
+					wants.append([kind, sim.yard_pick_salvage(key, c) - int(sim.salvage.get(kind, 0)), sim.yard_pick_cost(key, c)])
+		if sim.yard_rank_block(key).begins_with("Wants"):
+			wants.append([kind, sim.yard_rank_salvage(key) - int(sim.salvage.get(kind, 0)), sim.yard_rank_cost(key)])
+	if sim.rebuild_open():
+		var least := 1 << 30
+		var near := {}
+		for r in Data.REBUILDS:
+			var cost: Dictionary = sim.rebuild_cost(r["key"])
+			var short := {}
+			var n := 0
+			for m in cost:
+				var gap: int = int(cost[m]) - sim.held_of(m)
+				if gap > 0:
+					short[m] = gap
+					n += gap
+			if n == 0 or short.keys().any(func(m): return Data.KEY_ITEMS.has(m)):
+				continue                          # built already, or a key item short: the exchange has none
+			if n < least:
+				least = n
+				near = short
+		for m in near:
+			wants.append([m, int(near[m]), 0])
+	var done := {}
+	for w in wants:
+		var cur: String = w[0]
+		var need: int = int(w[1])
+		if need <= 0 or done.has(cur) or not sim.exchange_offered().has(cur):
+			continue
+		var rate: float = sim.exchange_rate("tins", cur)
+		if rate <= 0.0:
+			continue
+		var tins: int = int(ceil(need / rate))
+		while sim.exchange_get("tins", cur, tins) < need:
+			tins += 1
+		if tins > sim.cash * EXCHANGE_CASH_SHARE or sim.cash - tins < _reserve(sim) + float(w[2]):
+			continue
+		if sim.exchange("tins", cur, tins):
+			done[cur] = true
+			bought.append([sim.elapsed, "exchange: %d tins for %d %s" % [tins, need, cur]])
+
+
 func _reserve(sim) -> float:
 	return sim.treat_cost() * 3.0 + _lorry_watch_saving(sim)     # nothing when whole: the bench keeps its own £2,000 floor
 

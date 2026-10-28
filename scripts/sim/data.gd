@@ -149,9 +149,9 @@ const YARD := [
 		[{"id": "stall", "name": "Stall", "short": "+2 for sale", "words": "2 more things on the Fence's shelf"},
 		 {"id": "haggling", "name": "Haggling", "short": "+10% sell prices", "words": "Everything sells for 10% more"}],
 		[{"id": "shopfront", "name": "Shopfront", "short": "+3 for sale", "words": "3 more things on the Fence's shelf"},
-		 {"id": "orders", "name": "Orders", "short": "5 contracts open", "words": "5 contracts open, not 3"}],
+		 {"id": "contacts", "name": "Contacts", "short": "Exchange spread 10%", "words": "The exchange keeps 10% either way, not 15%"}],     # was Orders (28 Oct: the contracts gone for the exchange)
 		[{"id": "back_room", "name": "Back room", "short": "A unique in stock", "words": "A unique always on the shelf"},
-		 {"id": "fixer", "name": "Fixer", "short": "Contract notes ×2", "words": "Contracts that pay notes pay twice the notes"}],
+		 {"id": "fixer", "name": "Fixer", "short": "+5% on trades", "words": "Every trade at the exchange gets 5% more"}],
 		[{"id": "gamblers_table", "name": "Gambler's table", "short": "Gambles half price", "words": "Every gamble costs half"},
 		 {"id": "insurance_desk", "name": "Insurance desk", "short": "Insured: pack kept", "words": "If an insured runner dies, the pack comes home too"}],
 		[{"id": "arms_dealer", "name": "Arms dealer", "short": "Stock at your best site's level", "words": "The Fence's stock rolls at the level of your highest open site"},
@@ -1095,9 +1095,10 @@ const FX := {
 	"yard/another_unit": 50,     # Another unit: Fifty more cells in the stash
 	"yard/beds": 0.5,     # Beds: Resting heals half an HP a second more
 	"yard/champion": 20.0,     # Champion: Twenty per cent better finds
+	"yard/contacts": 0.10,     # Contacts: The exchange keeps 10% either way, not 15% (28 Oct, the exchange; a draft)
 	"yard/crows_nest": 1.2,     # Crow's nest: Every gang takes a fifth longer to arrive
 	"yard/dealers_cut": 25.0,     # Dealer's cut: Everything sells for a quarter more
-	"yard/fixer": 2,     # Fixer: Contracts that pay notes pay twice the notes
+	"yard/fixer": 1.05,     # Fixer: Every trade at the exchange gets 5% more (28 Oct, the exchange; a draft)
 	"yard/flares.heads": 1,     # Flares: Every gang arrives one head short
 	"yard/gamblers_table": 0.5,     # Gambler's table: Every gamble costs half
 	"yard/good_nose": 5.0,     # A good nose: Five per cent better finds
@@ -1110,7 +1111,6 @@ const FX := {
 	"yard/med_lab": 1.25,     # Med lab: Every med heals a quarter more
 	"yard/military_band": 0.5,     # Military band: Every code's reward - tins, XP, drops, quality - half again
 	"yard/night_set": 0.5,     # Night set: Night's slower feet halved
-	"yard/orders": 2,     # Orders: Five contracts open, not three
 	"yard/overbump": 2,     # Overbump: A bump raises an item six levels, not three
 	"yard/jerry_can": 10.0,     # Jerry can: Max energy +10 (24 Oct, milestone 8: the Generator's away picks gone)
 	"yard/dynamo": 0.5,     # Dynamo: Energy refills 0.5 more a second
@@ -2482,25 +2482,8 @@ const FIRST_GUN_SITE := 1
 const FIRST_GUNS := [["Primary", "Farmer's shotgun"], ["Primary", "Pump shotgun"], ["Secondary", "Old revolver"]]
 const START_STASH_BANDAGES := 5    # a new camp's stash (17 Oct, Matt: "add 4 or 5 to the stash on a new save"): no meds to buy till the Gamekeeper opens the Clinic
 
-## Contracts (9 Oct, docs/design/contracts.md): the Fence wants gear - so many of a slot at a rarity, a deep
-## piece, one carrying a named affix - or papers or meds, and pays in currency only: cash sized to a run's
-## takings, notes and scrap by the deepest depth, or a salvage from a zone dug to SALVAGE_DEPTH. Three open
-## (five with the Fence's Orders); a handed-in one is replaced. The first turn-down after a run home is free,
-## then CONTRACT_PASS_NOTES doubling. The Fence's mate sells a loose unique for notes, a new one every MATE_RUNS.
-const CONTRACTS_OPEN := 3
-const CONTRACTS_MAX := 5
-const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Attachment"]
-const CONTRACT_KINDS := {"gear": 0.5, "deep": 0.125, "affix": 0.125, "meds": 0.125}     # no papers (18 Oct, Matt): they're the Radio's, off the stash
-const CONTRACT_KIND_NAMES := {"gear": "Gear", "deep": "Deep gear", "affix": "Named affix", "papers": "Papers", "meds": "Meds"}
-const CONTRACT_PAYS := {"notes": 0.45, "material": 0.35, "salvage": 0.2}     # notes and materials (24 Oct, Matt: tins "in the early game they don't offer enough and in the end game they offer too much" - the 24 Oct pass's contracts paid 26 times the runs; scrap out too, far over its gate); a material once its site's cleared, a salvage once a site drops it
-const CONTRACT_MATERIAL := 1.0     # a material contract: this times the ask's weight, rounded up (a rebuild wants 10-30)
-const CONTRACT_MATERIAL_MAX := 6   # and never more than this a contract (24 Oct review: 15-23 a contract swamped the rebuild)
-const CONTRACT_NOTES := 4          # notes, times the weight and (1 + the deepest depth / 5)
-const CONTRACT_SCRAP := 6          # scrap, the same
-const CONTRACT_OVER_FENCE := 1.5   # a gear ask paid in scrap pays at least this times what its pieces would scrap for (12 Oct, Matt: "why would I accept these prices when the items sell for 6x+ alone at the fence")
-const CONTRACT_DEEP_LESS := 3      # a deep piece: from the deepest site's level less this
-const CONTRACT_DEEP_FROM := 6      # and asked for only once that's this level or more
-const CONTRACT_PASS_NOTES := 5     # the second turn-down in a run; doubling after
+## The Fence's mate (9 Oct) sells a loose unique for notes, a new one every MATE_RUNS. (His contracts went for the
+## exchange, 28 Oct: EXCHANGE_* by the Issue's figures below.)
 const MATE_RUNS := 5
 const MATE_NOTES := 400            # a unique from the mate, times the tier
 
@@ -3396,6 +3379,17 @@ static func county(key: String) -> Dictionary:
 const FIAT_SCALE := 0.0005             # a fiat's worth against the day's tins: every price and pay after the Issue is the tins' x this
 const FIAT_PILE_K := 0.8               # the conversion, hard on piles: fiat = this x the square root of tins held (and notes at NOTE_TINS)
 const NOTE_TINS := 500.0               # a note's worth in the day's tins at the Issue (the crews' prices read through it after)
+
+## The exchange (28 Oct, Matt: "contracts should be replaced by currency conversion - notes, tins, scrap with varying
+## rates for each"; salvage and the County's materials too): a worth in tins at inflation 1 a currency, the day's
+## prices on it and a drift of ±EXCHANGE_DRIFT a run home; EXCHANGE_SPREAD kept either way. All drafts for the balance pass.
+const EXCHANGE_BASE := {
+	"notes": NOTE_TINS, "scrap": float(SCRAP_PER_POUND),
+	"copper": 600.0, "steel": 600.0, "army": 600.0,
+	"copper_wire": 900.0, "paving": 900.0, "glass": 900.0, "ledgers": 900.0, "cable_drums": 900.0, "army_kit": 900.0, "fuses": 900.0,
+}
+const EXCHANGE_DRIFT := 0.12            # a day's move a currency, either way (draft)
+const EXCHANGE_SPREAD := 0.15           # kept either way; the Fence's Contacts 10% (draft)
 const FIAT_CIRC_SPAN := 100000.0       # every this-much fiat in circulation adds 100% to prices
 const FIAT_CIRC_CAP := 4.0             # prices never past x4 the Issue's
 const RATE_MIN := 0.6                  # the Issuer's rate: the Fence buys at it

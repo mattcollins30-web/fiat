@@ -122,12 +122,11 @@ var scrap := 0                     # the Bench's material (34): found, stripped,
 var takings := 0.0                 # what the Yard takes a run, averaged over the last few: the run's cash and the Fence's money (the pass, 6 Oct)
 var gamble_base := 0.0             # the gamble's own: the takings, but a run moves it GAMBLE_STEP at most (13 Oct, Matt: 305 to 2366 off one sale)
 var _takings_run := 0.0            # the cash in since the last run came home
-var cash_in := 0.0                 # every pound in since the game began (runs, sales, contracts); not saved: the readers' figure
+var cash_in := 0.0                 # every pound in since the game began (runs, sales); not saved: the readers' figure
 var atlas := {}                    # the map's passives: key -> rank
 var boss_paid: Array = []          # per tier: the depths a head's price has been paid at (Long memory: once a depth)
 var atlas_points := 0              # earned: one a new depth cleared past the first
-var contracts: Array = []          # the Fence's: {kind, slot, rarity, count, level, stat, pay, amount, salvage}
-var passes := 0                    # contracts turned down since the last run home: the first is free (9 Oct)
+var exchange_day := 0              # the exchange's day (28 Oct, Matt: contracts replaced by currency conversion): one a run home, the rates' dice
 var mate := {}                     # the Fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
@@ -212,8 +211,6 @@ func start() -> void:
 		stash_put(_plain(Data.MEDICAL, "Bandage"))     # a new camp's spares (17 Oct, Matt): meds before the Clinic opens
 	restock()
 	came_back_seen()
-	while contracts.size() < contracts_open():
-		contracts.append(roll_contract())
 	mate = roll_mate()
 	# (18 Oct, Matt on Q8: the opening's scenes tell it; the log no longer tells it again on another timeline)
 	log_event(Words.YARD["set"])
@@ -1497,64 +1494,26 @@ func trait_add(key: String) -> float:
 	return a
 
 
-# ------------------------------------------------------------------ the Fence's contracts
+# ------------------------------------------------------------------ the exchange
 
-## One contract (9 Oct): a kind of ask and what it pays: notes or materials, never tins (24 Oct).
-func roll_contract() -> Dictionary:
-	var kind: String = _weighted(Data.CONTRACT_KINDS)
-	if kind == "deep" and deepest_site_level() - Data.CONTRACT_DEEP_LESS < Data.CONTRACT_DEEP_FROM:
-		kind = "gear"                             # a deep ask wants a deep site first: early, any piece would do
-	var c := {"kind": kind, "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "notes", "amount": 0, "salvage": "", "material": ""}
-	match kind:
-		"gear":
-			c["slot"] = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 1)]
-			c["rarity"] = rng.randi_range(1, 2)
-			c["count"] = rng.randi_range(1, 3)
-		"deep":
-			c["count"] = rng.randi_range(1, 2)
-			c["level"] = maxi(2, deepest_site_level() - Data.CONTRACT_DEEP_LESS)
-		"affix":
-			c["slot"] = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 2)]     # gear with affixes: not the gun parts
-			var allowed: Array = Items.allowed_affixes(c["slot"])
-			if allowed.is_empty():
-				c["kind"] = "gear"
-				c["rarity"] = 1
-			else:
-				c["stat"] = allowed[rng.randi_range(0, allowed.size() - 1)]["stat"]
-		"papers":
-			c["count"] = rng.randi_range(2, 4)
-		"meds":
-			c["count"] = rng.randi_range(2, 5)
-	_price_contract(c)
-	return c
-
-
-## A key by its weight: {"a": 0.5, "b": 0.25, ...}.
-func _weighted(w: Dictionary) -> String:
-	var total := 0.0
-	for k in w:
-		total += float(w[k])
-	var r := rng.randf() * total
-	for k in w:
-		r -= float(w[k])
-		if r <= 0.0:
-			return k
-	return w.keys().back()
-
-
-## How much an ask is worth: the count × the rarity for gear, three a deep piece, three an affix, a paper apiece,
-## a med a half.
-func contract_weight(c: Dictionary) -> float:
-	match str(c.get("kind", "gear")):
-		"deep":
-			return 3.0 * int(c["count"])
-		"affix":
-			return 3.0
-		"papers":
-			return float(int(c["count"]))
-		"meds":
-			return int(c["count"]) / 2.0
-	return float(int(c["count"]) * int(c["rarity"]))
+## The exchange (28 Oct, Matt: "contracts should be replaced by currency conversion - notes, tins, scrap with varying
+## rates for each"; salvage and the County's materials too): what's on it, in the screen's order. Tins always; notes
+## till the Issue (read out of the fiat after it); scrap; a salvage kind once held or its zone dug to SALVAGE_DEPTH; a
+## material once held or its site cleared (fuses once held or the rebuild's open).
+func exchange_offered() -> Array:
+	var out: Array = ["tins"]
+	if not issued:
+		out.append("notes")
+	out.append("scrap")
+	var kinds := salvage_kinds()
+	for k in Data.SALVAGE:
+		if int(salvage.get(k, 0)) > 0 or kinds.has(k):
+			out.append(k)
+	var mats := materials_met()
+	for k in Data.MATERIAL_ORDER:
+		if held_of(k) > 0 or mats.has(k):
+			out.append(k)
+	return out
 
 
 ## The zones whose salvage drops: a site of it dug to SALVAGE_DEPTH.
@@ -1568,232 +1527,150 @@ func salvage_kinds() -> Array:
 	return out
 
 
-## The materials a contract can pay (24 Oct): those of the sites cleared (Data.SITE_MATERIAL), in their order.
-func contract_materials() -> Array:
+## The materials met by the run (24 Oct, for the contracts; the exchange's since 28 Oct): those of the sites cleared
+## (Data.SITE_MATERIAL), in their order; the signals' fuses once the rebuild's open.
+func materials_met() -> Array:
 	var out: Array = []
 	for i in range(mini(Data.SITE_MATERIAL.size(), best_depth.size())):
 		var k: String = str(Data.SITE_MATERIAL[i])
 		if k != "" and int(best_depth[i]) >= 1 and not out.has(k):
 			out.append(k)
+	if rebuild_open() and not out.has("fuses"):
+		out.append("fuses")
 	return out
 
 
-## What it pays: notes by the deepest depth, a material or a salvage by the weight - never one the camp can't earn yet;
-## never tins or scrap (24 Oct, Matt: "notes and materials only").
-func _price_contract(c: Dictionary) -> void:
-	var pays: Dictionary = Data.CONTRACT_PAYS.duplicate()
-	var kinds := salvage_kinds()
-	if kinds.is_empty():
-		pays.erase("salvage")
-	var mats := contract_materials()
-	if mats.is_empty():
-		pays.erase("material")                    # the Outskirts alone: notes
-	c["pay"] = _weighted(pays)
-	var w := contract_weight(c)
-	var deep: float = 1.0 + deepest() / 5.0
-	match c["pay"]:
+## What's held of a currency on the exchange: whole tins, notes, scrap, a salvage kind, a material.
+func exchange_held(cur: String) -> int:
+	match cur:
+		"tins":
+			return int(floor(maxf(0.0, cash)))
 		"notes":
-			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_NOTES * w * deep)))
+			return notes
 		"scrap":
-			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_SCRAP * w * deep)))
-		"salvage":
-			c["salvage"] = kinds[rng.randi_range(0, kinds.size() - 1)]
-			c["amount"] = maxi(1, int(ceil(w)))
-		"material":
-			c["material"] = mats[rng.randi_range(0, mats.size() - 1)]
-			c["amount"] = clampi(int(ceil(w * Data.CONTRACT_MATERIAL)), 1, Data.CONTRACT_MATERIAL_MAX)
-	_contract_floor(c)
+			return scrap
+	if Data.SALVAGE.has(cur):
+		return int(salvage.get(cur, 0))
+	return held_of(cur)
 
 
-## A gear ask paid in scrap never under CONTRACT_OVER_FENCE of what its pieces would scrap for (12 Oct). Raises, never
-## lowers: a save's contracts come up to it on load.
-func _contract_floor(c: Dictionary) -> void:
-	var worth := contract_worth(c)
-	if worth <= 0.0:
-		return
-	match str(c.get("pay", "")):
+func _exchange_add(cur: String, n: int) -> void:
+	match cur:
+		"tins":
+			cash += n                             # a trade, not takings: no _earn (after the Issue the fiat's just cash)
+		"notes":
+			notes += n                            # the property handles itself
 		"scrap":
-			c["amount"] = maxi(int(c["amount"]), int(ceil(worth / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))
+			scrap += n
+		_:
+			if Data.SALVAGE.has(cur):
+				salvage[cur] = int(salvage.get(cur, 0)) + n
+			else:
+				materials[cur] = held_of(cur) + n
+				if int(materials[cur]) <= 0:
+					materials.erase(cur)          # none left: off the count, as the rebuild keeps it
 
 
-## What a gear ask's pieces are worth (12 Oct), before the Fence's own price: the slot's bases a find draws now (the
-## deepest open site's loot tier, held to the slot's top, and the two under it; never the starting kit, a site's own or
-## a socketable), their mean value at the rarity asked, times the count. A deep ask reads every contract slot at the
-## level's tier; an affix ask an uncommon of its slot; papers and meds nothing (their pay stays as it was).
-func contract_worth(c: Dictionary) -> float:
-	var kind := str(c.get("kind", "gear"))
-	if not (kind in ["gear", "deep", "affix"]):
+## A currency's name on the exchange: the money's, Notes, Scrap, the salvage's, the material's.
+func exchange_name(cur: String) -> String:
+	match cur:
+		"tins":
+			return money_word().capitalize()
+		"notes":
+			return "Notes"
+		"scrap":
+			return "Scrap"
+	if Data.SALVAGE.has(cur):
+		return str(Data.SALVAGE_NAMES[cur])
+	return thing_name(cur)
+
+
+## A currency's drift on a day: ±EXCHANGE_DRIFT from a hash of the day and the currency, through dice of its own (a
+## bare string hash moved every currency together, day on day) - the sim's dice never drawn, so the rates move no
+## other roll. Tins are the yardstick: they never drift.
+func exchange_drift(cur: String, day := -1) -> float:
+	if cur == "tins":
+		return 1.0
+	var r := RandomNumberGenerator.new()
+	r.seed = hash("exchange|%d|%s" % [exchange_day if day < 0 else day, cur])
+	return 1.0 + Data.EXCHANGE_DRIFT * r.randf_range(-1.0, 1.0)
+
+
+## A currency's worth in tins on a day (today by default): its base at the day's prices, times the day's drift.
+## A day before the first (yesterday on day 0) reads as today.
+func exchange_worth(cur: String, day := -1) -> float:
+	if cur == "tins":
+		return 1.0
+	var d: int = exchange_day if day < 0 else maxi(0, day)
+	return float(Data.EXCHANGE_BASE.get(cur, 0.0)) * inflation() * exchange_drift(cur, d)
+
+
+## What the exchange keeps either way: EXCHANGE_SPREAD, the Fence's Contacts less.
+func exchange_spread() -> float:
+	return Data.FX["yard/contacts"] if yard_has("contacts") else Data.EXCHANGE_SPREAD
+
+
+## The Fence's Fixer: more on every trade.
+func exchange_fixer() -> float:
+	return Data.FX["yard/fixer"] if yard_has("fixer") else 1.0
+
+
+## One of `from` buys this much `to` today: worth over worth, less the spread, the Fixer's on top.
+func exchange_rate(from: String, to: String, day := -1) -> float:
+	if from == to:
 		return 0.0
-	var want: int = loot_tier_at(int(c["level"]) if kind == "deep" else deepest_site_level())
-	var slots: Array = Data.CONTRACT_SLOTS if kind == "deep" else [str(c["slot"])]
-	var r: int = 1 if kind == "affix" else (0 if kind == "deep" else clampi(int(c["rarity"]), 0, Data.RARITIES.size() - 1))
-	var total := 0.0
-	var n := 0
-	for slot in slots:
-		var pool: Array = []
-		var top := 1
-		for b in (Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]):
-			if b.get("start", false) or str(b.get("mount", "")) == "socket" or Items.exclusive_to(str(b["name"])) != "" or not b.has("value"):
-				continue
-			pool.append(b)
-			top = maxi(top, int(b.get("tier", 1)))
-		var t_hi: int = mini(want, top)
-		for b in pool:
-			var t := int(b.get("tier", 1))
-			if t <= t_hi and t >= t_hi - 2:
-				total += float(b["value"])
-				n += 1
-	if n == 0:
+	var wt: float = exchange_worth(to, day)
+	if wt <= 0.0:
 		return 0.0
-	return total / n * float(Data.RARITIES[r]["value"]) * int(c.get("count", 1))
+	# the day's drift only ever goes against you (the review: buy on a cheap day, sell on a dear one, and a free drift
+	# beat the spread - a money pump): what you give is worth at most its base, what you get costs at least its base
+	var give: float = exchange_worth(from, day) / maxf(0.0001, exchange_drift(from, _ex_day(day))) * minf(1.0, exchange_drift(from, _ex_day(day))) if from != "tins" else 1.0
+	var get_w: float = wt / maxf(0.0001, exchange_drift(to, _ex_day(day))) * maxf(1.0, exchange_drift(to, _ex_day(day))) if to != "tins" else 1.0
+	return give / get_w * (1.0 - exchange_spread()) * exchange_fixer()
 
 
-func contract_fits(c: Dictionary, it: Dictionary) -> bool:
-	if it.has("unique") or it.has("set") or it.has("pattern") or Items.is_deeds(it):     # a patterned piece is kept like its unique (the review)
-		return false
-	match str(c.get("kind", "gear")):
-		"deep":
-			return str(it["slot"]) in Data.CONTRACT_SLOTS and Items.ilvl(it) >= int(c["level"])
-		"affix":
-			return it["slot"] == c["slot"] and it.get("affixes", []).any(func(a): return a["stat"] == c["stat"])
-		"papers":
-			return Items.is_paper(it)
-		"meds":
-			return Items.is_medical(it)
-	return it["slot"] == c["slot"] and int(it["rarity"]) >= int(c["rarity"])
+func _ex_day(day: int) -> int:
+	return exchange_day if day < 0 else maxi(0, day)
 
 
-## What would go to this contract: `pick` (ids, the player's swap, 19 Oct) when it's the count and every one fits,
-## else the cheapest that fit, up to its count.
-func contract_pick(c: Dictionary, pick: Array) -> Array:
-	if pick.size() == int(c["count"]):
-		var out: Array = []
-		for id in pick:
-			var it := item_by_id(int(id))
-			if it.is_empty() or not stash.has(it) or not contract_fits(c, it) or out.has(it):
-				return contract_items(c)
-			out.append(it)
-		return out
-	return contract_items(c)
+## What `amount` of `from` gets of `to` now, rounded down.
+func exchange_get(from: String, to: String, amount: int) -> int:
+	return int(floor(float(amount) * exchange_rate(from, to)))
 
 
-## Everything in the stash this contract takes, cheapest first.
-func contract_all(c: Dictionary) -> Array:
-	var fits: Array = stash.filter(func(it): return contract_fits(c, it) and tab_of(it) == "")     # the shared tab's: a class's own is kept
-	fits.sort_custom(func(a, b): return a["value"] < b["value"])
-	return fits
-
-
-## What in the stash would go to this contract: the cheapest that fit, up to its count.
-func contract_items(c: Dictionary) -> Array:
-	var fits: Array = []
-	for it in stash:
-		if contract_fits(c, it) and tab_of(it) == "":
-			fits.append(it)
-	fits.sort_custom(func(a, b): return a["value"] < b["value"])
-	return fits.slice(0, int(c["count"]))
-
-
-func can_hand_in(k: int) -> bool:
-	if not room_open("fence") or mission != null or k < 0 or k >= contracts.size():
-		return false
-	var c: Dictionary = contracts[k]
-	return contract_items(c).size() >= int(c["count"])
-
-
-func hand_in(k: int, pick := []) -> bool:
-	if not can_hand_in(k):
-		return false
-	var c: Dictionary = contracts[k]
-	for it in contract_pick(c, pick):
-		_remove(it)
-	var paid := ""
-	match c["pay"]:
-		"notes":
-			var n_paid: int = int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1)     # the Fence's Fixer
-			notes += n_paid
-			paid = "%d notes" % n_paid
-		"scrap":
-			scrap += int(c["amount"])
-			paid = "%d scrap" % int(c["amount"])
-		"salvage":
-			salvage[c["salvage"]] = int(salvage.get(c["salvage"], 0)) + int(c["amount"])
-			paid = contract_pay_words(c)
-		"material":
-			materials[c["material"]] = int(materials.get(c["material"], 0)) + int(c["amount"])
-			paid = contract_pay_words(c)
-	log_event("Handed in: %s. %s" % [contract_words(c), paid])
-	chron("contract", {"kind": str(c.get("kind", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0))})
-	contracts[k] = roll_contract()
-	return true
-
-
-## The price of turning one down now: the first after a run home free, then notes, doubling.
-func pass_cost() -> int:
-	if passes == 0:
-		return 0
-	return Data.CONTRACT_PASS_NOTES * int(pow(2, passes - 1))
-
-
-func can_pass_contract(k: int) -> bool:
-	return mission == null and k >= 0 and k < contracts.size() and notes >= pass_cost()
-
-
-## Turn one down: another in its place, the price paid.
-func pass_contract(k: int) -> bool:
-	if not can_pass_contract(k):
-		return false
-	notes -= pass_cost()
-	passes += 1
-	contracts[k] = roll_contract()
-	return true
-
-
-func contract_words(c: Dictionary) -> String:
-	var n: int = int(c["count"])
-	var num: String = ["", "one", "two", "three", "four", "five", "six"][n] if n <= 6 else str(n)
-	match str(c.get("kind", "gear")):
-		"deep":
-			return "%s piece%s from level %d up" % [num, "" if n == 1 else "s", int(c["level"])]
-		"affix":
-			var slot: String = "gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"]).to_lower()
-			return "%s %s with %s" % ["an" if slot.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", slot, contract_affix_phrase(str(c["stat"]))]
-		"papers":
-			return "%s paper%s, any" % [num, "" if n == 1 else "s"]
-		"meds":
-			return "%s med%s, any" % [num, "" if n == 1 else "s"]
-	var noun: String = "gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"]).to_lower()
-	if n != 1:
-		noun = noun.trim_suffix("y") + "ies" if noun.ends_with("ry") else noun + "s"     # primaries, not primarys
-	var what: String = "%s %s" % [Data.RARITIES[c["rarity"]]["name"].to_lower(), noun]
-	return "%s %s" % [num, what]
-
-
-## An affix as a contract names it: a conversion as such, the two armours apart, a long label to its first clause.
-func contract_affix_phrase(stat: String) -> String:
-	if stat.begins_with("conv_"):
-		return "%s conversion" % stat.trim_prefix("conv_").trim_suffix("_pct")
-	if stat == "armour_pct":
-		return "% armour"
-	if stat == "armour":
-		return "flat armour"
-	if stat == "dot_pct":
-		return "damage over time"
-	var a: Dictionary = Items.affix_def(stat)
-	return str(a.get("label", stat)).get_slice(",", 0)
-
-
-func contract_pay_words(c: Dictionary) -> String:
-	match c["pay"]:
-		"notes":
-			return "%d notes" % (int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1))     # what the hand-in pays, the Fixer's double with it
-		"scrap":
-			return "%d scrap" % int(c["amount"])
-		"salvage":
-			return "%d %s" % [int(c["amount"]), str(Data.SALVAGE_NAMES.get(c["salvage"], c["salvage"])).to_lower()]
-		"material":
-			return "%d %s" % [int(c["amount"]), thing_name(str(c.get("material", ""))).to_lower()]
+## Why a trade can't go now, or "": the Fence shut, the runner out, a pair not on, the amount.
+func exchange_block(from: String, to: String, amount: int) -> String:
+	if not room_open("fence"):
+		return "The Fence isn't open"
+	if mission != null:
+		return "The runner is out"
+	var on := exchange_offered()
+	if from == to or not on.has(from) or not on.has(to):
+		return "Pick two to trade"
+	if amount <= 0:
+		return "Nothing to give"
+	if amount > exchange_held(from):
+		return "Not that much held"
+	if exchange_get(from, to, amount) <= 0:
+		return "Too little for one"
 	return ""
+
+
+func can_exchange(from: String, to: String, amount: int) -> bool:
+	return exchange_block(from, to, amount) == ""
+
+
+## A trade: `amount` of `from` for what it gets of `to`, rounded down.
+func exchange(from: String, to: String, amount: int) -> bool:
+	if not can_exchange(from, to, amount):
+		return false
+	var got: int = exchange_get(from, to, amount)
+	var rate: float = exchange_rate(from, to)
+	_exchange_add(from, -amount)
+	_exchange_add(to, got)
+	log_event("At the exchange: %d %s for %d %s" % [amount, exchange_name(from).to_lower(), got, exchange_name(to).to_lower()])
+	chron("exchange", {"from": from, "to": to, "give": amount, "got": got, "day": exchange_day, "rate": snappedf(rate, 0.0001)})
+	return true
 
 
 func _unique_named(name: String) -> Dictionary:
@@ -1995,9 +1872,6 @@ func next_words(short := false) -> String:
 		return w["first"]
 	if campaign_done():     # the lorry's line is the log's, once (21 Oct: the move it pointed at is gone)
 		return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
-	for k in range(contracts.size()):
-		if can_hand_in(k) and mission == null:
-			return w["contract"]
 	for z in range(Data.ZONES.size()):
 		if zone_complete(z):
 			continue
@@ -5257,15 +5131,14 @@ func _yard_changed(_key: String) -> void:
 					it["tab"] = "own"
 
 
-## What a pick or a refit might grow or shrink, read before it's built: the Fence's shelf, the Back room, the
-## contracts open, Pin.
+## What a pick or a refit might grow or shrink, read before it's built: the Fence's shelf, the Back room, Pin.
 func _yard_before() -> Dictionary:
-	return {"stock": market_stock(), "back": yard_has("back_room"), "open": contracts_open()}
+	return {"stock": market_stock(), "back": yard_has("back_room")}
 
 
-## A pick that grows a shelf or the contracts adds only what it grew by - never a re-roll or a refill of what's
+## A pick that grows a shelf adds only what it grew by - never a re-roll or a refill of what's
 ## there (the reviewers' catches: a Fence pick re-rolled every site's words, and any build refilled a shelf the
-## player had bought from). A refit away shrinks them back: Orders' two contracts, Pin's pins.
+## player had bought from). A refit away shrinks them back: Pin's pins.
 func _yard_grew(before: Dictionary) -> void:
 	var add: int = market_stock() - int(before["stock"])
 	if add > 0:
@@ -5277,10 +5150,6 @@ func _yard_grew(before: Dictionary) -> void:
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
 		if not bu.is_empty():
 			market.append(Items.roll_unique(bu, rng, gamble_level(), shop_unique_tier()))
-	while contracts.size() < contracts_open():
-		contracts.append(roll_contract())
-	if contracts_open() < int(before["open"]) and contracts.size() > contracts_open():
-		contracts = contracts.slice(0, contracts_open())
 
 
 ## The Kennel's quality; the gangs' lateness from the Kennel and the Lookout; the odds' dry runs; the sales.
@@ -5299,10 +5168,6 @@ func odds_runs() -> int:
 
 func yard_sell_pct() -> float:
 	return (Data.FX["yard/haggling"] if yard_has("haggling") else 0.0) + (Data.FX["yard/dealers_cut"] if yard_has("dealers_cut") else 0.0) + Data.FX["yard_rank/fence"] * yard_rank("fence")
-
-
-func contracts_open() -> int:
-	return Data.CONTRACTS_OPEN + (Data.FX["yard/orders"] if yard_has("orders") else 0)
 
 
 ## The Yard's lanes from a save; a save from before them maps its buildings' levels onto the picks that match,
@@ -10212,6 +10077,7 @@ func _extract() -> void:
 	mission = null
 	_idle_tidy()
 	_say_next()
+	exchange_day += 1                         # a run home: the exchange's new day of rates (28 Oct, Matt's play-day)
 	restock()
 	_top_up()                                 # home, the rig loaded again: the card's odds read the rig that goes out (the review)
 
@@ -10436,6 +10302,7 @@ func _kia() -> void:
 	# the new operator brings their own worn kit, so a KIA with an empty stash
 	# and no cash is a setback, not a dead end
 	_starter_loadout()
+	exchange_day += 1                         # home, if not whole: the exchange's new day (28 Oct)
 	restock()
 	# two turn up; one is who was brought home from a run, if anyone was
 	var pool: Array = []
@@ -11122,7 +10989,6 @@ func gear_tier() -> int:
 
 
 func restock() -> void:
-	passes = 0                                # a run home: the next contract turned down is free again (9 Oct)
 	_restock_clinic()
 	_restock_gamble()
 	_restock_market()
@@ -12676,7 +12542,7 @@ func _state() -> Dictionary:
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
+		"exchange_day": exchange_day, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 		"skill_slots": skill_slots, "skill_auto": skill_auto,
@@ -12985,18 +12851,7 @@ func load_dict(d: Dictionary) -> void:
 			for x in paid[i]:
 				at.append(int(x))
 		boss_paid.append(at)
-	contracts = []
-	for c in d.get("contracts", []):
-		if not (str(c.get("pay", "")) in Data.CONTRACT_PAYS) or not c.has("kind") or not Data.CONTRACT_KINDS.has(str(c["kind"])):
-			contracts.append(roll_contract())    # a save from before (9 Oct): a unique, a socketable or rounds, rolled again; papers too (18 Oct: the pile)
-			continue
-		contracts.append({"kind": str(c["kind"]), "slot": str(c.get("slot", "")), "rarity": int(c.get("rarity", 1)), "count": int(c.get("count", 1)), "level": int(c.get("level", 0)),
-			"stat": str(c.get("stat", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0)), "salvage": str(c.get("salvage", "")), "material": str(c.get("material", ""))})
-	passes = int(d.get("passes", 0))
-	while contracts.size() < contracts_open():
-		contracts.append(roll_contract())
-	for c in contracts:
-		_contract_floor(c)                       # a save's asks up to what their pieces fetch (12 Oct)
+	exchange_day = int(d.get("exchange_day", 0))     # the exchange (28 Oct): an old save's "contracts" are ignored
 	mate = {}
 	if d.has("mate") and not d["mate"].is_empty():
 		mate = {"unique": str(d["mate"]["unique"]), "notes": int(d["mate"]["notes"])}
@@ -13068,7 +12923,6 @@ func load_dict(d: Dictionary) -> void:
 			shelf_tier[it["unique"]] = maxi(int(shelf_tier.get(it["unique"], 0)), int(it["tier"]))     # a save from before the tiers: the shelf's from what's owned
 	if market.is_empty():
 		restock()
-		passes = int(d.get("passes", 0))     # the restock is the shelf's; the turn-downs stay as saved
 	if not d.has("gamble"):
 		_restock_gamble()                 # a save from before the Fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
 	_skills_known_only()                  # a slot the runner can't use is free (25 Oct, the review)
