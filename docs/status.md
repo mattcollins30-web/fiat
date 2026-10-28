@@ -7084,3 +7084,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   voice lines owed (docs/voice/recording_list.md); the endgame's activities brainstorm (docs/design/endgame_activities.md:
   single player, rotating); meds by what they treat, magazines with real reloads, the Clinic's quality from supplies
   (docs/design/meds_ammo_clinic.md). Matt playing a fresh camp through to the County to time it (target: 20 h+).
+- Parked from play (28 Oct): the Workshop's padlocks draw at their picture's own size over the affix words (workshop.gd
+  sets the TextureRect's size before EXPAND_IGNORE_SIZE; the Crates panel has the order right). Fix: the expand mode
+  first, and a smoke check that each padlock is 22 px and clear of its line. The figures' flames don't follow a dying
+  body's tilt (cosmetic, the reviewer's follow-up to e3216f5).
