@@ -448,7 +448,7 @@ func show_state(s) -> void:
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%s (%s)" % [Fmt.group(int(round(sim.armour()))), Fmt.pct(sim.mitigation())], Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())]], ["Damage", fire_forms(fire_now)],
-		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
+		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", mag_forms(rounds) if rounds > 0 and sim.uses_mag("Primary") else [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT)
 	if _view != null:
 		# the six under the frame: theirs, then yours
@@ -481,6 +481,11 @@ func show_state(s) -> void:
 	for ty in ["fire", "poison", "bleed"]:
 		if float(m.get("my_dots", {}).get(ty, 0.0)) > 0.5:
 			on_you.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
+	for ty in Data.MY_AILS:
+		var ail: float = sim.my_ail(m, ty)
+		if ail >= 0.05:
+			var pct: int = roundi(ail * float(Data.MY_AILS[ty]["most"]) * 100.0)     # frost and shock on you (28 Oct, the cures)
+			on_you.append({"forms": [Words.ON_YOU_AIL[ty][0] % pct, Words.ON_YOU_AIL[ty][1]], "colour": ty})
 	for chip in sim.order_chips(true):
 		on_you.push_front(chip)
 	if m["using"] != null:
@@ -827,6 +832,8 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		r = ["Rounds", ["melee"], Pal.TEXT_3]
 	elif Items.free_rounds(gun):
 		r = ["Rounds", ["∞"], Pal.TEXT_3]          # a gun that never spends a round (Items.free_rounds)
+	elif rounds > 0 and sim.uses_mag("Primary"):
+		r = ["Rounds", mag_forms(rounds), Pal.WARN if float(sim.mag_now("Primary")[2]) > 0.0 else Pal.TEXT]     # the magazine in the gun (28 Oct)
 	elif rounds > 0:
 		r = ["Rounds", [Fmt.group(rounds), Fmt.short_num(float(rounds))], Pal.TEXT]
 	else:
@@ -834,6 +841,16 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 	var meds: int = sim.meds_carried()
 	return [first, ["Your fire", fire_forms(fire_now), Pal.TEXT], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))], Pal.TEXT],
 		["Armour", [Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())], Pal.TEXT], ["Meds", ["%d" % meds] if meds > 0 else ["none"], Pal.TEXT if meds > 0 else Pal.BAD], r]
+
+
+## The primary's magazine as a tile says it (28 Oct, magazines): "18 / 30 · 240 in the rig" down to "18/30", or
+## "Reloading 2 s" while it reloads.
+func mag_forms(rounds: int) -> Array:
+	var mg: Array = sim.mag_now("Primary")
+	if float(mg[2]) > 0.0:
+		return ["Reloading %.1f s" % float(mg[2]), "Reloading", "Reload"]
+	var in_rig: int = maxi(0, rounds - int(mg[0]))
+	return ["%d / %d · %s more" % [int(mg[0]), int(mg[1]), Fmt.group(in_rig)], "%d/%d · %s" % [int(mg[0]), int(mg[1]), Fmt.short_num(float(in_rig))], "%d/%d" % [int(mg[0]), int(mg[1])], "%d" % int(mg[0])]
 
 
 func _tiles(tiles: Array, rows: Array) -> void:
@@ -887,7 +904,11 @@ func _show_pick(m: Dictionary) -> void:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level (the review)
 		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
 		return
-	if Items.rig_item(it):
+	if Items.is_ammo(it) and not it.get("from_rig", false):
+		# a box found (28 Oct, magazines): it stays a box in the pack, and fills the rig's magazines at home
+		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
+			[Words.BOX_FOUND[0], Words.BOX_FOUND[1]])
+	elif Items.rig_item(it):
 		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
@@ -1286,13 +1307,15 @@ func _show_rig() -> void:
 		var pos: int = int(places[n])
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
-		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)
+		var lit: bool = (Items.is_heal(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0) \
+			or (Items.is_cure(it) and sim.ail_weight(sim.mission, Items.cure_of(it)) > 0.5 and not sim.cure_wards(sim.mission, Items.cure_of(it)) and not sim.mission["t"].get("no_meds", false))     # a cure lit while its element's on you (28 Oct)
 		c.show_item(it, lit or int(it["id"]) == _rig_pick, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		# the hover (11 Oct): what a med heals, what a stack is and whether it's firing
 		if Items.is_medical(it):
 			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
 		elif Items.is_ammo(it):
-			c.tooltip_text = "%s · %d rounds · click for the pack" % [it["base"], int(it["rounds"])]
+			c.set_mags(Items.pouch_fills(it))      # its magazines along its foot (28 Oct)
+			c.tooltip_text = "%s · %s, %d rounds · click for the pack" % [it["base"], Items.pouch_words(it), int(it["rounds"])]
 		else:
 			c.tooltip_text = str(it["base"])
 		c.visible = true

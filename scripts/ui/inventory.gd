@@ -55,7 +55,7 @@ static func height_for(n: int) -> int:
 ## meds tab displays both meds and ammo"): slots, or "unique" / "set" for what the piece is. The deeds and a head's
 ## papers sit in All. Each tab is as wide as its words; the sort an icon at the end.
 const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helmet", "Armour", "Charm"]], ["Bags", ["Rig", "Backpack"]],
-	["Meds", ["Medical", "Grenade"]], ["Rounds", ["Ammo"]], ["Parts", ["Attachment"]], ["Uniques", "unique"], ["Sets", "set"]]
+	["Meds", ["Medical", "Grenade", "Supplies"]], ["Rounds", ["Ammo"]], ["Parts", ["Attachment"]], ["Uniques", "unique"], ["Sets", "set"]]
 const FILL_W := 100
 const KIND_PAD := 32                 # a button's margin round its words (the fit rule)
 const KIND_GAP := 3

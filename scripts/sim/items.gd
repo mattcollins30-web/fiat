@@ -73,6 +73,12 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
 		r = mini(r, Data.PAPER_RARITY_MAX) if slot == Data.PAPER else 0     # a box is a box; a bottle a bottle; a grenade a grenade; a paper rare or plain (15 Oct: a rare one rolls its signal deeper)
 		affixes = []
+	if slot == Data.SUPPLIES:
+		r = 0
+		affixes = []
+	if slot == Data.MEDICAL and base.has("cure"):
+		r = 0                                 # a cure is a cure (28 Oct): its one job, nothing to roll
+		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,
 		"attachments": attachments, "tier": base["tier"], "ilvl": ilvl_v,
@@ -84,6 +90,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		it["mount"] = base["mount"]
 		if base["mount"] == "socket":
 			it["count"] = 1
+	if slot == Data.SUPPLIES:
+		it["count"] = 1
 	_next_id += 1
 	return it
 
@@ -786,11 +794,71 @@ static func heal(it: Dictionary) -> float:
 
 
 static func use_time(it: Dictionary) -> float:
-	return base_of(it).get("use", 0.0)
+	return float(base_of(it).get("use", 0.0)) * maxf(0.3, 1.0 - affix_total(it, "med_fast_pct") / 100.0)     # its own Quicker to use (28 Oct)
+
+
+## A gun's magazine (28 Oct): its base's own "mag", else its rounds' type's MAG_SIZE; 0 for a gun that has none
+## (a bat, a free-round gun).
+static func mag_size(gun: Dictionary) -> int:
+	var t := ammo_type(gun)
+	if t in ["", "none"] or free_rounds(gun):
+		return 0
+	return int(base_of(gun).get("mag", Data.MAG_SIZE.get(t, 0)))
+
+
+## A gun's reload before the runner's speed: its base's "reload", else its type's RELOAD_S.
+static func reload_base(gun: Dictionary) -> float:
+	return float(base_of(gun).get("reload", Data.RELOAD_S.get(ammo_type(gun), 2.0)))
+
+
+## The rounds a rig pouch holds of a type: MAG_POUCH magazines of its MAG_SIZE.
+static func pouch_cap_of(type: String) -> int:
+	return Data.MAG_POUCH * int(Data.MAG_SIZE.get(type, 30))
+
+
+static func pouch_cap(it: Dictionary) -> int:
+	return pouch_cap_of(str(base_of(it).get("type", "")))
+
+
+## A rig pouch's magazines as the cell draws them (28 Oct): MAG_POUCH, each its share loaded, the full ones first.
+static func pouch_fills(it: Dictionary) -> Array:
+	var mag: float = float(Data.MAG_SIZE.get(str(base_of(it).get("type", "")), 30))
+	var loaded: float = float(it.get("rounds", 0)) / mag
+	var out: Array = []
+	for k in range(Data.MAG_POUCH):
+		out.append(clampf(loaded - k, 0.0, 1.0))
+	return out
+
+
+## A pouch's magazines in words: "3 mags", "2 mags + 12".
+static func pouch_words(it: Dictionary) -> String:
+	var mag: int = int(Data.MAG_SIZE.get(str(base_of(it).get("type", "")), 30))
+	var r: int = int(it.get("rounds", 0))
+	@warning_ignore("integer_division")
+	var full: int = r / mag
+	var part: int = r - full * mag
+	var head: String = "%d mag%s" % [full, "" if full == 1 else "s"]
+	return head if part == 0 else ("%s + %d" % [head, part] if full > 0 else "%d rounds" % part)
 
 
 static func is_medical(it: Dictionary) -> bool:
 	return it["slot"] == Data.MEDICAL
+
+
+## A cure (28 Oct): a med that stops an element on you instead of healing. "" for a heal or anything else.
+static func cure_of(it: Dictionary) -> String:
+	if it.get("slot", "") != Data.MEDICAL:
+		return ""
+	return str(base_of(it).get("cure", ""))
+
+
+static func is_cure(it: Dictionary) -> bool:
+	return cure_of(it) != ""
+
+
+## A med that heals: every med but a cure.
+static func is_heal(it: Dictionary) -> bool:
+	return is_medical(it) and not is_cure(it)
 
 
 static func is_paper(it: Dictionary) -> bool:
@@ -819,6 +887,11 @@ static func is_ammo(it: Dictionary) -> bool:
 
 static func is_grenade(it: Dictionary) -> bool:
 	return it["slot"] == Data.GRENADE
+
+
+## Medical supplies (28 Oct): a stack for the Clinic.
+static func is_supplies(it: Dictionary) -> bool:
+	return it.get("slot", "") == Data.SUPPLIES
 
 
 ## What goes in the rig's pouches: meds, rounds, grenades.
@@ -931,6 +1004,8 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 			label = "pouches"                    # "+1 pouch", "+2 pouches" (18 Oct)
 		var plus: String = "" if a["stat"] in ["crowd_less_pct", "cdr_pct"] else "+"     # "8% less damage with three or more on you", "8% shorter cooldowns"
 		line = "%s%s%s %s" % [plus, fig(str(a["stat"]), float(a["value"])), "%" if pct else "", label]
+		if d.get("flag", false):
+			line = label                         # on or off, no figure: a med's cure built in (28 Oct)
 		if tiers and a.has("tier"):
 			line += " · T%d" % int(a["tier"])
 		out.append(line)
@@ -970,7 +1045,9 @@ static func kind_words(it: Dictionary) -> String:
 	if slot == Data.AMMO:
 		return "Rounds · %s" % base_of(it).get("type", "")
 	if slot == Data.MEDICAL:
-		return "Med"
+		return "Cure" if is_cure(it) else "Med"
+	if slot == Data.SUPPLIES:
+		return "Supplies"
 	if slot == Data.PAPER:
 		return "Paper"
 	if is_melee(it):
@@ -1030,6 +1107,10 @@ static func headline(it: Dictionary) -> Array:
 	var b := base_of(it)
 	if it["slot"] == Data.GRENADE:
 		return ["%.0f" % b["damage"], "%s to everyone on you" % b["type"]]
+	if b.has("cure"):
+		return ["Stops", str(b["cure"])]              # a cure (28 Oct): what it stops
+	if it["slot"] == Data.SUPPLIES:
+		return ["×%d" % int(it.get("count", 1)), "for the Clinic"]
 	if b.has("damage"):
 		return ["%.0f" % dps(it), "dmg/s"]     # the style guide's form (25 Oct, the review)
 	if b.has("armour"):
@@ -1107,19 +1188,21 @@ static func stack_cap(it: Dictionary) -> int:
 		return int(base_of(it)["rounds"]) * Data.STACK_BOXES
 	if is_socketable(it):
 		return Data.SOCKET_STACK
+	if is_supplies(it):
+		return Data.SUPPLY_STACK
 	return 1
 
 
 static func stack_size(it: Dictionary) -> int:
 	if is_ammo(it):
 		return int(it.get("rounds", 0))
-	if is_socketable(it):
+	if is_socketable(it) or is_supplies(it):
 		return int(it.get("count", 1))
 	return 1
 
 
 static func stacks(it: Dictionary) -> bool:
-	return is_ammo(it) or (is_socketable(it) and it.get("affixes", []).is_empty())
+	return is_ammo(it) or is_supplies(it) or (is_socketable(it) and it.get("affixes", []).is_empty())
 
 
 ## Two stacks that can merge: the same base, both plain.
@@ -1133,7 +1216,7 @@ static func set_stack(it: Dictionary, n: int) -> void:
 	if is_ammo(it):
 		it["rounds"] = n
 		it["value"] = int(round(float(b["value"]) * n / float(b["rounds"])))
-	elif is_socketable(it):
+	elif is_socketable(it) or is_supplies(it):
 		it["count"] = n
 		it["value"] = int(b["value"]) * n
 

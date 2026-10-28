@@ -131,6 +131,9 @@ func show_state(s) -> void:
 			c.visible = true
 			c.position = _rig_at(places[k][0])
 			c.show_item(it, it["id"] == selected, Vector2(w * _rc + (w - 1) * _rg, _rc))
+			if Items.is_ammo(it):
+				c.set_mags(Items.pouch_fills(it))     # a pouch of magazines, each pip one, filled as loaded (28 Oct)
+				c.tooltip_text = "%s · %s" % [it["base"], Items.pouch_words(it)]
 		else:
 			c.id = -1
 			c.visible = false

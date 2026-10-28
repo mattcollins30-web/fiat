@@ -222,6 +222,12 @@ const TOPPED_UP := "Topped up: %d rounds and %d meds from the stash into the rig
 const TOP_UP := {"leave": "Leave it", "fill": "Top up", "best": "Best grades only"}     # the rig at the gate, the Map's button (23 Oct; "Top up" as the log's "Topped up", the language pass)
 const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
 const TOPPED_UP_MEDS := "Topped up: %d meds from the stash into the rig"     # meds alone
+const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Rounds go in the rig as magazines", "Not loose in the rig"]]     # a box found on a run (28 Oct)
+const FILLED_MAGS :="The magazines filled: %d rounds from the stash"     # the rig's magazines at home, the mode Leave it (28 Oct)
+## The cures (28 Oct): what each stops, as a log line and a card say it; the chips for frost and shock on you.
+const CURE_WORD := {"bleed": "the bleeding", "fire": "the burns", "poison": "the poison", "frost": "the chill", "shock": "the shock"}
+const CURE_CLEARS := {"bleed": "Stops a bleed", "fire": "Stops burns", "poison": "Stops poison", "frost": "Stops a chill", "shock": "Stops a shock"}
+const ON_YOU_AIL := {"frost": ["Chilled: fire %d%% slower", "Chilled"], "shock": ["Shocked: %d%% more taken", "Shocked"]}
 const PACK_EMPTY := "Nothing found yet. What the run turns up lands here; pick a cell to read it."     # the run's pack card, empty (23 Oct)
 const PACK_PICK := "Pick a cell for its figures; Select ditches several at once"
 const TOP_UP_SHORT := {"leave": "Leave it", "fill": "Top up", "best": "Best only"}
@@ -393,7 +399,13 @@ const MEDIC := {
 	"wounds": ["", "Two of them now. You're collecting.", "Three of them. Sit down before you fall down."],
 	"new_runner": "Another one. The last one didn't listen either.",
 	"shelf": "More on the shelf. It won't be enough.",
+	"supplies": "Proper dressings. Where did you find these? Don't tell me.",     # supplies handed in (28 Oct)
 }
+## Medical supplies to the medic (28 Oct): the log's line, each step's line, the Clinic's strip.
+const SUPPLIES_IN := "To the medic: %d medical supplies, %d all told"
+const SUPPLIES_STEP := ["The Clinic's shelf: a tier up", "The Clinic's shelf: two tiers up", "The Clinic's shelf: some meds Magic now",
+	"The Clinic's shelf: some meds Rare now", "The Clinic's shelf: three tiers up, more of it Rare"]
+const SUPPLIES_NEXT := ["A tier up on her shelf", "Two tiers up", "Magic meds on her shelf", "Rare meds on her shelf", "Three tiers up, more Rare"]
 
 ## What the runner was, before: a line each, and how they turn up at the Yard.
 const PASTS := {
@@ -830,6 +842,13 @@ const ITEMS := {
 	"Dry-ice bag": "A carrier bag of the stuff from the ice-cream van. It bursts, and they stop moving.",
 	"Wired battery": "A car battery with the terminals wired wrong. Thrown, it finds everyone standing in the wet.",
 	"Bandage": "A roll of it. Pressure, time, and don't look.",
+	# the cures and the Clinic's supplies (28 Oct)
+	"Tourniquet": "A strap and a stick. Tighter than you'd think, and note the time.",
+	"Burn gel": "A sachet of something cold. On the burn, not near it.",
+	"Activated charcoal": "Black, gritty, horrible. Whatever you swallowed, it swallows.",
+	"Hot flask": "Tea, still hot, in a dented flask. The shakes stop by the second cup.",
+	"Smelling salts": "One sniff and you're back, whether you wanted to be or not.",
+	"Medical supplies": "Dressings, gloves, sealed things with dates on. The medic will want these.",
 	"First aid kit": "A green box from a kitchen wall. Most of what's in it is plasters. The rest is what you want.",
 	"Field dressing": "Army issue, vacuum packed. Tear, press, hold. It's quicker than it sounds.",
 	"Trauma kit": "A paramedic's bag with the good things in it. Clotting, splints, a mask for the worst of it.",
@@ -1045,7 +1064,7 @@ const SKY := {
 	"night": "night", "day": "day", "rain": "rain", "fog": "fog", "clear": "clear",     # nouns, all four (the language pass: "fog down" was flavour among values)
 	"fresh": "Fresh",
 	# a site's crates kept between runs (27 Oct): what's left, the best named; picked clean and the next crate's wait
-	"left": "%d crate%s left", "left_top": "%s +%d", "clean": "Picked clean · a crate in %s", "clean_short": "Clean · %s",
+	"left": "%d crate%s left", "left_top": "%s +%d", "clean": "Picked clean · a crate in %s", "clean_short": "Clean · %s", "clean_tiny": "Clean",
 }
 ## The first ten minutes: what's next, in the voice, on the Runner card and
 ## in the log when it changes. Nobody says objective.

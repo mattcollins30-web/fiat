@@ -12,7 +12,7 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Backpack": "PCK",
-	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN"}
+	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP"}
 const INSET := 3                   # the picture sits inside the border
 ## The tone made to read at a glance (17 Oct, Matt: the item-colours canvas): a wash of the tone up from the cell's
 ## foot, a glow round the picture from epic up, a sheen across a unique (a faster ember one on a mythic) and a mythic's
@@ -119,11 +119,78 @@ func _init() -> void:
 	_sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheen.visible = false
 	add_child(_sheen)
+	_mags = Control.new()                  # a rig pouch's magazines (28 Oct): a pip each along its foot, filled as loaded
+	_mags.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mags.visible = false
+	_mags.draw.connect(_draw_mags)
+	add_child(_mags)
 	_mark = Control.new()                  # over everything: the Fence's contract marks (19 Oct)
 	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mark.draw.connect(_draw_mark)
 	add_child(_mark)
 	set_process(false)
+
+
+## A rig pouch's magazines (28 Oct, magazines): `fills` one a magazine, 0 to 1 (empty to loaded), drawn as pips
+## along the cell's foot; [] takes them off. The rounds stay in the corner, lifted clear of the pips.
+var _mags: Control
+var _mag_fill: Array = []
+const MAG_PIP_H := 6
+const MAG_PIP_SMALL := 4
+
+
+func set_mags(fills: Array) -> void:
+	_mag_fill = fills
+	_mags.visible = not fills.is_empty() and size.x >= 26.0
+	_mags.position = Vector2.ZERO
+	_mags.size = size
+	if _mags.visible:
+		# what's written on the pouch kept clear of the pips: the count's corner above them, the words lifted
+		var pip_top: float = size.y - INSET - 2.0 - float(mag_pip_h())
+		if _corner.visible:
+			if size.y < 48.0:
+				_corner.size.y = maxf(8.0, pip_top - 1.0 - _corner.position.y)
+			_corner.position.y = pip_top - 1.0 - _corner.size.y     # a label won't shrink under its font's height (Godot 4.7: 23 px at 11): its foot on the pips' top, its words at the foot
+		var low := 0.0
+		for l in _lines:
+			if l.visible:
+				low = maxf(low, l.position.y + l.size.y - (pip_top - 1.0))
+		if low > 0.0:
+			for l in _lines:
+				if l.visible:
+					l.position.y -= low
+	_mags.queue_redraw()
+
+
+## A pip's height at this cell's size.
+func mag_pip_h() -> int:
+	return MAG_PIP_SMALL if size.y < 48.0 else MAG_PIP_H
+
+
+## The pips as drawn, for the tests: one Rect2 a magazine, inside the cell.
+func mag_pips() -> Array:
+	var out: Array = []
+	if not _mags.visible:
+		return out
+	var n: int = _mag_fill.size()
+	var gap := 2.0
+	var x0 := float(INSET) + 3.0
+	var w: float = (size.x - 2.0 * x0 - gap * (n - 1)) / float(n)
+	var h: float = float(mag_pip_h())
+	for k in range(n):
+		out.append(Rect2(x0 + k * (w + gap), size.y - INSET - 2.0 - h, w, h))
+	return out
+
+
+func _draw_mags() -> void:
+	var pips: Array = mag_pips()
+	for k in range(pips.size()):
+		var r: Rect2 = pips[k]
+		var f: float = clampf(float(_mag_fill[k]), 0.0, 1.0)
+		_mags.draw_rect(r, Color(Pal.BG, 0.9))
+		if f > 0.0:
+			_mags.draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), Pal.GOOD if f >= 0.999 else Pal.WARN)
+		_mags.draw_rect(r, Color(Pal.TEXT_2, 0.8), false, 1.0)
 
 
 ## A contract's mark on the cell (19 Oct, Matt's Fence B): "go" - it goes on Hand in, a green ring; "could" - it
@@ -294,6 +361,8 @@ static func rarity_tone(it: Dictionary) -> String:
 func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	id = it["id"]
 	_up.visible = false
+	_mags.visible = false
+	_mag_fill = []
 	set_locked(0)
 	_nudged = false
 	var f := Items.footprint(it)
@@ -316,7 +385,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		# does: 64 a cell, the cell 64 plus the gaps); only a bigger one is scaled
 		var fits: bool = tex.get_width() <= _art.size.x and tex.get_height() <= _art.size.y
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if Items.is_ammo(it) or (Items.is_socketable(it) and int(it.get("count", 1)) > 1):
+		if Items.is_ammo(it) or ((Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1):
 			_corner.text = ("%d" % int(it["rounds"])) if Items.is_ammo(it) else ("×%d" % int(it["count"]))
 			var small: bool = size.y < 48.0               # a shrunk pouch (a full rig, 44 px and under): the count smaller, "1.2k" past 999
 			var tiny: bool = size.x < 34.0                # the smallest pouches: 9 px, whole thousands
@@ -359,7 +428,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	var line_h := 22 if big else 20
 	var words: Array = []
 	if f.x == 1 and f.y == 1:
-		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if Items.is_socketable(it) and int(it.get("count", 1)) > 1 else h[0])]
+		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else h[0])]
 	else:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:

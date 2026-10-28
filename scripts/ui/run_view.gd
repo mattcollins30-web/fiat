@@ -153,6 +153,7 @@ var _red_a := 0.0
 var _shot_t := 0.0
 var _rof := 1.0
 var _firing := false
+var _reloading := false                    # the gun in hand reloading, nothing else firing (28 Oct, magazines): no shots
 var _recoil := 0.0
 ## A melee weapon's swing (14 Oct, Matt: "we need an attack frame for melee ... the action just hangs"): in engine, no
 ## new art. The weapon's arm (the picture split from the off hand where there's a clean gap between them) winds back,
@@ -803,6 +804,8 @@ func show_state(sim, m: Dictionary) -> void:
 		gang = 1 if boss_on else mini(int(m["remaining"]), maxi(1, sim.contact(m["t"])))
 	_on_you = mini(gang, SLOTS.size())
 	_firing = _on_you > 0
+	var sec = sim.equipped["Secondary"]
+	_reloading = float(sim.mag_now("Primary")[2]) > 0.0 and (sec == null or not sim.has_rounds(sec))
 	# what's on them, and on you: the chips' own thresholds (sim.dots_on_them, run.gd's "On you")
 	var dots: Dictionary = m.get("dots", {})
 	var mine: Dictionary = m.get("my_dots", {})
@@ -810,6 +813,8 @@ func show_state(sim, m: Dictionary) -> void:
 	for el in ["fire", "poison", "bleed"]:
 		_them_fx[el] = fighting_v and float(dots.get(el, 0.0)) > 0.5
 		_you_fx[el] = float(mine.get(el, 0.0)) > 0.5
+	for el in Data.MY_AILS:
+		_you_fx[el] = float(m.get("my_ails", {}).get(el, 0.0)) > 0.0 and sim.my_ail(m, el) >= 0.05     # frost and shock on you (28 Oct)
 	_them_fx["frost"] = fighting_v and float(m.get("chill_t", 0.0)) > 0.0
 	_them_fx["shock"] = fighting_v and float(m.get("shock_t", 0.0)) > 0.0
 	# a kill: the one in front goes down
@@ -1114,7 +1119,7 @@ func _process(dt: float) -> void:
 		_glass.queue_redraw()
 	# your gun: a kick back at its rate while there's someone to shoot, the marker on the one you're hitting
 	_shot_t -= dt
-	if _firing and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
+	if _firing and not _reloading and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
 		_shot_t = 1.0 / _rof
 		gun_fired.emit()
 		var ups: Array = range(SLOTS.size()).filter(func(k_in): return _figs[k_in]["state"] == "up")
@@ -1749,7 +1754,7 @@ func fx() -> Dictionary:
 
 ## Whether your gun's going off in the frame right now: someone up to shoot at, and you not down behind the wall.
 func shooting() -> bool:
-	return _firing and _duck < 0.2 and _figs.any(func(f): return f["state"] == "up")
+	return _firing and not _reloading and _duck < 0.2 and _figs.any(func(f): return f["state"] == "up")
 
 
 ## Whether there's a fight on in the frame at all (down behind the wall counts): the run screen holds your hits for it.

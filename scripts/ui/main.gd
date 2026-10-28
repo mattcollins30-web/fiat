@@ -48,7 +48,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 9               # 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 10              # 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)

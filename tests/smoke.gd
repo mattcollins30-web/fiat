@@ -473,13 +473,15 @@ func _init() -> void:
 		sim.leave(sim.rig.back()["id"])     # room for the drop, a two-cell kit included
 	var dropped := false
 	var any_med := false
+	# a med or a grenade, not rounds (28 Oct: a box dropped on the rig fills a pouch of magazines off it, a new piece;
+	# the magazines' own drag is _magazine_checks')
 	for it in sim.stash:
-		any_med = any_med or (Items.rig_item(it) and sim.rig_room(Items.size(it)))
+		any_med = any_med or (Items.rig_item(it) and not Items.is_ammo(it) and sim.rig_room(Items.size(it)))
 	if not any_med:
 		sim.stash.append(sim._plain("Medical", "Bandage"))      # the run may have used them all, or what's left is too big for the room
 	for k in range(sim.stash.size()):
 		var it: Dictionary = sim.stash[k]
-		if Items.rig_item(it) and sim.rig_room(Items.size(it)):
+		if Items.rig_item(it) and not Items.is_ammo(it) and sim.rig_room(Items.size(it)):
 			dropped = true
 			var data := {"id": it["id"], "src": "stash"}
 			_check(main._armoury._containers._can_drop(Vector2.ZERO, data), "the rig refuses a med dropped on it")
@@ -567,7 +569,7 @@ func _init() -> void:
 	var inv = main._armoury._inv
 	# every kind filters on real slot keys, not their screen names (18 Oct: the words pass renamed Medical/Ammo in the
 	# filter and emptied the Meds tab)
-	var real_slots: Array = Data.SLOTS + [Data.MEDICAL, Data.AMMO, Data.GRENADE, Data.PAPER, Data.ATTACHMENT]
+	var real_slots: Array = Data.SLOTS + [Data.MEDICAL, Data.AMMO, Data.GRENADE, Data.PAPER, Data.ATTACHMENT, Data.SUPPLIES]     # the Clinic's supplies (28 Oct)
 	for kd in inv.KINDS:
 		if kd[1] is String:
 			_check(kd[1] in ["unique", "set"], "the %s tab reads '%s', not a slot or what a piece is" % [kd[0], kd[1]])
@@ -766,6 +768,9 @@ func _init() -> void:
 	_feel_gate_checks()
 	_map_checks(main)
 	_med_over_time_checks(main)
+	_cures_checks(main)
+	_clinic_supply_checks(main)
+	_magazine_checks(main)
 	_skills_checks(main.sim)
 	_skills_ui_checks(main)
 	_class_skills_checks(main.sim)
@@ -1626,7 +1631,8 @@ func _narrative_checks(main) -> void:
 	var cards: Array = mc._cards.filter(func(c): return c["button"].visible)
 	_check(cards.size() == mini(med_kinds.size(), mc.CARDS), "the Clinic shows %d med cards for %d kinds" % [cards.size(), med_kinds.size()])
 	for c in cards:
-		_check(str(c["total"].text).contains(" HP "), "a med card does not say what it heals: '%s'" % c["total"].text)
+		var cure: bool = Data.BASES[Data.MEDICAL].any(func(b): return str(b["name"]) == str(c["base"]) and b.has("cure"))     # a cure's card says what it stops (28 Oct)
+		_check(str(c["total"].text).contains(" HP ") or (cure and str(c["total"].text).begins_with("Stops")), "a med card does not say what it heals: '%s'" % c["total"].text)
 	# a heal node trained elsewhere moves the cards' figures without anything else changing (the reviewer's catch)
 	if not cards.is_empty():
 		var heal_before: String = cards[0]["total"].text
@@ -1729,11 +1735,18 @@ func _run_screen(main) -> void:
 		# rounds top up the rig's stack of the same type
 		while not sim.rig_room(1) and not sim.rig.is_empty():
 			sim.rig.pop_back()                      # a pouch free: the gate's top-up (16 Oct) can leave the rig full
+		# a box found stays a box in the pack (28 Oct, magazines: it fills them at home), and the pick says so
 		var box: Dictionary = sim._plain(Data.AMMO, "Nails")
 		Items.set_stack(box, 10)
 		sim.mission["found"].append(box)
-		_check(sim.take_from_pack(box["id"]), "rounds found did not go into the rig")
-		_check(not sim.mission["found"].has(box) or Items.stack_size(box) < 10, "the rounds stayed whole in the pack")
+		_check(not sim.take_from_pack(box["id"]), "rounds found went loose into the rig")
+		_check(sim.mission["found"].has(box) and Items.stack_size(box) == 10, "the box found didn't stay whole in the pack")
+		main.refresh()
+		main._run._inv._pick(main._run._inv.cell_of(box["id"]))
+		main.refresh()
+		_check(not main._run._pick.button_texts().has("Take into the rig"), "a box in the pack offers Take into the rig: %s" % str(main._run._pick.button_texts()))
+		_check_fit(main, "Run (a box picked)")
+		main._run._inv.selected = -1
 		main.refresh()
 	var m: Dictionary = sim.mission
 	# the pack is the bag's own shape (27 Oct): its cells as outlines, every piece where the sim says it lies
@@ -2884,7 +2897,7 @@ func _web_rule_checks(main) -> void:
 	_check(m.get("clocked", false) and not m["fresh"], "Clocked did not mark the first of the gang down")
 	sim.hp = sim.max_hp() * 0.6
 	var hp0: float = sim.hp
-	var meds: Array = sim.rig.filter(func(x): return Items.is_medical(x))
+	var meds: Array = sim.rig.filter(func(x): return Items.is_heal(x))     # a heal: a cure goes in at once, never "using" (28 Oct)
 	if not meds.is_empty():
 		_check(sim.use_med(meds[0]["id"]) and m["using"] != null, "the med for Jab did not go on")
 		_check(float(m.get("jab_t", 0.0)) > 7.0 and sim.hp <= hp0 - sim.max_hp() * 0.05 + (float(m["using"]["heal"]) if m["using"] != null else 0.0) + 0.01, "Jab did not start or cost its 5%%: jab_t %.1f" % float(m.get("jab_t", 0.0)))
@@ -2904,7 +2917,7 @@ func _web_rule_checks(main) -> void:
 	with.call(["Triage/Worst first"])
 	sim.deploy(3)
 	m = sim.mission
-	var meds2: Array = sim.rig.filter(func(x): return Items.is_medical(x))
+	var meds2: Array = sim.rig.filter(func(x): return Items.is_heal(x))     # a heal (28 Oct: the gate packs cures too)
 	if not meds2.is_empty():
 		var it: Dictionary = meds2[0]
 		var full: float = sim.med_heal(it)
@@ -5278,6 +5291,7 @@ func _places_checks(main) -> void:
 		sim.weather[z] = ""
 	sim.elapsed = 3600.0 * 2.0            # 11:00, day
 	_check(not sim.is_night() and sim.clock_words() == "11:00", "the clock reads %s at two hours in" % sim.clock_words())
+	sim.site_crates.erase("3")                  # a site nobody's opened (28 Oct: the camp's own runs could leave it picked over)
 	var fresh: Dictionary = sim.effective(3)
 	_check(not ("Night" in fresh["intel"]) and sim.site_state(3) == Words.SKY["fresh"], "a fresh site at 11:00 is not fresh: %s" % str(fresh["intel"]))
 	# the crates kept between runs (27 Oct, Matt): two opened, the rest wait; drops and cash never thin
@@ -5468,20 +5482,24 @@ func _stack_checks(main) -> void:
 	var before: int = int(nails[1]["rounds"])
 	_check(sim.buy_ammo("improvised") and int(nails[1]["rounds"]) == before + 200 and sim.stash_used() == cells, "a bought box did not join the stack: %d -> %d, cells %d -> %d" % [before, int(nails[1]["rounds"]), cells, sim.stash_used()])
 	# the rig: a take tops up the rig's stack and splits the rest
+	# magazines (28 Oct): a take fills a pouch of MAG_POUCH magazines off the stack, the rest staying in the stash (was:
+	# the whole stack to the rig)
 	var full: Dictionary = nails[0]
-	_check(sim.take(full["id"]) and sim.rig.size() == 1 and int(sim.rig[0]["rounds"]) == cap_nails, "the full stack did not go to the rig whole")
+	var pouch_n: int = Items.pouch_cap(full)
+	_check(sim.take(full["id"]) and sim.rig.size() == 1 and int(sim.rig[0]["rounds"]) == pouch_n and int(full["rounds"]) == cap_nails - pouch_n and sim.stash.has(full), "the full stack did not fill a pouch of magazines and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]) if not sim.rig.is_empty() else -1, int(full["rounds"])])
 	var part: Dictionary = nails[1]
 	var part_before: int = int(part["rounds"])
-	sim.rig[0]["rounds"] = cap_nails - 150
-	Items.set_stack(sim.rig[0], cap_nails - 150)
+	Items.set_stack(sim.rig[0], pouch_n - 15)
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))       # no pouch free: only the top-up can happen
-	_check(sim.take(part["id"]) and int(sim.rig[0]["rounds"]) == cap_nails and int(part["rounds"]) == part_before - 150 and sim.stash.has(part), "the take did not top up the rig's stack and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]), int(part["rounds"])])
+	_check(sim.take(part["id"]) and int(sim.rig[0]["rounds"]) == pouch_n and int(part["rounds"]) == part_before - 15 and sim.stash.has(part), "the take did not top up the rig's pouch and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]), int(part["rounds"])])
 	sim.rig = sim.rig.filter(func(it): return Items.is_ammo(it))
-	_check(sim.take(part["id"]) and sim.rig.size() == 2, "the rest did not take a pouch of its own once one was free")
+	_check(sim.take(part["id"]) and sim.rig.size() == 2 and int(sim.rig[1]["rounds"]) == pouch_n, "the rest did not fill a pouch of its own once one was free")
 	# leaving merges back
 	var rig_part: Dictionary = sim.rig[1]
-	_check(sim.leave(rig_part["id"]) and sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size() == 1, "the stack left did not merge back")
+	var stacks_n: int = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size()
+	var rounds_n: int = sim._rounds_in_stash("Nails")
+	_check(sim.leave(rig_part["id"]) and sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size() == stacks_n and sim._rounds_in_stash("Nails") == rounds_n + pouch_n, "the pouch left did not merge back")
 	# the pack: found rounds join the found stack
 	sim.words[3] = []
 	sim.set_depth(3, 1)
@@ -7402,11 +7420,13 @@ func _ammo_checks(sim) -> void:
 	sim.rig = []
 	sim.set_top_up("fill")
 	sim._top_up()
-	# the rounds first, every grade, then the meds best first into what's left (a kit takes two pouches, a bandage one):
+	# the rounds first, the best grade first, as magazines into up to RIG_MAG_SHARE of the pouches (28 Oct: was every
+	# grade, a pouch a box), then the meds best first into what's left (a kit takes two pouches, a bandage one):
 	# nothing left in the stash that would still fit
 	var fill_bases: Array = sim.rig.map(func(x): return str(x["base"]))
 	var left_fits: bool = sim.stash.any(func(x): return Items.is_medical(x) and sim.rig_room(Items.size(x)))
-	_check(fill_bases.has("Slugs") and fill_bases.has("Shells") and not left_fits and sim.rig.any(func(x): return Items.is_medical(x)), "Fill up took the wrong things for %d pouches: %s" % [sim.med_capacity(), str(fill_bases)])
+	var mag_pouches: int = sim.rig.filter(func(x): return Items.is_ammo(x)).size()
+	_check(fill_bases.has("Slugs") and mag_pouches >= 1 and mag_pouches <= ceili(sim.med_capacity() * Data.RIG_MAG_SHARE) and not left_fits and sim.rig.any(func(x): return Items.is_medical(x)), "Fill up took the wrong things for %d pouches: %s" % [sim.med_capacity(), str(fill_bases)])
 	sim.set_top_up("best")
 	var td: Dictionary = sim.to_dict()
 	var s_tu = Sim.new()
@@ -9688,6 +9708,438 @@ func _med_over_time_checks(main) -> void:
 	print("meds over time ok: a share a second, the whole by its time, stops at full, the cards")
 
 
+## A fresh camp on a run for the meds' and the magazines' checks (28 Oct): nothing coming back unless a check says so,
+## a gang that stands.
+func _fresh_run(i := 0):
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	s.hp = s.max_hp()
+	s.deploy(i)
+	if not s.on_mission():
+		return null
+	var mm: Dictionary = s.mission
+	mm["t"]["dps"] = 0.0
+	mm["t"]["hp"] = 1e7
+	mm["target_hp"] = 1e7
+	mm["remaining"] = maxi(3, int(mm["remaining"]))
+	mm["clock"] = 1e6
+	return s
+
+
+## The cures (28 Oct, docs/design/meds_ammo_clinic.md): one an element, a pouch each, at once beside a heal under way;
+## what each stops gone and a grace before it lands again; used by the runner when its element's heavy, as a heal is
+## under 40%; frost and shock on you (a chill slows your fire, a shock lands more of theirs); the Ambulance's Bag keeps
+## a cure as a med; the Clinic, the Workshop and the gate's top-up deal in them; the run screen and the cards say so.
+func _cures_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	for ty in Data.ELEMENTS:
+		var bs: Array = Data.BASES[Data.MEDICAL].filter(func(b): return str(b.get("cure", "")) == ty)
+		_check(bs.size() == 1 and not bs[0].has("heal") and Words.item_words(str(bs[0]["name"])) != "", "no one cure for %s: %s" % [ty, str(bs)])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 28
+	var rolled := 0
+	for k in range(300):
+		var r: Dictionary = Items.roll(Data.MEDICAL, 2, rng, 3.0)
+		if Items.is_cure(r):
+			rolled += 1
+			_check(int(r["rarity"]) == 0 and r["affixes"].is_empty(), "a cure rolled %s with affixes %s" % [Items.rarity_name(r), str(r["affixes"])])
+	_check(rolled > 0, "three hundred meds rolled and not one cure")
+	var s = _fresh_run(0)
+	if s == null:
+		_check(false, "the cures' fixture: no run")
+		return
+	var mm: Dictionary = s.mission
+	var tq: Dictionary = s._plain(Data.MEDICAL, "Tourniquet")
+	var band: Dictionary = s._plain(Data.MEDICAL, "Bandage")
+	s.rig = [tq, band]
+	_check(int(s.first_med().get("id", -1)) == int(band["id"]) and s.meds_carried() == 1 and int(s.first_cure("bleed").get("id", -1)) == int(tq["id"]), "a cure read as a heal: first med %s, %d carried" % [str(s.first_med().get("base", "")), s.meds_carried()])
+	# an odds read's cure writes nothing in the log (the review)
+	var ev0: int = s.events_total
+	var dry_m: Dictionary = mm.duplicate(true)
+	dry_m["dry"] = true
+	var tq_dry: Dictionary = s._plain(Data.MEDICAL, "Tourniquet")
+	s.rig.append(tq_dry)
+	s._cure(dry_m, s.rig.find(tq_dry))
+	_check(s.events_total == ev0, "a dry run's cure wrote to the log: %d lines from %d" % [s.events_total, ev0])
+	s.rig = [tq, band]
+	# at once, beside a heal going in
+	s.hp = s.max_hp() * 0.5
+	_check(s.use_med(int(band["id"])) and mm["using"] != null, "the fixture: the bandage didn't go in")
+	mm["my_dots"] = {"bleed": 30.0}
+	_check(s.use_med(int(tq["id"])) and not mm["my_dots"].has("bleed") and s.cure_wards(mm, "bleed") and not s.rig.has(tq) and mm["using"] != null, "the Tourniquet: bleed %s, warded %s, spent %s, the heal kept %s" % [str(mm["my_dots"].get("bleed", 0)), str(s.cure_wards(mm, "bleed")), str(not s.rig.has(tq)), str(mm["using"] != null)])
+	_check(str(s.events.back()[1]).begins_with("Tourniquet used"), "the cure wasn't logged: '%s'" % str(s.events.back()[1]))
+	# its grace: no bleed lands for CURE_IMMUNE_S, then it does
+	mm["using"] = null
+	s.rig = []
+	mm["t"]["dps"] = s.max_hp() * 0.05
+	mm["t"]["types"] = {"bleed": 0.5, "physical": 0.5}
+	for k in range(3):
+		s.hp = s.max_hp()
+		s._tick(1.0)
+	_check(float(mm.get("my_dots", {}).get("bleed", 0.0)) == 0.0, "a bleed landed through the cure's grace: %.1f" % float(mm.get("my_dots", {}).get("bleed", 0.0)))
+	for k in range(int(Data.CURE_IMMUNE_S)):
+		s.hp = s.max_hp()
+		s._tick(1.0)
+	_check(float(mm.get("my_dots", {}).get("bleed", 0.0)) > 0.0 and not s.cure_wards(mm, "bleed"), "the cure's grace never ran out")
+	# by itself, when its element's heavy: a light burn keeps the gel, a heavy one uses it
+	var gel: Dictionary = s._plain(Data.MEDICAL, "Burn gel")
+	s.rig = [gel]
+	mm["my_dots"] = {"fire": s.hp * Data.CURE_AT * 0.5}
+	s._auto_cure(mm)
+	_check(s.rig.has(gel), "a light burn used the gel")
+	mm["my_dots"]["fire"] = s.hp * Data.CURE_AT * 1.5
+	s._auto_cure(mm)
+	_check(not s.rig.has(gel) and not mm["my_dots"].has("fire"), "a heavy burn didn't use the gel by itself")
+	# the runner's tick does it too (and so the odds' dry runs, which run the same tick)
+	var ch: Dictionary = s._plain(Data.MEDICAL, "Activated charcoal")
+	s.rig = [ch]
+	mm["t"]["dps"] = 0.0
+	mm["my_dots"] = {"poison": s.hp * Data.CURE_AT * 2.0}
+	s._tick(0.1)
+	_check(not s.rig.has(ch), "a heavy poison on a run didn't use the charcoal by itself")
+	# frost and shock on you: pools from their fire, a chill slowing yours, a shock landing more; each cure stops its own
+	mm["cure_t"] = {}
+	mm["my_dots"] = {}
+	mm["t"]["dps"] = s.max_hp() * 0.1
+	mm["t"]["types"] = {"frost": 0.4, "shock": 0.4, "physical": 0.2}
+	for k in range(4):
+		s.hp = s.max_hp()
+		s._tick(1.0)
+	_check(s.my_ail(mm, "frost") > 0.0 and s.my_chill_x(mm) < 1.0 and s.my_ail(mm, "shock") > 0.0, "frost and shock left nothing on you: %.2f, %.2f" % [s.my_ail(mm, "frost"), s.my_ail(mm, "shock")])
+	mm["t"]["dps"] = 0.0
+	var fl: Dictionary = s._plain(Data.MEDICAL, "Hot flask")
+	var salts: Dictionary = s._plain(Data.MEDICAL, "Smelling salts")
+	s.rig = [fl, salts]
+	_check(s.use_med(int(fl["id"])) and s.use_med(int(salts["id"])) and s.my_ail(mm, "frost") == 0.0 and s.my_ail(mm, "shock") == 0.0 and s.rig.is_empty(), "the flask and the salts didn't stop the chill and the shock")
+	# a clear-all (Code blue, Clean hands, a skill) takes frost and shock too
+	mm["my_ails"] = {"frost": 10.0}
+	s._clear_on_you(mm)
+	_check(s.my_ail(mm, "frost") == 0.0, "a clear-all left the chill")
+	# the Ambulance's Bag: a cure's a med to it, never used up
+	var bag: Dictionary = s._plain("Rig", "Paramedic's rig")
+	bag["rule"] = "ambulance_bag"
+	s.equipped["Rig"] = bag
+	var tq2: Dictionary = s._plain(Data.MEDICAL, "Tourniquet")
+	s.rig = [tq2]
+	mm["cure_t"] = {}
+	mm["my_dots"] = {"bleed": 20.0}
+	_check(s.use_med(int(tq2["id"])) and s.rig.has(tq2) and not mm["my_dots"].has("bleed"), "the Ambulance's Bag spent its cure")
+	s.extract_now()
+	# the Workshop's med ladder builds them from scrap; the Clinic stocks them, the front's elements first; the gate
+	# packs one for each of the front's elements
+	var built: Array = s.build_options("med").map(func(o): return str(o["name"]))
+	_check(["Tourniquet", "Burn gel", "Activated charcoal", "Hot flask", "Smelling salts"].all(func(n): return built.has(n)), "the Workshop's med ladder doesn't build the cures: %s" % str(built))
+	s._restock_clinic()
+	var on_shelf: Array = s.clinic.filter(func(x): return Items.is_cure(x))
+	var front_els: Array = s.zone_elements(s.front_tier())
+	_check(on_shelf.size() == mini(Data.CLINIC_CURES, s.clinic_stock() - 1) and s.clinic.size() == s.clinic_stock() and (front_els.is_empty() or Items.cure_of(on_shelf[0]) == front_els[0]), "the Clinic's cures: %s for %s" % [str(on_shelf.map(func(x): return x["base"])), str(front_els)])
+	s.rig = []
+	s.stash = [s._plain(Data.MEDICAL, "Activated charcoal"), s._plain(Data.MEDICAL, "Burn gel"), s._plain(Data.MEDICAL, "Bandage")]
+	s._top_up()
+	var packed: Array = s.rig.map(func(x): return str(x["base"]))
+	_check(front_els.has("poison") and packed.has("Activated charcoal") and not packed.has("Burn gel") and packed.has("Bandage"), "the gate's cures for %s: %s" % [str(front_els), str(packed)])
+	# the bot packs them for its zone
+	var bt = Bot.new()
+	s.rig = []
+	s.stash = [s._plain(Data.MEDICAL, "Activated charcoal")]
+	bt._pack_cures(s)
+	_check(s.rig.any(func(x): return Items.cure_of(x) == "poison"), "the bot didn't pack a cure for the Outskirts' poison")
+	# on screen: frost and shock on you as chips, a cure lit in the rig while its element's on you, the cards
+	sim.deploy(3)
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		m["remaining"] = 3
+		m["target_hp"] = 1e9
+		m["my_dots"] = {"bleed": 40.0}
+		m["my_ails"] = {"frost": sim.max_hp(), "shock": sim.max_hp()}
+		sim.rig = [sim._plain(Data.MEDICAL, "Tourniquet"), sim._plain(Data.MEDICAL, "Bandage")]
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var rn = main._run
+		var said: Array = []
+		for k in range(rn._runner["chips"].shown()):
+			said.append(rn._runner["chips"].words(k))
+		_check(said.any(func(w): return str(w).begins_with("Chilled")) and said.any(func(w): return str(w).begins_with("Shocked")) and said.has("Bleeding"), "On you doesn't say the chill and the shock: %s" % str(said))
+		var lit := false
+		for c in rn._rig_cells:
+			if c.visible and int(c.id) == int(sim.rig[0]["id"]):
+				lit = (c.get_theme_stylebox("normal") as StyleBoxFlat).border_color == Pal.PICK
+				_check(str(c.tooltip_text).contains("Stops a bleed"), "the Tourniquet's pouch doesn't say what it does: '%s'" % c.tooltip_text)
+		_check(lit, "the Tourniquet isn't lit with a bleed on you")
+		_check_fit(main, "Run (cures, chill and shock on you)")
+		sim.extract_now()
+	main.show_room(main.MEDIC)
+	sim.stash.append(sim._plain(Data.MEDICAL, "Burn gel"))
+	main._clinic._show("stash")
+	main.refresh()
+	var cards: String = " | ".join(main._clinic._meds.text_nodes().map(func(l): return str(l.text)))
+	_check(cards.contains("Burn gel") and cards.contains("Stops burns"), "the Burn gel's card: %s" % cards.left(300))
+	_check_fit(main, "Clinic (a cure's card)")
+	main._clinic._show("shelf")
+	sim.load_dict(saved)
+	main.refresh()
+	print("cures ok: one an element, at once beside a heal, a grace, by themselves when heavy, frost and shock on you, the Bag, the Workshop, the Clinic, the gate, the bot, the screen")
+
+
+## The Clinic's supplies (28 Oct, docs/design/meds_ammo_clinic.md): found in medicine cabinets and on the sites leaning
+## to meds (the Hospital most), a stack; handed in at the Clinic's strip, her shelf a step better for good - a tier up,
+## then Magic and Rare meds rolled with the meds' own affixes, which work as they say; saved; the bot hands them in.
+func _clinic_supply_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var hosp: int = -1
+	for i in range(Data.TIERS.size()):
+		if Data.TIERS[i]["name"] == "The Hospital":
+			hosp = i
+	var cab: Dictionary = Sim.crate_def("medicine")
+	_check(hosp >= 0 and sim.supply_odds(Data.TIERS[hosp], {}) > 0.0 and sim.supply_odds(Data.TIERS[3], {}) == 0.0 and sim.supply_odds(Data.TIERS[3], cab) > 0.0 and sim.supply_odds(Data.TIERS[hosp], cab) > sim.supply_odds(Data.TIERS[3], cab), "the supplies' odds: the Hospital %.3f, the Streets %.3f, a cabinet %.3f" % [sim.supply_odds(Data.TIERS[hosp], {}), sim.supply_odds(Data.TIERS[3], {}), sim.supply_odds(Data.TIERS[3], cab)])
+	var s = _fresh_run(0)
+	if s == null:
+		_check(false, "the supplies' fixture: no run")
+		return
+	var got := 0
+	for k in range(200):
+		var f: Dictionary = s._find(s.mission, s.effective(hosp), false, cab, true)
+		if not f.is_empty() and Items.is_supplies(f["it"]):
+			got += 1
+			_check(Items.stack_size(f["it"]) >= int(Data.SUPPLY_COUNT[0]) and Items.stack_size(f["it"]) <= int(Data.SUPPLY_COUNT[1]), "a find of supplies held %d" % Items.stack_size(f["it"]))
+	_check(got > 10, "two hundred looks in the Hospital's cabinets found supplies %d times" % got)
+	s.extract_now()
+	var a: Dictionary = s._plain(Data.SUPPLIES, "Medical supplies")
+	var b: Dictionary = s._plain(Data.SUPPLIES, "Medical supplies")
+	Items.set_stack(a, 3)
+	Items.set_stack(b, 4)
+	s.stash = []
+	s.stash_put(a)
+	s.stash_put(b)
+	_check(s.stash.size() == 1 and s.supplies_held() == 7, "two finds of supplies didn't stack: %d pieces, %d held" % [s.stash.size(), s.supplies_held()])
+	_check(not s.is_junk(s.stash[0]) and s._bin_commons(s.stash.duplicate()).size() == 1, "the junk run or the Bins take the supplies")
+	# her shelf a step at a time
+	s.supplies_in = 0
+	s._restock_clinic()
+	_check(s.med_stock().any(func(bb): return not bb.has("cure") and int(bb["tier"]) == 1), "the fixture: her shelf has no tier-1 heal before the supplies")
+	var need0: int = int(Data.CLINIC_STEPS[0]["need"])
+	Items.set_stack(s.stash[0], need0)
+	s.unlock_all()
+	_check(s.hand_in_supplies() == need0 and s.supplies_held() == 0 and s.supplies_in == need0 and s.clinic_step() == 1, "the hand-in: in %d, held %d, step %d" % [s.supplies_in, s.supplies_held(), s.clinic_step()])
+	_check(not s.med_stock().any(func(bb): return not bb.has("cure") and int(bb["tier"]) == 1) and s.clinic.all(func(x): return Items.is_cure(x) or int(x["tier"]) > 1), "the first step didn't lift her shelf a tier: %s" % str(s.clinic.map(func(x): return x["base"])))
+	_check(s.events.any(func(e): return str(e[1]) == Words.SUPPLIES_STEP[0]), "her step wasn't logged")
+	s.supplies_in = int(Data.CLINIC_STEPS[3]["need"])
+	var rolled: Array = []
+	for k in range(30):
+		s._restock_clinic()
+		rolled.append_array(s.clinic.filter(func(x): return int(x["rarity"]) > 0))
+	var allowed: Array = Items.allowed_affixes(Data.MEDICAL).map(func(af): return str(af["stat"]))
+	_check(rolled.any(func(x): return int(x["rarity"]) == 1) and rolled.any(func(x): return int(x["rarity"]) == 2) and rolled.all(func(x): return not Items.is_cure(x) and x["affixes"].size() == int(Data.RARITIES[int(x["rarity"])]["affixes"]) and x["affixes"].all(func(af): return allowed.has(str(af["stat"])))), "her Magic and Rare meds: %d rolled" % rolled.size())
+	# a rolled med's own: quicker to use, a beat of Guard, a cure built in
+	var s2 = _fresh_run(0)
+	if s2 != null:
+		var mm: Dictionary = s2.mission
+		var med: Dictionary = s2._plain(Data.MEDICAL, "Bandage")
+		var plain_t: float = s2.use_time(med)
+		med["rarity"] = 2
+		med["affixes"] = [{"stat": "med_fast_pct", "value": 50, "tier": 3}, {"stat": "med_guard_pct", "value": 10, "tier": 3}, {"stat": "cure_bleed", "value": 1, "tier": 1}]
+		_check(s2.use_time(med) < plain_t * 0.6, "Quicker to use: %.1f s against %.1f" % [s2.use_time(med), plain_t])
+		_check(Items.affix_lines(med).has("Stops a bleed too"), "a cure built in reads '%s'" % str(Items.affix_lines(med)))
+		s2.rig = [med]
+		s2.hp = s2.max_hp() * 0.5
+		mm["my_dots"] = {"bleed": 30.0}
+		var g0: float = s2.guard()
+		s2.use_med(int(med["id"]))
+		s2._patch(mm, 30.0)
+		_check(mm["using"] == null and not mm["my_dots"].has("bleed") and s2.cure_wards(mm, "bleed") and s2.guard() > g0, "the rolled med's own at its end: bleed %s, warded %s, Guard %.1f from %.1f" % [str(mm["my_dots"].get("bleed", 0)), str(s2.cure_wards(mm, "bleed")), s2.guard(), g0])
+		s2.extract_now()
+	var d: Dictionary = s.to_dict()
+	var s3 = Sim.new()
+	s3.load_dict(d)
+	_check(s3.supplies_in == s.supplies_in and s3.clinic_step() == s.clinic_step(), "the supplies handed in didn't save: %d" % s3.supplies_in)
+	# the bot hands them in coming home
+	var bt = Bot.new()
+	var st: Dictionary = s._plain(Data.SUPPLIES, "Medical supplies")
+	Items.set_stack(st, 5)
+	s.stash.append(st)
+	var in0: int = s.supplies_in
+	bt._restock_meds(s)
+	_check(s.supplies_held() == 0 and s.supplies_in == in0 + 5, "the bot didn't hand its supplies in")
+	# the Clinic's strip: what's held, the step, Hand in - fitting with the three wounds' rows over it
+	sim.supplies_in = 0
+	var sp: Dictionary = sim._plain(Data.SUPPLIES, "Medical supplies")
+	Items.set_stack(sp, need0)
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(sp)
+	for area in Data.WOUND_AREAS:
+		sim.wounds[area] = {"what": "a cut", "stat": "hp", "from": "The Parade", "hp_pct": 20}
+	main.show_room(main.MEDIC)
+	main._clinic._show("shelf")
+	main.refresh()
+	var body = main._clinic._body
+	var strip: Dictionary = body.supplies_strip()
+	_check(strip["panel"].visible and not strip["hand"].disabled and strip["hand"].text.contains(str(need0)) and strip["head"].text.contains(str(need0)), "the strip: '%s', '%s'" % [strip["head"].text, strip["hand"].text])
+	var sr: Rect2 = Rect2(strip["panel"].position, strip["panel"].size)
+	var note_end: float = body._note.position.y + body._note.size.y
+	_check(sr.position.y >= note_end and sr.end.y <= body._bar.position.y, "the strip runs into the rows or the HP: %s, the note ends %.0f, the bar at %.0f" % [str(sr), note_end, body._bar.position.y])
+	for r in body._rows:
+		if r["panel"].visible:
+			_check(not Rect2(r["panel"].position, r["panel"].size).intersects(sr), "the strip sits on a wound's row")
+	_check_fit(main, "Clinic (supplies to hand in, three wounds)")
+	strip["hand"].pressed.emit()
+	main.refresh()
+	_check(sim.supplies_in == need0 and sim.supplies_held() == 0 and strip["hand"].disabled and strip["line"].text.begins_with("Step 1"), "Hand in through the screen: in %d, '%s'" % [sim.supplies_in, strip["line"].text])
+	_check_fit(main, "Clinic (supplies handed in)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the Clinic's supplies ok: the finds, the stack, the hand-in, her steps, the rolled meds' own, the save, the bot, the strip")
+
+
+## Magazines (28 Oct, Matt: "carrying 3000 smg rounds in a rig doesn't make much sense"; docs/design/meds_ammo_clinic.md):
+## a gun fires its magazine, reloads empty (a pause by its type, cut by reload_pct), the fight's damage and the odds'
+## dry runs with the pause in and the figures out of a fight at the share it fires; the rig carries pouches of
+## magazines; the gate fills them free from the stash; bats and free-round guns untouched; the rig shows a pouch's
+## magazines and the Rounds tile the one in the gun.
+func _magazine_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var mk := func(slot: String, base: String) -> Dictionary: return sim._plain(slot, base)
+	_check(Items.mag_size(mk.call("Primary", _base_of_type("smg"))) == 30 and Items.mag_size(mk.call("Primary", _base_of_type("rifle"))) == 10 and Items.mag_size(mk.call("Primary", _base_of_type("shotgun"))) == 8
+		and Items.mag_size(mk.call("Secondary", "Service pistol")) == 15 and Items.mag_size(mk.call("Primary", "Nail gun")) == 50 and Items.mag_size(mk.call("Primary", "Belt-fed SMG")) == 100, "the magazines' sizes")
+	_check(Items.mag_size(mk.call("Primary", "Spiked bat")) == 0, "a bat has a magazine")
+	var smg: Dictionary = mk.call("Primary", _base_of_type("smg"))
+	var quick: Dictionary = smg.duplicate(true)
+	quick["affixes"] = [{"stat": "reload_pct", "value": 50, "tier": 3}]
+	_check(sim.reload_s(quick) < sim.reload_s(smg) and is_equal_approx(sim.reload_s(smg), float(Data.RELOAD_S["smg"])), "Quicker reloads: %.2f s against %.2f" % [sim.reload_s(quick), sim.reload_s(smg)])
+	# the fight: the SMG empties its magazine, then a pause with no fire from it, then fires again
+	var s = _fresh_run(0)
+	if s == null:
+		_check(false, "the magazines' fixture: no run")
+		return
+	var mm: Dictionary = s.mission
+	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
+	s.equipped["Secondary"] = null
+	var pouch: Dictionary = s._plain(Data.AMMO, "SMG rounds")
+	Items.set_stack(pouch, Items.pouch_cap(pouch))
+	s.rig = [pouch]
+	s._dry_memo.clear()
+	var paused_n := 0
+	var fired_after := false
+	var r0: int = s.rounds_for(s.equipped["Primary"])
+	for k in range(40):
+		s.hp = s.max_hp()
+		var hp0: float = float(mm["target_hp"])
+		s._tick(0.5)
+		var x: float = float(mm.get("fire_x", {}).get("Primary", 1.0))
+		if x <= 0.0:
+			paused_n += 1
+			_check(hp0 - float(mm["target_hp"]) <= 0.001, "the SMG hit while it reloaded: %.1f" % (hp0 - float(mm["target_hp"])))
+		elif paused_n > 0:
+			fired_after = fired_after or hp0 - float(mm["target_hp"]) > 0.0
+	_check(int(mm.get("reloads", 0)) >= 1 and paused_n >= 2 and fired_after, "the SMG's magazine: %d reloads, %d half-seconds paused, fired after %s" % [int(mm.get("reloads", 0)), paused_n, str(fired_after)])
+	_check(s.rounds_for(s.equipped["Primary"]) < r0, "the SMG spent nothing")
+	# the reload in the figures out of the fight: the guns' part at the share it fires
+	s.extract_now()
+	var share: float = s.mag_share("Primary")
+	var parts: Dictionary = s.damage_parts()
+	_check(share > 0.5 and share < 1.0 and absf(float(parts["guns"]) - Items.dps(s.equipped["Primary"]) * share) < 0.01, "the sheet's guns %.2f against %.2f at the share %.2f" % [float(parts["guns"]), Items.dps(s.equipped["Primary"]) * share, share])
+	var est0: float = s.estimate(0)
+	var slow: Dictionary = s.equipped["Primary"]
+	slow["affixes"] = [{"stat": "reload_pct", "value": -90, "tier": 1}]
+	s._dry_memo.clear()
+	_check(s.estimate(0) > est0 * 1.2, "a slow reload didn't make the fight longer: %.1f s against %.1f" % [s.estimate(0), est0])
+	# and in the odds' dry runs: a slow reload takes longer on the same dice
+	var d_rng := RandomNumberGenerator.new()
+	d_rng.seed = 7
+	Items.set_stack(pouch, Items.pouch_cap(pouch))
+	s.rig = [pouch]
+	s.hp = s.max_hp()
+	s._dry_run(0, d_rng)
+	var slow_t: float = float(s._dry_last["elapsed"])
+	slow["affixes"] = []
+	s._dry_memo.clear()
+	d_rng.seed = 7
+	s.rig = [pouch]
+	s.hp = s.max_hp()
+	s._dry_run(0, d_rng)
+	var fast_t: float = float(s._dry_last["elapsed"])
+	_check(slow_t > fast_t, "the odds' dry runs don't read the reload: %.0f s slow, %.0f s quick" % [slow_t, fast_t])
+	# a bat and a free-round gun: no magazine, no pause
+	s.equipped["Primary"] = s._plain("Primary", "Spiked bat")
+	_check(not s.uses_mag("Primary") and is_equal_approx(s.mag_share("Primary"), 1.0), "a bat reloads")
+	# the gate fills the rig's magazines free from the stash, whatever the setting; new pouches up to the share
+	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
+	var half: Dictionary = s._plain(Data.AMMO, "SMG rounds")
+	Items.set_stack(half, 20)
+	s.rig = [half]
+	s.stash = [s._plain(Data.AMMO, "SMG rounds")]
+	var box_n: int = int(s.stash[0]["rounds"])
+	s.set_top_up("leave")
+	s._top_up()
+	_check(int(half["rounds"]) == Items.pouch_cap(half) and s._rounds_in_stash("SMG rounds") == box_n - (Items.pouch_cap(half) - 20) and s.rig.size() == 1, "Leave it didn't fill the magazines free: %d in the pouch, %d in the stash" % [int(half["rounds"]), s._rounds_in_stash("SMG rounds")])
+	s.set_top_up("fill")
+	s._top_up()
+	var pouches: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
+	_check(pouches == ceili(s.med_capacity() * Data.RIG_MAG_SHARE) or s._rounds_in_stash("SMG rounds") == 0, "the gate's magazines: %d pouches of %d" % [pouches, s.med_capacity()])
+	_check(s.rig.all(func(x): return not Items.is_ammo(x) or int(x["rounds"]) <= Items.pouch_cap(x)), "a pouch holds more than its magazines")
+	# on screen: the run's rig draws a pouch's magazines and the Rounds tile the one in the gun; the Kit's rig too
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	sim.equipped["Secondary"] = null
+	var sp: Dictionary = sim._plain(Data.AMMO, "SMG rounds")
+	Items.set_stack(sp, Items.pouch_cap(sp) - 10)
+	sim.rig = [sp, sim._plain(Data.MEDICAL, "Bandage")]
+	sim.set_top_up("leave")
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
+	sim.deploy(3)
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		m["remaining"] = 3
+		m["target_hp"] = 1e9
+		m["t"]["dps"] = 0.0
+		sim.advance(1.0)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var rn = main._run
+		var cell = null
+		for c in rn._rig_cells:
+			if c.visible and int(c.id) == int(sp["id"]):
+				cell = c
+		_check(cell != null and cell.mag_pips().size() == Data.MAG_POUCH, "the run's rig doesn't draw the pouch's magazines")
+		if cell != null:
+			var whole := Rect2(Vector2.ZERO, cell.size)
+			for pr in cell.mag_pips():
+				_check(whole.encloses(pr), "a magazine's pip leaves its pouch: %s in %s" % [str(pr), str(whole)])
+			for l in cell.text_nodes():
+				for pr in cell.mag_pips():
+					_check(not Rect2(l.position, l.size).intersects(pr), "the pouch's '%s' sits on its magazines: %s on %s in %s" % [l.text, str(Rect2(l.position, l.size)), str(pr), str(cell.size)])
+		var tile: String = rn._runner["tiles"][3]["value"].text
+		_check(tile.contains("/") and tile.contains("30"), "the Rounds tile doesn't show the magazine: '%s'" % tile)
+		_check_fit(main, "Run (magazines)")
+		m["reload_t"]["Primary"] = 1.5
+		main.refresh()
+		_check(rn._runner["tiles"][3]["value"].text.begins_with("Reload"), "the Rounds tile doesn't say it's reloading: '%s'" % rn._runner["tiles"][3]["value"].text)
+		_check_fit(main, "Run (reloading)")
+		sim.extract_now()
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var ct = main._armoury._containers
+	var kit_cell = null
+	for c in ct._rig_cells:
+		if c.visible and Items.is_ammo(ct._item(int(c.id))):
+			kit_cell = c
+	_check(kit_cell != null and kit_cell.mag_pips().size() == Data.MAG_POUCH, "the Kit's rig doesn't draw a pouch's magazines")
+	_check_fit(main, "Kit (magazines in the rig)")
+	sim.set_top_up("fill")
+	sim.load_dict(saved)
+	main.refresh()
+	print("magazines ok: sizes, reloads, the pause in the fight, the figures and the odds, bats, the gate's fill, the screens")
+
+
 ## The effects' numbers in one table (15 Oct, refactor A2): every Data.FX key names something the data has (a tree
 ## node's effect, a unique's or a set's rule, a joint, a Yard pick or building, a map node), and the sim reads every
 ## key - a figure moved into the table and orphaned, or a table row for a node since cut, says so here.
@@ -10504,6 +10956,13 @@ func _full_pack_checks(sim) -> void:
 			var med: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
 			med["id"] = 950000 + guard
 			m["found"].append(med)             # topped up to the last cell: full is full
+			guard += 1
+		# and the grid's holes (28 Oct: a bag whose width left the vests a strip read full by its cells with a helmet's
+		# room still in it, so the drop went in - which bag the camp wears by now is the run's dice)
+		while not sim.pack_spot(m, up).is_empty() and guard < 200:
+			var hole: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+			hole["id"] = 950000 + guard
+			m["found"].append(hole)
 			guard += 1
 		var fill: Array = m["found"].map(func(x): return int(x["id"]))
 		if hand:
@@ -11332,7 +11791,7 @@ func _crates_checks(main) -> void:
 			if got.is_empty():
 				continue
 			all += 1
-			hit += 1 if got["it"]["slot"] == pair[1] else 0
+			hit += 1 if got["it"]["slot"] == pair[1] or (pair[0] == "medicine" and got["it"]["slot"] == Data.SUPPLIES) else 0     # a cabinet's medical supplies are its lean too (28 Oct)
 		_check(all > 0 and float(hit) / float(all) >= float(pair[2]), "a %s's finds are %d of %d %s (ammo types owned: %s)" % [pair[0], hit, all, pair[1], str(sim.owned_ammo_types(m))])
 	sim.stash.erase(lean_pistol)
 	# a site's own: the Barracks' military crates, the Bank's safes, none of either in the Outskirts

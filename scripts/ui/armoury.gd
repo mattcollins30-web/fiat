@@ -387,7 +387,9 @@ func _rounds_clause(gun: Dictionary) -> Array:
 
 ## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
 func _show_medical(it: Dictionary) -> Array:
-	var lines := [("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
+	var lines: Array = [("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
+	if Items.is_cure(it):
+		lines[0] = [sim.med_words(it), Words.CURE_CLEARS[Items.cure_of(it)] + ", at once"]     # a cure (28 Oct): what it stops
 	if Items.is_ammo(it):
 		var gun = sim.equipped["Primary"]
 		var sec = sim.equipped["Secondary"]
@@ -396,6 +398,10 @@ func _show_medical(it: Dictionary) -> Array:
 			if g != null and Items.ammo_type(g) == Items.base_of(it)["type"]:
 				feeds.append(g["base"])
 		lines[0] = ("Feeds both guns" if feeds.size() == 2 else "Feeds the %s" % str(feeds[0]).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"     # two names ran past the panel (10 Oct)
+		if selected["kind"] == "rig":
+			lines.append(["%s, %d rounds" % [Items.pouch_words(it), int(it["rounds"])], Items.pouch_words(it)])     # a pouch of magazines (28 Oct)
+		else:
+			lines.append(["A box: it fills the rig's magazines", "Fills the rig's magazines"])
 	var buttons := []
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})

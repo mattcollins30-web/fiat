@@ -4,9 +4,13 @@ extends Control
 ## empty areas dashed, the HP as it rests, and one button for the lot. Three wounds at most, one an area; the Clinic is
 ## the only cure.
 ##
-## Signals: `acted` after a treatment.
+## Her supplies (28 Oct, docs/design/meds_ammo_clinic.md): a strip over the HP - the medical supplies in the stash, her
+## shelf's step and the next, Hand in.
+##
+## Signals: `acted` after a treatment; `handed` after supplies go in.
 
 signal acted
+signal handed
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -23,6 +27,8 @@ const EMPTY_H := 44.0
 const ROW_GAP := 10.0
 const TREAT_W := 140.0
 const BAR_H := 58.0
+const SUP_H := 66.0
+const HAND_W := 170.0
 
 var sim
 var _head: Label
@@ -35,6 +41,10 @@ var _track: Panel
 var _fill: Panel
 var _all: Button
 var _upgrades: Button
+var _sup: Panel                       # her supplies (28 Oct): the strip, its head and line, Hand in
+var _sup_head: Label
+var _sup_line: Label
+var _hand: Button
 var _marks: Array = []                # [area, number] drawn on the body, in the rows' order
 var _figure: TextureRect              # the runner's own drawing, the Kit's (19 Oct, Matt: yes to the class's body art)
 var _over: Control                    # the wounds, drawn over the figure
@@ -76,6 +86,12 @@ func _init(w: float, h: float) -> void:
 		r["num_l"] = UI.label(r["num"], Rect2(0, 0, 24, 24), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.BG, HORIZONTAL_ALIGNMENT_CENTER, false)
 		_rows.append(r)
 	_note = UI.label(self, Rect2(ROW_X, 0, w - ROW_X, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_sup = UI.panel(self, Rect2(0, h - Pal.BUTTON_H - 12 - BAR_H - 10 - SUP_H, w, SUP_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_sup_head = UI.label(_sup, Rect2(12, 8, w - HAND_W - 34, 22), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_sup_line = UI.label(_sup, Rect2(12, 34, w - HAND_W - 34, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_hand = UI.button(_sup, Rect2(w - HAND_W - 10, (SUP_H - 44.0) / 2.0, HAND_W, 44), false)
+	_hand.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+	_hand.pressed.connect(_hand_in)
 	_bar = UI.panel(self, Rect2(0, h - Pal.BUTTON_H - 12 - BAR_H, w, BAR_H), UI.box(Pal.BG, 8))
 	_bar_left = UI.label(_bar, Rect2(12, 6, w * 0.4, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_bar_right = UI.label(_bar, Rect2(w * 0.4, 8, w * 0.6 - 12, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
@@ -90,7 +106,7 @@ func _init(w: float, h: float) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%d|%d|%s|%d|%s|%.1f|%s" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate(), sim.cls]
+	var sig := "%s|%d|%d|%s|%d|%s|%.1f|%s|%d|%d" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate(), sim.cls, sim.supplies_held(), sim.supplies_in]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -180,8 +196,33 @@ func show_state(s) -> void:
 		if sim.yard_side("clinic", c) != "":
 			picks += 1
 	_upgrades.text = "Upgrades %d/5" % picks
+	_show_supplies(out)
 	queue_redraw()
 	_over.queue_redraw()
+
+
+## Her supplies' strip (28 Oct): what's in the stash, the step she's at and what the next gives, Hand in.
+func _show_supplies(out: bool) -> void:
+	var held: int = sim.supplies_held()
+	var step: int = sim.clinic_step()
+	var steps: int = Data.CLINIC_STEPS.size()
+	UI.fit(_sup_head, ["MEDICAL SUPPLIES · %d IN THE STASH" % held, "SUPPLIES · %d HELD" % held, "SUPPLIES · %d" % held])
+	var next: int = sim.clinic_next_need()
+	if next < 0:
+		UI.fit(_sup_line, ["Her shelf's at its best: step %d of %d" % [step, steps], "Her shelf's at its best", "At its best"])
+	else:
+		var what: String = Words.SUPPLIES_NEXT[step]
+		UI.fit(_sup_line, ["Step %d of %d · next, %d more: %s" % [step, steps, next, what.to_lower()], "Step %d of %d · %d more: %s" % [step, steps, next, what.to_lower()],
+			"Step %d/%d · %d to the next" % [step, steps, next], "%d to the next" % next])
+	UI.fit_button(_hand, ["Hand in %d" % held, "Hand in"] if held > 0 else (["The runner is out", "Out"] if out else ["None to hand in", "None held"]))
+	_hand.disabled = not sim.can_hand_in()
+	UI.style_button(_hand, not _hand.disabled)
+
+
+func _hand_in() -> void:
+	if sim != null and sim.hand_in_supplies() > 0:
+		_shown = ""
+		handed.emit()
 
 
 ## The figure as drawn: the drawing's rect in the box (kept to its aspect, centred), or the box for the outline.
@@ -266,13 +307,18 @@ func _treat_all() -> void:
 		acted.emit()
 
 
+## For the tests: the supplies' strip, its Hand in.
+func supplies_strip() -> Dictionary:
+	return {"panel": _sup, "head": _sup_head, "line": _sup_line, "hand": _hand}
+
+
 ## For the tests: a row by its area.
 func row(a: String) -> Dictionary:
 	return _rows[Data.WOUND_AREAS.find(a)]
 
 
 func text_nodes() -> Array:
-	var out: Array = [_head, _note, _bar_left, _bar_right, _all, _upgrades]
+	var out: Array = [_head, _note, _bar_left, _bar_right, _all, _upgrades, _sup_head, _sup_line, _hand]
 	for r in _rows:
 		for l in [r["title"], r["effect"], r["empty"], r["treat"]] + r["from"]:
 			if l.visible:

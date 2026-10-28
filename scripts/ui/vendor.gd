@@ -288,6 +288,7 @@ func setup(k: String) -> void:
 		_body = ClinicBody.new(INNER, BODY_H - TOP - PAD)
 		_body.position = Vector2(PAD, TOP)
 		_body.acted.connect(_on_treated)
+		_body.handed.connect(_on_handed)
 		_side.add_child(_body)
 		_meds = MedCards.new(GRID_W, BODY_H)
 		_meds.position = Vector2(GRID_X, BODY_Y)
@@ -880,6 +881,13 @@ func _side_press(i: int) -> void:
 ## The body's Treat (clinic_body.gd): the medic's word, then the room again.
 func _on_treated() -> void:
 	_says("fit" if sim.hp >= sim.max_hp() - 0.5 and sim.wounds.is_empty() else "treated")
+	_shown = ""
+	acted.emit()
+
+
+## Her supplies handed in (28 Oct): her word, then the room again (the shelf may have moved a step).
+func _on_handed() -> void:
+	_says("supplies")
 	_shown = ""
 	acted.emit()
 

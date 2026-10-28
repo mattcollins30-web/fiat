@@ -1513,14 +1513,17 @@ func _next_in(sim, b: Dictionary) -> String:
 
 
 func _restock_meds(sim) -> void:
+	if sim.can_hand_in():
+		sim.hand_in_supplies()                # the medic's supplies, as a person hands them over coming home (28 Oct)
 	_restock_rounds(sim)
+	_pack_cures(sim)
 	var guard := 0
 	while sim.rig_room(1) and guard < 40:
 		guard += 1
 		var took := false
 		var small := false
 		for it in sim.stash:
-			if Items.is_medical(it):
+			if Items.is_heal(it):
 				small = small or Items.size(it) <= 1
 				if sim.take(it["id"]):
 					took = true
@@ -1528,9 +1531,38 @@ func _restock_meds(sim) -> void:
 		if took:
 			continue
 		# a bandage only when the stash has no one-cell med (D13: a kit too big for the room left was tried, refused and
-		# a bandage bought for the stash, again and again - a hundred, the cash gone and the stash full, papers left lying)
-		if small or sim.cash < sim.tins_now(200.0) or not sim.buy_med("Bandage"):
+		# a bandage bought for the stash, again and again - a hundred, the cash gone and the stash full, papers left lying);
+		# the cheapest one-cell heal she stocks once her supplies lift her shelf past bandages (28 Oct)
+		if small or sim.cash < sim.tins_now(200.0) or not sim.buy_med(_cheap_heal(sim)):
 			return
+
+
+## The cheapest one-cell heal on the Clinic's list: a bandage until her shelf moves past it.
+func _cheap_heal(sim) -> String:
+	var best := {}
+	for b in sim.med_stock():
+		if b.has("cure") or Items.size({"slot": Data.MEDICAL, "base": b["name"]}) > 1:
+			continue
+		if best.is_empty() or int(b["value"]) < int(best["value"]):
+			best = b
+	return str(best.get("name", "Bandage"))
+
+
+## A cure for each element the front's gangs throw (28 Oct, the cures): from the stash, or bought at the Clinic, a
+## pouch each, before the heals take the rest - as the gate's top-up packs them.
+func _pack_cures(sim) -> void:
+	for ty in sim.zone_elements(sim.front_tier()).slice(0, Data.TOP_UP_CURES):
+		if not sim.first_cure(ty).is_empty() or not sim.rig_room(1):
+			continue
+		var name := ""
+		for b in Data.BASES[Data.MEDICAL]:
+			if str(b.get("cure", "")) == ty:
+				name = str(b["name"])
+		var have: Array = sim.stash.filter(func(x): return Items.cure_of(x) == ty)
+		if have.is_empty() and sim.cash >= sim.tins_now(200.0) and sim.buy_med(name):
+			have = sim.stash.filter(func(x): return Items.cure_of(x) == ty)
+		if not have.is_empty():
+			sim.take(int(have[0]["id"]))
 
 
 ## Rounds for both guns: two runs' worth for the primary, one for the
@@ -1555,7 +1587,9 @@ func _restock_rounds(sim) -> void:
 		if pair[0] == "Primary" and sim.rounds_for(gun) == 0 and not sim.rig_room(1) and sim.med_capacity() > 0:
 			sim.leave(sim.rig.back()["id"])     # a dry primary beats a third bandage
 		var guard := 0
-		while sim.rounds_for(gun) < want and sim.rig_room(1) and guard < 6:
+		# magazines (28 Oct): the rounds' pouches stop at the gate's share of the rig, the meds and cures the rest
+		var mag_room: int = ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
+		while sim.rounds_for(gun) < want and sim.rig_room(1) and guard < 6 and sim.rig.filter(func(x): return Items.is_ammo(x)).size() < mag_room:
 			guard += 1
 			var took := false
 			for it in sim.stash:
@@ -1573,7 +1607,7 @@ func _restock_rounds(sim) -> void:
 					break
 				var worst := {}
 				for it in sim.stash:
-					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or it.get("mythic", false):
+					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or Items.is_supplies(it) or it.get("mythic", false):
 						continue
 					if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
 						continue
@@ -1603,12 +1637,18 @@ func _dispose(sim, it: Dictionary) -> bool:
 func _sell_spares(sim) -> void:
 	var keep_type: String = TYPE_OF.get(sim.cls, "") if keystones_first else ""
 	# meds: a dozen cells' worth stay, the dearest; the rig can't carry more and they pile up otherwise
-	var meds: Array = sim.stash.filter(func(it): return Items.is_medical(it))
+	var meds: Array = sim.stash.filter(func(it): return Items.is_heal(it))
 	meds.sort_custom(func(a, b): return a["value"] > b["value"])
 	var med_cells := 0
 	for it in meds:
 		med_cells += Items.size(it)
 		if med_cells > 12:
+			_dispose(sim, it)
+	# cures (28 Oct): three of each kept, the rest go
+	var cure_n := {}
+	for it in sim.stash.filter(func(x): return Items.is_cure(x)):
+		cure_n[it["base"]] = int(cure_n.get(it["base"], 0)) + 1
+		if int(cure_n[it["base"]]) > 3:
 			_dispose(sim, it)
 	# rounds a gun fires: the six dearest stacks a type stay (D15: a bleed Doorman's stash held 176 stacks, full, and
 	# picked nothing up - no papers - for the last ten hours of the read)
@@ -1641,8 +1681,8 @@ func _sell_spares(sim) -> void:
 			for r in range(ranked.size()):
 				mount_rank[int(ranked[r]["id"])] = r
 	for it in sim.stash.duplicate():
-		if Items.is_medical(it) or Items.is_paper(it) or it.get("mythic", false):
-			continue                      # a paper's a key to the endgame now (15 Oct): kept; a mythic never goes
+		if Items.is_medical(it) or Items.is_paper(it) or Items.is_supplies(it) or it.get("mythic", false):
+			continue                      # a paper's a key to the endgame now (15 Oct): kept; a mythic never goes; supplies are the medic's
 		if Items.is_ammo(it):
 			var fired := false
 			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:

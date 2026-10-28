@@ -14,6 +14,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const PAD := 20.0
 const GAP := 12.0
@@ -99,6 +100,9 @@ func meds() -> Array:
 
 ## A med's card words: [total over the time, a second's, how it ends].
 func med_lines(it: Dictionary) -> Array:
+	if Items.is_cure(it):
+		# a cure (28 Oct): what it stops, at once, and its grace
+		return [Words.CURE_CLEARS[Items.cure_of(it)], "at once", "%d s before it lands again" % int(Data.CURE_IMMUNE_S)]
 	var heal: float = sim.med_heal(it)
 	var t: float = sim.use_time(it)
 	var total: String = ("%d HP over %s s" % [int(round(heal)), ("%.1f" % t) if t < 10.0 and t != floorf(t) else str(int(t))]) if t > 0.0 else "%d HP at once" % int(round(heal))
@@ -143,7 +147,7 @@ func show_state(s) -> void:
 		c["where"].add_theme_color_override("font_color", Pal.GOOD if int(m[3]) > 0 and int(m[2]) == 0 else Pal.TEXT_2)
 		var ln: Array = med_lines(it)
 		c["total"].text = ln[0]
-		c["chips"].show_chips([{"forms": [ln[1], ln[1].replace(" a second", "/s")], "colour": "good"}, {"forms": [ln[2], ln[2].replace("stops at full", "to full").replace(" over goes to Guard", " to Guard")], "colour": Pal.TEXT_2}], 1, true)
+		c["chips"].show_chips([{"forms": [ln[1], ln[1].replace(" a second", "/s")], "colour": "good"}, {"forms": [ln[2], ln[2].replace("stops at full", "to full").replace(" over goes to Guard", " to Guard").replace(" before it lands again", " safe")], "colour": Pal.TEXT_2}], 1, true)
 		var on: bool = m[0] == picked
 		for st in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
 			b.add_theme_stylebox_override(st, UI.box(Pal.SELECT if (st == "hover") else Pal.PANEL, 8, 2 if on else 1, Pal.ACCENT if on else Pal.CARD_LINE))

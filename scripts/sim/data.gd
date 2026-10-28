@@ -24,6 +24,9 @@ const CHARM_DROP := 0.05           # the share of a site's finds that are charms
 ## The backpack's capacity is loot.
 const MEDICAL := "Medical"
 const GRENADE := "Grenade"        # thrown from a pouch (32): damage to everyone on you, by type
+## Medical supplies (28 Oct, docs/design/meds_ammo_clinic.md): a stack in the pack, found in medicine cabinets and on
+## the sites that lean to meds (the Hospital most); handed to the medic, her shelf gets better for good.
+const SUPPLIES := "Supplies"
 ## Ammo rides in the rig too, a stack a cell. A gun fires its type's rounds
 ## and runs dry without them: then the secondary, then fists.
 const AMMO := "Ammo"
@@ -40,7 +43,7 @@ const RADIO_EVERY := 3             # the radio comes on every this many runs hom
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
 const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Rig": [3, 2], "Backpack": [3, 3],
-	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1]}
+	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1]}
 const FOOTPRINTS := {
 	# melee
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
@@ -235,7 +238,7 @@ const RIG_CAP := 24
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
 	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour",
-	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw",
+	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value",
 	"Charm": "find",
 }
 
@@ -352,7 +355,7 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Section gun", "type": "smg", "tier": 6, "damage": 27.0, "rof": 4.4, "value": 700, "sustain": [4, 40],     # lifted (7 Oct): 26 × 4.2 read 109 against the shotguns' 115
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40],
+		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40], "mag": 100, "reload": 3.0,     # its belt (28 Oct, magazines): draft
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		## the deep bases (10 Oct, docs/design/deep_guns.md): tiers 7-9, found from level 12, 16 and 20 (the Barracks at depth
 		## 4, 8, 12); about +18% damage a second a tier on each type's own line, so the climb has a base to chase all the way down
@@ -600,6 +603,17 @@ const BASES := {
 		{"name": "Trauma kit", "tier": 2, "heal": 120.0, "use": 10.0, "value": 120, "from": "Field dressing"},
 		{"name": "Surgeon's kit", "tier": 3, "heal": 200.0, "use": 12.0, "value": 220, "from": "Trauma kit"},
 		{"name": "Hospital kit", "tier": 4, "heal": 300.0, "use": 14.0, "value": 380, "from": "Surgeon's kit"},
+		# the cures (28 Oct, Matt: "different meds for different things like bleed/poison etc"): `cure` the element it
+		# stops on you, at once, and CURE_IMMUNE_S before it can land again; no heal; a pouch each
+		{"name": "Tourniquet", "tier": 1, "cure": "bleed", "use": 0.0, "value": 18},     # draft
+		{"name": "Burn gel", "tier": 1, "cure": "fire", "use": 0.0, "value": 18},     # draft
+		{"name": "Activated charcoal", "tier": 1, "cure": "poison", "use": 0.0, "value": 18},     # draft
+		{"name": "Hot flask", "tier": 2, "cure": "frost", "use": 0.0, "value": 30},     # draft
+		{"name": "Smelling salts", "tier": 2, "cure": "shock", "use": 0.0, "value": 30},     # draft
+	],
+	## Medical supplies (28 Oct): a stack of `count`, for the Clinic
+	"Supplies": [
+		{"name": "Medical supplies", "tier": 1, "value": 6},     # draft
 	],
 	## Grenades (32): a pouch each, thrown at everyone on you; the hit is the type's, through the damage model
 	"Grenade": [
@@ -632,10 +646,35 @@ const BASES := {
 		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30, "from": "Match rounds"},
 	],
 }
+## Magazines (28 Oct, Matt: "carrying 3000 smg rounds in a rig doesn't make much sense for the realistic tone we
+## have"; docs/design/meds_ammo_clinic.md): a gun fires from its magazine, MAG_SIZE rounds by what it fires (a base's
+## own "mag" over it), and empty it reloads - RELOAD_S of no fire from it (a base's "reload" over it), shortened by
+## reload_pct. The rig carries loaded magazines, MAG_POUCH to a pouch, of a grade (a pouch of hollow points); boxes
+## stay in the stash and fill them at home, free, at the gate.
+const MAG_SIZE := {"smg": 30, "rifle": 10, "pistol": 15, "shotgun": 8, "improvised": 50}     # draft
+const RELOAD_S := {"smg": 2.0, "rifle": 2.5, "pistol": 1.5, "shotgun": 3.0, "improvised": 2.0}     # draft
+const MAG_POUCH := 3                # draft: magazines a pouch
+const RIG_MAG_SHARE := 0.5          # draft: the gate's top-up fills magazines into up to this share of the rig's pouches, the meds the rest
 const AMMO_PRICE := 1.5             # the Fence's markup on a standard box
 const AMMO_DROP := 0.22             # the share of a kill's drops that are rounds; a look's is half that
 const MED_PRICE := 1.5            # the Clinic's markup on a common med
 const MED_DROP := 0.08            # the share of finds that are medical
+## Medical supplies' finds (28 Oct): a look's share at a site leaning to meds, times its lean (the Garden Centre 1.5,
+## the Hospital 3); a medicine cabinet's share of its finds on top; so many a find; a stack's most.
+const SUPPLY_FIND := 0.03           # draft
+const SUPPLY_CABINET := 0.35        # draft
+const SUPPLY_COUNT := [1, 3]        # draft
+const SUPPLY_STACK := 30            # draft
+## The Clinic's shelf as supplies come in (28 Oct): each step `need` handed in all told; `tier` lifts what she stocks,
+## then `magic` and `rare` are the shares of her heals rolled with med affixes. Her shelf's size stays the Yard's picks.
+const CLINIC_STEPS := [
+	{"need": 10, "tier": 1},                               # draft
+	{"need": 30, "tier": 2},                               # draft
+	{"need": 60, "tier": 2, "magic": 0.35},                # draft
+	{"need": 100, "tier": 2, "magic": 0.45, "rare": 0.15},     # draft
+	{"need": 160, "tier": 3, "magic": 0.45, "rare": 0.35},     # draft
+]
+const CLINIC_CURES := 2             # draft: of her shelf, so many are cures, the front's elements first
 const GRENADE_DROP := 0.04        # the share of a look's finds that are grenades (32)
 const ATT_DROP := 0.30            # the share of a look's finds that are attachments
 const SOCKET_FIND := 0.04         # a socketable, a find of its own (21 Oct, Matt's save: 4 in 300 finds, none his element's): kills too
@@ -761,6 +800,15 @@ const UNIQUE_CAP := 0.04
 const MYTHIC_ODDS_IN := 10000
 const MYTHIC_HURT_A_SECOND := 0.05     # the Bomb Disposal Suit: never more than this of your HP a second
 const MYTHIC_AUTO_MED := 0.5           # the Ambulance's Bag: a med by itself under this
+## The cures (28 Oct, docs/design/meds_ammo_clinic.md): one is used by itself when its element on you is heavy - what
+## its pool would still take is CURE_AT of the HP left - as a heal is under 40%; then CURE_IMMUNE_S before it lands again.
+const CURE_AT := 0.25                  # draft
+const CURE_IMMUNE_S := 6.0             # draft
+const TOP_UP_CURES := 2                # draft: the gate packs a cure for each of the front's elements, so many at most
+## Frost and shock on you (28 Oct, the cures: there was nothing of theirs on the runner to cure): their fire's frost
+## and shock fill a pool as a burn's does (`ratio` of what landed, draining over `s`), and the pool at `full` of your
+## max HP is the whole effect - frost your fire `most` slower, shock `most` more of theirs taken.
+const MY_AILS := {"frost": {"ratio": 0.5, "s": 4.0, "full": 0.25, "most": 0.2}, "shock": {"ratio": 0.5, "s": 4.0, "full": 0.25, "most": 0.2}}     # draft
 const MYTHIC_SEARCH_FINDS := 2         # the Removal Van: finds a search, more
 const MYTHIC_PACK := 4                 # and the pack this many times over
 const MYTHIC_PAY := 2.0                # the Freedom of the Borough: tins, notes and XP
@@ -1328,6 +1376,7 @@ const AFFIXES := [
 	{"stat": "crowd_less_pct", "label": "less damage with three or more on you", "short": "less/crowd", "min": 4, "max": 16, "slots": ["Armour"]},
 	# the guns: rate of fire
 	{"stat": "attack_pct", "label": "rate of fire", "short": "RoF", "min": 3, "max": 15, "slots": ["Primary", "Secondary"]},
+	{"stat": "reload_pct", "label": "quicker reloads", "short": "reload", "min": 10, "max": 40, "slots": ["Primary", "Secondary"], "weight": 0.6},     # magazines (28 Oct): draft
 	# the carry: pouches, meds, searches, gangs later, notes
 	{"stat": "med_cap", "label": "pouch", "short": "pouch", "min": 1, "max": 3, "slots": ["Rig"], "flat": true},
 	{"stat": "med_speed_pct", "label": "quicker meds", "short": "med spd", "min": 5, "max": 30, "slots": ["Rig", "Helmet"]},
@@ -1367,6 +1416,15 @@ const AFFIXES := [
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
 	# Guard (12 Oct): anyone's, a little
 	{"stat": "overflow_pct", "label": "of its overheal as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
+	# the Clinic's rolled meds (28 Oct, docs/design/meds_ammo_clinic.md: "heals more, works faster, a cure built in, a
+	# beat of Guard"): heals more is heal_pct; the rest are a med's own, read off it as it's used - drafts
+	{"stat": "med_fast_pct", "label": "quicker to use", "short": "quicker", "min": 10, "max": 40, "slots": ["Medical"]},
+	{"stat": "med_guard_pct", "label": "of max HP as Guard when it's done", "short": "Guard", "min": 4, "max": 15, "slots": ["Medical"], "weight": 0.6},
+	{"stat": "cure_bleed", "label": "Stops a bleed too", "short": "stops bleed", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
+	{"stat": "cure_fire", "label": "Stops burns too", "short": "stops burns", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
+	{"stat": "cure_poison", "label": "Stops poison too", "short": "stops poison", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
+	{"stat": "cure_frost", "label": "Stops a chill too", "short": "stops chill", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
+	{"stat": "cure_shock", "label": "Stops a shock too", "short": "stops shock", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
 	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
 	{"stat": "guard_pct", "label": "Guard cap", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
 	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
