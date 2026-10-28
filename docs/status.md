@@ -7095,3 +7095,10 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   the Workshop's grid Scraps (it has no mode, so it fell back to Sell), with a smoke check that neither shows Sell. The
   big pack on one page (Matt's pick): the cells shrink till every row fits, floor about 28 px; only a pack past that
   (the Removal Van) scrolls, with drag auto-scrolling at the edges, and `pack_one_page` goes. Mockup first.
+- Mocked (28 Oct, Matt: "do the mockup of the pitch now and add the radio in too"; canvas boards PitchA, PitchB,
+  RadioAir, RadioDial, TwoElements), waiting on his decision: the Pitch room as building cards with the picked one's
+  rows (A, the rules as now) or two themed lines a building climbed in order (B, recommended); the Radio's tabs as a
+  bar, the air's decoder as one row, three fixed signal slots, the Dial's regions side by side with every node named,
+  the story's beats in a row. Matt (28 Oct): two elements at most in the skill tree; whose two (the camp's, a class's,
+  or the joints') and whether Knuckles counts are on the TwoElements board. After his call: every parked item before
+  he plays again, then 0.9.1.
