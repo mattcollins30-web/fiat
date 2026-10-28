@@ -1318,7 +1318,7 @@ func _reserve(sim) -> float:
 ## open (the twenty-fifth read, 9 Oct: every build that beat the lorry bought it first, at £45-85k; the plain
 ## Drifter's bench spent every run's take as it came, never held the price, never bought it, and sat under the
 ## convoy's depth for 32 hours). A player who knows the lorry is the ending saves for the pick that brings it near.
-const LORRY_WATCH_COL := 3
+const LORRY_WATCH_COL := 4                # the sky line's fifth (28 Oct)
 func _lorry_watch_saving(_sim) -> float:
 	return 0.0                                # the lorry's the depot's signal now (15 Oct): the convoy's depth no longer matters
 
@@ -1413,9 +1413,9 @@ func _train_tree(sim) -> void:
 				return                    # save up for it rather than spend elsewhere
 
 
-## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
+## The Yard's lanes (9 Oct; two lines a building, 28 Oct): each building's line in BOT_LINE, cheapest
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
-const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [], "lookout": [], "kennel": [3]}   # the Generator's first sides (24 Oct: its away picks gone; the energy ones read in milestone 9)
+const BOT_LINE := {"bench": "a", "stash": "a", "clinic": "a", "fence": "b", "radio": "a", "generator": "a", "lookout": "a", "kennel": "a"}     # the line the bot climbs in each building (28 Oct, two lines a building: the lines that hold most of the picks it took before)
 ## The cheapest rank the Pitch could buy now (no rank open: a price past any).
 func _cheapest_rank(sim) -> int:
 	var out := 1 << 40
@@ -1426,57 +1426,62 @@ func _cheapest_rank(sim) -> int:
 
 
 func _build_yard(sim) -> void:
-	if _lorry_watch_saving(sim) > 0.0 and sim.cash >= _lorry_watch_saving(sim) and sim.can_yard_pick("radio", LORRY_WATCH_COL, "a"):
-		var cost: int = sim.yard_pick_cost("radio", LORRY_WATCH_COL)
-		if sim.yard_pick("radio", LORRY_WATCH_COL, "a"):
-			bought.append([sim.elapsed, "radio lorry_watch for £%d" % cost])
-		return
+	# two lines a building (28 Oct): the bot climbs its line in each building (BOT_LINE), the cheapest next step first;
+	# then the other lines' next steps at their dearer price; then ranks
 	var best_key := ""
 	var best_col := -1
+	var best_side := ""
 	var best_cost := 1 << 40
 	for b in Data.YARD:
-		for c in range(b["picks"].size()):
-			if sim.yard_side(b["key"], c) != "":
-				continue
-			var side: String = "b" if c in PICK_B.get(b["key"], []) else "a"
-			if sim.can_yard_pick(b["key"], c, side) and sim.yard_pick_cost(b["key"], c) < best_cost:
-				best_key = b["key"]
-				best_col = c
-				best_cost = sim.yard_pick_cost(b["key"], c)
-	if best_key != "" and sim.cash >= best_cost + sim.tins_now(500.0) and sim.cash - best_cost >= _lorry_watch_saving(sim):
-		var side: String = "b" if best_col in PICK_B.get(best_key, []) else "a"
-		if sim.yard_pick(best_key, best_col, side):
-			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if side == "a" else 1]["id"], best_cost]])
+		var side: String = BOT_LINE.get(b["key"], "a")
+		var c: int = _next_step(sim, b, side)
+		if c >= 0 and sim.can_yard_pick(b["key"], c, side) and sim.yard_pick_cost(b["key"], c) < best_cost:
+			best_key = b["key"]
+			best_col = c
+			best_side = side
+			best_cost = sim.yard_pick_cost(b["key"], c)
+	if best_key != "" and sim.cash >= best_cost + sim.tins_now(500.0):
+		if sim.yard_pick(best_key, best_col, best_side):
+			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if best_side == "a" else 1]["id"], best_cost]])
 		return
-	var firsts_left: bool = Data.YARD.any(func(yb): return range(yb["picks"].size()).any(func(c): return c < sim.yard_cols() and sim.yard_side(yb["key"], c) == "" and not sim.yard_pick_block(yb["key"], c, "a").begins_with("Opens with")))
+	var firsts_left := false
+	for yb in Data.YARD:
+		var ln: String = BOT_LINE.get(yb["key"], "a")
+		var c0: int = _next_step(sim, yb, ln)
+		if c0 >= 0 and c0 < sim.yard_cols() and not sim.yard_pick_block(yb["key"], c0, ln).begins_with("Opens with"):
+			firsts_left = true
 	if best_key == "" and not firsts_left:
-		# every open column has its first side (its price or salvage aside - the review): a column's other side (24 Oct,
-		# option B), the cheapest, with half again in hand
+		# every line it climbs is as far as it opens (its price or salvage aside - the review): the other lines, cheapest first, with half again in hand
 		var sec_key := ""
 		var sec_col := -1
 		var sec_side := ""
 		var sec_cost := 1 << 40
 		for b in Data.YARD:
-			for c in range(b["picks"].size()):
-				var have: String = sim.yard_side(b["key"], c)
-				if have.length() != 1:
-					continue
-				var other: String = "b" if have == "a" else "a"
-				if sim.can_yard_pick(b["key"], c, other) and sim.yard_pick_cost(b["key"], c) < sec_cost:
-					sec_key = b["key"]
-					sec_col = c
-					sec_side = other
-					sec_cost = sim.yard_pick_cost(b["key"], c)
-		if sec_key != "" and sim.cash >= sec_cost * 1.5 and sim.cash - sec_cost >= _lorry_watch_saving(sim) and sec_cost <= _cheapest_rank(sim):
+			var other: String = "b" if BOT_LINE.get(b["key"], "a") == "a" else "a"
+			var c: int = _next_step(sim, b, other)
+			if c >= 0 and sim.can_yard_pick(b["key"], c, other) and sim.yard_pick_cost(b["key"], c) < sec_cost:
+				sec_key = b["key"]
+				sec_col = c
+				sec_side = other
+				sec_cost = sim.yard_pick_cost(b["key"], c)
+		if sec_key != "" and sim.cash >= sec_cost * 1.5 and sec_cost <= _cheapest_rank(sim):
 			if sim.yard_pick(sec_key, sec_col, sec_side):
-				bought.append([sim.elapsed, "%s %s (its other side) for £%d" % [sec_key, Data.yard_building(sec_key)["picks"][sec_col][0 if sec_side == "a" else 1]["id"], sec_cost]])
+				bought.append([sim.elapsed, "%s %s (its other line) for £%d" % [sec_key, Data.yard_building(sec_key)["picks"][sec_col][0 if sec_side == "a" else 1]["id"], sec_cost]])
 			return
 	for b in Data.YARD:
-		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5 and sim.cash - sim.yard_rank_cost(b["key"]) >= _lorry_watch_saving(sim):
+		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5:
 			var cost: int = sim.yard_rank_cost(b["key"])
 			if sim.buy_yard_rank(b["key"]):
 				bought.append([sim.elapsed, "%s rank %d for £%d" % [b["key"], sim.yard_rank(b["key"]), cost]])
 			return
+
+
+## A line's next step to build: its first column not built on that side, or -1 when the line's done.
+static func _next_step(sim, b: Dictionary, side: String) -> int:
+	for c in range(b["picks"].size()):
+		if not sim.yard_built_side(b["key"], c, side):
+			return c
+	return -1
 
 
 ## A tree's next node for this runner, left to right (the lanes, 9 Oct): the lowest column's untaken node it

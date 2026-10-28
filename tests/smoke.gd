@@ -60,9 +60,20 @@ func _check(ok: bool, msg: String) -> void:
 
 
 ## A Yard pick set straight in (9 Oct): for the checks that set the Yard up rather than buy it. side "" clears it.
+## Sets a pick by its place before two lines a building (28 Oct: the checks were written to the old columns): the old
+## column's two picks taken off, the one named put on where it stands now, by id.
 func _yard_set(s, key: String, col: int, side: String) -> void:
 	var sides: Array = s.yard_picks.get(key, ["", "", "", "", ""]).duplicate()
-	sides[col] = side
+	var was: Array = Data.YARD_OLD[key][col]
+	var b: Dictionary = Data.yard_building(key)
+	for c in range(b["picks"].size()):
+		for k in range(2):
+			var id: String = str(b["picks"][c][k]["id"])
+			var letter: String = "a" if k == 0 else "b"
+			if id in was:
+				sides[c] = str(sides[c]).replace(letter, "")
+			if side != "" and id == str(was[0 if side == "a" else 1]):
+				sides[c] = ("a" if (str(sides[c]).contains("a") or letter == "a") else "") + ("b" if (str(sides[c]).contains("b") or letter == "b") else "")
 	var before: Dictionary = s._yard_before()
 	s.yard_picks[key] = sides
 	s._yard_changed(key)
@@ -8144,18 +8155,17 @@ func _check_fit(main, where: String) -> void:
 					_check(not ra.intersects(body.box_rect(b)), "%s: the %s and %s boxes overlap" % [where, a, b])
 	if main.room == main.OVERVIEW and main._yard_tree.visible:
 		bad += _check_nodes(main._yard_tree.text_nodes(), main._yard_tree.line_pairs(), where + " yard tree")
-		# the Pitch's web (22 Oct): every pick and rank on the canvas, none on another, the whole Pitch in view
+		# the Pitch's cards (28 Oct): inside the room, none on another
 		var yt = main._yard_tree
-		var yw = yt.web()
-		var yids: Array = yw.layout.keys()
-		var yover := 0
-		for a_i in range(yids.size()):
-			for b_i in range(a_i + 1, yids.size()):
-				if yw.layout[yids[a_i]].distance_to(yw.layout[yids[b_i]]) < yw.radius_of(yw.node_of(yids[a_i])) + yw.radius_of(yw.node_of(yids[b_i])) + 4.0:
-					yover += 1
-		if yover > 0:
-			push_error("%s: %d pairs of Pitch nodes sit on each other" % [where, yover])
-			bad += yover
+		for a_i in range(yt.cards.size()):
+			var ra: Rect2 = Rect2(yt.cards[a_i]["button"].position, yt.cards[a_i]["button"].size)     # in the room's own space
+			if not Rect2(Vector2.ZERO, yt.size).grow(1.0).encloses(ra):
+				push_error("%s: the Pitch's %s card runs out of the room: %s in %s" % [where, yt.cards[a_i]["key"], str(ra), str(yt.get_global_rect())])
+				bad += 1
+			for b_i in range(a_i + 1, yt.cards.size()):
+				if ra.intersects(Rect2(yt.cards[b_i]["button"].position, yt.cards[b_i]["button"].size)):
+					push_error("%s: the Pitch's %s and %s cards overlap" % [where, yt.cards[a_i]["key"], yt.cards[b_i]["key"]])
+					bad += 1
 	var rail_nodes := []
 	for name in main.ROOMS:
 		var b = main._rail_buttons[name]
@@ -12739,11 +12749,9 @@ func _yard_wide_checks(main) -> void:
 			_check(NodeGlyphs.of_pick(col[0], bld["key"]) != NodeGlyphs.of_pick(col[1], bld["key"]), "%s's %s and %s share a glyph" % [bld["name"], col[0]["name"], col[1]["name"]])
 			for pk in col:
 				_check(NodeGlyphs.SVG.has(NodeGlyphs.of_pick(pk, bld["key"])), "%s's glyph is not drawn: %s" % [pk["name"], NodeGlyphs.of_pick(pk, bld["key"])])
-	_check(yt.STRIP_Y + yt.STRIP_H <= yt.size.y and yt._build.position.y + yt._build.size.y <= yt.STRIP_H, "the Pitch's strip runs past the room or its button out of it")
-	# the heading takes the room the lanes left (Matt, 10 Oct): the strip ends at the room's foot, the heading its band
-	_check(is_equal_approx(yt.STRIP_Y + yt.STRIP_H, yt.size.y) and yt.HEAD_H >= 200 and yt.LANES_Y == yt.HEAD_H + 8, "the Pitch leaves room unused or its heading short: strip to %d of %d, heading %d" % [yt.STRIP_Y + yt.STRIP_H, int(yt.size.y), yt.HEAD_H])
-	var names: Array = Data.YARD_WEB.map(func(t): return t["name"])
-	_check(names == Data.YARD.map(func(b): return b["name"]) and yt.web().layout.size() == Data.YARD.size() * 15, "the Pitch's regions are off: %s, %d nodes" % [str(names), yt.web().layout.size()])
+	# two lines a building (28 Oct): eight cards, each building two named lines of five, its detail inside the room
+	_check(yt.cards.size() == Data.YARD.size() and Data.YARD.all(func(b): return b["lines"].size() == 2 and b["picks"].size() == 5), "the Pitch's cards or lines are off: %d cards" % yt.cards.size())
+	_check(yt._detail.position.y + yt._detail.size.y <= yt.size.y + 0.5 and yt._build.position.y + yt._build.size.y <= yt._detail.size.y and yt._tiles[1][4]["button"].position.y + yt._tiles[1][4]["button"].size.y <= yt._rank.position.y, "the Pitch's detail runs past the room, or its tiles into the rank")
 	# a fresh Yard: column 1 open, the rest shut with their gates; nothing affordable with no cash
 	sim.yard_picks = {}
 	sim.yard_ranks = {}
@@ -12828,7 +12836,9 @@ func _yard_wide_checks(main) -> void:
 		sim.depth[i] = 1
 		sim.best_depth[i] = 0
 	_check(sim.yard_cols() == Data.YARD_COLS, "the columns closed again when the depth went")
-	# the fifth column and the rank want salvage
+	# the fifth column and the rank want salvage (a line's first four built: it climbs in order, 28 Oct)
+	sim.yard_picks["stash"] = ["ab", "ab", "ab", "ab", ""]
+	sim._yard_changed("stash")
 	sim.salvage = {"copper": 0, "steel": 0, "army": 0}
 	_check(sim.yard_pick_block("stash", 4, "a").begins_with("Wants 10 copper"), "column five without salvage: '%s'" % sim.yard_pick_block("stash", 4, "a"))
 	sim.salvage["copper"] = 40
@@ -13167,8 +13177,21 @@ func _yard_pick_checks(main) -> void:
 	old["stash_level"] = 3
 	old["comms_level"] = 2
 	old["kennel_level"] = 3
+	old.erase("yard_v")                         # a save from before the lanes is from before two lines a building too
 	sim.load_dict(old)
 	_check(sim.yard_has("shelving") and sim.yard_has("another_unit") and sim.yard_has("lock_up") and sim.yard_has("weather_set") and sim.yard_has("forecast") and not sim.yard_has("scanner") and sim.yard_has("fetch"), "an old save's levels did not become picks: %s" % str(sim.yard_picks))
+	# two lines a building (28 Oct): a save from before has its picks moved by id; a line climbs in order
+	var old2: Dictionary = sim.to_dict()
+	old2.erase("yard_v")
+	old2["yard_picks"] = {"bench": ["", "a", "b", "", ""], "kennel": ["", "", "", "b", ""]}     # Third socket, Strip for parts, Ratter where they stood
+	sim.load_dict(old2)
+	_check(sim.yard_side("bench", 1) == "b" and sim.yard_side("bench", 3) == "b" and sim.yard_has("third_socket") and sim.yard_has("strip_for_parts") and sim.yard_has("ratter") and sim.yard_side("kennel", 3) == "b", "an old save's picks didn't move by id: %s" % str(sim.yard_picks))
+	sim.yard_picks = {}
+	sim._yard_changed("")
+	sim.cash = 1.0e9
+	_check(sim.yard_pick_block("bench", 1, "a") == "After Steady hands" and not sim.yard_pick("bench", 1, "a"), "a line's second step built before its first: '%s'" % sim.yard_pick_block("bench", 1, "a"))
+	_check(sim.yard_pick("bench", 0, "a") and sim.yard_pick("bench", 1, "a") and sim.yard_has("two_locks") and sim.yard_pick_block("bench", 1, "b") == "After Cheap parts", "the Rolls line didn't climb in order")
+	_check(sim.yard_rank_block("bench").begins_with("After a line's fifth") or sim.yard_cols() < Data.YARD_COLS, "a rank opened before a line's fifth step: '%s'" % sim.yard_rank_block("bench"))
 	sim.load_dict(saved)
 	main.refresh()
 	print("the Pitch's lanes ok: the screen, a build and its other side, the gates kept, salvage, ranks, every building's picks, the move, the old saves")
@@ -14707,18 +14730,18 @@ func _build_one_checks(main) -> void:
 	sim.scrap = int(want["scrap"]) * 2
 	bot._build_one(sim)
 	_check(bot.bought.size() == 1 and sim.scrap == int(want["scrap"]) and sim.stash.any(func(it): return it["base"] == "Hardened bolts"), "the bot did not build the grade for its rounds: %s, scrap %d" % [str(bot.bought), sim.scrap])
-	# the Pitch (24 Oct, option B): every open column's first side built, the bot builds a column's other side
+	# the Pitch (two lines a building, 28 Oct): every line it climbs as far as it opens, the bot builds another line's next
 	var yard_keep: Dictionary = sim.yard_picks.duplicate(true)
 	for yb in Data.YARD:
 		var sides: Array = []
 		for c in range(yb["picks"].size()):
-			sides.append("a" if c < sim.yard_cols() else "")
+			sides.append(Bot.BOT_LINE.get(yb["key"], "a") if c < sim.yard_cols() else "")
 		sim.yard_picks[yb["key"]] = sides
 	sim._yard_dirty = true
 	sim.cash = 1.0e9
 	var bot_y = Bot.new()
 	bot_y._build_yard(sim)
-	_check(bot_y.bought.size() == 1 and str(bot_y.bought[0][1]).contains("its other side") and Data.YARD.any(func(yb): return sim.yard_picks[yb["key"]].has("ab")), "the bot didn't build a column's other side with every first built: %s" % str(bot_y.bought))
+	_check(bot_y.bought.size() == 1 and str(bot_y.bought[0][1]).contains("its other line") and Data.YARD.any(func(yb): return sim.yard_picks[yb["key"]].has("ab")), "the bot didn't build another line's step with its own lines built: %s" % str(bot_y.bought))
 	# and not while an open column still wants its first side, too dear for now (the review: the cash hid it)
 	var dear_key: String = str(Data.YARD[0]["key"])
 	sim.yard_picks[dear_key][0] = ""
@@ -16519,7 +16542,7 @@ func _web_checks(main) -> void:
 	# no link through a node that isn't one of its ends (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so
 	# Keen read as the next step): every link's drawn path clears every other node by 2 px past its radius, on the
 	# three canvases; the ones that had to bend round counted
-	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+	for cv in [wv, main._radio._atlas._web]:
 		if cv == null:
 			continue
 		var through := 0
@@ -16568,7 +16591,7 @@ func _web_checks(main) -> void:
 	# every node at its pictured size (23 Oct, Matt: art in every node): the three canvases hold it before the art lands
 	var WV = load("res://scripts/ui/web_view.gd")
 	WV.assume_pics = true
-	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+	for cv in [wv, main._radio._atlas._web]:
 		if cv == null:
 			continue
 		var cids: Array = cv.layout.keys()
@@ -16585,7 +16608,7 @@ func _web_checks(main) -> void:
 	# the frame's calls (23 Oct, Matt's fans: ~2,500 a frame at the whole web): the nodes from the one atlas, the links
 	# a colour at a time, the words a size at a time - each canvas under BATCH_MAX at its whole view and close in, and
 	# every picture, glyph and emblem packed
-	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+	for cv in [wv, main._radio._atlas._web]:
 		if cv == null:
 			continue
 		var cam_was: Vector2 = cv.cam
@@ -18725,14 +18748,15 @@ func _pitch_scramble_checks(main) -> void:
 	main._yard_tree._shown = ""
 	main.refresh()
 	var yt = main._yard_tree
-	for t in Data.YARD_WEB:
-		var key: String = str(t["yard"])
-		var b: Dictionary = Data.yard_building(key)
+	for b in Data.YARD:
+		var key: String = str(b["key"])
 		var open: bool = s.room_open(Sim.building_room(key))
 		var pk_name: String = str(b["picks"][0][0]["name"])
-		var shown: String = str(yt.web().node_of("%s/0" % t["name"])["name"])
+		yt._pick_building(key)
+		main.refresh()
+		var shown: String = yt._tiles[0][0]["name"].text
 		if open:
-			_check(shown == pk_name, "the Pitch's %s, its room open, reads '%s'" % [key, shown])
+			_check(shown.contains(pk_name), "the Pitch's %s, its room open, reads '%s'" % [key, shown])
 		else:
 			_check(shown != pk_name and not shown.contains(pk_name), "the Pitch's %s, its room shut, names it: '%s'" % [key, shown])
 	main.sim = keep
@@ -18944,7 +18968,7 @@ func _skills_checks(sim) -> void:
 	sim._skills_tick(m, t, 0.0, 0)
 	_check(is_equal_approx(float(m["target_hp"]), before_trap), "Gin trap sprang twice")
 	# the Generator: Pilot light's first free, Kickback's energy a kill
-	sim.yard_picks["generator"] = ["", "", "b", "", "a"]
+	sim.yard_picks["generator"] = ["", "", "a", "", "a"]     # Kickback and Pilot light, the Energy line's third and fifth (28 Oct)
 	sim._yard_changed("")
 	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
 	sim._skills_fight_start(m)

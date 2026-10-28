@@ -4987,6 +4987,8 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 		return Data.yard_gate(col)
 	if yard_built_side(key, col, side):
 		return "Built"
+	if col > 0 and not yard_built_side(key, col - 1, side):
+		return "After %s" % str(b["picks"][col - 1][0 if side == "a" else 1]["name"])     # a line climbs in order (28 Oct, two lines a building)
 	if cash < yard_pick_cost(key, col):
 		return "Short of " + money_word()
 	if int(salvage.get(b["salvage"], 0)) < yard_pick_salvage(key, col):
@@ -5052,6 +5054,8 @@ func yard_rank_block(key: String) -> String:
 		return "The runner is out"
 	if yard_cols() < Data.YARD_COLS:
 		return Data.yard_gate(Data.YARD_COLS - 1)
+	if not (yard_built_side(key, 4, "a") or yard_built_side(key, 4, "b")):
+		return "After a line's fifth step"            # ranks once either line is done (28 Oct, two lines a building)
 	if cash < yard_rank_cost(key):
 		return "Short of " + money_word()
 	if int(salvage.get(b["salvage"], 0)) < yard_rank_salvage(key):
@@ -5091,9 +5095,10 @@ func _yard_buyable_ids() -> Array:
 	for b in Data.YARD:
 		var have: int = int(salvage.get(b["salvage"], 0))
 		for c in range(b["picks"].size()):
-			if c < yard_cols() and yard_side(b["key"], c).length() < 2 and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
+			var next_side: bool = ["a", "b"].any(func(sd): return not yard_built_side(b["key"], c, sd) and (c == 0 or yard_built_side(b["key"], c - 1, sd)))     # a line's next step (28 Oct)
+			if c < yard_cols() and next_side and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
 				out.append("%s/%d%s" % [b["key"], c, "" if yard_side(b["key"], c) == "" else "+"])     # "+": its other side (option B)
-		if yard_cols() >= Data.YARD_COLS and cash >= yard_rank_cost(b["key"]) and have >= yard_rank_salvage(b["key"]):
+		if yard_cols() >= Data.YARD_COLS and (yard_built_side(b["key"], 4, "a") or yard_built_side(b["key"], 4, "b")) and cash >= yard_rank_cost(b["key"]) and have >= yard_rank_salvage(b["key"]):
 			out.append("%s/r%d" % [b["key"], yard_rank(b["key"]) + 1])
 	return out
 
@@ -5196,7 +5201,34 @@ func _load_yard(d: Dictionary) -> void:
 				var sides: Array = yard_picks.get(key, ["", "", "", "", ""])
 				sides[int(cols[k])] = "a"
 				yard_picks[key] = sides
+	if int(d.get("yard_v", 1)) < 2:
+		_yard_by_id()
 	_yard_dirty = true
+
+
+## Two lines a building (28 Oct): a save from before has its picks moved by id from where they stood to where they are.
+func _yard_by_id() -> void:
+	var moved := {}
+	for b in Data.YARD:
+		var key: String = b["key"]
+		var was: Array = Data.YARD_OLD.get(key, [])
+		var sides: Array = yard_picks.get(key, [])
+		var ids: Array = []
+		for c in range(mini(sides.size(), was.size())):
+			if str(sides[c]).contains("a"):
+				ids.append(str(was[c][0]))
+			if str(sides[c]).contains("b"):
+				ids.append(str(was[c][1]))
+		if ids.is_empty():
+			continue
+		var now: Array = ["", "", "", "", ""]
+		for c in range(b["picks"].size()):
+			for k in range(2):
+				if str(b["picks"][c][k]["id"]) in ids:
+					now[c] = str(now[c]) + ("a" if k == 0 else "b")
+		moved[key] = now
+	for key in moved:
+		yard_picks[key] = moved[key]
 
 
 # ------------------------------------------------------------------ the workshop
@@ -12535,7 +12567,7 @@ func _state() -> Dictionary:
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
 		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls, "crew": roster,
-		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
+		"yard_picks": yard_picks.duplicate(true), "yard_v": 2, "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
