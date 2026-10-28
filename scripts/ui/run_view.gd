@@ -1025,9 +1025,12 @@ func _process(dt: float) -> void:
 				var kk: float = sin(PI * float(f["kick_t"]) / KICK_S) if float(f["kick_t"]) > 0.0 else 0.0     # out and back
 				f["kick_x"] = KICK_PX * kk * _away(k)
 				f["kick_r"] = KICK_DEG * kk * _away(k)
-		r.pivot_offset = anchor
-		r.rotation = deg_to_rad(float(f.get("kick_r", 0.0)))
-		r.position = slot["foot"] - anchor * slot["scale"] + Vector2(_pan * -0.6 + float(f.get("kick_x", 0.0)), lift - DUCK_SCENE * _duck)
+		# the tilt about the feet, worked by hand (28 Oct: a pivot at the feet had Godot scale about it too, and every
+		# figure smaller than full size stood off its spot); no tilt, the feet exactly where they were
+		var th: float = deg_to_rad(float(f.get("kick_r", 0.0)))
+		r.pivot_offset = Vector2.ZERO
+		r.rotation = th
+		r.position = slot["foot"] - (anchor * slot["scale"]).rotated(th) + Vector2(_pan * -0.6 + float(f.get("kick_x", 0.0)), lift - DUCK_SCENE * _duck)
 		var lit: float = slot["lit"]
 		if float(f.get("hit_t", 0.0)) > 0.0:
 			f["hit_t"] = float(f["hit_t"]) - dt

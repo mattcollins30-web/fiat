@@ -5584,6 +5584,9 @@ func _hit_register_checks(main) -> void:
 		sim.extract_now()
 		sim.load_dict(saved)
 		return
+	v._duck = 0.0                                 # standing: the duck moves the scene a frame behind the figures (28 Oct, the flaky read)
+	v._duck_t = 0.0
+	v._duck_next = 99.0
 	v._process(RunView.POP_S + 0.1)
 	if not v._figs.any(func(f): return f["state"] == "up"):
 		v._set_state(0, "up")
@@ -5601,7 +5604,21 @@ func _hit_register_checks(main) -> void:
 	_check(v.impacts == i0 + 1 and v._stop_t > 0.0 and float(v._figs[k].get("kick_t", 0.0)) > 0.0, "a solid hit didn't hold, knock or spray: stop %.2f, kick %.2f" % [v._stop_t, float(v._figs[k].get("kick_t", 0.0))])
 	v._process(0.02)
 	_check(v._stop_t > 0.0 and v._stop_t < RunView.STOP_S, "the hold didn't run down in part: %.3f" % v._stop_t)
+	# every figure up stands on its slot: its feet, as drawn, on the slot's foot (28 Oct: a pivot put the far ones off)
+	for i in range(v._figs.size()):
+		var fr: TextureRect = v._figs[i]["rect"]
+		if v._figs[i]["state"] == "up" and fr.texture != null and is_zero_approx(float(v._figs[i].get("kick_x", 0.0))):
+			var ub: Rect2 = RunView.used_of(fr.texture)
+			var feet: Vector2 = fr.get_transform() * Vector2(ub.get_center().x, ub.end.y)
+			var want: Vector2 = v.slot_of(i)["foot"] + Vector2(v._pan * -0.6, -RunView.DUCK_SCENE * v._duck)
+			_check(feet.distance_to(want) < 1.5, "figure %d's feet are drawn at %s, its slot at %s (scale %.2f)" % [i, str(feet), str(want), fr.scale.x])
 	v._process(RunView.STOP_S + RunView.KICK_S * 0.5)
+	# tilted, the feet stay put: the kick's lean is about them, at any scale
+	var kr: TextureRect = v._figs[k]["rect"]
+	var kub: Rect2 = RunView.used_of(kr.texture)
+	var kfeet: Vector2 = kr.get_transform() * Vector2(kub.get_center().x, kub.end.y)
+	var kwant: Vector2 = v.slot_of(k)["foot"] + Vector2(v._pan * -0.6 + float(v._figs[k].get("kick_x", 0.0)), -RunView.DUCK_SCENE * v._duck)
+	_check(absf(kr.rotation) > 0.0 and kfeet.distance_to(kwant) < 1.5, "a tilted figure's feet left its spot: %s, not %s" % [str(kfeet), str(kwant)])
 	_check(absf(float(v._figs[k].get("kick_x", 0.0))) > 1.0 and absf(v._figs[k]["rect"].rotation) > 0.0, "the hit didn't knock the figure back and tilt it: %.1f px" % float(v._figs[k].get("kick_x", 0.0)))
 	v._process(RunView.KICK_S)
 	v._last_hit = {"k": k, "at": Vector2(300, 150)}
