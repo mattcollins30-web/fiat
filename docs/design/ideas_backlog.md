@@ -1,5 +1,15 @@
 # Ideas to revisit
 
+## The queue after the playtest (28 Oct)
+
+Matt plays c252141 from a fresh camp to the County and a pinnacle first. Then, in order:
+
+1. **Repeat runs, trips and the Bunkhouse** (docs/design/trips.md, designed 28 Oct; canvas RepeatRuns, Trips,
+   Bunkhouse), with the wagers.
+2. Anything Matt raises from here that isn't a bug fix or a UI change, below with his words and the date - if it fits
+   docs/design/vision.md at all.
+
+
 *Banked 11 Oct, from asking Claude what it would add. Nothing here is agreed; each goes through design with Matt
 first. Matt's framing: Fiat is an auto-battler ARPG (Melvor's kind of active), the away settle its only idle
 system. The guard rail: no new systems. Each of these sharpens one that's there.*

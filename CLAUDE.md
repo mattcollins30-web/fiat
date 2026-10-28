@@ -104,6 +104,20 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   Matt overrules in words. A parked item that grows a feature in the designing is the same: the fix goes in, the
   growth goes to the backlog. Something that changes numbers (a class, a node, a rule) belongs before the balance
   phase or after it, never during.
+- The plan from 28 Oct (Matt: "I haven't even played the game from fresh to county and pinnacle yet so that needs to
+  come first before anything else. Outside of bug fixes of course"):
+  1. The balance pass on c252141 read, then Matt plays that build from a fresh camp through the County and a pinnacle.
+  2. While he plays, only **bug fixes and UI changes** are taken, and they are parked (as every playtest item), built
+     after the playtest. Anything else he raises - a feature, a system, a rework, a new activity - goes to
+     docs/design/ideas_backlog.md, queued **after** the trips (docs/design/trips.md, designed 28 Oct, the first item
+     after the playtest), with his words and the date.
+  3. Claude refuses and pushes back, as project manager, on anything that doesn't fit docs/design/vision.md or the
+     plan, says why and where it went - not "parked" by default but "no, because". Matt: "You really need to wear the
+     role of project manager here and simply push back and refuse things I might raise that don't fit the vision."
+  4. Balance passes are bought time: shorter reads while iterating (the hours cut before the reads are), the full
+     pass for a final.
+  Missed 28 Oct: the trips were designed the same day they were raised, with no push back - the creep rule above
+  should have sent them to the backlog first.
 - The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>. The milestone counts the
   systems that changed what the game is - 1 the first slice, 2 the tree, 3 depth and intel, 4 the Yard, 5 the
   Radio's endgame, 6 the crew, 7 the web; the build counts the commits Matt plays within it (a playtest build bumps

@@ -7136,3 +7136,7 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
   the contracts.
 - The balance pass on 1bda16d (before the fixes, its rigs packed no heals): 23 reds against 27 Oct's 18; a fresh
   `24 1` pass follows.
+- Designed, for after the 0.9.1 playtest (28 Oct, Matt's calls): repeat runs on a cleared site (×5 to start), runs
+  safe to leave (a bail loses the pack, never the loadout), trips (a runner of another class and hired hands on a
+  route, resolved by the odds sim), the Bunkhouse on the Pitch, the wagers first of the endgame's activities.
+  docs/design/trips.md; canvas boards RepeatRuns, Trips, Bunkhouse.
