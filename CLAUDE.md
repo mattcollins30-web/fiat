@@ -4,6 +4,24 @@ Matt's standing conventions for any session on this repo (house rule, 21 Oct: th
 chat or a compacted one). Read this first. Design is in docs/design/ (the statement: docs/design/vision.md); what's
 been done and why is docs/status.md.
 
+## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
+
+At the start of every work item, and after every compaction, find its row and read what it names before writing
+anything. A row's doc is the procedure: a summary of a long chat drops it (28 Oct: an art manifest was handed to Matt
+to run by hand, the `art.flag` handoff missed for want of reading pixellab_lessons.md).
+
+| Work | Read first | Hand it off / run it with | Then |
+|---|---|---|---|
+| Any change to the game | "How work goes in" and "Talk first" below | `smoke.flag` (the watcher, below) | the reviewer on the diff; commit only on a green smoke |
+| UI | "How work goes in" (mockups, the assertion rule) | the design canvas, rendered and checked first | a smoke assertion for every UI fix |
+| New words on screen | docs/language/style_guide.md | the language pass (two reviewers, an editor's call) | fold the calls into the design doc |
+| Voiced lines (story, room intros, Kev) | docs/voice/recording_list.md | Matt records them | add a changed line to the list |
+| Art (a manifest) | docs/art/pixellab_lessons.md | `python3 tools/art_lint.py`, then `docs/art/handoff/art.flag` | read `art.done`, wire what isn't found by name |
+| Balance | "Running things" and the balance lines in "How work goes in" | `balance.flag` (`24 1` while iterating) | read docs/balance/summary.md against Matt's latest save |
+| A save's shape | "How work goes in" (old saves) | bump `SAVE_VERSION` in scripts/ui/main.gd | |
+| A build Matt plays | "The project manager" (the version) | bump `VERSION` in scripts/ui/menu.gd in that commit | |
+| A playtest item | "How work goes in" (parked) | docs/status.md's parked list | built only when Matt says |
+
 ## Running things - on Matt's machine, never the cloud
 
 The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag files in `docs\balance\`:
