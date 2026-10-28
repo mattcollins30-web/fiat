@@ -17,7 +17,9 @@ extends Control
 ## The run's pack is the exception (27 Oct, Matt: "true tetris"): `pack_mode` draws the bag's own shape - the sim's
 ## pack_w() columns, capacity() cells - and every piece where the sim says it lies ("pos", turned by "rot"). Pieces
 ## drag about inside it (R or the right button turns the one in hand), green where it lies, red where it won't;
-## a piece strapped on (no place, but coming home) sits past the pack's rows with no outline under it.
+## a piece strapped on (no place, but coming home) sits past the pack's rows with no outline under it. The whole pack
+## is on one screen (28 Oct, Matt died sorting a bag split over two pages): its cells shrink till every row fits, down to
+## PACK_MIN_CELL; only a pack past that (the Removal Van) scrolls - the wheel, the arrows, or a drag held at an edge.
 ##
 ## Signals: `picked(id)` on a single selection, `acted` after a sell,
 ## `dropped(data)` for something dragged onto the grid from elsewhere.
@@ -67,6 +69,8 @@ const ALL_W := 200                 # the shelf's "All n · price" (23 Oct)
 const PAGE_BTN := 44
 const PAGE_LBL := 56
 const SORTS := ["Value", "New", "Slot"]
+const PACK_MIN_CELL := 28            # the smallest a pack's cell draws before the pack scrolls instead (28 Oct)
+const SCROLL_EVERY := 0.25           # a drag held at the pack's edge scrolls a row this often, in seconds
 
 var sim
 var items: Array = []              # what the grid shows, after filter and sort
@@ -109,6 +113,13 @@ var _shown := ""
 var pack_mode := false             # the run's pack (27 Oct): the bag's own shape, pieces where they lie
 var _pack_cols := COLS             # the bag's width in pack mode
 var _ghost: Panel                  # where the piece in hand would land: green, or red
+var pack_cell := CELL              # the pack's cell, shrunk so every row fits (28 Oct)
+var top_row := 0                   # the pack's first row on screen: past 0 only when it scrolls
+var _view_rows := ROWS             # the pack's rows on screen
+var _reach_rows := 0               # the pack's rows in all, strapped pieces' too
+var _grid: Control = null          # the pack's cells, clipped to the grid's rect (made once a pack is laid out)
+var _scroll_at := 0.0              # when a held drag last scrolled
+var _edge_dir := 0                 # a drag held at the scrolling pack's edge: -1 the top, 1 the bottom
 static var drag_rot := false       # the piece in hand turned (R, or the right button, while dragging)
 static var _live: Control          # the drag's picture, to turn
 static var _live_fp := Vector2i.ONE     # its footprint as it lies
@@ -183,11 +194,56 @@ func _cell(k: int) -> Button:
 		var i := _cells.size()
 		c.pressed.connect(_pick.bind(i))
 		c.gui_input.connect(_cell_input.bind(i))
-		c.set_drag_forwarding(Callable(), func(at, data): return _can_drop_data(at + c.position, data), func(at, data): _drop_data(at + c.position, data))     # a drop over a piece is the grid's
+		c.set_drag_forwarding(Callable(), func(at, data): return _can_drop_data(at + _in_grid(c), data), func(at, data): _drop_data(at + _in_grid(c), data))     # a drop over a piece is the grid's
 		c.visible = false
-		add_child(c)
+		(_grid if _grid != null else self).add_child(c)
 		_cells.append(c)
 	return _cells[k]
+
+
+## A cell's place in the grid's own coordinates: the pack's cells sit in the clip, GRID_Y down.
+func _in_grid(c: Control) -> Vector2:
+	return c.position + (_grid.position if _grid != null and c.get_parent() == _grid else Vector2.ZERO)
+
+
+## The pack's clip (28 Oct): the grid's rect, the outlines, the ghost and the cells inside it, so a scrolled pack's
+## pieces are cut at its edges, never drawn over the bars.
+func _ensure_grid() -> void:
+	if _grid != null:
+		return
+	_grid = Control.new()
+	_grid.position = Vector2(0, GRID_Y)
+	_grid.size = Vector2(WIDTH, size.y - GRID_Y)
+	_grid.clip_contents = true
+	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_grid)
+	for n in _outlines + [_ghost] + _cells:
+		n.reparent(_grid, false)
+
+
+## The k-th outline, made when first needed (a shrunk pack shows more than the stash's 91).
+func _outline(k: int) -> Panel:
+	while _outlines.size() <= k:
+		var o := UI.panel(_grid if _grid != null else self, Rect2(0, 0, CELL, CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
+		o.visible = false
+		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_outlines.append(o)
+	return _outlines[k]
+
+
+## The cell's size as drawn: the pack's, shrunk, or the grid's.
+func cell_px() -> int:
+	return pack_cell if pack_mode else CELL
+
+
+## So many cells across, as drawn.
+func cpx(n: int) -> int:
+	return n * cell_px() + (n - 1) * GAP
+
+
+## Whether the pack scrolls: more rows than fit at the smallest cell.
+func scrolls() -> bool:
+	return pack_mode and _reach_rows > _view_rows
 
 
 ## The tabs along bar one, each as wide as its words, from after the fill.
@@ -251,7 +307,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	chosen = chosen.filter(func(id): return _has(id))
 	if selected >= 0 and not _has(selected):
 		selected = -1
-	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
+	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page * 1000 + top_row, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
 		("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else ""]     # the lot's button reads the cash and the room (23 Oct)
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
@@ -334,16 +390,18 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	else:
 		_lay_grid(cap)
 	var k := 0
-	var top := page * page_rows
+	var top := top_row if pack_mode else page * page_rows
+	var shown_rows := _view_rows if pack_mode else page_rows
+	var pitch := cell_px() + GAP
 	for it in items:
 		var r: Rect2i = _placed[it["id"]]
-		if r.position.y < top or r.position.y >= top + page_rows:
-			continue
+		if r.position.y + r.size.y <= top or r.position.y >= top + shown_rows or (not pack_mode and r.position.y < top):
+			continue                           # the pack's pieces show while any of their rows is on screen, cut by the clip
 		var c := _cell(k)
 		c.visible = true
-		c.position = Vector2(r.position.x * (CELL + GAP), GRID_Y + (r.position.y - top) * (CELL + GAP))
+		c.position = Vector2(r.position.x * pitch, (0 if pack_mode else GRID_Y) + (r.position.y - top) * pitch)
 		var turned: bool = pack_mode and bool(it.get("rot", false)) and it.has("pos")
-		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected, Vector2(ItemCell.px(r.size.x), ItemCell.px(r.size.y)) if turned else Vector2.ZERO)
+		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected, Vector2(cpx(r.size.x), cpx(r.size.y)) if pack_mode else Vector2.ZERO)
 		c.set_turned(turned)
 		c.set_upgrade(ups[it["id"]])
 		c.set_locked(locks[it["id"]])
@@ -391,15 +449,31 @@ func _lay_pack(cap: int) -> void:
 		for id in extra:
 			_placed[id] = extra[id]
 			reach_rows = maxi(reach_rows, extra[id].end.y)
-	var pages := maxi(1, ceili(float(reach_rows) / page_rows))
-	page = clampi(page, 0, pages - 1)
-	var top := page * page_rows
-	for k in range(_outlines.size()):
-		@warning_ignore("integer_division")
-		var row: int = k / COLS
-		var col: int = k % COLS
-		_outlines[k].visible = col < _pack_cols and row < page_rows and (top + row) * _pack_cols + col < cap
-	_paged(pages)
+	# one screen (28 Oct): the cell shrinks till every row fits the grid's height, down to PACK_MIN_CELL; past that it scrolls
+	_reach_rows = reach_rows
+	var avail: int = page_rows * CELL + (page_rows - 1) * GAP
+	pack_cell = clampi(int(floor(float(avail + GAP) / float(maxi(1, reach_rows)))) - GAP, PACK_MIN_CELL, CELL)
+	_view_rows = maxi(1, int(floor(float(avail + GAP) / float(pack_cell + GAP))))
+	top_row = clampi(top_row, 0, maxi(0, reach_rows - _view_rows))
+	_ensure_grid()
+	_grid.size = Vector2(WIDTH, avail)
+	var pitch := pack_cell + GAP
+	var n := 0
+	for row in range(_view_rows):
+		for col in range(_pack_cols):
+			var o := _outline(n)
+			o.position = Vector2(col * pitch, row * pitch)
+			o.size = Vector2(pack_cell, pack_cell)
+			o.visible = (top_row + row) * _pack_cols + col < cap
+			n += 1
+	for k in range(n, _outlines.size()):
+		_outlines[k].visible = false
+	@warning_ignore("integer_division")
+	page = top_row / _view_rows
+	_paged(maxi(1, ceili(float(reach_rows) / _view_rows)))
+	_page_prev.visible = scrolls()
+	_page_next.visible = scrolls()
+	_page_label.visible = scrolls()
 
 
 func _paged(pages: int) -> void:
@@ -505,6 +579,8 @@ func _item(id: int) -> Dictionary:
 func set_rows(n: int) -> void:
 	page_rows = n
 	size = Vector2(WIDTH, height_for(n))
+	if _grid != null:
+		_grid.size = Vector2(WIDTH, size.y - GRID_Y)
 
 
 # ------------------------------------------------------------------ dragging
@@ -512,6 +588,11 @@ func set_rows(n: int) -> void:
 ## A press that moves far enough becomes a drag of the cell's item, if this
 ## grid lets its items out. The drop goes to whichever control accepts it.
 func _cell_input(event: InputEvent, k: int) -> void:
+	if scrolls() and event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		scroll_by(-1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1)     # the wheel over a piece too (the review)
+		if is_inside_tree():
+			accept_event()
+		return
 	if pack_mode and not many and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and not _dragging():
 		var rid: int = _cells[k].id
 		if rid >= 0:
@@ -605,11 +686,14 @@ func _dragging() -> bool:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END and _ghost != null:
 		_ghost.visible = false
+	if what == NOTIFICATION_DRAG_END:
+		_edge_dir = 0
 
 
 ## The pack's cell under a point, and the page's: [x, y] in the pack's cells.
 func cell_at(at: Vector2) -> Vector2i:
-	return Vector2i(floori(at.x / (CELL + GAP)), page * page_rows + floori((at.y - GRID_Y) / (CELL + GAP)))
+	var pitch := float(cell_px() + GAP)
+	return Vector2i(floori(at.x / pitch), (top_row if pack_mode else page * page_rows) + floori((at.y - GRID_Y) / pitch))
 
 
 func _can_drop_data(at: Vector2, data: Variant) -> bool:
@@ -618,14 +702,55 @@ func _can_drop_data(at: Vector2, data: Variant) -> bool:
 	if pack_mode and sim != null and sim.mission != null:
 		var it: Dictionary = _drag_item(data)
 		if not it.is_empty():
+			_edge_scroll(at)
 			var c := cell_at(at)
 			var fp := lies(it, drag_rot)
 			var ok: bool = sim.pack_free_at(sim.mission, it, c.x, c.y, drag_rot)
-			_ghost.position = Vector2(c.x * (CELL + GAP), GRID_Y + (c.y - page * page_rows) * (CELL + GAP))
-			_ghost.size = Vector2(ItemCell.px(fp.x), ItemCell.px(fp.y))
+			_ghost.position = Vector2(c.x * (cell_px() + GAP), (c.y - top_row) * (cell_px() + GAP))
+			_ghost.size = Vector2(cpx(fp.x), cpx(fp.y))
 			_ghost.add_theme_stylebox_override("panel", UI.box(Color(Pal.GOOD if ok else Pal.BAD, 0.25), 6, 2, Pal.GOOD if ok else Pal.BAD))
 			_ghost.visible = true
 	return true
+
+
+## A drag held at the scrolling pack's top or bottom edge moves it a row, every SCROLL_EVERY.
+func _edge_scroll(at: Vector2) -> void:
+	if not scrolls():
+		return
+	var y: float = at.y - GRID_Y
+	var edge: float = (cell_px() + GAP) * 0.5
+	_edge_dir = -1 if y < edge else (1 if y > _view_rows * (cell_px() + GAP) - edge else 0)
+	_edge_tick(Time.get_ticks_msec() / 1000.0)
+
+
+## The held drag's repeat: Godot asks can_drop only as the mouse moves, so the repeat runs from _process (the review).
+func _edge_tick(now: float) -> void:
+	if _edge_dir == 0 or not scrolls() or now - _scroll_at < SCROLL_EVERY:
+		return
+	_scroll_at = now
+	scroll_by(_edge_dir)
+
+
+func _process(_dt: float) -> void:
+	if _edge_dir != 0:
+		if not _dragging():
+			_edge_dir = 0
+		else:
+			_edge_tick(Time.get_ticks_msec() / 1000.0)
+
+
+## The pack moved so many rows (the wheel, the arrows, a held drag); the owner redraws on `picked`.
+func scroll_by(rows: int) -> void:
+	var was := top_row
+	top_row = clampi(top_row + rows, 0, maxi(0, _reach_rows - _view_rows))
+	if top_row != was:
+		picked.emit(-1)
+
+
+func _gui_input(event: InputEvent) -> void:
+	if scrolls() and event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		scroll_by(-1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1)
+		accept_event()
 
 
 func _drop_data(at: Vector2, data: Variant) -> void:
@@ -734,6 +859,9 @@ func _toggle_many() -> void:
 
 
 func _turn(by: int) -> void:
+	if pack_mode:
+		scroll_by(by * _view_rows)            # the scrolling pack's arrows: a screen at a time
+		return
 	page += by
 	picked.emit(-1)
 

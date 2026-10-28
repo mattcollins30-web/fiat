@@ -71,7 +71,6 @@ const FOOTPRINTS := {
 ## The pack as a grid (27 Oct): no bag wider than the screen's thirteen columns, and its rows in pages of seven - a
 ## piece never lies across a page's edge, so every page is whole on screen.
 const PACK_MAX_W := 13
-const PACK_PAGE_ROWS := 7
 
 ## The stash in cells before the Yard's picks: one page, thirteen cells a row, seven rows.
 const STASH_CELLS := 91

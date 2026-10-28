@@ -7486,9 +7486,9 @@ func _check_pack_grid(inv, sim, what: String) -> void:
 	inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	var w: int = sim.pack_w()
 	var cap: int = sim.capacity()
-	var top: int = inv.page * inv.page_rows
+	var top: int = inv.top_row
 	var want := 0
-	for row in range(inv.page_rows):
+	for row in range(inv._view_rows):
 		for col in range(w):
 			if (top + row) * w + col < cap:
 				want += 1
@@ -7509,7 +7509,7 @@ func _check_pack_grid(inv, sim, what: String) -> void:
 	for c in inv._cells:
 		if c.visible:
 			var r: Rect2i = placed.get(c.id, Rect2i())
-			_check(c.size == Vector2(inv.ItemCell.px(r.size.x), inv.ItemCell.px(r.size.y)), "%s: a cell drawn %s for a %s footprint" % [what, str(c.size), str(r.size)])
+			_check(c.size == Vector2(inv.cpx(r.size.x), inv.cpx(r.size.y)), "%s: a cell drawn %s for a %s footprint" % [what, str(c.size), str(r.size)])
 
 
 ## The pack as a grid (27 Oct, Matt: "true tetris"; the bag's own shape, turned pieces, a find with no place waits on
@@ -7638,6 +7638,86 @@ func _pack_grid_checks(sim) -> void:
 ## The floor all run (27 Oct, Matt; the canvas's "The floor, all run"): its row at one height from deploy to the door, the
 ## rig over it in a fight and under it in the search, the take under it; a selected piece turned by R or right-click
 ## where it lies, refused when it won't; Salvage half again at the Workshop.
+## The whole pack on one screen (28 Oct, Matt died sorting a bag split over two pages): every bag's rows fit the grid's
+## height, the cells shrinking to PACK_MIN_CELL; past that (the Removal Van) it scrolls - the wheel, the arrows, a held drag.
+func _pack_one_screen_checks(main) -> void:
+	var sim = main.sim
+	var run = main._run
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var inv = run._inv
+	var avail: float = inv.page_rows * inv.CELL + (inv.page_rows - 1) * inv.GAP
+	for bag in Data.BASES["Backpack"]:
+		sim.equipped["Backpack"] = sim._plain("Backpack", str(bag["name"]))
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var m: Dictionary = sim.mission
+		m["found"] = []
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		_check_pack_grid(inv, sim, "the pack (%s)" % bag["name"])
+		_check(not inv.scrolls() and inv.top_row == 0 and inv.outlines_shown() == sim.capacity(), "%s isn't whole on one screen: %d of %d cells drawn, %d rows at %d px" % [bag["name"], inv.outlines_shown(), sim.capacity(), sim.pack_rows(), inv.pack_cell])
+		_check(inv.pack_cell >= inv.PACK_MIN_CELL and sim.pack_rows() * (inv.pack_cell + inv.GAP) - inv.GAP <= avail + 0.5, "%s's rows overrun the grid: %d rows at %d px in %.0f" % [bag["name"], sim.pack_rows(), inv.pack_cell, avail])
+		_check(not inv._page_label.visible, "%s shows a page count on one screen" % bag["name"])
+		# a find drawn in its last row sits inside the grid's rect
+		var hat: Dictionary = sim._plain("Helmet", "Hard hat")
+		var fp: Vector2i = Items.footprint(hat)
+		var w: int = sim.pack_w()
+		var last_y: int = int((sim.capacity() - 1) / w) - fp.y + 1
+		if sim.pack_free_at(m, hat, 0, last_y, false):
+			sim._pack_put(m, hat, [0, last_y, false])
+			main.refresh()
+			var k: int = inv.cell_of(hat["id"])
+			_check(k >= 0 and inv._cells[k].position.y + inv._cells[k].size.y <= avail + 0.5, "%s: a piece in the last row is off the screen" % bag["name"])
+		sim.extract_now()
+	_check_fit(main, "Run (the biggest pack, one screen)")
+	# the scroll: a grid of two rows for a thirteen-row bag can't shrink that far, so it scrolls
+	sim.equipped["Backpack"] = sim._plain("Backpack", "Special forces bergen")
+	sim.deploy(0)
+	sim.mission["found"] = []
+	main.show_room(main.MISSIONS)
+	inv.set_rows(2)
+	inv._shown = ""
+	main.refresh()
+	_check(inv.scrolls() and inv.pack_cell == inv.PACK_MIN_CELL and inv._page_label.visible, "a pack past the smallest cell doesn't scroll: %d px, %d of %d rows" % [inv.pack_cell, inv._view_rows, inv._reach_rows])
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	inv._gui_input(wheel)
+	main.refresh()
+	_check(inv.top_row == 1, "the wheel didn't scroll the pack a row: %d" % inv.top_row)
+	_check_pack_grid(inv, sim, "the pack (scrolled)")
+	# the wheel over a piece, and a drag held at the bottom edge repeating with no more mouse moves (the review)
+	var piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim._pack_put(sim.mission, piece, [0, inv.top_row, false])
+	main.refresh()
+	var pk: int = inv.cell_of(piece["id"])
+	_check(pk >= 0, "the fixture: the hat isn't drawn in the scrolled pack")
+	if pk >= 0:
+		inv._cell_input(wheel, pk)
+		main.refresh()
+		_check(inv.top_row == 2, "the wheel over a piece didn't scroll: %d" % inv.top_row)
+	inv._edge_dir = 1
+	inv._scroll_at = 0.0
+	var row0: int = inv.top_row
+	inv._edge_tick(1000.0)
+	inv._edge_tick(1000.1)
+	inv._edge_tick(1000.3)
+	_check(inv.top_row == mini(row0 + 2, inv._reach_rows - inv._view_rows), "a held drag at the edge didn't repeat every %.2f s: %d from %d" % [inv.SCROLL_EVERY, inv.top_row, row0])
+	inv._edge_dir = 0
+	inv.scroll_by(99)
+	main.refresh()
+	_check(inv.top_row == inv._reach_rows - inv._view_rows, "the scroll ran past the pack's end: %d" % inv.top_row)
+	inv.scroll_by(-99)
+	inv.set_rows(inv.ROWS)
+	inv._shown = ""
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the pack on one screen ok: every bag whole, the cells shrunk to fit, the last row inside, the scroll past the smallest cell")
+
+
 func _floor_all_run_checks(main) -> void:
 	var sim = main.sim
 	var run = main._run
@@ -8350,6 +8430,7 @@ func _loot_roll_checks(main) -> void:
 	_full_pack_checks(main.sim)
 	_pack_grid_checks(main.sim)
 	_floor_all_run_checks(main)
+	_pack_one_screen_checks(main)
 	_loot_table_checks(main.sim)
 	_harder_gang_checks(main.sim)
 	_over_level_checks(main.sim)

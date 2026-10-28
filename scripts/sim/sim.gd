@@ -4027,11 +4027,6 @@ static func pack_cell_in(x: int, y: int, w: int, cap: int) -> bool:
 	return x >= 0 and y >= 0 and x < w and y * w + x < cap
 
 
-## Whether rows y to y + h - 1 sit on one page (a piece taller than a page can't help but cross).
-static func pack_one_page(y: int, h: int) -> bool:
-	return h > Data.PACK_PAGE_ROWS or floori(float(y) / Data.PACK_PAGE_ROWS) == floori(float(y + h - 1) / Data.PACK_PAGE_ROWS)
-
-
 ## The cells taken, {y * w + x: id}, by every placed piece but `skip_id`'s.
 func _pack_taken(m: Dictionary, skip_id := -1) -> Dictionary:
 	var w := pack_w()
@@ -4054,8 +4049,6 @@ func pack_free_at(m: Dictionary, it: Dictionary, x: int, y: int, rot: bool, take
 	var cap := capacity()
 	var tk: Dictionary = taken if taken != null else _pack_taken(m, int(it.get("id", -1)))
 	var fp := pack_fp(it, rot)
-	if not pack_one_page(y, fp.y):
-		return false
 	for yy in range(fp.y):
 		for xx in range(fp.x):
 			if not pack_cell_in(x + xx, y + yy, w, cap) or tk.has((y + yy) * w + x + xx):
@@ -4105,7 +4098,7 @@ func _pack_settle(m: Dictionary) -> void:
 		if not f.has("pos"):
 			continue
 		var fp := pack_fp(f)
-		var ok := pack_one_page(int(f["pos"][1]), fp.y)
+		var ok := true                        # the pack's one screen now (28 Oct): no page edge to keep off
 		for yy in range(fp.y):
 			for xx in range(fp.x):
 				var cx: int = int(f["pos"][0]) + xx
@@ -4217,7 +4210,7 @@ func _pack_all_fit(items: Array, w: int, cap: int) -> bool:
 				for x in range(w):
 					if placed:
 						break
-					var ok := pack_one_page(y, fp.y)
+					var ok := true
 					for yy in range(fp.y):
 						for xx in range(fp.x):
 							if not pack_cell_in(x + xx, y + yy, w, cap) or taken.has((y + yy) * w + x + xx):
