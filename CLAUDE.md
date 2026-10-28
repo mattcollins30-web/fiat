@@ -4,6 +4,23 @@ Matt's standing conventions for any session on this repo (house rule, 21 Oct: th
 chat or a compacted one). Read this first. Design is in docs/design/ (the statement: docs/design/vision.md); what's
 been done and why is docs/status.md.
 
+## Stop checks (28 Oct, Matt: "plug the gap" - three CLAUDE.md rules missed in one day)
+
+This file isn't loaded by itself in a cloud session (it reaches the repo over the device bridge), so these are the
+moments to come back to it. Each was missed at least once.
+
+1. **After a compaction, or in a new chat**: read this file, then the newest entries in docs/status.md, before
+   anything else. A summary carries memory of the rules, not the rules (21 Oct, 28 Oct).
+2. **Matt raises anything new**: the first line of the reply says which it is - a bug, a UI change, or new. New goes
+   to docs/design/ideas_backlog.md (or gets "no, because" against docs/design/vision.md) before any design or mockup
+   (28 Oct: the trips designed the afternoon they were raised).
+3. **Before dropping any flag**: read its row in docs/running.md - not the last flag dropped (28 Oct: `32` dropped
+   where `24 1` was the rule).
+4. **Before giving Matt a command to run**: is there a flag or a handoff for it? (28 Oct: an art run line, where
+   `art.flag` is the way.)
+5. **Any word on a mockup or a screen**: the glossary in docs/language/style_guide.md (28 Oct: "Depth 3" on the
+   trips boards, where depth is internal only and the player reads level).
+
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
 At the start of every work item, and after every compaction, find its row and read what it names before writing
@@ -17,43 +34,28 @@ to run by hand, the `art.flag` handoff missed for want of reading pixellab_lesso
 | New words on screen | docs/language/style_guide.md | the language pass (two reviewers, an editor's call) | fold the calls into the design doc |
 | Voiced lines (story, room intros, Kev) | docs/voice/recording_list.md | Matt records them | add a changed line to the list |
 | Art (a manifest) | docs/art/pixellab_lessons.md | `python3 tools/art_lint.py`, then `docs/art/handoff/art.flag` | read `art.done`, wire what isn't found by name |
-| Balance | "Running things" and the balance lines in "How work goes in" | `balance.flag` (`24 1` while iterating) | read docs/balance/summary.md against Matt's latest save |
+| Balance | docs/running.md and the balance lines in "How work goes in" | `balance.flag` (`24 1` while iterating) | read docs/balance/summary.md against Matt's latest save |
 | A save's shape | "How work goes in" (old saves) | bump `SAVE_VERSION` in scripts/ui/main.gd | |
 | A build Matt plays | "The project manager" (the version) | bump `VERSION` in scripts/ui/menu.gd in that commit | |
 | A playtest item | "How work goes in" (parked) | docs/status.md's parked list | built only when Matt says |
+| Anything new Matt raises | "The project manager" (the plan, the creep rule) | docs/design/ideas_backlog.md | say where it went, or "no, because" |
+| A mockup | the style guide's glossary; "How work goes in" (rendered first) | the design canvas | Matt's word before the build |
 
 ## Running things - on Matt's machine, never the cloud
 
-The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag files in `docs\balance\`:
+The watcher (`tools\watch.bat`, a window Matt leaves open) runs one job at a time from flag files in `docs\balance\`.
+The full procedure for each, and the cloud fallbacks, are in docs/running.md: read a job's row there before its flag.
 
-| Job | Drop | Runs | Results | Done |
-|---|---|---|---|---|
-| Smoke | `smoke.flag` (empty) | `tools\smoke.bat` (~1.5 min) | `docs\balance\smoke.txt`; last line is the verdict | `smoke.done` (a timestamp) |
-| Balance pass | `balance.flag` with the hours in it, e.g. `32` | `tools\balance.bat <hours>`: first the Radio's checkpoint (a new game to the Radio, `radio_checkpoint.save`), then side by side every element build as one save from the Poacher (its class taken when it opens) twice, every build 4 h from the checkpoint twice (`parity-<class>-<element>-N.txt`, `PARITY {json}`, judged on the mean), then the gauntlet (26 Oct, Matt): each build's end state (`pass\<Class>-<element>-<N>.save`, one a read) through the endgame in order - the Grid, the Archive, the Mint, the County's twelve - three tries each, issued kit bought for each zone, a death or loss put back (`gauntlet-<Class>-<element>.txt`, `GAUNTLET {json}`), and the six broken builds' pieces put on their class's end state the same way (`broken-<key>.txt`, `BROKEN {json}`; broken = every place won; outside the gates - its own table in the summary), the probe and the loot read. Each read runs through `tools\balance_read.bat <name> <minutes> <args>` (or `<name> <minutes> script <res path> <args>`; run_limited.ps1: killed past its minutes, or 15 min silent after a SCRIPT ERROR), and its `.done` says how it ended (`done ok`, `killed-time`, `killed-error`, `crashed`); `pass\expected.txt` lists every read started, `pass\deadline.log` marks the 5 h deadline firing; the summary names any read that didn't end ok | `docs\balance\pass\<build>-N.txt` (half-hour lines, purchases, a `GATES {json}` line; the folder is the pass's own, wiped at its start), the summary `docs\balance\summary.md` (each red with its kind: design, bot timing, bot play) | `balance.done`, each read `pass\<build>-N.done` |
-| Broken builds alone | `balance.flag` with `0 0 broken` | `tools\balance.bat 0 0 broken`: the six broken builds' gauntlets from the last full pass's end states (refuses without them); the pass folder's other reads kept | `docs\balance\pass\broken-<key>.txt`, the table `docs\balance\broken.md` | `balance.done` (a bad flag: `docs\balance\flag_error.txt`, nothing run) |
-| Build hunt | `balance.flag` with `2 0 hunt` | `tools\balance.bat 2 0 hunt` (26 Oct, Matt: "cook some different builds up"): from the pass's checkpoint at level 50, the runner staying out (20 patrols, the bail, or a short clock after the clear). Stage 1: every class's two joints, each with every set at its count or none, 2 h each in 12 shards (`pass\hunt-s1-<shard>.txt`, `HUNT {json}`). Stage 2: stage 1's best 20, each with every unique whose slot the set leaves free (`hunt-s2-*`). Then stage 2's best six through the gauntlet from the last pass's end states (`broken-hunt<n>`, `-- 0 broken hunt<n>`). Ranked by the damage really dealt a second fought; the finalists judged as the broken builds are | the tables `docs\balance\hunt.md` | `balance.done` |
-| Playtest read | `playtest.flag` with a save path (or empty) | `tools\playtest.bat` | the playtest summary | `playtest.done` |
+| Job | Drop | Read |
+|---|---|---|
+| Smoke (~2 min) | `smoke.flag`, empty | `smoke.txt`'s last line, a new `smoke.done` |
+| Balance, iterating | `balance.flag` with `24 1` | `summary.md`, a new `balance.done` |
+| Balance, a final | `balance.flag` with the hours, e.g. `32` (two reads a build) | the same |
+| Broken builds / build hunt | `balance.flag` with `0 0 broken` / `2 0 hunt` | `broken.md` / `hunt.md` |
+| Playtest read | `playtest.flag` with a save path | the playtest summary, `playtest.done` |
+| Art | `docs/art/handoff/art.flag` (docs/art/pixellab_lessons.md) | `art.done` |
 
-- From a cloud session the smoke is `bash $HOME/flaky/run.sh N` in the device shell: it drops the flag, waits for a
-  fresh `smoke.done`, copies the log to `$HOME/flaky/smoke_N.txt` and greps `CHECK FAILED\|SCRIPT ERROR`. Check the
-  done timestamp is new (it's Matt's local time: UK time, GMT in winter, BST in summer). The verdict is run.sh's own "run N (done ...)" line, never
-  `smoke_N.txt` read on its own: the numbers wrap and an old run's file sits there (23 Oct: runs 61-63 read "green" off
-  the 19th's files while the smoke hung). A run that writes no done file within run.sh's wait has hung: find where
-  `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
-- The watcher runs one job at a time: no smoke while a balance pass runs.
-- The gauntlet (26 Oct, in every full pass after the one-save reads): each build's end state
-  (`pass/<Class>-<element>-<N>.save`) fights the Grid, the Archive, the Mint and the County's 12 in order, 3 tries each,
-  the camp restored after every lost try; the six broken builds' pieces on too. The summary's `gauntlet_table`. Flags:
-  `0 0 broken` (the broken builds' gauntlets alone, from the last pass's end states), `2 0 hunt` (the build hunt).
-  A bad flag writes `docs\balance\flag_error.txt` and runs nothing.
-- With the watcher off, a cloud session runs the full smoke in the cloud on a snapshot of its copy (xvfb, opengl3). Its
-  known cloud-only reds are art the cloud copy lacks: gang faces, muzzle flashes, the Recruit's portraits, item
-  pictures (a cell's words standing in, e.g. 'AMO'); every other red is real.
-- The smoke's dice are fixed (seed 1025) so a red repeats; `-- seed N` runs it on another, `-- seed random` on a fresh
-  one (its `SMOKE seed` line says which). `-- only <area>` runs one area.
-- Long sim and balance runs are Matt's machine's (6 Oct: it's about twice as fast). One quick read between passes:
-  `tools\read.bat <hours> <class> [element]`.
-- gdlint shows 0 before any commit (`tools/gdlint.py`).
+No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py`).
 
 ## How work goes in
 
@@ -91,39 +93,22 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 ## and act as a creep warden")
 
 - Matt is design director; Claude runs the project: the plan, the version, the scope, the parked list, the order of
-  work, and says so when something asked for breaks the plan. Design calls stay Matt's.
-- The plan as set (22 Oct): 1. Matt's playtest of the web build. 2. Every parked item (docs/status.md's "Parked from
-  the playtest" lists, oldest first), designed together, built, smoked, committed. 3. Then balance and nothing else:
-  the endgame's shape, the gates, the passes, Matt's playtests, until the game's balanced. Nothing new goes into the
-  build in phase 3.
-- Changed 24 Oct (Matt overruled in words: "Our skill tree has no skills and fights devolve into watching bats and
-  clicking meds"): milestone 8 is active skills and energy, the sixth class (the Recruit), the unlock order and the
-  Pitch's tree, per docs/design/skills.md; balance moves to milestone 9 and starts once 8 is in.
-- The creep rule: a new feature or system raised after phase 2 begins goes to docs/design/ideas_backlog.md with the
-  date and Matt's words, not into the build, and Claude says where it went. It comes back when phase 3 is done or
-  Matt overrules in words. A parked item that grows a feature in the designing is the same: the fix goes in, the
-  growth goes to the backlog. Something that changes numbers (a class, a node, a rule) belongs before the balance
-  phase or after it, never during.
-- The plan from 28 Oct (Matt: "I haven't even played the game from fresh to county and pinnacle yet so that needs to
-  come first before anything else. Outside of bug fixes of course"):
-  1. The balance pass on c252141 read, then Matt plays that build from a fresh camp through the County and a pinnacle.
-  2. While he plays, only **bug fixes and UI changes** are taken, and they are parked (as every playtest item), built
-     after the playtest. Anything else he raises - a feature, a system, a rework, a new activity - goes to
-     docs/design/ideas_backlog.md, queued **after** the trips (docs/design/trips.md, designed 28 Oct, the first item
-     after the playtest), with his words and the date.
-  3. Claude refuses and pushes back, as project manager, on anything that doesn't fit docs/design/vision.md or the
-     plan, says why and where it went - not "parked" by default but "no, because". Matt: "You really need to wear the
-     role of project manager here and simply push back and refuse things I might raise that don't fit the vision."
-  4. Balance passes are bought time: shorter reads while iterating (the hours cut before the reads are), the full
-     pass for a final.
-  Missed 28 Oct: the trips were designed the same day they were raised, with no push back - the creep rule above
-  should have sent them to the backlog first.
-- The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>. The milestone counts the
-  systems that changed what the game is - 1 the first slice, 2 the tree, 3 depth and intel, 4 the Yard, 5 the
-  Radio's endgame, 6 the crew, 7 the web; the build counts the commits Matt plays within it (a playtest build bumps
-  it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; milestone 8 is the
-  skills (docs/design/skills.md; 0.8.0 its first build to play, 24 Oct), and the balance phase starts milestone 9. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
-  and notes it in docs/status.md.
+  work, and says so when something asked for breaks the plan. Design calls stay Matt's. The plan's history:
+  docs/pm_history.md.
+- **The plan in force (28 Oct**, Matt: "I haven't even played the game from fresh to county and pinnacle yet so that
+  needs to come first before anything else. Outside of bug fixes of course"):
+  1. The balance pass on c252141 read; then Matt plays from a fresh camp through the County and a pinnacle.
+  2. While he plays, only bug fixes and UI changes are taken, parked, built after the playtest.
+  3. Then docs/design/ideas_backlog.md's queue: the trips (docs/design/trips.md) first, the rest behind them.
+- **The creep rule**: a feature, system, rework or activity Matt raises goes to docs/design/ideas_backlog.md with the
+  date and his words, not into the build or a design, and Claude says where it went. Claude refuses and pushes back on
+  what doesn't fit docs/design/vision.md or the plan, and says why (Matt, 28 Oct: "simply push back and refuse things
+  I might raise that don't fit the vision"). It comes back when the queue reaches it or Matt overrules in words. A parked
+  fix that grows a feature in the designing: the fix goes in, the growth to the backlog.
+- Balance passes are bought time: shorter reads while iterating, the full pass for a final.
+- The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>; the build counts the commits
+  Matt plays within a milestone. 0.9.1 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
+  count. Claude bumps the version in the commit Matt plays and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")
 
@@ -156,13 +141,10 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - Player luck is the point of the itemisation: don't retune numbers off one lucky run; read fresh saves first (12 Oct).
 - The bot plays the campaign the way a person does (12 Oct).
 - The campaign grind is intended - it's an ARPG (13 Oct); ARPGs live and die by their length (14 Oct).
-- Fiat is an auto-battler ARPG: active play, no idle systems - no offline progress (removed 24 Oct; auto-run removed 21 Oct). The world waits while the game is shut.
+- Fiat is an auto-battler ARPG: active play - no offline progress (removed 24 Oct). The world waits while the game is
+  shut. Changed 28 Oct (Matt, in words): repeat runs the player starts and trips (docs/design/trips.md) come after his
+  playtest; a watched run always pays more.
 - Balance is judged on element builds; plain builds only have to finish (11 Oct).
-
-## After a compaction or in a new chat
-
-Re-read this file, then the newest entries in docs/status.md, before carrying on. A compacted summary has dropped
-standing rules before (21 Oct: balance reads were run in the cloud against the rule above).
 
 ## Things to know
 
