@@ -7080,3 +7080,7 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   edged numbers; your bar's white chunk; the red by the hit and the jolt on a big one). Smokes 288-291 green. Parked:
   the Workshop's voiced room card still says "The armourer's roll" (a recorded line); the bot grinds one site, so the
   next pass's search and scrap gates move; the bot's early scrap from binning is gone.
+- Parked, designed (28 Oct, mid-playtest): the tutorial (docs/design/tutorial.md, the canvas's "The tutorial"); the
+  voice lines owed (docs/voice/recording_list.md); the endgame's activities brainstorm (docs/design/endgame_activities.md:
+  single player, rotating); meds by what they treat, magazines with real reloads, the Clinic's quality from supplies
+  (docs/design/meds_ammo_clinic.md). Matt playing a fresh camp through to the County to time it (target: 20 h+).

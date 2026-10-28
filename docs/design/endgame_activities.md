@@ -50,5 +50,5 @@ by what they want. Each reuses what exists (the fight, the crates, the crew, the
 ## For Matt to say
 
 - Which goals matter most to you when you're grinding: a named item, crafting, numbers going up, or a boss?
-- Is a ladder or record (the Pit's waves, the tunnels' depth) wanted, or is Fiat single-player only, quietly?
-- Should activities be seasonal (rotate, like PoE leagues) or all permanent?
+- ~~Is a ladder or record wanted?~~ Matt, 28 Oct: single player for now (a personal record at most, no ladder).
+- ~~Seasonal or permanent?~~ Matt, 28 Oct: rotation, for longevity - activities come and go like PoE's leagues.
