@@ -441,6 +441,15 @@ func _init() -> void:
 	if not bad_ends.is_empty():
 		out.append("")
 		out.append("Reads that didn't finish ok: " + "; ".join(bad_ends) + ".")
+	# the quick pass's cap (28 Oct): a read stopped on its wall cap is judged on the hours it got to - a "never" in it
+	# may be the cap, not the build
+	var capped: Array = []
+	for rd in reads:
+		if rd.has("capped_at"):
+			capped.append("%s at %.1f h of %d" % [rd.get("build", "?"), float(rd["capped_at"]), int(rd.get("hours", 0))])
+	if not capped.is_empty():
+		out.append("")
+		out.append("Stopped at the quick pass's wall cap (its gates read to there; a \"never\" may be the cap): " + "; ".join(capped) + ".")
 	if expected.is_empty():
 		out.append("")
 		out.append("No pass/expected.txt (a pass from before 25 Oct): a read that never wrote can't be named.")

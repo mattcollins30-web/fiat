@@ -5,6 +5,8 @@ rem the campaign and swapped freely).
 rem   tools\balance.bat           thirty-two simulated hours a one-save read (the chase's pass)
 rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
+rem   tools\balance.bat 16 1 quick  the quick pass for iterating (28 Oct, Matt: "buy time on balance passes"): each
+rem                                  one-save read stopped at 20 minutes of wall (its GATES line says where), no gauntlet
 rem   tools\balance.bat 0 0 broken    the six broken builds' gauntlets alone, from the last pass's end states (a pass
 rem                                  first): docs\balance\broken.md, the pass's own files left
 rem   tools\balance.bat 0 0 gauntlet  the gauntlet alone (27 Oct, the retune): every build's as played and the six pinnacle
@@ -45,7 +47,9 @@ rem a flag it can't read deletes nothing (the third review: a typo fell through 
 del /q docs\balance\flag_error.txt 2>nul
 echo %HOURS%| findstr /r "^[0-9][0-9]*$ ^[0-9][0-9]*\.[0-9][0-9]*$" >nul || goto badflag
 echo %READS%| findstr /r "^[0-9][0-9]*$" >nul || goto badflag
-if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" if /i not "%~3"=="gauntlet" goto badflag
+if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" if /i not "%~3"=="gauntlet" if /i not "%~3"=="quick" goto badflag
+set CAPARG=
+if /i "%~3"=="quick" set CAPARG=cap20
 if /i "%~3"=="broken" goto broken_only
 if /i "%~3"=="gauntlet" goto gauntlet_only
 if /i "%~3"=="hunt" goto hunt
@@ -69,7 +73,7 @@ for /l %%S in (1,1,%READS%) do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			set /a N+=1
 			>>docs\balance\pass\expected.txt echo %%B-%%A-%%S
-			start "" /b cmd /c tools\balance_read.bat %%B-%%A-%%S 240 %HOURS% one %%B %%A 0 read%%S
+			start "" /b cmd /c tools\balance_read.bat %%B-%%A-%%S 240 %HOURS% one %%B %%A 0 read%%S %CAPARG%
 		)
 	)
 )
@@ -122,6 +126,8 @@ if exist docs\balance\pass\expected.txt (
 )
 for /f %%C in ('git rev-parse --short HEAD 2^>nul') do echo The gauntlet on %%C>> docs\balance\pass\commit.log
 :gauntlets
+rem the quick pass has no gauntlet (28 Oct): straight to the summary
+if /i "%~3"=="quick" goto summary
 rem the gauntlet (26 Oct, Matt: "test they are broken and can smash all content at least once"; its kit "the final
 rem pass's end states"): each build's end state as played, and the six broken builds' pieces on their class's
 rem each twice (27 Oct, Matt): the summary takes the better of the two, a build's run of luck either way read out

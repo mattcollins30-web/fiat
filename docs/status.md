@@ -7140,3 +7140,8 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
   safe to leave (a bail loses the pack, never the loadout), trips (a runner of another class and hired hands on a
   route, resolved by the odds sim), the Bunkhouse on the Pitch, the wagers first of the endgame's activities.
   docs/design/trips.md; canvas boards RepeatRuns, Trips, Bunkhouse.
+- The `24 1` pass on c252141 (20:14-21:52, 1 h 38 min; Scrapper-fire's one-save read the long pole to 21:51, the
+  gauntlet in the last minute): 21 red (1bda16d's 23, 27 Oct's 18). Campaign walls down from four builds to two
+  (Drifter as fire and Scrapper as shock never beat the Bank). Deaths and bails back with the heals packed; faint
+  signals won 70% (target 85%+); the gauntlet's live_load fell to 3 of 15 first try. Next, agreed with Matt: the
+  iterating flag at 16 h with a per-read cap and no gauntlet (~25 min), then his playtest from fresh.

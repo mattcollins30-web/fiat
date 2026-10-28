@@ -34,7 +34,7 @@ to run by hand, the `art.flag` handoff missed for want of reading pixellab_lesso
 | New words on screen | docs/language/style_guide.md | the language pass (two reviewers, an editor's call) | fold the calls into the design doc |
 | Voiced lines (story, room intros, Kev) | docs/voice/recording_list.md | Matt records them | add a changed line to the list |
 | Art (a manifest) | docs/art/pixellab_lessons.md | `python3 tools/art_lint.py`, then `docs/art/handoff/art.flag` | read `art.done`, wire what isn't found by name |
-| Balance | docs/running.md and the balance lines in "How work goes in" | `balance.flag` (`24 1` while iterating) | read docs/balance/summary.md against Matt's latest save |
+| Balance | docs/running.md and the balance lines in "How work goes in" | `balance.flag` (`16 1 quick` while iterating) | read docs/balance/summary.md against Matt's latest save |
 | A save's shape | "How work goes in" (old saves) | bump `SAVE_VERSION` in scripts/ui/main.gd | |
 | A build Matt plays | "The project manager" (the version) | bump `VERSION` in scripts/ui/menu.gd in that commit | |
 | A playtest item | "How work goes in" (parked) | docs/status.md's parked list | built only when Matt says |
@@ -49,7 +49,7 @@ The full procedure for each, and the cloud fallbacks, are in docs/running.md: re
 | Job | Drop | Read |
 |---|---|---|
 | Smoke (~2 min) | `smoke.flag`, empty | `smoke.txt`'s last line, a new `smoke.done` |
-| Balance, iterating | `balance.flag` with `24 1` | `summary.md`, a new `balance.done` |
+| Balance, iterating | `balance.flag` with `16 1 quick` (~25 min: each read capped at 20 min of wall, no gauntlet) | `summary.md` (its header names the capped reads), a new `balance.done` |
 | Balance, a final | `balance.flag` with the hours, e.g. `32` (two reads a build) | the same |
 | Broken builds / build hunt | `balance.flag` with `0 0 broken` / `2 0 hunt` | `broken.md` / `hunt.md` |
 | Playtest read | `playtest.flag` with a save path | the playtest summary, `playtest.done` |
@@ -83,7 +83,8 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   A second pass only when the first shows something drastically wrong (a runaway, a wall, an unwinnable stretch).
 - Balancing: always read Matt's latest save alongside the bot's figures, as the comparison (his saves:
   `C:\Users\mattc\AppData\Roaming\Fiat`; `tools\playtest.bat` / `playtest.flag` summarises one).
-- While iterating, one read a build is enough (`balance.flag` with `24 1`, about half the time); two for a final.
+- While iterating: `balance.flag` with `16 1 quick` (28 Oct: 16 h, one read a build, each stopped at 20 min of wall, no
+  gauntlet; ~25 min against a full pass's ~1 h 40). A final: `32` (two reads a build, the gauntlet).
 - Old saves: no compatibility work. When the save's shape changes, bump `SAVE_VERSION` in scripts/ui/main.gd so the
   old slot shows the incompatible-save warning. A change that would leave an old save wrong (not just a new shape)
   gets the same bump, without asking: Matt never cares if a save breaks (23 Oct).

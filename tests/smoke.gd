@@ -10456,6 +10456,22 @@ func _review28_checks(main) -> void:
 			var pistol_n: int = s.rig.filter(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == "pistol").size()
 			_check(s.rig.any(func(x): return Items.is_heal(x)) and ammo_n <= share and ammo_n >= 1 and pistol_n == (1 if share >= 2 else 0) and s.rig_used() == s.med_capacity(), "the %s packed a %s: %d heals, %d pouches of rounds (share %d, %d the pistol's), %d of %d used" % [who, rig_name, s.rig.filter(func(x): return Items.is_heal(x)).size(), ammo_n, share, pistol_n, s.rig_used(), s.med_capacity()])
 		s.equipped["Secondary"] = null
+		# a rig full of last run's heals (28 Oct, the wall check: Drifter as fire out for twelve hours on one pouch of
+		# rounds): the bot repacks as a person would, the heals past the best back to the stash so the magazines reach
+		# their share; the gate's top-up leaves a full rig alone (a full rig takes no rounds at the gate, above)
+		if who == "gate":
+			continue
+		s.equipped["Rig"] = s._plain("Rig", "Chest rig")
+		s.rig = []
+		while s.rig_room(1):
+			s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
+		var full_n: int = s.rig.size()
+		s.stash = [s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds")]
+		bt._restock_meds(s)
+		var share2: int = ceili(s.med_capacity() * Data.RIG_MAG_SHARE)
+		var mags2: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
+		var heals2: int = s.rig.filter(func(x): return Items.is_heal(x)).size()
+		_check(full_n >= 4 and mags2 == share2 and heals2 >= 1 and heals2 + mags2 == s.rig.size(), "the %s left a rig of %d heals with %d pouches of rounds (share %d) and %d heals" % [who, full_n, mags2, share2, heals2])
 	# the bot buys off her shelf as the player does (B3): the cheapest heal that fits, a cure for the front, nothing off it
 	s = fresh.call()
 	s.cash = 1.0e5

@@ -1519,6 +1519,7 @@ func _next_in(sim, b: Dictionary) -> String:
 func _restock_meds(sim) -> void:
 	if sim.can_hand_in():
 		sim.hand_in_supplies()                # the medic's supplies, as a person hands them over coming home (28 Oct)
+	_unpack_heals(sim)
 	_restock_rounds(sim)
 	_stock_cures(sim)
 	if not sim.rig.any(func(x): return Items.is_heal(x)) and not sim.stash.any(func(x): return Items.is_heal(x)):
@@ -1567,6 +1568,28 @@ func _stock_cures(sim) -> void:
 
 
 ## The cures stocked and packed, as the gate packs them (the smoke's fixture reads it alone).
+## The rig repacked at home as a person would (28 Oct, the wall check: Drifter as fire went out for twelve hours on
+## one pouch of rounds, the rig's pouches all last run's heals, and the gate's top-up leaves a full rig alone by design):
+## the heals past the best go back to the stash, the weakest first, until the primary's magazines can reach their share.
+func _unpack_heals(sim) -> void:
+	var gun = sim.equipped["Primary"]
+	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
+		return
+	var short: int = sim.mag_pouch_room() - (sim.med_capacity() - sim.rig_used())
+	if short <= 0:
+		return
+	var spare: Array = sim.rig.filter(func(x): return Items.is_heal(x))
+	spare.sort_custom(func(a, b): return sim.med_heal(a) > sim.med_heal(b))
+	spare = spare.slice(1)                    # the best heal stays
+	spare.reverse()
+	for it in spare:
+		if short <= 0:
+			break
+		var sz: int = Items.size(it)
+		if sim.leave(int(it["id"])):
+			short -= sz
+
+
 func _pack_cures(sim) -> void:
 	_stock_cures(sim)
 	sim.pack_rig()

@@ -59,8 +59,12 @@ func _init() -> void:
 		# opens, the crew's swaps after; the same gates as `gate`. `-- 32 one Drifter fire 0 checkpoint` also writes
 		# the Radio's checkpoint save as the Radio opens and stops there (the parity reads start from it)
 		# `-- 32 one Drifter fire 0 read2`: the pass's second read of the build, its end state saved as its own (the review)
+		# `-- 16 one Drifter fire 0 read1 cap20`: the quick pass's read (28 Oct, Matt: "buy time on balance passes"), stopped
+		# after 20 minutes of wall wherever it's got to, its GATES line saying so (capped_at)
 		var tag: String = args[5] if args.size() > 5 else ""
-		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, tag == "checkpoint", tag.trim_prefix("read") if tag.begins_with("read") else "")
+		var cap: String = args[6] if args.size() > 6 else ""
+		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, tag == "checkpoint", tag.trim_prefix("read") if tag.begins_with("read") else "",
+				int(cap.trim_prefix("cap")) if cap.begins_with("cap") else 0)
 		return
 	if cls == "parity":
 		_parity(hours, args[2] if args.size() > 2 else "Poacher", args[3] if args.size() > 3 else "")
@@ -265,7 +269,7 @@ static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false, read_n := "") -> void:
+func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false, read_n := "", cap_min := 0) -> void:
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
@@ -322,6 +326,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	var ladder_us := 0
 	var t0 := Time.get_ticks_msec()
 	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 7200000:     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
+		if cap_min > 0 and Time.get_ticks_msec() - t0 >= cap_min * 60000:
+			g["capped_at"] = snappedf(sim.elapsed / 3600.0, 0.01)     # the quick pass's cap (28 Oct): the summary names it
+			print("CAPPED at %s of %d h: %d minutes of wall" % [_hm(sim.elapsed), int(hours), cap_min])
+			break
 		var items_before: int = sim.stash.size()
 		var lost_before: int = sim.operators_lost
 		var uniques_before: Dictionary = {}
