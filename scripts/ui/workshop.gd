@@ -187,10 +187,10 @@ func _init() -> void:
 		var r := {"button": b, "stat": ""}
 		r["lock"] = TextureRect.new()
 		r["lock"].texture = NodeGlyphs.texture("lock")
+		r["lock"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE     # before the size, or the picture's own size wins (28 Oct, Matt's padlocks over the words)
+		r["lock"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		r["lock"].position = Vector2(10, (AFFIX_H - 2 - 22) / 2.0)
 		r["lock"].size = Vector2(22, 22)
-		r["lock"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		r["lock"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		r["lock"].mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(r["lock"])
 		r["label"] = UI.label(b, Rect2(42, 0, rw - 54, AFFIX_H - 8), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)

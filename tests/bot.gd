@@ -1161,6 +1161,12 @@ func _hold_the_type(sim, type: String) -> void:
 		sim.equip_item(best["id"])
 
 
+## A site with nothing to open (28 Oct, the crates remembered): every crate taken and none back yet on the trickle.
+static func picked_clean(sim, i: int) -> bool:
+	var st: Array = sim.site_stock(i)
+	return not st.is_empty() and Array(st[0]).size() + int(st[1]) == 0
+
+
 func pick_tier(sim) -> int:
 	# from the top down, stopping at the first tier that reads PUSH: each read
 	# is the lookout's dry runs, so the tiers under the one it will run go unread
@@ -1182,11 +1188,18 @@ func pick_tier(sim) -> int:
 			if sim.tier_open(i):
 				order.append(i)
 		order.sort_custom(func(a, b_in): return _aim_level(sim, a) > _aim_level(sim, b_in))
-		for i in order:
-			if sim.survival(i) >= PUSH:          # every site at its campaign self (15 Oct): the highest that holds, for its papers
-				best = i
+		for pass_i in range(2):                  # a site picked clean is passed over for one with crates to open (28 Oct), unless none holds
+			for i in order:
+				if pass_i == 0 and picked_clean(sim, i):
+					continue
+				if sim.survival(i) >= PUSH:      # every site at its campaign self (15 Oct): the highest that holds, for its papers
+					best = i
+					break
+			if best >= 0:
 				break
 	if best < 0:
+		var found := false
+		var clean_fallback := -1
 		for i in range(Data.TIERS.size() - 1, -1, -1):
 			if not sim.tier_open(i):
 				continue
@@ -1197,15 +1210,23 @@ func pick_tier(sim) -> int:
 				sim.arm_boss(i, true)               # a head not yet beaten, at a person's odds (the review: farmed sites never armed him)
 				if sim.survival(i) >= FIRST:
 					best = i
+					found = true                 # a head to fight is never swapped for a fallback (the review)
 					break
 				sim.arm_boss(i, false)
 			var odds: float = sim.survival(i)
 			if odds >= (FIRST if sim.best_depth[i] <= 0 else PUSH):     # a first clear at a person's odds; what's cleared, farmed at PUSH
+				if sim.best_depth[i] > 0 and picked_clean(sim, i):
+					if clean_fallback < 0:
+						clean_fallback = i      # farmed and picked clean (28 Oct): the next site down that holds, this one if none
+					continue
 				best = i
+				found = true
 				break
 			if odds >= best_odds:
 				best_odds = odds                  # ties to the lower tier: the old fallback was the lowest open tier
 				best = i
+		if not found and clean_fallback >= 0:
+			best = clean_fallback
 	best = maxi(best, 0)
 	# the zone's boss, once its last site is cleared and the crew's head still
 	# stands: armed when the odds hold with them in; past the campaign, when

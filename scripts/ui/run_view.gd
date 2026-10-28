@@ -1069,7 +1069,8 @@ func _process(dt: float) -> void:
 				var s: float = slot_of(k)["scale"]
 				p.scale = Vector2(s, s) * 1.6
 				p.emission_rect_extents = Vector2(sz.x * 0.28, sz.y * (0.3 if el == "fire" else 0.35)) / p.scale
-				p.position = r.position + Vector2(sz.x * 0.5, sz.y * (0.55 if el == "fire" else 0.45))
+				p.position = r.position + Vector2(sz.x * 0.5, sz.y * (0.55 if el == "fire" else 0.45)).rotated(r.rotation)     # the body's tilt (the kick, a throw): the flames on it, not where it stood
+				p.rotation = r.rotation
 	_lay_bars()
 	# ducking: now and then under fire, and on a big hit - the wall comes up, the gun goes down, no shots
 	if _firing:

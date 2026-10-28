@@ -2084,6 +2084,11 @@ func _craft_view_checks(main) -> void:
 	_check(ws._affix_buttons[1].position.x + ws._affix_buttons[1].size.x <= ws.BODY_W - ws.PAD + 0.5, "the re-rolls run off the piece card")
 	_check(ws._affix_buttons[0].text.contains("tin") and ws._affix_buttons[1].text.contains("tin"), "the re-rolls carry no price")
 	_check_fit(main, "Workshop (craft, a padlock on)")
+	# the padlocks drawn at 22 px, clear of their row's words (28 Oct, Matt: the padlocks over the affix words)
+	for r in ws._affix_rows:
+		var lk: TextureRect = r["lock"]
+		var lr: Rect2 = lk.get_global_rect()
+		_check(lk.size == Vector2(22, 22) and lr.end.x <= r["label"].get_global_rect().position.x + 0.5 and lr.end.y <= r["button"].get_global_rect().end.y + 0.5, "a padlock drawn %s at %s, over its words at %.0f" % [str(lk.size), str(lr.position), r["label"].get_global_rect().position.x])
 	# the job runs in the room: new affixes keep the count and the locked one, the foot says what was done
 	var before_affixes: int = piece["affixes"].size()
 	var kept0: Dictionary = piece["affixes"][0].duplicate()
@@ -5620,6 +5625,15 @@ func _hit_register_checks(main) -> void:
 	var kwant: Vector2 = v.slot_of(k)["foot"] + Vector2(v._pan * -0.6 + float(v._figs[k].get("kick_x", 0.0)), -RunView.DUCK_SCENE * v._duck)
 	_check(absf(kr.rotation) > 0.0 and kfeet.distance_to(kwant) < 1.5, "a tilted figure's feet left its spot: %s, not %s" % [str(kfeet), str(kwant)])
 	_check(absf(float(v._figs[k].get("kick_x", 0.0))) > 1.0 and absf(v._figs[k]["rect"].rotation) > 0.0, "the hit didn't knock the figure back and tilt it: %.1f px" % float(v._figs[k].get("kick_x", 0.0)))
+	# the flames lean with the body (28 Oct, the reviewer's follow-up to e3216f5): on its tilted middle, turned as it is
+	var fire_was: bool = v._them_fx.get("fire", false)
+	v._them_fx["fire"] = true
+	v._process(0.001)
+	var fp_fx = v._figs[k]["fx"].get("fire")
+	if fp_fx != null and v._figs[k]["state"] in ["pop", "up"]:
+		var on_body: Vector2 = kr.get_transform() * Vector2(kr.size.x * 0.5, kr.size.y * 0.55)
+		_check(is_equal_approx(fp_fx.rotation, kr.rotation) and fp_fx.position.distance_to(on_body) < 1.5, "the flames don't lean with a tilted body: %s turned %.2f, the body's middle %s turned %.2f" % [str(fp_fx.position), fp_fx.rotation, str(on_body), kr.rotation])
+	v._them_fx["fire"] = fire_was
 	v._process(RunView.KICK_S)
 	v._last_hit = {"k": k, "at": Vector2(300, 150)}
 	v.impact("fire", 0.2)
@@ -14494,7 +14508,18 @@ func _leave_checks(main) -> void:
 	_check(bot.should_leave(sim), "the bot stays on a picked-over site")
 	sim.extract_now()
 	sim.load_dict(saved)
-	print("the bot leaves a picked-over site ok")
+	# the next run (28 Oct): a site picked clean is passed over for another that holds
+	var t1: int = bot.pick_tier(sim)
+	sim.site_crates[str(t1)] = {"left": [], "at": sim.elapsed, "full": 5}
+	_check(Bot.picked_clean(sim, t1), "the fixture: T%d isn't picked clean" % t1)
+	var t2: int = bot.pick_tier(sim)
+	var others: bool = false
+	for i in range(Data.TIERS.size()):
+		if i != t1 and sim.tier_open(i) and sim.best_depth[i] > 0 and sim.survival(i) >= Bot.PUSH:
+			others = true
+	_check(t2 != t1 or not others, "the bot went back to T%d picked clean with another site holding" % t1)
+	sim.load_dict(saved)
+	print("the bot leaves a picked-over site ok, and passes one picked clean over")
 	_bench_worn_checks(main)
 
 
