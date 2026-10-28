@@ -34,3 +34,17 @@ The Training panel's resets and the exchange go on the canvas before they're bui
 
 1. The weapon stripped (small). 2. The three resets (small). 3. The exchange (medium; it changes the economy, so it
 goes in before the balance pass).
+
+## Built (28 Oct, Matt: "build it all")
+
+- Strip all parts: `sim.strip_all(slot)`; the Kit room's "Strip all parts" (two or more parts on), the Workshop's
+  "Strip all N".
+- The resets: Training's one reset button follows the node picked - the ring, the Pitch (its nodes; the elements'
+  starters on its circle stay), an element (its nodes but the starter), else the class's trees. Each RESPEC_CASH a
+  point, asked twice.
+- Two elements a class (Matt, 28 Oct; Knuckles counts): `sim.elements_open`; a class opens two, another class's
+  element opens for nothing, closing one is free and leaves its nodes the camp's; only the open two work and fill.
+- The exchange: the Fence's third tab. New rates every run home (there's no short play-day), ±12% drift that only
+  ever goes against the trader (the review: a free drift beat the spread - a money pump), 15% spread; the Fence's
+  Prices line has Contacts (10% spread) and the Fixer (+5%) where Orders and the old Fixer were. The contracts are
+  gone, the mate kept on the tab. Drafts all, for the balance pass.

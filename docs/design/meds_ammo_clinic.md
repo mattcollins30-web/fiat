@@ -49,3 +49,17 @@ the numbers below are drafts for the balance pass to set. The rig's new look goe
 
 1. The cures (the smallest, and the Paramedic wants them). 2. The Clinic's supplies. 3. Magazines (the biggest:
 it changes every gun's numbers, so it goes in before the balance pass, not after).
+
+## Built (28 Oct, Matt: "build it all")
+
+- The cures, with frost and shock pools on the runner (there were none: a chill slows your fire, a shock lands more on
+  you); Smelling salts clears shock only (no stun on the runner). Auto-used at CURE_AT of the HP left; the Clinic keeps
+  two cure slots, the front's elements first; the Workshop's med ladder builds them; the bot packs them.
+- Medical supplies: found where the sites lean to meds (the Hospital most) and in medicine cabinets; handed in at the
+  Clinic's body panel; CLINIC_STEPS lift her tiers then her rarity, with new med affixes (quicker, Guard, a cure
+  built in).
+- Magazines: a rig rounds item is a pouch of MAG_POUCH magazines; reloads by type, a reload_pct affix (no tree nodes
+  yet); filled free at the gate from the stash; boxes found stay in the pack. Drafts all.
+- For the balance pass: a 1 h bot read climbs 2-3x slower, almost all from the pouches (MAG_POUCH 12 restores the
+  pace); the Paramedic's Tourniquet skill and Clean hands not yet reworked as the cures' big brothers; magazine
+  attachments carry no size or reload yet.

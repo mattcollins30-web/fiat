@@ -7102,3 +7102,21 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   the story's beats in a row. Matt (28 Oct): two elements at most in the skill tree; whose two (the camp's, a class's,
   or the joints') and whether Knuckles counts are on the TwoElements board. After his call: every parked item before
   he plays again, then 0.9.1.
+
+## Every parked item built, 0.9.1 (28 Oct, Matt: "I'll take your recommendations - build it all"; the tutorial left for later)
+
+Each reviewed, its smoke area added, the device smoke green before its commit:
+- Select-many sells only at the Fence (737cf38): the Kit room and the Clinic bin, the Workshop scraps.
+- The whole pack on one screen (a5217d0): the cells shrink till every row fits, a scroll past the smallest cell.
+- Three small fixes (ebc29cc): the Workshop's padlocks at 22 px, the flames lean with a tilted body, the bot passes a
+  site picked clean.
+- Two elements a class, Knuckles counting; the Pitch's and an element's resets; every part off a gun at once (147fc9c).
+- The exchange in the contracts' place (bc6568a), Contacts and the Fixer on the Fence's Prices line.
+- The Pitch as two lines a building (86da52a): the canvas's "Pitch B"; an old save's picks moved by id.
+- The Radio reworked (f578b4c): the tab bar, the air in two columns, the Dial as three columns of named tiles (its node
+  pictures no longer drawn; the picked strip shows one), the story's beats in a row.
+- The cures, the Clinic's supplies and magazines (SAVE_VERSION 10: an old save shows the incompatible warning).
+- Not built: the tutorial (Matt: later); the endgame activities (a brainstorm: the playtest's hours decide).
+- For the balance pass next: the magazines slow the bot's climb 2-3x (the pouch size); the exchange's drafts; the
+  contracts' notes and materials income gone; the Pitch's ranks now wait on a line's fifth step.
+- Voice: the Fence's card's third line changed with the contracts (docs/voice/recording_list.md).

@@ -13,6 +13,7 @@ listener would hear.
 | Take | File | Why | Line 1 | Line 2 |
 |---|---|---|---|---|
 | The Workshop's card | `art/intro/rooms/workshop.mp3` | The Workshop opens at the Carpet Man now, with his fitter's kit | The Carpet Man's fitter's kit, laid out on the bench. Proper tools, for once. | Guns get better here, part by part. *(unchanged)* |
+| The Fence's card | `art/intro/rooms/fence.mp3` | The contracts went for the exchange (28 Oct) | *(lines 1-2 unchanged)* | Line 3: Notes, tins, scrap. I'll change any of it. At a price. *(was: Want steady work? I've got contracts.)* |
 
 ## 2. Re-record, your call: the words still play, but the game's moved on
 
