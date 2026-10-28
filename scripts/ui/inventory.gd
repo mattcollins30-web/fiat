@@ -79,7 +79,8 @@ var sort := 0
 var page := 0
 var fixed_kind := ""               # set by the Workshop: only this kind, bar hidden
 var ditching := false              # set by the Run screen: Select-many ditches instead of selling
-var binning := false               # the Kit room with the Fence shut (13 Oct): Select-many bins instead, for nothing (27 Oct)
+var binning := false               # the Kit room (13 Oct; always, 28 Oct, Matt: "sales should only come from the fence"): Select-many bins, for nothing (27 Oct)
+var scrapping := false             # the Workshop (28 Oct, Matt: "workshop should be to scrap"): Select-many scraps
 var buying := ""                   # a vendor's shelf (23 Oct, parked item 10, Matt: "single buying at a time is a chore"): Select-many buys - "clinic" or "fence"
 var can_many := true               # a shelf without the many: the Kit's compare shelf
 var _all_button: Button            # the shelf's "All n · price" beside Buy (23 Oct)
@@ -314,10 +315,20 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 			if _many_bins(_item(id)):
 				n += 1
 		_sell_button.text = "Bin %d" % n           # gone for nothing (27 Oct): scrapping's the Workshop's
+	elif scrapping:
+		var n := 0
+		var bits := 0
+		for id in chosen:
+			if _many_scraps(_item(id)):
+				n += 1
+				bits += sim.scrap_yield(_item(id))
+		UI.fit_button(_sell_button, ["Scrap %d · %d scrap" % [n, bits], "Scrap %d" % n])
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	if buying == "":
-		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id))))     # the Fence buys; shut till the Carpet Man (13 Oct)
+		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not scrapping and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id)))) or (scrapping and not chosen.any(func(id): return _many_scraps(_item(id)))) or (scrapping and sim.on_mission())     # the Fence buys; shut till the Carpet Man (13 Oct); the Workshop scraps at home (the review)
+		if scrapping and sim.on_mission() and not chosen.is_empty():
+			_sell_button.tooltip_text = "Not while the runner's out"
 	if pack_mode:
 		_lay_pack(cap)
 	else:
@@ -755,6 +766,9 @@ func _sell_chosen() -> void:
 			elif binning:
 				if _many_bins(it):
 					sim.bin(id)
+			elif scrapping:
+				if _many_scraps(it):
+					sim.scrap_item(id)
 			else:
 				sim.sell(it)
 	chosen = left
@@ -764,6 +778,11 @@ func _sell_chosen() -> void:
 ## Select-many's bin takes the plain things: a unique or a set piece is binned one at a time, from the pick, on purpose.
 func _many_bins(it: Dictionary) -> bool:
 	return sim.can_bin(it) and not it.has("unique") and not it.has("set")
+
+
+## Select-many's scrap, as the bin: a unique or a set piece is scrapped one at a time, from the pick.
+func _many_scraps(it: Dictionary) -> bool:
+	return not it.is_empty() and sim.stash.has(it) and not Items.is_deeds(it) and not it.has("unique") and not it.has("set")
 
 
 ## For the tests: every label and visible button with text.

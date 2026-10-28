@@ -305,6 +305,7 @@ func _init() -> void:
 	_inv.set_rows(GRID_ROWS)
 	_inv.fixed_kind = Data.ATTACHMENT
 	_inv.stash_tabs = true                # the shared tab and the class's own, as the Armoury's (21 Oct)
+	_inv.scrapping = true                 # Select-many scraps (28 Oct, Matt: sales only at the Fence)
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)

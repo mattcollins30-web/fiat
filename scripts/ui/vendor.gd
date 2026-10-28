@@ -252,6 +252,7 @@ func _init() -> void:
 func setup(k: String) -> void:
 	kind = k
 	_shelf.buying = kind                        # Select-many on the shelf buys the lot (23 Oct)
+	_stash.binning = kind != "fence"            # the Clinic's stash: Select-many bins; only the Fence buys (28 Oct, Matt)
 	if kind == "fence":
 		for i in range(4):                          # four at the band's foot, right
 			_tabs[i].position.x = _tab_x(i, 4)

@@ -8355,6 +8355,7 @@ func _loot_roll_checks(main) -> void:
 	_over_level_checks(main.sim)
 	_mythic_checks(main.sim)
 	_bin_checks(main)
+	_select_many_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
@@ -11368,6 +11369,76 @@ func _crates_checks(main) -> void:
 
 
 ## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash pick has
+## Select-many sells only at the Fence (28 Oct, Matt): the Kit room and the Clinic bin, the Workshop scraps, whatever's
+## open; the Fence's stash still sells.
+func _select_many_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	for k in ["fence", "workshop", "clinic"]:
+		if not sim.unlocked.has(k):
+			sim.unlocked.append(k)
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var rooms := [[main.ARMOURY, main._armoury._inv, "Bin 1"], [main.MEDIC, main._clinic._stash, "Bin 1"], [main.WORKSHOP, main._workshop._inv, "Scrap 1"], [main.MARKET, main._fence._stash, "Sell 1"]]
+	for r in rooms:
+		sim.stash_put(sim._plain("Helmet", "Hard hat"))
+		sim.stash_put(sim._plain("Attachment", "Red dot"))
+		sim.stash_put(sim._plain("Medical", "Bandage"))
+		main.show_room(r[0])
+		if r[0] == main.MARKET:
+			main._fence._show("stash")
+		var inv = r[1]
+		inv.many = true
+		main.refresh()
+		var shown: Array = inv.items.filter(func(x): return not Items.is_deeds(x) and not x.has("unique") and not x.has("set") and sim.stash.has(x))
+		_check(not shown.is_empty(), "%s's grid showed none of the fixture's pieces" % r[0])
+		if shown.is_empty():
+			continue
+		var it: Dictionary = shown[0]
+		# a mixed pick (the review): a unique beside the plain piece is passed over, and the figure is the plain one's
+		var prize: Dictionary = {}
+		var lone: Array = shown.filter(func(x): return not Items.stacks(x))
+		if r[0] in [main.ARMOURY, main.WORKSHOP] and not lone.is_empty():
+			it = lone[0]
+			prize = sim._plain(str(it["slot"]), str(it["base"]))
+			prize["unique"] = "A test unique"
+			sim.stash_put(prize)
+		inv.chosen = [it["id"]] + ([prize["id"]] if not prize.is_empty() else [])
+		main.refresh()
+		if r[2] == "Scrap 1":
+			_check(inv._sell_button.text.contains("%d scrap" % sim.scrap_yield(it)) or inv._sell_button.text == "Scrap 1", "the Workshop's Scrap figure is not the plain piece's %d: '%s'" % [sim.scrap_yield(it), inv._sell_button.text])
+		var words: String = inv._sell_button.text
+		_check(inv._sell_button.visible and words.begins_with(r[2]) and not inv._sell_button.disabled, "%s's Select-many reads '%s', not %s (28 Oct: sales only at the Fence)" % [r[0], words, r[2]])
+		if r[0] != main.MARKET:
+			_check(not words.begins_with("Sell"), "%s sells from Select-many: '%s'" % [r[0], words])
+		_check_fit(main, "%s (select many)" % r[0])
+		var scrap0: int = int(sim.scrap)
+		var cash0: float = sim.cash
+		inv._sell_chosen()
+		_check(not sim.stash.has(it), "%s's Select-many left the %s" % [r[0], it["base"]])
+		if not prize.is_empty():
+			_check(sim.stash.has(prize), "%s's Select-many took a unique in a mixed pick" % r[0])
+		if r[2] == "Scrap 1":
+			_check(int(sim.scrap) == scrap0 + sim.scrap_yield(it) and is_equal_approx(sim.cash, cash0), "the Workshop's Select-many did not scrap the plain piece alone: scrap %d from %d" % [int(sim.scrap), scrap0])
+			# on a run the Workshop's Scrap is shut (the review: it pressed to nothing)
+			var again: Dictionary = sim._plain("Attachment", "Red dot")
+			sim.stash_put(again)
+			sim.deploy(0)
+			inv.many = true
+			inv.chosen = [again["id"]]
+			main.refresh()
+			_check(sim.on_mission() and inv._sell_button.disabled, "the Workshop's Select-many Scrap is live on a run")
+			sim.extract_now()
+		elif r[2] == "Bin 1":
+			_check(int(sim.scrap) == scrap0 and is_equal_approx(sim.cash, cash0), "%s's Select-many paid for a bin" % r[0])
+		inv.many = false
+	sim.load_dict(saved)
+	main.refresh()
+	print("select many ok: the Kit room and the Clinic bin, the Workshop scraps, the Fence sells")
+
+
 ## Bin for its scrap; a unique asks twice; the deeds never; with the Fence shut, Select-many bins the plain things.
 func _bin_checks(main) -> void:
 	var sim = main.sim

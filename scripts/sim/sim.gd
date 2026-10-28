@@ -2595,13 +2595,18 @@ func bin(id: int) -> bool:
 	return false
 
 
+## What scrapping a thing at the Workshop gives: its scrap, half again with Salvage (27 Oct: from the ditch to the Workshop).
+func scrap_yield(it: Dictionary) -> int:
+	return int(ceil(scrap_of(it) * (Data.FX["node/salvage"] if has_node("salvage") else 1.0)))
+
+
 ## A stash item broken down at the Bench for its scrap. Gone for good.
 func scrap_item(id: int) -> bool:
 	if mission != null or not room_open("workshop"):
 		return false
 	for it in stash:
 		if it["id"] == id:
-			var bits: int = int(ceil(scrap_of(it) * (Data.FX["node/salvage"] if has_node("salvage") else 1.0)))     # Salvage: half again (27 Oct: from the ditch to the Workshop)
+			var bits: int = scrap_yield(it)
 			_remove(it)
 			scrap += bits
 			if yard_has("salvage_line") and int(it.get("rarity", 0)) >= 2:

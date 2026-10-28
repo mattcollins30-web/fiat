@@ -173,7 +173,7 @@ static func rarity_tone(it: Dictionary) -> String:
 
 func show_state(s) -> void:
 	sim = s
-	_inv.binning = not sim.room_open("fence")     # the Fence shut, Select-many bins (13 Oct)
+	_inv.binning = true                 # Select-many bins (13 Oct); always (28 Oct, Matt: sales only at the Fence)
 	_inv.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_body.selected = selected.get("slot", "") if selected.get("kind", "") == "slot" else ""
 	_body.show_state(sim)
