@@ -1,14 +1,18 @@
 extends Control
 ## The Radio as the endgame (15 Oct, docs/design/endgame_radio.md, mockup signals_radio.png; Matt: "the endgame is
 ## the wrong way round"). Three papers in, a signal out: one mission on a campaign site at random, a crew from any
-## zone, a depth rolled round your reach, each paper's code on it. Down the left the papers held, each with its code;
-## in the middle the decoder, three in and what they'll make; on the right the signals held, the picked one as a card
-## (its figures, its codes, Kev's line, the crafts, Set off) and the rest under it. The Dial, the endgame's tree, in
-## the band's other view. Before the Quartermaster: nothing on the air.
+## zone, a depth rolled round your reach, each paper's code on it. The Dial, the endgame's tree, in the band's other
+## view. Before the Quartermaster: nothing on the air.
 ##
-## The code book (21 Oct, canvas "The code book and the death pick" 1): the standing codes and the filter are a box at
-## the papers' foot; pressing one opens the book over the decoder and the signals, every known code a card with its
-## cost and its pay, the rest scrambled, and what's still to learn. Done, or a code picked, puts them back.
+## Laid out as the mockup RadioAir (28 Oct, Matt: "the Radio looks crap"): a tab bar at the band's right; two columns.
+## Down the left (about two thirds) the papers as a shelf of cards, four across and paged, Kev's pile under them; the
+## decoder as one row, three slots, an arrow and what they'll make, the crew and Decrypt under it; the standing codes
+## and the filter at the foot. On the right the signals: the picked one as the full card, the others held as rows
+## that pick, and the empty ones as fixed dashed slots - three places, always.
+##
+## The code book (21 Oct, canvas "The code book and the death pick" 1): pressing a standing code or the filter opens
+## the book over the shelf, the decoder and the signals, every known code a card with its cost and its pay, the rest
+## scrambled, and what's still to learn. Done, or a code picked, or the slot again, puts them back.
 ##
 ## Signals: `acted` after anything changes.
 
@@ -24,49 +28,81 @@ const Words := preload("res://scripts/sim/words.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
 const Town := preload("res://scripts/ui/town.gd")
 const KevStory := preload("res://scripts/ui/kev_story.gd")
+const Dashed := preload("res://scripts/ui/dashed.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
 const BODY_Y := HEAD_H + 8
 const BODY_H := Pal.ROOM_H - BODY_Y
 const COL_GAP := 12
-const PAPERS_W := 404
-const DECODER_W := 420
-const DECODER_X := PAPERS_W + COL_GAP
-const SIGNALS_X := DECODER_X + DECODER_W + COL_GAP
-const SIGNALS_W := Pal.GRID_W - SIGNALS_X
-const HEAD_ROW_H := 62              # a column's head: its title and a line under
-const PAPER_H := 66
-const PAPER_GAP := 8
-const PAPERS_MAX := 5               # a page of them; ‹ › past that (7 till the standing codes' box, 21 Oct)
-const STAND_H := 54                 # a standing code's slot: what it is, the code
-const STAND_GAP := 6
+const BP := 14                      # a box's padding
+# the two columns (28 Oct, RadioAir): the papers, the decoder and the codes down the left; the signals on the right
+const SIGNALS_W := 512
+const LEFT_W := Pal.GRID_W - SIGNALS_W - COL_GAP
+const SIGNALS_X := LEFT_W + COL_GAP
+const LEFT_IW := LEFT_W - 2 * BP
+# down the left: the shelf, the decoder, the standing codes, each a box under the one before
+const PAPERS_Y := BODY_Y
+const SHELF_COLS := 4
+const SHELF_ROWS := 2
+const PAPERS_MAX := SHELF_COLS * SHELF_ROWS     # a page of them; ‹ › past that
+const PAPER_H := 74
+const PAPER_GAP := 10
+const SHELF_TOP := 44
+const KEV_Y := SHELF_TOP + SHELF_ROWS * (PAPER_H + PAPER_GAP) + 2     # Kev's pile, a row under the shelf
+const KEV_H := 44
+const PAPERS_H := KEV_Y + KEV_H + 12
+const DECODER_Y := PAPERS_Y + PAPERS_H + COL_GAP
+const SLOT_TOP := 44
+const SLOT_H := 112
+const SLOT_GAP := 8
+const SLOT_W := 200
+const ARROW_W := 40
+const MAKE_X := BP + 3 * SLOT_W + 2 * SLOT_GAP + ARROW_W
+const MAKE_W := LEFT_W - BP - MAKE_X
+const CREW_Y := SLOT_TOP + SLOT_H + 14
+const CREW_H := 48                  # the crew to call: any, or an area's for Kev's notes (20 Oct)
+const CREW_W := 118
+const NOTE_Y := CREW_Y + CREW_H + 4
+const DECODER_H := NOTE_Y + 22 + 10
+const STAND_Y := DECODER_Y + DECODER_H + COL_GAP
+const STAND_H := Pal.ROOM_H - STAND_Y
+const STAND_TOP := 46
+const STAND_SLOT_H := 72            # a standing code's slot: what it is, the code
+const STAND_GAP := 10
 const BOOK_KINDS := ["standing0", "standing1", "filter"]
-const BOOK_COLS := 3
-const BOOK_ROWS := 5
-const BOOK_CARD_H := 96
+# the code book over the shelf, the decoder and the signals; the standing codes stay under it to shut it again
+const BOOK_H := STAND_Y - COL_GAP - BODY_Y
+const BOOK_COLS := 5
+const BOOK_ROWS := 3
+const BOOK_CARD_H := 110
 const BOOK_GAP := 8
 const BOOK_TOP := 92                # the cards under the title and the line
 const LEARN_FROM := {"paper": "off papers", "zone": "in the zones", "deep": "deep"}
 const LEARNT := {"paper": "Learnt off a paper", "zone": "Learnt in a zone", "deep": "Learnt off a deep paper"}
-const SLOT_H := 92                 # (104 till the crew row came under the make box, 20 Oct)
-const CREW_H := 40                  # the crew to call: any, or an area's for Kev's notes (20 Oct)
-const SLOT_GAP := 12
-const MAKE_H := 112
-const CARD_H := 520                 # the picked signal (21 Oct: 470, and the crew's row under Set off)
-const CREW_ROW_Y := 446              # the crew's odds (21 Oct): a button a class played, the one out first
+# the signals' column: the picked card, then the other two places - a held signal's row, or an empty dashed slot
+const SIG_IW := SIGNALS_W - 2 * BP
+const CARD_TOP := 42
+const CREW_ROW_Y := 408              # the crew's odds (21 Oct): a button a class played, the one out first
 const CREW_MAX := 6                 # every class played (24 Oct: the sixth, the Recruit, had no button); Data.CLASSES.size(), held by the smoke
-const CRAFT_H := 50
-const OTHER_H := 70
+const CREW_COLS := 3                # the card's narrower now: three a row, a second row for the rest (28 Oct)
+const CREW_BH := 50
+const CARD_H := CREW_ROW_Y + 2 * (CREW_BH + 6) + 4     # the picked signal at its tallest: every class in two rows
+const CRAFT_H := 48
+const OTHER_H := 56
+const OTHER_GAP := 8
 const OTHERS_MAX := 2
-const VIEW_W := 170
-const VIEW_H := 28
-const VIEW_Y := 88
+const PLACES := 3                   # Data.SIGNALS_HELD: the column's three places, held or empty (the smoke holds them equal)
+# the tab bar (28 Oct, RadioAir): bigger, at the band's right, on its own dark strip so the painting can't swallow it
+const VIEW_W := 152
+const VIEW_H := 44
+const VIEW_GAP := 8
+const VIEW_Y := 30
+const VIEWS_X := Pal.GRID_W - PAD - 4 * VIEW_W - 3 * VIEW_GAP
 const HEARD_X := 470
 const HEARD_Y := HEAD_H - 44
 const BITE := Color("ee7663")
 const SPARE_NAME := ["", "A second paper", "A third paper"]     # an empty slot past the first paper (20 Oct)
-const KEV_H := 96                  # Kev's pile, under the decoder
 const KEV := Color("f0a868")        # Kev's voice's colour (the radio line's mockup, approved 16 Oct)
 const STORY := Color("8fb3d9")      # Kev's story's papers and signals (the mockup's blue)
 const PAY := Color("62bd8f")
@@ -91,18 +127,24 @@ var _atlas
 var _town
 var _story                         # Kev's story, the fourth view (20 Oct)
 var _views: Array = []
+var _view_bar: Panel                # the tab bar's strip (28 Oct)
+var _view_note: Label               # under it while the views are shut: what opens them
 var _quiet: Array = []              # nothing on the air: the lines before the Quartermaster
 # the papers
 var _papers_box: Panel
 var _papers_title: Label
 var _papers_sub: Label
-var _paper_rows: Array = []         # {button, name, code, badge, id}
+var _paper_rows: Array = []         # {button, name, code, id}
+var _paper_more: Control            # the shelf's next place, dashed: where papers come from
+var _paper_more_line: Label
 var _paper_prev: Button
 var _paper_next: Button
 var _paper_page: Label
+var _stand_box: Panel
 var _stand_head: Label
+var _stand_sub: Label
 var _stand: Array = []              # the three slots, standing 1 and 2 and the filter: {button, top, name, kind}
-# the code book, over the decoder and the signals
+# the code book, over the shelf, the decoder and the signals
 var book_kind := ""                 # "" shut, else the slot it's open for (BOOK_KINDS)
 var book_page := 0
 var _book: Panel
@@ -118,17 +160,19 @@ var _book_pages: Label
 # the decoder
 var _decoder_box: Panel
 var _decoder_title: Label
-var _slots: Array = []              # {panel, n, name, code}
+var _slots: Array = []              # {panel, dash, n, name, code}
+var _arrow: Label
 var _make_box: Panel
 var _make_head: Label
 var _make: Label
 var _make_sub: Label
 var _make_sub2: Label
+var _crew_head: Label
 var _decrypt: Button
 var _crew_buttons: Array = []       # any crew, the Estate's, the Town's, the City's
 var crew_pick := -1                 # the crew to call, -1 any
 var _decrypt_note: Label
-var _kev_box: Panel                 # Kev's pile (16 Oct): a plain paper for notes
+var _kev_box: Panel                 # Kev's pile (16 Oct): a plain paper for notes; a row under the shelf (28 Oct)
 var _kev_head: Label
 var _kev_line: Label
 var _kev: Button
@@ -152,6 +196,7 @@ var _bin: Button
 var _empty: Label
 var _empty2: Label
 var _others: Array = []             # {button, name, line, odds}
+var _places: Array = []             # the empty places, dashed: {box, name, line}
 var _shown := ""
 # the decrypt (16 Oct, item 20; the UI pass canvas): the new signal's card coming through, about 2.5 s; the sim's
 # signal is made at the press, this is only the look of it, and a tap (the button, or the card) skips to the end
@@ -187,6 +232,7 @@ func _init() -> void:
 	_heard = UI.label(head, Rect2(HEARD_X + 140, HEARD_Y, Pal.GRID_W - PAD - HEARD_X - 140, 28), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_build_papers()
 	_build_decoder()
+	_build_stand()
 	_build_signals()
 	_build_book()
 	visibility_changed.connect(func():
@@ -212,59 +258,82 @@ func _init() -> void:
 	_story = KevStory.new()
 	_story.visible = false
 	add_child(_story)
+	# the tab bar over every view's band (28 Oct, RadioAir: "not small buttons lost in the painting")
+	_view_bar = UI.panel(self, Rect2(VIEWS_X - 6, VIEW_Y - 6, Pal.GRID_W - PAD - VIEWS_X + 12, VIEW_H + 12), UI.box(Color(Pal.BG, 0.86), 10, 1, Pal.CARD_LINE))
 	for k in range(VIEWS.size()):
-		var vb := UI.button(self, Rect2(Pal.GRID_W - PAD - (VIEWS.size() - k) * (VIEW_W + 6) + 6, VIEW_Y, VIEW_W, VIEW_H), false)
-		vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+		var vb := UI.button(self, Rect2(VIEWS_X + k * (VIEW_W + VIEW_GAP), VIEW_Y, VIEW_W, VIEW_H), false)
+		vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
 		vb.pressed.connect(_pick_view.bind(VIEWS[k]))
 		_views.append(vb)
+	_view_note = UI.label(self, Rect2(VIEWS_X - 6, VIEW_Y + VIEW_H + 12, Pal.GRID_W - PAD - VIEWS_X + 12, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	UI.shadow(_view_note)
 
 
+## The papers as a shelf (28 Oct, Matt: "the Radio looks crap"; RadioAir): four across, two rows a page, each card a
+## paper's name and its code under it; Kev's story's in the story blue, the picked ones edged; Kev's pile a row under.
 func _build_papers() -> void:
-	_papers_box = UI.panel(self, Rect2(0, BODY_Y, PAPERS_W, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-	var iw: float = PAPERS_W - 2 * 14
-	_papers_title = UI.label(_papers_box, Rect2(14, 10, iw, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_papers_sub = UI.label(_papers_box, Rect2(14, 34, iw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_papers_box = UI.panel(self, Rect2(0, PAPERS_Y, LEFT_W, PAPERS_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_papers_title = UI.label(_papers_box, Rect2(BP, 10, 260, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_papers_sub = UI.label(_papers_box, Rect2(BP + 270, 10, LEFT_IW - 270 - 170, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var cw: float = (LEFT_IW - (SHELF_COLS - 1) * PAPER_GAP) / float(SHELF_COLS)
 	for k in range(PAPERS_MAX):
 		var b := Button.new()
-		b.position = Vector2(14, HEAD_ROW_H + k * (PAPER_H + PAPER_GAP))
-		b.size = Vector2(iw, PAPER_H)
+		@warning_ignore("integer_division")
+		b.position = Vector2(BP + (k % SHELF_COLS) * (cw + PAPER_GAP), SHELF_TOP + (k / SHELF_COLS) * (PAPER_H + PAPER_GAP))
+		b.size = Vector2(cw, PAPER_H)
 		b.focus_mode = Control.FOCUS_ALL
 		b.pressed.connect(_toggle_paper.bind(k))
 		_papers_box.add_child(b)
 		var r := {"button": b, "id": -1}
-		r["name"] = UI.label(b, Rect2(12, 6, iw - 80, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["code"] = UI.label(b, Rect2(12, 34, iw - 24, 24), "", "Regular", Pal.CELL_TEXT - 1, PAY, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["badge"] = UI.label(b, Rect2(iw - 46, 8, 34, 22), "IN", "SemiBold", Pal.CELL_TEXT - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
-		r["badge"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 4, 1, Pal.ACCENT))
+		r["name"] = UI.label(b, Rect2(12, 10, cw - 24, 28), "", "SemiBold", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["code"] = UI.label(b, Rect2(12, 40, cw - 24, 24), "", "Regular", Pal.CELL_TEXT - 2, PAY, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_paper_rows.append(r)
-	var py: float = HEAD_ROW_H + PAPERS_MAX * (PAPER_H + PAPER_GAP)
-	_paper_prev = UI.button(_papers_box, Rect2(14, py, 44, 32), false)     # 44: the arrow needs 42 (16 Oct, the smoke with a page of 30)
+	_paper_more = Dashed.new(Vector2(cw, PAPER_H))
+	_papers_box.add_child(_paper_more)
+	_paper_more_line = UI.label(_paper_more, Rect2(14, 0, cw - 28, PAPER_H), "Papers come off signals", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the pages at the title row's right
+	var px: float = LEFT_W - BP - 44 - 56 - 44 - 8
+	_paper_prev = UI.button(_papers_box, Rect2(px, 6, 44, 32), false)     # 44: the arrow needs 42 (16 Oct, the smoke with a page of 30)
 	_paper_prev.text = "‹"
 	_paper_prev.pressed.connect(func(): _turn(-1))
-	_paper_next = UI.button(_papers_box, Rect2(14 + 104, py, 44, 32), false)
+	_paper_page = UI.label(_papers_box, Rect2(px + 48, 6, 56, 32), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_paper_next = UI.button(_papers_box, Rect2(px + 108, 6, 44, 32), false)
 	_paper_next.text = "›"
 	_paper_next.pressed.connect(func(): _turn(1))
-	_paper_page = UI.label(_papers_box, Rect2(14 + 46, py, 56, 32), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
-	# the Dial's standing codes and Clear air's filter (9 Oct): a box at the column's foot (21 Oct, the canvas), each
-	# slot opening the code book
-	py += 44
-	_stand_head = UI.label(_papers_box, Rect2(14, py, iw, 22), "STANDING CODES · EVERY SITE", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece, and no signal from either): a row under
+	# the shelf, his words and his button (28 Oct, RadioAir)
+	_kev_box = UI.panel(_papers_box, Rect2(BP, KEV_Y, LEFT_IW, KEV_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
+	_kev_head = UI.label(_kev_box, Rect2(12, 0, 236, KEV_H), "KEV'S PILE · PLAIN PAPERS ONLY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kev = UI.button(_kev_box, Rect2(LEFT_IW - 6 - 230, 5, 230, KEV_H - 10), false)
+	_kev.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+	_kev.pressed.connect(_on_kev)
+	_kev_line = UI.label(_kev_box, Rect2(256, 0, LEFT_IW - 256 - 248, KEV_H), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+
+
+## The Dial's standing codes and Clear air's filter (9 Oct): a box at the left column's foot (21 Oct, the canvas; 28 Oct,
+## RadioAir: three side by side), each slot opening the code book.
+func _build_stand() -> void:
+	_stand_box = UI.panel(self, Rect2(0, STAND_Y, LEFT_W, STAND_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_stand_head = UI.label(_stand_box, Rect2(BP, 10, 340, 26), "THE STANDING CODES AND THE FILTER", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_stand_sub = UI.label(_stand_box, Rect2(BP + 350, 10, LEFT_IW - 350, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var sw: float = (LEFT_IW - (BOOK_KINDS.size() - 1) * STAND_GAP) / float(BOOK_KINDS.size())
 	for k in range(BOOK_KINDS.size()):
 		var sb := Button.new()
-		sb.position = Vector2(14, py + 26 + k * (STAND_H + STAND_GAP))
-		sb.size = Vector2(iw, STAND_H)
+		sb.position = Vector2(BP + k * (sw + STAND_GAP), STAND_TOP)
+		sb.size = Vector2(sw, STAND_SLOT_H)
 		sb.focus_mode = Control.FOCUS_ALL
 		sb.pressed.connect(open_book.bind(str(BOOK_KINDS[k])))
-		_papers_box.add_child(sb)
+		_stand_box.add_child(sb)
 		var t := {"button": sb, "kind": BOOK_KINDS[k]}
-		t["top"] = UI.label(sb, Rect2(12, 4, iw - 24, 20), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		t["name"] = UI.label(sb, Rect2(12, 24, iw - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["top"] = UI.label(sb, Rect2(14, 10, sw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["name"] = UI.label(sb, Rect2(14, 34, sw - 28, 28), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_stand.append(t)
 
 
 func _build_book() -> void:
-	var bw: float = Pal.GRID_W - DECODER_X
-	_book = UI.panel(self, Rect2(DECODER_X, BODY_Y, bw, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	var bw: float = Pal.GRID_W
+	_book = UI.panel(self, Rect2(0, BODY_Y, bw, BOOK_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_book.mouse_filter = Control.MOUSE_FILTER_STOP     # over the shelf: a press on the book isn't a paper's under it
 	_book.visible = false
 	_book_title = UI.label(_book, Rect2(16, 12, bw - 32 - 140, 36), "", "SemiBold", Pal.TITLE - 4, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_book_sub = UI.label(_book, Rect2(16, 52, bw - 32 - 140, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -281,11 +350,11 @@ func _build_book() -> void:
 		b.pressed.connect(_pick_book.bind(k))
 		_book.add_child(b)
 		var c := {"button": b, "code": ""}
-		c["name"] = UI.label(b, Rect2(12, 8, cw - 24 - 76, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["on"] = UI.label(b, Rect2(cw - 12 - 76, 12, 76, 22), "on now", "Regular", Pal.CELL_TEXT - 3, Pal.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT, false)
-		c["line"] = UI.label(b, Rect2(12, 40, cw - 24, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["name"] = UI.label(b, Rect2(12, 10, cw - 24 - 76, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["on"] = UI.label(b, Rect2(cw - 12 - 76, 14, 76, 22), "on now", "Regular", Pal.CELL_TEXT - 3, Pal.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		c["line"] = UI.label(b, Rect2(12, 46, cw - 24, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var ch := Chips.new(cw - 24, 4)
-		ch.position = Vector2(12, 40)
+		ch.position = Vector2(12, 46)
 		b.add_child(ch)
 		c["chips"] = ch
 		for n2 in [c["name"], c["on"], c["line"]]:
@@ -370,68 +439,65 @@ func _pick_book(k: int) -> void:
 	acted.emit()
 
 
+## The decoder as one row (28 Oct, RadioAir): three slots side by side - an empty one dashed, saying what it does - an
+## arrow, and what they'll make; the crew to call and Decrypt under it, its note under that.
 func _build_decoder() -> void:
-	_decoder_box = UI.panel(self, Rect2(DECODER_X, BODY_Y, DECODER_W, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-	var iw: float = DECODER_W - 2 * 14
-	_decoder_title = UI.label(_decoder_box, Rect2(14, 10, iw, 26), "THE DECODER · ONE TO THREE PAPERS", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_decoder_box = UI.panel(self, Rect2(0, DECODER_Y, LEFT_W, DECODER_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_decoder_title = UI.label(_decoder_box, Rect2(BP, 10, LEFT_IW, 26), "THE DECODER · ONE TO THREE PAPERS", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(Data.SIGNAL_PAPERS):
-		var p := UI.panel(_decoder_box, Rect2(14, 46 + k * (SLOT_H + SLOT_GAP), iw, SLOT_H), UI.box(Pal.BG, 7, 1, Pal.CARD_LINE))
+		var p := UI.panel(_decoder_box, Rect2(BP + k * (SLOT_W + SLOT_GAP), SLOT_TOP, SLOT_W, SLOT_H), UI.box(Pal.BG, 7, 1, Pal.CARD_LINE))
 		var sl := {"panel": p}
-		sl["n"] = UI.label(p, Rect2(14, 8, iw - 28, 20), "%d" % (k + 1), "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		sl["name"] = UI.label(p, Rect2(14, 30, iw - 28, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		sl["code"] = UI.label(p, Rect2(14, 62, iw - 28, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		sl["dash"] = Dashed.new(p.size)
+		p.add_child(sl["dash"])
+		sl["n"] = UI.label(p, Rect2(14, 10, SLOT_W - 28, 20), "%d" % (k + 1), "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		sl["name"] = UI.label(p, Rect2(14, 36, SLOT_W - 28, 30), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		sl["code"] = UI.label(p, Rect2(14, 70, SLOT_W - 28, 26), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_slots.append(sl)
-	var my: float = 46 + Data.SIGNAL_PAPERS * (SLOT_H + SLOT_GAP)
-	_make_box = UI.panel(_decoder_box, Rect2(14, my, iw, MAKE_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
-	_make_head = UI.label(_make_box, Rect2(14, 8, iw - 28, 22), "WHAT THEY'LL MAKE", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_make = UI.label(_make_box, Rect2(14, 32, iw - 28, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_make_sub = UI.label(_make_box, Rect2(14, 62, iw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_make_sub2 = UI.label(_make_box, Rect2(14, 84, iw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_arrow = UI.label(_decoder_box, Rect2(BP + 3 * SLOT_W + 2 * SLOT_GAP, SLOT_TOP, ARROW_W, SLOT_H), "→", "SemiBold", Pal.TITLE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_make_box = UI.panel(_decoder_box, Rect2(MAKE_X, SLOT_TOP, MAKE_W, SLOT_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
+	var mw: float = MAKE_W - 28
+	_make_head = UI.label(_make_box, Rect2(14, 8, mw, 22), "WHAT THEY'LL MAKE", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_make = UI.label(_make_box, Rect2(14, 30, mw, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_make_sub = UI.label(_make_box, Rect2(14, 62, mw, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_make_sub2 = UI.label(_make_box, Rect2(14, 84, mw, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the crew to call (20 Oct, Matt: "you can't really target farm what you are short of"): any, or an area's for notes
-	var cy: float = my + MAKE_H + 8
-	var cw: float = (iw - 3 * 6) / 4.0
+	_crew_head = UI.label(_decoder_box, Rect2(BP, CREW_Y, 52, CREW_H), "Crew", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(4):
-		var cb := UI.button(_decoder_box, Rect2(14 + k * (cw + 6), cy, cw, CREW_H), false)
-		cb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+		var cb := UI.button(_decoder_box, Rect2(BP + 56 + k * (CREW_W + 6), CREW_Y, CREW_W, CREW_H), false)
+		cb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
 		cb.pressed.connect(_pick_crew.bind(k if k > 0 else -1))
 		_crew_buttons.append(cb)
-	var dy: float = cy + CREW_H + 8
-	_decrypt = UI.button(_decoder_box, Rect2(14, dy, iw, 56), true)
+	_decrypt = UI.button(_decoder_box, Rect2(MAKE_X, CREW_Y, MAKE_W, CREW_H), true)
 	_decrypt.text = "Decrypt"
 	_decrypt.pressed.connect(_on_decrypt)
-	_decrypt_note = UI.label(_decoder_box, Rect2(14, dy + 62, iw, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
-	# Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece, and no signal from either)
-	var ky: float = dy + 62 + 30
-	_kev_box = UI.panel(_decoder_box, Rect2(14, ky, iw, KEV_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
-	_kev_head = UI.label(_kev_box, Rect2(12, 6, iw - 24, 20), "KEV'S PILE · PLAIN PAPERS ONLY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_kev_line = UI.label(_kev_box, Rect2(12, 26, iw - 24, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_kev = UI.button(_kev_box, Rect2(12, 52, iw - 24, 36), false)
-	_kev.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
-	_kev.pressed.connect(_on_kev)
+	var nx: float = BP + 56 + 4 * (CREW_W + 6)                # the note under Decrypt, from the crew row's end: its longer reasons fit
+	_decrypt_note = UI.label(_decoder_box, Rect2(nx, NOTE_Y, LEFT_W - BP - nx, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 
+## The signals (28 Oct, RadioAir): "SIGNALS · n OF 3 HELD", the picked one as its full card, then the column's other
+## places - a held signal as a row that picks, an empty one dashed, saying how one's made.
 func _build_signals() -> void:
 	_signals_box = UI.panel(self, Rect2(SIGNALS_X, BODY_Y, SIGNALS_W, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-	var iw: float = SIGNALS_W - 2 * 14
-	_signals_title = UI.label(_signals_box, Rect2(14, 10, iw, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card = UI.panel(_signals_box, Rect2(14, 46, iw, CARD_H), UI.box(Pal.CARD, 8, 2, Pal.ACCENT))
+	var iw: float = SIG_IW
+	_signals_title = UI.label(_signals_box, Rect2(BP, 10, iw, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card = UI.panel(_signals_box, Rect2(BP, CARD_TOP, iw, CARD_H), UI.box(Pal.CARD, 8, 2, Pal.ACCENT))
 	var cw: float = iw - 2 * 16
-	_card_kicker = UI.label(_card, Rect2(16, 10, cw - 150, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_title = UI.label(_card, Rect2(16, 32, cw - 150, 40), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_line = UI.label(_card, Rect2(16, 74, cw, 26), "", "Regular", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_odds = UI.label(_card, Rect2(16 + cw - 150, 26, 150, 40), "", "SemiBold", Pal.TITLE, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT)
-	_card_odds_sub = UI.label(_card, Rect2(16 + cw - 150, 62, 150, 20), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_card_tiles = UI.tile_row(_card, 16, 108, cw, 3)
+	_card_kicker = UI.label(_card, Rect2(16, 8, cw - 130, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_title = UI.label(_card, Rect2(16, 28, cw - 130, 38), "", "SemiBold", Pal.TITLE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_line = UI.label(_card, Rect2(16, 66, cw, 24), "", "Regular", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_odds = UI.label(_card, Rect2(16 + cw - 130, 22, 130, 40), "", "SemiBold", Pal.TITLE, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT)
+	_card_odds_sub = UI.label(_card, Rect2(16 + cw - 130, 8, 130, 18), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_card_tiles = UI.tile_row(_card, 16, 94, cw, 3)
 	_card_codes = Chips.new(cw, 8)
-	_card_codes.position = Vector2(16, 180)
+	_card_codes.position = Vector2(16, 162)
 	_card.add_child(_card_codes)
-	_card_kev = UI.label(_card, Rect2(16, 258, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_kev2 = UI.label(_card, Rect2(16, 282, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_kev = UI.label(_card, Rect2(16, 250, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_kev2 = UI.label(_card, Rect2(16, 272, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var n: int = SIM_CRAFTS.size()
 	var crw: float = (cw - (n - 1) * 8) / n
 	for k in range(n):
 		var b := Button.new()
-		b.position = Vector2(16 + k * (crw + 8), 318)
+		b.position = Vector2(16 + k * (crw + 8), 302)
 		b.size = Vector2(crw, CRAFT_H)
 		b.focus_mode = Control.FOCUS_ALL
 		b.pressed.connect(_craft.bind(SIM_CRAFTS[k]))
@@ -442,43 +508,50 @@ func _build_signals() -> void:
 		t["words"] = UI.label(b, Rect2(10, 24, crw - 20, 22), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_crafts.append(t)
 	var bw: float = (cw - 8) / 3.0
-	_set_off = UI.button(_card, Rect2(16, 380, bw * 2, 56), true)
+	_set_off = UI.button(_card, Rect2(16, 356, bw * 2, 46), true)
 	_set_off.text = "Set off"
 	_set_off.pressed.connect(_on_set_off)
-	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 380, bw, 56), false)
+	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 356, bw, 46), false)
 	_bin.text = "Bin it"
 	_bin.pressed.connect(_on_bin)
-	var cbw: float = (cw - (CREW_MAX - 1) * 6) / CREW_MAX
+	var cbw: float = (cw - (CREW_COLS - 1) * 6) / CREW_COLS
 	for k in range(CREW_MAX):
 		var cb := Button.new()
-		cb.position = Vector2(16 + k * (cbw + 6), CREW_ROW_Y)
-		cb.size = Vector2(cbw, 60)
+		@warning_ignore("integer_division")
+		cb.position = Vector2(16 + (k % CREW_COLS) * (cbw + 6), CREW_ROW_Y + (k / CREW_COLS) * (CREW_BH + 6))
+		cb.size = Vector2(cbw, CREW_BH)
 		cb.focus_mode = Control.FOCUS_ALL
 		cb.pressed.connect(_on_crew.bind(k))
 		_card.add_child(cb)
 		UI.style_button(cb, false)
 		var t := {"button": cb, "cls": ""}
-		t["name"] = UI.label(cb, Rect2(8, 4, cbw - 16, 26), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		t["odds"] = UI.label(cb, Rect2(8, 30, cbw - 16, 24), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["name"] = UI.label(cb, Rect2(10, 2, cbw - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["odds"] = UI.label(cb, Rect2(10, 24, cbw - 20, 22), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		for n2 in [t["name"], t["odds"]]:
 			n2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cb.visible = false
 		_crew_btns.append(t)
 	_build_dec(cw)
-	_empty = UI.label(_signals_box, Rect2(28, 60, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_empty2 = UI.label(_signals_box, Rect2(28, 88, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(OTHERS_MAX):
 		var b := Button.new()
-		b.position = Vector2(14, 46 + CARD_H + 12 + k * (OTHER_H + 8))
 		b.size = Vector2(iw, OTHER_H)
 		b.focus_mode = Control.FOCUS_ALL
 		b.pressed.connect(_pick_other.bind(k))
 		_signals_box.add_child(b)
 		var o := {"button": b, "k": -1}
-		o["name"] = UI.label(b, Rect2(14, 6, iw - 150, 28), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		o["line"] = UI.label(b, Rect2(14, 36, iw - 150, 24), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		o["odds"] = UI.label(b, Rect2(iw - 130, 18, 116, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 4, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT)
+		o["name"] = UI.label(b, Rect2(14, 4, iw - 28, 26), "", "SemiBold", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		o["line"] = UI.label(b, Rect2(14, 28, iw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		o["odds"] = UI.label(b, Rect2(iw - 130, 12, 116, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 4, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT)
 		_others.append(o)
+	for k in range(PLACES):
+		var d := Dashed.new(Vector2(iw, OTHER_H))
+		_signals_box.add_child(d)
+		var e := {"box": d}
+		e["name"] = UI.label(d, Rect2(16, 4, iw - 32, 26), "An empty slot", "SemiBold", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		e["line"] = UI.label(d, Rect2(16, 28, iw - 32, 22), "Decrypt papers on the left to make a signal", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_places.append(e)
+	_empty = UI.label(_signals_box, Rect2(BP + 2, 0, iw - 4, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_empty2 = UI.label(_signals_box, Rect2(BP + 2, 0, iw - 4, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
 const SIM_CRAFTS := ["tune", "retune", "twist"]
@@ -617,13 +690,16 @@ func show_state(s) -> void:
 	sim = s
 	if view != "air" and not sim.campaign_done():
 		view = "air"
-	_views[0].text = "The air"
-	_views[1].text = "The Dial" if sim.campaign_done() else "The Dial · locked"
-	_views[1].disabled = not sim.campaign_done()
-	_views[2].text = "The town" if sim.campaign_done() else "The town · locked"     # the rebuild (18 Oct): its cards read shut till Kev's story is done
-	_views[2].disabled = not sim.campaign_done()
-	_views[3].text = "The story" if sim.campaign_done() else "The story · locked"
-	_views[3].disabled = not sim.campaign_done()
+	# the tabs (28 Oct): a shut one says so when it fits, and the note under the bar says what opens them
+	var open: bool = sim.campaign_done()
+	UI.fit_button(_views[0], ["The air"])
+	UI.fit_button(_views[1], ["The Dial"] if open else ["The Dial · locked", "The Dial"])
+	UI.fit_button(_views[2], ["The town"] if open else ["The town · locked", "The town"])     # the rebuild (18 Oct): its cards read shut till Kev's story is done
+	UI.fit_button(_views[3], ["The story"] if open else ["The story · locked", "The story"])
+	for k in range(1, VIEWS.size()):
+		_views[k].disabled = not open
+	UI.fit(_view_note, ["" if open else "The Dial, the town and the story open after the Quartermaster", "" if open else "Locked till the Quartermaster"])
+	_view_note.visible = not open
 	for k in range(VIEWS.size()):
 		UI.style_button(_views[k], view == VIEWS[k])
 	_air.visible = view == "air"
@@ -664,9 +740,10 @@ func show_state(s) -> void:
 	_show_heard()
 	if book_kind != "" and not (on_air and book_open(book_kind)):
 		book_kind = ""
-	_papers_box.visible = on_air
+	_papers_box.visible = on_air and book_kind == ""     # the book over the shelf too (28 Oct): the standing codes under it shut it
 	_decoder_box.visible = on_air and book_kind == ""
 	_signals_box.visible = on_air and book_kind == ""
+	_stand_box.visible = on_air
 	_book.visible = on_air and book_kind != ""
 	var quiet: Array = Words.RADIO_QUIET if not on_air else []
 	for k in range(_quiet.size()):
@@ -675,10 +752,11 @@ func show_state(s) -> void:
 			UI.fit(_quiet[k], [str(quiet[k]), ""])
 	if not on_air:
 		return
-	_show_papers()
+	_show_stand()
 	if book_kind != "":
 		_show_book()
 		return
+	_show_papers()
 	_show_decoder()
 	_show_signals(od)
 
@@ -722,11 +800,16 @@ func _show_papers() -> void:
 	var pages: int = maxi(1, ceili(float(papers.size()) / PAPERS_MAX))
 	paper_page = clampi(paper_page, 0, pages - 1)
 	UI.fit(_papers_title, ["THE PAPERS · %d OF %d" % [papers.size(), Data.PILE_CAP], "THE PAPERS · %d" % papers.size()])     # the pile's cap (23 Oct)
+	# the line beside the title, from its end to the pages (28 Oct)
+	_papers_sub.position.x = BP + ceilf(UI.text_width(_papers_title, _papers_title.text)) + 16
+	var sub_end: float = (_paper_prev.position.x - 12.0) if pages > 1 else float(LEFT_W - BP)
+	_papers_sub.size.x = sub_end - _papers_sub.position.x
 	# the two kinds, each with its count of the three (16 Oct): a story piece never hides that the plain ones are short
 	var plain: int = papers.filter(func(x): return sim.story_of(x) < 0).size()
 	var story: int = sim.story_held().size()
 	var kinds: String = "Plain %d%s" % [plain, (" · Kev's story %d of 3" % story) if story > 0 else ""]
-	UI.fit(_papers_sub, [kinds + " · pick one to three", kinds, "Plain %d" % plain] if not papers.is_empty() else ["None held: they're found searching, or off Kev's pile", "None held", ""])
+	UI.fit(_papers_sub, [kinds + " · pick one to three into the decoder", kinds + " · pick one to three", kinds, "Plain %d" % plain] if not papers.is_empty() else ["None held: they're found searching, or off Kev's pile", "None held", ""])
+	var shown := 0
 	for k in range(PAPERS_MAX):
 		var r: Dictionary = _paper_rows[k]
 		var n: int = paper_page * PAPERS_MAX + k
@@ -734,48 +817,53 @@ func _show_papers() -> void:
 		if not r["button"].visible:
 			r["id"] = -1
 			continue
+		shown += 1
 		var it: Dictionary = papers[n]
 		r["id"] = int(it["id"])
 		var rare: bool = int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT
-		UI.fit(r["name"], [str(it["base"]) + (" · rare" if rare else "")])
+		UI.fit(r["name"], [str(it["base"]) + (" · rare" if rare else ""), str(it["base"])])
 		r["name"].add_theme_color_override("font_color", Pal.tone_color(Pal.item_tone(it)) if int(it.get("rarity", 0)) > 0 else Pal.TEXT)
 		var beat: int = sim.story_of(it)
 		if beat >= 0:
 			var bn: String = str(Data.STORY_BEATS[beat]["name"]).to_lower()
-			UI.fit(r["code"], ["Kev's story · %s · %d of 3 found" % [bn, sim.story_held().size()] if beat == sim.story_now() else "Kev's story · %s" % bn, "Kev's story"])
+			UI.fit(r["code"], ["Kev's story · %s · %d of 3 found" % [bn, sim.story_held().size()] if beat == sim.story_now() else "Kev's story · %s" % bn, "Kev's story · %s" % bn, "Kev's story"])
 			r["code"].add_theme_color_override("font_color", STORY)
 		else:
 			var cw: Array = code_words(str(it["base"]))
 			UI.fit(r["code"], ([str(cw[0][0]) + " · one deeper"] if rare else []) + cw[0])
 			r["code"].add_theme_color_override("font_color", cw[1])
+		# picked: edged in the accent, thicker; Kev's story's in its blue (28 Oct, RadioAir: the badges went for the edges)
 		var on: bool = int(it["id"]) in chosen
-		r["badge"].visible = on or beat >= 0
-		r["badge"].text = "IN" if on else "STORY"
-		r["badge"].size.x = 34 if on else 62
-		r["badge"].position.x = r["button"].size.x - 12 - r["badge"].size.x
-		r["badge"].add_theme_color_override("font_color", Pal.ACCENT if on else STORY)
-		r["badge"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 4, 1, Pal.ACCENT if on else STORY))
 		var edge: Color = Pal.ACCENT if on else (STORY if beat >= 0 else Pal.CARD_LINE)
-		r["button"].add_theme_stylebox_override("normal", UI.box(Pal.CARD, 7, 2 if on else 1, edge))
+		var ground: Color = Pal.CARD.blend(Color(STORY, 0.08)) if beat >= 0 and not on else Pal.CARD
+		r["button"].add_theme_stylebox_override("normal", UI.box(ground, 7, 2 if on else 1, edge))
 		r["button"].add_theme_stylebox_override("hover", UI.box(Pal.BUTTON, 7, 2 if on else 1, edge))
+		r["button"].add_theme_stylebox_override("pressed", UI.box(Pal.BUTTON_PRESS, 7, 2 if on else 1, edge))
+		r["button"].add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 7, 2, Pal.TEXT))
+	# the shelf's next place on the last page, dashed: where more come from
+	_paper_more.visible = shown < PAPERS_MAX
+	if _paper_more.visible:
+		_paper_more.position = _paper_rows[shown]["button"].position
+		UI.fit(_paper_more_line, ["Papers come off signals and searches", "Papers come off signals", "More papers"])
 	_paper_prev.visible = pages > 1
 	_paper_next.visible = pages > 1
 	_paper_page.visible = pages > 1
 	_paper_page.text = "%d/%d" % [paper_page + 1, pages]
 	_paper_prev.disabled = paper_page == 0
 	_paper_next.disabled = paper_page >= pages - 1
-	var any_open: bool = BOOK_KINDS.any(func(kd): return book_open(str(kd)))
-	_stand_head.visible = any_open
+
+
+## The standing codes' three slots (28 Oct): side by side at the left column's foot, shut ones saying so.
+func _show_stand() -> void:
+	UI.fit(_stand_sub, ["Pressing one opens the code book" + (": press it again to put it back" if book_kind != "" else ""), "Pressing one opens the code book", ""])
 	for t in _stand:
 		var b: Button = t["button"]
 		var kind: String = str(t["kind"])
-		b.visible = any_open
-		if not any_open:
-			continue
 		var open: bool = book_open(kind)
 		var what: String = "Filter" if kind == "filter" else "Standing %d" % (int(kind.trim_prefix("standing")) + 1)
 		var state: String = "picking" if book_kind == kind else ("never heard" if kind == "filter" else "every site")
-		UI.fit(t["top"], ["%s · %s" % [what, state if open else "not open yet"], what])
+		var opener: String = "Clear air" if kind == "filter" else ("the Relay" if kind == "standing0" else "the whole band")
+		UI.fit(t["top"], ["%s · %s" % [what, state] if open else "%s · not open yet · %s on the Dial" % [what, opener], "%s · %s" % [what, state if open else "not open yet"], what])
 		var now: String = _book_now(kind) if open else ""
 		UI.fit(t["name"], [now if now != "" else ("None" if open else "Shut")])
 		t["name"].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_3)
@@ -861,16 +949,21 @@ func _show_decoder() -> void:
 		var sl: Dictionary = _slots[k]
 		var it: Dictionary = _paper(chosen[k]) if k < chosen.size() else {}
 		var on: bool = not it.is_empty()
-		(sl["panel"] as Panel).add_theme_stylebox_override("panel", UI.box(Pal.BG, 7, 2 if on else 1, Pal.ACCENT if on else Pal.CARD_LINE))
+		# an empty slot dashed, saying what it does (28 Oct, RadioAir); a full one edged in the accent
+		(sl["panel"] as Panel).add_theme_stylebox_override("panel", UI.box(Pal.BG, 7, 2, Pal.ACCENT) if on else UI.box(Color(0, 0, 0, 0), 7))
+		sl["dash"].visible = not on
 		var spare: bool = not on and k > 0 and k >= chosen.size() and not chosen.is_empty() and sim.story_of(_paper(chosen[0])) < 0     # 20 Oct: one paper makes a signal, more make it stronger
 		sl["n"].text = "%d · optional" % (k + 1) if spare else "%d" % (k + 1)
-		UI.fit(sl["name"], [str(it["base"]) + (" · rare" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "")] if on else ([SPARE_NAME[k]] if spare else ["A paper from the left"]))
+		var base: String = str(it.get("base", ""))
+		UI.fit(sl["name"], [base + (" · rare" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else ""), base] if on else ([SPARE_NAME[k]] if spare else ["A paper from the left", "A paper here"]))
 		sl["name"].add_theme_color_override("font_color", Pal.TEXT if on else Pal.TEXT_3)
 		var more: Dictionary = sim.signal_grade(k + 1)
-		var cw: Array = code_words(str(it["base"])) if on else ([["%s signal, room for %d codes" % [more["name"], int(more["codes"])], "Room for %d codes" % int(more["codes"])], Pal.TEXT_3] if spare else [[""], Pal.TEXT_3])
+		var idle: Array = ["Click one on the shelf", "From the shelf"] if k == 0 else ["More make it stronger", ""]
+		var cw: Array = code_words(base) if on else ([["%s signal, room for %d codes" % [more["name"], int(more["codes"])], "Room for %d codes" % int(more["codes"])], Pal.TEXT_3] if spare else [idle, Pal.TEXT_3])
 		if on and sim.story_of(it) >= 0:
 			cw = [["Kev's story · %s" % str(Data.STORY_BEATS[sim.story_of(it)]["name"]).to_lower(), "Kev's story"], STORY]
 		UI.fit(sl["code"], cw[0])
+		sl["code"].add_theme_color_override("font_color", cw[1])
 	var band: Array = sim.signal_band(chosen)
 	var gr: Dictionary = sim.signal_grade(chosen.size())
 	UI.fit(_make_head, ["%s · %s" % ["WHAT IT'LL MAKE" if chosen.size() == 1 else "WHAT THEY'LL MAKE", str(gr["name"]).to_upper()], str(gr["name"]).to_upper()] if not chosen.is_empty() else ["WHAT THEY'LL MAKE"])
@@ -920,9 +1013,13 @@ func _show_signals(od: Array) -> void:
 	_empty.visible = n == 0
 	_empty2.visible = n == 0
 	if n == 0:
-		UI.wrap([_empty, _empty2], "No signals held. One to three papers in the decoder make one: a fix on a site, a crew from anywhere, run once.")     # 20 Oct: one to three; "campaign" a banned word on screen
 		for o in _others:
 			o["button"].visible = false
+			o["k"] = -1
+		var y_end: float = _lay_places(CARD_TOP, 0)
+		_empty.position.y = y_end + 8
+		_empty2.position.y = y_end + 34
+		UI.wrap([_empty, _empty2], "No signals held. One to three papers in the decoder make one: a fix on a site, a crew from anywhere, run once.")     # 20 Oct: one to three; "campaign" a banned word on screen
 		return
 	var sg: Dictionary = sim.signal_at(selected)
 	var e: Dictionary = sim.signal_read(selected)
@@ -985,6 +1082,8 @@ func _show_signals(od: Array) -> void:
 	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
 	UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
 	_show_crew()
+	# the column's other places under the card (28 Oct, RadioAir): the signals held as rows that pick, then the empty
+	var y: float = CARD_TOP + _card.size.y + OTHER_GAP
 	var k := 0
 	for j in range(n):
 		if j == selected or k >= OTHERS_MAX:
@@ -993,6 +1092,8 @@ func _show_signals(od: Array) -> void:
 		var og: Dictionary = sim.signal_at(j)
 		o["k"] = j
 		o["button"].visible = true
+		o["button"].position = Vector2(BP, y)
+		y += OTHER_H + OTHER_GAP
 		UI.fit(o["name"], ["%s · level %d · the %s crew" % [sim.signal_place(og), sim.signal_level(og), str(Data.ZONES[int(og["zone"])]["name"]).replace("The ", "")], "%s · level %d" % [sim.signal_place(og), sim.signal_level(og)]])
 		var names: Array = sim.signal_words(og).map(func(x): return str(x["w"]))
 		var extra: String = ((" · %s at full strength" % Words.mid(sim.signal_head_name(og))) if bool(og.get("head", false)) else "") + (" · a convoy may come" if bool(og.get("convoy", false)) else "")
@@ -1003,6 +1104,18 @@ func _show_signals(od: Array) -> void:
 		_others[k]["button"].visible = false
 		_others[k]["k"] = -1
 		k += 1
+	_lay_places(y, n)
+
+
+## The empty places from `y` down, dashed: as many as the column has left after `held`. Returns the y under them.
+func _lay_places(y: float, held: int) -> float:
+	for k in range(_places.size()):
+		var e: Dictionary = _places[k]
+		e["box"].visible = k < PLACES - held
+		if e["box"].visible:
+			e["box"].position = Vector2(BP, y)
+			y += OTHER_H + OTHER_GAP
+	return y
 
 
 func _paper(id: int) -> Dictionary:
@@ -1090,6 +1203,12 @@ func _show_crew() -> void:
 		t["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if bool(o[1]) else Pal.TEXT_3)
 		UI.style_button(t["button"], k == best and not out_now)
 		t["button"].disabled = out_now or sim.on_mission()
+	# the card as tall as its crew rows (28 Oct: three a row on the narrower card), the decrypt's panel with it
+	var rows: int = ceili(float(mini(played.size(), CREW_MAX)) / CREW_COLS) if on_show else 0
+	var h: float = CREW_ROW_Y + rows * (CREW_BH + 6) + 4 if rows > 0 else CREW_ROW_Y + 2
+	if not is_equal_approx(_card.size.y, h):
+		_card.size.y = h
+		_dec.size.y = h
 
 
 func _on_crew(k: int) -> void:
@@ -1153,26 +1272,24 @@ func _reset_map() -> void:
 
 
 func text_nodes() -> Array:
+	var out: Array = _views.duplicate()
+	out.append(_view_note)
 	if view == "map":
-		return _views + _atlas.text_nodes()
+		return out + _atlas.text_nodes()
 	if view == "town":
-		return _views + _town.text_nodes()
+		return out + _town.text_nodes()
 	if view == "story":
-		return _views + _story.text_nodes()
-	var out: Array = [_kicker, _headline, _unit, _sub, _heard] + _views
+		return out + _story.text_nodes()
+	out.append_array([_kicker, _headline, _unit, _sub, _heard])
 	out.append_array(_chips.text_nodes())
 	for l in _quiet:
 		if l.visible:
 			out.append(l)
-	if not _papers_box.visible:
+	if not _stand_box.visible:
 		return out
-	out.append_array([_papers_title, _papers_sub])
-	if _decoder_box.visible:
-		out.append_array([_decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _signals_title, _kev_head, _kev_line, _kev])
-	if _stand_head.visible:
-		out.append(_stand_head)
-		for t in _stand:
-			out.append_array([t["top"], t["name"]])
+	out.append_array([_stand_head, _stand_sub])
+	for t in _stand:
+		out.append_array([t["top"], t["name"]])
 	if _book.visible:
 		out.append_array([_book_title, _book_sub, _book_done])
 		for c in _book_cards:
@@ -1189,18 +1306,20 @@ func text_nodes() -> Array:
 			out.append_array(_book_left.text_nodes())
 		if _book_pages.visible:
 			out.append(_book_pages)
+		return out
+	out.append_array([_papers_title, _papers_sub, _kev_head, _kev_line, _kev, _paper_more_line])
 	for r in _paper_rows:
 		if r["button"].visible:
 			out.append_array([r["name"], r["code"]])
-	for sl in _slots:
-		if _decoder_box.visible:
-			out.append_array([sl["name"], sl["code"]])
 	if _paper_page.visible:
 		out.append(_paper_page)
-	if not _signals_box.visible:
-		return out
+	out.append_array([_decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _crew_head, _decrypt])
+	out.append_array(_crew_buttons)
+	for sl in _slots:
+		out.append_array([sl["n"], sl["name"], sl["code"]])
+	out.append(_signals_title)
 	if _card.visible:
-		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2])
+		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin])
 		for t in _card_tiles:
 			out.append_array([t["key"], t["value"]])
 		out.append_array(_card_codes.text_nodes())
@@ -1212,6 +1331,9 @@ func text_nodes() -> Array:
 	for o in _others:
 		if o["button"].visible:
 			out.append_array([o["name"], o["line"]])
+	for e in _places:
+		if e["box"].visible:
+			out.append_array([e["name"], e["line"]])
 	if _empty.visible:
 		out.append_array([_empty, _empty2])
 	return out
@@ -1225,3 +1347,4 @@ func line_pairs() -> Array:
 	if view == "story":
 		return _story.line_pairs()
 	return [[_headline, _unit]]
+

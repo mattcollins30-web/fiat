@@ -9845,6 +9845,74 @@ func _gear_gate_checks(main) -> void:
 	print("gear gated by level ok: the padlock and its level, Equip at, the arrow and Equip if better pass it, at the level it goes on; an old save refused")
 
 
+## The Radio's layout (28 Oct, the mockups RadioAir and RadioDial; Matt: "the Radio looks crap"): the tab bar inside the
+## band at its right; two columns, inside the room and apart; the shelf four across; the decoder's three slots in one
+## row with what they'll make beside them; the signals' three places, held or dashed, inside their column; the story's
+## three beats in a row, each its three paper slots.
+func _radio_layout_checks(main) -> void:
+	var rd = main._radio
+	var band := Rect2(rd.global_position, Vector2(Pal.GRID_W, rd.HEAD_H))
+	var room := Rect2(rd.global_position, Vector2(Pal.GRID_W, Pal.ROOM_H))
+	for k in range(rd._views.size()):
+		var vb: Button = rd._views[k]
+		_check(band.encloses(Rect2(vb.global_position, vb.size)) and vb.size.x >= 140.0 and vb.size.y >= 40.0, "the Radio's tab %d isn't a proper tab inside the band: %s" % [k, str(Rect2(vb.global_position, vb.size))])
+		if k > 0:
+			_check(vb.global_position.x >= rd._views[k - 1].global_position.x + rd._views[k - 1].size.x and is_equal_approx(vb.global_position.y, rd._views[0].global_position.y), "the Radio's tabs %d and %d aren't one row" % [k - 1, k])
+	_check(rd._views[0].global_position.x >= rd._kicker.global_position.x + rd._kicker.size.x and band.encloses(Rect2(rd._view_bar.global_position, rd._view_bar.size)), "the tab bar isn't at the band's right")
+	var left := Rect2(rd._papers_box.global_position, rd._papers_box.size)
+	var sig := Rect2(rd._signals_box.global_position, rd._signals_box.size)
+	_check(room.encloses(sig) and left.end.x <= sig.position.x and sig.size.x < left.size.x, "the Radio's two columns: shelf %s, signals %s" % [str(left), str(sig)])
+	for bx in [rd._papers_box, rd._decoder_box, rd._stand_box]:
+		var r := Rect2(bx.global_position, bx.size)
+		_check(room.encloses(r) and is_equal_approx(r.size.x, left.size.x), "a left-hand box runs out of the room or its column: %s" % str(r))
+	_check(rd._papers_box.position.y + rd._papers_box.size.y <= rd._decoder_box.position.y and rd._decoder_box.position.y + rd._decoder_box.size.y <= rd._stand_box.position.y, "the shelf, the decoder and the standing codes aren't one under the other")
+	# the shelf four across, every card inside the box
+	var pr0: Button = rd._paper_rows[0]["button"]
+	for k in range(rd.PAPERS_MAX):
+		var b: Button = rd._paper_rows[k]["button"]
+		_check(Rect2(Vector2.ZERO, rd._papers_box.size).encloses(Rect2(b.position, b.size)), "the shelf's card %d runs out of its box" % k)
+		if k % rd.SHELF_COLS > 0:
+			_check(is_equal_approx(b.position.y, rd._paper_rows[k - 1]["button"].position.y) and b.position.x >= rd._paper_rows[k - 1]["button"].position.x + pr0.size.x, "the shelf's cards %d and %d aren't side by side" % [k - 1, k])
+	# the decoder's three slots in one row, the arrow and what they'll make after them, the crew and Decrypt under
+	for k in range(rd._slots.size()):
+		var p: Panel = rd._slots[k]["panel"]
+		_check(Rect2(Vector2.ZERO, rd._decoder_box.size).encloses(Rect2(p.position, p.size)), "the decoder's slot %d runs out of its box" % k)
+		if k > 0:
+			var q: Panel = rd._slots[k - 1]["panel"]
+			_check(is_equal_approx(p.position.y, q.position.y) and p.position.x >= q.position.x + q.size.x, "the decoder's slots %d and %d aren't one row" % [k - 1, k])
+		_check(rd._slots[k]["dash"].visible == (k >= rd.chosen.size()), "the decoder's slot %d: dashed %s with %d in" % [k, str(rd._slots[k]["dash"].visible), rd.chosen.size()])
+	var last: Panel = rd._slots.back()["panel"]
+	_check(rd._make_box.position.x >= last.position.x + last.size.x and is_equal_approx(rd._make_box.position.y, last.position.y) and rd._make_box.position.x + rd._make_box.size.x <= rd._decoder_box.size.x, "what they'll make isn't after the slots on their row")
+	_check(rd._decrypt.position.y >= last.position.y + last.size.y and rd._crew_buttons.all(func(b): return b.position.y >= last.position.y + last.size.y and b.position.x + b.size.x <= rd._decrypt.position.x), "the crew and Decrypt aren't under the slots")
+	# the signals' three places: the card, the held as rows, the rest dashed - inside the column, none on another
+	var places: Array = []
+	if rd._card.visible:
+		places.append(Rect2(rd._card.position, rd._card.size))
+	for o in rd._others:
+		if o["button"].visible:
+			places.append(Rect2(o["button"].position, o["button"].size))
+	for e in rd._places:
+		if e["box"].visible:
+			places.append(Rect2(e["box"].position, e["box"].size))
+	_check(places.size() == Data.SIGNALS_HELD and rd.PLACES == Data.SIGNALS_HELD, "the signals' column shows %d places for %d" % [places.size(), Data.SIGNALS_HELD])
+	for k in range(places.size()):
+		_check(Rect2(Vector2.ZERO, rd._signals_box.size).encloses(places[k]), "the signals' place %d runs out of its column: %s" % [k, str(places[k])])
+		for j in range(k):
+			_check(not places[k].intersects(places[j]), "the signals' places %d and %d sit on each other" % [j, k])
+	# Kev's story: three beats in a row, each its three slots in a row inside it, the words under the row
+	var ks = rd._story
+	for k in range(ks._beats.size()):
+		var bp: Panel = ks._beats[k]["panel"]
+		_check(Rect2(Vector2.ZERO, Vector2(Pal.GRID_W, Pal.ROOM_H)).encloses(Rect2(bp.position, bp.size)) and is_equal_approx(bp.position.y, ks._beats[0]["panel"].position.y), "the story's beat %d isn't on the row" % k)
+		if k > 0:
+			var bq: Panel = ks._beats[k - 1]["panel"]
+			_check(bp.position.x >= bq.position.x + bq.size.x, "the story's beats %d and %d overlap" % [k - 1, k])
+		for i in range(3):
+			var sb: Panel = ks._beats[k]["slots"][i]["box"]
+			_check(Rect2(Vector2.ZERO, bp.size).encloses(Rect2(sb.position, sb.size)) and (i == 0 or sb.position.x >= ks._beats[k]["slots"][i - 1]["box"].position.x + sb.size.x), "the story's beat %d slot %d is off its row" % [k, i])
+		_check(ks._side.position.y >= bp.position.y + bp.size.y and ks._side.position.y + ks._side.size.y <= Pal.ROOM_H, "the story's words aren't under its row")
+
+
 ## Signals (15 Oct, endgame_radio.md, signals_radio.png): three papers decrypt into a held signal - a campaign site, a
 ## crew from any zone, a depth in the reach's band (one deeper with a rare paper), each paper's code; the papers
 ## spent; three held at most. Read, the site carries it and goes back; run, it's gone from the Radio, the site carries
@@ -10025,6 +10093,7 @@ func _signal_checks(main) -> void:
 	main.refresh()
 	_check(rd._card.visible and rd._card_title.text == str(Data.TIERS[i]["name"]) and rd._papers_box.visible, "the Radio doesn't show the signal held: '%s'" % rd._card_title.text)
 	_check_fit(main, "the Radio's signals")
+	_radio_layout_checks(main)
 	rd._toggle_paper(0)
 	rd._toggle_paper(1)
 	rd._toggle_paper(2)
@@ -10900,8 +10969,8 @@ func _kev_checks(main) -> void:
 	_check(rd._kev.disabled and rd._kev.text.contains("%d notes" % price), "short of notes, Ask Kev reads '%s', %s" % [rd._kev.text, "off" if rd._kev.disabled else "on"])
 	_check(sim.ask_kev().is_empty() and sim.notes == price - 1, "Kev sold a paper on credit")
 	var kb := Rect2(rd._kev_box.global_position, rd._kev_box.size)
-	var dbox := Rect2(rd._decoder_box.global_position, rd._decoder_box.size)
-	_check(dbox.encloses(kb), "Kev's pile leaves the decoder's column: %s in %s" % [str(kb), str(dbox)])
+	var dbox := Rect2(rd._papers_box.global_position, rd._papers_box.size)
+	_check(dbox.encloses(kb), "Kev's pile leaves the shelf's box: %s in %s" % [str(kb), str(dbox)])     # a row under the shelf since 28 Oct (RadioAir)
 	main._radio.view = kept_view
 	sim.load_dict(saved)
 	main.show_room(main.OVERVIEW)
@@ -14159,36 +14228,61 @@ func _map_nodes_checks(main) -> void:
 	sim.load_dict(hold)
 
 
-## The map in the Caravan's shape (Map-A, 7 Oct): the tiles in three columns, the pips as the ranks, the taken
-## tiles lined, the sum strip, and the panel filled by a pick with a rank taken through it.
+## The map in the Caravan's shape (Map-A, 7 Oct); the Dial as columns (28 Oct, RadioDial): every region a column, every
+## node and filler a tile inside it, none on another; the taken tiles lit; the sum strip; and the panel filled by a
+## pick with a rank taken through it.
 func _map_screen_checks(main) -> void:
 	var sim = main.sim
 	var at = main._radio._atlas
 	var wv = at.web()
-	# the Map's web (22 Oct): every atlas node and every filler on the canvas, none on another, the whole Dial in view
+	# every atlas node and every filler a tile, inside its region's column, none on another, all in the Dial's room
 	var ids: Array = []
 	for t in Data.MAP_WEB:
 		for i in range(t["nodes"].size()):
 			ids.append("%s/%d" % [t["name"], i])
-	_check(at.visible and wv.visible and ids.size() == Data.ATLAS_ALL.size() and ids.size() >= Data.ATLAS.size() + 24, "the Map's web has %d nodes for %d atlas nodes" % [ids.size(), Data.ATLAS_ALL.size()])
+	_check(at.visible and wv.visible and ids.size() == Data.ATLAS_ALL.size() and ids.size() >= Data.ATLAS.size() + 24, "the Dial has %d nodes for %d atlas nodes" % [ids.size(), Data.ATLAS_ALL.size()])
 	for a in Data.ATLAS:
-		_check(Data.map_id(a["key"]) != "", "%s is not on the Map's web" % a["key"])
+		_check(Data.map_id(a["key"]) != "", "%s is not on the Dial" % a["key"])
+	_check(wv.col_rects.size() == Data.MAP_WEB.size(), "the Dial has %d columns for %d regions" % [wv.col_rects.size(), Data.MAP_WEB.size()])
+	for c in range(wv.col_rects.size()):
+		var cr: Rect2 = wv.col_rects[c]
+		_check(cr.position.x >= 0.0 and cr.end.x <= wv.size.x + 0.5 and cr.end.y <= wv.size.y + 0.5, "the Dial's column %d runs out of its room: %s" % [c, str(cr)])
+		if c > 0:
+			_check(cr.position.x >= wv.col_rects[c - 1].end.x, "the Dial's columns %d and %d overlap" % [c - 1, c])
+	var outside := 0
+	for id in ids:
+		_check(wv.layout.has(id), "%s has no tile on the Dial" % id)
+		var c: int = Data.MAP_WEB.map(func(t): return t["name"]).find(str(id).get_slice("/", 0))
+		if not wv.col_rects[c].grow(-2.0).encloses(wv.layout[id]):
+			outside += 1
+			if outside <= 3:
+				_check(false, "%s's tile %s runs out of its column %s" % [id, str(wv.layout[id]), str(wv.col_rects[c])])
+	_check(outside == 0, "%d Dial tiles run out of their column" % outside)
 	var overlaps := 0
 	for a_i in range(ids.size()):
 		for b_i in range(a_i + 1, ids.size()):
-			var pa: Vector2 = wv.layout[ids[a_i]]
-			var pb: Vector2 = wv.layout[ids[b_i]]
-			if pa.distance_to(pb) < wv.radius_of(wv.node_of(ids[a_i])) + wv.radius_of(wv.node_of(ids[b_i])) + 4.0:
+			if wv.layout[ids[a_i]].grow(1.0).intersects(wv.layout[ids[b_i]]):
 				overlaps += 1
-	_check(overlaps == 0, "%d pairs of Map nodes sit on each other" % overlaps)
-	wv.focus_all()
-	for id in ids:
-		var p: Vector2 = wv.to_screen(wv.layout[id])
-		_check(p.x >= -1.0 and p.y >= -1.0 and p.x <= wv.size.x + 1.0 and p.y <= wv.size.y + 1.0, "%s is off the Dial's canvas at the whole zoom" % id)
+				if overlaps <= 3:
+					_check(false, "the Dial's tiles %s and %s sit on each other" % [ids[a_i], ids[b_i]])
+	_check(overlaps == 0, "%d pairs of Dial tiles sit on each other" % overlaps)
+	# the spine down the middle, the entry at the top and the keystone at the foot; a filler smaller than a node
+	for t in Data.MAP_WEB:
+		var e: Rect2 = wv.layout["%s/0" % t["name"]]
+		var ks: Rect2 = wv.layout["%s/3" % t["name"]]
+		var c: int = Data.MAP_WEB.find(t)
+		var mid: float = wv.col_rects[c].get_center().x
+		_check(absf(e.get_center().x - mid) < 2.0 and absf(ks.get_center().x - mid) < 2.0 and e.position.y < ks.position.y, "%s's spine isn't down the middle, entry over keystone" % t["name"])
+		for i in range(t["nodes"].size()):
+			var r: Rect2 = wv.layout["%s/%d" % [t["name"], i]]
+			if t["nodes"][i].get("filler", false):
+				_check(r.size.y < e.size.y and r.size.x < e.size.x, "%s's filler %d is no smaller than a node" % [t["name"], i])
+			elif float(t["nodes"][i]["at"][1]) != 0.0:
+				_check(absf(r.get_center().x - mid) > e.size.x * 0.5, "%s's branch node %d sits on the spine" % [t["name"], i])
 	wv.show_state(sim)
 	for key in sim.atlas:
 		if sim.atlas_rank(key) > 0 and Data.map_id(key) != "":
-			_check(wv.state_of(Data.map_id(key)).get("taken", false), "%s is ranked and the canvas doesn't show it" % key)
+			_check(wv.state_of(Data.map_id(key)).get("taken", false), "%s is ranked and the Dial doesn't show it" % key)
 	var taken := 0
 	for key in sim.atlas:
 		if sim.atlas_rank(key) > 0 and not Data.atlas_of(key).get("filler", false):
@@ -14199,13 +14293,14 @@ func _map_screen_checks(main) -> void:
 		var keys: Array = t["nodes"].filter(func(n): return not n.get("filler", false)).map(func(n): return n["key"])
 		var last: Dictionary = Data.atlas_of(t["nodes"][3]["key"])
 		_check(keys.size() == (12 if t["column"] != 2 else 11) and last.get("keystone", false), "%s is not its nodes with the keystone at the spine's end" % t["name"])
+	_check(wv._tiles[Data.map_id("lie_of_the_land")]["line"].text.begins_with("keystone") or sim.atlas_rank("lie_of_the_land") > 0, "the keystone's tile doesn't say so: '%s'" % wv._tiles[Data.map_id("lie_of_the_land")]["line"].text)
 	at._pick("lie_of_the_land")
+	_check(at._pic.visible == (at.WebView.picture("map_lie_of_the_land") != null) and (not at._pic.visible or at._title.position.x >= at._pic.position.x + at._pic.size.x), "the Dial's pick doesn't show its painted picture, or its words sit on it")
 	_check((at._title.text.to_lower().contains("wants a path") or at._title.text.to_lower().contains("opens at %d points" % Data.MAP_KEYSTONE_POINTS) or sim.can_rank_atlas("lie_of_the_land")) and (at._take.disabled or sim.can_rank_atlas("lie_of_the_land")), "a shut node's panel does not say what it needs: '%s'" % at._title.text)
-	for b in at._web_buttons:
-		_check(b.visible, "a Dial web button is hidden")
-	at._web_buttons[3].pressed.emit()
-	_check(wv.zoom > 0.3, "The codes button did not zoom the canvas")
-	at._web_buttons[0].pressed.emit()
+	# a tile pressed picks it; the panel's words keep clear of its buttons
+	wv._tiles[Data.map_id("quiet_roads")]["button"].pressed.emit()
+	_check(at.selected == "quiet_roads" and wv.selected == Data.map_id("quiet_roads"), "a Dial tile pressed didn't pick it: '%s'" % at.selected)
+	_check(at._title.position.y + at._title.size.y <= at._take.position.y and at._words.position.x + at._words.size.x <= at._take.position.x, "the Dial panel's words run under its buttons")
 	# a pick fills the panel; a rank through it takes; the pips follow
 	var rank0: int = sim.atlas_rank("quiet_roads")
 	sim.atlas_points += 1
@@ -14214,6 +14309,7 @@ func _map_screen_checks(main) -> void:
 	_check(at._words.position.y >= at._chips.position.y + Chips.CHIP_H, "the map panel's sentence sits on its chips")
 	at._on_take()
 	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.to_lower().begins_with("quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
+	_check(wv.state_of(Data.map_id("quiet_roads"))["taken"] and wv._tiles[Data.map_id("quiet_roads")]["line"].text.contains("%d of 3" % (rank0 + 1)), "the ranked tile doesn't say its rank: '%s'" % wv._tiles[Data.map_id("quiet_roads")]["line"].text)
 	_check_fit(main, "Runs (the map, picked)")
 	sim.atlas_points -= 1                 # the point lent above goes back: the save check after counts them
 
@@ -16542,7 +16638,7 @@ func _web_checks(main) -> void:
 	# no link through a node that isn't one of its ends (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so
 	# Keen read as the next step): every link's drawn path clears every other node by 2 px past its radius, on the
 	# three canvases; the ones that had to bend round counted
-	for cv in [wv, main._radio._atlas._web]:
+	for cv in [wv]:     # the Dial's tiles in columns since 28 Oct (RadioDial): no canvas of its own
 		if cv == null:
 			continue
 		var through := 0
@@ -16591,7 +16687,7 @@ func _web_checks(main) -> void:
 	# every node at its pictured size (23 Oct, Matt: art in every node): the three canvases hold it before the art lands
 	var WV = load("res://scripts/ui/web_view.gd")
 	WV.assume_pics = true
-	for cv in [wv, main._radio._atlas._web]:
+	for cv in [wv]:     # the Dial's tiles in columns since 28 Oct (RadioDial): no canvas of its own
 		if cv == null:
 			continue
 		var cids: Array = cv.layout.keys()
@@ -16603,12 +16699,11 @@ func _web_checks(main) -> void:
 		_check(cover == 0, "%s: %d pairs of nodes overlap at their pictured size" % [cv.get_script().resource_path.get_file(), cover])
 	WV.assume_pics = false
 	_check(wv.radius_of({"name": "Nothing drawn here"}) == wv.R_PLAIN and wv.R_SMALL_PIC > wv.R_PLAIN and wv.R_FILLER_PIC > wv.R_FILLER, "a small node without a picture isn't plain, or the pictured sizes don't grow")
-	_check(main._radio._atlas._web.picture_slug({"name": "Light fingers", "filler": true}).begins_with("map_f_"), "the Dial's fillers borrow Training's pictures")
 	_check(main._barracks.web().picture_slug({"name": "Clean shot", "skill": "clean_shot"}) == "skill/clean_shot", "a skill node doesn't take the skill's own picture")
 	# the frame's calls (23 Oct, Matt's fans: ~2,500 a frame at the whole web): the nodes from the one atlas, the links
 	# a colour at a time, the words a size at a time - each canvas under BATCH_MAX at its whole view and close in, and
 	# every picture, glyph and emblem packed
-	for cv in [wv, main._radio._atlas._web]:
+	for cv in [wv]:     # the Dial's tiles in columns since 28 Oct (RadioDial): no canvas of its own
 		if cv == null:
 			continue
 		var cam_was: Vector2 = cv.cam

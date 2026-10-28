@@ -1,34 +1,42 @@
 extends Control
 ## The Radio's fourth view, Kev's story (20 Oct, Matt: "where are the story beats explained or displayed once you
-## complete a mission?"; the canvas "Fiat – The playtest batch", KevStory): the three beats down the left - its
-## name, beaten or on now, his lines when its signal was made and when it was beaten - and on the right what's on now:
-## the beat's papers held and wanted, or past the third, the depot again and what it's for.
+## complete a mission?"; the canvas "Fiat – The playtest batch", KevStory). Laid out as the mockup RadioDial's story
+## (28 Oct, Matt: "the Radio looks crap"): the three beats in a row, each its name, beaten or on now, its three paper
+## slots - held in the story blue, wanted dashed, the beats to come scrambled - and his lines when its signal was made
+## and when it was beaten; under the row what's on now: the beat's papers held and wanted, or past the third, the
+## depot again and what it's for.
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
+const Dashed := preload("res://scripts/ui/dashed.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
 const BODY_Y := HEAD_H + 8
 const BODY_H := Pal.ROOM_H - BODY_Y
 const GAP := 12
-const SIDE_W := 520                 # what's on now
-const LIST_W := Pal.GRID_W - SIDE_W - GAP
+const SIDE_H := 316                 # what's on now, under the row: the beats as tall as their slots and his six lines
 @warning_ignore("integer_division")
-const BEAT_H := (BODY_H - 2 * GAP) / 3
+const BEAT_W := (Pal.GRID_W - 2 * GAP) / 3
+const BEAT_H := BODY_H - SIDE_H - GAP
 const CP := 16
-const LINE_H := 28
-const QUOTE_LINES := 2              # a line of Kev's, over two at most
+const SLOT_TOP := 64
+const SLOT_H := 88
+const SLOT_GAP := 8
+const LINE_H := 30
+const QUOTE_TOP := SLOT_TOP + SLOT_H + 22
+const QUOTE_LINES := 3              # a line of Kev's, over three at most in a beat's third of the row
+const SIDE_LINE_W := 1000           # the side's words wrap short of the panel's width: a paragraph, not one long line
 
 var sim
 var _kicker: Label
 var _headline: Label
 var _unit: Label
 var _sub: Label
-var _beats: Array = []              # {panel, name, state, made: [Label], won: [Label]}
+var _beats: Array = []              # {panel, name, state, slots: [{box, dash, name, state}], made: [Label], won: [Label]}
 var _side: Panel
 var _side_head: Label
 var _side_lines: Array = []
@@ -44,24 +52,33 @@ func _init() -> void:
 	_headline = UI.label(head, Rect2(PAD, 32, 200, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 400, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_sub = UI.label(head, Rect2(PAD, 78, 820, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var iw: float = LIST_W - 2 * CP
+	var iw: float = BEAT_W - 2 * CP
+	var sw: float = (iw - 2 * SLOT_GAP) / 3.0
 	for k in range(Data.STORY_BEATS.size()):
-		var p := UI.panel(self, Rect2(0, BODY_Y + k * (BEAT_H + GAP), LIST_W, BEAT_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+		var p := UI.panel(self, Rect2(k * (BEAT_W + GAP), BODY_Y, BEAT_W, BEAT_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 		var c := {"panel": p}
-		c["name"] = UI.label(p, Rect2(CP, 10, iw, 32), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["state"] = UI.label(p, Rect2(CP, 10, iw, 32), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		c["name"] = UI.label(p, Rect2(CP, 14, iw, 34), "", "SemiBold", Pal.FLOOR - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["state"] = UI.label(p, Rect2(CP, 14, iw, 34), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		c["slots"] = []
+		for i in range(3):
+			var box := UI.panel(p, Rect2(CP + i * (sw + SLOT_GAP), SLOT_TOP, sw, SLOT_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
+			var sl := {"box": box}
+			sl["dash"] = Dashed.new(box.size)
+			box.add_child(sl["dash"])
+			sl["name"] = UI.label(box, Rect2(10, 16, sw - 20, 26), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			sl["state"] = UI.label(box, Rect2(10, 46, sw - 20, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+			c["slots"].append(sl)
 		c["made"] = []
 		c["won"] = []
 		for i in range(QUOTE_LINES):
-			c["made"].append(UI.label(p, Rect2(CP, 48 + i * LINE_H, iw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+			c["made"].append(UI.label(p, Rect2(CP, QUOTE_TOP + i * LINE_H, iw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		for i in range(QUOTE_LINES):
-			c["won"].append(UI.label(p, Rect2(CP, 48 + (QUOTE_LINES + i) * LINE_H + 6, iw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+			c["won"].append(UI.label(p, Rect2(CP, QUOTE_TOP + (QUOTE_LINES + i) * LINE_H + 14, iw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_beats.append(c)
-	_side = UI.panel(self, Rect2(LIST_W + GAP, BODY_Y, SIDE_W, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-	var sw: float = SIDE_W - 2 * CP
-	_side_head = UI.head(_side, Rect2(CP, 14, sw, UI.HEAD_H), "")
-	for i in range(9):
-		_side_lines.append(UI.label(_side, Rect2(CP, 14 + UI.HEAD_H + 10 + i * LINE_H, sw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_side = UI.panel(self, Rect2(0, BODY_Y + BEAT_H + GAP, Pal.GRID_W, SIDE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_side_head = UI.head(_side, Rect2(CP, 14, Pal.GRID_W - 2 * CP, UI.HEAD_H), "")
+	for i in range(7):
+		_side_lines.append(UI.label(_side, Rect2(CP, 14 + UI.HEAD_H + 10 + i * LINE_H, SIDE_LINE_W, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 
 
 func show_state(s) -> void:
@@ -104,6 +121,7 @@ func show_state(s) -> void:
 		for l in c["made"] + c["won"]:
 			l.add_theme_color_override("font_color", KEV)
 		(c["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = STORY if on_now else Pal.CARD_LINE
+		_show_slots(c, k, beaten, on_now, held)
 	# what's on now: the beat's papers, or the depot again past the third
 	var lines: Array = []
 	var beat: int = sim.story_now()
@@ -125,6 +143,37 @@ func show_state(s) -> void:
 		else:
 			l.text = ""
 		l.add_theme_color_override("font_color", Pal.TEXT if i >= lines.size() - 2 else Pal.TEXT_2)
+
+
+## A beat's three paper slots (28 Oct): the one on now (or the depot again) its papers held in the story blue and the
+## wanted dashed; a beaten one its three, decrypted; one to come, three dashed, unread.
+func _show_slots(c: Dictionary, k: int, beaten: bool, on_now: bool, held: Array) -> void:
+	var names: Array = sim.story_papers(k)
+	var again: bool = beaten and k == sim.story_now() and sim.story_beat >= Data.STORY_BEATS.size()     # the depot again
+	for i in range(c["slots"].size()):
+		var sl: Dictionary = c["slots"][i]
+		var nm: String = str(names[i]) if i < names.size() else ""
+		var known: bool = beaten or on_now
+		var is_held: bool = (on_now or again) and nm in held
+		var used: bool = beaten and not again
+		var dashed: bool = not (is_held or used)
+		sl["dash"].visible = dashed
+		sl["dash"].set_colour(Color(STORY, 0.55) if (on_now or again) else Dashed.LINE)
+		sl["box"].add_theme_stylebox_override("panel", UI.box(Pal.CARD.blend(Color(STORY, 0.1)), 7, 2, STORY) if is_held else (UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE) if used else UI.box(Color(0, 0, 0, 0), 7)))
+		_fit_name(sl["name"], nm if known else "?")
+		sl["name"].add_theme_color_override("font_color", STORY if is_held else (Pal.TEXT if used else Pal.TEXT_3))
+		UI.fit(sl["state"], ["held" if is_held else ("decrypted" if used else "wanted")] if known else [""])
+		sl["state"].add_theme_color_override("font_color", STORY if is_held else Pal.TEXT_3)
+
+
+## A paper's name at 15, 14 or 13 before it loses its "A" (28 Oct: a slot is a third of a beat's width).
+func _fit_name(l: Label, nm: String) -> void:
+	for sz in [Pal.CELL_TEXT - 1, Pal.CELL_TEXT - 2, Pal.CELL_TEXT - 3]:
+		l.add_theme_font_size_override("font_size", sz)
+		if UI.text_width(l, nm) <= l.size.x:
+			l.text = nm
+			return
+	UI.fit(l, [nm, nm.trim_prefix("A ").trim_prefix("An ")])
 
 
 const KEV := Color("f0a868")        # Kev's voice (the Radio's)
@@ -152,6 +201,8 @@ func text_nodes() -> Array:
 	var out: Array = [_kicker, _headline, _unit, _sub, _side_head]
 	for c in _beats:
 		out.append_array([c["name"], c["state"]])
+		for sl in c["slots"]:
+			out.append_array([sl["name"], sl["state"]])
 		for l in c["made"] + c["won"]:
 			if l.text != "":
 				out.append(l)
