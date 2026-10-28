@@ -963,6 +963,10 @@ func _show_panel() -> void:
 			return
 		_title.text = nd["name"] + (" · capstone" if nd.get("capstone", false) else (" · keystone" if nd.get("keystone", false) else (" · notable" if nd.get("notable", false) else "")))
 		var is_taken: bool = sim.tree.has(selected)
+		var sel_el: String = sim.element_of(selected)
+		var starter: bool = sim.is_element_starter(selected)
+		if starter:
+			is_taken = sim.element_opened(sel_el)     # two a class (28 Oct): a starter is "taken" when this class has it open
 		if nd.has("ring"):
 			# the ring (slice 4): the paragon's node, its points on it of its stack; "trained" is a full one
 			_title.text = "%s · the ring · %d of %d" % [nd["name"], int(sim.ring.get(selected, 0)), int(nd["stack"])]
@@ -993,7 +997,9 @@ func _show_panel() -> void:
 			var jw: String = str(j["words"])
 			jw = jw.substr(0, 1).to_lower() + jw.substr(1)     # mid-line: only its first letter drops (18 Oct: "smgs")
 			tail = ("joined: %s" % jw) if sim.has_joint(j_key) else ("with %s in %s: %s" % [other, other_tree, jw])
-		if is_taken and not sim.node_active(selected) and not sim._active(nd):
+		if sel_el != "" and sim.tree.has(selected) and not sim.element_opened(sel_el):
+			tail = "idle: %s isn't one of the %s's two elements" % [str(selected).get_slice("/", 0), sim.cls]
+		elif is_taken and not sim.node_active(selected) and not sim._active(nd):
 			tail = "idle without %s in hand" % type_words(nd)
 		elif is_taken and not sim.node_active(selected):
 			tail = "idle until a joint in %s is joined again" % str(selected).get_slice("/", 0)
@@ -1012,12 +1018,28 @@ func _show_panel() -> void:
 			_train.visible = true
 			var cost: int = sim.node_cost(selected)
 			_train.text = ("Train (%d paragon point%s)" if nd.has("ring") else "Train (%d point%s)") % [cost, "" if cost == 1 else "s"]
+			if starter:
+				_train.text = ("Open for the %s" % sim.cls) if sim.tree.has(selected) else "Open (1 Pitch point)"
 			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+		elif starter:
+			_train.visible = true                      # one of the class's two: closed for nothing, to open another (28 Oct)
+			_train.text = "Close %s" % str(selected).get_slice("/", 0)
+			_train.disabled = sim.on_mission()
+			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
 	var armed: bool = respec_armed()
-	if selected != "" and sim.is_ring(selected):
+	var rk := _respec_key()
+	if rk == "ring":
 		_respec.text = (Words.ASK["again"] % Words.BUILD["ring_sure"] if armed else Words.BUILD["ring_sure"]) % Fmt.money(sim.paragon_reset_cost())
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
+	elif rk == "pitch":
+		_respec.text = (Words.ASK["again"] % Words.BUILD["pitch_sure"] if armed else Words.BUILD["pitch_sure"]) % Fmt.money(sim.pitch_reset_cost())
+		_respec.disabled = sim.pitch_nodes_spent() == 0 or sim.cash < sim.pitch_reset_cost() or sim.on_mission()
+	elif rk.begins_with("el:"):
+		var el: String = rk.get_slice(":", 1)
+		var el_name: String = str(Data.element_tree_of(el).get("name", el))
+		_respec.text = (Words.ASK["again"] % Words.BUILD["element_sure"] if armed else Words.BUILD["element_sure"]) % [el_name, Fmt.money(sim.element_reset_cost(el))]
+		_respec.disabled = sim.element_spent(el) == 0 or sim.cash < sim.element_reset_cost(el) or sim.on_mission()
 	else:
 		_respec.text = (Words.ASK["again"] % Words.BUILD["reset_sure"] if armed else Words.BUILD["reset_sure"]) % Fmt.money(sim.respec_cost())
 		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
@@ -1149,7 +1171,10 @@ func _on_train() -> void:
 		_pick_class(_armed)                    # the panel's Swap button: the second press (21 Oct, the crew)
 		return
 	_armed = ""
-	if selected != "" and sim.train_node(selected):
+	if selected != "" and sim.is_element_starter(selected) and sim.element_opened(sim.element_of(selected)):
+		if sim.close_element(sim.element_of(selected)):     # the class's element closed, for nothing (28 Oct)
+			acted.emit()
+	elif selected != "" and sim.train_node(selected):
 		acted.emit()
 	show_state(sim)
 
@@ -1161,12 +1186,20 @@ func _on_train() -> void:
 var _respec_arm := Arm.new()
 
 
+## What the reset resets, by the node picked (28 Oct, the three resets): the ring, the Pitch, an element, or the class's trees.
 func _respec_key() -> String:
-	return "ring" if selected != "" and sim.is_ring(selected) else "trees"
+	if selected == "":
+		return "trees"
+	if sim.is_ring(selected):
+		return "ring"
+	if sim.is_pitch(selected):
+		return "pitch"
+	var el: String = sim.element_of(selected)
+	return ("el:" + el) if el != "" else "trees"
 
 
 func _respec_fp() -> String:
-	return "%s|%d|%d" % [selected, sim.tree.size(), sim.paragon_spent()]
+	return "%s|%d|%d|%s" % [selected, sim.tree.size(), sim.paragon_spent(), str(sim.class_elements())]
 
 
 func respec_armed() -> bool:
@@ -1179,12 +1212,22 @@ func _on_respec() -> void:
 		_shown = ""
 		show_state(sim)
 		return
-	var ring_one: bool = selected != "" and sim.is_ring(selected)
-	if not ring_one:
+	var rk := _respec_key()
+	var ring_one: bool = rk == "ring"
+	if rk == "trees":
 		DisplayServer.clipboard_set(sim.build_code())
-	if (sim.paragon_reset() if ring_one else sim.respec()):
-		if not ring_one:
+	var done: bool = false
+	if ring_one:
+		done = sim.paragon_reset()
+	elif rk == "pitch":
+		done = sim.pitch_reset()
+	elif rk.begins_with("el:"):
+		done = sim.element_reset(rk.get_slice(":", 1))
+	else:
+		done = sim.respec()
+		if done:
 			sim.log_event(Words.BUILD["reset_copied"])
+	if done:
 		acted.emit()
 	_shown = ""
 	show_state(sim)

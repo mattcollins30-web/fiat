@@ -384,6 +384,53 @@ func paragon_reset() -> bool:
 	return true
 
 
+## The three resets (28 Oct, Matt: "no way to reset pitch or elemental skill trees"; docs/design/resets_strip_exchange.md):
+## the class's trees (respec), the Pitch's, and an element's, each RESPEC_CASH a point it frees, each leaving the others.
+## The Pitch's and the elements' points are the camp's, so their resets free them for every class.
+func pitch_nodes_spent() -> int:
+	var n := 0
+	for id in tree:
+		if is_pitch(str(id)):
+			n += node_cost(id)
+	return n
+
+
+func pitch_reset_cost() -> int:
+	return _inf(pitch_nodes_spent() * Data.RESPEC_CASH)
+
+
+## The Pitch's nodes back to its points; the elements' starters on its circle stay (they open the elements).
+func pitch_reset() -> bool:
+	if mission != null or pitch_nodes_spent() == 0 or cash < pitch_reset_cost():
+		return false
+	_dry_memo.clear()
+	var paid := pitch_reset_cost()
+	var pts := pitch_nodes_spent()
+	cash -= paid
+	chron("respec", {"cost": paid, "points": pts, "pitch": true})
+	tree = tree.filter(func(id): return not is_pitch(str(id)))
+	log_event("The Pitch reset: its points are free to spend again")
+	return true
+
+
+func element_reset_cost(el: String) -> int:
+	return _inf(element_spent(el) * Data.RESPEC_CASH)
+
+
+## An element's nodes back to its own points; its starter stays, so it stays open for whoever has it.
+func element_reset(el: String) -> bool:
+	if mission != null or element_spent(el) == 0 or cash < element_reset_cost(el):
+		return false
+	_dry_memo.clear()
+	var paid := element_reset_cost(el)
+	var pts := element_spent(el)
+	cash -= paid
+	chron("respec", {"cost": paid, "points": pts, "element": el})
+	tree = tree.filter(func(id): return element_of(str(id)) != el or is_element_starter(str(id)))
+	log_event("%s reset: its points are free to spend again" % str(Data.element_tree_of(el).get("name", el)))
+	return true
+
+
 ## XP in: the runner's to the cap, the rest the crew's paragon.
 func _gain_xp(g: float) -> void:
 	var room := maxf(0.0, Data.xp_for_level(Data.MAX_LEVEL) - xp)
@@ -3051,7 +3098,8 @@ func _active(n: Dictionary) -> bool:
 
 func node_active(id: String) -> bool:
 	var n := node(id)
-	return not n.is_empty() and _active(n)     # the web (22 Oct): an element's top works for anyone who paths to it
+	var el := element_of(id)
+	return not n.is_empty() and _active(n) and (el == "" or element_opened(el))     # the web (22 Oct): an element's top works for anyone who paths to it; an element the class has open (28 Oct)
 
 
 func has_node(effect: String) -> bool:
@@ -3079,13 +3127,13 @@ var _closed := {}                  # joint key -> true, closed
 var _open_tops := {}               # element tree name -> true: its columns 5 and 6 work (a joint closed there, or a trade)
 func _nodes_for(effect: String) -> Array:
 	var cap: bool = has_rule("headmasters_cap")
-	var h := hash([tree, cls, cap])
+	var h := hash([tree, cls, cap, elements_open.get(cls, null)])
 	if h != _eff_hash or _eff_cache.is_empty():
 		_eff_cache = {"": []}
 		_closed = {}
 		_open_tops = {}
 		for j in Data.JOINTS:
-			if j["class"] == cls and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]):
+			if j["class"] == cls and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]) and element_opened(str(Data.element_tree(j["element_tree"]).get("element", ""))):
 				_closed[j["key"]] = true
 				_open_tops[j["element_tree"]] = true
 		var ids: Array = tree.duplicate()
@@ -3101,6 +3149,9 @@ func _nodes_for(effect: String) -> Array:
 			var n := node(id)
 			if n.is_empty():
 				continue
+			var el_n := element_of(str(id))
+			if el_n != "" and not element_opened(el_n):
+				continue                              # an element this class hasn't open: the camp's, not this runner's (28 Oct)
 			var waits: String = ""                # the web (22 Oct): no element top waits on a joint
 			var e: String = n.get("effect", "")
 			if not _eff_cache.has(e):
@@ -3189,11 +3240,62 @@ func is_element_starter(id: String) -> bool:
 	return element_of(id) != "" and Data.web_entry(node(id))
 
 
+## Two elements a class (28 Oct, Matt: two at most; the canvas's "Two elements", B): each class opens its own two, and
+## its runner uses and fills only those. The camp keeps every element's nodes and points, whoever opened them: a class
+## opens one another class trained for nothing, and closes one of its two for nothing, to open another.
+var elements_open := {}            # class -> [element, ...] in the order opened
 func element_opened(el: String) -> bool:
+	return el in class_elements()
+
+
+## The element's starter is in the camp's tree: some class paid its Pitch point.
+func element_trained(el: String) -> bool:
 	for id in tree:
 		if element_of(str(id)) == el and Data.web_entry(node(str(id))):
 			return true
-	return false     # slice 3: an element's region is paid in its own points - no doubling off the pair
+	return false
+
+
+## The elements this runner's class has open. A class that's never opened or closed one takes the camp's first two
+## trained, in the circle's order: a class swapped in keeps the camp's elements (and an old save its own).
+func class_elements() -> Array:
+	if elements_open.has(cls):
+		return Array(elements_open[cls]).duplicate()
+	var list: Array = []
+	for et in Data.ELEMENT_TREES:
+		var el := str(et.get("element", ""))
+		if list.size() < Data.ELEMENTS_A_CLASS and _element_in_tree(el):
+			list.append(el)
+	return list
+
+
+## Any of an element's nodes in the camp's tree (its starter first, in play; a fixture's node alone, in the tests).
+func _element_in_tree(el: String) -> bool:
+	for id in tree:
+		if element_of(str(id)) == el:
+			return true
+	return false
+
+
+func _open_element(el: String) -> void:
+	var list: Array = class_elements()
+	if not (el in list):
+		list.append(el)
+	elements_open[cls] = list
+
+
+## One of the class's two closed (free): its nodes stay the camp's, its meter stops for this class.
+func close_element(el: String) -> bool:
+	if mission != null or not element_opened(el):
+		return false
+	var list: Array = class_elements()
+	list.erase(el)
+	elements_open[cls] = list
+	_dry_memo.clear()
+	var et: Dictionary = Data.element_tree_of(el)
+	log_event("%s closed for the %s" % [et.get("name", el), cls])
+	chron("element_close", {"element": el})
+	return true
 
 
 ## The class's points spent: its own trees (the Pitch's is the camp's, below).
@@ -3332,6 +3434,14 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "no such node"
 	if n.has("ring") and int(ring.get(id, 0)) >= int(n["stack"]):
 		return "full: %d points on it" % int(n["stack"])
+	var el_of := element_of(id)
+	if el_of != "" and is_element_starter(id):
+		if element_opened(el_of):
+			return "trained"
+		if class_elements().size() >= Data.ELEMENTS_A_CLASS:
+			return "two elements open: close one first"
+		if tree.has(id):
+			return ""                         # trained by another class: open for this one, for nothing
 	if tree.has(id) and not n.has("ring"):
 		return "trained"
 	var parts := id.split("/")
@@ -3339,6 +3449,8 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "not one of this runner's trees"
 	if not Data.for_classes(n, my_classes()):
 		return "%s only" % n["class"]
+	if el_of != "" and not is_element_starter(id) and not element_opened(el_of):
+		return "open %s first" % str(Data.element_tree_of(el_of).get("name", el_of))     # two a class (28 Oct)
 	if n.has("bridge"):
 		if bridge() != "":
 			return "one bridge a class: the %s's is taken" % bridge()
@@ -3472,6 +3584,12 @@ func train_node(id: String) -> bool:
 		return false
 	_dry_memo.clear()                     # the memos read the tree (A4's review)
 	var nd: Dictionary = node(id)
+	if is_element_starter(id):
+		_open_element(element_of(id))         # two a class (28 Oct)
+		if tree.has(id):
+			log_event("%s opened for the %s" % [nd["name"], cls])
+			chron("element_open", {"element": element_of(id), "free": true})
+			return true
 	var paid: int = node_cost(id)
 	var held := keystone_held_against(id)
 	if held != "":
@@ -5328,6 +5446,32 @@ func strip(slot: String, mount: String) -> bool:
 	stash_put(gun["attachments"][mount])
 	gun["attachments"][mount] = null
 	return true
+
+
+## Every part off a worn piece at once (28 Oct, Matt: "no way to strip everything off a weapon at once"): each
+## attachment and socketable back to the stash as room allows, free as one is. [taken off, left on for want of room].
+func strip_all(slot: String) -> Array:
+	if mission != null or equipped.get(slot) == null:
+		return [0, 0]
+	var off := 0
+	var left := 0
+	for mount in Dictionary(equipped[slot].get("attachments", {})).keys():
+		if equipped[slot]["attachments"][mount] == null:
+			continue
+		if strip(slot, str(mount)):
+			off += 1
+		else:
+			left += 1
+	if off > 0:
+		log_event("Stripped the %s: %d part%s back to the stash%s" % [str(equipped[slot]["base"]).to_lower(), off, "" if off == 1 else "s", (", %d left on: no room" % left) if left > 0 else ""])
+	return [off, left]
+
+
+## The parts on a worn piece.
+func parts_on(slot: String) -> int:
+	if equipped.get(slot) == null:
+		return 0
+	return Dictionary(equipped[slot].get("attachments", {})).values().filter(func(a): return a != null).size()
 
 
 ## The stash's attachments that go on this mount, best first.
@@ -12528,7 +12672,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -12783,6 +12927,9 @@ func load_dict(d: Dictionary) -> void:
 	element_points = {}
 	for k in d.get("element_points", {}):
 		element_points[str(k)] = int(d["element_points"][k])
+	elements_open = {}
+	for k in d.get("elements_open", {}):
+		elements_open[str(k)] = Array(d["elements_open"][k]).map(func(x): return str(x))     # none saved: each class takes the camp's first two (class_elements)
 	deeds_found = bool(d.get("deeds_found", false))
 	if d.has("unlocked"):
 		unlocked = Array(d["unlocked"])

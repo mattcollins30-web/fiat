@@ -1277,7 +1277,7 @@ const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "w
 const BUILD := {"copy": "Copy build", "paste": "Paste build", "copied": "Build code copied", "bad": "That isn't a build code", "old": "A build code from an older version: the web has changed since",
 	"out": "Not while the runner's out", "class": "A %s build: swap to them in Training first", "short": "Short of tins: the reset is %s",
 	"title": "A %s build · %d perks · %d skills", "plan": "Resets every perk for %s, then trains %d of %d", "plan_free": "Trains %d of %d perks, no reset",
-	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Reset trees for %s", "ring_sure": "Reset the ring for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
+	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Reset trees for %s", "ring_sure": "Reset the ring for %s", "pitch_sure": "Reset the Pitch for %s", "element_sure": "Reset %s for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
 const COLLECTION := {"button": "The collection ›", "title": "The collection", "sub": "Every runner's, for the record · it gives no power", "close": "Close",
 	"uniques": "Uniques found", "mythics": "Mythics found", "sites": "Sites with every mark", "classes": "Classes at level 50", "order": "The order's three beaten", "sets": "Sets complete",
 	"of": "of %d", "grid_head": "Every unique · the found ones in colour, the rest by slot", "sites_head": "Sites · a mark at levels %s",

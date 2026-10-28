@@ -2771,6 +2771,7 @@ func _web_pool_checks(main) -> void:
 	m["dealt_by"] = {"frost": float(m["t"]["hp"]) * float(m["t"]["pool"]) * Data.ELEMENT_METER}
 	if not sim.element_opened("frost"):
 		sim.tree.append("The cold/0")          # the Pitch circle: only an opened element's meter fills
+		sim.elements_open[sim.cls] = ["frost"]     # two a class (28 Oct): this class's
 	var frost0: int = int(sim.element_points.get("frost", 0))
 	sim._kia()
 	_check(int(sim.element_points.get("frost", 0)) == frost0 + 1, "a death's run did not fill the meter")
@@ -3314,6 +3315,8 @@ func _element_checks(main) -> void:
 		_check(not bk._sum_chips._labels[k].text.begins_with("+0") and not bk._sum_chips._labels[k].text.begins_with("0%"), "the sum strip shows a figure at nothing: %s %s" % [sum_tags[k], bk._sum_chips._labels[k].text])
 	# a crowded strip: every plain figure and four elements at once - the short forms, then the plain figures go
 	var crowd_tree: Array = sim.tree.duplicate()
+	var crowd_open: Dictionary = sim.elements_open.duplicate(true)
+	sim.elements_open[sim.cls] = ["fire", "frost", "shock", "poison", "bleed", "physical"]     # past two a class (28 Oct): the band's layout under the most it could hold
 	for tn in ["The Pitch", "Petrol", "The cold", "Live", "The Rat Man"]:
 		for i in _behind_cap(tn):
 			if not sim.tree.has("%s/%d" % [tn, i]):
@@ -3351,6 +3354,7 @@ func _element_checks(main) -> void:
 	main.refresh()
 	_check_fit(main, "Caravan (the heaviest sum)")
 	sim.tree = crowd_tree
+	sim.elements_open = crowd_open
 	sim.tops_open = false
 	bk._shown = ""
 	main.refresh()
@@ -8451,6 +8455,8 @@ func _loot_roll_checks(main) -> void:
 	_mythic_checks(main.sim)
 	_bin_checks(main)
 	_select_many_checks(main)
+	_two_elements_checks(main)
+	_strip_all_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
@@ -11464,6 +11470,131 @@ func _crates_checks(main) -> void:
 
 
 ## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash pick has
+## Two elements a class (28 Oct, Matt; the canvas's "Two elements", B): a class opens two at most, Knuckles counting;
+## another class's element opens for nothing; closing one is free and its nodes stay the camp's; only the open two work
+## and fill. The three resets: an element's nodes and the Pitch's back to their points, each apart, through Training.
+func _two_elements_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_set_cls(sim, "Poacher")
+	sim.tree = []
+	sim.elements_open = {}
+	sim.element_points = {"shock": 6, "fire": 6, "frost": 6, "physical": 6}
+	sim.best_level = maxi(sim.best_level, 20)
+	sim.xp = maxf(sim.xp, Data.xp_for_level(20))
+	sim.cash = maxf(sim.cash, 1000000.0)
+	var p0: int = sim.pitch_free()
+	_check(sim.train_node("Live/0") and sim.train_node("Knuckles/0") and sim.class_elements() == ["shock", "physical"] and sim.pitch_free() == p0 - 2, "two elements didn't open, Knuckles counting: %s, %d Pitch free from %d" % [str(sim.class_elements()), sim.pitch_free(), p0])
+	_check(sim.train_block("Petrol/0").begins_with("two elements open") and not sim.train_node("Petrol/0"), "a third element opened: '%s'" % sim.train_block("Petrol/0"))
+	_check(sim.train_node("Live/1") and sim.node_active("Live/1"), "an open element's node didn't train or work")
+	# closed for nothing: its nodes stay the camp's, idle for this class; another opens
+	var cash0: float = sim.cash
+	_check(sim.close_element("shock") and not sim.element_opened("shock") and sim.tree.has("Live/1") and not sim.node_active("Live/1") and is_equal_approx(sim.cash, cash0), "closing Live cost, lost its nodes, or left them working")
+	_check(sim.train_block("Live/2").begins_with("open Live"), "a closed element's node trains: '%s'" % sim.train_block("Live/2"))
+	_check(sim.train_node("Petrol/0") and sim.element_opened("fire"), "an element didn't open once one was closed")
+	# another class: Live, trained by the Poacher, opens for nothing
+	_set_cls(sim, "Scrapper")
+	sim.elements_open["Scrapper"] = []
+	var p1: int = sim.pitch_free()
+	_check(sim.train_block("Live/0") == "" and sim.train_node("Live/0") and sim.element_opened("shock") and sim.pitch_free() == p1 and sim.node_active("Live/1"), "the camp's Live didn't open free for the Scrapper: %d Pitch free from %d" % [sim.pitch_free(), p1])
+	# only the open two fill
+	sim.deploy(3)
+	var m: Dictionary = sim.mission
+	var pool_hp: float = float(m["t"]["hp"]) * float(m["t"]["pool"])
+	var fire_pts: int = int(sim.element_points.get("fire", 0))
+	m["dealt_by"] = {"fire": pool_hp * Data.ELEMENT_METER * 2.0 + 1.0}
+	sim.extract_now()
+	_check(int(sim.element_points.get("fire", 0)) == fire_pts, "the Scrapper's run filled Petrol, the Poacher's: %d from %d" % [int(sim.element_points.get("fire", 0)), fire_pts])
+	# Training: the starter's button closes, opens; the reset by the node picked
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk.selected = "Live/0"
+	bk._shown = ""
+	main.refresh()
+	_check(bk._train.visible and bk._train.text == "Close Live", "an open element's starter doesn't offer Close: '%s'" % bk._train.text)
+	_check(bk._respec.text.begins_with("Reset Live for "), "the reset with Live picked isn't Live's: '%s'" % bk._respec.text)
+	_check_fit(main, "Training (an open element's starter)")
+	bk._on_train()
+	_check(not sim.element_opened("shock"), "Close didn't close Live")
+	bk._shown = ""
+	main.refresh()
+	_check(bk._train.visible and bk._train.text == "Open for the Scrapper" and not bk._train.disabled, "a camp element's starter doesn't offer to open free: '%s'" % bk._train.text)
+	bk._on_train()
+	_check(sim.element_opened("shock"), "Open didn't open Live for the Scrapper")
+	# the element's reset: its nodes back to its points, the starter kept, twice asked, priced
+	var spent: int = sim.element_spent("shock")
+	var price: int = sim.element_reset_cost("shock")
+	cash0 = sim.cash
+	bk.selected = "Live/1"
+	bk._shown = ""
+	main.refresh()
+	bk._on_respec()
+	_check(sim.tree.has("Live/1"), "the element's reset didn't ask twice")
+	bk._on_respec()
+	_check(spent > 0 and not sim.tree.has("Live/1") and sim.tree.has("Live/0") and sim.element_spent("shock") == 0 and is_equal_approx(sim.cash, cash0 - price), "Live's reset: %s, %d spent, £%.0f from £%.0f (price %d)" % [str(sim.tree), sim.element_spent("shock"), sim.cash, cash0, price])
+	# the Pitch's reset: its nodes alone, the starters on its circle kept
+	var pid := ""
+	for i in range(Data.tree_named(Data.COMMON_TREE)["nodes"].size()):
+		var cand := "%s/%d" % [Data.COMMON_TREE, i]
+		if sim.can_train(cand):
+			pid = cand
+			break
+	_check(pid != "" and sim.train_node(pid), "the fixture: no Pitch node to train")
+	bk.selected = pid
+	bk._shown = ""
+	main.refresh()
+	_check(bk._respec.text.begins_with("Reset the Pitch for "), "the reset with a Pitch node picked isn't the Pitch's: '%s'" % bk._respec.text)
+	_check_fit(main, "Training (the Pitch's reset)")
+	bk._on_respec()
+	bk._on_respec()
+	_check(not sim.tree.has(pid) and sim.tree.has("Live/0") and sim.tree.has("Petrol/0") and sim.pitch_nodes_spent() == 0, "the Pitch's reset: %s" % str(sim.tree))
+	bk.selected = ""
+	sim.load_dict(saved)
+	main.refresh()
+	print("two elements a class ok: two open, Knuckles counting, a third refused, closed free, the camp's opened free, only the two fill; the element's and the Pitch's resets")
+
+
+## Every part off a worn gun at once (28 Oct, Matt): back to the stash as room allows, the Kit room's and the
+## Workshop's buttons.
+func _strip_all_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var gun: Dictionary = sim._plain("Primary", "AR-pattern rifle")
+	gun["attachments"] = {"optic": null, "muzzle": null, "magazine": null, "handguard": null, "stock": null}
+	sim.equipped["Primary"] = gun
+	var n_on := 0
+	for att in Data.ATTACHMENTS:
+		if att.get("mount", "") in ["optic", "muzzle", "stock"] and gun["attachments"][att["mount"]] == null:
+			var a: Dictionary = sim._plain(Data.ATTACHMENT, str(att["name"]))
+			gun["attachments"][att["mount"]] = a
+			n_on += 1
+	_check(n_on >= 2 and sim.parts_on("Primary") == n_on, "the fixture: %d parts on the rifle" % n_on)
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "slot", "slot": "Primary"}
+	main._armoury._shown = ""
+	main.refresh()
+	var bi := -1
+	for k in range(main._armoury._pick._buttons.size()):
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Strip all parts":
+			bi = k
+	_check(bi >= 0, "the Kit room has no Strip all parts on a gun with %d parts" % n_on)
+	_check_fit(main, "Kit room (strip all)")
+	var stash0: int = sim.stash.size()
+	if bi >= 0:
+		main._armoury._press(bi)
+		main.refresh()
+	_check(sim.parts_on("Primary") == 0 and sim.stash.size() == stash0 + n_on, "Strip all parts left %d on, the stash %d from %d" % [sim.parts_on("Primary"), sim.stash.size(), stash0])
+	sim.load_dict(saved)
+	main.refresh()
+	print("strip all ok: every part off at once, to the stash, from the Kit room")
+
+
 ## Select-many sells only at the Fence (28 Oct, Matt): the Kit room and the Clinic bin, the Workshop scraps, whatever's
 ## open; the Fence's stash still sells.
 func _select_many_checks(main) -> void:

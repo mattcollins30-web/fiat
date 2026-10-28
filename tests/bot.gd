@@ -1336,7 +1336,9 @@ func _train_tree(sim) -> void:
 			break
 	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	if element != "" and not sim.element_opened(element) and sim.pitch_free() > 0:
+	if element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission():
+		sim.close_element(str(sim.class_elements()[0]))     # two a class (28 Oct): the oldest closed for the build's own
+	if element != "" and not sim.element_opened(element) and (sim.pitch_free() > 0 or sim.element_trained(element)):
 		var et0: Dictionary = Data.element_tree_of(element)
 		for i in range(et0["nodes"].size()):
 			var sid: String = "%s/%d" % [et0["name"], i]

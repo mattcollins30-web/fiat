@@ -330,7 +330,9 @@ func _show_panel() -> void:
 			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
-			if not it.has("unique") and not it.has("set"):
+			if sim.parts_on(it["slot"]) > 1:
+				buttons.append({"text": "Strip all parts", "action": sim.strip_all.bind(it["slot"]), "enabled": not sim.on_mission(), "primary": false})     # every part off at once (28 Oct, Matt)
+			if not it.has("unique") and not it.has("set") and buttons.size() < PickPanel.BUTTONS:
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
 	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, gone for nothing (27 Oct); a unique or a set piece asks twice
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:

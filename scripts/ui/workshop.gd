@@ -800,6 +800,8 @@ func _show_panel() -> void:
 		_pick.show_pick(fitted, sim, "Fitted · %s %s" % [sel_slot.to_lower(), Items.mount_name(fitted["mount"]).to_lower()])
 		_pick.show_right_words("The stash", "Strip it back to the stash", ["Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]])
 		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_fits(fitted), "primary": true})
+		if sim.parts_on(sel_slot) > 1:
+			buttons.append({"text": "Strip all %d" % sim.parts_on(sel_slot), "action": sim.strip_all.bind(sel_slot), "enabled": not sim.on_mission(), "primary": false})     # every part off at once (28 Oct, Matt)
 		_set_pick_buttons(buttons)
 		return
 	_pick.show_pick(it, sim, "The pick · in the stash")

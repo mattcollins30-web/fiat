@@ -1989,6 +1989,7 @@ const WHEEL_BRIDGE_DEG := 168.0
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
 const ELEMENT_METER := 1.5
 const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter costs a Pitch point; its meter fills from then
+const ELEMENTS_A_CLASS := 2     # two elements open a class at most (28 Oct, Matt: "otherwise you could just keep speccing into elemental nodes"); Knuckles counts
 const BRIDGE_LEVEL := 30
 const BRIDGE_COST := 3
 const BRIDGES := {"Poacher": ["Paramedic", "Recruit"], "Recruit": ["Poacher", "Doorman"], "Doorman": ["Recruit", "Drifter"], "Drifter": ["Doorman", "Scrapper"], "Scrapper": ["Drifter", "Paramedic"], "Paramedic": ["Scrapper", "Poacher"]}     # the ring's neighbours, joints B (24 Oct)
