@@ -139,8 +139,14 @@ const MAG_PIP_H := 6
 const MAG_PIP_SMALL := 4
 
 
-func set_mags(fills: Array) -> void:
+func set_mags(fills: Array, it := {}) -> void:
 	_mag_fill = fills
+	var mag_tex: Texture2D = Items.mag_art(it) if not fills.is_empty() else null
+	if mag_tex != null:
+		_art.visible = true                   # the pouch drawn as its magazines once their pictures are in (28 Oct)
+		_art.texture = mag_tex
+		var fits: bool = mag_tex.get_width() <= _art.size.x and mag_tex.get_height() <= _art.size.y
+		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_mags.visible = not fills.is_empty() and size.x >= 26.0
 	_mags.position = Vector2.ZERO
 	_mags.size = size

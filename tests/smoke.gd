@@ -10137,6 +10137,11 @@ func _magazine_checks(main) -> void:
 	sim.set_top_up("fill")
 	sim.load_dict(saved)
 	main.refresh()
+	# the pouch's own picture by its rounds' type (28 Oct, the art manifest): the names the manifest writes
+	for ab in Data.BASES[Data.AMMO]:
+		var want: String = "mag_belt" if str(ab["name"]) == "Belt links" else "mag_" + str(ab["type"])
+		_check(Items.mag_slug(sim._plain(Data.AMMO, str(ab["name"]))) == want, "%s's pouch picture isn't %s" % [ab["name"], want])
+	_check(Items.mag_slug(sim._plain(Data.MEDICAL, "Bandage")) == "", "a med reads as a magazine")
 	print("magazines ok: sizes, reloads, the pause in the fight, the figures and the odds, bats, the gate's fill, the screens")
 
 

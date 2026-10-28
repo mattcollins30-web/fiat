@@ -200,6 +200,21 @@ static func art(it: Dictionary) -> Texture2D:
 	return base
 
 
+## A rig pouch's picture (28 Oct, magazines): its magazines by the rounds' type - art/items/mag_<type>.png, "belt" for
+## belt links - or null, and the cell keeps the box's picture.
+static func mag_art(it: Dictionary) -> Texture2D:
+	var name := mag_slug(it)
+	return _art_named(name) if name != "" else null
+
+
+## The pouch's picture's name: "mag_<the rounds' type>", "mag_belt" for belt links; "" for anything not rounds.
+static func mag_slug(it: Dictionary) -> String:
+	if it.is_empty() or not is_ammo(it):
+		return ""
+	var kind: String = "belt" if str(it.get("base", "")) == "Belt links" else str(base_of(it).get("type", ""))
+	return ("mag_" + kind) if kind != "" else ""
+
+
 static func _art_named(s: String) -> Texture2D:
 	if not _art.has(s):
 		var path := "res://art/items/%s.png" % s

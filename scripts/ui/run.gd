@@ -1314,7 +1314,7 @@ func _show_rig() -> void:
 		if Items.is_medical(it):
 			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
 		elif Items.is_ammo(it):
-			c.set_mags(Items.pouch_fills(it))      # its magazines along its foot (28 Oct)
+			c.set_mags(Items.pouch_fills(it), it)      # its magazines along its foot (28 Oct)
 			c.tooltip_text = "%s · %s, %d rounds · click for the pack" % [it["base"], Items.pouch_words(it), int(it["rounds"])]
 		else:
 			c.tooltip_text = str(it["base"])
