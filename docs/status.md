@@ -7090,3 +7090,8 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   body's tilt (cosmetic, the reviewer's follow-up to e3216f5).
 - Parked, designed (28 Oct): three tree resets (class, the Pitch, the elements), every part off a weapon at once, and
   the exchange in the contracts' place (docs/design/resets_strip_exchange.md).
+- Parked from play (28 Oct, Matt died on Signal 4, the Barracks, sorting a pack split over two pages): Select-many
+  never sells outside the Fence - the Kit room always Bins (armoury.gd sets `binning` only while the Fence is shut) and
+  the Workshop's grid Scraps (it has no mode, so it fell back to Sell), with a smoke check that neither shows Sell. The
+  big pack on one page (Matt's pick): the cells shrink till every row fits, floor about 28 px; only a pack past that
+  (the Removal Van) scrolls, with drag auto-scrolling at the edges, and `pack_one_page` goes. Mockup first.
