@@ -27,14 +27,14 @@ MEDS = [
     ("Activated charcoal", "a small brown glass bottle of black charcoal powder, the cork out, a little black powder spilled beside it, no label"),
     ("Hot flask", "a dented steel vacuum flask with its cup-lid off, steam curling from the open neck, plain, unprinted"),
     ("Smelling salts", "a tiny old glass vial of white smelling-salt crystals with a brass screw cap, plain, unlabelled"),
-    ("Medical supplies", "a tied bundle of medical supplies: rolled bandages, a strip of sealed syringes, a few blister packs and cotton pads, "
+    ("Medical supplies", "a tied bundle of medical supplies: rolled bandages, a strip of sealed syringes with no markings or numbers on them, a few blister packs and cotton pads, "
                          "held with a rubber band, all plain and unprinted, no labels, no red cross"),
 ]
 MAGS = [
     ("mag_smg", "two loaded straight SMG magazines side by side in a worn olive canvas pouch, the brass of the top rounds showing, no markings"),
     ("mag_rifle", "two loaded rifle magazines, slightly curved, in a worn olive canvas pouch, brass rounds showing at the top, no markings"),
     ("mag_pistol", "three loaded pistol magazines standing in a small worn black nylon pouch, brass rounds showing at the top, no markings"),
-    ("mag_shotgun", "a worn leather shell caddy with six red shotgun shells in its loops, brass ends showing, no markings"),
+    ("mag_shotgun", "a worn leather shell caddy with six plain red shotgun shells in its loops, brass ends showing, the shells unprinted, no markings"),
     ("mag_improvised", "two long strips of collated nail-gun nails in a worn canvas tool pouch, plain, no markings"),
     ("mag_belt", "a folded belt of linked brass rounds coiled in an olive ammo pouch, plain, no markings"),
 ]
