@@ -7088,3 +7088,5 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   sets the TextureRect's size before EXPAND_IGNORE_SIZE; the Crates panel has the order right). Fix: the expand mode
   first, and a smoke check that each padlock is 22 px and clear of its line. The figures' flames don't follow a dying
   body's tilt (cosmetic, the reviewer's follow-up to e3216f5).
+- Parked, designed (28 Oct): three tree resets (class, the Pitch, the elements), every part off a weapon at once, and
+  the exchange in the contracts' place (docs/design/resets_strip_exchange.md).
