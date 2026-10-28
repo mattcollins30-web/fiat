@@ -1,7 +1,7 @@
 extends Control
 ## The Fence's side on the exchange (28 Oct, Matt: contracts replaced by currency conversion; was his contracts' list,
-## 19 Oct, Fence B): today's rates in tins - a row a currency on the board, its worth today with ▲ or ▼ against
-## yesterday's - then his mate, as before.
+## 19 Oct, Fence B): today's rates in tins - a row a currency on the board, what one sells for today (scrap, bought
+## only, what one costs) with ▲ or ▼ against yesterday's - then his mate, as before.
 ##
 ## Signals: `mate` for the mate's Buy.
 
@@ -61,7 +61,7 @@ func _init(w: float, h: float) -> void:
 func show_state(s) -> void:
 	sim = s
 	var on: Array = sim.exchange_offered().filter(func(c): return c != "tins")     # tins are the yardstick
-	var sig := "%s|%d|%d|%s|%s|%.4f|%s" % [str(on), sim.exchange_day, sim.notes, str(sim.mate), str(sim.on_mission()), sim.inflation(), str(sim.issued) + str(Fmt.fiat)]
+	var sig := "%s|%d|%d|%s|%s|%.4f|%s|%s" % [str(on), sim.exchange_day, sim.notes, str(sim.mate), str(sim.on_mission()), sim.inflation(), str(sim.issued) + str(Fmt.fiat), str(sim.yard_picks.get("fence", []))]     # Contacts and the Fixer move the rates
 	if sig == _shown:
 		return
 	_shown = sig
@@ -75,20 +75,25 @@ func show_state(s) -> void:
 			continue
 		var cur: String = on[k]
 		r["cur"] = cur
-		UI.fit(r["name"], [sim.exchange_name(cur), str(sim.exchange_name(cur)).get_slice(" ", 0)])
-		var today: float = sim.exchange_worth(cur)
-		var before: float = sim.exchange_worth(cur, sim.exchange_day - 1)
+		# what a trade gives today (28 Oct, the review: the mid worth, before the spread and with an upside the trade never
+		# pays, read 590 beside the panel's 501): what one sells for, or for what's bought only (scrap) what one costs
+		var buy_only: bool = not sim.exchange_gives().has(cur)
+		var nm: String = sim.exchange_name(cur)
+		UI.fit(r["name"], ["%s · to buy" % nm, nm, nm.get_slice(" ", 0)] if buy_only else [nm, nm.get_slice(" ", 0)])
+		var today: float = rate_today(cur)
+		var before: float = rate_today(cur, sim.exchange_day - 1)
 		var pct: float = (today / before - 1.0) * 100.0 if before > 0.0 else 0.0
 		if absf(pct) < 0.5:
 			r["move"].text = "– 0%"
 			r["move"].add_theme_color_override("font_color", Pal.TEXT_3)
 		else:
+			var good: bool = (pct > 0.0) != buy_only           # dearer to buy is the bad way
 			r["move"].text = "%s %d%%" % ["▲" if pct > 0.0 else "▼", int(round(absf(pct)))]
-			r["move"].add_theme_color_override("font_color", Pal.GOOD if pct > 0.0 else Pal.BAD)
+			r["move"].add_theme_color_override("font_color", Pal.GOOD if good else Pal.BAD)
 		UI.fit(r["worth"], [worth_words(today), _num(today)])
 		y = r["panel"].position.y + ROW_H + ROW_GAP
 	_note.position.y = y + 4
-	UI.fit(_note, ["New rates every run home; ▲ or ▼ against yesterday's", "New rates every run home"])
+	UI.fit(_note, ["What one sells for, scrap what one costs; new every run home", "What one sells for; new every run home", "New rates every run home"])
 	if sim.mate.is_empty():
 		_mate_name.text = "Not about"
 		UI.fit(_mate_sub, ["He comes by every %d runs" % Data.MATE_RUNS, "Every %d runs" % Data.MATE_RUNS])
@@ -104,6 +109,15 @@ func show_state(s) -> void:
 		var short: int = int(sim.mate["notes"]) - sim.notes
 		_mate_buy.text = "Buy" if short <= 0 else "Short %s" % Fmt.group(short)
 		_mate_buy.disabled = not sim.can_buy_mate()
+
+
+## A row's figure (28 Oct, the review): what one of `cur` sells for in tins on a day, as a trade pays it - or, bought
+## only, what one costs.
+func rate_today(cur: String, day := -1) -> float:
+	if sim.exchange_gives().has(cur):
+		return sim.exchange_rate(cur, "tins", day)
+	var r: float = sim.exchange_rate("tins", cur, day)
+	return 1.0 / r if r > 0.0 else 0.0
 
 
 ## A worth in tins as the row says it: "512 tins", "26.3 tins"; after the Issue the fiat's, to as many places as it takes.

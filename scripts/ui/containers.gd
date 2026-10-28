@@ -134,6 +134,8 @@ func show_state(s) -> void:
 			if Items.is_ammo(it):
 				c.set_mags(Items.pouch_fills(it), it)     # a pouch of magazines, each pip one, filled as loaded (28 Oct)
 				c.tooltip_text = "%s · %s" % [it["base"], Items.pouch_words(it)]
+			else:
+				c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)] if Items.is_medical(it) else str(it["base"])     # the cells are pooled (28 Oct, the review: a med kept a pouch's words)
 		else:
 			c.id = -1
 			c.visible = false

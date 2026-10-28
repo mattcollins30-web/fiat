@@ -639,7 +639,7 @@ const BASES := {
 		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15, "conv_bleed_pct": 20, "from": "SMG rounds"},
 		{"name": "Pistol rounds", "type": "pistol", "tier": 1, "rounds": 300, "value": 25},
 		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15, "conv_bleed_pct": 20, "from": "Pistol rounds"},
-		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20, "from": "SMG hollow point"},
+		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20, "from": "SMG hollow point", "mag": 100},     # a pouch of belts, the Belt-fed's 100 (28 Oct, the review: a pouch of 90 held less than one)
 		{"name": "Depot rounds", "type": "rifle", "tier": 3, "rounds": 300, "value": 170, "damage_pct": 25, "from": "Match rounds"},
 		{"name": "Incendiary shells", "type": "shotgun", "tier": 3, "rounds": 80, "value": 140, "damage_pct": 10, "conv_fire_pct": 30, "from": "Slugs"},
 		{"name": "Incendiary SMG rounds", "type": "smg", "tier": 3, "rounds": 320, "value": 150, "damage_pct": 10, "conv_fire_pct": 30, "from": "SMG hollow point"},

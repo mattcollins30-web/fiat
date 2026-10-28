@@ -97,12 +97,13 @@ func show_state(s) -> void:
 	if sim == null:
 		return
 	var on: Array = sim.exchange_offered()
-	if not on.has(give):
-		give = "notes" if on.has("notes") else "scrap"       # notes off the board after the Issue
+	var gives: Array = sim.exchange_gives()                  # scrap buy-only (28 Oct, the review): never in You give
+	if not gives.has(give):
+		give = "notes" if gives.has("notes") else (str(gives[1]) if gives.size() > 1 else "tins")       # notes off the board after the Issue
 	if not on.has(get_cur) or get_cur == give:
 		get_cur = "tins" if give != "tins" else "scrap"
 	var held_sig: Array = on.map(func(c): return sim.exchange_held(c))
-	var sig := "%s|%s|%s|%.2f|%d|%s|%s|%.5f|%s|%s" % [str(on), give, get_cur, share, sim.exchange_day, str(held_sig), str(sim.on_mission()), sim.exchange_rate(give, get_cur), str(sim.yard_picks.get("fence", [])), str(sim.issued) + str(Fmt.fiat)]
+	var sig := "%s|%s|%s|%.2f|%d|%s|%s|%.5f|%s|%s" % [str(on) + str(gives), give, get_cur, share, sim.exchange_day, str(held_sig), str(sim.on_mission()), sim.exchange_rate(give, get_cur), str(sim.yard_picks.get("fence", [])), str(sim.issued) + str(Fmt.fiat)]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -112,14 +113,15 @@ func show_state(s) -> void:
 		"Today's rates · he keeps %d%% either way%s" % [spread, fixer], "Today's rates · %d%% kept either way" % spread, "Today · %d%% kept" % spread])
 	for side in range(2):
 		var mine: String = give if side == 0 else get_cur
+		var list: Array = gives if side == 0 else on
 		for k in range(_cols[side].size()):
 			var c: Dictionary = _cols[side][k]
 			var b: Button = c["button"]
-			b.visible = k < on.size()
+			b.visible = k < list.size()
 			if not b.visible:
 				c["cur"] = ""
 				continue
-			var cur: String = on[k]
+			var cur: String = list[k]
 			c["cur"] = cur
 			var picked: bool = cur == mine
 			UI.style_button(b, picked)

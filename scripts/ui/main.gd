@@ -1402,6 +1402,8 @@ func _rail_status(nm: String) -> Dictionary:
 			return {"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}
 		MEDIC:
 			var fine: bool = sim.hp >= sim.max_hp() * MEDIC_HURT_UNDER and sim.wounds.is_empty()     # hurt under 90% or wounded (25 Oct, the review: "Hurt" at 1087 of 1088)
+			if (fine or sim.on_mission()) and sim.can_hand_in():
+				return {"badge": "Supplies", "badge_tone": "good"}     # supplies to hand in (28 Oct, Matt: as a ready contract's "Ready")
 			return {"badge": "" if fine or sim.on_mission() else "Hurt", "badge_tone": "warn"}
 		# the Fence: no badge since the contracts went for the exchange (28 Oct) - nothing there waits on a decision
 	return {}

@@ -433,8 +433,9 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	var fs := Pal.CELL_TEXT_BIG if big else Pal.CELL_TEXT
 	var line_h := 22 if big else 20
 	var words: Array = []
+	var cure: String = Items.cure_of(it)     # a cure's one cell names its element, in its tone (28 Oct, the review: "MED Stops")
 	if f.x == 1 and f.y == 1:
-		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else h[0])]
+		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else (cure.capitalize() if cure != "" else h[0]))]
 	else:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:
@@ -455,9 +456,11 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		if i == 0:
 			options.append(SHORT[it["slot"]])
 		elif i == 1:
-			options.append(h[0] if not Items.is_ammo(it) else "%d" % int(it["rounds"]))
+			options.append((cure.capitalize().left(4) if cure != "" and f.x == 1 and f.y == 1 else h[0]) if not Items.is_ammo(it) else "%d" % int(it["rounds"]))
 		else:
 			options.append("T%d" % it["tier"])
+		var cure_word: bool = cure != "" and i == 1 and f.x == 1 and f.y == 1 and words.size() > 1
+		l.add_theme_color_override("font_color", Pal.ELEMENT_COLOURS.get(cure, Pal.TEXT) if cure_word else (Pal.TEXT if i < 2 else Pal.TEXT_3))
 		# fit() takes the last option even when it doesn't fit; the tests then
 		# say so, which is the point - a cell that can't carry its words needs
 		# shorter words, not an ellipsis

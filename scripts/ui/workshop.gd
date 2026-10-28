@@ -774,6 +774,22 @@ func _fitted() -> Dictionary:
 	return a if a != null else {}
 
 
+## Strip all (28 Oct, the review: with partial room it took some off and said nothing on screen): what was left on, kept
+## to say so while the piece and the stash stand as the press left them.
+var _strip_note: Array = []            # [slot, parts left on, stash cells used]
+func _strip_all_press(slot: String) -> void:
+	var r: Array = sim.strip_all(slot)
+	_strip_note = [slot, sim.parts_on(slot), sim.stash_used()] if int(r[1]) > 0 else []
+
+
+## The hint's forms for a Strip all that left parts on, or [] (for the tests too).
+func strip_note_forms(slot: String) -> Array:
+	if _strip_note.size() != 3 or str(_strip_note[0]) != slot or int(_strip_note[1]) != sim.parts_on(slot) or int(_strip_note[2]) != sim.stash_used():
+		return []
+	var n: int = int(_strip_note[1])
+	return ["%d left on: no room in the stash" % n, "%d left on: no room" % n, "No room for %d" % n]
+
+
 func _show_panel() -> void:
 	var it := _selected_item()
 	var fitted := _fitted()
@@ -795,13 +811,17 @@ func _show_panel() -> void:
 		if fitted.is_empty():
 			_pick.show_empty("%s · %s: empty" % [sel_slot, Items.mount_name(sel_mount)],
 				["Nothing in the stash fits" if sim.attachments_for(sel_mount).is_empty() else "Pick one on the right"])
+			if not strip_note_forms(sel_slot).is_empty():
+				_pick.set_hint_options(strip_note_forms(sel_slot))     # this one came off, others stayed on (the review)
 			_set_pick_buttons([])
 			return
 		_pick.show_pick(fitted, sim, "Fitted · %s %s" % [sel_slot.to_lower(), Items.mount_name(fitted["mount"]).to_lower()])
 		_pick.show_right_words("The stash", "Strip it back to the stash", ["Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]])
 		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_fits(fitted), "primary": true})
+		if not strip_note_forms(sel_slot).is_empty():
+			_pick.set_hint_options(strip_note_forms(sel_slot))
 		if sim.parts_on(sel_slot) > 1:
-			buttons.append({"text": "Strip all %d" % sim.parts_on(sel_slot), "action": sim.strip_all.bind(sel_slot), "enabled": not sim.on_mission(), "primary": false})     # every part off at once (28 Oct, Matt)
+			buttons.append({"text": "Strip all %d" % sim.parts_on(sel_slot), "action": _strip_all_press.bind(sel_slot), "enabled": sim.can_strip_any(sel_slot), "primary": false})     # every part off at once (28 Oct, Matt); off with no room for one (the review)
 		_set_pick_buttons(buttons)
 		return
 	_pick.show_pick(it, sim, "The pick · in the stash")

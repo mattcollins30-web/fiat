@@ -5,6 +5,7 @@ extends Control
 ## then the six elements, each as a meter in its colour (a point when it fills) with its free points beside. The
 ## words came off the regions' labels: this is where the pools and the meters live.
 
+const WebView := preload("res://scripts/ui/web_view.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -50,7 +51,7 @@ func show_state(s) -> void:
 		var free_s: String = (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else ""
 		if not sim.element_opened(el):
 			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): a Pitch point on its starter opens it
-		rows.append([str(et["name"]), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
+		rows.append([WebView.plain_name(str(et["name"])), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
 	var sig := str(rows)
 	if sig == _sig:
 		return

@@ -865,7 +865,9 @@ func _show_stand() -> void:
 		var opener: String = "Clear air" if kind == "filter" else ("the Relay" if kind == "standing0" else "the whole band")
 		UI.fit(t["top"], ["%s · %s" % [what, state] if open else "%s · not open yet · %s on the Dial" % [what, opener], "%s · %s" % [what, state if open else "not open yet"], what])
 		var now: String = _book_now(kind) if open else ""
-		UI.fit(t["name"], [now if now != "" else ("None" if open else "Shut")])
+		# shut: where it opens on the big line, free while shut (28 Oct, the review: the standings' top line fell back to
+		# "not open yet" and never said where)
+		UI.fit(t["name"], [now if now != "" else "None"] if open else ["Shut · %s on the Dial" % opener, "Shut · %s" % opener, "Shut"])
 		t["name"].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_3)
 		t["top"].add_theme_color_override("font_color", Pal.ACCENT if book_kind == kind else Pal.TEXT_2)
 		b.disabled = not open

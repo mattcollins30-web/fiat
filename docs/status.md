@@ -7120,3 +7120,19 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
 - For the balance pass next: the magazines slow the bot's climb 2-3x (the pouch size); the exchange's drafts; the
   contracts' notes and materials income gone; the Pitch's ranks now wait on a line's fifth step.
 - Voice: the Fence's card's third line changed with the contracts (docs/voice/recording_list.md).
+
+## The names, the three-stage review and its fixes (28 Oct, Matt: "fix all now")
+
+- The skill tree's names (Matt): an element reads by its name ("Rat Man", no "The" or "·"), a class by the class's
+  name, in the Dial, the key and the Barracks' Also row (`WebView.plain_name`).
+- The review (docs/review/28oct/): every A and B fixed, smoke area `review28`. Matt's calls: scrap is bought at the
+  exchange, never sold; a rig packs one heal, one magazine, the cures, then magazines to their share and heals
+  (`Sim.pack_rig`, the gate's and the bot's); scrap, salvage and materials held join the Issue's pile (its card:
+  "kit and goods worth"); the Clinic shows a Supplies badge and What's next a hand-in line.
+- The bot buys heals and cures only off the Clinic's shelf now, so its figures move.
+- Open for Matt: salvage and materials parked before the Issue still sell after at the straight rate (a stamped rate,
+  or the exchange shut on the Issue's run); a camp with one element hands it and the next one trained to every class
+  that hasn't picked (pin at any size if he wants it explicit); tests/shot_fence.gd and fp_dbg.gd (his) still call
+  the contracts.
+- The balance pass on 1bda16d (before the fixes, its rigs packed no heals): 23 reds against 27 Oct's 18; a fresh
+  `24 1` pass follows.

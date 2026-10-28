@@ -832,12 +832,18 @@ static func pouch_cap_of(type: String) -> int:
 
 
 static func pouch_cap(it: Dictionary) -> int:
-	return pouch_cap_of(str(base_of(it).get("type", "")))
+	return Data.MAG_POUCH * box_mag(it)
+
+
+## A box's magazine: its base's own "mag" (Belt links' belt, 28 Oct, the review), else its type's MAG_SIZE.
+static func box_mag(it: Dictionary) -> int:
+	var b: Dictionary = base_of(it)
+	return int(b.get("mag", Data.MAG_SIZE.get(str(b.get("type", "")), 30)))
 
 
 ## A rig pouch's magazines as the cell draws them (28 Oct): MAG_POUCH, each its share loaded, the full ones first.
 static func pouch_fills(it: Dictionary) -> Array:
-	var mag: float = float(Data.MAG_SIZE.get(str(base_of(it).get("type", "")), 30))
+	var mag: float = float(box_mag(it))
 	var loaded: float = float(it.get("rounds", 0)) / mag
 	var out: Array = []
 	for k in range(Data.MAG_POUCH):
@@ -847,7 +853,7 @@ static func pouch_fills(it: Dictionary) -> Array:
 
 ## A pouch's magazines in words: "3 mags", "2 mags + 12".
 static func pouch_words(it: Dictionary) -> String:
-	var mag: int = int(Data.MAG_SIZE.get(str(base_of(it).get("type", "")), 30))
+	var mag: int = box_mag(it)
 	var r: int = int(it.get("rounds", 0))
 	@warning_ignore("integer_division")
 	var full: int = r / mag

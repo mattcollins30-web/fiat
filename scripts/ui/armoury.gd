@@ -330,8 +330,10 @@ func _show_panel() -> void:
 			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
+			if not strip_note_forms(it["slot"]).is_empty():
+				_pick.set_hint_options(strip_note_forms(it["slot"]))
 			if sim.parts_on(it["slot"]) > 1:
-				buttons.append({"text": "Strip all parts", "action": sim.strip_all.bind(it["slot"]), "enabled": not sim.on_mission(), "primary": false})     # every part off at once (28 Oct, Matt)
+				buttons.append({"text": "Strip all parts", "action": _strip_all_press.bind(it["slot"]), "enabled": sim.can_strip_any(it["slot"]), "primary": false})     # every part off at once (28 Oct, Matt); off with no room for one (the review)
 			if not it.has("unique") and not it.has("set") and buttons.size() < PickPanel.BUTTONS:
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
 	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, gone for nothing (27 Oct); a unique or a set piece asks twice
@@ -352,6 +354,22 @@ func _burn_press(id: int) -> void:
 		return
 	_bin_arm.clear()
 	sim.burn_deeds(id)
+
+
+## Strip all (28 Oct, the review: with partial room it took some off and said nothing on screen): what was left on, kept
+## to say so while the piece and the stash stand as the press left them.
+var _strip_note: Array = []            # [slot, parts left on, stash cells used]
+func _strip_all_press(slot: String) -> void:
+	var r: Array = sim.strip_all(slot)
+	_strip_note = [slot, sim.parts_on(slot), sim.stash_used()] if int(r[1]) > 0 else []
+
+
+## The hint's forms for a Strip all that left parts on, or [] (for the tests too).
+func strip_note_forms(slot: String) -> Array:
+	if _strip_note.size() != 3 or str(_strip_note[0]) != slot or int(_strip_note[1]) != sim.parts_on(slot) or int(_strip_note[2]) != sim.stash_used():
+		return []
+	var n: int = int(_strip_note[1])
+	return ["%d left on: no room in the stash" % n, "%d left on: no room" % n, "No room for %d" % n]
 
 
 var _bin_arm := Arm.new()               # a unique or set piece's first Bin press: the second bins it (a while, or out of the room, disarms)

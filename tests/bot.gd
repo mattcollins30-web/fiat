@@ -1263,13 +1263,17 @@ func _exchange_short(sim) -> void:
 	if sim.on_mission() or not sim.room_open("fence"):
 		return
 	var wants: Array = []                     # [currency, short, tins the build itself still needs]
+	# the steps _build_yard would buy (28 Oct, the review: every open column's both sides turned tins into salvage the
+	# bot wouldn't spend for hours): its own line's next step; the other line's once its own are as far as they open
+	var own_left: bool = Data.YARD.any(func(yb): return _line_next_open(sim, yb, BOT_LINE.get(yb["key"], "a")))
 	for b in Data.YARD:
 		var key: String = b["key"]
 		var kind: String = b["salvage"]
-		for c in range(sim.yard_cols()):
-			for side in ["a", "b"]:
-				if sim.yard_pick_block(key, c, side).begins_with("Wants"):
-					wants.append([kind, sim.yard_pick_salvage(key, c) - int(sim.salvage.get(kind, 0)), sim.yard_pick_cost(key, c)])
+		var own: String = BOT_LINE.get(key, "a")
+		for side in ([own] if own_left else [own, "b" if own == "a" else "a"]):
+			var c: int = _next_step(sim, b, side)
+			if c >= 0 and c < sim.yard_cols() and sim.yard_pick_block(key, c, side).begins_with("Wants"):
+				wants.append([kind, sim.yard_pick_salvage(key, c) - int(sim.salvage.get(kind, 0)), sim.yard_pick_cost(key, c)])
 		if sim.yard_rank_block(key).begins_with("Wants"):
 			wants.append([kind, sim.yard_rank_salvage(key) - int(sim.salvage.get(kind, 0)), sim.yard_rank_cost(key)])
 	if sim.rebuild_open():
@@ -1311,16 +1315,7 @@ func _exchange_short(sim) -> void:
 
 
 func _reserve(sim) -> float:
-	return sim.treat_cost() * 3.0 + _lorry_watch_saving(sim)     # nothing when whole: the bench keeps its own £2,000 floor
-
-
-## The Radio's Lorry watch (the convoy two depths shallower) saved for while the lorry stands and its column is
-## open (the twenty-fifth read, 9 Oct: every build that beat the lorry bought it first, at £45-85k; the plain
-## Drifter's bench spent every run's take as it came, never held the price, never bought it, and sat under the
-## convoy's depth for 32 hours). A player who knows the lorry is the ending saves for the pick that brings it near.
-const LORRY_WATCH_COL := 4                # the sky line's fifth (28 Oct)
-func _lorry_watch_saving(_sim) -> float:
-	return 0.0                                # the lorry's the depot's signal now (15 Oct): the convoy's depth no longer matters
+	return sim.treat_cost() * 3.0     # nothing when whole: the bench keeps its own £2,000 floor (the Lorry watch's saving went 28 Oct, the review: it was 0 since 15 Oct)
 
 
 ## The notes kept back for the lorry once the services stand at its depth (the nineteenth read: three yards read the
@@ -1377,8 +1372,9 @@ func _train_tree(sim) -> void:
 			break
 	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	if element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission():
-		sim.close_element(str(sim.class_elements()[0]))     # two a class (28 Oct): the oldest closed for the build's own
+	if element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission() \
+		and (sim.pitch_free() > 0 or sim.element_trained(element)):
+		sim.close_element(str(sim.class_elements()[0]))     # two a class (28 Oct): the oldest closed for the build's own - only when it can open its own next (the review)
 	if element != "" and not sim.element_opened(element) and (sim.pitch_free() > 0 or sim.element_trained(element)):
 		var et0: Dictionary = Data.element_tree_of(element)
 		for i in range(et0["nodes"].size()):
@@ -1446,9 +1442,7 @@ func _build_yard(sim) -> void:
 		return
 	var firsts_left := false
 	for yb in Data.YARD:
-		var ln: String = BOT_LINE.get(yb["key"], "a")
-		var c0: int = _next_step(sim, yb, ln)
-		if c0 >= 0 and c0 < sim.yard_cols() and not sim.yard_pick_block(yb["key"], c0, ln).begins_with("Opens with"):
+		if _line_next_open(sim, yb, BOT_LINE.get(yb["key"], "a")):
 			firsts_left = true
 	if best_key == "" and not firsts_left:
 		# every line it climbs is as far as it opens (its price or salvage aside - the review): the other lines, cheapest first, with half again in hand
@@ -1474,6 +1468,12 @@ func _build_yard(sim) -> void:
 			if sim.buy_yard_rank(b["key"]):
 				bought.append([sim.elapsed, "%s rank %d for £%d" % [b["key"], sim.yard_rank(b["key"]), cost]])
 			return
+
+
+## A line's next step is there to build, its price or salvage aside (as _build_yard's "firsts left" reads it).
+static func _line_next_open(sim, b: Dictionary, side: String) -> bool:
+	var c: int = _next_step(sim, b, side)
+	return c >= 0 and c < sim.yard_cols() and not sim.yard_pick_block(b["key"], c, side).begins_with("Opens with")
 
 
 ## A line's next step to build: its first column not built on that side, or -1 when the line's done.
@@ -1512,57 +1512,64 @@ func _next_in(sim, b: Dictionary) -> String:
 	return best
 
 
+## The rig for the next run (28 Oct, Matt: HEAL, MAGAZINE, CURE): the supplies handed in, the stash stocked - boxes
+## for the guns at the Fence, a cure for each of the front's elements and a heal off the Clinic's shelf, as a player
+## buys them (the review: the bot bought any med the list had, any number, off no shelf) - then packed as the gate
+## packs (Sim.pack_rig), and the pouches left filled with heals off her shelf.
 func _restock_meds(sim) -> void:
 	if sim.can_hand_in():
 		sim.hand_in_supplies()                # the medic's supplies, as a person hands them over coming home (28 Oct)
 	_restock_rounds(sim)
-	_pack_cures(sim)
+	_stock_cures(sim)
+	if not sim.rig.any(func(x): return Items.is_heal(x)) and not sim.stash.any(func(x): return Items.is_heal(x)):
+		_buy_shelf_heal(sim, sim.med_capacity() - sim.rig_used())
+	sim.pack_rig()
 	var guard := 0
 	while sim.rig_room(1) and guard < 40:
 		guard += 1
+		var free: int = sim.med_capacity() - sim.rig_used()
 		var took := false
-		var small := false
 		for it in sim.stash:
-			if Items.is_heal(it):
-				small = small or Items.size(it) <= 1
-				if sim.take(it["id"]):
-					took = true
-					break
-		if took:
-			continue
-		# a bandage only when the stash has no one-cell med (D13: a kit too big for the room left was tried, refused and
-		# a bandage bought for the stash, again and again - a hundred, the cash gone and the stash full, papers left lying);
-		# the cheapest one-cell heal she stocks once her supplies lift her shelf past bandages (28 Oct)
-		if small or sim.cash < sim.tins_now(200.0) or not sim.buy_med(_cheap_heal(sim)):
+			if Items.is_heal(it) and Items.size(it) <= free and sim.take(it["id"]):
+				took = true
+				break
+		if not took and not _buy_shelf_heal(sim, free):
 			return
 
 
-## The cheapest one-cell heal on the Clinic's list: a bandage until her shelf moves past it.
-func _cheap_heal(sim) -> String:
+## The cheapest heal on the Clinic's shelf that fits so many pouches, bought into the stash (28 Oct, the review: her
+## shelf, as the player buys; a bandage off no shelf till then). False when there's none, or the cash is short.
+func _buy_shelf_heal(sim, pouches: int) -> bool:
+	if pouches <= 0 or sim.cash < sim.tins_now(200.0) or not sim.room_open("clinic"):
+		return false
 	var best := {}
-	for b in sim.med_stock():
-		if b.has("cure") or Items.size({"slot": Data.MEDICAL, "base": b["name"]}) > 1:
-			continue
-		if best.is_empty() or int(b["value"]) < int(best["value"]):
-			best = b
-	return str(best.get("name", "Bandage"))
+	for it in sim.clinic:
+		if Items.is_heal(it) and Items.size(it) <= pouches and sim.cash >= sim.clinic_price(it) and sim.stash_fits(it):
+			if best.is_empty() or sim.clinic_price(it) < sim.clinic_price(best) or (sim.clinic_price(it) == sim.clinic_price(best) and Items.size(it) < Items.size(best)):
+				best = it
+	return not best.is_empty() and sim.buy_clinic(int(best["id"]))
 
 
-## A cure for each element the front's gangs throw (28 Oct, the cures): from the stash, or bought at the Clinic, a
-## pouch each, before the heals take the rest - as the gate's top-up packs them.
-func _pack_cures(sim) -> void:
+## A cure in the stash for each element the front's gangs throw that the rig hasn't one for (28 Oct, the cures): off
+## the Clinic's shelf, the cheapest, as the player buys them.
+func _stock_cures(sim) -> void:
 	for ty in sim.zone_elements(sim.front_tier()).slice(0, Data.TOP_UP_CURES):
-		if not sim.first_cure(ty).is_empty() or not sim.rig_room(1):
+		if not sim.first_cure(ty).is_empty() or sim.stash.any(func(x): return Items.cure_of(x) == ty):
 			continue
-		var name := ""
-		for b in Data.BASES[Data.MEDICAL]:
-			if str(b.get("cure", "")) == ty:
-				name = str(b["name"])
-		var have: Array = sim.stash.filter(func(x): return Items.cure_of(x) == ty)
-		if have.is_empty() and sim.cash >= sim.tins_now(200.0) and sim.buy_med(name):
-			have = sim.stash.filter(func(x): return Items.cure_of(x) == ty)
-		if not have.is_empty():
-			sim.take(int(have[0]["id"]))
+		if sim.cash < sim.tins_now(200.0) or not sim.room_open("clinic"):
+			continue
+		var best := {}
+		for it in sim.clinic:
+			if Items.cure_of(it) == ty and sim.cash >= sim.clinic_price(it) and sim.stash_fits(it) and (best.is_empty() or sim.clinic_price(it) < sim.clinic_price(best)):
+				best = it
+		if not best.is_empty():
+			sim.buy_clinic(int(best["id"]))
+
+
+## The cures stocked and packed, as the gate packs them (the smoke's fixture reads it alone).
+func _pack_cures(sim) -> void:
+	_stock_cures(sim)
+	sim.pack_rig()
 
 
 ## Rounds for both guns: two runs' worth for the primary, one for the
@@ -1587,17 +1594,12 @@ func _restock_rounds(sim) -> void:
 		if pair[0] == "Primary" and sim.rounds_for(gun) == 0 and not sim.rig_room(1) and sim.med_capacity() > 0:
 			sim.leave(sim.rig.back()["id"])     # a dry primary beats a third bandage
 		var guard := 0
-		# magazines (28 Oct): the rounds' pouches stop at the gate's share of the rig, the meds and cures the rest
-		var mag_room: int = ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
-		while sim.rounds_for(gun) < want and sim.rig_room(1) and guard < 6 and sim.rig.filter(func(x): return Items.is_ammo(x)).size() < mag_room:
+		# magazines (28 Oct): the stash stocked for the pouches the gate packs (Sim.pack_rig, at its share of the rig; the
+		# secondary of another type its one) - the rounds the run wants, as far as those pouches hold
+		var pouches: int = maxi(1, sim.mag_pouch_room()) if pair[0] == "Primary" else 1
+		var need: int = mini(want - sim.rounds_for(gun), pouches * Items.pouch_cap_of(type))
+		while _stash_rounds(sim, type) < need and sim.rig_room(1) and guard < 6:
 			guard += 1
-			var took := false
-			for it in sim.stash:
-				if Items.is_ammo(it) and Items.base_of(it)["type"] == type:
-					took = sim.take(it["id"])
-					break
-			if took:
-				continue
 			if not sim.buy_ammo(type):
 				if sim.stash_room(1):
 					break
@@ -1615,6 +1617,15 @@ func _restock_rounds(sim) -> void:
 						worst = it
 				if worst.is_empty() or not _dispose(sim, worst):
 					break
+
+
+## The stash's rounds of a type.
+static func _stash_rounds(sim, type: String) -> int:
+	var n := 0
+	for it in sim.stash:
+		if Items.is_ammo(it) and str(Items.base_of(it)["type"]) == type:
+			n += int(it.get("rounds", 0))
+	return n
 
 
 const AMMO_STACKS_KEPT := 6

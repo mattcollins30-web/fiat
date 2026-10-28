@@ -1071,6 +1071,7 @@ const SKY := {
 const NEXT := {
 	"past": "The runner's waiting in Training. Ask what they were, before.",
 	"first": "The Allotments are out past the ring road. Go and see what's left.",
+	"supplies": "There's medical supplies in the stash. The Clinic's medic wants them: hand them in.",     # 28 Oct, Matt: as a ready contract's
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
@@ -1080,6 +1081,7 @@ const NEXT := {
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
 	"first": "Next: the Allotments",
+	"supplies": "Supplies for the Clinic",
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
 	"done": "The Radio's the game now",
@@ -1127,7 +1129,7 @@ const ISSUE := {"log": "The Issue: the town runs on the Issuer's money now. Your
 	"printed": "The Issuer printed again: %s, and every price up with it.",
 	"kicker": "THE ISSUE", "title": "Its value is as stated", "sub": "The Issuer's down. The town runs on his money now.",
 	"line": "\"Everything you've got is worth what I say it is. Today, that's this.\"",
-	"pile": "Your pile: %s, %s notes and kit worth %s", "rate": "The Issue: 0.8 × the square root of your pile", "came": "What came out: %s; your kit sells at ×%s of the day's rate, as the pile did",
+	"pile": "Your pile: %s, %s notes, and kit and goods worth %s", "rate": "The Issue: 0.8 × the square root of your pile", "came": "What came out: %s; your kit sells at ×%s of the day's rate, as the pile did",
 	"tiles": [["Prices follow the money", "More fiat about, more it costs"], ["His rate moves", "The Fence buys at it"], ["Burn it", "Hand fiat back: prices fall"]],
 	"go": "Take it", "hint": "Tins and notes are gone · the Issuer's at the Fence"}
 const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "short": "Short of fiat", "no_room": "No room in the stash",

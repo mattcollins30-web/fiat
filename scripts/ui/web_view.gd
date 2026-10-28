@@ -291,20 +291,19 @@ func stack_of(id: String, nd: Dictionary) -> Array:
 	return []
 
 
-## A region's name over it.
+## A region's name over it: the name alone (28 Oct, Matt: "it should just say 'Rat Man' ... same for the classes, just
+## the class names instead of what they do") - no "The", no element, lanes or points (the key carries those).
 func region_words(tn: String) -> String:
 	var t: Dictionary = _trees[tn]
-	if t.get("ring", false):
-		return "%s · paragon %d" % [tn, sim.paragon()]     # its free points are the key's (23 Oct)
-	if t.has("element"):
-		return "%s · %s" % [tn, t["element"]]     # the name alone: the meter and the free points are the key's (23 Oct, Matt)
-	if t.get("class", "") != "":
-		var lanes: Array = []
-		for other in Data.TREES:
-			if other.get("class", "") == t["class"]:
-				lanes.append(str(other["name"]))
-		return "%s · %s" % [str(t["class"]), " and ".join(lanes)]
-	return "%s · the Yard" % tn                   # the glossary: never "camp" (the language pass)
+	if t.get("class", "") != "" and not t.has("element"):
+		return str(t["class"])
+	return plain_name(tn)
+
+
+## A region's name without its "The", capitalised: "The Rat Man" -> "Rat Man", "The cold" -> "Cold".
+static func plain_name(tn: String) -> String:
+	var n: String = tn.trim_prefix("The ").trim_prefix("the ")
+	return n.left(1).to_upper() + n.substr(1) if n != "" else tn
 
 
 ## A node's glyph key (node_glyphs.gd), or "" for none.

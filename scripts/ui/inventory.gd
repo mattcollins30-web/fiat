@@ -123,6 +123,7 @@ var _edge_dir := 0                 # a drag held at the scrolling pack's edge: -
 static var drag_rot := false       # the piece in hand turned (R, or the right button, while dragging)
 static var _live: Control          # the drag's picture, to turn
 static var _live_fp := Vector2i.ONE     # its footprint as it lies
+static var _live_cell: int = Pal.CELL   # the cell it's drawn at (28 Oct)
 
 
 func _init() -> void:
@@ -308,7 +309,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	if selected >= 0 and not _has(selected):
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page * 1000 + top_row, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
-		("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else ""]     # the lot's button reads the cash and the room (23 Oct)
+		(("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else "") + (str(sim.on_mission()) if scrapping and sim != null else "")]     # the lot's button reads the cash and the room (23 Oct); the Workshop's Scrap the run (28 Oct, the review)
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
@@ -378,13 +379,15 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 			if _many_scraps(_item(id)):
 				n += 1
 				bits += sim.scrap_yield(_item(id))
-		UI.fit_button(_sell_button, ["Scrap %d · %d scrap" % [n, bits], "Scrap %d" % n])
+		UI.fit_button(_sell_button, ["Scrap %d · %d scrap" % [n, bits], "Scrap %d · %d" % [n, bits], "Scrap %d" % n])     # the figure kept when the long form won't fit (28 Oct, the tools review)
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	if buying == "":
 		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not scrapping and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id)))) or (scrapping and not chosen.any(func(id): return _many_scraps(_item(id)))) or (scrapping and sim.on_mission())     # the Fence buys; shut till the Carpet Man (13 Oct); the Workshop scraps at home (the review)
 		if scrapping and sim.on_mission() and not chosen.is_empty():
 			_sell_button.tooltip_text = "Not while the runner's out"
+		elif not _sell_button.disabled:
+			_sell_button.tooltip_text = ""         # a stale reason off (28 Oct, the review)
 	if pack_mode:
 		_lay_pack(cap)
 	else:
@@ -468,9 +471,12 @@ func _lay_pack(cap: int) -> void:
 			n += 1
 	for k in range(n, _outlines.size()):
 		_outlines[k].visible = false
-	@warning_ignore("integer_division")
-	page = top_row / _view_rows
-	_paged(maxi(1, ceili(float(reach_rows) / _view_rows)))
+	# the screens (28 Oct, the review: at the bottom it read 2/3 with a dead ›): the top a screen at a time, the
+	# bottom always the last
+	var last_top: int = maxi(0, reach_rows - _view_rows)
+	var pages: int = 1 if last_top == 0 else ceili(float(last_top) / _view_rows) + 1
+	page = 0 if top_row == 0 else (pages - 1 if top_row >= last_top else ceili(float(top_row) / _view_rows))
+	_paged(pages)
 	_page_prev.visible = scrolls()
 	_page_next.visible = scrolls()
 	_page_label.visible = scrolls()
@@ -614,12 +620,13 @@ func _cell_input(event: InputEvent, k: int) -> void:
 		var id: int = _cells[k].id
 		_press_cell = -1
 		if id >= 0:
-			_cells[k].force_drag({"id": id, "src": drag_src}, drag_preview(_item(id), bool(_item(id).get("rot", false)) and pack_mode))
+			_cells[k].force_drag({"id": id, "src": drag_src}, drag_preview(_item(id), bool(_item(id).get("rot", false)) and pack_mode, cell_px()))
 
 
 ## What rides under the mouse during a drag: the item's picture if it has
 ## one, its name if not; turned when `rot` (a piece lying turned in the pack). R or the right button turns it.
-static func drag_preview(it: Dictionary, rot := false) -> Control:
+## At `cell` a cell (28 Oct, the review: a shrunk pack's piece in hand was drawn at the full 64, twice its ghost).
+static func drag_preview(it: Dictionary, rot := false, cell: int = Pal.CELL) -> Control:
 	var holder := Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tex := Items.art(it)
@@ -631,7 +638,7 @@ static func drag_preview(it: Dictionary, rot := false) -> Control:
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		t.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var f := Items.footprint(it)
-		t.size = Vector2(ItemCell.px(f.x), ItemCell.px(f.y))
+		t.size = Vector2(_px_at(f.x, cell), _px_at(f.y, cell))
 		t.modulate = Color(1, 1, 1, 0.85)
 		inner = t
 	else:
@@ -643,6 +650,7 @@ static func drag_preview(it: Dictionary, rot := false) -> Control:
 		inner = preview
 	holder.add_child(inner)
 	_live = holder
+	_live_cell = cell
 	_live_fp = Items.footprint(it) if not it.is_empty() else Vector2i.ONE
 	drag_rot = false
 	if rot:
@@ -657,7 +665,12 @@ static func turn_live() -> void:
 		return
 	var inner: Control = _live.get_child(0)
 	inner.rotation_degrees = 90.0 if drag_rot else 0.0
-	inner.position = Vector2(float(ItemCell.px(_live_fp.y)) if drag_rot else 0.0, 0.0)
+	inner.position = Vector2(float(_px_at(_live_fp.y, _live_cell)) if drag_rot else 0.0, 0.0)
+
+
+## So many cells across at a cell's size, the gaps between.
+static func _px_at(n: int, cell: int) -> int:
+	return n * cell + (n - 1) * GAP
 
 
 func _input(event: InputEvent) -> void:
@@ -733,10 +746,18 @@ func _edge_tick(now: float) -> void:
 
 func _process(_dt: float) -> void:
 	if _edge_dir != 0:
-		if not _dragging():
-			_edge_dir = 0
+		if not _dragging() or not edge_held():
+			_edge_dir = 0                      # the drag ended, or left the pack (28 Oct, the review: it ran on to the top)
 		else:
 			_edge_tick(Time.get_ticks_msec() / 1000.0)
+
+
+## The mouse still over the pack's grid, where a held drag scrolls it (`at`, a global point, for the tests).
+func edge_held(at: Variant = null) -> bool:
+	var g: Control = _grid if _grid != null else self
+	if at != null:
+		return g.get_global_rect().has_point(Vector2(at))
+	return is_inside_tree() and g.get_global_rect().has_point(g.get_global_mouse_position())
 
 
 ## The pack moved so many rows (the wheel, the arrows, a held drag); the owner redraws on `picked`.

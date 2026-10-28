@@ -1197,6 +1197,7 @@ func issue_preview() -> Dictionary:
 	var held := 0.0                            # the kit's sale worth joins the pile (Matt, 26 Oct): kit bought to dodge the root doesn't
 	for it in _kit_held():
 		held += float(sell_price(it))
+	held += exchange_held_worth()              # and the exchange's held (28 Oct, Matt): tins parked in scrap or salvage don't either
 	var pile: float = money + held
 	var k: float = (Data.FIAT_PILE_K * sqrt(pile)) / pile if pile > 0.0 else Data.FIAT_SCALE
 	return {"fiat": money * k, "kit_k": clampf(k / Data.FIAT_SCALE, 0.0, 1.0), "money": money, "held": held}
@@ -1210,6 +1211,7 @@ func issue() -> void:
 	var kit_held: Array = _kit_held()
 	for it in kit_held:
 		held += float(sell_price(it))
+	held += exchange_held_worth()              # the exchange's held, as the preview's (28 Oct, Matt)
 	var pile: float = money + held
 	fiat_issue_inf = inflation()
 	if mission != null:
@@ -1231,6 +1233,17 @@ func issue() -> void:
 	fiat_rate = 1.0
 	log_event(Words.ISSUE["log"] % fiat_words(fiat))
 	chron("issue", issue_moment.duplicate())
+
+
+## Scrap, salvage and materials held, at their exchange worth today (28 Oct, Matt, the review's A2): what joins the
+## Issue's pile beside the kit, so tins parked in them before the Issue are converted hard on piles too.
+func exchange_held_worth() -> float:
+	var w := 0.0
+	for cur in ["scrap"] + Array(Data.SALVAGE) + Array(Data.MATERIAL_ORDER):
+		var n: int = exchange_held(cur)
+		if n > 0:
+			w += float(n) * exchange_worth(cur)
+	return w
 
 
 ## Every piece held at the Issue, worn or not: the stash, the runner's kit, every other runner's in the crew (the review:
@@ -1522,6 +1535,14 @@ func exchange_offered() -> Array:
 	return out
 
 
+## What can be given on the exchange: the board less scrap, which is bought, never sold (scrap buy-only, 28 Oct, the
+## review: scrapped with Strip for parts and Salvage, then sold, it paid up to 2.8x the Fence - and the Clinic's shelf
+## bought, scrapped and sold was a money pump).
+const EXCHANGE_BUY_ONLY := ["scrap"]
+func exchange_gives() -> Array:
+	return exchange_offered().filter(func(c): return not (c in EXCHANGE_BUY_ONLY))
+
+
 ## The zones whose salvage drops: a site of it dug to SALVAGE_DEPTH.
 func salvage_kinds() -> Array:
 	var out: Array = []
@@ -1623,8 +1644,8 @@ func exchange_fixer() -> float:
 
 ## One of `from` buys this much `to` today: worth over worth, less the spread, the Fixer's on top.
 func exchange_rate(from: String, to: String, day := -1) -> float:
-	if from == to:
-		return 0.0
+	if from == to or from in EXCHANGE_BUY_ONLY:
+		return 0.0                            # scrap buy-only (28 Oct, the review): never given
 	var wt: float = exchange_worth(to, day)
 	if wt <= 0.0:
 		return 0.0
@@ -1651,6 +1672,8 @@ func exchange_block(from: String, to: String, amount: int) -> String:
 	if mission != null:
 		return "The runner is out"
 	var on := exchange_offered()
+	if from in EXCHANGE_BUY_ONLY and on.has(to):
+		return "%s is bought, never sold" % exchange_name(from)     # scrap buy-only (28 Oct, the review)
 	if from == to or not on.has(from) or not on.has(to):
 		return "Pick two to trade"
 	if amount <= 0:
@@ -1876,6 +1899,8 @@ func next_words(short := false) -> String:
 		return w["past"]
 	if runs_total == 0:
 		return w["first"]
+	if can_hand_in():
+		return w["supplies"]  # supplies waiting on the medic (28 Oct, Matt: as a ready contract was), the endgame's too
 	if campaign_done():     # the lorry's line is the log's, once (21 Oct: the move it pointed at is gone)
 		return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
 	for z in range(Data.ZONES.size()):
@@ -3141,6 +3166,11 @@ func element_trained(el: String) -> bool:
 func class_elements() -> Array:
 	if elements_open.has(cls):
 		return Array(elements_open[cls]).duplicate()
+	return _derived_elements()
+
+
+## The camp's first two elements trained, in the circle's order: what a class that's never opened or closed one takes.
+func _derived_elements() -> Array:
 	var list: Array = []
 	for et in Data.ELEMENT_TREES:
 		var el := str(et.get("element", ""))
@@ -3155,6 +3185,19 @@ func _element_in_tree(el: String) -> bool:
 		if element_of(str(id)) == el:
 			return true
 	return false
+
+
+## Every class that's never opened or closed one keeps the two it takes now (28 Oct, the review: a Doorman's derived pair
+## moved when the Drifter trained an element earlier in the circle, and his poison nodes went dark): written to
+## elements_open before a new element joins the camp, once the camp has two to take.
+func _pin_class_elements() -> void:
+	var two: Array = _derived_elements()
+	if two.size() < Data.ELEMENTS_A_CLASS:
+		return
+	for c in Data.CLASSES:
+		var name: String = str(c["name"])
+		if not elements_open.has(name) and name != cls:
+			elements_open[name] = two.duplicate()
 
 
 func _open_element(el: String) -> void:
@@ -3465,6 +3508,8 @@ func train_node(id: String) -> bool:
 	_dry_memo.clear()                     # the memos read the tree (A4's review)
 	var nd: Dictionary = node(id)
 	if is_element_starter(id):
+		if not tree.has(id):
+			_pin_class_elements()             # the other classes keep the two they took (28 Oct, the review)
 		_open_element(element_of(id))         # two a class (28 Oct)
 		if tree.has(id):
 			log_event("%s opened for the %s" % [nd["name"], cls])
@@ -3505,8 +3550,14 @@ func respec_cost() -> int:
 	return _inf(points_spent() * Data.RESPEC_CASH)
 
 
+## A class-trees reset can go: a node of the class's own trained, and its price (28 Oct, the review: Training's button
+## read the whole tree, the camp's nodes too).
+func can_respec() -> bool:
+	return not tree.filter(func(id): return not is_camp(str(id))).is_empty() and cash >= respec_cost()
+
+
 func respec() -> bool:
-	if tree.filter(func(id): return not is_camp(str(id))).is_empty() or cash < respec_cost():
+	if not can_respec():
 		return false
 	_dry_memo.clear()
 	var paid := respec_cost()
@@ -3704,10 +3755,12 @@ func _mags_topped(m: Dictionary) -> void:
 
 ## The rounds a try-on counts as a trip to the rig: the stash's, and on a run the pack's too (21 Oct, Matt's playtest:
 ## a gun found with its box in the same run read as a downgrade in the fight, an upgrade once home).
+## Magazines (28 Oct, the review): a box found out there can't go to the rig now, so on a run only the rig's own pouches
+## moved to the pack count - a found gun and its box read as a gun that goes dry.
 func _rounds_held() -> Array:
 	var out: Array = stash.filter(func(x): return Items.is_ammo(x))
 	if mission != null:
-		out.append_array(mission.get("found", []).filter(func(x): return Items.is_ammo(x)))
+		out.append_array(mission.get("found", []).filter(func(x): return Items.is_ammo(x) and x.get("from_rig", false)))
 	return out
 
 
@@ -3764,16 +3817,20 @@ func _feed_stack_raw(gun: Dictionary) -> Dictionary:
 	return best
 
 
-## The elements the runner is built for: each element whose tree has a node trained. Read again when the tree changes
-## (a hash of the node list, as the trees' own lookups key theirs every tick).
+## The elements the runner is built for: each element whose tree has a node trained, of the class's open two (28 Oct,
+## the review: the camp's elements fed a class the grade of one it had closed). Read again when the tree or the
+## class's two change (a hash of them, as the trees' own lookups key theirs every tick).
 var _els_key := -1
 var _els: Array = []
 func build_elements() -> Array:
-	var k: int = hash(tree)              # the nodes themselves: a respec retrained to the same count is another build (the review)
+	var k: int = hash([tree, cls, elements_open.get(cls, null)])     # the nodes themselves: a respec retrained to the same count is another build (the review)
 	if k != _els_key:
 		_els_key = k
 		_els = []
+		var open_two: Array = class_elements()
 		for et in Data.ELEMENT_TREES:
+			if not (et["element"] in open_two):
+				continue
 			for id in tree:
 				if str(id).begins_with(str(et["name"]) + "/"):
 					_els.append(et["element"])
@@ -5547,6 +5604,14 @@ func strip_all(slot: String) -> Array:
 	if off > 0:
 		log_event("Stripped the %s: %d part%s back to the stash%s" % [str(equipped[slot]["base"]).to_lower(), off, "" if off == 1 else "s", (", %d left on: no room" % left) if left > 0 else ""])
 	return [off, left]
+
+
+## Strip all can take one off now (28 Oct, the review: live with the stash full, then nothing): not on a run, and a part
+## on the piece the stash has room for.
+func can_strip_any(slot: String) -> bool:
+	if mission != null or equipped.get(slot) == null:
+		return false
+	return Dictionary(equipped[slot].get("attachments", {})).values().any(func(a): return a != null and (stash_fits(a) or _stack_room(a)))
 
 
 ## The parts on a worn piece.
@@ -7604,7 +7669,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level()]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct)
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level(), str(class_elements())]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct); the class's two (28 Oct, the review: a close moves no tree)
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -9593,7 +9658,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var socket_find: bool = slot != Data.PAPER and rng.randf() < (0.5 if crate.get("socket", false) else Data.SOCKET_FIND)     # a socketable, its own kind of find, kills too (21 Oct); half of Breaker's yard's
 	if socket_find:
 		slot = Data.ATTACHMENT
-	if not from_kill and not socket_find and rng.randf() < supply_odds(site, crate):
+	if _supplies_take(slot, from_kill, socket_find, site, crate):
 		slot = Data.SUPPLIES                  # medical supplies (28 Oct): a medicine cabinet's, a site's leaning to meds
 	var said := ""
 	var quality: float = rarity_bonus() + float(t.get("rarity", 0.0)) + float(crate.get("rarity", 0.0))
@@ -9610,12 +9675,12 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		# rolls: a deep signal's tier-7+ bases stay the deep runner's (the review)
 		find_lv = wearable_level()
 		find_tier = mini(find_tier, gear_tier())
-	if slot == Data.SUPPLIES:
+	if not myth.is_empty():
+		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere - ahead of a socketable (the review), and of supplies (28 Oct, the review)
+		said = Words.MYTHIC_FOUND % it["unique"]
+	elif slot == Data.SUPPLIES:
 		it = _plain(Data.SUPPLIES, "Medical supplies")
 		Items.set_stack(it, rng.randi_range(int(Data.SUPPLY_COUNT[0]), int(Data.SUPPLY_COUNT[1])))
-	elif not myth.is_empty():
-		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere - ahead of a socketable (the review)
-		said = Words.MYTHIC_FOUND % it["unique"]
 	elif socket_find:
 		it = socket_find_roll(int(t["loot_tier"]))
 	elif not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
@@ -9665,6 +9730,12 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
 	_land(m, it, said, not from_kill and not crate.is_empty() and by_hand(m))
 	return {"it": shown, "said": said}
+
+
+## Whether a look's find is medical supplies instead: a look's (not a kill's), not a socketable, and never a paper
+## (28 Oct, the review: at the Hospital they took the endgame's keys), at supply_odds.
+func _supplies_take(slot: String, from_kill: bool, socket_find: bool, site: Dictionary, crate: Dictionary) -> bool:
+	return not from_kill and not socket_find and slot != Data.PAPER and rng.randf() < supply_odds(site, crate)
 
 
 ## The share of a look that's medical supplies (28 Oct): SUPPLY_FIND times a site's lean to meds where it has one, and
@@ -10953,8 +11024,7 @@ func set_top_up(mode: String) -> void:
 ## dearer grade, as feed_stack reads them) - then the meds, the best first, into the pouches left (23 Oct). What's in the
 ## rig already stays. Logs what went in.
 ## Magazines (28 Oct): the rig's magazines are filled from the stash's boxes first, free, whatever the mode (filling
-## them is home's job); new pouches of magazines take up to RIG_MAG_SHARE of the rig, the primary's before the
-## secondary's one; then a cure for each of the front's elements (TOP_UP_CURES at most), then the heals.
+## them is home's job); then pack_rig packs the rest.
 func _top_up() -> void:
 	if mission != null:
 		return
@@ -10964,6 +11034,23 @@ func _top_up() -> void:
 			_dry_memo.clear()
 			log_event(Words.FILLED_MAGS % moved)
 		return
+	var got: Array = pack_rig(top_up_mode)
+	moved += int(got[0])
+	var meds_in: int = int(got[1])
+	if moved > 0 or meds_in > 0:
+		_dry_memo.clear()
+		log_event((Words.TOPPED_UP % [moved, meds_in]) if meds_in > 0 and moved > 0 else ((Words.TOPPED_UP_MEDS % meds_in) if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved))
+
+
+## The rig packed from the stash (28 Oct, Matt, the review: magazines then cures left a Bum bag no heal): HEAL, MAGAZINE,
+## CURE - at least one heal and one pouch of magazines first, when the rig has the room and the stash has them; then a
+## cure for each of the front's elements (TOP_UP_CURES at most); then the rest, new pouches of magazines up to
+## RIG_MAG_SHARE of the rig (the primary's, one kept for a secondary firing another type), the heals the pouches left.
+## "best" takes the top grade of each alone. What's in the rig already stays. The gate's top-up and the bot pack by
+## it. [rounds moved, meds and cures in].
+func pack_rig(mode := "fill") -> Array:
+	if mission != null:
+		return [0, 0]
 	var lists: Array = []
 	for slot in ["Primary", "Secondary"]:
 		var gun = equipped[slot]
@@ -10982,52 +11069,75 @@ func _top_up() -> void:
 					v += 100000
 			return v
 		stacks.sort_custom(func(a, b): return worth.call(a) > worth.call(b))
-		if top_up_mode == "best" and not stacks.is_empty():
+		if mode == "best" and not stacks.is_empty():
 			var top: String = str(stacks[0]["base"])
 			stacks = stacks.filter(func(x): return str(x["base"]) == top)     # the top grade alone
 		lists.append([t, stacks])
-	# the magazines' pouches: the primary's fill the share but one, the secondary's (another type) the last
-	var room: int = mini(mag_pouch_room(), med_capacity() - rig_used())     # the share, inside the pouches free
-	var two_types: bool = lists.size() > 1 and str(lists[1][0]) != str(lists[0][0]) and not lists[1][1].is_empty()     # the same rounds: the primary's pouches feed both; none in the stash, the primary's
-	var sec_quota: int = 1 if two_types and room >= 2 else 0
-	var quotas: Array = [room - sec_quota, sec_quota]
-	for li in range(lists.size()):
-		var quota: int = int(quotas[li])
-		var got := 0
-		for it in lists[li][1]:
-			while got < quota and stash.has(it) and int(it.get("rounds", 0)) > 0 and rig_room(1):
-				var before: int = int(it["rounds"])
-				var pouches: int = rig.size()
-				if not take(int(it["id"])):
+	var meds: Array = stash.filter(func(x): return Items.is_heal(x))
+	meds.sort_custom(func(a, b): return med_heal(a) > med_heal(b))
+	if mode == "best" and not meds.is_empty():
+		var top_med: String = str(meds[0]["base"])
+		meds = meds.filter(func(x): return str(x["base"]) == top_med)
+	var moved := 0
+	var meds_in := 0
+	var has_mags: bool = rig.any(func(x): return Items.is_ammo(x))
+	var mags_to_come: bool = not has_mags and not lists.is_empty() and not lists[0][1].is_empty()
+	# one heal: the best that leaves a pouch for the magazines to come
+	if not rig.any(func(x): return Items.is_heal(x)):
+		var keep: int = 1 if mags_to_come else 0
+		for it in meds:
+			if rig_room(Items.size(it) + keep) and take(int(it["id"])):
+				meds_in += 1
+				break
+		if meds_in == 0 and keep > 0:
+			for it in meds:
+				if rig_room(Items.size(it)) and take(int(it["id"])):
+					meds_in += 1                  # no room for both: the heal first, as Matt's order has it
 					break
-				moved += before - (int(it["rounds"]) if stash.has(it) else 0)
-				if rig.size() > pouches:
-					got += 1
-	# the cures (28 Oct): one for each element the front's gangs throw, the heaviest first, a pouch each
-	var cures_in := 0
+	# one pouch of magazines: the primary's best grade
+	if mags_to_come:
+		moved += _pack_mags(lists[0][1], 1)
+	# the cures: one for each element the front's gangs throw, the heaviest first, a pouch each
 	for ty in zone_elements(front_tier()).slice(0, Data.TOP_UP_CURES):
 		if not first_cure(ty).is_empty() or not rig_room(1):
 			continue
 		for it in stash:
 			if Items.cure_of(it) == ty:
 				if take(int(it["id"])):
-					cures_in += 1
+					meds_in += 1
 				break
-	# the heals, the best first (23 Oct): a pouch each while the rig has one
-	var meds: Array = stash.filter(func(x): return Items.is_heal(x))
-	meds.sort_custom(func(a, b): return med_heal(a) > med_heal(b))
-	if top_up_mode == "best" and not meds.is_empty():
-		var top_med: String = str(meds[0]["base"])
-		meds = meds.filter(func(x): return str(x["base"]) == top_med)
-	var meds_in := cures_in
+	# the rest: the magazines' pouches to their share (the primary's but one, the secondary's of another type the last)
+	var room: int = mini(mag_pouch_room(), med_capacity() - rig_used())
+	var two_types: bool = lists.size() > 1 and str(lists[1][0]) != str(lists[0][0]) and not lists[1][1].is_empty() \
+		and not rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[1][0]))     # the same rounds: the primary's pouches feed both; none in the stash, or a pouch in the rig already, the primary's
+	var prim_in: bool = not lists.is_empty() and rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[0][0]))
+	var sec_quota: int = 1 if two_types and (room >= 2 or (room >= 1 and prim_in)) else 0     # the primary's pouch already in: the secondary's the next
+	var quotas: Array = [room - sec_quota, sec_quota]
+	for li in range(lists.size()):
+		moved += _pack_mags(lists[li][1], int(quotas[li]))
+	# and the heals, the best first, a pouch each while the rig has one
 	for it in meds:
-		if not rig_room(Items.size(it)):
+		if not stash.has(it) or not rig_room(Items.size(it)):
 			continue                              # a kit takes two pouches; a bandage after it may still fit
 		if take(int(it["id"])):
 			meds_in += 1
-	if moved > 0 or meds_in > 0:
-		_dry_memo.clear()
-		log_event((Words.TOPPED_UP % [moved, meds_in]) if meds_in > 0 and moved > 0 else ((Words.TOPPED_UP_MEDS % meds_in) if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved))
+	return [moved, meds_in]
+
+
+## Up to `pouches` new pouches of magazines into the rig from these stacks, in their order. The rounds moved.
+func _pack_mags(stacks: Array, pouches: int) -> int:
+	var moved := 0
+	var got := 0
+	for it in stacks:
+		while got < pouches and stash.has(it) and int(it.get("rounds", 0)) > 0 and rig_room(1):
+			var before: int = int(it["rounds"])
+			var n_pouches: int = rig.size()
+			if not take(int(it["id"])):
+				break
+			moved += before - (int(it["rounds"]) if stash.has(it) else 0)
+			if rig.size() > n_pouches:
+				got += 1
+	return moved
 
 
 ## The rig's magazines filled at home (28 Oct): every pouch of rounds topped to its MAG_POUCH magazines from the
@@ -11840,6 +11950,7 @@ func _restock_clinic() -> void:
 	for k in range(clinic_stock() - n_cures):
 		var b: Dictionary = bases[mini(bases.size() - 1, int(absf(rng.randfn(0.0, 1.2))))]
 		var it := _plain(Data.MEDICAL, str(b["name"]))
+		it["ilvl"] = int(b["tier"])           # at its base's tier, as the old shelf's (28 Oct, the review: _plain's roll left ilvl 1)
 		var x := rng.randf()
 		var r: int = 2 if x < float(step.get("rare", 0.0)) else (1 if x < float(step.get("rare", 0.0)) + float(step.get("magic", 0.0)) else 0)
 		if r > 0:
@@ -13546,10 +13657,12 @@ func loadout_wear(i: int) -> bool:
 	for b in want:
 		var have: int = rig.filter(func(x): return str(x["base"]) == b).size()
 		for it in stash.filter(func(x): return str(x["base"]) == b and Items.rig_item(x)):
+			# a box gives a pouch a take (28 Oct, the review: one pouch a box left a kit of three pouches short): take
+			# again while it's there, counting what the rig holds of the base
+			while have < int(want[b]) and stash.has(it) and take(int(it["id"])):
+				have = rig.filter(func(x): return str(x["base"]) == b).size()
 			if have >= int(want[b]):
 				break
-			if take(int(it["id"])):
-				have += 1
 		if have < int(want[b]):
 			missed.append(str(b))                 # the rig short of it: none in the stash, or no room (the review)
 	for k in range(mini(e["skills"].size(), Data.SKILL_SLOTS)):

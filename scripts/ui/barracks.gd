@@ -635,9 +635,9 @@ func _show_also() -> void:
 		var words := nm
 		var short := nm
 		if t.has("element"):
-			words = "%s · %s" % [nm, t["element"]]
+			words = WebView.plain_name(nm)            # the name alone (28 Oct, Matt)
 		elif t.get("class", "") != "":
-			words = "%s · %s" % [nm, t["class"]]
+			words = nm
 		elif _is_pages(nm):
 			# the drawer and the shelf carry their counts, and the page when one's open over the lanes
 			var br0: Dictionary = _branch_for(nm)
@@ -1042,7 +1042,7 @@ func _show_panel() -> void:
 		_respec.disabled = sim.element_spent(el) == 0 or sim.cash < sim.element_reset_cost(el) or sim.on_mission()
 	else:
 		_respec.text = (Words.ASK["again"] % Words.BUILD["reset_sure"] if armed else Words.BUILD["reset_sure"]) % Fmt.money(sim.respec_cost())
-		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
+		_respec.disabled = not sim.can_respec()     # the sim's own test (28 Oct, the review: live with only the camp's nodes, then refused)
 	UI.style_button(_respec, false, "bad" if armed else "")
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
 	var x: float = Pal.GRID_W - PAD
@@ -1214,8 +1214,7 @@ func _on_respec() -> void:
 		return
 	var rk := _respec_key()
 	var ring_one: bool = rk == "ring"
-	if rk == "trees":
-		DisplayServer.clipboard_set(sim.build_code())
+	var code: String = sim.build_code() if rk == "trees" else ""     # read before the reset clears it; copied only once it's done (the review)
 	var done: bool = false
 	if ring_one:
 		done = sim.paragon_reset()
@@ -1226,6 +1225,7 @@ func _on_respec() -> void:
 	else:
 		done = sim.respec()
 		if done:
+			DisplayServer.clipboard_set(code)
 			sim.log_event(Words.BUILD["reset_copied"])
 	if done:
 		acted.emit()
