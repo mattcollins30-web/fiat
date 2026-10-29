@@ -158,6 +158,12 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
 
 ## Things to know
 
+- The cloud session's scratchpad (/tmp) is wiped when its container restarts (29 Oct, 11:10: two built features, the
+  itemisation and the repeat runs, and their reviews lost before they reached this repo). Snapshot every workspace to
+  /mnt/user-data/outputs/snap/ (it survives) at the end of every phase, and every agent's brief says so. A fresh cloud
+  copy: `git archive` of HEAD staged up, Godot 4.7.2 from its release; with every art file in it the cloud smoke's bar
+  is 0 reds.
+
 - Voiced lines: the story, the room intros and Kev's story intro are ElevenLabs recordings. Changing their text means
   a re-record (propose the words to Matt; the text waits for his takes).
 - Times to Matt in his local time: UK time (GMT from 25 Oct 2026, BST from the last Sunday in March).
