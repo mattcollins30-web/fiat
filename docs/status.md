@@ -7150,3 +7150,7 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
   no collapse, a slow climb (about 100 damage a second at level 20, farming tiers 4-6, the loadout's worth flat). Bot
   timing, not tuned before a playtest (Matt's rule); one read a build, so a single unlucky read reads the same way.
   Faint signals 90%. Next: Matt plays 23c71d1 from fresh.
+- UI, raised 29 Oct (Matt): "it becomes really difficult to compare an item 1:1 if you have attachments and sockets
+  because it changes the base damage ... we need a way to display the base stats vs base stats." Mocked on the canvas
+  (Compare): A, three readings (as they stand, base to base, with your parts moved over - the verdict's, and a
+  "Swap, parts and all"), recommended; B, two readings. Waiting on Matt's pick.
