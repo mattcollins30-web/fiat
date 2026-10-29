@@ -4,10 +4,32 @@
 
 Matt plays c252141 from a fresh camp to the County and a pinnacle first. Then, in order:
 
-1. **Repeat runs, trips and the Bunkhouse** (docs/design/trips.md, designed 28 Oct; canvas RepeatRuns, Trips,
+1. **Itemisation** (29 Oct, below; Matt: ahead of the trips, whose rewards sit on its tiers): the campaign's tiers
+   cut to 1-4 with 5-6 from the early signals, more bases sideways within a tier, gloves as an eighth slot.
+   Measured against Matt's playtest log of each gun held and for how long.
+2. **Repeat runs, trips and the Bunkhouse** (docs/design/trips.md, designed 28 Oct; canvas RepeatRuns, Trips,
    Bunkhouse), with the wagers.
-2. Anything Matt raises from here that isn't a bug fix or a UI change, below with his words and the date - if it fits
+3. Anything Matt raises from here that isn't a bug fix or a UI change, below with his words and the date - if it fits
    docs/design/vision.md at all.
+
+### Raised 29 Oct: itemisation (from play, before the fresh playtest)
+
+Matt, on rifles and SMGs: "it feels bad in practice ... It feels crap throughout and the campaign's pacing means that
+you don't actually keep anything for very long at all. I wonder if the answer is both more items in general but also
+less tiers available during the campaign. The campaign stops at tier 4 with the early radios giving 5 and 6 so the step
+up feels rewarding. I also think that gloves need to be added as an item type that would carry affixes for pace etc."
+
+What the data says (23c71d1): 162 gear bases, 120 of them in the campaign (tiers 1-6); a campaign site steps the tier
+four times (the Parade T3, the Shopping Centre T4, the Bank T5, the Hospital T6); rifles have one T4 gun (the Scoped
+.308); tiers 7-9 hold 9 rifles and SMGs between them against the campaign's 21; SMGs out-damage rifles at every tier.
+
+Three parts, each its own size:
+1. The campaign's tiers cut to 1-4, tiers 5-6 from the early signals: a pacing and balance change (the bases'
+   tiers, the sites' and signals' loot tiers, the Fence and gamble, the bot's gates), a full pass after.
+2. More bases, sideways within a tier (a choice of how a gun plays, not only a bigger number), most of all where the
+   lists are thin; with art (the PixelLab pipeline).
+3. Gloves, an eighth slot: pace, reload and handling affixes (reload matters since the magazines), bases by tier,
+   uniques, the Runner room's loadout redrawn for eight cards, art.
 
 
 *Banked 11 Oct, from asking Claude what it would add. Nothing here is agreed; each goes through design with Matt

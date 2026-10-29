@@ -101,7 +101,8 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   needs to come first before anything else. Outside of bug fixes of course"):
   1. The balance pass on c252141 read; then Matt plays from a fresh camp through the County and a pinnacle.
   2. While he plays, only bug fixes and UI changes are taken, parked, built after the playtest.
-  3. Then docs/design/ideas_backlog.md's queue: the trips (docs/design/trips.md) first, the rest behind them.
+  3. Then docs/design/ideas_backlog.md's queue: the itemisation first (29 Oct), the trips (docs/design/trips.md) next,
+     the rest behind them. Matt logs each gun he holds and for how long, the rework's before picture.
 - **The creep rule**: a feature, system, rework or activity Matt raises goes to docs/design/ideas_backlog.md with the
   date and his words, not into the build or a design, and Claude says where it went. Claude refuses and pushes back on
   what doesn't fit docs/design/vision.md or the plan, and says why (Matt, 28 Oct: "simply push back and refuse things
