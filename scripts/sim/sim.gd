@@ -12105,8 +12105,32 @@ func pack_rig(mode := "fill") -> Array:
 		meds = meds.filter(func(x): return str(x["base"]) == top_med)
 	var moved := 0
 	var meds_in := 0
-	var has_mags: bool = rig.any(func(x): return Items.is_ammo(x))
+	# the primary's own rounds (29 Oct, the stall: a pouch of nails left from an old gun read as "magazines in", and the
+	# new gun's first pouch never came)
+	var has_mags: bool = not lists.is_empty() and rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[0][0]))
 	var mags_to_come: bool = not has_mags and not lists.is_empty() and not lists[0][1].is_empty()
+	# HEAL, MAGAZINE, CURE (29 Oct, the stall: what stayed in the rig from before - two cures and a two-pouch kit in a
+	# four-pouch rig - sent the runner out with 1,500 shells in the stash and none in the gun, the bot for hours): the
+	# first pouch of the primary's magazines comes before rounds neither gun fires, a cure, or any heal but the best,
+	# so those go back to the stash, in that order, until there's room for it (and a heal, when none is in)
+	if mags_to_come and med_capacity() > 0:
+		var fired: Array = lists.map(func(l): return str(l[0]))
+		var need_room: int = 1                 # the pouch; and with no heal in, the smallest heal the stash has beside it (the review: a kit is two to four pouches)
+		if not meds.is_empty() and not rig.any(func(x): return Items.is_heal(x)):
+			need_room += meds.map(func(x): return Items.size(x)).min()
+		var best_heal = null
+		for it in rig:
+			if Items.is_heal(it) and (best_heal == null or med_heal(it) > med_heal(best_heal)):
+				best_heal = it
+		var out_first: Array = rig.filter(func(x): return Items.is_ammo(x) and not (str(Items.base_of(x)["type"]) in fired))
+		var cures: Array = rig.filter(func(x): return Items.is_cure(x))
+		cures.reverse()
+		out_first += cures
+		out_first += rig.filter(func(x): return Items.is_heal(x) and x != best_heal)
+		for it in out_first:
+			if rig_room(need_room):
+				break
+			leave(int(it["id"]))
 	# one heal: the best that leaves a pouch for the magazines to come
 	if not rig.any(func(x): return Items.is_heal(x)):
 		var keep: int = 1 if mags_to_come else 0

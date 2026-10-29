@@ -7485,12 +7485,16 @@ func _ammo_checks(sim) -> void:
 	sim.rig = []
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	var stash0: Array = sim.stash.duplicate()
 	sim.stash.append(sim._plain(Data.AMMO, "Slugs"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
-	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) == 0, "a full rig took rounds at the gate")
+	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure): the primary's first pouch of magazines goes in,
+	# one bandage back to the stash - the gate no longer sends the gun out empty to keep a fourth bandage
+	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - 1,
+		"a full rig of bandages went out without the primary's pouch: %s" % str(sim.rig.map(func(x): return str(x["base"]))))
 	sim.extract_now()
-	sim.stash.pop_back()
+	sim.stash = stash0
 	# the card's rounds-short read (16 Oct): ten shells against a site's fight is short; a rig of them isn't
 	sim.rig = [sim._plain(Data.AMMO, "Shells")]
 	Items.set_stack(sim.rig[0], 10)
@@ -8446,8 +8450,10 @@ func _check_fit(main, where: String) -> void:
 				_check(not mn._wordmark.visible or mn._wordmark.position.x + mn._wordmark.size.x <= x0 + mn.COLUMN_W + 0.5, "%s menu: the wordmark leaves the column" % where)
 				_check(mn._foot_left.visible and mn._foot_left.position.y >= pr.end.y, "%s menu: the foot runs into the rows" % where)
 				_check(not mn._title.visible and mn._stamps[0].visible, "%s menu: the title shows its heading, or no stamps" % where)
+				# the wordmark is drawn at the painting's own 3x, whole pixels (the 29 Oct wordmark, 167 x 88: 501 x 264)
+				_check(typeof(mn.WORDMARK_SCALE) == TYPE_INT and mn.WORDMARK_SCALE == 3 and (not mn._wordmark.visible or mn._wordmark.size == mn._wordmark.texture.get_size() * mn.WORDMARK_SCALE), "%s menu: the wordmark is not drawn at %dx (%s)" % [where, mn.WORDMARK_SCALE, str(mn._wordmark.size)])
 				# the wordmark loads wherever the file is (the editor, a pack): the Deck's builds had none (8 Oct)
-				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size() == Vector2(154, 72)), "%s menu: the wordmark did not load from %s (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
+				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size() == Vector2(167, 88)), "%s menu: the wordmark did not load from %s (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
 			"drawer":
 				# the drawer is the rail's rect exactly, its kicker up, names only
 				var rail := Rect2(main._rail.position, Vector2(Pal.RAIL_W, main._rail_panel.size.y))     # the rail unfolded's, folded or not (15 Oct)
@@ -10268,6 +10274,24 @@ func _magazine_checks(main) -> void:
 	var pouches: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
 	_check(pouches == ceili(s.med_capacity() * Data.RIG_MAG_SHARE) or s._rounds_in_stash("SMG rounds") == 0, "the gate's magazines: %d pouches of %d" % [pouches, s.med_capacity()])
 	_check(s.rig.all(func(x): return not Items.is_ammo(x) or int(x["rounds"]) <= Items.pouch_cap(x)), "a pouch holds more than its magazines")
+	# the stall (29 Oct): the rig full from before - cures and a heal, or a pouch for a gun not carried - still gets the
+	# primary's first pouch of magazines, the best heal kept; the shells in the stash were never in the gun
+	s.equipped["Primary"] = s._plain("Primary", _base_of_type("shotgun"))
+	var cap_r: int = s.med_capacity()
+	for case in ["cures", "old rounds", "no heal"]:
+		var keep_heal: Dictionary = s._plain(Data.MEDICAL, "Bandage")
+		s.rig = [] if case == "no heal" else [keep_heal]
+		if case == "old rounds":
+			s.rig.append(s._plain(Data.AMMO, "Nails"))
+		while s.rig_used() < cap_r:
+			s.rig.append(s._plain(Data.MEDICAL, "Burn gel" if s.rig.size() % 2 == 0 else "Activated charcoal"))
+		# with no heal in, only a two-pouch kit in the stash (the review: room for a one-pouch heal let the kit take it all)
+		s.stash = [s._plain(Data.AMMO, "Shells"), s._plain(Data.MEDICAL, "First aid kit" if case == "no heal" else "Hospital kit")]
+		s._top_up()
+		var shells_in: int = s.rounds_for(s.equipped["Primary"])
+		_check(cap_r >= 3 and shells_in > 0 and (s.rig.has(keep_heal) if case != "no heal" else s.rig.any(func(x): return Items.is_heal(x))) and s.rig_used() <= cap_r
+			and (case != "old rounds" or not s.rig.any(func(x): return str(x["base"]) == "Nails")),
+			"a full rig (%s) went out with %d shells in the gun: %s" % [case, shells_in, str(s.rig.map(func(x): return str(x["base"])))])
 	# on screen: the run's rig draws a pouch's magazines and the Rounds tile the one in the gun; the Kit's rig too
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
 	sim.equipped["Secondary"] = null

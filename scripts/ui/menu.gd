@@ -14,7 +14,7 @@ extends Control
 ##   the away report), the rows; in the middle of the screen over a dim.
 ## - the title (`opaque`, over art/title.png - Title A on the canvas): a column
 ##   down the painting's left, fading into it; the wordmark (art/wordmark.png,
-##   200 x 80 drawn at the painting's 3x) at its head, the rows under, the studio
+##   167 x 88 drawn at the painting's 3x: 501 x 264) at its head, the rows under, the studio
 ##   at the foot. On the plain ground until the painting exists.
 ## - the drawer (`dock`: the rail's rect - Pause B): the panel takes the rail's
 ##   place over the dimmed game, edged gold, a kicker strip at its head, the
