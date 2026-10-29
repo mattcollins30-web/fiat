@@ -103,6 +103,9 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   2. While he plays, only bug fixes and UI changes are taken, parked, built after the playtest.
   3. Then docs/design/ideas_backlog.md's queue: the itemisation first (29 Oct), the trips (docs/design/trips.md) next,
      the rest behind them. Matt logs each gun he holds and for how long, the rework's before picture.
+- **Changed 29 Oct** (Matt overruled in words: "I won't be able to playtest for 3/4 days so rather than that being dead
+  time I say we build everything as planned ... that really is the last build until I play again"): the compare (A),
+  the itemisation and the trips are built now, in the queue's order, on his go; then he plays that build from fresh.
 - **The creep rule**: a feature, system, rework or activity Matt raises goes to docs/design/ideas_backlog.md with the
   date and his words, not into the build or a design, and Claude says where it went. Claude refuses and pushes back on
   what doesn't fit docs/design/vision.md or the plan, and says why (Matt, 28 Oct: "simply push back and refuse things

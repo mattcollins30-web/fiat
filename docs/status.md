@@ -7153,4 +7153,4 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
 - UI, raised 29 Oct (Matt): "it becomes really difficult to compare an item 1:1 if you have attachments and sockets
   because it changes the base damage ... we need a way to display the base stats vs base stats." Mocked on the canvas
   (Compare): A, three readings (as they stand, base to base, with your parts moved over - the verdict's, and a
-  "Swap, parts and all"), recommended; B, two readings. Waiting on Matt's pick.
+  "Swap, parts and all"), recommended; B, two readings. Matt (29 Oct): A.
