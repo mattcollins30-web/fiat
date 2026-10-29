@@ -17,6 +17,9 @@ a draft for the language pass. Canvas boards: TierMap, BaseGrid, Gloves.
 3. **Three bases a gun type a tier in the campaign, two in the endgame**, sideways in how they play.
 4. **Each gun type gets an edge** (rifles: SMGs out-damage them at every tier today, nothing to make up for it).
 5. Gloves: an eighth slot carrying pace and the like (his words, 29 Oct).
+6. **Gloves on the right, level with the figure's hands** (the canvas's Gloves board, layout A); the right column takes
+   five cards, the armour's shortens.
+7. **The numbers as drafted** (the signals' levels 10, 13, 16, 20, 24; the edges' figures), to be settled in the pass.
 
 ## 1. The tier map
 
@@ -81,8 +84,8 @@ them further ahead of rifles than the table's damage a second shows; the pass re
 
 ## 4. Gloves, the eighth slot
 
-- **Where**: the Runner room's left column, fourth place (where the worn kit's worth sits today; that moves into the
-  runner strip). Four cards a side.
+- **Where** (Matt, 29 Oct: layout A): the Runner room's right column, between the armour and the rig, level with the
+  figure's hands; the right takes five cards (helmet, armour, gloves, rig, charm), the armour's card shortens.
 - **Bases**: 18, two a tier, each with a small built-in figure: grip (quicker reloads) or pace. Drafts: Gardening
   gloves, Work gloves; Rigger gloves, Fingerless gloves; Leather gloves, Motorbike gloves; Shooting gloves, Welder's
   gauntlets; Tactical gloves, Riot gauntlets; Kevlar-lined gloves, Firefighter's gloves; Assault gloves, Hazmat
@@ -107,6 +110,5 @@ them further ahead of rifles than the table's damage a second shows; the pass re
 
 ## Open
 
-- The signal levels for T6-T9 (13, 16, 20, 24 drafted).
 - Whether the City's three sites should differ a little (T4 everywhere, the Barracks a step of quality).
 - The new bases' names and pictures: a manifest after the language pass.
