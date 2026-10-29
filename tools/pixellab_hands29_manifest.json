@@ -1,0 +1,1648 @@
+{
+ "_readme": [
+  "FIAT HANDS 29 (29 Oct): the fight's hands for the itemisation's 78 new weapons, 280x210 at $0.08 each (about $6.24). Straight to art/fight/hands/<slug>.png (RunView.hands_tex finds them by slug; nothing to wire).",
+  "Style images are the items29 stash pictures: run AFTER tools/pixellab_items29_manifest.json. ++ --parallel 3.",
+  "No test batch (Matt, 29 Oct: an established template; a wrong one is rerolled).",
+  "Regenerate with python3 tools/make_hands29_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight/hands/lump_hammer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/lump_hammer.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a lump hammer, raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Lump hammer (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/billhook.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/billhook.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a billhook, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Billhook (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/bike_chain.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bike_chain.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bike chain, swung forward in the right hand, the chain looping out ahead, its taped end wrapped round the fist, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bike chain (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/meat_cleaver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/meat_cleaver.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a meat cleaver, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Meat cleaver (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/hot_poker.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/hot_poker.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a hot poker, raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Hot poker (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/platelayer_s_maul.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/platelayer_s_maul.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a platelayer's maul, raised in both hands over the right shoulder, ready to swing down, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Platelayer's maul (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/cattle_prod.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/cattle_prod.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a cattle prod, held forward in both hands like a spear, its two metal prongs at the tip pointing up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Cattle prod (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/cavalry_sabre.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/cavalry_sabre.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a cavalry sabre, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Cavalry sabre (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/collier_s_pick.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/collier_s_pick.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a collier's pick, raised in both hands over the right shoulder, ready to swing down, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Collier's pick (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/felling_axe.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/felling_axe.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a felling axe, raised in both hands over the right shoulder, ready to swing, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Felling axe (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/civic_mace.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/civic_mace.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a civic mace, raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Civic mace (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/court_sword.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/court_sword.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a court sword, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Court sword (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/speargun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/speargun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a speargun, held forward in both hands, the steel spear pointing straight ahead into the scene, its rubber bands stretched, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Speargun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/compound_bow.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/compound_bow.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a compound bow, drawn, the bow held upright at arm's length in the left hand, the right hand pulling the string back, the arrow pointing straight ahead into the scene, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Compound bow (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/converted_air_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128014,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/converted_air_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a converted air rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Converted air rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/slam_fire_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128015,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/slam_fire_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a slam-fire shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Slam-fire shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/punt_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128016,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/punt_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a punt gun, braced at the hip in both hands, its huge barrel as long as a man pointing straight ahead into the scene, the rope breeching loop trailing back, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Punt gun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/paintball_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128017,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/paintball_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a paintball gun, held forward in both hands like a gun, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Paintball gun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/arc_welder_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128018,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/arc_welder_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a arc-welder gun, held forward in both hands like a gun, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Arc-welder gun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/lathe_bored_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128019,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/lathe_bored_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a lathe-bored rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Lathe-bored rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/chain_driven_repeater.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128020,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/chain_driven_repeater.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a chain-driven repeater, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Chain-driven repeater (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/bench_made_autocannon.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128021,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bench_made_autocannon.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bench-made autocannon, braced at the hip in both hands, its box magazine underneath, the stubby barrel pointing straight ahead into the scene, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bench-made autocannon (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/prototype_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128022,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/prototype_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a prototype rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Prototype rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/four_ten.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128023,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/four_ten.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a four-ten, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Four-ten (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/goose_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128024,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/goose_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a goose gun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Goose gun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/over_and_under.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128025,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/over_and_under.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a over-and-under, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Over-and-under (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/ten_bore.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128026,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/ten_bore.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a ten-bore, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Ten-bore (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/magnum_pump.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128027,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/magnum_pump.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a magnum pump, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Magnum pump (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/pigeon_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128028,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pigeon_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pigeon gun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pigeon gun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/rifled_slug_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128029,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/rifled_slug_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a rifled slug gun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Rifled slug gun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/marine_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128030,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/marine_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a marine shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Marine shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/dragon_s_breath_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128031,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/dragon_s_breath_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a dragon's-breath gun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Dragon's-breath gun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/siege_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128032,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/siege_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a siege shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Siege shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/lever_action_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128033,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/lever_action_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a lever-action rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Lever-action rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/self_loading_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128034,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/self_loading_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a self-loading rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Self-loading rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/vermin_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128035,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/vermin_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a vermin rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Vermin rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/regimental_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128036,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/regimental_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a regimental rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Regimental rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/big_game_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128037,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/big_game_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a big-game rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Big-game rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/heavy_barrel_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128038,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/heavy_barrel_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a heavy-barrel rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Heavy-barrel rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/castle_guard_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128039,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/castle_guard_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a castle guard rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Castle guard rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/wartime_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128040,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/wartime_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a wartime smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Wartime SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/unmarked_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128041,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/unmarked_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a unmarked smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Unmarked SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/customs_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128042,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/customs_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a customs smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Customs SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/navy_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128043,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/navy_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a navy smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Navy SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/briefcase_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128044,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/briefcase_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a briefcase smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Briefcase SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/spiral_mag_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128045,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/spiral_mag_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a spiral-mag smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Spiral-mag SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/ministerial_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128046,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/ministerial_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a ministerial smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Ministerial SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/derringer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128047,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/derringer.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a derringer, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Derringer (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/pocket_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128048,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pocket_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pocket pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon alone, out of its case or holster: no case, holster or box anywhere. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pocket pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/target_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128049,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/target_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a target pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Target pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/police_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128050,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/police_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a police revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon alone, out of its case or holster: no case, holster or box anywhere. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Police revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/polymer_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128051,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/polymer_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a polymer pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Polymer pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/long_slide_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128052,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/long_slide_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a long-slide pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Long-slide pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/hunting_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128053,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/hunting_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a hunting revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Hunting revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/competition_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128054,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/competition_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a competition pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Competition pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/cavalry_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128055,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/cavalry_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a cavalry revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Cavalry revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/ambassador_s_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128056,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/ambassador_s_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a ambassador's revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon alone, out of its case or holster: no case, holster or box anywhere. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Ambassador's revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/field_marshal_s_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128057,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/field_marshal_s_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a field marshal's revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Field marshal's revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/broomhandle_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128058,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/broomhandle_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a broomhandle pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Broomhandle pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/stockless_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128059,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/stockless_smg.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a stockless smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Stockless SMG (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/three_round_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128060,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/three_round_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a three-round pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Three-round pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/compact_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128061,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/compact_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a compact pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Compact PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/select_fire_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128062,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/select_fire_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a select-fire pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Select-fire pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/folding_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128063,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/folding_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a folding pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Folding PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/escort_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128064,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/escort_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a escort pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Escort PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/consular_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128065,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/consular_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a consular pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. The weapon alone, out of its case or holster: no case, holster or box anywhere. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Consular PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/overcoat_machine_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128066,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/overcoat_machine_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a overcoat machine pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Overcoat machine pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/crown_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128067,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/crown_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a crown pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Crown PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/catapult.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128068,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/catapult.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a catapult, held out at arm's length in the left hand, the right hand drawing the leather pouch back toward the viewer, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Catapult (secondary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/screwdriver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128069,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/screwdriver.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a screwdriver, held low and forward in the right hand, the sharpened tip up, the left hand out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Screwdriver (secondary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/bike_lock.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128070,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bike_lock.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bike lock, raised in the right hand by one end of its D, ready to swing, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bike lock (secondary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/hatchet.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128071,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/hatchet.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a hatchet, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Hatchet (secondary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/zip_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128072,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/zip_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a zip gun, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Zip gun (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/extendable_baton.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128073,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/extendable_baton.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a extendable baton, raised in the right hand, fully extended, ready to swing, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Extendable baton (secondary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/commando_dagger.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128074,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/commando_dagger.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a commando dagger, held low and forward in the right hand, the blade up, the left hand out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Commando dagger (secondary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/wheel_brace.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128075,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/wheel_brace.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a wheel brace, raised in the right hand by one arm of the cross, ready to swing, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Wheel brace (secondary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/pen_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128076,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pen_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pen gun, held out forward in the right hand like a pistol, the nib end pointing straight ahead into the scene, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pen gun (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/spring_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 128077,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/spring_gun.png",
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a spring gun, held forward in both hands like a gun, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its parts and colours, but turned to point away into the scene. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Spring gun (secondary; falls back to hands_improvised)"
+  }
+ ]
+}
