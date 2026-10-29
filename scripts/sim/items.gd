@@ -1394,3 +1394,170 @@ static func paper_keep(it: Dictionary, book: Array) -> String:
 	if str(it.get("rule", "")) != "":
 		return "Works from the stash: keep it"
 	return "Read: the Radio keeps the code"
+
+
+# ------------------------------------------------------------------ the expeditions' hands (29 Oct, docs/design/trips.md 3)
+
+## A hired hand, rolled as a piece of gear is (Matt: "hands come in the gear's tiers with affixes"): the trade its base,
+## a tier, a rarity from the gear's table (Legendary at most), one affix a rarity step from the expeditions' own pool,
+## each at a tier the rarity caps - the same roll_affix as a drop. `trade` "" for one at random; `place_keys` the far
+## places an affix can name. Saved as an item: {id, slot "Hand", base, trade, rarity, tier, ilvl, affixes, lv, xp, look}.
+static func roll_hand(tier: int, rng: RandomNumberGenerator, rarity_bonus := 0.0, no_commons := false, trade := "", place_keys: Array = []) -> Dictionary:
+	var trades: Array = Data.HAND_TRADES
+	var t: Dictionary = trades[rng.randi_range(0, trades.size() - 1)]
+	for td in trades:
+		if str(td["trade"]) == trade:
+			t = td
+	var r := mini(_roll_rarity(rng, rarity_bonus), Data.HAND_RARITY_MAX)
+	if no_commons and r == 0:
+		r = 1
+	var tv: int = clampi(tier, 1, Data.MAX_TIER)
+	var affixes: Array = []
+	var pool: Array = Data.HAND_AFFIXES.duplicate()
+	while affixes.size() < mini(r + 1, Data.HAND_AFFIX_MAX) and not pool.is_empty():
+		var total := 0.0
+		for a in pool:
+			total += float(a.get("weight", 1.0))
+		var x := rng.randf() * total
+		var pick := 0
+		for k in range(pool.size()):
+			x -= float(pool[k].get("weight", 1.0))
+			if x <= 0.0:
+				pick = k
+				break
+		var a: Dictionary = pool[pick]
+		pool.remove_at(pick)
+		if bool(a.get("place", false)) and place_keys.is_empty():
+			continue
+		var af := roll_affix(a, tv, rng, 0, int(Data.RARITIES[r]["tier"]))
+		if bool(a.get("place", false)):
+			af["place"] = str(place_keys[rng.randi_range(0, place_keys.size() - 1)])
+		affixes.append(af)
+	var it := {"id": _next_id, "slot": Data.HAND_SLOT, "base": t["name"], "trade": t["trade"], "rarity": r, "tier": tv, "ilvl": tv,
+		"affixes": affixes, "attachments": {}, "value": 0, "lv": 1, "xp": 0, "look": hand_look(r)}
+	_next_id += 1
+	return it
+
+
+static func is_hand(it: Dictionary) -> bool:
+	return str(it.get("slot", "")) == Data.HAND_SLOT
+
+
+## A hand's face of the three its trade has, by rarity: Common and Uncommon, Rare and Epic, Legendary.
+static func hand_look(r: int) -> int:
+	return 0 if r <= 1 else (1 if r <= 3 else 2)
+
+
+static func hand_trade(it: Dictionary) -> Dictionary:
+	for t in Data.HAND_TRADES:
+		if str(t["trade"]) == str(it.get("trade", "")):
+			return t
+	return {}
+
+
+static func hand_affix_def(stat: String) -> Dictionary:
+	for a in Data.HAND_AFFIXES:
+		if str(a["stat"]) == stat:
+			return a
+	return {}
+
+
+## A level's rise on a hand's figures: HAND_LV_GROW a level past the first.
+static func hand_grow(it: Dictionary) -> float:
+	return 1.0 + Data.HAND_LV_GROW * (clampi(int(it.get("lv", 1)), 1, Data.HAND_LV_MAX) - 1)
+
+
+## The trade's figure: its `fig` a tier to its cap, the level's rise on it (the cargo and the crates are counts: the
+## quartermaster's second slot from tier 5, the cracker's crate a three tiers).
+static func hand_fig(it: Dictionary) -> int:
+	var t := hand_trade(it)
+	if t.is_empty():
+		return 0
+	var tier: int = int(it.get("tier", 1))
+	match str(t["stat"]):
+		"cargo":
+			return 2 if tier >= 5 else 1
+		"crates":
+			return mini(int(t["cap"]), 1 + int(floor(tier / 3.0)))
+	return mini(int(t["cap"]), int(round(float(t["fig"]) * tier * hand_grow(it))))
+
+
+## An affix's figure as it stands: its roll, the hand's level's rise on it (a count or a flag doesn't rise).
+static func hand_affix_value(it: Dictionary, a: Dictionary) -> int:
+	var d := hand_affix_def(str(a["stat"]))
+	if bool(d.get("flag", false)) or int(d.get("max", 1)) <= 1:
+		return int(a["value"])
+	return int(round(float(a["value"]) * hand_grow(it)))
+
+
+## The trade's line, the number first (a chip): "+15% finds", "−24% time", "+1 cargo slot".
+static func hand_trade_line(it: Dictionary) -> String:
+	var f := hand_fig(it)
+	match str(hand_trade(it).get("stat", "")):
+		"finds":
+			return "+%d%% finds" % f
+		"bail":
+			return "−%d%% lost on a bad roll" % f
+		"odds":
+			return "+%d%% odds" % f
+		"crates":
+			return "+%d crate%s" % [f, "" if f == 1 else "s"]
+		"time":
+			return "−%d%% time" % f
+		"cargo":
+			return "+%d cargo slot%s" % [f, "" if f == 1 else "s"]
+	return ""
+
+
+## The trade's line, shorter for a small cell.
+static func hand_trade_short(it: Dictionary) -> String:
+	var f := hand_fig(it)
+	match str(hand_trade(it).get("stat", "")):
+		"bail":
+			return "−%d%% lost" % f
+		"cargo":
+			return "+%d cargo" % f
+		"crates":
+			return "+%d crate%s" % [f, "" if f == 1 else "s"]
+	return hand_trade_line(it)
+
+
+## The affixes' lines, the number first: "+8% odds", "−10% risk", "+1 cargo slot", "+15% from Liverpool",
+## "Never held up in London". `short`: the far place's short name; `tight` the smallest cell's ("+30% Brum", "Safe:
+## the Plain"). `tiers`: " · T3" after each.
+static func hand_lines(it: Dictionary, short := true, tiers := false, tight := false) -> Array:
+	var out: Array = []
+	for a in it.get("affixes", []):
+		var d := hand_affix_def(str(a["stat"]))
+		var place := ""
+		if a.has("place"):
+			for p in Data.EXP_PLACES:
+				if str(p["key"]) == str(a["place"]):
+					place = str(p["tag"] if tight else (p["short"] if short else p["name"]))
+		var label: String = str(d.get("tight" if tight and d.has("tight") else "short", a["stat"]))
+		if label.contains("%s"):
+			label = label % place
+		var v: int = hand_affix_value(it, a)
+		var line: String
+		if bool(d.get("flag", false)):
+			line = label.left(1).to_upper() + label.substr(1)     # sentence case: "Never held up in London"
+		elif bool(d.get("pct", false)):
+			line = "%s%d%% %s" % ["−" if bool(d.get("less", false)) else "+", v, label]
+		else:
+			line = "+%d %s%s" % [v, label, "" if v == 1 else "s"]
+		if tiers and a.has("tier"):
+			line += " · T%d" % int(a["tier"])
+		out.append(line)
+	return out
+
+
+## A hand's sum of one affix stat (a far place's own only for that place): its rolls with the level's rise.
+static func hand_affix_sum(it: Dictionary, stat: String, place_key := "") -> int:
+	var v := 0
+	for a in it.get("affixes", []):
+		if str(a["stat"]) != stat:
+			continue
+		if a.has("place") and str(a["place"]) != place_key:
+			continue
+		v += hand_affix_value(it, a)
+	return v

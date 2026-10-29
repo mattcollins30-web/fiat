@@ -49,7 +49,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 12              # 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 13              # 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -532,6 +532,12 @@ func _read_odds() -> void:
 				if str(nm) != sim.cls and not bool(sim.signal_odds_class(_radio.selected, str(nm), true)[1]):
 					sim.signal_odds_class(_radio.selected, str(nm))
 					break
+		sim.odds_time_ms = 0.0
+		return
+	if room == MISSIONS and _missions.exp_on:
+		var ep = _missions._exp_panel           # the Expeditions (29 Oct): the picked place's odds for the picked lead
+		if ep.lead != "" and not bool(sim.exp_odds(ep.place, ep.lead, true)[1]):
+			sim.exp_odds(ep.place, ep.lead)
 		sim.odds_time_ms = 0.0
 		return
 	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin

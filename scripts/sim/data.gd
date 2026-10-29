@@ -218,20 +218,20 @@ const YARD := [
 		[{"id": "pack", "name": "The litter", "short": "+2 finds a search", "words": "Every search finds 2 more"},
 		 {"id": "champion", "name": "Champion", "short": "+20% quality", "words": "Loot quality +20%"}]],
 	 "rank": {"short": "+2% loot quality", "words": "Loot quality +2% a rank"}},
-	# the Bunkhouse (29 Oct, docs/design/trips.md 4): line A the repeat runs', line B the trips' (a stub: "stub" steps never
-	# build until the trips are in)
+	# the Bunkhouse (29 Oct, docs/design/trips.md 4): line A the repeat runs', line B the expeditions' (shut till the
+	# Quartermaster falls: Sim.yard_stub)
 	{"key": "bunkhouse", "name": "The Bunkhouse", "salvage": "army", "costs": [2000, 7000, 18000, 40000, 80000], "lines": ["Repeat", "Expeditions"], "picks": [
 		[{"id": "rr_ten", "name": "Ten in a row", "short": "×10 runs · 35% XP", "words": "Run it ×10 on a cleared site. Repeat runs earn 35% of a watched run's XP"},
-		 {"id": "trip_hand", "name": "A hand on an expedition", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		 {"id": "trip_hand", "name": "A hand along", "short": "1 hand · the pool of six", "words": "A hired hand goes on an expedition; the pool of six to hire"}],
 		[{"id": "rr_list", "name": "Your own list", "short": "Loot rules decide · 45% XP", "words": "Your loot rules decide what a repeat keeps. Repeat runs earn 45% of a watched run's XP"},
-		 {"id": "trip_two_hands", "name": "Two hands", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		 {"id": "trip_two_hands", "name": "Two along", "short": "2 hands · Better faces", "words": "Two hired hands on an expedition; Better faces, the dearer reroll"}],
 		[{"id": "rr_twenty", "name": "Twenty in a row", "short": "×20 runs", "words": "Run it ×20 on a cleared site"},
-		 {"id": "trip_two", "name": "Two at once", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		 {"id": "trip_two", "name": "Two at once", "short": "2 expeditions at once", "words": "Two expeditions out at once"}],
 		[{"id": "rr_rest", "name": "Bunk beds", "short": "Rest twice as fast · 60% XP", "words": "Rest between repeat runs twice as fast. Repeat runs earn 60% of a watched run's XP"},
-		 {"id": "trip_roster", "name": "More bunks", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		 {"id": "trip_roster", "name": "More bunks", "short": "+4 roster · quotas", "words": "4 more hands on the roster; the far places' weekly quotas"}],
 		[{"id": "rr_full", "name": "Till it's full", "short": "Till the stash is full", "words": "Repeat runs go on till the stash is full"},
-		 {"id": "trip_three", "name": "Three at once", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}]],
-	 "rank": {"short": "5% quicker rest between runs", "words": "Rest between repeat runs 5% quicker a rank"}},
+		 {"id": "trip_three", "name": "Three at once", "short": "3 expeditions at once", "words": "Three expeditions out at once"}]],
+	 "rank": {"short": "Rest 5% quicker · risk −2%", "words": "Rest between repeat runs 5% quicker and expeditions' risk 2% lower a rank"}},
 ]
 ## The repeat runs (29 Oct, docs/design/trips.md 1-2): "Run it ×5" on a cleared site at REPEAT_ODDS or better; the runs
 ## unwatched, a bail at Sim.BAIL never a death; XP a share of a watched run's (the Bunkhouse raises it).
@@ -3958,3 +3958,91 @@ static func paragon_for_xp(xp: float) -> int:
 		l += 1
 	_paragon_memo = [xp, l - MAX_LEVEL]
 	return l - MAX_LEVEL
+
+
+# ------------------------------------------------------------------ expeditions (29 Oct, docs/design/trips.md 3, 4, 6)
+## The endgame's expeditions (the design doc's "trips"; on screen "Expeditions": the glossary's "a trip out" is a run): a
+## crew - a runner of another class leading, up to two hired hands - takes cargo to a far place and comes back after a
+## stretch of played time with that place's rewards, sized by the cargo's worth, rolled by the crew. Open once the
+## Quartermaster falls. Every number a placeholder for the balance pass; the words drafts for the language pass.
+## A far place: `lv` its level at the least, `reach` its level against the reach (the higher wins: the far places climb
+## with the camp); `zone` its gang (the crew types of that zone; never fought on screen); `time` played seconds; `pays`
+## its return as [kind, share]; `hold` the campaign site (one with fight art and a head) a hold-up is fetched from.
+const EXP_PLACES := [
+	{"key": "swansea", "name": "Swansea, gone quiet", "short": "Swansea", "tag": "Swansea", "time": 1800, "lv": 9, "reach": -4, "zone": 3, "hold": 5,
+		"pays": [["meds", 0.6], ["supplies", 0.4]], "quota": "mythic"},
+	{"key": "bristol", "name": "The Bristol checkpoint", "short": "Bristol", "tag": "Bristol", "time": 3000, "lv": 10, "reach": -3, "zone": 2, "hold": 8,
+		"pays": [["tins", 0.75], ["tokens", 0.25]], "quota": "gamble"},
+	{"key": "salisbury", "name": "Salisbury Plain", "short": "Salisbury", "tag": "the Plain", "time": 4800, "lv": 11, "reach": -2, "zone": 3, "hold": 11,
+		"pays": [["parts", 0.5], ["army", 0.5]], "quota": "set"},
+	{"key": "birmingham", "name": "The Birmingham depots", "short": "Birmingham", "tag": "Brum", "time": 6000, "lv": 12, "reach": -1, "zone": 1, "hold": 5,
+		"pays": [["materials", 0.7], ["fuses", 0.3]], "quota": "rebuild"},
+	{"key": "liverpool", "name": "The Liverpool docks", "short": "Liverpool", "tag": "the docks", "time": 7200, "lv": 13, "reach": 0, "zone": 2, "hold": 8,
+		"pays": [["socketables", 0.4], ["charms", 0.3], ["socketed", 0.3]], "quota": "socketed"},
+	{"key": "london", "name": "London", "short": "London", "tag": "London", "time": 10800, "lv": 15, "reach": 2, "zone": 3, "hold": 11,
+		"pays": [["uniques", 1.0]], "quota": "named"},
+]
+const EXP_HOST := 11                   # the site a far place's fight is read on (the hardest), laid on as a signal is
+const EXP_SIG_ID := 900000             # a far place's read apart from every signal's (its id + the place's index)
+## The lead's class weights the return (trips.md 3): this share of it goes to the class's own kind.
+const EXP_CLASS_KIND := {"Scrapper": "parts", "Paramedic": "supplies", "Poacher": "charms", "Doorman": "tins", "Drifter": "papers", "Recruit": "army"}
+const EXP_CLASS_SHARE := 0.2
+const EXP_RETURN := 1.0                # the return's worth, the cargo's times this: expeditions convert, they don't print
+const EXP_SLOTS := 3                   # cargo slots, the quartermaster's and "+1 cargo slot" on top
+const EXP_SLOTS_MAX := 6
+const EXP_SHARES := [0.25, 0.5, 0.75, 1.0]     # a cargo slot's amount: a share of what's held
+const EXP_RISK_K := 0.3                # the cargo's worth over the lead's kit's, times this, fills the risk
+const EXP_ODDS_W := 0.8                # and the odds short of 100%, times this
+const EXP_RISK_MIN := 0.02
+const EXP_RISK_MAX := 0.95
+const EXP_RANK_RISK := 0.02            # the Bunkhouse's rank: the risk 2% lower a rank
+const EXP_LOSS := [0.25, 1.0]          # a bad roll loses this share of the return
+const EXP_HOLD := 0.04                 # the hold-up: rare, more at high risk
+const EXP_HOLD_RISK := 0.25
+const EXP_RANSOM := 0.5                # the ransom: the cargo's worth times this, never under EXP_RANSOM_MIN tins
+const EXP_RANSOM_MIN := 500
+const EXP_TIME_FLOOR := 0.5            # the driver and "−% time" never take an expedition under half its time
+const EXP_ITEMS_MAX := 12              # items a return carries at most; the rest of its worth comes back as scrap
+const EXP_QUALITY_K := 0.1             # the return's loot quality: this a doubling of the cargo's worth over EXP_QUALITY_UNIT
+const EXP_QUALITY_UNIT := 2000.0
+const EXP_ITEM_FLOOR := 20.0           # an item counted at this worth at least against the return
+const EXP_CRATE := 300.0               # a cracker's crate: a free find of the place's first kind, worth up to this a tier
+const EXP_MED_UNIT := 60.0             # a med's worth for a quota when none are held
+const EXP_WEEK := 7                    # a quota's week: seven of the exchange's days
+const EXP_QUOTA_WORTH := [3000.0, 4000.0, 5000.0, 6000.0, 7000.0, 9000.0]     # a place's weekly quota, in tins at today's prices
+const EXP_QUOTA_BONUS := [0.2, 1.0]    # meeting it: the return +20-100%, and the quota's item
+const EXP_MYTHIC_CHANCE := 0.25        # Swansea's quota: the chance at a mythic
+## The hands (trips.md 3, Dragon Cliff): built as gear by the item code - a trade the base, a tier, a rarity, 1-4 affixes
+## from the expeditions' own pool. The trade's figure grows by tier (`fig` a tier, to `cap`) and with the hand's level.
+const HAND_SLOT := "Hand"
+const HAND_TRADES := [
+	{"trade": "porter", "name": "Porter", "stat": "finds", "fig": 5, "cap": 60},
+	{"trade": "medic", "name": "Medic", "stat": "bail", "fig": 6, "cap": 60},
+	{"trade": "scout", "name": "Scout", "stat": "odds", "fig": 2, "cap": 25},
+	{"trade": "cracker", "name": "Cracker", "stat": "crates", "fig": 1, "cap": 4},
+	{"trade": "driver", "name": "Driver", "stat": "time", "fig": 4, "cap": 40},
+	{"trade": "quartermaster", "name": "Loader", "stat": "cargo", "fig": 1, "cap": 2},     # the design's quartermaster: "Loader" on screen, the Quartermaster being a head (the glossary: one name a thing)
+]
+## The expeditions' affixes: rolled with the gear's tiers (Items.roll_affix); `less` reads "−8% risk"; `place` names a
+## far place, rolled with the affix; `flag` has no figure.
+const HAND_AFFIXES := [
+	{"stat": "x_odds", "short": "odds", "min": 2, "max": 12, "pct": true},
+	{"stat": "x_risk", "short": "risk", "min": 2, "max": 12, "pct": true, "less": true},
+	{"stat": "x_slot", "short": "cargo slot", "tight": "cargo", "min": 1, "max": 1, "weight": 0.5},
+	{"stat": "x_finds", "short": "finds", "min": 4, "max": 24, "pct": true},
+	{"stat": "x_quality", "short": "loot quality", "tight": "quality", "min": 4, "max": 24, "pct": true},
+	{"stat": "x_time", "short": "time", "min": 3, "max": 15, "pct": true, "less": true},
+	{"stat": "x_hold", "short": "hold-ups", "min": 10, "max": 50, "pct": true, "less": true},
+	{"stat": "x_wage", "short": "wage", "min": 5, "max": 30, "pct": true, "less": true},
+	{"stat": "x_place", "short": "from %s", "tight": "%s", "min": 8, "max": 30, "pct": true, "place": true},
+	{"stat": "x_safe", "short": "never held up in %s", "tight": "safe: %s", "min": 1, "max": 1, "flag": true, "place": true, "weight": 0.5},
+]
+const HAND_RARITY_MAX := 4             # Common to Legendary; affixes one a rarity step, four at most
+const HAND_AFFIX_MAX := 4
+const HAND_POOL := 6
+const HAND_ROSTER := [4, 8]            # the roster's cap; More bunks' +4
+const HAND_REROLL := [2000, 16000]     # New faces, Better faces (Settlers: 2,000 / 16,000), at today's prices
+const HAND_WAGE := 50.0                # a hand's wage an expedition: this × tier × the rarity's value, at today's prices
+const HAND_LV_MAX := 10
+const HAND_LV_EVERY := 2               # expeditions home a level
+const HAND_LV_GROW := 0.1              # a level's rise on the trade's figure and every affix's roll

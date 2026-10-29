@@ -159,3 +159,43 @@ slot's finds, a rarity). Watching is where the risk is; the dead time goes to re
 
 - The far places' names and their quota items (the language pass).
 - The ransom's price, and whether a walked-away hand can turn up in the pool again.
+
+## Built: the expeditions (29 Oct, the trips' build)
+
+Section 3, line B of section 4 and section 6's expedition parts, with the designer's calls since: open after the
+Quartermaster; the selected runner never leads; cargo out, the return by its worth; six far places with weekly quotas
+by the exchange's day; the gate's dry read; the hold-up's three ways out; hands as gear; line B real. On screen
+"Expeditions" (a trip out is a run). Code: Sim's "expeditions" section, Items.roll_hand, Data.EXP_* and HAND_*,
+Words.EXPEDITIONS; the Map's tab (expeditions_panel.gd), the report (expedition_report.gd), the Bunkhouse's hands
+(hands_panel.gd, hand_cell.gd); the bot's `_expeditions`; smoke `-- only expeditions`. SAVE_VERSION 13.
+
+The calls made in the build (every number a placeholder for the balance pass):
+
+- A far place's fight: the hardest site (the Barracks) read as a signal at the place's level - its own floor (9 to 15)
+  or the reach plus its offset (−4 to +2), whichever is higher, so the far places climb with the camp - with its gang's
+  zone types. The lead reads it at full HP (rested), whatever their HP on the bench.
+- The risk: 0.3 × the cargo's worth over the lead's kit's worth, plus 0.8 × the odds short of 100%, less the hands'
+  "−% risk" and 2% a Bunkhouse rank; 2-95%. A bad roll is a roll under it. The hold-up: 4% + 25% of the risk, less
+  "−% hold-ups"; never with "Never held up in" the place.
+- The return: the cargo's worth (×1.0), the porters' and "+% finds" on top, the quota's +20-100%, less the loss; split
+  by the place's shares, 20% to the lead's class's kind (Scrapper gun parts, Paramedic the Clinic's supplies, Poacher
+  charms - there are no hides - Doorman tins, Drifter papers, Recruit army surplus). Loot quality: +10% a doubling of
+  the cargo's worth over 2,000 tins. Twelve finds at most; the rest of their worth as scrap. Finds with no stash room
+  are sold at the gate on Take it (a mythic and the quota's item come home whatever the room).
+- Bristol's gamble tokens: a free gamble at the Fence each. Birmingham's quota: the next rebuild at half (materials and
+  key items halved, rounded up). Salisbury's quota: a set piece, an issued piece after the Issue.
+- The quota: a cargo kind the camp has met (scrap, meds, its salvage and materials) and a count worth 3,000-9,000 tins
+  at today's prices, rolled for the week; met by shipping that many of it, once a week a place.
+- The hold-up: Fetch them sends the selected runner to the place's hold site (Swansea and Birmingham the Retail Park,
+  Bristol and Liverpool the Bank, Salisbury and London the Barracks) with its head armed free; the head down brings
+  the crew home with the whole return (the bad roll's loss refunded - "its own drop"); not down, they stay held. The
+  ransom is half the cargo's worth (500 tins at the least). Walk away: the hands sent leave for good (they don't come
+  back to the pool).
+- The hands: hired free from the pool (the wage only for a hand sent: 50 × tier × the rarity's value, at today's
+  prices); New faces 2,000 and Better faces 16,000 tins (the top tier, no commons, the quality doubled). A level every
+  two expeditions home, to 10, each +10% on the trade's figure and the affixes' rolls. Hurt (a bad roll, no medic
+  along) for as long as that expedition took. The trades: porter +5% finds a tier, medic −6% of a bad roll's loss a
+  tier (nobody hurt with one along), scout +2% odds a tier, cracker a crate (a free find) a three tiers, driver −4%
+  time a tier, the quartermaster - "Loader" on screen, the Quartermaster being a head - one more cargo slot (two
+  from T5).
+- The Bunkhouse's rank does both lines' work: rest 5% quicker and the risk 2% lower a rank.

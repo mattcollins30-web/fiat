@@ -780,6 +780,7 @@ func _init() -> void:
 	_record_file_checks(main)
 	_itemisation_checks(main)
 	_compare_readings_checks(main)
+	_expeditions_checks(main)                 # the expeditions (29 Oct)
 	_finish()
 
 
@@ -14115,7 +14116,7 @@ func _yard_wide_checks(main) -> void:
 	sim.cash = cash0
 	yt._shown = ""
 	main.refresh()
-	_check(yt._headline.text == "%d of %d" % [sim.yard_built(), Data.yard_step_count()] and yt._unit.text == "upgrades built", "the Pitch's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
+	_check(yt._headline.text == "%d of %d" % [sim.yard_built(), sim.yard_steps()] and yt._unit.text == "upgrades built", "the Pitch's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
 	_check(yt._chips.shown() == 6 and yt._chips._labels[0].text.begins_with(Fmt.money(sim.cash)), "the Pitch's purse chips are off: %d shown, first '%s'" % [yt._chips.shown(), yt._chips._labels[0].text])
 	# the purse down the left under the title (Matt, 10 Oct): below the headline, inside the title's width and the band,
 	# clear of Move; every chip shown with the most salvage the Yard can hold
@@ -24095,7 +24096,9 @@ func _repeat_checks(main) -> void:
 	main.refresh()
 	_check(cols["repeat"].text in [Words.REPEAT["button_full"], Words.REPEAT["button_full_short"], Words.REPEAT["button_full_tiny"]], "the Map's button till the stash is full: '%s'" % cols["repeat"].text)
 	_check_fit(main, "the Map, run till the stash is full")
-	# line B: shut, every step, whatever's in hand; the Pitch counts only what can be built
+	# line B: shut, every step, whatever's in hand - before the Quartermaster (29 Oct: the expeditions open with him)
+	var qm_down: bool = sim.bosses_beaten[3]
+	sim.bosses_beaten[3] = false
 	sim.cash = 1e9
 	sim.salvage["army"] = 999
 	for col in range(5):
@@ -24106,10 +24109,11 @@ func _repeat_checks(main) -> void:
 	main.refresh()
 	_check(yt.cards.size() == 9 and yt.cards[8]["key"] == "bunkhouse" and yt.cards[4]["button"].position.y == yt.cards[0]["button"].position.y and yt.cards[5]["button"].position.y > yt.cards[4]["button"].position.y, "the Pitch isn't nine buildings five across")
 	_check(range(5).all(func(c): return yt.tile("bunkhouse", c, "b")["look"] == "shut" and yt.tile("bunkhouse", c, "b")["stub"]) and yt._tiles[1][0]["state"].text == Words.REPEAT["stub"], "the Bunkhouse's line B tiles: '%s'" % yt._tiles[1][0]["state"].text)
-	_check(Data.yard_step_count() == Data.YARD.size() * 10 - 5 and yt._headline.text.ends_with("of %d" % Data.yard_step_count()) and yt.cards[8]["built"].text.contains("of 5"), "the Pitch counts line B's stubs: '%s', '%s'" % [yt._headline.text, yt.cards[8]["built"].text])
+	_check(sim.yard_steps() == Data.YARD.size() * 10 - 5 and yt._headline.text.ends_with("of %d" % sim.yard_steps()) and yt.cards[8]["built"].text.contains("of 5"), "the Pitch counts line B's stubs: '%s', '%s'" % [yt._headline.text, yt.cards[8]["built"].text])
 	var gives: String = yt._gives_rows[8][1].text
 	_check(gives.begins_with(sim.repeat_gives()) and gives.count("XP") == 1, "the Pitch's Bunkhouse line lists the shares, not the one now: '%s'" % gives)
 	_check_fit(main, "the Pitch with the Bunkhouse")
+	sim.bosses_beaten[3] = qm_down
 	sim.yard_picks.erase("bunkhouse")
 	sim.yard_ranks.erase("bunkhouse")
 	sim._yard_dirty = true
@@ -24318,3 +24322,463 @@ func _repeat_checks(main) -> void:
 	main._missions._wagers.visible = false
 	main.refresh()
 	print("the repeat runs ok: the button's shut states, the gate at full HP, away and its locks, the rest, the report's sums, the bail, two bails, uniques home, the best upgrade, a full stash, manual skills unwatched, the XP's share, the Bunkhouse, line B shut, Kev's wagers and their gate, save mid-repeat")
+
+
+## The expeditions (29 Oct, docs/design/trips.md 3, 4 line B, 6): `-- only expeditions`. The gate (after the
+## Quartermaster), the selected runner refused, cargo converted (the return grows with the cargo's worth; no cargo, no
+## return), the risk and its roll, the quota, the hold-up's three ways out, hands rolled as items (save/load), the pool's
+## rerolls, wages only for those sent, levelling, hurt, lost only on walking away, line B's steps and expeditions at once,
+## every new screen's fit, save/load mid-expedition, no offline progress.
+func _expeditions_checks(main) -> void:
+	var sim = main.sim
+	var E: Dictionary = Words.EXPEDITIONS
+	if sim.on_mission():
+		sim.extract_now()
+	if sim.away():
+		sim.bring_back()
+	sim.mission = null
+	sim.repeat = {}
+	sim.odds_budget = 0
+	sim.candidates = []
+	var home: String = sim.cls
+	var lead_cls: String = "Scrapper" if home != "Scrapper" else "Drifter"
+	if not sim.roster.has(lead_cls):
+		_check(sim.set_class(lead_cls) and sim.set_class(home), "the fixture: no second runner for a lead")
+	sim.roster[lead_cls]["xp"] = maxf(float(sim.roster[lead_cls].get("xp", 0.0)), Data.xp_for_level(20))
+	var qz: int = 3
+	for b in Data.BOSSES:
+		if str(b["name"]) == "The Quartermaster":
+			qz = int(b["zone"])
+	sim.yard_picks.erase("bunkhouse")
+	sim.yard_ranks.erase("bunkhouse")
+	sim._yard_dirty = true
+	sim.expeditions = []
+	sim.hands = []
+	sim.hand_pool = []
+	sim.seen.erase("hand_pool_rolled")
+	sim.quota_done = {}
+	sim.cash = 1e7
+	sim.scrap = 50000
+	sim.salvage["copper"] = 400
+	sim.salvage["army"] = 999                  # the Bunkhouse's fifth step wants army surplus
+	sim.yard_open = maxi(sim.yard_open, 5)     # the Pitch's fifth column, as a camp dug deep has it
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done in this yard (a moved one starts it again): the hold sites open
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	var cargo: Array = [{"kind": "scrap", "n": 5000}]
+	# --- the gate: shut before the Quartermaster, the Bunkhouse's line B with it; open after
+	sim.bosses_beaten[qz] = false
+	_check(not sim.expeditions_open() and sim.exp_send_block(0, lead_cls, [], cargo) == E["shut_open"] and not _exp_go(sim, 0, lead_cls, [], cargo),
+		"an expedition went before the Quartermaster: '%s'" % sim.exp_send_block(0, lead_cls, [], cargo))
+	_check(sim.yard_pick_block("bunkhouse", 0, "b") == Words.REPEAT["stub"] and sim.yard_stub("bunkhouse", 0, "b"), "the Bunkhouse's line B opened before the Quartermaster: '%s'" % sim.yard_pick_block("bunkhouse", 0, "b"))
+	main.show_room(main.MISSIONS)
+	main._missions.set_expeditions(true)
+	main.refresh()
+	_check(not main._missions.exp_on and not main._missions._exp_btn.visible, "the Map's Expeditions tab showed before the Quartermaster")
+	sim.bosses_beaten[qz] = true
+	_check(sim.expeditions_open() and not sim.yard_stub("bunkhouse", 0, "b") and sim.yard_pick_block("bunkhouse", 0, "b") == "", "the Quartermaster down didn't open the expeditions and line B: '%s'" % sim.yard_pick_block("bunkhouse", 0, "b"))
+	# --- the selected runner can't go; the lead is another class's
+	_check(not (home in sim.exp_leads()) and lead_cls in sim.exp_leads(), "the leads: %s (the runner %s)" % [str(sim.exp_leads()), home])
+	_check(sim.exp_send_block(0, home, [], cargo) == E["shut_selected"] and not _exp_go(sim, 0, home, [], cargo), "the selected runner went: '%s'" % sim.exp_send_block(0, home, [], cargo))
+	# --- the odds: the gate's dry read of the lead's kit at the far place, the same read the lead's own gate makes
+	var o: Array = sim.exp_odds(0, lead_cls)
+	_check(bool(o[1]) and float(o[0]) >= 0.0 and float(o[0]) <= 1.0, "the far place's odds didn't read: %s" % str(o))
+	_check(sim.cls == home and not sim.roster.has(home) and sim.roster.has(lead_cls), "the odds' read left the crew swapped: %s, %s" % [sim.cls, str(sim.roster.keys())])
+	# --- cargo converted: no cargo, no return; the return grows with the cargo's worth
+	_check(sim.exp_send_block(0, lead_cls, [], []) == E["shut_cargo"] and is_equal_approx(sim.exp_return_worth(0, 0.0, []), 0.0), "no cargo still went, or returned something")
+	var r_small: float = sim.exp_return_worth(0, 1000.0, [])
+	var r_big: float = sim.exp_return_worth(0, 8000.0, [])
+	_check(r_big > r_small * 7.0 and r_small > 0.0 and sim.exp_quality(8000.0, []) > sim.exp_quality(1000.0, []), "the return doesn't grow with the cargo's worth: %.0f, %.0f" % [r_small, r_big])
+	var scrap0: int = sim.scrap
+	var cash0: float = sim.cash
+	_check(_exp_go(sim, 0, lead_cls, [], cargo), "an expedition with the lead alone didn't go: '%s'" % sim.exp_send_block(0, lead_cls, [], cargo))
+	_check(sim.scrap == scrap0 - 5000 and is_equal_approx(sim.cash, cash0), "the cargo didn't leave the camp, or the lead alone was paid: scrap %d -> %d, %s -> %s" % [scrap0, sim.scrap, str(cash0), str(sim.cash)])
+	var e1: Dictionary = sim.expeditions[0]
+	_check(is_equal_approx(float(e1["worth"]), 5000.0 * sim.exchange_worth("scrap")) and float(e1["dur"]) == float(Data.EXP_PLACES[0]["time"]), "the shipment's worth or time: %s" % str(e1))
+	_check(sim.lead_out(lead_cls) and not sim.set_class(lead_cls), "the lead away could still be played")
+	# one at a time before Two at once
+	_check(sim.exp_send_block(1, lead_cls, [], [{"kind": "copper", "n": 10}]) == E["shut_at_once"] % 1, "a second expedition went before Two at once: '%s'" % sim.exp_send_block(1, lead_cls, [], [{"kind": "copper", "n": 10}]))
+	e1["risk"] = 0.0
+	e1["hold"] = 0.0
+	sim.advance(float(e1["dur"]) - 10.0)
+	_check(str(e1["state"]) == "out", "the expedition came back before its time")
+	sim.advance(20.0)
+	_check(str(e1["state"]) == "back" and not bool(e1["res"]["bad"]), "the expedition didn't come back on time: %s" % str(e1["state"]))
+	var res1: Dictionary = e1["res"]
+	_check(float(res1["total"]) > 0.0 and (not res1["items"].is_empty() or not res1["cur"].is_empty()), "the cargo came back as nothing: %s" % str(res1))
+	var meds: int = res1["items"].filter(func(it): return Items.is_medical(it) or Items.is_supplies(it)).size()
+	_check(meds > 0, "Swansea paid no meds or supplies: %s" % str(res1["items"].map(func(it): return it["base"])))
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	main.refresh()
+	var rep = main._missions._exp_report
+	_check(rep.visible and rep.title.text == E["rep_title"] % Words.mid(str(Data.EXP_PLACES[0]["name"])) and rep.take.visible, "the report isn't up when they're back: '%s'" % rep.title.text)
+	_check_fit(main, "the Map, an expedition back")
+	var st0: int = sim.stash.size()
+	_check(sim.exp_take(int(e1["id"])) and sim.expeditions.is_empty() and sim.stash.size() > st0 and not sim.lead_out(lead_cls), "Take it didn't put it away: %d items" % (sim.stash.size() - st0))
+	# the bigger cargo brings back more, rolled
+	var totals: Array = []
+	for n in [2000, 16000]:
+		sim.scrap = 50000
+		_check(_exp_go(sim, 1, lead_cls, [], [{"kind": "scrap", "n": n}]), "the fixture: Bristol didn't go")
+		var e: Dictionary = sim.expeditions[0]
+		e["risk"] = 0.0
+		e["hold"] = 0.0
+		sim.advance(float(e["dur"]) + 1.0)
+		totals.append(float(e["res"]["total"]))
+		var tins0: float = sim.cash
+		sim.exp_take(int(e["id"]))
+		_check(sim.cash > tins0, "Bristol paid no %s" % sim.money_word())
+	_check(totals[1] > totals[0] * 7.0, "the return didn't grow with the cargo: %s" % str(totals))
+	# --- the risk: the cargo's worth over the lead's kit, the odds short; the roll loses 25-100%
+	var odds_v: float = sim.exp_crew_odds(0, lead_cls, [])
+	var rk_small: float = sim.exp_risk(0, lead_cls, [], 100.0, 1.0)
+	var rk_big: float = sim.exp_risk(0, lead_cls, [], sim.lead_strength(lead_cls) * 2.0, 1.0)
+	_check(rk_big > rk_small and rk_big < Data.EXP_RISK_MAX, "the risk doesn't grow with the cargo: %.2f, %.2f" % [rk_small, rk_big])
+	_check(sim.exp_risk(0, lead_cls, [], 100.0, 0.5) > rk_small + 0.3, "the risk doesn't grow as the odds fall: %.2f" % sim.exp_risk(0, lead_cls, [], 100.0, 0.5))
+	_check(odds_v >= 0.0 and odds_v <= 1.0, "the crew's odds: %.2f" % odds_v)
+	sim.yard_ranks["bunkhouse"] = 3
+	_check(is_equal_approx(sim.exp_risk(0, lead_cls, [], sim.lead_strength(lead_cls) * 2.0, 1.0), rk_big - 3 * Data.EXP_RANK_RISK), "the Bunkhouse's rank didn't lower the risk 2%% a rank: %.2f" % sim.exp_risk(0, lead_cls, [], sim.lead_strength(lead_cls) * 2.0, 1.0))
+	sim.yard_ranks.erase("bunkhouse")
+	sim.scrap = 50000
+	_exp_go(sim, 0, lead_cls, [], [{"kind": "scrap", "n": 3000}])
+	var eb: Dictionary = sim.expeditions[0]
+	eb["risk"] = 1.0
+	eb["hold"] = 0.0
+	sim.advance(float(eb["dur"]) + 1.0)
+	_check(bool(eb["res"]["bad"]) and float(eb["res"]["loss"]) >= 0.25 and float(eb["res"]["loss"]) <= 1.0, "a sure bad roll lost %s" % str(eb["res"].get("loss", "")))
+	_check(float(eb["res"]["total"]) <= sim.exp_return_worth(0, float(eb["worth"]), []) * 0.751, "the bad roll's loss wasn't taken off the return: %.0f" % float(eb["res"]["total"]))
+	sim.exp_take(int(eb["id"]))
+	# --- the hands: rolled as items, the gear's tiers and the expeditions' own affixes
+	var hr := RandomNumberGenerator.new()
+	hr.seed = 29
+	for k in range(40):
+		var h: Dictionary = Items.roll_hand(1 + k % Data.MAX_TIER, hr, 0.5, false, "", sim.exp_place_keys())
+		var r: int = int(h["rarity"])
+		_check(Items.is_hand(h) and r <= Data.HAND_RARITY_MAX and h["affixes"].size() <= mini(r + 1, Data.HAND_AFFIX_MAX) and h["affixes"].size() >= 1 and not Items.hand_trade(h).is_empty(), "a hand rolled wrong: %s" % str(h))
+		for a in h["affixes"]:
+			var d: Dictionary = Items.hand_affix_def(str(a["stat"]))
+			var span: Array = Items.tier_range(d, int(a["tier"]))
+			_check(not d.is_empty() and int(a["tier"]) <= int(Data.RARITIES[r]["tier"]) and int(a["value"]) >= int(span[0]) and int(a["value"]) <= int(span[1]), "a hand's affix off its tier: %s" % str(a))
+			_check(not (str(a["stat"]) in Data.AFFIXES.map(func(x): return x["stat"])), "a hand rolled a gear affix: %s" % str(a["stat"]))
+	# --- line B: step 1 a hand and the pool of six
+	_check(sim.exp_hands_max() == 0 and not sim.pool_open() and sim.hand_pool_now().is_empty(), "a hand could go before A hand along")
+	_check(sim.yard_pick("bunkhouse", 0, "b"), "A hand along didn't build: '%s'" % sim.yard_pick_block("bunkhouse", 0, "b"))
+	_check(sim.exp_hands_max() == 1 and sim.hand_pool_now().size() == Data.HAND_POOL and sim.roster_cap() == int(Data.HAND_ROSTER[0]), "A hand along didn't bring one hand and the pool of six: %d, %d" % [sim.exp_hands_max(), sim.hand_pool.size()])
+	var ids0: Array = sim.hand_pool.map(func(h): return int(h["id"]))
+	var cr0: float = sim.cash
+	_check(sim.reroll_block(true) != "" and not sim.reroll_pool(true), "Better faces before Two along")
+	_check(sim.reroll_pool(false) and is_equal_approx(sim.cash, cr0 - sim.reroll_cost(false)) and sim.hand_pool.size() == Data.HAND_POOL and sim.hand_pool.all(func(h): return not (int(h["id"]) in ids0)), "New faces didn't reroll the pool for its price")
+	var pool_seen = main._yard_tree
+	main.show_room(main.OVERVIEW)
+	pool_seen._pick_building("bunkhouse")
+	main.refresh()
+	_check(pool_seen.hands.visible and pool_seen.hands.cells().size() == Data.HAND_POOL and not pool_seen._status.get_parent().visible, "the Bunkhouse's card doesn't show the pool: %d cells" % pool_seen.hands.cells().size())
+	_check_fit(main, "the Pitch, the Bunkhouse's pool")
+	# hire to the cap: the porter, the medic and two more; the roster's full
+	var hired: Array = []
+	for want in ["porter", "medic", "scout", "driver"]:
+		var h: Dictionary = Items.roll_hand(5, hr, 0.0, true, want, sim.exp_place_keys())
+		sim.hand_pool.append(h)
+		_check(sim.hire_hand(int(h["id"])), "hiring a %s failed: '%s'" % [want, sim.hire_block(int(h["id"]))])
+		hired.append(h)
+	var extra: Dictionary = sim.hand_pool[0]
+	_check(sim.hands.size() == 4 and sim.hire_block(int(extra["id"])) == E["roster_full"] and not sim.hire_hand(int(extra["id"])), "the roster took past its cap: %d" % sim.hands.size())
+	var porter: Dictionary = hired[0]
+	var medic: Dictionary = hired[1]
+	var scout: Dictionary = hired[2]
+	# --- wages only for those sent; the trades in
+	sim.scrap = 50000
+	var cw: float = sim.cash
+	var wage_p: int = sim.hand_wage(porter)
+	_check(wage_p > 0 and sim.hand_wage(scout) > 0, "the fixture: a hand with no wage")
+	_check(sim.exp_send_block(0, lead_cls, [int(porter["id"]), int(medic["id"])], cargo) == E["shut_hands"] % [1, ""], "two hands went before Two along")
+	_check(sim.exp_return_worth(0, 1000.0, [int(porter["id"])]) > sim.exp_return_worth(0, 1000.0, []), "the porter brought back no more")
+	_check(_exp_go(sim, 0, lead_cls, [int(porter["id"])], cargo), "a hand didn't go: '%s'" % sim.exp_send_block(0, lead_cls, [int(porter["id"])], cargo))
+	_check(is_equal_approx(sim.cash, cw - wage_p), "the wages weren't the sent hand's alone: paid %s, the porter's %d" % [str(cw - sim.cash), wage_p])
+	var ep: Dictionary = sim.expeditions[0]
+	_check(not sim.hand_free(porter) and sim.hand_free(scout) and not sim.let_go(int(porter["id"])), "a hand away is free, or let go")
+	# hurt on a bad roll, no medic along
+	ep["risk"] = 1.0
+	ep["hold"] = 0.0
+	var lv_val0: int = Items.hand_affix_value(porter, porter["affixes"][0])
+	sim.advance(float(ep["dur"]) + 1.0)
+	_check(int(porter["id"]) in ep["res"]["hurt"] and sim.hand_hurt(porter), "the porter wasn't hurt by a bad roll")
+	sim.exp_take(int(ep["id"]))
+	_check(not sim.hand_free(porter) and sim.exp_send_block(0, lead_cls, [int(porter["id"])], cargo) == E["shut_hand"] % "Porter", "a hurt hand could go: '%s'" % sim.exp_send_block(0, lead_cls, [int(porter["id"])], cargo))
+	sim.advance(float(Data.EXP_PLACES[0]["time"]) + 1.0)
+	_check(sim.hand_free(porter) and sim.hands.has(porter), "the hurt didn't pass after an expedition's time, or the hand was lost")
+	# levelling: a level every HAND_LV_EVERY expeditions home, the rolls rising
+	_check(int(porter["lv"]) == 1, "the porter levelled after one: %d" % int(porter["lv"]))
+	sim.scrap = 50000
+	_exp_go(sim, 0, lead_cls, [int(porter["id"])], cargo)
+	sim.expeditions[0]["risk"] = 0.0
+	sim.expeditions[0]["hold"] = 0.0
+	sim.advance(float(sim.expeditions[0]["dur"]) + 1.0)
+	sim.exp_take(int(sim.expeditions[0]["id"]))
+	var lv_val1: int = Items.hand_affix_value(porter, porter["affixes"][0])
+	var d0: Dictionary = Items.hand_affix_def(str(porter["affixes"][0]["stat"]))
+	_check(int(porter["lv"]) == 2 and (lv_val1 > lv_val0 or bool(d0.get("flag", false)) or int(d0["max"]) <= 1 or int(porter["affixes"][0]["value"]) < 5), "two expeditions didn't level the porter, or the roll didn't rise: lv %d, %d -> %d" % [int(porter["lv"]), lv_val0, lv_val1])
+	# --- line B: Two along, the better reroll, two expeditions at once, the roster +4 and the quotas, three at once
+	_check(sim.yard_pick("bunkhouse", 1, "b") and sim.exp_hands_max() == 2 and sim.better_faces_open(), "Two along didn't bring two hands and Better faces")
+	var cb: float = sim.cash
+	_check(sim.reroll_pool(true) and is_equal_approx(cb - sim.cash, float(sim.reroll_cost(true))) and sim.hand_pool.all(func(h): return int(h["rarity"]) >= 1 and int(h["tier"]) == sim.best_tier_open()), "Better faces didn't roll better: %s" % str(sim.hand_pool.map(func(h): return [h["rarity"], h["tier"]])))
+	_check(sim.yard_pick("bunkhouse", 2, "b") and sim.exp_at_once() == 2, "Two at once didn't")
+	_check(sim.exp_quota(0).is_empty() and not sim.quotas_open(), "the quotas before More bunks")
+	_check(sim.yard_pick("bunkhouse", 3, "b") and sim.roster_cap() == int(Data.HAND_ROSTER[1]) and sim.quotas_open(), "More bunks didn't raise the roster and open the quotas")
+	_check(sim.yard_pick("bunkhouse", 4, "b") and sim.exp_at_once() == 3, "Three at once didn't: '%s'" % sim.yard_pick_block("bunkhouse", 4, "b"))
+	# --- the quota: this week's kind and count; met, +20-100% and its item; once a week
+	var lp: int = 5
+	var q: Dictionary = sim.exp_quota(lp)
+	_check(not q.is_empty() and int(q["n"]) >= 1 and str(q.get("unique", "")) != "", "London's quota: %s" % str(q))
+	var qk: String = str(q["kind"])
+	if qk == "meds":
+		for k in range(int(q["n"]) + 2):
+			sim.stash.append(Items.roll(Data.MEDICAL, 1, hr))
+	elif qk == "notes":
+		sim.notes = int(q["n"]) + 10
+	else:
+		sim._exchange_add(qk, int(q["n"]) + 10 - sim.cargo_held(qk))
+	var qcargo: Array = [{"kind": qk, "n": int(q["n"])}]
+	_check(sim.quota_met_by(lp, qcargo) and not sim.quota_met_by(lp, [{"kind": qk, "n": int(q["n"]) - 1}]), "the quota's count isn't what meets it")
+	var two: Array = [int(scout["id"]), int(medic["id"])]
+	_check(_exp_go(sim, lp, lead_cls, two, qcargo, "Helmet"), "the quota's shipment didn't go: '%s'" % sim.exp_send_block(lp, lead_cls, two, qcargo))
+	var eq: Dictionary = sim.expeditions.back()
+	_check(bool(eq["quota"]) and int(sim.quota_done.get("london", -1)) == sim.exp_week() and not sim.quota_met_by(lp, qcargo), "the quota wasn't met, or could be met twice a week")
+	eq["risk"] = 0.0
+	eq["hold"] = 0.0
+	sim.advance(float(eq["dur"]) + 1.0)
+	_check(float(eq["res"]["bonus"]) >= 0.2 and float(eq["res"]["bonus"]) <= 1.0 and str(eq["res"]["quota_item"]) == str(q["unique"]), "the quota paid wrong: +%s, '%s' for '%s'" % [str(eq["res"]["bonus"]), str(eq["res"]["quota_item"]), str(q["unique"])])
+	var london_u: Array = eq["res"]["items"].filter(func(it): return it.has("unique") and int(it["id"]) != int(eq["res"]["quota_id"]))
+	_check(not london_u.is_empty() and london_u.all(func(it): return str(it["slot"]) == "Helmet"), "London's uniques aren't of the slot picked: %s" % str(eq["res"]["items"].map(func(it): return [it.get("unique", ""), it["slot"]])))
+	main.show_room(main.MISSIONS)
+	main._missions._exp_report.id = int(eq["id"])
+	main._missions._shown = ""
+	main.refresh()
+	_check(main._missions._exp_report.visible and main._missions._exp_report.chips.text_nodes().size() >= 2, "the report doesn't say the quota was met")
+	_check_fit(main, "the Map, a quota met")
+	sim.exp_take(int(eq["id"]))
+	# --- the hands' trades and affixes: "−% risk" lowers the risk; a medic along cuts a bad roll's loss and keeps the crew whole
+	var safe_h: Dictionary = Items.roll_hand(3, hr, 0.0, false, "porter", sim.exp_place_keys())
+	safe_h["affixes"] = [{"stat": "x_risk", "value": 10, "tier": 3}]
+	sim.hands.append(safe_h)
+	_check(is_equal_approx(sim.exp_risk(0, lead_cls, [int(safe_h["id"])], 10.0, 0.6), sim.exp_risk(0, lead_cls, [], 10.0, 0.6) - 0.1), "a hand's −10%% risk didn't lower the risk 10%%: %.3f against %.3f" % [sim.exp_risk(0, lead_cls, [int(safe_h["id"])], 10.0, 0.6), sim.exp_risk(0, lead_cls, [], 10.0, 0.6)])
+	sim.hands.erase(safe_h)
+	sim.scrap = 50000
+	_check(_exp_go(sim, 0, lead_cls, [int(medic["id"]), int(porter["id"])], [{"kind": "scrap", "n": 1000}]), "the fixture: the medic's expedition didn't go: '%s'" % sim.exp_send_block(0, lead_cls, [int(medic["id"]), int(porter["id"])], [{"kind": "scrap", "n": 1000}]))
+	var em: Dictionary = sim.expeditions.back()
+	em["risk"] = 1.0
+	em["hold"] = 0.0
+	sim.advance(float(em["dur"]) + 1.0)
+	var cut: float = sim.crew_fig([int(medic["id"])], "bail", 0) / 100.0
+	_check(cut > 0.0 and float(em["res"]["loss"]) <= Data.EXP_LOSS[1] * (1.0 - cut) + 0.001 and em["res"]["hurt"].is_empty() and not sim.hand_hurt(porter), "a medic along didn't cut the loss or keep the crew whole: loss %.2f, cut %.2f, hurt %s" % [float(em["res"]["loss"]), cut, str(em["res"]["hurt"])])
+	main.show_room(main.MISSIONS)
+	main._missions._exp_report.id = int(em["id"])
+	main.refresh()
+	main._missions._exp_report._take()
+	_check(sim.exp_by_id(int(em["id"])).is_empty(), "the report's Take it didn't put it away")
+	# Bristol's gamble tokens: the Fence's gamble free, one a token
+	sim.stash = []                             # room for the gamble's find
+	sim.restock()
+	_check(not sim.gamble.is_empty() and sim.room_open("fence"), "the fixture: no gamble at the Fence")
+	if not sim.gamble.is_empty():
+		var gk: String = str(sim.gamble[0])
+		sim.gamble_tokens = 1
+		var gc: float = sim.cash
+		sim.cash = 0.0
+		_check(sim.can_gamble(gk) and not sim.gamble_buy(gk).is_empty() and sim.gamble_tokens == 0 and is_equal_approx(sim.cash, 0.0), "a gamble token didn't buy a free gamble")
+		sim.cash = gc
+	# Birmingham's quota: the next rebuild at half
+	sim.story_beat = Data.STORY_BEATS.size()
+	var rkey: String = str(Data.REBUILDS[0]["key"])
+	var full: Dictionary = sim.rebuild_cost(rkey)
+	sim.rebuild_halves = 1
+	var half: Dictionary = sim.rebuild_cost(rkey)
+	_check(full.keys().all(func(m): return int(half[m]) == int(ceil(int(full[m]) / 2.0))) and full.keys().any(func(m): return int(full[m]) > 1), "a rebuild at half isn't half: %s against %s" % [str(half), str(full)])
+	for m in half:
+		sim.materials[m] = int(half[m]) if not Data.KEY_ITEMS.has(m) else sim.materials.get(m, 0)
+		if Data.KEY_ITEMS.has(m):
+			sim.key_items[m] = int(half[m])
+	_check(sim.rebuild_place(rkey) and sim.rebuild_halves == 0, "the half-price rebuild didn't build, or the half stayed: '%s'" % sim.rebuild_block(rkey))
+	# --- the hold-up's three ways out
+	var held: Array = []
+	for k in range(3):
+		sim.scrap = 50000
+		_check(_exp_go(sim, k, lead_cls if k == 0 else _exp_other_lead(sim, lead_cls, home), [], [{"kind": "scrap", "n": 2000}]) or k > 0, "the fixture: a hold-up's expedition didn't go")
+	held = sim.expeditions.duplicate()
+	for e in held:
+		e["hold"] = 1.0
+		e["risk"] = 0.0
+	sim.advance(float(Data.EXP_PLACES[2]["time"]) + 1.0)
+	_check(held.all(func(e): return str(e["state"]) == "held"), "a sure hold-up came back: %s" % str(held.map(func(e): return e["state"])))
+	main.show_room(main.MISSIONS)
+	main._missions._exp_report.id = int(held[0]["id"])
+	main._missions._shown = ""
+	main.refresh()
+	var rp = main._missions._exp_report
+	_check(rp.visible and rp.held_line.visible and rp.ways[0]["button"].visible and not rp.take.visible, "the held report doesn't offer the three ways out")
+	_check_fit(main, "the Map, a hold-up")
+	# pay: the ransom, the crew home
+	var ransom: int = sim.exp_ransom(int(held[0]["id"]))
+	var cp: float = sim.cash
+	_check(ransom >= int(sim.tins_now(Data.EXP_RANSOM_MIN)) and sim.exp_pay(int(held[0]["id"])) and is_equal_approx(sim.cash, cp - ransom) and str(held[0]["state"]) == "back", "the ransom didn't bring them home: %d" % ransom)
+	sim.exp_take(int(held[0]["id"]))
+	if held.size() >= 2:
+		# fetch: the runner to the hold site, its head the holder, free; the head down brings them home whole
+		var fid: int = int(held[1]["id"])
+		var hsite: int = sim.exp_hold_site(fid)
+		var notes0: int = sim.notes
+		sim.hp = sim.max_hp()
+		_check(sim.exp_fetch_block(fid) == "" and sim.exp_fetch(fid), "Fetch them didn't set off: '%s'" % sim.exp_fetch_block(fid))
+		_check(sim.on_mission() and int(sim.mission["tier"]) == hsite and sim.mission.has("boss") and sim.notes == notes0 and sim.exp_fetching(fid), "the fetch isn't a run at the hold site with its head, free: %s" % str(sim.mission.get("tier", -1) if sim.mission != null else "none"))
+		_check(sim.exp_pay(fid) == false and sim.exp_walk(fid) == false, "a hold-up being fetched could be paid or walked from")
+		sim.mission["boss"]["alive"] = false
+		sim.mission["cleared"] = true
+		sim.extract_now()
+		_check(str(held[1]["state"]) == "back" and is_equal_approx(float(held[1]["res"]["loss"]), 0.0) and bool(held[1]["res"].get("fetched", false)), "the head down didn't bring the crew home whole: %s" % str(held[1]["state"]))
+		sim.exp_take(fid)
+	if held.size() >= 3:
+		var wid: int = int(held[2]["id"])
+		sim.hp = sim.max_hp()
+		sim.exp_fetch(wid)
+		sim.mission["cleared"] = true
+		sim.extract_now()
+		_check(str(held[2]["state"]) == "held", "a fetch with the head standing brought them home")
+		sim.exp_walk(wid)
+	# walk away: the hands sent leave the camp, only then
+	sim.scrap = 50000
+	_check(_exp_go(sim, 3, lead_cls, two, [{"kind": "scrap", "n": 1000}]), "the fixture: the walk-away expedition didn't go: '%s'" % sim.exp_send_block(3, lead_cls, two, [{"kind": "scrap", "n": 1000}]))
+	var ew: Dictionary = sim.expeditions.back()
+	ew["hold"] = 1.0
+	ew["risk"] = 1.0
+	sim.advance(float(ew["dur"]) + 1.0)
+	_check(str(ew["state"]) == "held" and sim.hands.has(scout) and sim.hands.has(medic), "the hands went before the walk")
+	_check(sim.exp_walk(int(ew["id"])) and not sim.hands.has(scout) and not sim.hands.has(medic) and sim.hands.has(porter) and sim.expeditions.is_empty() and not sim.lead_out(lead_cls), "walking away didn't lose the hands sent alone")
+	# --- the bot: its spare cargo, a sensible crew (another class leading, the risk read low), the held ones dealt with
+	var bot = Bot.new()
+	for sl in Data.SLOTS:
+		var g: Dictionary = Items.roll(sl, Data.MAX_TIER, hr, 3.0, true)     # the lead kitted to read the far places well (a sensible crew goes where it reads)
+		for k in range(60):
+			if sl != "Primary" or Items.is_melee(g):
+				break
+			g = Items.roll(sl, Data.MAX_TIER, hr, 3.0, true, false, "", "melee")     # a blade: no rounds wanted in a read
+		sim.roster[lead_cls]["equipped"][sl] = g
+	sim.roster[lead_cls]["equipped"]["Primary"]["affixes"].append({"stat": "damage_pct", "value": 5000, "tier": 5})     # past the City's fight by a mile
+	sim.roster[lead_cls]["equipped"]["Armour"]["affixes"].append({"stat": "hp", "value": 50000, "tier": 5})
+	sim.roster[lead_cls]["xp"] = Data.xp_for_level(40)
+	sim.scrap = 40000
+	sim.salvage["copper"] = 200
+	var before_n: int = sim.expeditions.size()
+	# the lead sets off rested: a lead swapped out hurt reads as at full HP, and the read leaves their HP as it was
+	var odds_full: float = float(sim.exp_odds(0, lead_cls)[0])
+	sim.roster[lead_cls]["hp"] = 5.0
+	var odds_hurt: float = float(sim.exp_odds(0, lead_cls)[0])
+	_check(odds_full > 0.0 and is_equal_approx(odds_hurt, odds_full) and is_equal_approx(float(sim.roster[lead_cls]["hp"]), 5.0), "a lead's odds read off their bench HP, or the read healed them: %.2f hurt, %.2f whole, HP %s" % [odds_hurt, odds_full, str(sim.roster[lead_cls]["hp"])])
+	# the far place's odds are the lead's own gate's: the same dry read, the lead out at full HP
+	_check(sim.set_class(lead_cls), "the fixture: no swap to the lead")
+	sim.hp = sim.max_hp()
+	var sg: Dictionary = sim._exp_sig(0)
+	sim._sig_on(sg)
+	var own: float = sim.survival(int(sg["site"]))
+	sim._sig_off()
+	_check(sim.set_class(home), "the fixture: no swap back")
+	_check(own > 0.0 and is_equal_approx(own, odds_full), "the expedition's odds aren't the lead's own gate's: %.3f against %.3f" % [odds_full, own])
+	bot._expeditions(sim)
+	var sent: Array = sim.expeditions.slice(before_n)
+	_check(not sent.is_empty() and sent.all(func(e): return str(e["lead"]) != sim.cls and float(e["risk"]) <= bot.EXP_RISK_AT + 0.001 and e["cargo"].all(func(c): return str(c["kind"]) in ["scrap", "copper", "steel", "army"])) and sim.scrap >= bot.EXP_SCRAP_KEEP,
+		"the bot's expeditions: %s" % str(sent.map(func(e): return [e["lead"], e["risk"], e["cargo"]])))
+	for e in sim.expeditions:
+		e["hold"] = 1.0
+	sim.advance(float(Data.EXP_PLACES.back()["time"]) + 1.0)
+	sim.cash = 1e8
+	bot._expeditions(sim)
+	_check(sim.expeditions.all(func(e): return str(e["state"]) == "out") and bot.exp_held >= sent.size(), "the bot left a crew held: %s" % str(sim.expeditions.map(func(e): return e["state"])))
+	sim.expeditions = []
+	# --- the Map's tab and the send card fit, and show the right thing
+	main.show_room(main.MISSIONS)
+	main._missions.set_expeditions(true)
+	var ep2 = main._missions._exp_panel
+	sim.scrap = 50000
+	ep2.set_pick(5, lead_cls, [int(porter["id"])], [{"kind": "scrap", "share": 0.5}, {"kind": "copper", "share": 1.0}])
+	main.refresh()
+	_check(main._missions.exp_on and ep2.visible and not main._missions._map.visible, "the Expeditions tab doesn't cover the map")
+	var shown_risk: String = E["risk"] % int(round(sim.exp_risk(5, lead_cls, [int(porter["id"])], sim.cargo_worth(ep2._cargo_now()), sim.exp_crew_odds(5, lead_cls, [int(porter["id"])])) * 100.0))
+	_check(ep2._risk_label.text == shown_risk and ep2._slot_btn.visible and not ep2.send.disabled, "the send card's risk '%s' isn't the sim's '%s', or London's slot or Send is off: '%s'" % [ep2._risk_label.text, shown_risk, ep2.note.text])
+	_check_fit(main, "the Map, Expeditions")
+	ep2._send()
+	main.refresh()
+	_check(sim.expeditions.size() == 1 and ep2._outs[0]["name"].visible, "Send them didn't send, or the out list doesn't show it")
+	var crew_was: Dictionary = sim.roster
+	sim.roster = {lead_cls: crew_was[lead_cls]}     # the only other runner, away leading
+	main.refresh()
+	_check(sim.exp_leads().is_empty() and ep2.lead_said == E["lead_away"], "the lead's button with the only other runner away: '%s'" % ep2.lead_said)
+	sim.roster = crew_was
+	_check_fit(main, "the Map, Expeditions, one out")
+	# --- save and load mid-expedition; no offline progress
+	var eo: Dictionary = sim.expeditions[0]
+	sim.advance(60.0)
+	var left0: float = float(eo["dur"]) - (sim.elapsed - float(eo["t0"]))
+	var f := FileAccess.open(main.save_file, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": main.SAVE_VERSION, "saved": Time.get_unix_time_from_system() - 7200.0, "sim": sim.to_dict()}))
+	f.close()
+	main.load_game()
+	main.sim.mythics_on = false
+	sim = main.sim
+	sim.odds_budget = 0
+	var el: Dictionary = sim.expeditions[0] if not sim.expeditions.is_empty() else {}
+	_check(not el.is_empty() and str(el["state"]) == "out" and is_equal_approx(float(el["dur"]) - (sim.elapsed - float(el["t0"])), left0), "the expedition didn't load as it was, or moved while the game was shut")
+	var ph: Dictionary = sim.hand_by_id(int(porter["id"]))
+	_check(not ph.is_empty() and int(ph["lv"]) == int(porter["lv"]) and int(ph["lv"]) >= 2 and typeof(ph["id"]) == TYPE_INT and str(ph["trade"]) == "porter" and ph["affixes"].size() == porter["affixes"].size() and sim.lead_out(lead_cls), "the hands didn't load as items: %s" % str(ph))
+	_check(Items._next_id > int(ph["id"]), "the item ids past a hand's after a load")
+	sim.advance(left0 + 1.0)
+	_check(str(el["state"]) in ["back", "held"], "the loaded expedition never came back")
+	# a worst roster: eight Legendary hands, four long affixes each, every trade - the Bunkhouse's card fits
+	sim.expeditions = []
+	sim.hands = []
+	sim._fill_pool(false)
+	var places: Array = sim.exp_place_keys()
+	for k in range(int(Data.HAND_ROSTER[1])):
+		var h: Dictionary = Items.roll_hand(Data.MAX_TIER, hr, 0.0, true, str(Data.HAND_TRADES[k % Data.HAND_TRADES.size()]["trade"]), places)
+		h["rarity"] = Data.HAND_RARITY_MAX
+		h["lv"] = Data.HAND_LV_MAX
+		h["affixes"] = [{"stat": "x_place", "value": 30, "tier": 5, "place": "birmingham"}, {"stat": "x_safe", "value": 1, "tier": 5, "place": "birmingham"},
+			{"stat": "x_quality", "value": 24, "tier": 5}, {"stat": "x_hold", "value": 50, "tier": 5}]
+		sim.hands.append(h)
+	sim.hands[0]["hurt_until"] = sim.elapsed + 600.0     # a hurt hand and one out: the state said with the name whole (29 Oct: a corner tag cut "Porter" to "Porte")
+	sim.expeditions = [{"id": 999, "place": 0, "lead": lead_cls, "hands": [int(sim.hands[1]["id"])], "cargo": [], "worth": 1.0, "odds": 1.0, "risk": 0.0, "hold": 0.0, "t0": sim.elapsed, "dur": 600.0, "state": "out", "res": {}, "seen": false}]
+	main.show_room(main.OVERVIEW)
+	main._yard_tree._pick_building("bunkhouse")
+	main._yard_tree.hands.picked = int(sim.hands[0]["id"])
+	main.refresh()
+	var cells: Array = main._yard_tree.hands.cells()
+	_check(cells.size() == Data.HAND_POOL + int(Data.HAND_ROSTER[1]), "the full roster didn't show: %d cells" % cells.size())
+	var panel_r := Rect2(Vector2.ZERO, main._yard_tree.hands.size)
+	for c in cells:
+		_check(panel_r.encloses(Rect2(c.position, c.size)), "a hand's cell runs out of the Bunkhouse's card: %s" % str(Rect2(c.position, c.size)))
+	_check_fit(main, "the Pitch, eight Legendary hands")
+	var rc: Array = main._yard_tree.hands._roster
+	_check(rc[0]._name.text == str(sim.hands[0]["base"]) and rc[0]._name.size.x >= rc[0].size.x - 2 * rc[0].PAD - 0.5 and rc[0].said().begins_with(E["hand_hurt"]) and rc[1].said().begins_with(E["hand_out"]) and rc[2]._name.text == str(sim.hands[2]["base"]),
+		"a hurt or away hand's cell doesn't say so with its name whole: '%s' '%s', '%s' '%s'" % [rc[0]._name.text, rc[0].said(), rc[1]._name.text, rc[1].said()])
+	sim.expeditions = []
+	sim.hands = []
+	sim.hand_pool = []
+
+
+## Another class's runner to lead, for the fixtures: one played, else made.
+func _exp_other_lead(sim, not_this: String, home: String) -> String:
+	for c in ["Poacher", "Paramedic", "Recruit", "Drifter", "Scrapper", "Doorman"]:
+		if c != not_this and c != home and sim.roster.has(c) and not sim.lead_out(c):
+			return c
+	for c in ["Poacher", "Paramedic", "Recruit"]:
+		if c != not_this and c != home and not sim.roster.has(c):
+			if sim.set_class(c) and sim.set_class(home):
+				return c
+	return not_this
+
+
+## A send for the checks: the place's odds read for the lead first (the send waits on a settled read, as the gate does).
+func _exp_go(sim, p: int, lead: String, hs: Array, goods: Array, slot := "") -> bool:
+	if lead != sim.cls and sim.roster.has(lead) and not sim.on_mission():
+		sim.exp_odds(p, lead)
+	return sim.send_expedition(p, lead, hs, goods, slot)

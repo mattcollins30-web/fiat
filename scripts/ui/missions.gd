@@ -25,6 +25,8 @@ const SkillPicker := preload("res://scripts/ui/skill_picker.gd")
 const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 const RepeatReport := preload("res://scripts/ui/repeat_report.gd")
 const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
+const ExpeditionsPanel := preload("res://scripts/ui/expeditions_panel.gd")
+const ExpeditionReport := preload("res://scripts/ui/expedition_report.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
@@ -246,6 +248,7 @@ func _init() -> void:
 	_guide = TierGuide.new()
 	_guide.closed.connect(func(): acted.emit())
 	add_child(_guide)
+	_exp_build()
 
 
 func _build_pick() -> void:
@@ -367,6 +370,8 @@ func show_state(s) -> void:
 		county_on = false
 	UI.fit_button(_county_btn, ["Back to the map", "The map"] if county_on else ["The County", "County"])
 	UI.style_button(_county_btn, county_on, "good")
+	if _exp_state(picking):
+		return                                   # the Expeditions over the map and the card (29 Oct)
 	_county.visible = county_on and not picking
 	_map.visible = not _county.visible
 	if _county.visible:
@@ -578,6 +583,8 @@ func _notification(what: int) -> void:
 
 func set_county(on: bool) -> void:
 	county_on = on and sim != null and sim.issued
+	if county_on:
+		exp_on = false                         # one over the map at a time (29 Oct)
 	if not county_on and _county != null:
 		_county.hide_shut()
 	_shown = ""
@@ -890,7 +897,7 @@ static func odds_reasons(s, i: int) -> Array:
 
 func text_nodes() -> Array:
 	var out: Array = _text_nodes_under()
-	for over in [_report, _wagers]:            # over the map (29 Oct): what's under it isn't the screen's
+	for over in [_report, _wagers, _exp_report]:            # over the map (29 Oct): what's under it isn't the screen's
 		if over.visible:
 			var r: Rect2 = over.get_global_rect()
 			out = out.filter(func(n): return not r.intersects(n.get_global_rect())) + over.text_nodes()
@@ -904,6 +911,8 @@ func _text_nodes_under() -> Array:
 		out.append(_came_btn)
 	if _county_btn.visible:
 		out.append(_county_btn)
+	if _exp_btn.visible:
+		out.append(_exp_btn)
 	out.append(_guide_btn)
 	if _guide.visible:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
@@ -925,6 +934,9 @@ func _text_nodes_under() -> Array:
 		return out
 	if _county.visible:
 		out.append_array(_county.text_nodes())
+		return out
+	if _exp_panel.visible:
+		out.append_array(_exp_panel.text_nodes())     # the Expeditions over the map (29 Oct)
 		return out
 	out.append_array(_skill_pick.text_nodes())
 	for c in _cols:
@@ -952,3 +964,76 @@ func _text_nodes_under() -> Array:
 func line_pairs() -> Array:
 	var out: Array = []
 	return out
+
+
+# ------------------------------------------------------------------ the Expeditions tab (29 Oct, docs/design/trips.md 3)
+
+const EXP_BTN_W := 240             # "Expeditions" in the row, before the County's
+var exp_on := false
+var _exp_btn: Button
+var _exp_panel                     # expeditions_panel.gd: over the map and the card while it's on
+var _exp_report                    # expedition_report.gd: over the map when a crew's back or held
+
+
+func _exp_build() -> void:
+	var x: float = _county_btn.position.x - COL_GAP - EXP_BTN_W
+	_title.size.x = x - COL_GAP
+	_exp_btn = UI.button(self, Rect2(x, 0, EXP_BTN_W, ZONE_H), false)
+	_exp_btn.pressed.connect(func(): set_expeditions(not exp_on))
+	_exp_btn.visible = false
+	_exp_panel = ExpeditionsPanel.new()
+	_exp_panel.position = Vector2(0, TOP)
+	_exp_panel.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	_exp_panel.report.connect(func(id: int):
+		_exp_report.id = id
+		_shown = ""
+		acted.emit())
+	add_child(_exp_panel)
+	_exp_report = ExpeditionReport.new()
+	_exp_report.position = Vector2((Pal.GRID_W - ExpeditionReport.W) / 2.0, TOP + 40)
+	_exp_report.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(_exp_report)
+
+
+func set_expeditions(on: bool) -> void:
+	exp_on = on and sim != null and sim.expeditions_open()
+	if exp_on:
+		county_on = false
+		_county.hide_shut()
+	_shown = ""
+	if sim != null:
+		show_state(sim)
+
+
+## The tab's button, the panel over the map and the card, the report over everything: true when the panel has the room.
+func _exp_state(picking: bool) -> bool:
+	var E: Dictionary = Words.EXPEDITIONS
+	var open: bool = sim.expeditions_open()
+	_exp_btn.visible = open and not picking
+	if not open:
+		exp_on = false
+	var back: int = sim.expeditions.filter(func(e): return str(e["state"]) != "out").size()
+	UI.fit_button(_exp_btn, [E["tab_map"], E["tab_map_short"]] if exp_on else ([E["tab_back"] % back, E["tab"]] if back > 0 else [E["tab"], E["tab_short"]]))
+	UI.style_button(_exp_btn, exp_on or back > 0, "good" if exp_on else "")
+	_exp_report.show_state(sim)
+	_exp_report.move_to_front()
+	_exp_panel.visible = exp_on and not picking
+	if not _exp_panel.visible:
+		return false
+	_map.visible = false
+	_county.visible = false
+	_order.visible = false
+	_pick.visible = false
+	for c in _cols:
+		c["panel"].visible = false
+		c["edge"].visible = false
+	UI.fit(_title, [E["title"] + " · " + E["progress"] % [sim.exp_busy(), sim.exp_at_once()], E["title"]])
+	_exp_panel.show_state(sim)
+	_shown = ""
+	_exp_report.move_to_front()
+	_guide.move_to_front()
+	return true

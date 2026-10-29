@@ -146,7 +146,12 @@ func step(sim) -> int:
 	# campaign site farmed for the papers
 	var t := -1
 	var t0 := Time.get_ticks_usec()
-	var okey: String = _pick_order(sim) if sim.campaign_done() else ""
+	var fetched: bool = expeditions_on and not sim.on_mission() and _expeditions(sim)     # the expeditions (29 Oct): a hold-up fought is this step's run
+	if fetched:
+		t = int(sim.mission["tier"])
+		last_tier = -1
+		t0 = _lap("step/expeditions", t0)
+	var okey: String = _pick_order(sim) if sim.campaign_done() and not fetched else ""
 	if okey != "":
 		var o_lv: int = sim.order_level(okey)
 		if sim.deploy_order(okey):
@@ -154,7 +159,7 @@ func step(sim) -> int:
 			last_tier = -1
 			bought.append([sim.elapsed, "ran %s at level %d" % [str(Data.pinnacle(okey)["place"]), o_lv]])
 		t0 = _lap("step/order", t0)
-	if t < 0 and sim.campaign_done() and sim.room_open("radio"):
+	if t < 0 and not fetched and sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
 		t0 = _lap("step/signals", t0)
 		var k := _pick_signal(sim)
@@ -181,7 +186,7 @@ func step(sim) -> int:
 				t = -1
 			else:
 				ran_signal = [sg_lv, sg_odds, sim.reach, sg_tags]
-	if t < 0:
+	if t < 0 and not fetched:
 		t = pick_tier(sim)
 		last_tier = t
 		t0 = _lap("step/pick_tier", t0)
@@ -1531,7 +1536,7 @@ static func _line_next_open(sim, b: Dictionary, side: String) -> bool:
 static func _next_step(sim, b: Dictionary, side: String) -> int:
 	for c in range(b["picks"].size()):
 		if not sim.yard_built_side(b["key"], c, side):
-			return -1 if bool(b["picks"][c][0 if side == "a" else 1].get("stub", false)) else c     # the Bunkhouse's line B (29 Oct): nothing to build till the trips
+			return -1 if sim.yard_stub(b["key"], c, side) else c     # the Bunkhouse's line B (29 Oct): nothing to build till the Quartermaster
 	return -1
 
 
@@ -1842,3 +1847,117 @@ func _socket_wanting(sim) -> String:
 				if cur == null or float(Items.base_of(cur).get("conv_%s_pct" % element, 0)) <= 0.0:
 					return mount
 	return ""
+
+
+# ------------------------------------------------------------------ the expeditions (29 Oct, docs/design/trips.md 3, 6)
+
+## The bot's expeditions, as a person leaving them to run would: once the Quartermaster's down, the Bunkhouse's line B
+## built as the cash allows, the pool's best hired to the cap, and every free slot sent - the highest-level runner not
+## selected leading, the best free hands, the spare cargo (scrap and salvage over what the Pitch wants; never the meds,
+## the notes or the rebuild's materials) cut down until the risk reads EXP_RISK_AT or under, to the hardest far place
+## whose odds read EXP_ODDS_AT. A crew back is put away at once; a held one is fought for (Fetch them) when the runner
+## reads PUSH at the hold site, else ransomed with the cash there EXP_RANSOM_SPARE times over, else walked from.
+## `expeditions_on` false: none (the campaign's reads; they're shut till the Quartermaster in any case).
+var expeditions_on := true
+var exp_sent := 0
+var exp_held := 0
+var exp_fetched := 0
+var exp_walked := 0
+const EXP_RISK_AT := 0.35
+const EXP_ODDS_AT := 0.6
+const EXP_RANSOM_SPARE := 2.0
+const EXP_SCRAP_KEEP := 3000
+const EXP_SALVAGE_KEEP := 60
+
+
+## Returns true when a hold-up's fetch has set off (the step's run).
+func _expeditions(sim) -> bool:
+	if not sim.expeditions_open():
+		return false
+	for e in sim.expeditions.duplicate():
+		var id: int = int(e["id"])
+		if str(e["state"]) == "back":
+			sim.exp_take(id)
+		elif str(e["state"]) == "held":
+			var i: int = sim.exp_hold_site(id)
+			if sim.exp_fetch_block(id) == "" and i >= 0 and sim.odds_ready(i) and float(sim.odds_now(i)) >= PUSH and sim.exp_fetch(id):
+				exp_held += 1
+				exp_fetched += 1
+				bought.append([sim.elapsed, "expedition held up: fetched from %s" % str(Data.TIERS[i]["name"])])
+				return true
+			exp_held += 1
+			if sim.cash >= sim.exp_ransom(id) * EXP_RANSOM_SPARE and sim.exp_pay(id):
+				sim.exp_take(id)
+				bought.append([sim.elapsed, "expedition held up: ransom paid"])
+			elif sim.exp_walk(id):
+				exp_walked += 1
+				bought.append([sim.elapsed, "expedition held up: walked away"])
+	var bh: Dictionary = Data.yard_building("bunkhouse")
+	var c: int = _next_step(sim, bh, "b")
+	if c >= 0 and sim.can_yard_pick("bunkhouse", c, "b") and sim.cash >= sim.yard_pick_cost("bunkhouse", c) * 3.0:
+		sim.yard_pick("bunkhouse", c, "b")
+		bought.append([sim.elapsed, "bunkhouse b%d" % (c + 1)])
+	if sim.pool_open():
+		var pool: Array = sim.hand_pool_now().duplicate()
+		pool.sort_custom(func(a, b): return int(a["rarity"]) * 10 + int(a["tier"]) > int(b["rarity"]) * 10 + int(b["tier"]))
+		for h in pool:
+			if sim.hands.size() >= sim.roster_cap():
+				break
+			sim.hire_hand(int(h["id"]))
+		if sim.hand_pool.is_empty() and sim.hands.size() < sim.roster_cap() and sim.cash >= sim.reroll_cost(false) * 10.0:
+			sim.reroll_pool(false)
+	var guard := 0
+	while sim.exp_busy() < sim.exp_at_once() and guard < 3:
+		guard += 1
+		if not _exp_send(sim):
+			break
+	return false
+
+
+func _exp_send(sim) -> bool:
+	var leads: Array = sim.exp_leads()
+	if leads.is_empty():
+		return false
+	leads.sort_custom(func(a, b): return sim.crew_level(str(a)) > sim.crew_level(str(b)))
+	var lead: String = str(leads[0])
+	var free: Array = sim.hands.filter(func(h): return sim.hand_free(h))
+	free.sort_custom(func(a, b): return int(a["rarity"]) * 10 + int(a["tier"]) > int(b["rarity"]) * 10 + int(b["tier"]))
+	var hs: Array = free.slice(0, sim.exp_hands_max()).map(func(h): return int(h["id"]))
+	while not hs.is_empty() and sim.cash < sim.crew_wages(hs):
+		hs.pop_back()
+	var spare: Array = []
+	if sim.scrap > EXP_SCRAP_KEEP * 2:
+		spare.append(["scrap", sim.scrap - EXP_SCRAP_KEEP])
+	for k in Data.SALVAGE:
+		var n: int = int(sim.salvage.get(k, 0)) - EXP_SALVAGE_KEEP
+		if n > 0:
+			spare.append([k, n])
+	spare = spare.slice(0, sim.exp_slots(hs))
+	if spare.is_empty():
+		return false
+	var place := -1
+	for p in range(Data.EXP_PLACES.size() - 1, -1, -1):
+		if float(sim.exp_odds(p, lead)[0]) >= EXP_ODDS_AT:
+			place = p
+			break
+	if place < 0:
+		place = 0
+		sim.exp_odds(place, lead)
+	# the cargo cut to what the risk allows: the odds' part first, then the worth that fills the rest to EXP_RISK_AT
+	var odds: float = sim.exp_crew_odds(place, lead, hs)
+	var risk0: float = sim.exp_risk(place, lead, hs, 0.0, odds)
+	if risk0 >= EXP_RISK_AT:
+		return false
+	var full: Array = spare.map(func(x): return {"kind": str(x[0]), "n": int(x[1])})
+	var room: float = (EXP_RISK_AT - risk0) * sim.lead_strength(lead) / Data.EXP_RISK_K
+	var share: float = minf(1.0, room / maxf(1.0, sim.cargo_worth(full)))
+	var goods: Array = full.map(func(x): return {"kind": str(x["kind"]), "n": int(floor(int(x["n"]) * share))}).filter(func(x): return int(x["n"]) > 0)
+	if goods.is_empty():
+		return false
+	var worth: float = sim.cargo_worth(goods)
+	var risk: float = sim.exp_risk(place, lead, hs, worth, odds)
+	if sim.send_expedition(place, lead, hs, goods, str(Data.SLOTS[sim.exp_sent % Data.SLOTS.size()])):
+		exp_sent += 1
+		bought.append([sim.elapsed, "expedition: %s to %s, %d hands, worth %d, risk %.2f" % [lead, str(Data.EXP_PLACES[place]["short"]), hs.size(), int(worth), risk]])
+		return true
+	return false

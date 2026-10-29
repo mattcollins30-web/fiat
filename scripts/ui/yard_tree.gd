@@ -15,6 +15,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const HandsPanel := preload("res://scripts/ui/hands_panel.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H                 # every room's band, one height (10 Oct, Bands-U A)
@@ -155,19 +156,21 @@ func _init() -> void:
 	_other = UI.label(_detail, Rect2(PAD, by + 54, RIGHT_W - 2 * PAD, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_build = UI.button(_detail, Rect2(RIGHT_W - PAD - BUILD_W, Pal.ROOM_H - BODY_Y - PAD - 48, BUILD_W, 48), true)
 	_build.pressed.connect(_on_build)
+	_hands_build()
 
 
 func show_state(s, purse: Dictionary) -> void:
 	sim = s
+	_hands_show()                              # the Bunkhouse's hands (29 Oct): over what the Pitch gives while it's picked
 	var sig := "%s|%s|%s|%s|%d|%d|%s|%s|%d|%d|%.3f|%s" % [building, str(selected), str(sim.yard_picks), str(sim.yard_ranks), int(sim.cash), sim.yard_cols(), str(sim.salvage), str(sim.on_mission()),
-		sim.notes, sim.scrap, sim.inflation(), str(sim.unlocked)]
+		sim.notes, sim.scrap, sim.inflation(), str(sim.unlocked)] + "|%s" % sim.expeditions_open()     # line B opens with the Quartermaster: the counts move
 	if sig == _shown:
 		var st = purse.get("status", "")
 		UI.fit(_status, st if st is Array else [str(st)])     # the clock moves
 		return
 	_shown = sig
 	var built: int = sim.yard_built()
-	var of: int = Data.yard_step_count()     # the buildable steps (29 Oct: not the expeditions' stubs)
+	var of: int = sim.yard_steps()     # the buildable steps (29 Oct: not the expeditions' stubs)
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 350 - _unit.position.x
@@ -216,7 +219,7 @@ func _show_cards() -> void:
 			c["button"].add_theme_stylebox_override(st, UI.box(Pal.SELECT if st == "hover" else Pal.CARD, 8, 2 if picked_now else 1, Pal.ACCENT if picked_now else Pal.CARD_LINE))
 		UI.fit(c["name"], [en.call(str(b["name"])), en.call(str(b["name"]).trim_prefix("The "))])
 		var n: int = _line_built(key, "a") + _line_built(key, "b")
-		UI.fit(c["built"], ["%d of %d built · rank %d" % [n, Data.yard_step_count(key), sim.yard_rank(key)], "%d of %d · r%d" % [n, Data.yard_step_count(key), sim.yard_rank(key)]])
+		UI.fit(c["built"], ["%d of %d built · rank %d" % [n, sim.yard_steps(key), sim.yard_rank(key)], "%d of %d · r%d" % [n, sim.yard_steps(key), sim.yard_rank(key)]])
 		c["built"].add_theme_color_override("font_color", Pal.ACCENT if n > 0 else Pal.TEXT_2)
 		for k in range(2):
 			var side: String = "a" if k == 0 else "b"
@@ -256,8 +259,8 @@ func _show_gives() -> void:
 func step_look(key: String, col: int, side: String) -> String:
 	if sim.yard_built_side(key, col, side):
 		return "built"
-	if bool(Data.yard_building(key)["picks"][col][0 if side == "a" else 1].get("stub", false)):
-		return "stub"                         # the Bunkhouse's line B (29 Oct): comes with the trips
+	if sim.yard_stub(key, col, side):
+		return "stub"                         # the Bunkhouse's line B (29 Oct): after the Quartermaster
 	if col >= sim.yard_cols():
 		return "shut"
 	if col > 0 and not sim.yard_built_side(key, col - 1, side):
@@ -349,8 +352,8 @@ func _show_picked(key: String, b: Dictionary, en: Callable, kind: String) -> voi
 		_build.text = "Built"
 		_build.disabled = true
 		return
-	if bool(pk.get("stub", false)):
-		UI.fit(_other, [Words.REPEAT["stub"]])     # the Bunkhouse's line B (29 Oct): nothing to buy until the trips are in
+	if sim.yard_stub(key, c, side):
+		UI.fit(_other, [Words.REPEAT["stub"]])     # the Bunkhouse's line B (29 Oct): nothing to buy until the Quartermaster's down
 		UI.fit_button(_build, [Words.REPEAT["stub"], "Not yet"])
 		_build.disabled = true
 		return
@@ -411,12 +414,16 @@ func tile(key: String, col: int, side: String) -> Dictionary:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_kicker, _headline, _unit, _status, _b_title, _b_sub, _rank_name, _rank_short, _rank_state]
+	var out: Array = [_kicker, _headline, _unit, _b_title, _b_sub, _rank_name, _rank_short, _rank_state]
 	out.append_array(_chips.text_nodes())
 	for c in cards:
 		out.append_array([c["name"], c["built"], c["salvage"]] + c["lines"].map(func(x): return x["label"]))
-	for r in _gives_rows:
-		out.append_array(r)
+	if hands.visible:
+		out.append_array(hands.text_nodes())     # over what the Pitch gives (29 Oct)
+	else:
+		out.append(_status)
+		for r in _gives_rows:
+			out.append_array(r)
 	out.append_array(_line_heads)
 	for col in _tiles:
 		for d in col:
@@ -431,3 +438,26 @@ func text_nodes() -> Array:
 
 func line_pairs() -> Array:
 	return [[_headline, _unit]]
+
+
+# ------------------------------------------------------------------ the Bunkhouse's hands (29 Oct, docs/design/trips.md 3-4)
+
+var hands                          # hands_panel.gd: in the place of what the Pitch gives while the Bunkhouse is picked
+
+
+func _hands_build() -> void:
+	var gives: Control = _status.get_parent()
+	hands = HandsPanel.new(Rect2(gives.position, gives.size))
+	hands.visible = false
+	hands.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(hands)
+
+
+func _hands_show() -> void:
+	var on: bool = building == "bunkhouse" and sim.expeditions_open()
+	hands.visible = on
+	_status.get_parent().visible = not on
+	if on:
+		hands.show_state(sim)
