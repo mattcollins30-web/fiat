@@ -1,0 +1,112 @@
+# Itemisation: fewer tiers in the campaign, more bases, gloves (29 Oct, designed for after the playtest)
+
+Matt (29 Oct), from play: rifles and SMGs "feel crap throughout and the campaign's pacing means that you don't
+actually keep anything for very long at all. I wonder if the answer is both more items in general but also less tiers
+available during the campaign. The campaign stops at tier 4 with the early radios giving 5 and 6 so the step up feels
+rewarding. I also think that gloves need to be added as an item type that would carry affixes for pace etc." Then: "I'd
+rather design and discuss now so it's all just ready to be built."
+
+Queue: first after Matt's fresh playtest on 23c71d1, ahead of the trips (whose rewards sit on these tiers). Matt logs
+each gun he holds and for how long: the before picture. Every number here is a draft for the balance pass; every name
+a draft for the language pass. Canvas boards: TierMap, BaseGrid, Gloves.
+
+## Matt's calls (29 Oct)
+
+1. **One tier a zone**: the Outskirts T1, the Estate T2, the Town T3, the City T4.
+2. **The bases keep their tiers and stats**; the campaign stops dropping T5-6, which become the early signals'.
+3. **Three bases a gun type a tier in the campaign, two in the endgame**, sideways in how they play.
+4. **Each gun type gets an edge** (rifles: SMGs out-damage them at every tier today, nothing to make up for it).
+5. Gloves: an eighth slot carrying pace and the like (his words, 29 Oct).
+
+## 1. The tier map
+
+| Where | Today | After |
+|---|---|---|
+| The Outskirts (the Allotments, the Garden Centre, Top Farm) | T1 | T1 |
+| The Estate (Ransacked Streets, the Parade, the Retail Park) | T1, T3, T3 | T2 |
+| The Town (the Pleasure Park, the Shopping Centre, the Bank) | T3, T4, T5 | T3 |
+| The City (the Services, the Hospital, the Barracks) | T5, T6, T6 | T4 |
+| Signals | T6 from level 10, T7 12, T8 16, T9 20 | T5 from level 10, T6 13, T7 16, T8 20, T9 24 |
+
+- Four steps over the campaign, each when a new part of the map opens, so a gun lasts a zone (three sites).
+- A campaign site pushed past its first clear follows the signals' levels (the Streets at level 10 drop T5).
+- The Fence's shelf, the gamble and the Arms dealer roll at the best tier open, as now.
+- Within a tier the climb is the item's level (its affixes roll by the level found at, as now) and its rarity: a T3 gun
+  found at level 7 rolls better than one found at level 4. With fewer tiers this carries more of the campaign.
+- The campaign's gangs are tuned to T6 gear at the Barracks today; they come down to T4's (the balance pass).
+- Uniques' base ranges move with the tiers (a levelling unique's [3, 6] becomes [2, 4]); the head uniques stay where
+  their heads are.
+
+## 2. The bases: how many, where
+
+Kept: every base, its stats and tier (Matt's call 2). New bases fill each gun type to three a tier in T1-4 and two in
+T5-9; rifles and SMGs start at T2 (the Outskirts have none, as today); the secondaries' melee and improvised stay in the
+campaign. The worn slots to two a tier throughout. Today / after (new):
+
+| | T1 | T2 | T3 | T4 | T5 | T6 | T7 | T8 | T9 | New |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Melee | 1/3 | 2/3 | 1/3 | 1/3 | 1/2 | 1/2 | 1/2 | 1/2 | 1/2 | 12 |
+| Improvised | 3/3 | 1/3 | 1/3 | 1/3 | 1/2 | 1/2 | 1/2 | 1/2 | 1/2 | 11 |
+| Shotgun | 2/3 | 1/3 | 2/3 | 1/3 | 1/2 | 2/2 | 1/2 | 1/2 | 1/2 | 10 |
+| Rifle | - | 2/3 | 4/3 | 1/3 | 1/2 | 2/2 | 1/2 | 1/2 | 1/2 | 7 |
+| SMG | - | 1/3 | 2/3 | 2/3 | 2/2 | 2/2 | 1/2 | 1/2 | 1/2 | 7 |
+| Pistol (secondary) | 0/2 | 3/3 | 1/3 | 1/3 | 0/2 | 2/2 | 1/2 | 1/2 | 1/2 | 11 |
+| SMG (secondary) | - | 0/2 | 1/2 | 0/2 | 1/2 | 1/2 | 1/2 | 1/2 | 1/2 | 10 |
+| Melee, improvised (secondary) | 4/4 | 1/4 | 1/4 | 0/4 | - | - | - | - | - | 10 |
+| Helmet, armour, rig, pack, charm | | | | | | | | | | 18 |
+| Gloves | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 18 |
+
+About 115 new bases (114; today 162): 47 primaries, 31 secondaries, 36 worn. Each with a picture (PixelLab).
+
+**Sideways, not more of the same**: the three of a type at a tier differ in how they play, not only by a number - one
+heavy and slow, one quick and light, one with a quirk (a belt, an element lean, more attachment points, a bigger
+magazine). Their damage a second sits within about 10% of each other.
+
+## 3. Each gun type's edge
+
+Damage a second stays close between types at a tier; the edge decides the fight. Two exist already (walking fire, a
+melee weapon never runs dry). Drafts:
+
+| Type | Edge | Today |
+|---|---|---|
+| Rifle | **Piercing**: ignores 30% of a gang member's armour; **the opener**: +50% on the first shot at each new one | nothing |
+| SMG | **Walking fire**: +4% a second on one gang, to +40% | built |
+| Shotgun | **Spread**: each shot also hits the next in line for 40% | nothing |
+| Melee | **Never dry** (no rounds, no reloads); +20% with three or more on you | the first built |
+| Improvised | **Bodged**: one more attachment point than its kind | nothing |
+| Pistol (secondary) | **Quick draw**: fires at full while the primary reloads, the quickest reload | the first built |
+
+Shown on the item as one line under its figure (the style guide's mechanics voice). SMGs' walking fire today lifts
+them further ahead of rifles than the table's damage a second shows; the pass reads each type's real damage dealt.
+
+## 4. Gloves, the eighth slot
+
+- **Where**: the Runner room's left column, fourth place (where the worn kit's worth sits today; that moves into the
+  runner strip). Four cards a side.
+- **Bases**: 18, two a tier, each with a small built-in figure: grip (quicker reloads) or pace. Drafts: Gardening
+  gloves, Work gloves; Rigger gloves, Fingerless gloves; Leather gloves, Motorbike gloves; Shooting gloves, Welder's
+  gauntlets; Tactical gloves, Riot gauntlets; Kevlar-lined gloves, Firefighter's gloves; Assault gloves, Hazmat
+  gloves; Breacher's gloves, Pilot's gloves; Special forces gloves, EOD gauntlets.
+- **Their affixes**: pace, quicker reloads, rate of fire, quicker meds, quicker searches, shorter cooldowns, energy
+  gain, armour (small). Quicker reloads moves off the guns to gloves alone (it matters since the magazines); pace off
+  the guns, kept on armour; rate of fire on both.
+- **Uniques**: The Sparky's Gloves becomes gloves (a charm today); two new, a levelling one and a chase one.
+- **Sets**: none at first; the Army's could take a pair later.
+- The County's issued kit and the zone wants: unchanged (seven slots).
+
+## 5. What it costs
+
+- Data: the tier map, ~115 bases, the edges' rules, the gloves slot through the sim (equip, compare, the Bench, the
+  Fence, the junk rules, the pack's sizes), the affix pools moved.
+- UI: the Runner room's eight cards (mockup on the canvas), the Kit room's slot filters, the Bench, the Fence's shelf.
+- The bot: gloves worn, the type edges read by its picks.
+- Art: ~115 base pictures, three unique gloves.
+- Balance: the campaign's gangs to T4 gear, the signals' T5-6, a full pass.
+- Size: the biggest piece since the skills: about a week of the 28 Oct's build days, then the balance pass.
+- SAVE_VERSION bumps (a new slot, re-tiered sites).
+
+## Open
+
+- The signal levels for T6-T9 (13, 16, 20, 24 drafted).
+- Whether the City's three sites should differ a little (T4 everywhere, the Barracks a step of quality).
+- The new bases' names and pictures: a manifest after the language pass.
