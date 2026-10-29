@@ -158,6 +158,11 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
 
 ## Things to know
 
+- Estimates (29 Oct, timed for real, Matt: "time things in real time so that moving forward you have an accurate
+  estimate"): a feature of the itemisation's or the expeditions' size is about 1 h to build and about 1-1.5 h to
+  review (three stages side by side) and fix, with agents in parallel; three such pieces took one day (08:46-20:09,
+  two hours of it lost to a restart), against the 4-5 days estimated. Estimate in those units, not "build days".
+
 - The cloud session's scratchpad (/tmp) is wiped when its container restarts (29 Oct, 11:10: two built features, the
   itemisation and the repeat runs, and their reviews lost before they reached this repo). Snapshot every workspace to
   /mnt/user-data/outputs/snap/ (it survives) at the end of every phase, and every agent's brief says so. A fresh cloud
