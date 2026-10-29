@@ -41,6 +41,18 @@ const CREW_STAND := 7200.0
 const CREW_AHEAD := 5
 const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "shock", "Scrapper": "shock", "Recruit": "physical"}     # the Recruit (24 Oct); the Paramedic shock (joints B)
 var crew_on := true
+## The repeat runs (29 Oct, docs/design/trips.md 1): past the campaign (the Quartermaster down; the designer: a person
+## watches the campaign) the bot farms a cleared site with "Run it ×N" when the gate allows (90%+ at full HP, no head on),
+## as a person leaving the game to it would; `norepeat` on a read switches it off. Kev's wagers off unless asked for.
+var repeats := true
+static var norepeat := false      # a read without repeats (`norepeat` on balance.gd's line): every Bot.new() reads it
+var wagers_on := false
+var repeat_runs := 0              # repeat runs gone, all told (the summary's)
+var repeat_bails := 0
+var repeat_wounds := 0
+var repeat_timeouts := 0
+var repeats_gone := 0             # repeats set off
+var last_repeat := {}             # the last repeat's sums (Sim.repeat_totals), for the read to count its runs one by one
 var crew_swaps := 0
 ## The one-save read (25 Oct, the endgame chase step 8: Matt, "effectively a different game" a class): the read starts
 ## as the Poacher, as a new game does, and takes its target build the moment that class opens; the crew's swaps after.
@@ -173,6 +185,14 @@ func step(sim) -> int:
 		t = pick_tier(sim)
 		last_tier = t
 		t0 = _lap("step/pick_tier", t0)
+		if repeat_ok(sim) and sim.can_repeat(t) and sim.start_repeat(t):
+			_repeat_out(sim)                  # farmed unwatched: the repeat's runs, then the report put away
+			_lap("step/repeat", t0)
+			return t
+		if wagers_on and sim.wager_site_open(t):
+			var wk: String = sim.wager_site_key(t)
+			for k in range(sim.wager_offer(wk).size()):
+				sim.take_wager(wk, k)
 		sim.deploy(t)
 	t0 = _lap("step/deploy", t0)
 	var guard := 0
@@ -322,7 +342,7 @@ func _hold_broken(sim) -> void:
 			sim.equip_item(kept["id"])
 			sim._dry_memo.clear()
 			continue
-		var tier: int = sim.loot_tier_at(lv)        # the depth's tier: a set piece or a unique found there is lifted to it (26 Oct: without it, the campaign's bases)
+		var tier: int = sim.tier_for_level(lv)        # the depth's tier (the level's best since the itemisation, 29 Oct): a set piece or a unique found there is lifted to it (26 Oct: without it, the campaign's bases)
 		var it: Dictionary = {}
 		if kind == "set":
 			it = Items.roll_set_piece(set_name, want[sl][1], sim.rng, lv, tier)
@@ -383,7 +403,7 @@ func _wear_issued(sim) -> void:
 				best = it
 		var worn = sim.equipped.get(sl)
 		if best != null and (worn == null or not worn.get("issued", false) or Items.ilvl(best) > Items.ilvl(worn)):
-			sim.equip_item(int(best["id"]))
+			_wear(sim, best)
 
 
 ## A signal's extras for the log: its site, the head, a convoy, its codes.
@@ -438,6 +458,29 @@ func pick_skills(sim, i: int) -> void:
 		picks.append("")
 	sim.skill_slots = picks.slice(0, Data.SKILL_SLOTS)
 	sim.skill_auto = [true, true, true]
+
+
+## Whether the bot repeats now: switched on and the campaign done (the designer, 29 Oct: a person watches the campaign).
+func repeat_ok(sim) -> bool:
+	return repeats and not norepeat and sim.campaign_done()
+
+
+## A repeat out: the world on a second at a time until they're back, the report's runs counted, the card put away.
+func _repeat_out(sim) -> void:
+	var guard := 0
+	while sim.away() and guard < 200000:
+		sim.advance(1.0)
+		guard += 1
+	var rep: Dictionary = sim.repeat_report
+	var tot: Dictionary = sim.repeat_totals(rep)
+	repeat_runs += int(tot["runs"])
+	repeat_bails += int(tot["bails"])
+	repeat_wounds += int(tot["wounds"])
+	repeat_timeouts += int(tot["timeouts"])
+	repeats_gone += 1
+	last_repeat = tot
+	bought.append([sim.elapsed, "repeat: %d runs at %s, %d bails, ended %s" % [int(tot["runs"]), str(Data.TIERS[int(rep.get("site", 0))]["name"]), int(tot["bails"]), str(rep.get("ended", ""))]])
+	sim.repeat_seen()
 
 
 func should_leave(sim) -> bool:
@@ -882,7 +925,7 @@ func _build_one(sim) -> void:
 ## there's room, then the dead affixes rolled away (the build's own lines padlocked first: the element's conversion,
 ## its increase, the dots), or, with nothing dead, the weakest's values - rolled again until the piece reads better
 ## than it did, BENCH_TRIES at most, while two grand stays. No undo: a run of bad rolls is kept, as a player's is.
-const BENCH_SLOTS := ["Primary", "Armour", "Helmet", "Charm", "Rig", "Secondary"]
+const BENCH_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Charm", "Rig", "Secondary"]     # the gloves (29 Oct): read by _power, pace and the reloads in
 const BENCH_EVERY := 600.0      # sim seconds between the Bench's passes (the odds' reads are the wall's)
 const BENCH_TRIES := 6          # rolls on one piece a pass before it moves on
 const BENCH_JOBS := 16          # jobs a pass at most
@@ -1114,6 +1157,14 @@ func _elem_score(it: Dictionary) -> float:
 	return Items.score(it) * (1.0 + 2.0 * _elem_share(it))
 
 
+## A piece on as the Kit would put it on (the fix round, 29 Oct, the game review's C7): "Swap, parts and all" when the worn
+## one's parts go onto it, else a plain equip.
+static func _wear(sim, it: Dictionary) -> void:
+	if sim.swap_moves(it) and sim.swap_with_parts(int(it["id"])):
+		return
+	sim.equip_item(int(it["id"]))
+
+
 func _hold_the_element(sim) -> void:
 	var cur = sim.equipped["Primary"]
 	var best := {}
@@ -1122,8 +1173,8 @@ func _hold_the_element(sim) -> void:
 			best = it
 	if best.is_empty():
 		return
-	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary") >= sim.damage_total() * ELEM_DPS_FLOOR):
-		sim.equip_item(best["id"])        # D23: the element's gun, but not at a fifth less damage, read on a try-on - a shock Scrapper took one at half at an hour and held the Estate's wall for twenty
+	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary", -1, sim.swap_moves(best)) >= sim.damage_total() * ELEM_DPS_FLOOR):
+		_wear(sim, best)        # D23: the element's gun, but not at a fifth less damage, read on a try-on - a shock Scrapper took one at half at an hour and held the Estate's wall for twenty
 
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back
@@ -1144,7 +1195,7 @@ func _hold_the_type(sim, type: String) -> void:
 	if best.is_empty():
 		return
 	if cur == null or Items.score(best) >= Items.score(cur) * 0.7:
-		sim.equip_item(best["id"])
+		_wear(sim, best)
 
 
 ## A site with nothing to open (28 Oct, the crates remembered): every crate taken and none back yet on the trickle.
@@ -1411,7 +1462,7 @@ func _train_tree(sim) -> void:
 
 ## The Yard's lanes (9 Oct; two lines a building, 28 Oct): each building's line in BOT_LINE, cheapest
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
-const BOT_LINE := {"bench": "a", "stash": "a", "clinic": "a", "fence": "b", "radio": "a", "generator": "a", "lookout": "a", "kennel": "a"}     # the line the bot climbs in each building (28 Oct, two lines a building: the lines that hold most of the picks it took before)
+const BOT_LINE := {"bench": "a", "stash": "a", "clinic": "a", "fence": "b", "radio": "a", "generator": "a", "lookout": "a", "kennel": "a", "bunkhouse": "a"}     # the Bunkhouse's repeat line (29 Oct)     # the line the bot climbs in each building (28 Oct, two lines a building: the lines that hold most of the picks it took before)
 ## The cheapest rank the Pitch could buy now (no rank open: a price past any).
 func _cheapest_rank(sim) -> int:
 	var out := 1 << 40
@@ -1480,7 +1531,7 @@ static func _line_next_open(sim, b: Dictionary, side: String) -> bool:
 static func _next_step(sim, b: Dictionary, side: String) -> int:
 	for c in range(b["picks"].size()):
 		if not sim.yard_built_side(b["key"], c, side):
-			return c
+			return -1 if bool(b["picks"][c][0 if side == "a" else 1].get("stub", false)) else c     # the Bunkhouse's line B (29 Oct): nothing to build till the trips
 	return -1
 
 
@@ -1764,7 +1815,7 @@ func _buy_upgrade(sim) -> void:
 		if Items.is_attachment(it) or Items.rig_item(it) or not sim.can_wear(it):
 			continue                       # gear over the runner's level waits (15 Oct): not bought to wear yet
 		var cur = sim.equipped[it["slot"]]
-		var g: float = sim.upgrade_gain(it) if sim.compare(it) == 1 else 0.0     # tried on (11 Oct), as the player's arrow
+		var g: float = sim.upgrade_gain(it, true) if sim.compare(it, -1, true) == 1 else 0.0     # tried on (11 Oct), as the Kit's arrow reads it once home (the swap)
 		if element != "" and it["slot"] == "Primary":
 			g = ((_elem_score(it) - _elem_score(cur)) / maxf(_elem_score(cur), 0.01)) if cur != null else sim.EMPTY_GAIN   # a build weighs its gun its own way, as a share like the rest
 		if g > gain and sim.cash >= sim.price(it) + sim.tins_now(100.0):

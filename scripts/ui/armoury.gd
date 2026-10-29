@@ -101,6 +101,7 @@ func _init() -> void:
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.drag_src = "stash"
 	_inv.stash_tabs = true                 # the shared tab and the class's own (21 Oct, the crew)
+	_inv.moved_reads = true               # the Kit's arrows as "Swap, parts and all" would wear a piece (the fix round, 29 Oct)
 	_inv.accepts = ["rig", "body"]
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
@@ -215,7 +216,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(sim.loadouts.get(sim.cls, [])), str(sim.skill_slots), str(sim.rig.size()), str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, _bin_arm.sig() + _save_arm.sig(), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
+	var parts := [str(sim.loadouts.get(sim.cls, [])), str(sim.skill_slots), str(sim.rig.size()), str(selected), str(sim.runner_busy()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, _bin_arm.sig() + _save_arm.sig(), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -287,7 +288,7 @@ func _show_panel() -> void:
 			_pick.show_right_words("The Workshop", "Fitted in the Workshop", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
 			_pick.show_right_words("The Workshop", "Fitted in the Workshop", ["Goes on %s" % Items.mount_words(it["mount"])])
-		buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": true})     # every Bench from the start (9 Oct)
+		buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.runner_busy() and sim.room_open("workshop"), "primary": true})     # every Bench from the start (9 Oct)
 		if Items.stacks(it):
 			buttons.append(_split_button(it))
 	else:
@@ -297,27 +298,38 @@ func _show_panel() -> void:
 			if fitted == null:
 				_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 			else:
-				var ftail = ""
-				if Items.is_gun(fitted):
-					ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
-				_pick.show_fitted(fitted, sim, "Fitted now", ftail)
-				var v: Array = PickPanel.verdict_for(sim, it)
-				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
+				# parts or socketables on either (29 Oct, the Compare board's layout A): the three readings in the fitted's place
+				var rows: Array = sim.compare_readings(it)
+				if not rows.is_empty():
+					_pick.show_readings(fitted, sim, rows, "dmg/s" if Data.SLOT_SCORE.get(str(it["slot"]), "") == "dps" else "")
+				else:
+					var ftail = ""
+					if Items.is_gun(fitted):
+						ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
+					_pick.show_fitted(fitted, sim, "Fitted now", ftail)
+				var mv: bool = sim.swap_moves(it)     # the swap's what Equip does here only when something moves (the fix round)
+				var v: Array = PickPanel.verdict_for(sim, it, mv)
+				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted, mv))
 			var lock: int = sim.wear_lock(it)
-			buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
+			var swap: bool = from_stash and fitted != null and sim.swap_moves(it)
+			if swap:
+				buttons.append({"text": "Swap, parts and all", "action": func(): sim.swap_with_parts(int(it["id"])), "enabled": sim.can_equip_item(it["id"]) and lock <= 0, "primary": true})     # what the verdict read (29 Oct)
+			buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": not swap})
 			# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct),
 			# no room for what comes off, or both
 			var hints: Array = []
 			if Items.is_gun(it) and not sim.has_rounds(it):
 				hints.append("No rounds for it in the rig")
-			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
+			if sim.away():
+				hints.append(Words.REPEAT["shut_away"])     # the kit's with the runner (29 Oct)
+			elif not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				hints.append("No room in the stash for what comes off")
 			if lock > 0 and fitted == null:
 				_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level: said once (the review)
 			elif not hints.is_empty():
 				_pick.set_hint_options(_hint_forms(hints))
-			if not it.has("unique") and not it.has("set"):
-				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
+			if not it.has("unique") and not it.has("set") and not swap:     # the swap's in its place (29 Oct): the foot keeps room for the item's line
+				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.runner_busy() and sim.room_open("workshop"), "primary": false})
 		else:
 			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
 			var lines := []
@@ -329,13 +341,13 @@ func _show_panel() -> void:
 				lines.append(["%s · %s" % [a["base"], figures], a["base"]])
 			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
-			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
+			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.runner_busy() and sim.stash_fits(it), "primary": true})
 			if not strip_note_forms(it["slot"]).is_empty():
 				_pick.set_hint_options(strip_note_forms(it["slot"]))
 			if sim.parts_on(it["slot"]) > 1:
 				buttons.append({"text": "Strip all parts", "action": _strip_all_press.bind(it["slot"]), "enabled": sim.can_strip_any(it["slot"]), "primary": false})     # every part off at once (28 Oct, Matt); off with no room for one (the review)
 			if not it.has("unique") and not it.has("set") and buttons.size() < PickPanel.BUTTONS:
-				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
+				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.runner_busy() and sim.room_open("workshop"), "primary": false})
 	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, gone for nothing (27 Oct); a unique or a set piece asks twice
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
 		var precious: bool = it.has("unique") or it.has("set")
@@ -422,12 +434,12 @@ func _show_medical(it: Dictionary) -> Array:
 			lines.append(["A box: it fills the rig's magazines", "Fills the rig's magazines"])
 	var buttons := []
 	if selected["kind"] == "rig":
-		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
+		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
 	else:
 		var room: bool = sim.rig_room(Items.size(it))
 		if not room:
 			lines.append("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
-		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.on_mission() and room, "primary": true})
+		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and room, "primary": true})
 	if Items.stacks(it):
 		buttons.append(_split_button(it))
 	_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
@@ -476,9 +488,9 @@ func _show_loadouts() -> void:
 			c["more"].add_theme_color_override("font_color", Pal.BAD if not gone.is_empty() else Pal.TEXT_3)
 			var rest: Array = [Words.LOADOUTS["skill"] if sk == 1 else Words.LOADOUTS["skills"] % sk, Words.LOADOUTS["rig"] % e["rig"].size()]
 			UI.fit(c["more"], [Words.LOADOUTS["short"] % ", ".join(gone), Words.LOADOUTS["short"] % ("%d" % gone.size())] if not gone.is_empty() else [" · ".join(rest), rest[0]])
-		c["wear"].disabled = st == "empty" or st == "worn" or sim.on_mission()
+		c["wear"].disabled = st == "empty" or st == "worn" or sim.runner_busy()
 		c["wear"].tooltip_text = Words.LOADOUTS["wear_tip"]
-		c["save"].disabled = sim.on_mission() or sim.cls == ""
+		c["save"].disabled = sim.runner_busy() or sim.cls == ""
 		var armed: bool = _save_arm.holds(i) and st != "empty"
 		if armed:
 			UI.fit_button(c["save"], UI.ask_forms(Words.LOADOUTS["save_sure"]))

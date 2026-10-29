@@ -35,14 +35,16 @@ func _init() -> void:
 	var hours := 8.0
 	var cls := "Doorman"
 	var every_run := 0
-	var args := OS.get_cmdline_user_args()
+	var args: Array = Array(OS.get_cmdline_user_args())
+	Bot.norepeat = args.has("norepeat")          # a read without the repeat runs (29 Oct): `-- 16 one Drifter fire 0 read1 norepeat`
+	args = args.filter(func(a): return str(a) != "norepeat")
 	if args.size() > 0:
 		hours = float(args[0])
 	if args.size() > 1:
 		cls = args[1]
 	if args.size() > 2:
 		every_run = int(args[2])
-	var element := args[3] if args.size() > 3 else ""     # `-- 4 Scrapper 0 fire`: the class as a fire build
+	var element: String = str(args[3]) if args.size() > 3 else ""     # `-- 4 Scrapper 0 fire`: the class as a fire build
 	if cls == "all":
 		_all_classes(hours)
 		return
@@ -252,6 +254,19 @@ func _gate_firsts(sim, g: Dictionary, loose_seen: bool) -> void:
 
 
 ## The longest stretch in hours from `from_h` to `to_h` with none of `times` in it; -1 when it never started.
+## The gun type a run's damage goes under (29 Oct, the itemisation's reads): the primary's as it set off; "fists" with none.
+static func dealt_type(sim) -> String:
+	return str(Items.base_of(sim.equipped["Primary"]).get("type", "")) if sim.equipped["Primary"] != null else "fists"
+
+
+## A step's run's own damage dealt into its gun type's total (the fix round, 29 Oct, the review's A2: the record's "dealt"
+## is the runner's best single run, so the steps it went up read only those): the run's report, when the step made one.
+static func dealt_add(by: Dictionary, ty: String, sim, rep0) -> void:
+	var rep = sim.last_report
+	if rep is Dictionary and not is_same(rep, rep0) and rep.has("fight"):
+		by[ty] = snappedf(float(by.get(ty, 0.0)) + float(rep["fight"].get("dealt", 0.0)), 1.0)
+
+
 static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
 	if from_h < 0.0 or to_h <= from_h:
 		return -1.0
@@ -297,12 +312,14 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
 		"manager_at": -1.0, "first_death_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
+		# the itemisation's reads (29 Oct, shown not judged): the bases the bot wore, by slot, in hours; damage dealt by gun type
+		"worn": {}, "dealt_by_type": {},
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
 		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save,
 		# P1 on the campaign alone (25 Oct, Matt: past level 50 a death starts again at level 1 by design; the death band is
 		# the campaign's): the runs, deaths and bails (left under a quarter HP) until the Quartermaster falls
-		"campaign_runs": 0, "campaign_deaths": 0, "campaign_bails": 0, "first_bail_at": -1.0,
+		"campaign_runs": 0, "campaign_deaths": 0, "campaign_bails": 0, "first_bail_at": -1.0, "repeats": 0, "repeat_runs": 0, "repeat_bails": 0, "norepeat": Bot.norepeat,
 		# P3 on the runs the bot takes at a person's odds (25 Oct, the tools review: farmed at PUSH, the median is 100% by
 		# construction): the odds at the gate of every first clear and every head not yet beaten; the farm's apart
 		"first_odds": []}
@@ -344,21 +361,44 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		var lorry0: bool = sim.lorry_done
 		var in_campaign: bool = float(g["qm_at"]) < 0.0
 		var p0 := Time.get_ticks_usec()
+		var worn_e0: float = sim.elapsed                     # what the bot wore and what each gun type dealt (29 Oct, the itemisation's reads)
+		var worn0: Dictionary = {}
+		for sl in Data.SLOTS:
+			if sim.equipped.get(sl) != null:
+				worn0[sl] = str(sim.equipped[sl]["base"])
+		var dealt_ty: String = dealt_type(sim)
+		var rep0 = sim.last_report
+		var reps0: int = bot.repeats_gone
 		var t: int = bot.step(sim)
+		var rep_t: Dictionary = bot.last_repeat if bot.repeats_gone > reps0 else {}     # a repeat's runs, each counted (29 Oct, the tools review)
+		var worn_h: float = (sim.elapsed - worn_e0) / 3600.0
+		for sl in worn0:
+			if not g["worn"].has(sl):
+				g["worn"][sl] = {}
+			g["worn"][sl][worn0[sl]] = snappedf(float(g["worn"][sl].get(worn0[sl], 0.0)) + worn_h, 0.001)
+		dealt_add(g["dealt_by_type"], dealt_ty, sim, rep0)
 		step_us += Time.get_ticks_usec() - p0
 		if t >= 0:
-			g["runs"] += 1
+			var n_runs: int = maxi(1, int(rep_t.get("runs", 1)))
+			g["runs"] += n_runs
+			if not rep_t.is_empty():
+				g["repeats"] += 1
+				g["repeat_runs"] += n_runs
+				g["repeat_bails"] += int(rep_t["bails"])
+				g["timeouts"] += int(rep_t["timeouts"])
+				g["wounded_runs"] += int(rep_t["wounds"])
 			_first_or_farm(sim, c0, depth0, beaten0, lorry0, g["first_odds"], farm_odds)
 			if in_campaign:
-				g["campaign_runs"] += 1
+				g["campaign_runs"] += n_runs
+				g["campaign_bails"] += int(rep_t.get("bails", 0))
 				if sim.operators_lost > lost_before:
 					g["campaign_deaths"] += 1
 				elif bot.bails > bails0:
 					g["campaign_bails"] += 1      # a bail that died anyway counts once, as the death
-			if bot.bails > bails0 and float(g["first_bail_at"]) < 0.0:
+			if (bot.bails > bails0 or int(rep_t.get("bails", 0)) > 0) and float(g["first_bail_at"]) < 0.0:
 				g["first_bail_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
-			mark_runs += 1
-			var r = sim.last_report
+			mark_runs += n_runs
+			var r = sim.last_report if rep_t.is_empty() else {}     # a repeat's figures are counted above, run by run
 			if bool(r.get("timed_out", false)):
 				g["timeouts"] += 1                # out of time (9 Oct): the clock's gate
 			if sim.operators_lost > lost_before:
@@ -505,7 +545,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	@warning_ignore("integer_division")
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	g["kit"] = _kit(sim)
-	g["bails"] = bot.bails
+	g["bails"] = bot.bails + bot.repeat_bails     # a repeat's bails too (29 Oct); repeat_bails says how many
 	g["dry_timeouts"] = int(sim.prof.get("dry_timeouts", 0))     # the odds' runs lost to the clock, for the read
 	# the endgame's two (7 Oct): the lorry's hour and the moves, and the ladders' spread - the deepest depth the
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
@@ -590,8 +630,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	print("  wall %ds: step %ds (odds %ds on %d reads of %d calls, %d dry runs, %d dry ticks, snapshots %ds; the run %d ticks %ds), tidy %ds (%s), ladders %ds" % [g["wall_s"],
 		g["prof"]["step_s"], g["prof"]["surv_s"], pr["surv_reads"], pr["surv_calls"], pr["dry_runs"], pr["dry_ticks"], g["prof"]["snap_s"], pr["real_ticks"], g["prof"]["real_s"], g["prof"]["tidy_s"], str(tidy_parts), g["prof"]["ladder_s"]])
 	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
-	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
-	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
+	g["bails_per_h"] = snappedf(float(g["bails"]) / maxf(0.01, sim.elapsed / 3600.0), 0.01)
+	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(g["bails"])), 0.1) if int(g["bails"]) > 0 else 999.0
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
@@ -687,7 +727,7 @@ func _probe() -> void:
 	# finds a search at +25% quantity against the plain, over 400 searches each
 	var per := {}
 	for pair in [["finds_plain", 0.0], ["finds_boosted", 0.25]]:
-		var pack: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"].back()["name"])
+		var pack: Dictionary = sim._plain("Backpack", "Special forces bergen")     # named (29 Oct, the review): the list's last is a loot-quantity pack now
 		pack["affixes"] = [] if pair[1] == 0.0 else [{"stat": "loot_pct", "value": int(pair[1] * 100), "tier": 5}]
 		sim.equipped["Backpack"] = pack
 		sim.tree = []
@@ -955,7 +995,7 @@ func _standard_camp(sim, bot) -> void:
 	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + STANDARD_PARAGON) - Data.xp_for_level(Data.MAX_LEVEL)
 	sim.paragon_reset_free()
 	var lv: int = mini(Items.max_ilvl_for(sim.level()), STANDARD_REACH)
-	var tier: int = sim.loot_tier_at(lv)
+	var tier: int = sim.tier_for_level(lv)
 	# the stash's kit past the camp's level goes: the bot's tidy wore it again (a read's ilvl-155 plate, 164k HP)
 	sim.stash = sim.stash.filter(func(x): return not (x is Dictionary and str(x.get("slot", "")) in Data.SLOTS and Items.ilvl(x) > lv))
 	for sl in Data.SLOTS:

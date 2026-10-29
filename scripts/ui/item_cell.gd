@@ -11,9 +11,10 @@ const UI := preload("res://scripts/ui/ui.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
-const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Backpack": "PCK",
+const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Gloves": "GLV", "Rig": "RIG", "Backpack": "PCK",
 	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP"}
 const INSET := 3                   # the picture sits inside the border
+const NAME_MIN := 9                # the smallest type a name steps down to in a cell of two or more across (29 Oct)
 ## The tone made to read at a glance (17 Oct, Matt: the item-colours canvas): a wash of the tone up from the cell's
 ## foot, a glow round the picture from epic up, a sheen across a unique (a faster ember one on a mythic) and a mythic's
 ## border pulsing. Common has none of it.
@@ -456,11 +457,20 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		if i == 0:
 			options.append(SHORT[it["slot"]])
 		elif i == 1:
+			if str(it.get("slot", "")) == "Gloves":
+				options.append("%s %s" % [h[0], Items.glove_unit_short(it)])     # a pair's unit short before none (the fix round, 29 Oct)
 			options.append((cure.capitalize().left(4) if cure != "" and f.x == 1 and f.y == 1 else h[0]) if not Items.is_ammo(it) else "%d" % int(it["rounds"]))
 		else:
 			options.append("T%d" % it["tier"])
 		var cure_word: bool = cure != "" and i == 1 and f.x == 1 and f.y == 1 and words.size() > 1
 		l.add_theme_color_override("font_color", Pal.ELEMENT_COLOURS.get(cure, Pal.TEXT) if cure_word else (Pal.TEXT if i < 2 else Pal.TEXT_3))
+		if i == 0 and f.x > 1 and str(words[0]) != str(SHORT[it["slot"]]):
+			# a long name in a cell with room for one (29 Oct, the itemisation's bases): the type steps down before the name
+			# gives way to the slot's code
+			var nfs: int = fs
+			while nfs > NAME_MIN and UI.text_width(l, str(words[0])) > l.size.x:
+				nfs -= 1
+				l.add_theme_font_size_override("font_size", nfs)
 		# fit() takes the last option even when it doesn't fit; the tests then
 		# say so, which is the point - a cell that can't carry its words needs
 		# shorter words, not an ellipsis

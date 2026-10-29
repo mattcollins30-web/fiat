@@ -64,6 +64,7 @@ const JOB_GAP := 8
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP * (JOB_COLS - 1)) / JOB_COLS        # 136
 const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap", "stamp"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct); the stamp (26 Oct)
 const JOB_NAMES := {"add": "Add an affix", "socket": "Socket", "bump": "Item lvl +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip", "stamp": "Stamp"}
+const SOCK_IN := 10                 # a socket tile's words in from its sides
 const JOB_WORDS := {"add": "One more affix, rarer", "socket": "Up to %d sockets", "strip": "Every affix gone",
 	"bump": "Lowest tiers stop rolling", "temper": "+1 item level, it grows", "scrap": "To scrap, gone for good", "stamp": "Counts as issued kit"}
 const RE_ROLLS := ["values", "affixes"]
@@ -273,7 +274,7 @@ func _init() -> void:
 	# the sockets view: the same shape, four groups, two rows each
 	y = TOP
 	@warning_ignore("integer_division")
-	var sw := (BODY_W - 2 * PAD - 2 * ROW_GAP) / 3     # three across (9 Oct): the Yard's Third socket cuts a third
+	var sw := (BODY_W - 2 * PAD - 2 * ROW_GAP) / 3     # three across; a fourth only on something improvised, laid by _lay_socks (the fix round, 29 Oct)
 	for slot in Data.SOCKET_SLOTS:
 		var g := {}
 		var card := UI.panel(self, Rect2(0, y, BODY_W, SOCK_HEAD_H + ROW_GAP + UI.TILE_H + CARD_PAD), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -281,7 +282,7 @@ func _init() -> void:
 		g["label"] = UI.label(card, Rect2(PAD, 0, 150, SOCK_HEAD_H), slot, "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		g["name"] = UI.label(card, Rect2(PAD, 0, BODY_W - 2 * PAD, SOCK_HEAD_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 		g["rows"] = {}
-		for k in range(Data.SOCKET_MAX + 1):
+		for k in range(Data.SOCKET_MAX + 1 + int(Data.EDGE["improvised"]["sockets"])):
 			var mount := "socket %d" % (k + 1)
 			var b := Button.new()
 			b.position = Vector2(PAD + k * (sw + ROW_GAP), SOCK_HEAD_H + ROW_GAP)
@@ -291,8 +292,8 @@ func _init() -> void:
 			b.pressed.connect(_pick_mount.bind(slot, mount))
 			card.add_child(b)
 			var r := {"button": b}
-			r["mount"] = UI.label(b, Rect2(10, 4, sw - 20, 22), Items.mount_name(mount), "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			r["fitted"] = UI.label(b, Rect2(10, 26, sw - 20, 30), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["mount"] = UI.label(b, Rect2(SOCK_IN, 4, sw - 2 * SOCK_IN, 22), Items.mount_name(mount), "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["fitted"] = UI.label(b, Rect2(SOCK_IN, 26, sw - 2 * SOCK_IN, 30), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			g["rows"][mount] = r
 		y += SOCK_HEAD_H + ROW_GAP + UI.TILE_H + CARD_PAD + 10
 		_socks[slot] = g
@@ -603,10 +604,12 @@ func show_state(s) -> void:
 						g["name"].text = o
 						break
 			g["name"].add_theme_color_override("font_color", Pal.TEXT if n > 0 else Pal.TEXT_3)
+		_lay_socks(slot)
 		for mount in g["rows"]:
 			var r: Dictionary = g["rows"][mount]
 			var has: bool = gear != null and gear["attachments"].has(mount)
 			var on: bool = sel_slot == slot and sel_mount == mount
+			r["button"].visible = g["head"].visible and _sock_shown(slot, mount)     # as many as the piece can take (29 Oct)
 			if not has:
 				# a socket not cut yet: a hollow slot (as a mount the gun hasn't)
 				r["fitted"].text = ""
@@ -665,17 +668,34 @@ const PART_MIN := UI.TILE_TEXT - 6
 static func _fit_part(l: Label, base: String) -> void:
 	l.remove_theme_font_size_override("font_size")
 	var forms: Array = _short_names(base)
-	var fs: int = UI.TILE_TEXT
-	while true:
-		l.add_theme_font_size_override("font_size", fs)
-		for o in forms:
+	for o in forms:                          # each form down to PART_MIN before a shorter one (the fix round, the UI review's A2)
+		for fs in range(UI.TILE_TEXT, PART_MIN - 1, -1):
+			l.add_theme_font_size_override("font_size", fs)
 			if UI.text_width(l, o) <= l.size.x:
 				l.text = o
 				return
-		if fs <= PART_MIN:
-			l.text = forms.back()
-			return
-		fs -= 1
+	l.text = forms.back()
+
+
+## A socket card's tiles (the fix round, 29 Oct, the UI review's A2): three across, the tile's room for a whole name; four
+## only when the piece shows four (something improvised with the Third socket).
+func _lay_socks(slot: String) -> void:
+	var g: Dictionary = _socks[slot]
+	var shown: int = 0
+	for mount in g["rows"]:
+		if _sock_shown(slot, mount):
+			shown += 1
+	var cols: int = maxi(3, shown)
+	@warning_ignore("integer_division")
+	var sw: int = (BODY_W - 2 * PAD - (cols - 1) * ROW_GAP) / cols
+	var k := 0
+	for mount in g["rows"]:
+		var r: Dictionary = g["rows"][mount]
+		r["button"].position.x = PAD + k * (sw + ROW_GAP)
+		r["button"].size.x = sw
+		r["mount"].size.x = sw - 2 * SOCK_IN
+		r["fitted"].size.x = sw - 2 * SOCK_IN
+		k += 1
 
 
 ## The gun's own mounts, in the Bench's order, sockets apart.
@@ -707,7 +727,7 @@ func _all_attachments(socketables: bool) -> Array:
 
 func _signature() -> String:
 	@warning_ignore("integer_division")
-	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sel_pattern), _break_arm.sig(), str(sim.patterns.size()), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
+	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sel_pattern), _break_arm.sig(), str(sim.patterns.size()), sel_stat, str(sim.runner_busy()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", "")), build_kind, sel_build, str(build_page), str(sim.stash.size()), str(sim.stash_used()), str(sim.gun_types_held()), str(sim.deepest_site_level()), _inv.tab]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
@@ -817,7 +837,7 @@ func _show_panel() -> void:
 			return
 		_pick.show_pick(fitted, sim, "Fitted · %s %s" % [sel_slot.to_lower(), Items.mount_name(fitted["mount"]).to_lower()])
 		_pick.show_right_words("The stash", "Strip it back to the stash", ["Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]])
-		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_fits(fitted), "primary": true})
+		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.runner_busy() and sim.stash_fits(fitted), "primary": true})
 		if not strip_note_forms(sel_slot).is_empty():
 			_pick.set_hint_options(strip_note_forms(sel_slot))
 		if sim.parts_on(sel_slot) > 1:
@@ -844,7 +864,7 @@ func _show_panel() -> void:
 			else:
 				_pick.show_right_words("On the %s · %s" % [target_slot.to_lower(), key], "Empty", [line])
 			_part_verdict(it, cur, dw, gun_slot)
-			buttons.append({"text": "Fit", "action": sim.fit_socket.bind(target_slot, key, it["id"]), "enabled": not sim.on_mission(), "primary": true})
+			buttons.append({"text": "Fit", "action": sim.fit_socket.bind(target_slot, key, it["id"]), "enabled": not sim.runner_busy(), "primary": true})
 	else:
 		var target_slot := sel_slot if sel_slot != "" else _slot_for(it["mount"])
 		if target_slot == "":
@@ -1064,7 +1084,7 @@ func _show_craft(it: Dictionary) -> void:
 		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
 		if kind == "temper" and not it.is_empty() and sim.temper_block(it) != "":
 			jw = sim.temper_block(it)                  # why it can't, in its words: nothing grows, a mythic, Item level +3 first, past your level (the second review)
-		UI.wrap(t["words"], jw % sim.socket_max() if kind == "socket" else jw)     # "up to %d": the real cap (18 Oct)
+		UI.wrap(t["words"], jw % sim.socket_max(it) if kind == "socket" else jw)     # "up to %d": the real cap (18 Oct), the piece's own (an improvised gun's one more, 29 Oct)
 		var cost: int = -1
 		if not it.is_empty():
 			cost = ((-1 if _worn(it) else sim.scrap_of(it)) if kind == "scrap" else sim.craft_cost(it, kind))     # a worn piece isn't scrapped off the runner
@@ -1164,7 +1184,7 @@ func _toggle_lock(k: int) -> void:
 ## An affix's tier's figures on this piece, low and high, as its line shows them (the item level's edge in).
 func tier_figures(it: Dictionary, k: int) -> Array:
 	var a: Dictionary = it["affixes"][k]
-	var d: Dictionary = Items.affix_def(str(a["stat"]))
+	var d: Dictionary = Items.affix_def_for(str(a["stat"]), str(it.get("slot", "")))     # the slot's own range (the fix round, the game review's C6)
 	var r: Array = Items.tier_range(d, int(a.get("tier", 1)))
 	var m: float = Items.ilvl_mult(Items.ilvl(it))
 	var div := float(d.get("div", 1))
@@ -1219,7 +1239,18 @@ func _show_view() -> void:
 		var g: Dictionary = _socks[slot]
 		g["head"].visible = view == "sockets"
 		for mount in g["rows"]:
-			g["rows"][mount]["button"].visible = view == "sockets"
+			g["rows"][mount]["button"].visible = view == "sockets" and _sock_shown(slot, mount)
+
+
+## Whether a socket's tile shows (29 Oct): up to what the worn piece can take - three with the Pitch's Third socket, one
+## more on something improvised - or the base cap with nothing worn; a socket already cut always.
+func _sock_shown(slot: String, mount: String) -> bool:
+	if sim == null:
+		return int(mount.get_slice(" ", 1)) <= Data.SOCKET_MAX
+	var gear = sim.equipped[slot]
+	if gear != null and gear["attachments"].has(mount):
+		return true
+	return int(mount.get_slice(" ", 1)) <= sim.socket_max(gear if gear != null else {})
 
 
 ## The gun's damage a second with this attachment in place of the mount's.

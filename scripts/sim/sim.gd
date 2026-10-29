@@ -71,7 +71,7 @@ var auto_equip := false            # idle: the best of each slot goes on when a 
 ## the gear at or under `junk_upto`'s rarity (-1, nothing), never an upgrade on what's worn (is_upgrade), never a kind
 ## kept (`junk_keep`, one of JUNK_KEEPS), and never what the junk run never took (rounds, meds, grenades, papers,
 ## parts that socket, uniques, set pieces, the deeds, a built gun).
-const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
+const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Gloves", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
 var junk_upto := -1
 var junk_keep := ""
 var auto_sell: bool:                 # the old toggle: on is "sell the commons" (old saves, the tests)
@@ -399,7 +399,7 @@ func pitch_reset_cost() -> int:
 
 ## The Pitch's nodes back to its points; the elements' starters on its circle stay (they open the elements).
 func pitch_reset() -> bool:
-	if mission != null or pitch_nodes_spent() == 0 or cash < pitch_reset_cost():
+	if runner_busy() or pitch_nodes_spent() == 0 or cash < pitch_reset_cost():
 		return false
 	_dry_memo.clear()
 	var paid := pitch_reset_cost()
@@ -417,7 +417,7 @@ func element_reset_cost(el: String) -> int:
 
 ## An element's nodes back to its own points; its starter stays, so it stays open for whoever has it.
 func element_reset(el: String) -> bool:
-	if mission != null or element_spent(el) == 0 or cash < element_reset_cost(el):
+	if runner_busy() or element_spent(el) == 0 or cash < element_reset_cost(el):
 		return false
 	_dry_memo.clear()
 	var paid := element_reset_cost(el)
@@ -431,6 +431,9 @@ func element_reset(el: String) -> bool:
 
 ## XP in: the runner's to the cap, the rest the crew's paragon.
 func _gain_xp(g: float) -> void:
+	if mission != null and bool(mission.get("unwatched", false)):
+		g *= float(repeat.get("share", repeat_xp_share()))     # a repeat run's share of a watched run's (29 Oct)
+		mission["xp_got"] = float(mission.get("xp_got", 0.0)) + g
 	var room := maxf(0.0, Data.xp_for_level(Data.MAX_LEVEL) - xp)
 	xp += minf(g, room)
 	paragon_xp += g - minf(g, room)
@@ -492,20 +495,10 @@ func damage_parts() -> Dictionary:
 
 
 func _dps(parts) -> float:
-	var d := 0.0
+	var pair: Array = _gun_dps()             # the primary's and the secondary's (29 Oct: apart, the type edge is the primary's own)
+	var d: float = float(pair[0]) + float(pair[1])
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
-	# the magazines (28 Oct): each gun by the share of now it fires, its reloads apart; the secondary at full while the
-	# primary reloads, as it does with the primary dry
-	var px: float = fire_x("Primary") if primary_live else 0.0
-	if primary_live:
-		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (Data.FX["node/cap_jerry"] if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"]) * px   # Jerry-rigged: something improvised hits half again as hard
-	if secondary_live:
-		var sec_share: float = (secondary_share(true) * px + (1.0 - px)) if primary_live else 1.0
-		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) * sec_share * fire_x("Secondary")
-		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
-			sec *= Data.FX["rule/branch_pistol"]
-		d += sec
 	if d <= 0.0 and not (primary_live or secondary_live):
 		d = Data.UNARMED_DPS                  # fists only with no gun live: a reload is a pause, not a punch
 	var pct := _affix_sum("damage_pct") + tree_sum("damage_pct")
@@ -523,7 +516,122 @@ func _dps(parts) -> float:
 		parts.merge({"guns": d, "level": Data.DMG_PER_LEVEL * (level() - 1), "pct": pct / 100.0, "attack": _affix_sum("attack_pct") / 100.0,
 			"past": cm("damage"), "trait": trait_mult("damage"), "growth": growth_mult()}, true)
 	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage") * growth_mult() \
+		* (Data.FX["rule/safecrackers"] if has_rule("safecrackers") else 1.0) \
 		* (0.85 if has_node("live_firing") else 1.0)     # Firing blanks (the Recruit's keystone): his damage 15% down
+
+
+## The guns' damage a second before the runner's own multipliers, [the primary's, the secondary's] (29 Oct, split out of
+## _dps so the type edge can read the primary's share): each gun by the share of now it fires, its reloads apart (the
+## magazines, 28 Oct); the secondary at full while the primary reloads, as it does with the primary dry.
+func _gun_dps() -> Array:
+	var p := 0.0
+	var sd := 0.0
+	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
+	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
+	var px: float = fire_x("Primary") if primary_live else 0.0
+	if primary_live:
+		p = Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (Data.FX["node/cap_jerry"] if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"]) * px   # Jerry-rigged: something improvised hits half again as hard
+	if secondary_live:
+		var sec_share: float = (secondary_share(true) * px + (1.0 - px)) if primary_live else 1.0
+		sd = Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) * sec_share * fire_x("Secondary")
+		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
+			sd *= Data.FX["rule/branch_pistol"]
+	return [p, sd]
+
+
+## The gun type's edge (29 Oct, docs/design/itemisation.md §3): the primary's type when it's in hand and fed, else "" -
+## a rifle pierces and opens, an SMG walks its fire, a shotgun spreads, a melee weapon takes a crowd; the edge is the
+## primary's alone (an improvised gun's is its extra socket, a pistol's its quick draw: neither in the fight's sums).
+static var edges_off := false     # the smoke's A/B switch (29 Oct): the fight with no type edge, to measure the edge against its read
+func edge_type() -> String:
+	if edges_off:
+		return ""
+	var g = equipped["Primary"]
+	if g == null or not has_rounds(g):
+		return ""
+	return str(Items.base_of(g).get("type", ""))
+
+
+## The primary's share of the guns' damage now: what the edge multiplies (the secondary's share takes none).
+func edge_share() -> float:
+	var pair: Array = _gun_dps()
+	var tot: float = float(pair[0]) + float(pair[1])
+	return float(pair[0]) / tot if tot > 0.0 else 0.0
+
+
+## The edge as the hits read it (29 Oct, the review: the try-on, the Kit's arrows, the bot's picks and the odds' figure
+## read what the real fight pays): the multiplier on the hits at a site - the mission's while one runs, else the fight
+## being pushed (front_tier) - worked out the way _fight pays it, per type:
+## - rifle: their physical resist cut by the pierce, and one shot's opener on every man (the gang's HP in a pool, so
+##   an opener that kills a man early carries into the next: the rate over 1 - opener/HP, never past ×1 + EDGE opener);
+## - SMG: walking fire over the first gang's length (the base's `sustain`: it grows a second, to its cap);
+## - shotgun: the spread on every man while a second stands behind him (the last of a gang has none);
+## - melee: the crowd's bonus while two or more are on you (the last of a gang alone, or a contact of one, none).
+func edge_read(t: Dictionary = {}) -> float:
+	var ty := edge_type()
+	if not (ty in ["rifle", "smg", "shotgun", "melee"]):
+		return 1.0
+	if t.is_empty():
+		t = _edge_site()
+	var share := edge_share()
+	if share <= 0.0:
+		return 1.0
+	var per := type_dps()
+	var res: Dictionary = t.get("res", {})
+	var plain := 0.0
+	for k in Data.TYPES:
+		var r: float = float(res.get(k, 0.0))
+		if k == "physical":
+			r = phys_resist(r)
+		plain += float(per[k]) * (1.0 - r)
+	if plain <= 0.0:
+		return 1.0
+	var n: float = maxf(1.0, float(t.get("pool", 1)))
+	var man: float = maxf(1.0, float(t.get("hp", 1.0)))
+	var e := float(Data.EDGE.get(ty, {}).get("x", 0.0))
+	match ty:
+		"rifle":
+			var r_p: float = phys_resist(float(res.get("physical", 0.0)))
+			var pierced: float = plain + float(per["physical"]) * r_p * float(Data.EDGE["rifle"]["pierce"]) * share
+			var g = equipped["Primary"]
+			var shot: float = pierced * share / maxf(0.01, float(Items.base_of(g)["rof"]) * mag_share("Primary"))     # one of the primary's rounds, landed (pace cancels: hits and rounds both ride it)
+			var op: float = float(Data.EDGE["rifle"]["opener"])
+			var opener: float = minf(1.0 + op, 1.0 / maxf(0.01, 1.0 - op * minf(1.0, shot / man)))
+			return pierced / plain * opener
+		"smg":
+			var su: Array = Items.base_of(equipped["Primary"]).get("sustain", [0, 0])
+			var a: float = float(su[0]) / 100.0
+			var c: float = float(su[1]) / 100.0
+			if a <= 0.0 or c <= 0.0:
+				return 1.0
+			var t0: float = n * man / maxf(0.01, plain * pace() * float(t.get("pace", 1.0)))     # the first gang's seconds, no walking fire
+			var full: float = c / a + a * (c / a) * (c / a) / 2.0                             # the plain seconds the stream's climb to its cap is worth
+			var secs: float = ((-1.0 + sqrt(1.0 + 2.0 * a * t0)) / a) if t0 <= full else (t0 + c * c / (2.0 * a)) / (1.0 + c)
+			return t0 / maxf(0.001, secs)
+		"shotgun", "melee":
+			if ty == "melee" and contact(t) < int(Data.EDGE["melee"]["on_you"]):
+				return 1.0
+			var x: float = 1.0 + e * share
+			# the men who go without: a shotgun's last (no one behind him), a blade's last on_you - 1 (too few on you; the
+			# fix round, the game review's C3: counted from on_you, not fixed at one)
+			var k: float = clampf(float(int(Data.EDGE["melee"]["on_you"]) - 1) if ty == "melee" else 1.0, 1.0, n)
+			return n / ((n - k) / x + k)
+	return 1.0
+
+
+## The site the edge is read at: the mission's while one runs (its own crew), else the fight being pushed; kept a kit's
+## front (effective() is dear, and the try-ons ask once a piece).
+var _edge_key := -1
+var _edge_t := {}
+func _edge_site() -> Dictionary:
+	if mission != null and mission.get("t", null) is Dictionary:
+		return mission["t"]
+	var k: int = hash([front_tier(), depth, words, standing, campaign_done(), is_night(), atlas])     # the night's pace and the atlas too (the game review's C11)
+	if k != _edge_key:
+		_edge_key = k
+		var e: Dictionary = effective(front_tier())
+		_edge_t = {"pool": e["pool"], "hp": e["hp"], "res": e.get("res", {}), "pace": e["pace"], "contact": e.get("contact", 0)}
+	return _edge_t
 
 
 ## What the secondary fires behind the primary: a third; all of it with Double tap or the primary dry; two thirds with
@@ -787,9 +895,10 @@ func type_dps() -> Dictionary:
 ## ratio × seconds × stacks × depth × grow) - so a dot's figure is rate × ratio × grow × min(1, stacks × depth), as
 ## _dot_add and _dot_tick work it; Won't stop's bleed never drains, so it sits at the cap. `res`, when given, is their
 ## resist by type (a site's), cut from each type as damage_rate does. {hits, dots: {type: dps}, dot, total}.
-func damage_split(res := {}) -> Dictionary:
+func damage_split(res := {}, edge := true) -> Dictionary:
 	var per := type_dps()
-	var hits := 0.0
+	var ex: float = edge_read() if edge else 1.0     # the gun type's edge on the hits as the fight pays it (29 Oct); a skill's figure has none.
+	var hits := 0.0                                  # The burn stays the plain rate's: the pools' caps in the fight are the plain rate's
 	var dots := {}
 	var dot := 0.0
 	var grow := dot_grow(true)
@@ -798,7 +907,7 @@ func damage_split(res := {}) -> Dictionary:
 		if ty == "shock" and has_rule("sparkys_gloves"):
 			r = 0.0
 		var rate := float(per[ty]) * (1.0 - r)
-		hits += rate
+		hits += rate * ex
 		if not Data.DOTS.has(ty) or rate <= 0.0:
 			continue
 		var cap := float(dot_stacks(ty, true)) * dot_depth(true) * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0)
@@ -808,10 +917,21 @@ func damage_split(res := {}) -> Dictionary:
 	return {"hits": hits, "dots": dots, "dot": dot, "total": hits + dot}
 
 
+## Damage a second as the fight lands it (29 Oct): the top bar's figure at the runner's pace - what a pair of gloves is
+## judged by, so a pace pair reads as the more damage it is (the bot's and the Kit's picks, the junk rules).
+func fight_damage() -> float:
+	return damage_total() * pace()
+
+
 ## The damage a second the top bar shows (18 Oct, Matt: a fire build's Epic read as a downgrade from a Common): the
 ## hits and the dots' burn together, so a try-on weighs a piece by the figure the player sees.
 func damage_total() -> float:
 	return float(damage_split()["total"])
+
+
+## The figure without the gun type's edge (29 Oct): what a skill's hit and its dots are made from.
+func damage_total_raw() -> float:
+	return float(damage_split({}, false)["total"])
 
 
 ## The top bar's figure with a part on the gun in `slot` (18 Oct: the Workshop read the gun's raw hits, so a part that
@@ -869,6 +989,10 @@ func damage_rate(t: Dictionary, shocked := false) -> float:
 	var res: Dictionary = t.get("res", {})
 	var total := 0.0
 	var per := type_dps()
+	var ex: float = edge_read(t) if t.has("pool") else 1.0     # a site's: the type edge as it pays there (29 Oct)
+	if ex != 1.0:
+		for k in per:
+			per[k] = float(per[k]) * ex
 	for ty in Data.TYPES:
 		var r := float(res.get(ty, 0.0))
 		if ty == "shock" and has_rule("sparkys_gloves"):
@@ -895,7 +1019,7 @@ func resist_raw(ty: String) -> float:
 func _resist_raw_pct(ty: String) -> float:
 	if ty == "physical" or (ty == "fire" and has_rule("vicars_thermos")):
 		return 0.0
-	var r: float = _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + _affix_sum("%s_proofed" % ty) + (0.0 if has_rule("blue_plaque") else base_res(ty))
+	var r: float = _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + _affix_sum("%s_proofed" % ty) + base_res(ty)     # a base's resist is its role (29 Oct): a Blue Plaque leaves it
 	r += clampf(Data.RESIST_CAP - r, 0.0, paragon_pct("resists"))     # the board's points to the cap, never past it into over_cap's damage (the review)
 	if mission != null:
 		r -= float(mission["t"].get("soaked", 0.0)) * 100.0     # the Water cannon: your resists down for the run
@@ -1343,7 +1467,7 @@ const RUNNER_KEYS := ["xp", "hp", "equipped", "rig", "wounds", "tree", "training
 
 
 func set_class(name: String) -> bool:
-	if mission != null or name == cls or Data.CLASSES.filter(func(c): return c["name"] == name).is_empty():
+	if runner_busy() or name == cls or Data.CLASSES.filter(func(c): return c["name"] == name).is_empty():
 		return false
 	_dry_memo.clear()
 	if cls == "":
@@ -1787,8 +1911,8 @@ func issued_worn() -> int:
 	var n := 0
 	for sl in Data.SLOTS:
 		var it = equipped.get(sl)
-		if it != null and (it.get("issued", false) or it.get("stamped", false)):
-			n += 1                               # a piece of your own stamped at the Bench counts too (Matt, 26 Oct)
+		if it != null and (it.get("issued", false) or it.get("stamped", false)) and not issued_def(sl).is_empty():
+			n += 1                               # a piece of your own stamped at the Bench counts too (Matt, 26 Oct); only in a slot he issues (29 Oct)
 	return n
 
 
@@ -1802,6 +1926,8 @@ func stamp_block(it: Dictionary) -> String:
 		return Words.STAMP["on_a_run"]
 	if it.is_empty() or not (str(it.get("slot", "")) in Data.SLOTS):
 		return Words.STAMP["not_kit"]
+	if issued_def(str(it["slot"])).is_empty():
+		return Words.STAMP["no_issue"]                # no issued piece in the slot (29 Oct, the review: a pack stamped for −1 fiat; the gloves)
 	if it.get("issued", false):
 		return Words.STAMP["issued"]
 	if it.get("stamped", false):
@@ -1848,7 +1974,7 @@ func roll_mate() -> Dictionary:
 
 ## The tier a shop's unique comes at (the mate, the Back room, a gamble): the loot tier of the deepest site dug.
 func shop_unique_tier() -> int:
-	return loot_tier_at(deepest_site_level())
+	return best_tier_open()
 
 
 ## The mate's offer, rolled: at its tier (a save from before the tiers has none: its own base's).
@@ -2420,7 +2546,7 @@ func _craft_cost_raw(it: Dictionary, kind: String, _stat := "") -> int:
 			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
 				return -1
 		"socket":
-			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= socket_max():
+			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= socket_max(it):
 				return -1
 		"bump":
 			if Items.ilvl(it) >= int(it["tier"]) + bump_cap():
@@ -2631,7 +2757,7 @@ func build_options(kind: String) -> Array:
 			for b in Data.BASES["Primary"]:
 				if b.get("type", "") != "improvised" or b.get("start", false):
 					continue                  # the starting gun is nobody's build
-				if int(b["tier"]) > maxi(Data.CAMPAIGN_TIER, loot_tier_at(deepest_site_level())):
+				if int(b["tier"]) > maxi(Data.CAMPAIGN_TIER, best_tier_open()):
 					continue                  # a deep base (10 Oct) is built once a site that drops its tier is reached
 				out.append(_build_entry(kind, b["name"], Data.BUILD_GUN * int(b["tier"]), "", 0, true, "", int(b["tier"])))
 		"grenade":
@@ -2755,7 +2881,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 			if not Items.add_affix(it, rng, yard_has("masterwork")):
 				return false
 		"socket":
-			if not Items.add_socket(it, socket_max()):
+			if not Items.add_socket(it, socket_max(it)):
 				return false
 		"strip":
 			Items.strip_affixes(it)
@@ -3209,7 +3335,7 @@ func _open_element(el: String) -> void:
 
 ## One of the class's two closed (free): its nodes stay the camp's, its meter stops for this class.
 func close_element(el: String) -> bool:
-	if mission != null or not element_opened(el):
+	if runner_busy() or not element_opened(el):
 		return false
 	var list: Array = class_elements()
 	list.erase(el)
@@ -3552,8 +3678,12 @@ func respec_cost() -> int:
 
 ## A class-trees reset can go: a node of the class's own trained, and its price (28 Oct, the review: Training's button
 ## read the whole tree, the camp's nodes too).
+static func _first_lower(t: String) -> String:
+	return t.substr(0, 1).to_lower() + t.substr(1) if t != "" else t
+
+
 func can_respec() -> bool:
-	return not tree.filter(func(id): return not is_camp(str(id))).is_empty() and cash >= respec_cost()
+	return not runner_busy() and not tree.filter(func(id): return not is_camp(str(id))).is_empty() and cash >= respec_cost()
 
 
 func respec() -> bool:
@@ -3631,7 +3761,8 @@ func _pace_raw() -> float:
 		if equipped[s] != null:
 			worn_v += Items.base_pace(equipped[s])
 	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn_v) / 100.0) * cm("pace") * (Data.FX["node/one_at_a_time.pace"] if has_node("one_at_a_time") else 1.0) * (Data.FX["node/hoarder.pace"] if has_node("hoarder") else 1.0) * trait_mult("pace") \
-		* (Data.FX["rule/van_keys"] if has_rule("van_keys") else 1.0) * (Data.FX["node/frost_more.pace"] if has_node("frost_more") else 1.0) * (Data.FX["node/physical_more.pace"] if has_node("physical_more") else 1.0) * (Data.FX["rule/the_float.pace"] if has_rule("the_float") else 1.0) * wound_mult("pace")
+		* (Data.FX["rule/van_keys"] if has_rule("van_keys") else 1.0) * (Data.FX["node/frost_more.pace"] if has_node("frost_more") else 1.0) * (Data.FX["node/physical_more.pace"] if has_node("physical_more") else 1.0) * (Data.FX["rule/the_float.pace"] if has_rule("the_float") else 1.0) * wound_mult("pace") \
+		* (Data.FX["rule/milkmans"] if (has_rule("milkmans") and (_trying or (mission != null and not mission.get("cleared", false)))) else 1.0)     # the Milkman's Gloves: before the clear; a try-on reads it on, as the fight has it (the fix round, the game review's C4)
 
 
 # ------------------------------------------------------------------ ammo
@@ -3671,7 +3802,15 @@ func uses_mag(slot: String) -> bool:
 
 ## A reload's seconds for this gun: its own, cut by its reload_pct (and the trees', none yet).
 func reload_s(gun: Dictionary) -> float:
-	return Items.reload_base(gun) / (1.0 + (Items.affix_total(gun, "reload_pct") + tree_sum("reload_pct")) / 100.0)
+	if has_rule("safecrackers"):
+		return 0.0                               # the Safecracker's Gloves: no reload at all
+	return Items.reload_base(gun) / (1.0 + (_affix_sum("reload_pct") + tree_sum("reload_pct")) / 100.0)     # quicker reloads is the gloves' (29 Oct): theirs, base and affixes
+
+
+## The guns' rate of fire from a rule (the fix round, 29 Oct, the game review's C5): the Safecracker's Gloves' −15%. The damage
+## a second carries it (_dps); the rounds spent, the rounds wanted and a rifle's opener a shot read it here.
+func rate_x() -> float:
+	return float(Data.FX["rule/safecrackers"]) if has_rule("safecrackers") else 1.0
 
 
 ## The share of the time a slot's gun fires, its reloads apart, read off its magazine: the seconds a magazine lasts
@@ -3738,8 +3877,11 @@ func _mag_spend(m: Dictionary, slot: String, shots: float) -> void:
 	var left: float = float(m["mag"].get(slot, 0.0)) - shots
 	m["mag"][slot] = maxf(0.0, left)
 	if left <= 0.0 and float(m["reload_t"].get(slot, 0.0)) <= 0.0 and rounds_for(gun) > 0:
-		m["reload_t"][slot] = reload_s(gun)
 		m["reloads"] = int(m.get("reloads", 0)) + 1
+		if reload_s(gun) <= 0.0:
+			m["mag"][slot] = float(mini(Items.mag_size(gun), rounds_for(gun)))     # no reload (the Safecracker's): the next one's in at once
+			return
+		m["reload_t"][slot] = reload_s(gun)
 
 
 ## Between gangs the magazines are topped up (28 Oct): the quiet's reload, free, so each gang meets full ones.
@@ -3998,7 +4140,7 @@ func _cure(m: Dictionary, k: int) -> void:
 ## Walking fire: the primary's `sustain` [a second, cap] as the stream's multiplier after `sustain_t` seconds on one gang.
 func sustain_mult(m: Dictionary) -> float:
 	var gun = equipped["Primary"]
-	if gun == null or not Items.base_of(gun).has("sustain"):
+	if gun == null or not Items.base_of(gun).has("sustain") or edges_off:     # walking fire is the SMG's edge (29 Oct): off with the rest
 		return 1.0
 	var su: Array = Items.base_of(gun)["sustain"]
 	return 1.0 + minf(float(su[1]), float(su[0]) * float(m.get("sustain_t", 0.0))) / 100.0
@@ -4930,8 +5072,8 @@ func word_craft_cost(i: int, key: String) -> int:
 func word_craft_block(i: int, key: String) -> String:
 	if not room_open("radio"):
 		return "The Radio isn't on the air yet"     # until the Quartermaster's set (13 Oct)
-	if mission != null:
-		return "The runner is out"
+	if runner_busy():
+		return busy_words()                       # out, or away on a repeat (29 Oct)
 	if not juiceable(i):
 		return "Codes go on signals, after the campaign"
 	var n: int = words[i].size()
@@ -5225,6 +5367,8 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 		return "Opens with %s" % Words.GATES["shut"][building_room(key)]     # a building for a shut room waits on it
 	if mission != null:
 		return "The runner is out"
+	if bool(b["picks"][col][0 if side == "a" else 1].get("stub", false)):
+		return Words.REPEAT["stub"]                  # the Bunkhouse's line B (29 Oct): comes with the trips
 	if col >= yard_cols():
 		return Data.yard_gate(col)
 	if yard_built_side(key, col, side):
@@ -5261,7 +5405,7 @@ func yard_pick(key: String, col: int, side: String) -> bool:
 	_yard_changed(key)
 	_yard_grew(before)
 	var pk: Dictionary = b["picks"][col][0 if side == "a" else 1]
-	log_event("%s built: %s" % [b["name"], "%s - %s" % [pk["name"], str(pk["words"]).to_lower()]])
+	log_event("%s built: %s" % [b["name"], "%s - %s" % [pk["name"], _first_lower(str(pk["words"]))]])     # the first letter only: "XP" stays (the language pass)
 	return true
 
 
@@ -5318,7 +5462,7 @@ func buy_yard_rank(key: String) -> bool:
 	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_rank_salvage(key)
 	yard_ranks[key] = yard_rank(key) + 1
 	_yard_changed(key)
-	log_event("%s, rank %d: %s" % [b["name"], yard_rank(key), str(b["rank"]["words"]).to_lower()])
+	log_event("%s, rank %d: %s" % [b["name"], yard_rank(key), _first_lower(str(b["rank"]["words"]))])
 	return true
 
 
@@ -5480,8 +5624,8 @@ func mount_open(_mount: String) -> bool:
 	return true
 
 
-func socket_max() -> int:
-	return Data.SOCKET_MAX + (Data.FX["yard/third_socket"] if yard_has("third_socket") else 0)
+func socket_max(it: Dictionary = {}) -> int:
+	return Items.socket_cap(it, Data.FX["yard/third_socket"] if yard_has("third_socket") else 0)     # an improvised gun's one more (29 Oct)
 
 
 func bump_cap() -> int:
@@ -5495,8 +5639,8 @@ func bump_levels() -> int:
 ## Why a stash attachment cannot go on a fitted gun's mount: "" when it can.
 ## A part made for a type (a choke, a bipod) is refused on any other gun (Matt, 6 Oct), not fitted for nothing.
 func fit_refusal(slot: String, id: int) -> String:
-	if mission != null:
-		return "The runner is out"
+	if runner_busy():
+		return "The runner is out" if mission != null else Words.REPEAT["shut_away"]
 	if equipped[slot] == null:
 		return "Nothing fitted as %s" % slot.to_lower()
 	var gun: Dictionary = equipped[slot]
@@ -5559,7 +5703,7 @@ func _one_off(it: Dictionary) -> Dictionary:
 
 ## A socketable into a named socket of a fitted item.
 func fit_socket(slot: String, mount: String, id: int) -> bool:
-	if mission != null or not Data.SLOTS.has(slot) or equipped[slot] == null or not mount.begins_with("socket"):
+	if runner_busy() or not Data.SLOTS.has(slot) or equipped[slot] == null or not mount.begins_with("socket"):
 		return false
 	var it_at: Dictionary = equipped[slot]
 	if not it_at["attachments"].has(mount) or not mount_open(mount):
@@ -5575,7 +5719,7 @@ func fit_socket(slot: String, mount: String, id: int) -> bool:
 
 
 func strip(slot: String, mount: String) -> bool:
-	if mission != null or equipped[slot] == null:
+	if runner_busy() or equipped[slot] == null:
 		return false
 	var gun: Dictionary = equipped[slot]
 	if gun["attachments"].get(mount, null) == null:
@@ -5590,7 +5734,7 @@ func strip(slot: String, mount: String) -> bool:
 ## Every part off a worn piece at once (28 Oct, Matt: "no way to strip everything off a weapon at once"): each
 ## attachment and socketable back to the stash as room allows, free as one is. [taken off, left on for want of room].
 func strip_all(slot: String) -> Array:
-	if mission != null or equipped.get(slot) == null:
+	if runner_busy() or equipped.get(slot) == null:
 		return [0, 0]
 	var off := 0
 	var left := 0
@@ -5646,9 +5790,25 @@ func _affix_sum(stat: String) -> float:
 
 
 func __affix_sum_raw(stat: String) -> float:
+	var base: float = float(_base_stat_index().get(stat, 0.0))     # the bases' built-in figures (29 Oct, the roles): never an affix, so the plaque leaves them
 	if stat != "all_res" and has_rule("blue_plaque"):
-		return 0.0                               # a Blue Plaque: nothing else on you counts
-	return float(_affix_index().get(stat, 0.0))
+		return base                              # a Blue Plaque: no other affix on you counts
+	return float(_affix_index().get(stat, 0.0)) + base
+
+
+## The worn bases' built-in figures by stat (29 Oct, docs/design/itemisation.md §2: a role a base, a built-in figure).
+func _base_stat_index() -> Dictionary:
+	return _memo("base_stat_index", _base_stat_index_raw)
+
+
+func _base_stat_index_raw() -> Dictionary:
+	var out := {}
+	for s in Data.SLOTS:
+		if equipped[s] != null:
+			var st: Dictionary = Items.base_of(equipped[s]).get("stats", {})
+			for k in st:
+				out[k] = float(out.get(k, 0.0)) + float(st[k])
+	return out
 
 
 ## Every worn affix and set bonus added up by stat in one walk of the kit, memoised with the rest (22 Oct, the pass's
@@ -5989,7 +6149,7 @@ func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool, convoy := false) ->
 
 
 func can_arm_boss(i: int) -> bool:
-	return (not boss_of(i).is_empty() or is_convoy(i)) and mission == null and tier_open(i) and notes >= boss_cost(i)
+	return (not boss_of(i).is_empty() or is_convoy(i)) and not runner_busy() and tier_open(i) and notes >= boss_cost(i)     # away (29 Oct): no head on a repeat
 
 
 ## Armed for the next run, and only that run: the deploy takes it off, so the notes are paid once a choice (7 Oct).
@@ -6046,14 +6206,37 @@ static func lv_at(i: int, d: int) -> int:
 	return maxi(1, i - Data.OUTSKIRTS_SITES + d)
 
 
-## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the Barracks from depth 1.
-## Past the campaign's six (10 Oct, docs/design/deep_guns.md): a deep tier a step from level 12, 16 and 20.
+## The gear tier a level draws bases from (29 Oct, docs/design/itemisation.md §1: one tier a zone): under the signals'
+## first level a site's own tier stands (the floor here; depth_figures clamps every site to its own), from it the
+## signals' steps - T5 at level 10, T6 13, T7 16, T8 20, T9 24 - so a campaign site pushed past its first clear follows
+## them (the Streets at level 10 drop T5).
 static func loot_tier_at(level_v: int) -> int:
-	var t: int = clampi(int(floor(level_v * Data.CAMPAIGN_TIER / 9.0)), 1, Data.CAMPAIGN_TIER)
+	var t: int = 1
 	for at in Data.DEEP_TIER_LEVELS:
 		if level_v >= int(at):
-			t += 1
+			t = maxi(t, Data.CAMPAIGN_TIER) + 1
 	return mini(t, Data.MAX_TIER)
+
+
+## A site's tier at a level (29 Oct, the review): never under its own, past its first clear too.
+static func site_tier_at(i: int, level_v: int) -> int:
+	return maxi(int(Data.TIERS[i]["loot_tier"]), loot_tier_at(level_v))
+
+
+## The best tier a level reaches (29 Oct): the signals' from level 10, under it the best campaign site's whose first
+## level it is or past (the Streets' T2 at level 1, the City's T4 from 7) - a level's own, with no site in hand.
+static func tier_for_level(level_v: int) -> int:
+	var t: int = loot_tier_at(level_v)
+	for i in range(Data.TIERS.size()):
+		if lv_at(i, 1) <= level_v:
+			t = maxi(t, int(Data.TIERS[i]["loot_tier"]))
+	return t
+
+
+## The best tier open (29 Oct, the review: the shelf stuck at T4 once the signals opened): the open sites' own, or the
+## deepest level's - what the Fence's shelf, the gamble, the Arms dealer, the mate and the Back room roll at.
+func best_tier_open() -> int:
+	return maxi(gear_tier(), loot_tier_at(deepest_site_level()))
 
 
 ## The top a tier-up can reach at a level: a campaign site's "a tier up" stays in the campaign's six.
@@ -6104,12 +6287,14 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 		# D21: and on a signal the shape keeps its crowd and toughness but not its fire - the soft sites' many and the hard
 		# ones' few come to much the same crew HP (14 x 0.6 against 8 x 1.5), and fire x0.7 against x1.4 was nine levels at
 		# the 8% slope: the reach ran ahead on the soft sites and four in five rolls past it were unwinnable
-		e["hp"] = float(c["hp"]) * g * float(shape["hp"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
-		e["dps"] = float(c["dps"]) * g if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
+		var kh: float = Data.curve_k(lv)                 # the level's gear against before (29 Oct, the new tiers): its HP by it, its fire half way
+		var kd: float = (1.0 + kh) / 2.0
+		e["hp"] = float(c["hp"]) * g * kh * float(shape["hp"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * kh * float(shape["hp"]))
+		e["dps"] = float(c["dps"]) * g * kd if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * kd * float(shape["dps"]))
 		e["xp"] = float(c["xp"]) * r if on_sig else maxf(float(e["xp"]), float(c["xp"]) * r)     # and its pay (the review)
 		e["cash"] = float(c["cash"]) * r * float(shape.get("cash", 1.0)) if on_sig else maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
 		e["drop"] = float(c["drop"]) + Data.DEPTH_DROP * (d - 2) if on_sig else maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))
-		e["loot_tier"] = loot_tier_at(lv)
+		e["loot_tier"] = site_tier_at(i, lv)     # never under the site's own tier (29 Oct, the review)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
 	e["rarity"] += Data.ZONE_QUALITY[int(base["zone"])]     # a zone's quality (15 Oct, the loot read): a City drop is rarer than an Outskirts one
@@ -6337,7 +6522,7 @@ func modifier(name: String) -> Dictionary:
 
 ## Depth up or down. A site's words stay as they are; their tiers work at what the new depth allows.
 func set_depth(i: int, d: int) -> void:
-	if mission == null:
+	if not runner_busy():                     # away (29 Oct): the site's level stands while the repeat's on it
 		var top: int = best_depth[i] + 1 if campaign_done() else 1     # the ladder is the endgame's
 		depth[i] = clampi(d, 1, top)
 
@@ -6697,7 +6882,7 @@ func order_block(k: String) -> String:
 	elif not order_open(k):
 		return "Rebuild %s to open" % str(Data.rebuild(str(p["opened_by"]))["name"]).to_lower()
 	if not can_deploy() or not _sig.is_empty():
-		return "The runner is out" if mission != null else "The runner can't go"
+		return "The runner is out" if mission != null else (Words.REPEAT["shut_away"] if away() else "The runner can't go")
 	if not tier_open(int(p["site"])):
 		return "The way there is shut"            # its host site shut (the review: a silent failed Go)
 	return ""
@@ -7562,7 +7747,7 @@ func searching() -> bool:
 
 
 func can_deploy() -> bool:
-	return mission == null and hp > 0.0
+	return mission == null and hp > 0.0 and (not away() or _repeat_going)     # away on a repeat (29 Oct): the gate's the repeat's
 
 
 func can_deploy_to(i: int) -> bool:
@@ -7578,7 +7763,7 @@ func rounds_short(i: int) -> Array:
 	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
 		return []
 	var t := effective(i)
-	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]) * mag_share("Primary"))     # the reloads' pauses fire nothing (28 Oct)
+	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]) * mag_share("Primary") * rate_x())     # the reloads' pauses fire nothing (28 Oct)
 	var have: int = rounds_for(gun)
 	var ty: String = Items.ammo_type(gun)
 	# the gate tops up from the stash (the review): a box bought since home still goes out - as magazines (28 Oct), into
@@ -7597,7 +7782,7 @@ func rounds_short(i: int) -> Array:
 
 func estimate(i: int) -> float:
 	var t := effective(i)
-	return t["pool"] * t["hp"] / (dps() * pace() * t["pace"])
+	return t["pool"] * t["hp"] / (dps() * edge_read(t) * pace() * t["pace"])     # the gun type's edge as it pays there (29 Oct)
 
 
 ## The chance of clearing the fight alive from here, from SURVIVAL_RUNS dry
@@ -7954,6 +8139,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 func deploy(i: int) -> void:
 	if not can_deploy_to(i):
 		return
+	var wager_gate: bool = (not _sig.is_empty() and int(_sig["site"]) == i) or int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false))     # Kev's wagers go only on a run whose gate is open as it sets off
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
 	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
@@ -8029,6 +8215,8 @@ func deploy(i: int) -> void:
 		var line := Words.site_line(t["name"], int(t["depth"]))
 		if line != "":
 			log_event(line)
+	if not _repeat_going and not _dry_on and wager_gate:
+		_wagers_on(mission, ("sig:%d" % int(_sig["id"])) if sig_head else wager_site_key(i))     # Kev's wagers taken there (29 Oct): never a repeat's
 
 
 
@@ -8054,9 +8242,14 @@ func advance(seconds: float) -> void:
 					_memo_age = 0.0
 					_dry_memo.clear()
 			_tick(step)
+			if mission != null and bool(mission.get("unwatched", false)):
+				_unwatched_step()                 # a repeat's run (29 Oct): the bail at once, a med under 40%
 			prof["real_ticks"] += 1
 			prof["real_us"] += Time.get_ticks_usec() - p0
 			left -= step
+			continue
+		if away():
+			left = _repeat_rest(left)             # between repeat runs: rest, and out again at full HP
 			continue
 		if hp < max_hp():     # at camp: rest
 			hp = minf(max_hp(), hp + rest_rate() * left)
@@ -8150,6 +8343,7 @@ func _tick(dt: float) -> void:
 			if m["remaining"] <= 0 and rng.randf() < gang_next_odds(int(m["patrols"])):
 				_gang_harder(m)                     # B9 (15 Oct): the next zone's crew, harder a head
 				t = m["t"]
+			size = ceili(size * float(m.get("wager_gang", 1.0)))     # Kev's bigger gang: every gang (29 Oct, the review)
 			m["remaining"] += size
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
@@ -8194,6 +8388,9 @@ func _time_out(m: Dictionary) -> void:
 	if m.get("dry", false):
 		m["dead"] = true                       # the odds: out of time is a run lost
 		prof["dry_timeouts"] = int(prof.get("dry_timeouts", 0)) + 1     # the bot and the balance gate count them
+		return
+	if m.get("unwatched", false):
+		_bail(m)                               # unwatched (29 Oct): out of time is a bail, the kit kept
 		return
 	_floor_mythics_in(m)
 	_pack_unmark(m)                       # before the dog and the insurance send pieces home (the review)
@@ -8334,6 +8531,577 @@ func _gang_arrives(m: Dictionary, new_fight := true) -> void:
 	var share: float = (Data.FX["node/squared_up"] if has_node("squared_up") else 0.0) + _affix_sum("guard_gang") + (25.0 if has_node("bin_lid") else 0.0)     # Bin lid (22 Oct): Guard of 25% as each gang arrives
 	if share > 0.0:
 		_guard_add(m, max_hp() * share / 100.0)
+
+
+# ------------------------------------------------------------------ repeat runs and safe to leave (29 Oct, docs/design/trips.md 1, 2)
+
+## "Run it ×5" (Matt, 28 Oct: "staring at the same animations over and over gets old"): a cleared site reading 90% or
+## better at full HP, run five times unwatched, one after another in their real played time - the runner away, the rooms
+## free but the runner's kit, class, tree resets, the site's level and codes and its head locked. Between runs the runner
+## rests (the Clinic's rate as a share of max HP: repeat_rest_rate), the rig's packed (pack_rig) and they go again at full
+## HP. An unwatched run leaves by the auto-run rule (leave_full), uses a med under 40% as the bot does, fires every skill
+## slotted (the designer: manual ones too) and never dies: under BAIL it bails at once - the pack lost but the deeds, the
+## mythics, issued kit, uniques and its own rounds; the tins and the kill XP kept. Its XP is a share of a watched run's
+## (the Bunkhouse raises it). Two bails in a row end it; so do "Bring them back" (after the run out), every run done and a
+## stash too full for what it keeps. A wound is rested off between runs (the designer: it doesn't end the repeat). The
+## pack sorts itself at the gate (_repeat_sort): only the best upgrade a slot comes home. No offline: the world waits.
+var repeat := {}               # the repeat out: {site, of (0: till the stash is full), done, phase "run"/"rest", stop, bails_row, bails, runs, kept, ups, t0, run_t0, lv0, wounds0, share, own_list}
+var repeat_report := {}        # the last repeat's card, until it's put away: {site, of, runs, kept, time, ended, reason, lv0, lv1, share}
+var _repeat_going := false     # the repeat's own deploy: the gate's shut to everything else while the runner's away
+const REPEAT_ROOM := 9         # the stash's cells a repeat wants free to go on: the biggest find's (3 x 3)
+
+
+func away() -> bool:
+	return not repeat.is_empty()
+
+
+## Whether the run out is a repeat's, nobody watching.
+func unwatched() -> bool:
+	return mission != null and bool(mission.get("unwatched", false))
+
+
+## The runner's kit, class and tree are theirs while a run's out or they're away (the rooms are free; the runner isn't).
+func runner_busy() -> bool:
+	return mission != null or away()
+
+
+## Why the runner can't be changed now ("" when they can): out on a run, or away on a repeat.
+func busy_words() -> String:
+	if away():
+		return Words.REPEAT["shut_away"]
+	return Words.REPEAT["shut_out"] if mission != null else ""
+
+
+## Runs a repeat goes: 5, the Bunkhouse's 10 and 20, or 0 for till the stash is full.
+func repeat_count() -> int:
+	if yard_has("rr_full"):
+		return 0
+	if yard_has("rr_twenty"):
+		return 20
+	if yard_has("rr_ten"):
+		return 10
+	return Data.REPEAT_RUNS
+
+
+## A repeat run's XP, a share of a watched run's: 25%, the Bunkhouse's 35, 45 and 60 (a watched run always pays more).
+func repeat_xp_share() -> float:
+	if yard_has("rr_rest"):
+		return Data.REPEAT_XP[3]
+	if yard_has("rr_list"):
+		return Data.REPEAT_XP[2]
+	if yard_has("rr_ten"):
+		return Data.REPEAT_XP[1]
+	return Data.REPEAT_XP[0]
+
+
+## The rest between repeat runs (the review: a flat rate left a late repeat mostly resting): the Clinic's rate as a share
+## of max HP - what it heals a second of BASE_HP, of the runner's max - twice with Bunk beds, 5% quicker a Bunkhouse rank.
+func repeat_rest_rate() -> float:
+	return rest_rate() * max_hp() / maxf(1.0, Data.BASE_HP) * (2.0 if yard_has("rr_rest") else 1.0) * (1.0 + Data.REPEAT_RANK_REST * yard_rank("bunkhouse"))
+
+
+## The rest the runner's on now: between repeat runs the repeat's, else the camp's. The top bar, the Clinic and the Map read it.
+func rest_rate_now() -> float:
+	return repeat_rest_rate() if away() else rest_rate()
+
+
+## The site's odds at full HP (the designer: the 90% gate reads the runner whole, as the repeat rests first): [read, odds].
+func repeat_odds(i: int) -> Array:
+	var h := hp
+	hp = max_hp()
+	var out: Array = [odds_ready(i), odds_now(i)]
+	hp = h
+	return out
+
+
+## The full-HP read the gate wants, a step at a time in the shell's odds budget (main._read_odds).
+func repeat_read(i: int) -> void:
+	if mission != null or hp >= max_hp() - 0.01:
+		return
+	var h := hp
+	hp = max_hp()
+	survival(i)
+	hp = h
+
+
+## Why "Run it ×5" is shut on a site, or "" when it can go: the runner away or out, a trait to pick, not cleared, a head
+## (or the convoy) on, the stash full, the odds at full HP still reading or under 90%.
+func repeat_block(i: int) -> String:
+	if i < 0 or i >= Data.TIERS.size() or not tier_open(i):
+		return Words.REPEAT["shut_site"]
+	if away():
+		return Words.REPEAT["shut_away"]
+	if mission != null:
+		return Words.REPEAT["shut_out"]
+	if candidates.size() == 2:
+		return Words.REPEAT["shut_trait"]
+	if int(best_depth[i]) <= 0:
+		return Words.REPEAT["shut_new"]
+	if bool(boss_armed.get(i, false)):
+		return Words.REPEAT["shut_convoy"] if is_convoy(i) else Words.REPEAT["shut_head"]
+	if not stash_room(REPEAT_ROOM):
+		return Words.REPEAT["shut_full"]
+	var o: Array = repeat_odds(i)
+	if not bool(o[0]):
+		return Words.REPEAT["shut_reading"]
+	if float(o[1]) < Data.REPEAT_ODDS:
+		return Words.REPEAT["shut_odds"] % int(floor(float(o[1]) * 100.0))
+	return ""
+
+
+func can_repeat(i: int) -> bool:
+	return repeat_block(i) == ""
+
+
+## Set off on a repeat: rested to full first when hurt, then the first run.
+func start_repeat(i: int) -> bool:
+	if not can_repeat(i):
+		return false
+	repeat = {"site": i, "of": repeat_count(), "done": 0, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": elapsed, "run_t0": elapsed, "lv0": level(), "wounds0": wounds.duplicate(true), "share": repeat_xp_share(), "own_list": yard_has("rr_list"), "first": true}
+	repeat_report = {}
+	var of: int = int(repeat["of"])
+	log_event(Words.REPEAT["set_off"] % [Words.mid(str(Data.TIERS[i]["name"])), (Words.REPEAT["times"] % of) if of > 0 else Words.REPEAT["till_full"]])
+	chron("repeat", {"site": str(Data.TIERS[i]["name"]), "of": of, "share": float(repeat["share"])})
+	if hp >= max_hp() - 0.01:
+		_repeat_go()
+	return true
+
+
+## "Bring them back": the run out is the last; resting between runs, back now.
+func bring_back() -> void:
+	if not away():
+		return
+	repeat["stop"] = true
+	if mission == null:
+		_repeat_end("back")
+	else:
+		log_event(Words.REPEAT["calling"])
+
+
+## The next run of the repeat: the rig packed from the stash whatever the gate's top-up says, then out, unwatched. A head
+## is never on a repeat run (locked while away; disarmed here whatever).
+func _repeat_go() -> void:
+	var i: int = int(repeat["site"])
+	if bool(boss_armed.get(i, false)):
+		boss_armed[i] = false
+		_surv_cache.erase(i)
+	_fill_mags()
+	pack_rig("fill")
+	var ins := insure_next
+	insure_next = false                       # the paper's for a watched run
+	_repeat_going = true
+	deploy(i)
+	_repeat_going = false
+	insure_next = ins
+	if mission == null:
+		_repeat_end("blocked", repeat_block(i) if repeat_block(i) != "" else Words.REPEAT["shut_out"])
+		return
+	mission["unwatched"] = true
+	mission["leave_full"] = true             # the auto-run's rule: a full pack, every crate open, or as the next gang comes
+	repeat["phase"] = "run"
+	repeat["first"] = false
+	repeat["run_t0"] = elapsed
+
+
+## The wounds the repeat gave, rested off when a run's home (the designer: a bail's wound doesn't end it): any wound not
+## there, as it was, when the repeat set off. Rested off before the rest, so the rest is to the true max HP.
+func _rest_off_wounds() -> void:
+	var before: Dictionary = repeat.get("wounds0", {}) if repeat.get("wounds0", {}) is Dictionary else {}
+	var changed := false
+	for area in wounds.keys():
+		if not before.has(area) or str(before[area]) != str(wounds[area]):
+			wounds.erase(area)
+			changed = true
+	if changed:
+		_caches_out()
+
+
+## The world's seconds while the runner's at camp between repeat runs: rest, and out again at full HP. What's left over.
+func _repeat_rest(left: float) -> float:
+	repeat["phase"] = "rest"
+	var rate: float = maxf(repeat_rest_rate(), 0.1)
+	var need: float = maxf(0.0, max_hp() - hp) / rate
+	if need > left:
+		hp += rate * left
+		return 0.0
+	hp = max_hp()
+	_repeat_go()
+	return left - need
+
+
+## After each of an unwatched run's ticks: the bail under BAIL, at once; a med under 40%, as the bot uses one.
+func _unwatched_step() -> void:
+	var m: Dictionary = mission
+	if hp < max_hp() * BAIL:
+		_bail(m)
+		return
+	if m["using"] == null and hp < max_hp() * Data.REPEAT_MED_UNDER and not first_med().is_empty():
+		use_med(int(first_med()["id"]))
+
+
+## A bail (Matt's call 1: never a death unwatched): out at once with the loadout, the pack lost but what never is - the
+## deeds, mythics, issued kit, uniques (the designer) and the runner's own rounds.
+func _bail(m: Dictionary) -> void:
+	m["bailed"] = true
+	hp = maxf(hp, 1.0)
+	_floor_mythics_in(m)
+	var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it) or it.get("mythic", false) or it.get("issued", false) or it.has("unique") or it.get("from_rig", false))
+	m["left"] = int(m["left"]) + m["found"].size() - keep.size()
+	m["found"] = keep
+	log_event(Words.REPEAT["bail"] % Words.mid(str(tier(int(m["tier"]))["name"])))
+	_extract()
+
+
+## Why the gate keeps a find from an unwatched run, or "" for the Fence: the runner's rounds and meds, papers and what
+## opens a room, the deeds, mythics, issued kit, uniques always (the designer), what the junk rules never sell (set
+## pieces, socketables, supplies) and your loot rules' keeps with Your own list. Upgrades are _repeat_sort's: the best a
+## slot, while the stash has room.
+func repeat_keep_why(it: Dictionary, own_list := false) -> String:
+	if it.get("from_rig", false):
+		return "own"
+	if it.get("first_gun", false):
+		return Words.REPEAT["why_first"]
+	if Items.is_deeds(it):
+		return Words.REPEAT["why_deeds"]
+	if it.get("mythic", false):
+		return Words.REPEAT["why_mythic"]
+	if it.get("issued", false):
+		return Words.REPEAT["why_issued"]
+	if it.has("unique"):
+		return Words.REPEAT["why_unique"]
+	if Items.is_paper(it) or is_pile_paper(it):
+		return Words.REPEAT["why_paper"]
+	if Items.opens(it) != "":
+		return Words.REPEAT["why_opens"]
+	if Items.is_ammo(it):
+		return Words.REPEAT["why_rounds"]
+	if Items.rig_item(it):
+		return Words.REPEAT["why_meds"]
+	if Items.is_supplies(it):
+		return Words.REPEAT["why_supplies"]
+	if it.has("set") or it.has("pattern") or Items.is_socketable(it) or it.get("built", false):
+		return Words.REPEAT["why_set"] if it.has("set") else Words.REPEAT["why_socket"]
+	if own_list and loot_rule_act(it) in ["keep", "highlight"]:
+		return Words.REPEAT["why_list"]
+	return ""
+
+
+## The pack sorted at the gate, after the loot rules and the Bins: what's kept goes on home, an upgrade only the best a
+## slot of the whole repeat (the designer: a better one later sends the earlier one to the Fence), the rest sold at the
+## Fence (binned for scrap while it's shut). The run's tally in the mission: rep_sold, rep_sold_tins, rep_kept.
+func _repeat_sort(m: Dictionary) -> Array:
+	var own: bool = bool(repeat.get("own_list", false))
+	var kept: Array = []
+	var chips: Array = []
+	var rest: Array = []
+	var best_up := {}                         # slot -> [item, gain]: this run's best upgrade a slot
+	for it in m["found"]:
+		var why: String = repeat_keep_why(it, own)
+		if why != "":
+			kept.append(it)
+			if why != "own":
+				chips.append({"id": int(it.get("id", -1)), "name": Items.full_name(it), "rarity": int(it.get("rarity", 0)), "why": why})
+			continue
+		if is_upgrade(it):
+			var g: float = upgrade_gain(it)
+			var sl: String = str(it["slot"])
+			if not best_up.has(sl) or g > float(best_up[sl][1]):
+				if best_up.has(sl):
+					rest.append(best_up[sl][0])
+				best_up[sl] = [it, g]
+				continue
+		rest.append(it)
+	var ups: Dictionary = repeat.get("ups", {}).duplicate()
+	var removed := 0
+	for sl in best_up:
+		var it: Dictionary = best_up[sl][0]
+		var g: float = float(best_up[sl][1])
+		if (ups.has(sl) and g <= float(ups[sl]["gain"])) or not stash_fits(it):
+			rest.append(it)
+			continue
+		if ups.has(sl) and away():
+			var old: Dictionary = item_by_id(int(ups[sl]["id"]))
+			if not old.is_empty() and stash.has(old) and _remove(old):
+				rest.append(old)                   # the earlier upgrade, bettered: to the Fence with the rest
+				var n0: int = repeat["kept"].size()
+				repeat["kept"] = repeat["kept"].filter(func(c): return int(c.get("id", -2)) != int(old["id"]))
+				removed += n0 - repeat["kept"].size()
+		ups[sl] = {"id": int(it.get("id", -1)), "gain": g}
+		kept.append(it)
+		chips.append({"id": int(it.get("id", -1)), "name": Items.full_name(it), "rarity": int(it.get("rarity", 0)), "why": Words.REPEAT["why_upgrade"]})
+	if away():
+		repeat["ups"] = ups
+	var sold := 0
+	var sold_tins := 0.0
+	var binned := 0
+	for it in rest:
+		if room_open("fence"):
+			var got := float(sell_price(it))
+			_earn(got)
+			_rate_after_sale(got)
+			sold += 1
+			sold_tins += got
+		else:
+			scrap += scrap_of(it)                # the Fence shut: the junk to the bins
+			binned += 1
+	m["rep_sold"] = sold
+	m["rep_sold_tins"] = sold_tins
+	m["rep_binned"] = binned
+	m["rep_kept"] = chips
+	m["rep_unkept"] = removed
+	if sold > 0:
+		log_event(Words.REPEAT["sold"] % [sold, "" if sold == 1 else "s", _cash_words(sold_tins)])
+	return kept
+
+
+func _materials_total() -> int:
+	var n := 0
+	for k in materials:
+		n += int(materials[k])
+	return n
+
+
+## A repeat run home (_extract's last act): its line in the report, the wounds it gave rested off, then the rest, or the end.
+func _repeat_run_done(m: Dictionary, pre: Dictionary) -> void:
+	if not away():
+		return
+	var bailed: bool = bool(m.get("bailed", false))
+	var rec := {"n": int(repeat["done"]) + 1, "kills": int(m.get("kills", 0)), "tins": float(m.get("cash", 0.0)) + float(m.get("rep_sold_tins", 0.0)), "run_tins": float(m.get("cash", 0.0)),
+		"sold": int(m.get("rep_sold", 0)), "sold_tins": float(m.get("rep_sold_tins", 0.0)), "scrap": scrap - int(pre["scrap"]), "mats": _materials_total() - int(pre["mats"]),
+		"xp": float(m.get("xp_got", 0.0)), "kept": m.get("rep_kept", []).size() - int(m.get("rep_unkept", 0)), "bail": bailed, "wounded": bool(m.get("wounded", false)),
+		"cleared": bool(m.get("cleared", false)) and not bailed, "timed_out": bool(m.get("timed_out", false)), "time": elapsed - float(repeat["run_t0"])}
+	repeat["runs"].append(rec)
+	repeat["done"] = int(repeat["done"]) + 1
+	repeat["kept"].append_array(m.get("rep_kept", []))
+	_rest_off_wounds()                        # before the rest: rested to the true max HP, the next run whole (the review)
+	if bailed:
+		repeat["bails_row"] = int(repeat["bails_row"]) + 1
+		repeat["bails"] = int(repeat["bails"]) + 1
+	else:
+		repeat["bails_row"] = 0
+	var of: int = int(repeat["of"])
+	var why := ""
+	if int(repeat["bails_row"]) >= 2:
+		why = "bails"
+	elif bool(repeat["stop"]):
+		why = "back"
+	elif (of > 0 and int(repeat["done"]) >= of) or int(repeat["done"]) >= Data.REPEAT_MAX:
+		why = "done"
+	elif bool(m.get("rep_overflow", false)) or not stash_room(REPEAT_ROOM):
+		why = "full"                          # what it keeps won't fit next time: home now, nothing lost
+	if why != "":
+		_repeat_end(why)
+	else:
+		repeat["phase"] = "rest"
+
+
+## The repeat over: its card waits on the Map until it's put away. `reason` the shut reason when it couldn't set off.
+func _repeat_end(why: String, reason := "") -> void:
+	var r: Dictionary = repeat
+	_rest_off_wounds()
+	repeat = {}
+	repeat_report = {"site": int(r["site"]), "of": int(r["of"]), "runs": r["runs"], "kept": r["kept"], "time": elapsed - float(r["t0"]), "ended": why, "reason": reason,
+		"lv0": int(r["lv0"]), "lv1": level(), "share": float(r["share"])}
+	var tot := repeat_totals(repeat_report)
+	log_event(Words.REPEAT["back"] % [Words.mid(str(Data.TIERS[int(r["site"])]["name"])), int(tot["runs"]), "" if int(tot["runs"]) == 1 else "s", int(tot["bails"]), "" if int(tot["bails"]) == 1 else "s"])
+	chron("repeat_back", {"site": str(Data.TIERS[int(r["site"])]["name"]), "runs": int(tot["runs"]), "bails": int(tot["bails"]), "ended": why, "xp": snappedf(float(tot["xp"]), 1.0), "tins": snappedf(float(tot["tins"]), 1.0)})
+
+
+## A repeat report's sums, its runs added up: the card's figures and the smoke's.
+static func repeat_totals(rep: Dictionary) -> Dictionary:
+	var out := {"runs": 0, "kills": 0, "kept": 0, "tins": 0.0, "sold": 0, "sold_tins": 0.0, "scrap": 0, "mats": 0, "xp": 0.0, "bails": 0, "wounds": 0, "cleared": 0, "timeouts": 0}
+	for r in rep.get("runs", []):
+		out["runs"] += 1
+		for k in ["kills", "kept", "sold", "scrap", "mats"]:
+			out[k] += int(r.get(k, 0))
+		for k in ["tins", "sold_tins", "xp"]:
+			out[k] += float(r.get(k, 0.0))
+		out["bails"] += 1 if bool(r.get("bail", false)) else 0
+		out["wounds"] += 1 if bool(r.get("wounded", false)) else 0
+		out["cleared"] += 1 if bool(r.get("cleared", false)) else 0
+		out["timeouts"] += 1 if bool(r.get("timed_out", false)) else 0
+	return out
+
+
+## What the Bunkhouse gives now, in one line: the runs a repeat goes and its XP (the Pitch's list, once).
+func repeat_gives() -> String:
+	var n: int = repeat_count()
+	return (Words.REPEAT["gives"] % [n, int(round(repeat_xp_share() * 100.0))]) if n > 0 else Words.REPEAT["gives_full"] % int(round(repeat_xp_share() * 100.0))
+
+
+func repeat_seen() -> void:
+	repeat_report = {}
+
+
+## The away card's figures: the run out (1 up), of how many (0: till the stash is full), the share done (the stash's
+## fill till full) and the seconds left at the pace so far - to the run out's end once they're called back.
+func repeat_progress() -> Dictionary:
+	if not away():
+		return {}
+	var i: int = int(repeat["site"])
+	var done: int = int(repeat["done"])
+	var of: int = int(repeat["of"])
+	var stop: bool = bool(repeat["stop"])
+	var spent: float = elapsed - float(repeat["t0"])
+	var per: float = spent / done if done > 0 else maxf(60.0, estimate(i) * 1.5 + 60.0)
+	var into: float = elapsed - float(repeat["run_t0"]) if mission != null else 0.0
+	var share: float = clampf(into / maxf(per, 1.0), 0.0, 0.95)
+	var to: int = done + 1 if stop else of
+	var left: float = maxf(0.0, per * (to - done) - into) if (of > 0 or stop) else -1.0
+	var fill: float = (float(done) + share) / maxf(1.0, to) if (of > 0 or stop) else clampf(float(stash_used()) / maxf(1.0, stash_cap()), 0.0, 1.0)
+	return {"site": i, "n": mini(done + 1, of) if of > 0 else done + 1, "of": of, "share": fill,
+		"left": left, "bails": int(repeat["bails"]), "out": mission != null, "stop": stop, "first": bool(repeat.get("first", false))}
+
+
+# ------------------------------------------------------------------ Kev's wagers (29 Oct, the endgame's first activity)
+
+## Before a watched run - a first clear or an armed head on the Map, a signal on the Radio - Kev offers 1-3 wagers, each
+## a harder word for a payout (one of each pay an offer); take any, they stack, and go on the next run there whose gate is
+## open as it sets off (never a repeat's, never a plain farm run after the head's untaken). Kev's at the Radio: the
+## wagers open with it (docs/design/endgame_activities.md: "the wagers with the Radio").
+var wagers := {}               # key ("site:3", "sig:17") -> {"seq": offers made there so far, "taken": [offer indices]}
+
+
+static func wager_site_key(i: int) -> String:
+	return "site:%d" % i
+
+
+func wager_signal_key(k: int) -> String:
+	var sg := signal_at(k)
+	return ("sig:%d" % int(sg["id"])) if not sg.is_empty() else ""
+
+
+## Whether Kev has an offer on the site's next run: the Radio open, the runner home, a first clear or a head armed.
+func wager_site_open(i: int) -> bool:
+	return room_open("radio") and not runner_busy() and i >= 0 and i < Data.TIERS.size() and tier_open(i) and (int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false)))
+
+
+func wager_signal_open(k: int) -> bool:
+	return room_open("radio") and not runner_busy() and not signal_at(k).is_empty()
+
+
+## Kev's offer there: 1-3 wagers seeded from the run (the place and how many offers it's had), each a different word
+## and a different pay (the designer: one a pay kind an offer).
+func wager_offer(key: String) -> Array:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([key, int(wagers.get(key, {}).get("seq", 0)), fixed_seed])
+	var n: int = r.randi_range(1, 3)
+	var conds: Array = range(Data.WAGER_CONDS.size())
+	var pays: Array = range(Data.WAGER_PAYS.size())
+	for list in [conds, pays]:
+		for k in range(list.size() - 1, 0, -1):
+			var j: int = r.randi_range(0, k)
+			var tmp = list[k]
+			list[k] = list[j]
+			list[j] = tmp
+	var out: Array = []
+	for k in range(mini(n, pays.size())):
+		var pay: Dictionary = Data.WAGER_PAYS[int(pays[k])]
+		var slot: String = str(Data.WAGER_SLOTS[r.randi_range(0, Data.WAGER_SLOTS.size() - 1)]) if str(pay["id"]) == "slot" else ""
+		out.append({"cond": str(Data.WAGER_CONDS[int(conds[k])]["id"]), "pay": str(pay["id"]), "slot": slot})
+	return out
+
+
+func wager_taken(key: String, k: int) -> bool:
+	return k in wagers.get(key, {}).get("taken", [])
+
+
+func wagers_taken_n(key: String) -> int:
+	return wagers.get(key, {}).get("taken", []).size()
+
+
+## Take a wager, or drop one taken. Logged.
+func take_wager(key: String, k: int, on := true) -> bool:
+	var offer := wager_offer(key)
+	if k < 0 or k >= offer.size() or runner_busy():
+		return false
+	var w: Dictionary = wagers.get(key, {"seq": 0, "taken": []})
+	var taken: Array = w.get("taken", [])
+	if on == (k in taken):
+		return false
+	if on:
+		taken.append(k)
+	else:
+		taken.erase(k)
+	w["taken"] = taken
+	wagers[key] = w
+	log_event((Words.WAGERS["taken"] if on else Words.WAGERS["left"]) % wager_words(offer[k]))
+	chron("wager", {"key": key, "cond": str(offer[k]["cond"]), "pay": str(offer[k]["pay"]), "slot": str(offer[k]["slot"]), "on": on})
+	return true
+
+
+## A wager in a line: "+50% men for ×1.5 notes".
+static func wager_cond_chip(w: Dictionary) -> String:
+	for c in Data.WAGER_CONDS:
+		if str(c["id"]) == str(w["cond"]):
+			return str(c["chip"])
+	return ""
+
+
+static func wager_pay_chip(w: Dictionary) -> String:
+	for p in Data.WAGER_PAYS:
+		if str(p["id"]) == str(w["pay"]):
+			return (str(p["chip"]) % str(Data.WAGER_SLOT_WORDS.get(str(w["slot"]), str(w["slot"]).to_lower()))) if str(p["id"]) == "slot" else str(p["chip"])
+	return ""
+
+
+static func wager_words(w: Dictionary) -> String:
+	return Words.WAGERS["line"] % [wager_cond_chip(w), wager_pay_chip(w)]
+
+
+## The wagers taken there, on the run setting off (deploy, with their gate open): the harder words on its fight, the
+## payouts marked to pay. Spent: the next offer there is a fresh one.
+func _wagers_on(m: Dictionary, key: String) -> void:
+	var taken: Array = wagers.get(key, {}).get("taken", [])
+	if taken.is_empty():
+		return
+	var offer := wager_offer(key)
+	var on: Array = []
+	m["t"] = m["t"].duplicate(true)
+	var t: Dictionary = m["t"]
+	for k in taken:
+		if int(k) >= offer.size():
+			continue
+		var w: Dictionary = offer[int(k)]
+		on.append(w)
+		match str(w["cond"]):
+			"gang":
+				t["pool"] = ceili(float(t["pool"]) * Data.WAGER_GANG)
+				if int(m["remaining"]) > 0:
+					m["remaining"] = ceili(float(m["remaining"]) * Data.WAGER_GANG)
+				m["wager_gang"] = float(m.get("wager_gang", 1.0)) * Data.WAGER_GANG     # every gang after it too (the review: a real risk)
+			"no_meds":
+				t["no_meds"] = true
+			"clock":
+				m["clock"] = float(m["clock"]) * Data.WAGER_CLOCK
+				m["clock_max"] = float(m.get("clock_max", m["clock"])) * Data.WAGER_CLOCK
+			"hard":
+				t["dps"] = float(t["dps"]) * Data.WAGER_HARD
+		match str(w["pay"]):
+			"notes":
+				m["wager_notes"] = float(m.get("wager_notes", 1.0)) * 1.5
+			"slot":
+				var sl: Dictionary = m.get("wager_slots", {})
+				sl[str(w["slot"])] = int(sl.get(str(w["slot"]), 1)) * 3
+				m["wager_slots"] = sl
+			"quality":
+				t["rarity"] = float(t.get("rarity", 0.0)) + 0.5
+	m["wagers"] = on
+	wagers[key] = {"seq": int(wagers.get(key, {}).get("seq", 0)) + 1, "taken": []}
+	log_event(Words.WAGERS["on"] % [" · ".join(on.map(func(x): return wager_words(x)))])
+	chron("wagers_on", {"key": key, "n": on.size()})
+
+
+## A slot's wagered finds: the find landed, and its two more of the same slot (×3), rolled as it was.
+func _wager_finds(m: Dictionary, it: Dictionary, roll: Callable, to_floor: bool) -> void:
+	var x: int = int(m.get("wager_slots", {}).get(str(it.get("slot", "")), 1))
+	if x <= 1 or it.has("unique") or it.get("mythic", false):
+		return
+	for k in range(x - 1):
+		var extra: Dictionary = roll.call()
+		_land(m, extra, "", to_floor)
+		m["wager_finds"] = int(m.get("wager_finds", 0)) + 1
 
 
 # ------------------------------------------------------------------ patterns (24 Oct, the endgame chase, phase 4)
@@ -8858,12 +9626,20 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	mult *= _skill_hit_mult(m)
 	var held := gun_type()
 	mult *= _joint_hit_mult(m, held)
+	# the gun type's edge (29 Oct, docs/design/itemisation.md §3), on the primary's share of the hit: a rifle's pierce (and
+	# its opener, below), a shotgun's spread into the next in line, a melee weapon's crowd; the read is edge_read's
+	var edge: String = edge_type()
+	var e_share: float = edge_share() if edge != "" else 0.0
+	var e_pierce: float = float(Data.EDGE["rifle"]["pierce"]) * e_share if edge == "rifle" else 0.0
+	var e_hit: float = (1.0 + float(Data.EDGE["melee"]["x"]) * e_share) if (edge == "melee" and crowd_on_you >= int(Data.EDGE["melee"]["on_you"])) else 1.0
+	var e_spread: float = float(Data.EDGE["shotgun"]["x"]) * e_share if (edge == "shotgun" and int(m["remaining"]) >= 2) else 0.0
 	for ty in Data.TYPES:
 		var r_ty: float = float(res.get(ty, 0.0))
 		if ty == "physical":
 			r_ty = phys_resist(r_ty)                  # Knuckles: the Doorman's knuckles and Bust them up get through their jackets
+			r_ty *= 1.0 - e_pierce                    # a rifle's pierce: so much of their armour ignored
 		r_ty *= 1.0 - _skill_pat(m)                   # Pat down: their armour and resists off (milestone 8)
-		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * _skill_type_mult(m, ty) * ((1.0 + shock_amount() + (combo_step("live_load") * combo_stacks(m) if combo_on("live_load") else 0.0) + (combo_step("flatline") * combo_stacks(m) if combo_on("flatline") else 0.0)) if shocked else 1.0)
+		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * e_hit * _skill_type_mult(m, ty) * ((1.0 + shock_amount() + (combo_step("live_load") * combo_stacks(m) if combo_on("live_load") else 0.0) + (combo_step("flatline") * combo_stacks(m) if combo_on("flatline") else 0.0)) if shocked else 1.0)
 		landed *= exploit_x(m)
 		if ty == "fire" and combo_on("embers"):
 			landed *= 1.0 + combo_step("embers") * combo_stacks(m)          # Embers
@@ -8889,6 +9665,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			landed *= crowd_on_you                # Live wire: shock on one of them is shock on all of them, while it holds
 		elif ty == "shock" and has_rule("linemans_bag") and shocked and crowd_on_you > 1:
 			landed *= 1.0 + Data.FX["rule/linemans_bag.arc"] * (crowd_on_you - 1)     # the Lineman's Tool Bag: the shock arcs to the rest at half
+		if e_spread > 0.0:
+			landed += single * e_spread           # a shotgun's spread: each round hits the next in line too
 		if ty == "fire" and has_node("fire_more"):
 			hp -= minf(single * 0.02, max_hp() * 0.01 * dt)   # petrol on your hands: 2% of a hit, never past 1% of you a second
 		landed_total += landed
@@ -8905,6 +9683,19 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else status_s(1.0)     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
 		m["chill_t"] = 1.0                        # everyone on you is chilled, always
+	if edge == "rifle" and single_total > 0.0:
+		# a rifle's opener: one round's worth more into each new man, once (a round, not a tick: the bot's second, the odds'
+		# two and a player's frames pay it the same); due until the primary fires, so a reload holds it
+		var e_boss: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+		var man_id: String = "%d/%d/%s/%d" % [int(m.get("kills", 0)), int(m["remaining"]), str(e_boss), int(m.get("patrols", 0))]
+		var e_shots: float = float(Items.base_of(equipped["Primary"])["rof"]) * pace() * jab * float(t["pace"]) * dt * float(m.get("fire_x", {}).get("Primary", 1.0)) * my_chill_x(m) * rate_x()
+		if str(m.get("edge_opened", "")) != man_id and e_shots > 0.000001:
+			m["edge_opened"] = man_id
+			var ob: float = float(Data.EDGE["rifle"]["opener"]) * single_total * e_share / e_shots
+			landed_total += ob
+			if not m.has("dealt_by"):
+				m["dealt_by"] = {}
+			m["dealt_by"][str(single_top[0])] = float(m["dealt_by"].get(str(single_top[0]), 0.0)) + ob
 	_joints_on_hit(m, t, landed_total, held, dt)
 	_count_src(m, _gun_src(), landed_total)
 	m["target_hp"] -= landed_total
@@ -8931,14 +9722,14 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var chill_x: float = my_chill_x(m)
 	var px_t: float = float(m["fire_x"].get("Primary", 1.0))
 	if primary_live and not has_rule("qm_rifle"):
-		var p_shots: float = Items.base_of(equipped["Primary"])["rof"] * pace() * jab * t["pace"] * dt * px_t * chill_x
+		var p_shots: float = Items.base_of(equipped["Primary"])["rof"] * pace() * jab * t["pace"] * dt * px_t * chill_x * rate_x()
 		_spend_rounds(equipped["Primary"], p_shots)
 		_mag_spend(m, "Primary", p_shots)
 	# the secondary spends what it fires: its full rate when it's the gun in
 	# hand (the primary dry, gone or reloading, or Double tap), a third while it backs the primary
 	if equipped["Secondary"] != null and has_rounds(equipped["Secondary"]):
 		var share: float = (secondary_share(true) * px_t + (1.0 - px_t)) if primary_live else 1.0
-		var s_shots: float = Items.base_of(equipped["Secondary"])["rof"] * pace() * jab * t["pace"] * dt * share * float(m["fire_x"].get("Secondary", 1.0)) * chill_x
+		var s_shots: float = Items.base_of(equipped["Secondary"])["rof"] * pace() * jab * t["pace"] * dt * share * float(m["fire_x"].get("Secondary", 1.0)) * chill_x * rate_x()
 		_spend_rounds(equipped["Secondary"], s_shots)
 		_mag_spend(m, "Secondary", s_shots)
 	if mech != "":
@@ -9672,9 +10463,10 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var find_tier: int = int(t["loot_tier"])
 	if slot in Data.SLOTS and rng.randf() < Data.FIND_AT_MINE and wearable_level() < find_lv:
 		# a fifth of the plain gear at the level the runner wears (16 Oct), on a base the campaign gives - as a gamble
-		# rolls: a deep signal's tier-7+ bases stay the deep runner's (the review)
+		# rolls: a deep signal's tier-7+ bases stay the deep runner's (the review); the tier his level's own (the fix round,
+		# 29 Oct, the review's B4: the campaign's best is T4 now, the early signals' T5-6)
 		find_lv = wearable_level()
-		find_tier = mini(find_tier, gear_tier())
+		find_tier = mini(find_tier, tier_for_level(find_lv))
 	if not myth.is_empty():
 		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere - ahead of a socketable (the review), and of supplies (28 Oct, the review)
 		said = Words.MYTHIC_FOUND % it["unique"]
@@ -9729,6 +10521,10 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		return {"it": it, "said": said}
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
 	_land(m, it, said, not from_kill and not crate.is_empty() and by_hand(m))
+	if m.has("wager_slots") and str(it.get("slot", "")) in Data.SLOTS:
+		_wager_finds(m, it, func(): return Items.roll(str(it["slot"]), find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv),
+			not from_kill and not crate.is_empty() and by_hand(m))     # Kev's ×3 a slot's finds (29 Oct)
 	return {"it": shown, "said": said}
 
 
@@ -10318,6 +11114,7 @@ func _extract() -> void:
 	if mission != null and mission.get("dry", false):
 		return
 	var m: Dictionary = mission
+	var rep_pre: Dictionary = {"scrap": scrap, "mats": _materials_total()} if m.get("unwatched", false) else {}     # a repeat run's line (29 Oct)
 	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
 	_site_remember(m)                     # the crates left for next time (27 Oct)
 	_bailiff_keeps_deeds(m)
@@ -10349,6 +11146,10 @@ func _extract() -> void:
 		run_notes *= Data.FX["rule/managers_pen"]
 	if has_rule("drivers_log"):
 		run_notes *= Data.FX["rule/drivers_log"]
+	if float(m.get("wager_notes", 1.0)) != 1.0:
+		var before_w: int = run_notes
+		run_notes = int(round(run_notes * float(m["wager_notes"])))     # Kev's wager paid (29 Oct)
+		log_event(Words.WAGERS["paid_notes"] % [run_notes - before_w, "" if run_notes - before_w == 1 else "s"])
 	notes += run_notes                        # before the takings: after the Issue the notes are this run's income (the review)
 	var base0: float = a_gamble_base()
 	gamble_base = clampf(lerp(base0, _takings_run, 0.25), base0 * (1.0 - Data.GAMBLE_STEP), base0 * (1.0 + Data.GAMBLE_STEP))     # before takings moves: the first run starts from its stand-in
@@ -10358,9 +11159,13 @@ func _extract() -> void:
 	var sv: Dictionary = m.get("salvage", {})
 	for kind in sv:
 		salvage[kind] = int(salvage.get(kind, 0)) + int(sv[kind])      # and its salvage (9 Oct)
+	if m.get("unwatched", false):
+		m["found_pre"] = m["found"].duplicate()     # the record's gear finds, before the gate's sort
 	m["found"] = apply_loot_rules(m["found"])    # the loot filter (24 Oct): keep, highlight or scrap as it comes in - first, so a kept common skips the Bins
 	if yard_has("bins"):
 		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
+	if m.get("unwatched", false):
+		m["found"] = _repeat_sort(m)          # a repeat run's pack sorted at the gate (29 Oct), after the rules and the Bins: its kept chips are what goes in
 	var stashed := 0
 	for it in m["found"]:
 		var first: bool = it.get("first_gun", false) and Items.is_gun(it)
@@ -10398,9 +11203,13 @@ func _extract() -> void:
 		elif it.get("mythic", false) or it.get("issued", false):
 			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct); a head's issued piece too (the third review)
 			stashed += 1
+		elif m.get("unwatched", false):
+			stash.append(it)                 # a repeat's keeps never lost to a full stash (the review): home, and the repeat ends
+			m["rep_overflow"] = true
+			stashed += 1
 		else:
 			continue
-		if not Items.rig_item(it):
+		if not Items.rig_item(it) and not m.get("unwatched", false):
 			_came_back_find(it)              # the card's dearest find (rounds and meds aren't finds)
 	var outcome := "Back"
 	if m.get("timed_out", false):
@@ -10433,6 +11242,8 @@ func _extract() -> void:
 	exchange_day += 1                         # a run home: the exchange's new day of rates (28 Oct, Matt's play-day)
 	restock()
 	_top_up()                                 # home, the rig loaded again: the card's odds read the rig that goes out (the review)
+	if not rep_pre.is_empty():
+		_repeat_run_done(m, rep_pre)          # the repeat's next, or its end (29 Oct)
 
 
 ## The runner's record, from a run that came back (8 Oct).
@@ -10489,7 +11300,7 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	var wearable := 0
 	var at_mine := 0
 	var mine: int = int(m.get("wear_gate", wearable_level()))     # as it was at the gate: a level-up mid-run would miss the finds rolled before it (the review)
-	for it in m.get("found", []):
+	for it in m.get("found_pre", m.get("found", [])):
 		if str(it.get("slot", "")) in Data.SLOTS and not it.get("mythic", false):
 			gear += 1
 			wearable += 1 if Items.wear_level(it) <= level() else 0
@@ -10497,6 +11308,9 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	d["gear"] = gear
 	d["gear_wearable"] = wearable
 	d["gear_at_mine"] = at_mine
+	if m.get("unwatched", false):
+		d["unwatched"] = true                     # a repeat's run (29 Oct): the readers count it apart from play
+		d["xp_shared"] = snappedf(float(m.get("xp_got", 0.0)), 0.01)
 	d.merge(extra, true)
 	chron("run", d)
 
@@ -10549,6 +11363,9 @@ func _kia() -> void:
 	var m: Dictionary = mission
 	if m.get("dry", false):
 		m["dead"] = true                     # a dry run: the answer, nothing lost
+		return
+	if m.get("unwatched", false):
+		_bail(m)                             # never a death unwatched (29 Oct, Matt's call 1): a bail
 		return
 	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
 	_site_remember(m)                     # the crates left for next time (27 Oct)
@@ -10739,7 +11556,9 @@ func _try(it: Dictionary, f: Callable) -> Variant:
 ## for the body (survival_value: HP, regen, armour and resists against the fight being pushed), the piece's score for
 ## bags and charms.
 ## `key`: the kit's key when the caller has it (a scan of the stash reads it once, not once an item).
-func fit_value(it: Dictionary, slot := "", key := -1) -> float:
+## `moved`: read with the worn piece's parts moved over (moved_over) - where the screen's act is "Swap, parts and all" (the
+## Kit, Equip if better); else as the piece stands, as an equip moves nothing (a run's pack, the Fence: the fix round).
+func fit_value(it: Dictionary, slot := "", key := -1, moved := false) -> float:
 	if slot == "":
 		slot = str(it.get("slot", ""))
 	# cached with the verdicts (the bot's sell loop asks for the best of a slot once a stash item)
@@ -10748,18 +11567,22 @@ func fit_value(it: Dictionary, slot := "", key := -1) -> float:
 	if key != _cmp_key:
 		_cmp_key = key
 		_cmp_cache.clear()
-	var fk := "f/%s/%d" % [slot, hash(it)]
+	var fk := "f/%s/%d/%s" % [slot, hash(it), "m" if moved else ""]
 	if _cmp_cache.has(fk):
 		return _cmp_cache[fk]
-	var v := _fit_value(it, slot)
+	var v := _fit_value(it, slot, moved)
 	_cmp_cache[fk] = v
 	return v
 
 
-func _fit_value(it: Dictionary, slot: String) -> float:
+func _fit_value(it: Dictionary, slot: String, moved := false) -> float:
+	if moved:
+		it = moved_over(it)                  # what you'd wear after the swap: the worn piece's parts on it where they fit (29 Oct, the compare's A)
 	match Data.SLOT_SCORE.get(slot, ""):
 		"dps":
 			return _try(it, damage_total)     # the hits and the burn, as the top bar reads them (18 Oct)
+		"grip":
+			return _try(it, fight_damage)     # gloves (29 Oct, the review: pace read as a damage drop): the fight's figure, pace in
 		"armour":
 			return _try(it, survival_value.bind(front_fight()))
 	if it.is_empty():
@@ -10833,7 +11656,7 @@ func front_tier() -> int:
 
 
 ## The body's figure with `it` worn, as a share up or down on the kit as it is (0.0 for a slot that has none).
-func survival_gain(it: Dictionary) -> float:
+func survival_gain(it: Dictionary, moved := false) -> float:
 	var slot: String = str(it.get("slot", ""))
 	if not (slot in SURV_SLOTS) or not equipped.has(slot):
 		return 0.0
@@ -10841,12 +11664,12 @@ func survival_gain(it: Dictionary) -> float:
 	if key != _cmp_key:
 		_cmp_key = key
 		_cmp_cache.clear()
-	var sk := "s/%d" % hash(it)
+	var sk := "s/%d/%s" % [hash(it), "m" if moved else ""]
 	if not _cmp_cache.has(sk):
 		if not _cmp_cache.has("s0"):
 			_cmp_cache["s0"] = _try({}, survival_value)
 		var s0: float = _cmp_cache["s0"]
-		_cmp_cache[sk] = (float(_try(it, survival_value.bind(front_fight()))) - s0) / maxf(s0, 0.0001)
+		_cmp_cache[sk] = (float(_try(moved_over(it) if moved else it, survival_value.bind(front_fight()))) - s0) / maxf(s0, 0.0001)     # with your parts moved over when the swap's the act (29 Oct)
 	return _cmp_cache[sk]
 
 
@@ -10854,7 +11677,7 @@ func survival_gain(it: Dictionary) -> float:
 ## by the runner's damage with it on; anything else by its own job and the damage with it on, and a helmet, coat,
 ## charm or rig by the survival figure too (12 Oct; a helmet's or coat's job is that figure). An empty slot takes
 ## anything that goes in it.
-func compare(it: Dictionary, key := -1) -> int:
+func compare(it: Dictionary, key := -1, moved := false) -> int:
 	var slot: String = str(it.get("slot", ""))
 	if not equipped.has(slot):
 		return 0
@@ -10866,10 +11689,10 @@ func compare(it: Dictionary, key := -1) -> int:
 	if key != _cmp_key:
 		_cmp_key = key
 		_cmp_cache.clear()
-	var ih: int = hash(it)
+	var ih: int = hash([it, moved])
 	if _cmp_cache.has(ih):
 		return _cmp_cache[ih]
-	var c := _compare(it, slot)
+	var c := _compare(it, slot, moved)
 	# over a worn unique bag or charm (Matt, 11 Oct): their figure is the piece's own score, which never sees the
 	# unique's rule (the Van Keys' 12 against a plain charm's 30), so nothing is better outright - the player's to
 	# judge. A gun's or body piece's figure is the runner's own with it on, the rule counted where it touches the
@@ -10923,7 +11746,9 @@ func _stash_grades() -> Array:
 	return k
 
 
-func _compare(it: Dictionary, slot: String) -> int:
+func _compare(it: Dictionary, slot: String, moved := false) -> int:
+	if moved:
+		it = moved_over(it)                  # the Kit's verdict reads the piece with your parts moved over (29 Oct, the compare's A)
 	# the top bar's figure, the dots in (18 Oct: the hits alone called a fire build's Epic a downgrade); once a kit, as
 	# the survival baseline is (22 Oct, the pass's wall: it was tried on again for every piece compared)
 	if not _cmp_cache.has("d0"):
@@ -10934,10 +11759,16 @@ func _compare(it: Dictionary, slot: String) -> int:
 	var kind: String = Data.SLOT_SCORE.get(slot, "")
 	if kind == "dps":
 		return g
+	if kind == "grip":
+		# gloves (29 Oct): the fight's damage, pace in - their whole job; a trade is the player's
+		if not _cmp_cache.has("f0"):
+			_cmp_cache["f0"] = _try({}, fight_damage)
+		var frel: float = (_try(it, fight_damage) - float(_cmp_cache["f0"])) / maxf(float(_cmp_cache["f0"]), 0.01)
+		return 1 if frel > TRY_EPS else (-1 if frel < -TRY_EPS else 0)
 	# each way it's read (12 Oct): the damage, the piece's own job, and for what's on the body the survival figure (a
 	# body piece's job is that figure). Up on one and down on none, better; the reverse, worse; both, a trade
 	var ways: Array = [g]
-	var srel: float = survival_gain(it)
+	var srel: float = survival_gain(it)      # `it` is already as it'd be worn
 	if slot in SURV_SLOTS:
 		ways.append(1 if srel > TRY_EPS else (-1 if srel < -TRY_EPS else 0))
 	if kind != "armour":
@@ -10955,16 +11786,16 @@ func _compare(it: Dictionary, slot: String) -> int:
 ## How much better, as a share of what the slot gives now (the bot's shop weighs one slot against another by it).
 ## An empty slot filled counts as doubling it (1.0): first in line, without the share blowing up over nothing.
 const EMPTY_GAIN := 1.0
-func upgrade_gain(it: Dictionary) -> float:
+func upgrade_gain(it: Dictionary, moved := false) -> float:
 	var slot: String = str(it.get("slot", ""))
 	if not equipped.has(slot):
 		return 0.0
 	if equipped[slot] == null:
 		return EMPTY_GAIN
 	var v0: float = fit_value({}, slot)
-	var g: float = (fit_value(it) - v0) / maxf(v0, 0.000001)
+	var g: float = (fit_value(it, "", -1, moved) - v0) / maxf(v0, 0.000001)
 	if slot in SURV_SLOTS and Data.SLOT_SCORE.get(slot, "") != "armour":
-		g = maxf(g, survival_gain(it))       # a charm or rig bought for its regen or resists (the review: the bot never would)
+		g = maxf(g, survival_gain(it, moved))       # a charm or rig bought for its regen or resists (the review: the bot never would)
 	return g
 
 
@@ -10983,26 +11814,207 @@ func best_in_stash(slot: String) -> Dictionary:
 
 
 func equip_best(slot: String) -> bool:
-	if mission != null:
+	if runner_busy():                         # away (29 Oct): the kit's with the runner
 		return false
 	# the best of the ones that are better outright (a trade is the player's to make)
 	var best := {}
 	var bs := -INF
 	var key := _kit_key()                # once a scan (22 Oct, the pass's wall)
 	for it in stash:
-		if it["slot"] == slot and can_wear(it) and compare(it, key) == 1:
-			var v := fit_value(it, slot, key)
+		if it["slot"] == slot and can_wear(it) and compare(it, key, true) == 1:     # read as the swap leaves it (29 Oct)
+			var v := fit_value(it, slot, key, true)
 			if v > bs:
 				best = it
 				bs = v
 	if best.is_empty():
 		return false
+	if swap_moves(best):
+		if swap_with_parts(int(best["id"])):     # read with your parts moved over, worn so (29 Oct, the compare's A)
+			_feed(best)
+			return true
 	_remove(best)
 	chron("equip", {"slot": slot, "how": "best", "on": _chron_item(best), "off": _chron_item(equipped[slot])})
 	if equipped[slot] != null:
 		stash.append(equipped[slot])
 	equipped[slot] = best
 	_feed(best)
+	return true
+
+
+## The compare's three readings (29 Oct, Matt: "it becomes really difficult to compare an item 1:1 if you have
+## attachments and sockets"; the Compare board's layout A). A piece and the worn one in its slot, either with parts or
+## socketables on: as they stand, base to base (both bare), and with your parts moved over - the found piece with the
+## worn's parts where its mounts take them (open at the Bench, a typed part on its type), its socketables in the
+## sockets it has; what won't go goes to the stash, named. The Kit's verdict, its stash's arrow and Equip if better read
+## the third (moved_over) when the swap moves something, so what's read is what's worn after "Swap, parts and all";
+## everywhere else (a run's pack, the Fence) reads as they stand (the fix round, 29 Oct).
+func has_parts(piece) -> bool:
+	return piece is Dictionary and Dictionary(piece.get("attachments", {})).values().any(func(a): return a != null)
+
+
+## Whether "Swap, parts and all" moves anything (the fix round, 29 Oct, the UI review's B2): the worn one in its slot carries a
+## part that goes onto `it`. Else the act is a plain Equip, read as the piece stands.
+func swap_moves(it: Dictionary) -> bool:
+	var on_kit = equipped.get(str(it.get("slot", "")))
+	if on_kit == null or int(on_kit.get("id", -1)) == int(it.get("id", -2)) or not has_parts(on_kit):
+		return false
+	return not Array(parts_moved(it, on_kit)["moved"]).is_empty()
+
+
+## The found piece with the worn's parts on it where they fit: {copy, moved: [names], left: [names], bumped: [the found's
+## own parts they push off]}.
+func parts_moved(found: Dictionary, on_kit: Dictionary) -> Dictionary:
+	var copy: Dictionary = found.duplicate(true)
+	var moved: Array = []
+	var left: Array = []
+	var left_ids: Array = []
+	var bumped: Array = []
+	var ty: String = str(Items.base_of(found).get("type", ""))
+	var socks: Array = []
+	for k in copy.get("attachments", {}):
+		if str(k).begins_with("socket"):
+			socks.append(str(k))
+	socks.sort()
+	for mount in on_kit.get("attachments", {}):
+		var a = on_kit["attachments"][mount]
+		if a == null:
+			continue
+		var at := ""
+		if str(mount).begins_with("socket"):
+			if not socks.is_empty():
+				at = str(socks.pop_front())
+		elif copy["attachments"].has(mount) and mount_open(str(mount)) and Items.att_fits(a, ty):
+			at = str(mount)
+		if at == "":
+			left.append(str(a["base"]))
+			left_ids.append(int(a["id"]))
+			continue
+		if copy["attachments"][at] != null:
+			bumped.append(copy["attachments"][at])
+		copy["attachments"][at] = Dictionary(a).duplicate(true)
+		moved.append(str(a["base"]))
+	return {"copy": copy, "moved": moved, "left": left, "left_ids": left_ids, "bumped": bumped}
+
+
+## A piece as the try-ons read it: with the worn's parts moved over when the worn one in its slot carries any (and it isn't
+## the worn one itself); else as it is.
+func moved_over(it: Dictionary) -> Dictionary:
+	if it.is_empty():
+		return it
+	var on_kit = equipped.get(str(it.get("slot", "")))
+	if on_kit == null or int(on_kit.get("id", -1)) == int(it.get("id", -2)) or not has_parts(on_kit):
+		return it
+	return parts_moved(it, on_kit)["copy"]
+
+
+## A piece bare: no parts, no socketables, its mounts and sockets as they are.
+static func bare(it: Dictionary) -> Dictionary:
+	var b: Dictionary = it.duplicate(true)
+	for k in b.get("attachments", {}):
+		b["attachments"][k] = null
+	return b
+
+
+## The three readings for a gun against the worn one, [] when neither carries a part or it's no gun (one reading as before):
+## each {key, label, found, worn, line} - the runner's damage a second, as the sim sums it.
+func compare_readings(it: Dictionary) -> Array:
+	var slot: String = str(it.get("slot", ""))
+	var on_kit = equipped.get(slot)
+	# a gun's alone (the fix round, 29 Oct, the UI review's B6 and D5): a body piece's odds against the front sit flat, so
+	# its socketable reads better as the plain head and the deltas
+	if Data.SLOT_SCORE.get(slot, "") != "dps" or on_kit == null or int(on_kit.get("id", -1)) == int(it.get("id", -2)) or not (has_parts(on_kit) or has_parts(it)):
+		return []
+	var f: Callable = damage_total
+	var w_stand: float = float(_try({}, f))
+	var mv: Dictionary = parts_moved(it, on_kit)
+	var out: Array = []
+	out.append({"key": "stand", "label": "As they stand", "found": float(_try(it, f)), "worn": w_stand, "line": _stand_line(it, on_kit)})
+	out.append({"key": "bare", "label": "Base to base", "found": float(_try(bare(it), f)), "worn": float(_try(bare(on_kit), f)), "line": ["Both bare: no parts, no sockets", "Both bare"]})
+	out.append({"key": "moved", "label": "With your parts moved over", "found": float(_try(mv["copy"], f)), "worn": w_stand, "line": _moved_line(mv), "left": mv["left"]})
+	return out
+
+
+## The first reading's small line: what's on each now, long to short.
+func _stand_line(it: Dictionary, on_kit: Dictionary) -> Array:
+	var yours: Array = Items.fitted_words(on_kit)
+	var theirs: Array = Items.fitted_words(it)
+	var y: String = "nothing on yours" if not has_parts(on_kit) else "yours: %s" % str(yours[mini(1, yours.size() - 1)])
+	var t: String = "nothing on this" if not has_parts(it) else "this: %s" % str(theirs[mini(1, theirs.size() - 1)])
+	var line: String = "%s · %s" % [y, t]
+	var n_y: int = Dictionary(on_kit.get("attachments", {})).values().filter(func(a): return a != null).size()
+	var n_t: int = Dictionary(it.get("attachments", {})).values().filter(func(a): return a != null).size()
+	return [line.left(1).to_upper() + line.substr(1), "Yours %d fitted · this %d" % [n_y, n_t]]     # the middle form keeps the count (the fix round, the UI review's C3)
+
+
+## The third reading's small line, long to short: what moves onto this one, what of yours goes to the stash, and this one's
+## own parts it pushes off (the fix round, 29 Oct: the UI review's B3 and C4, the language review's "to the stash").
+func _moved_line(mv: Dictionary) -> Array:
+	var moved: Array = mv["moved"]
+	var off: Array = Array(mv["left"]) + Array(mv["bumped"]).map(func(a): return str(a["base"]))
+	var go: String = ("%s onto this one" % ", ".join(moved)) if not moved.is_empty() else "Nothing moves over"
+	var stash_w: String = ("%s to the stash" % ", ".join(off)) if not off.is_empty() else ""
+	var forms: Array = []
+	forms.append(go + ((" · " + stash_w) if stash_w != "" else ""))
+	if not off.is_empty():
+		forms.append("%s · %d to the stash" % [("%d moved" % moved.size()) if not moved.is_empty() else "Nothing moves over", off.size()])
+		forms.append("%d moved · %d off" % [moved.size(), off.size()])
+	else:
+		forms.append("%d part%s moved over" % [moved.size(), "" if moved.size() == 1 else "s"])
+	return forms
+
+
+## Swap, parts and all (29 Oct): the stash piece on, the worn one's parts and socketables onto it where they fit, the
+## rest off into the stash; the new piece's own parts they push off go to the stash too. False when it can't be worn,
+## or the stash hasn't the room for what comes off.
+func swap_with_parts(id: int) -> bool:
+	if mission != null or not can_equip_item(id):
+		return false
+	var it := {}
+	for x in stash:
+		if int(x["id"]) == id:
+			it = x
+	if it.is_empty():
+		return false
+	var slot: String = str(it["slot"])
+	var on_kit = equipped[slot]
+	if on_kit == null or not has_parts(on_kit):
+		return equip_item(id)
+	var mv: Dictionary = parts_moved(it, on_kit)
+	var need := 0
+	for b in mv["bumped"]:
+		need += Items.size(b)
+	for mount in on_kit["attachments"]:
+		var a = on_kit["attachments"][mount]
+		if a != null and int(a["id"]) in mv["left_ids"]:
+			need += Items.size(a)
+	var out_cells: int = 0 if stash_free(it) or tab_of(it) != "" else Items.size(it)
+	if stash_used() - out_cells + Items.size(on_kit) + need > stash_cap():
+		return false
+	if not equip_item(id):
+		return false
+	var new_piece: Dictionary = equipped[slot]
+	var moved_n := 0
+	for at in mv["copy"]["attachments"]:
+		var a = mv["copy"]["attachments"][at]
+		if a == null:
+			continue
+		for mount in on_kit["attachments"]:
+			var w = on_kit["attachments"][mount]
+			if w != null and int(w["id"]) == int(a["id"]):
+				if new_piece["attachments"].get(at) != null:
+					stash_put(new_piece["attachments"][at])     # the new piece's own, pushed off
+				new_piece["attachments"][at] = w
+				on_kit["attachments"][mount] = null
+				moved_n += 1
+				break
+	for mount in on_kit["attachments"]:
+		if on_kit["attachments"][mount] != null:
+			stash_put(on_kit["attachments"][mount])     # what won't go: off the old piece into the stash
+			on_kit["attachments"][mount] = null
+	_dry_memo.clear()
+	var off: Array = Array(mv["left"]) + Array(mv["bumped"]).map(func(a): return str(a["base"]))
+	var nm: String = Words.mid(Items.full_name(new_piece)) if new_piece.has("unique") else "the " + Words.mid_base(Items.full_name(new_piece))     # never lowered whole (the language review)
+	log_event("Swapped to %s, parts and all: %d moved over%s" % [nm, moved_n, (", %s to the stash" % ", ".join(off)) if not off.is_empty() else ""])
 	return true
 
 
@@ -11220,7 +12232,7 @@ func equip_item(id: int) -> bool:
 ## replaces must fit in the stash once the new one has left it (footprints
 ## differ - a riot suit coming off needs more room than a stab vest going on).
 func can_equip_item(id: int) -> bool:
-	if mission != null:
+	if runner_busy():                    # out, or away on a repeat (29 Oct): the kit's with them
 		return false
 	for it in stash:
 		if it["id"] == id:
@@ -11431,7 +12443,7 @@ func leave(id: int) -> bool:
 
 
 func unequip(slot: String) -> bool:
-	if mission != null or equipped[slot] == null or not stash_fits(equipped[slot]):
+	if runner_busy() or equipped[slot] == null or not stash_fits(equipped[slot]):
 		return false
 	stash.append(equipped[slot])
 	equipped[slot] = null
@@ -11458,7 +12470,7 @@ func restock() -> void:
 ## The Fence's shelf, rolled afresh.
 func _restock_market() -> void:
 	market = []
-	var t := gear_tier()
+	var t := best_tier_open()                # the best tier open, the endgame's too (29 Oct, the review)
 	for k in range(market_stock()):
 		var slot: String = Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)]
 		var roll := rng.randf()
@@ -11477,7 +12489,7 @@ func _restock_market() -> void:
 		if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 			it = Items.roll(Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)], t, rng)
 		if yard_has("arms_dealer") and not Items.is_ammo(it) and not Items.is_grenade(it):
-			it = Items.roll(it["slot"], loot_tier_at(deepest_site_level()), rng, 0.0, false, false, "", "", Data.FX["yard/arms_dealer"], 0, deepest_site_level())     # the Fence's Arms dealer
+			it = Items.roll(it["slot"], best_tier_open(), rng, 0.0, false, false, "", "", Data.FX["yard/arms_dealer"], 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
 	if yard_has("back_room"):
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
@@ -11485,7 +12497,7 @@ func _restock_market() -> void:
 			market.append(Items.roll_unique(bu, rng, gamble_level(), shop_unique_tier()))    # the Fence's Back room: a loose one (the ungated), held in its range
 
 
-## The Fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
+## The Fence's gamble: GAMBLE_SHOWN kinds of the twelve, rotated with every restock.
 func _restock_gamble() -> void:
 	var kinds: Array = []
 	for k in Data.GAMBLE_KINDS:
@@ -11498,7 +12510,7 @@ func _restock_gamble() -> void:
 ## Whether the pool holds a base of the kind at the tier opened (not a start base).
 func _gamble_has_base(k: Dictionary) -> bool:
 	for b in Data.BASES[k["slot"]]:
-		if not b.get("start", false) and int(b["tier"]) <= gear_tier() and (k["type"] == "" or b.get("type", "") == k["type"]):
+		if not b.get("start", false) and int(b["tier"]) <= best_tier_open() and (k["type"] == "" or b.get("type", "") == k["type"]):
 			return true
 	return false
 
@@ -11573,7 +12585,7 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 			return Items.roll_unique(gu, rng, gamble_level(), shop_unique_tier())     # one whose range takes the deepest tier dug; else a plain roll
 	var it: Dictionary = {}
 	for tries in range(40):
-		it = Items.roll(k["slot"], gear_tier(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, 0, gamble_level())     # at your deepest site's level, as its drops (15 Oct, the loot read)
+		it = Items.roll(k["slot"], best_tier_open(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, 0, gamble_level())     # at your deepest site's level, as its drops (15 Oct, the loot read)
 		if k["type"] == "" or Items.base_of(it).get("type", "") == k["type"]:
 			return it
 	# the type never came up: the kind's lowest base, with the roll's affixes on it
@@ -11733,7 +12745,7 @@ func rarity_spare(r: int) -> Array:
 		if _spare(it, r):
 			n += 1
 			worth += sell_price(it)
-		elif int(it["rarity"]) == r and str(it.get("slot", "")) in Data.SLOTS and (compare(it) == 1 or sell_kept(it)):
+		elif int(it["rarity"]) == r and str(it.get("slot", "")) in Data.SLOTS and (compare(it, -1, true) == 1 or sell_kept(it)):
 			kept += 1
 	return [n, worth, kept]
 
@@ -11752,12 +12764,13 @@ func is_junk(it: Dictionary) -> bool:
 		return false
 	if str(it.get("slot", "")) in JUNK_KEEPS.get(junk_keep, []):
 		return false
-	return compare(it) != 1              # an upgrade waiting for its level is kept too
+	return compare(it, -1, true) != 1    # an upgrade waiting for its level is kept too; read as the Kit's swap would wear it
 
 
-## Better than what's worn, tried on (compare), and wearable now: the compare's "▲ Upgrade", the stash's arrow.
-func is_upgrade(it: Dictionary) -> bool:
-	return can_wear(it) and compare(it) == 1
+## Better than what's worn, tried on (compare), and wearable now: the compare's "▲ Upgrade", the stash's arrow. `moved`: as
+## the swap would leave it (the Kit's stash), else as it stands (a run's pack, the Fence's shelf: the fix round, 29 Oct).
+func is_upgrade(it: Dictionary, moved := false) -> bool:
+	return can_wear(it) and compare(it, -1, moved) == 1
 
 
 ## Gear gated by level (15 Oct): whether the runner is level enough to put it on.
@@ -11829,7 +12842,7 @@ func loot_rule_fits(r: Dictionary, it: Dictionary) -> bool:
 	var rar: int = int(it.get("rarity", 0))
 	if rar < int(r.get("rarity", 0)) or rar > int(r.get("upto", 4)):
 		return false
-	if str(r.get("slot", "")) != "" and str(it["slot"]) != str(r["slot"]) and not (str(r["slot"]) == "Body" and str(it["slot"]) in ["Helmet", "Armour", "Charm"]) and not (str(r["slot"]) == "Bags" and str(it["slot"]) in ["Rig", "Backpack"]):
+	if str(r.get("slot", "")) != "" and str(it["slot"]) != str(r["slot"]) and not (str(r["slot"]) == "Body" and str(it["slot"]) in ["Helmet", "Armour", "Gloves", "Charm"]) and not (str(r["slot"]) == "Bags" and str(it["slot"]) in ["Rig", "Backpack"]):
 		return false
 	if str(r.get("gun", "")) != "" and str(Items.base_of(it).get("type", "")) != str(r["gun"]):
 		return false
@@ -12186,7 +13199,7 @@ func _say_unlocks(before: Array) -> void:
 
 ## Puts a learnt skill in slot `i` ("" empties it); one copy a loadout, never on a run.
 func set_skill_slot(i: int, id: String) -> bool:
-	if i < 0 or i >= Data.SKILL_SLOTS or mission != null:
+	if i < 0 or i >= Data.SKILL_SLOTS or runner_busy():
 		return false
 	if id != "" and (not skill_known(id) or skill(id).is_empty()):
 		return false
@@ -12364,7 +13377,7 @@ func _skills_tick(m: Dictionary, t: Dictionary, dt: float, on_you: int) -> void:
 			var best := -1.0
 			for i in range(Data.SKILL_SLOTS):
 				var id: String = str(skill_slots[i])
-				if id == "" or not skill_auto[i] or not _skill_can(m, i):
+				if id == "" or not (skill_auto[i] or m.get("unwatched", false)) or not _skill_can(m, i):     # unwatched (29 Oct, the designer): the manual ones fire too
 					continue
 				if not _skill_rule_holds(m, t, str(skill(id)["rule"]), on_you):
 					continue
@@ -12707,7 +13720,7 @@ func _sk_set(sk: Dictionary, key: String, dur: float) -> void:
 
 ## A skill's base: your hits a second, not the dots' burn (25 Oct, the review: a dot build's skills rode its burn).
 func _skill_base() -> float:
-	return float(damage_split()["hits"])
+	return float(damage_split({}, false)["hits"])     # never the gun type's edge (29 Oct, the review)
 
 
 ## A skill's hit on the man in front, counted with the rest (the run screen's numbers read `dealt`). `resisted`: cut
@@ -12727,7 +13740,7 @@ func _skill_damage(m: Dictionary, amount: float, ty := "physical", resisted := f
 	if has_joint("recruit_poison") and amount > 0.0:
 		if not m.has("dots"):
 			m["dots"] = {}
-		_dot_add(m["dots"], "poison", amount * 0.3, maxf(amount * 0.3, damage_total()))     # joined with the Rat Man: it poisons them (joints B, 24 Oct)
+		_dot_add(m["dots"], "poison", amount * 0.3, maxf(amount * 0.3, damage_total_raw()))     # joined with the Rat Man: it poisons them (joints B, 24 Oct)
 	m["target_hp"] -= amount
 	_count_src(m, "skill:" + str(m.get("src_now", "")), amount)
 	m["dealt"] = float(m.get("dealt", 0.0)) + amount
@@ -12740,7 +13753,7 @@ func _skill_damage(m: Dictionary, amount: float, ty := "physical", resisted := f
 func _skill_dot(m: Dictionary, ty: String, secs: float) -> void:
 	if not m.has("dots"):
 		m["dots"] = {}
-	_dot_add(m["dots"], ty, damage_total() * secs, damage_total())
+	_dot_add(m["dots"], ty, damage_total_raw() * secs, damage_total_raw())     # a skill's dot: no type edge (29 Oct)
 
 
 ## The share of this tick a timed effect covers: a whole tick while it runs, the part left in its last.
@@ -13044,7 +14057,8 @@ func chron(kind: String, data := {}) -> void:
 	e.merge(data, true)
 	chronicle.append(e)
 	chron_count += 1
-	_came_back_line(e)
+	if not unwatched():
+		_came_back_line(e)                    # a repeat's runs have their own report (29 Oct): not the per-run card
 
 
 ## The shell's real time at the game: the player's hours, and a snapshot every SNAP_S of them.
@@ -13097,6 +14111,7 @@ func _state() -> Dictionary:
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 		"skill_slots": skill_slots, "skill_auto": skill_auto,
+		"repeat": repeat, "repeat_report": repeat_report, "wagers": wagers,
 	}
 
 
@@ -13192,6 +14207,11 @@ func load_dict(d: Dictionary) -> void:
 	clinic = d.get("clinic", [])
 	supplies_in = int(d.get("supplies_in", 0))
 	mission = d.get("mission", null)
+	repeat = d.get("repeat", {})                 # away on a repeat (29 Oct): saved mid-repeat, back where it was
+	repeat_report = d.get("repeat_report", {})
+	wagers = d.get("wagers", {})
+	for wk in wagers:
+		wagers[wk]["taken"] = Array(wagers[wk].get("taken", [])).map(func(x): return int(x))     # JSON's floats: the offer's indices
 	if mission is Dictionary:
 		if mission.get("pack_key", null) is Array:
 			mission["pack_key"] = mission["pack_key"].map(func(v): return int(v))     # JSON's floats: the shape reads as itself
@@ -13640,7 +14660,7 @@ func loadout_missing(i: int) -> Array:
 ## won't come (gone, or no room for what comes off) is named in the log; what's on stays on. False on a run or empty.
 func loadout_wear(i: int) -> bool:
 	var e := loadout(i)
-	if e.is_empty() or mission != null:
+	if e.is_empty() or runner_busy():
 		return false
 	_dry_memo.clear()
 	var missed: Array = []

@@ -857,7 +857,7 @@ func show_state(sim, m: Dictionary) -> void:
 			_hs = hands_scale(ht)
 			_hands.scale = Vector2(_hs, _hs)
 			_hands_at = HANDS_CORNER - used_of(ht).end * _hs
-			_mz = muzzle_of(ht, _kind, art_slug(str(gun["base"])))
+			_mz = muzzle_of(ht, _kind, art_slug(Items.art_name(str(gun["base"]))))
 		_set_swing_parts(ht)
 	_hands.visible = ht != null
 	# the search: the view pans along to the crates in the street, the next three
@@ -1313,7 +1313,7 @@ static func gun_in_hand(sim) -> Variant:
 static func hands_tex(gun) -> Texture2D:
 	if gun == null:
 		return null
-	var own: Texture2D = tex("hands/" + art_slug(str(gun["base"])))
+	var own: Texture2D = tex("hands/" + art_slug(Items.art_name(str(gun["base"]))))
 	if own != null:
 		return own
 	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"])

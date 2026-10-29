@@ -39,6 +39,9 @@ static func read(ch: Array, count_away := false) -> Dictionary:
 				if int(e.get("zone", -1)) == 3:
 					campaign = false            # the Quartermaster down: the campaign's gear read ends
 			"run":
+				if e.get("unwatched", false):
+					f["repeat_runs"] = int(f.get("repeat_runs", 0)) + 1     # a repeat's run (29 Oct): not play, shown apart
+					continue
 				if e.get("away", false) and not count_away:
 					continue
 				f["runs"] += 1
@@ -68,6 +71,8 @@ static func rows(f: Dictionary) -> Array:
 		_judged(not seen.is_empty(), off.is_empty())])
 	var gear: int = int(f.get("gear", 0))
 	var share: float = float(f.get("wearable", 0)) / float(gear) if gear > 0 else 0.0
+	if int(f.get("repeat_runs", 0)) > 0:
+		out.append(["Repeat runs (shown)", "the runs left unwatched: not play, out of every gate here", "%d" % int(f["repeat_runs"]), null])
 	out.append(["Gear to wear", "%d%% or more of the campaign's plain gear finds wearable as they drop" % roundi(WEARABLE_MIN * 100.0),
 		("%d of %d (%d%%)" % [int(f.get("wearable", 0)), gear, roundi(share * 100.0)]) if gear > 0 else "no gear found yet", _judged(gear > 0, share >= WEARABLE_MIN)])
 	var runs: int = int(f.get("runs", 0))

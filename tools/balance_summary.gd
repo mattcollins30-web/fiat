@@ -205,6 +205,46 @@ static func hunt_table(stage: int) -> Array:
 	return out
 
 
+
+## The itemisation's rows (29 Oct; the fix round, the review's B5: every slot, "none worn" where a read wore nothing
+## there, and the campaign's bases worn by no read): [name, what, words, null] each, shown, never judged.
+static func itemisation_rows(full: Array) -> Array:
+	var worn_by := {}
+	var dealt_by := {}
+	for bd in full:
+		var wn: Dictionary = bd.get("worn", {})
+		for sl in wn:
+			if not worn_by.has(sl):
+				worn_by[sl] = {}
+			for b in wn[sl]:
+				worn_by[sl][b] = float(worn_by[sl].get(b, 0.0)) + float(wn[sl][b])
+		var dl: Dictionary = bd.get("dealt_by_type", {})
+		for ty in dl:
+			dealt_by[ty] = float(dealt_by.get(ty, 0.0)) + float(dl[ty])
+	var rows: Array = []
+	var worn_words: Array = []
+	var never: Array = []
+	for sl in Data.SLOTS:
+		var by: Dictionary = worn_by.get(sl, {})
+		if by.is_empty():
+			worn_words.append("%s: none worn" % sl)
+		else:
+			var bs: Array = by.keys()
+			bs.sort_custom(func(a, b): return float(by[a]) > float(by[b]))
+			worn_words.append("%s: %s" % [sl, ", ".join(bs.slice(0, 4).map(func(b): return "%s %.1f h" % [b, float(by[b])]))])
+		for b in Data.BASES[sl]:
+			if int(b["tier"]) <= Data.CAMPAIGN_TIER and not b.get("start", false) and not by.has(str(b["name"])):
+				never.append(str(b["name"]))
+	rows.append(["Bases worn (shown)", "the bases the bot wore longest, by slot, hours over every read", "; ".join(worn_words) if not full.is_empty() else "no read carried them", null])
+	rows.append(["Bases never worn (shown)", "the campaign's bases (T%d and under) no read wore" % Data.CAMPAIGN_TIER, (", ".join(never) if not never.is_empty() else "every one worn") if not full.is_empty() else "no read carried them", null])
+	var dealt_tot := 0.0
+	for ty in dealt_by:
+		dealt_tot += float(dealt_by[ty])
+	var dts: Array = dealt_by.keys()
+	dts.sort_custom(func(a, b): return float(dealt_by[a]) > float(dealt_by[b]))
+	rows.append(["Damage by gun type (shown)", "damage dealt each run, under the type of primary it set off with, every read", ", ".join(dts.map(func(ty): return "%s %.0f%%" % [ty, 100.0 * float(dealt_by[ty]) / maxf(1.0, dealt_tot)])) if not dts.is_empty() else "no read carried it", null])
+	return rows
+
 func _init() -> void:
 	if "hunt" in OS.get_cmdline_user_args():
 		# `-- hunt`: the build hunt (tools\balance.bat <hours> 0 hunt), to docs/balance/hunt.md - the two stages, then the
@@ -379,6 +419,17 @@ func _init() -> void:
 		var wnd: float = (float(bd["wounded_runs"]) / float(bd["runs"])) if int(bd["runs"]) > 0 else 0.0
 		shown.append("%s: bails one in %s, wounded %.0f%%" % [bd["build"], ("%.0f" % every) if every < 999.0 else "never", wnd * 100.0])
 	rows.append(["Deaths and wounds (shown)", "the bails and wounds a build", "; ".join(shown), null])
+	# the repeat runs (29 Oct, shown, not a gate): how much of each read the bot left to them, and their bails
+	var reps: Array = []
+	for bd in full:
+		if bool(bd.get("norepeat", false)):
+			reps.append("%s: off" % bd["build"])
+		else:
+			reps.append("%s: %d runs in %d repeats of %d runs, %d bails" % [bd["build"], int(bd.get("repeat_runs", 0)), int(bd.get("repeats", 0)), int(bd["runs"]), int(bd.get("repeat_bails", 0))])
+	rows.append(["Repeat runs (shown)", "the runs the bot left unwatched after the campaign, and their bails", "; ".join(reps), null])
+	# the itemisation's reads (29 Oct, shown, not a gate): the bases worn longest a slot, the campaign's never worn, and the
+	# damage by gun type
+	rows.append_array(itemisation_rows(full))
 	# the endgame's gates (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the pinnacle builds (the six combos, their
 	# pieces on) take every place first try with no deaths; every other build takes every place inside three tries
 	if not broken.is_empty():

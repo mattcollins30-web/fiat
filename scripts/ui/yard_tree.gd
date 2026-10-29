@@ -14,6 +14,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H                 # every room's band, one height (10 Oct, Bands-U A)
@@ -22,7 +23,8 @@ const CHIPS_W := 330
 const CHIPS_ROWS := 3
 const BODY_Y := HEAD_H + 8
 const LEFT_W := 900                        # the cards and what the Pitch gives
-const CARD_W := 216
+const ACROSS := 5                          # the buildings five across (29 Oct, the Bunkhouse the ninth: the designer's layout)
+const CARD_W := 170
 const CARD_H := 140
 const CARD_GAP := 12
 const GIVES_Y := BODY_Y + 2 * CARD_H + CARD_GAP + 12
@@ -34,7 +36,9 @@ const TILE_GAP := 8
 const TILES_Y := 114
 const RANK_Y := TILES_Y + 5 * (TILE_H + TILE_GAP) + 4
 const BUILD_W := 250
-const PIP := 13
+const PIP := 10
+const PIP_GAP := 3
+const CARD_PAD := 10
 const STEPS := 5
 
 var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
@@ -75,10 +79,10 @@ func _init() -> void:
 	_chips = Chips.new(CHIPS_W, 9)
 	_chips.position = Vector2(PAD, CHIPS_Y)
 	head.add_child(_chips)
-	# the cards: four across, two down
+	# the cards: five across, two down (29 Oct: nine buildings)
 	for i in range(Data.YARD.size()):
 		@warning_ignore("integer_division")
-		var at := Vector2((i % 4) * (CARD_W + CARD_GAP), BODY_Y + (i / 4) * (CARD_H + CARD_GAP))
+		var at := Vector2((i % ACROSS) * (CARD_W + CARD_GAP), BODY_Y + (i / ACROSS) * (CARD_H + CARD_GAP))
 		var b := Button.new()
 		b.position = at
 		b.size = Vector2(CARD_W, CARD_H)
@@ -86,19 +90,19 @@ func _init() -> void:
 		b.pressed.connect(_pick_building.bind(str(Data.YARD[i]["key"])))
 		add_child(b)
 		var c := {"button": b, "key": str(Data.YARD[i]["key"])}
-		c["name"] = UI.label(b, Rect2(14, 8, CARD_W - 28, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["built"] = UI.label(b, Rect2(14, 36, CARD_W - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["name"] = UI.label(b, Rect2(CARD_PAD, 8, CARD_W - 2 * CARD_PAD, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["built"] = UI.label(b, Rect2(CARD_PAD, 36, CARD_W - 2 * CARD_PAD, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["lines"] = []
 		for k in range(2):
 			var ly: float = 66 + k * 24
-			var l := UI.label(b, Rect2(14, ly - 3, CARD_W - 28 - STEPS * (PIP + 4), 22), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var l := UI.label(b, Rect2(CARD_PAD, ly - 3, CARD_W - 2 * CARD_PAD - STEPS * (PIP + PIP_GAP), 22), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			var pips: Array = []
 			for s in range(STEPS):
-				var p := UI.panel(b, Rect2(CARD_W - 14 - (STEPS - s) * (PIP + 4) + 4, ly, PIP, PIP), UI.box(Color.TRANSPARENT, 3, 1, Pal.TEXT_3))
+				var p := UI.panel(b, Rect2(CARD_W - CARD_PAD - (STEPS - s) * (PIP + PIP_GAP) + PIP_GAP, ly + 2, PIP, PIP), UI.box(Color.TRANSPARENT, 3, 1, Pal.TEXT_3))
 				p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				pips.append(p)
 			c["lines"].append({"label": l, "pips": pips})
-		c["salvage"] = UI.label(b, Rect2(14, CARD_H - 30, CARD_W - 28, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["salvage"] = UI.label(b, Rect2(CARD_PAD, CARD_H - 30, CARD_W - 2 * CARD_PAD, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		for l in [c["name"], c["built"], c["salvage"]] + c["lines"].map(func(x): return x["label"]):
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cards.append(c)
@@ -163,7 +167,7 @@ func show_state(s, purse: Dictionary) -> void:
 		return
 	_shown = sig
 	var built: int = sim.yard_built()
-	var of: int = Data.YARD.size() * STEPS * 2
+	var of: int = Data.yard_step_count()     # the buildable steps (29 Oct: not the expeditions' stubs)
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 350 - _unit.position.x
@@ -212,7 +216,7 @@ func _show_cards() -> void:
 			c["button"].add_theme_stylebox_override(st, UI.box(Pal.SELECT if st == "hover" else Pal.CARD, 8, 2 if picked_now else 1, Pal.ACCENT if picked_now else Pal.CARD_LINE))
 		UI.fit(c["name"], [en.call(str(b["name"])), en.call(str(b["name"]).trim_prefix("The "))])
 		var n: int = _line_built(key, "a") + _line_built(key, "b")
-		UI.fit(c["built"], ["%d of %d built · rank %d" % [n, 2 * STEPS, sim.yard_rank(key)], "%d of %d · r%d" % [n, 2 * STEPS, sim.yard_rank(key)]])
+		UI.fit(c["built"], ["%d of %d built · rank %d" % [n, Data.yard_step_count(key), sim.yard_rank(key)], "%d of %d · r%d" % [n, Data.yard_step_count(key), sim.yard_rank(key)]])
 		c["built"].add_theme_color_override("font_color", Pal.ACCENT if n > 0 else Pal.TEXT_2)
 		for k in range(2):
 			var side: String = "a" if k == 0 else "b"
@@ -233,6 +237,8 @@ func _show_gives() -> void:
 			for k in range(2):
 				if sim.yard_built_side(str(b["key"]), c, "a" if k == 0 else "b"):
 					got.append(en.call(str(b["picks"][c][k]["short"])))
+		if str(b["key"]) == "bunkhouse" and not got.is_empty():
+			got = [sim.repeat_gives()]           # the share now, once (the review: every step's share listed)
 		if sim.yard_rank(str(b["key"])) > 0:
 			got.append("rank %d" % sim.yard_rank(str(b["key"])))
 		UI.fit(_gives_rows[i][0], [en.call(str(b["name"]))])
@@ -250,6 +256,8 @@ func _show_gives() -> void:
 func step_look(key: String, col: int, side: String) -> String:
 	if sim.yard_built_side(key, col, side):
 		return "built"
+	if bool(Data.yard_building(key)["picks"][col][0 if side == "a" else 1].get("stub", false)):
+		return "stub"                         # the Bunkhouse's line B (29 Oct): comes with the trips
 	if col >= sim.yard_cols():
 		return "shut"
 	if col > 0 and not sim.yard_built_side(key, col - 1, side):
@@ -293,6 +301,8 @@ func _show_detail() -> void:
 					colour = Pal.TEXT_2
 				"waits":
 					UI.fit(d["state"], ["After the step above"])
+				"stub":
+					UI.fit(d["state"], [Words.REPEAT["stub"]])
 				_:
 					UI.fit(d["state"], [Data.yard_gate(sx), "Not open yet"])
 			d["state"].add_theme_color_override("font_color", colour)
@@ -337,6 +347,11 @@ func _show_picked(key: String, b: Dictionary, en: Callable, kind: String) -> voi
 	if sim.yard_built_side(key, c, side):
 		_other.text = "Built"
 		_build.text = "Built"
+		_build.disabled = true
+		return
+	if bool(pk.get("stub", false)):
+		UI.fit(_other, [Words.REPEAT["stub"]])     # the Bunkhouse's line B (29 Oct): nothing to buy until the trips are in
+		UI.fit_button(_build, [Words.REPEAT["stub"], "Not yet"])
 		_build.disabled = true
 		return
 	var why: String = sim.yard_pick_block(key, c, side)
@@ -392,7 +407,7 @@ func tile(key: String, col: int, side: String) -> Dictionary:
 	if side == "rank":
 		return {"look": "built" if sim.yard_rank(key) > 0 else ("open" if sim.yard_rank_block(key) == "" or sim.yard_rank_block(key).begins_with("Short") else "shut")}
 	var look := step_look(key, col, side)
-	return {"look": {"next": "open", "twin": "other"}.get(look, look)}
+	return {"look": {"next": "open", "twin": "other", "stub": "shut"}.get(look, look), "stub": look == "stub"}
 
 
 func text_nodes() -> Array:

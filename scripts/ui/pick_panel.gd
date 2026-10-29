@@ -52,6 +52,15 @@ var _words: Label                                             # the foot's line:
 var _flavour_text := ""
 var _buttons: Array[Button] = []
 var _actions: Array = []
+## The compare's three readings (29 Oct, the Compare board's layout A): in the right column under the worn piece's
+## name, a row each - its words, the found piece's figure against the worn's - and a small line under it.
+const READINGS := 3
+const READ_Y := 40                                            # under the right column's title
+const READ_ROW := 24
+const READ_LINE := 18
+const READ_GAP := 4
+var _reads: Array = []                                        # [{label, fig, line}]
+var readings: Array = []                                      # the readings showing, as the sim gave them (the tests')
 
 
 func _init(width: int, height: int) -> void:
@@ -84,6 +93,11 @@ func _init(width: int, height: int) -> void:
 	_right_title = UI.label(_panel, Rect2(rx, HEAD_Y, rw, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(LINES):
 		_right_lines.append(UI.label(_panel, Rect2(rx, HEAD_Y + 40 + i * 28, rw, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	for i in range(READINGS):
+		var ry: int = HEAD_Y + READ_Y + i * (READ_ROW + READ_LINE + READ_GAP)
+		_reads.append({"label": UI.label(_panel, Rect2(rx, ry, rw, READ_ROW), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false),
+			"fig": UI.label(_panel, Rect2(rx, ry, rw, READ_ROW), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false),
+			"line": UI.label(_panel, Rect2(rx, ry + READ_ROW, rw, READ_LINE), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)})
 	_empty_title = UI.label(_panel, Rect2(PAD, 10, w - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(LINES):
 		_empty_lines.append(UI.label(_panel, Rect2(PAD, 48 + i * 28, w - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
@@ -143,6 +157,84 @@ func show_fitted(fitted: Dictionary, sim, kicker := "Fitted now", tail = "", ext
 	_heads[1].show_item(fitted, sim, tail, extra, false)
 
 
+## The right column as the compare's readings (29 Oct, layout A): the worn piece's kicker, price and name, then a row a
+## reading - its words, the found piece's figure against the worn's (in the tone of which is ahead), and the small line
+## under it. `unit` "dmg/s" for a gun; "" for a body piece, read as the odds against the worn.
+func show_readings(fitted: Dictionary, sim, rows: Array, unit: String, kicker := "Fitted now") -> void:
+	_boxes[1].visible = true
+	_kickers[1].visible = true
+	_kickers[1].text = (kicker + " · " + _cells(fitted)).to_upper()
+	_tag(1, Fmt.money(sim.sell_price(fitted)))
+	_right_title.visible = true
+	_right_title.add_theme_color_override("font_color", Pal.TEXT)
+	UI.fit(_right_title, [Items.full_name(fitted), str(fitted["base"])])
+	readings = rows
+	for i in range(READINGS):
+		var r: Dictionary = _reads[i]
+		var on: bool = i < rows.size()
+		for k in ["label", "fig", "line"]:
+			r[k].visible = on
+		if not on:
+			continue
+		var row: Dictionary = rows[i]
+		var f: float = float(row["found"])
+		var wv: float = float(row["worn"])
+		var figs: Array = []
+		if unit != "":
+			figs = ["%s against %s %s" % [_num(f), _num(wv), unit], "%s against %s" % [_num(f), _num(wv)], "%s / %s" % [_num(f), _num(wv)]]
+		else:
+			var rel: float = (f - wv) / maxf(wv, 0.000001) * 100.0
+			figs = ["%s%.0f%% odds" % ["+" if rel >= 0.0 else "−", absf(rel)], "%s%.0f%%" % ["+" if rel >= 0.0 else "−", absf(rel)]]
+		var ahead: bool = f > wv * 1.0005
+		var behind: bool = f < wv * 0.9995
+		r["fig"].add_theme_color_override("font_color", Pal.GOOD if ahead else (Pal.BAD if behind else Pal.TEXT_2))
+		r["figs"] = figs
+		UI.fit(r["line"], row["line"] if row["line"] is Array else [str(row["line"])])
+	# one figure form on every row (the fix round, 29 Oct, the UI review's B1): the longest that fits each row beside one of
+	# its words; then each row's words as long as fit beside it
+	var n: int = mini(rows.size(), READINGS)
+	var fi: int = -1
+	var n_forms: int = 0 if n == 0 else Array(_reads[0]["figs"]).size()
+	for k in range(n_forms):
+		var all_fit := true
+		for i in range(n):
+			var one := false
+			for lf in _read_labels(rows[i]):
+				if UI.text_width(_reads[i]["label"], str(lf)) + UI.text_width(_reads[i]["fig"], str(_reads[i]["figs"][k])) + 12.0 <= col_w:
+					one = true
+			all_fit = all_fit and one
+		if all_fit:
+			fi = k
+			break
+	if fi < 0:
+		fi = n_forms - 1
+	for i in range(n):
+		var r: Dictionary = _reads[i]
+		var pick_f: String = str(r["figs"][fi])
+		var labels: Array = _read_labels(rows[i])
+		var pick_l: String = str(labels.back())
+		for lf in labels:
+			if UI.text_width(r["label"], str(lf)) + UI.text_width(r["fig"], pick_f) + 12.0 <= col_w:
+				pick_l = str(lf)
+				break
+		r["fig"].text = pick_f
+		var fw: float = ceilf(UI.text_width(r["fig"], pick_f))
+		r["fig"].position.x = PAD * 2 + col_w + col_w - fw
+		r["fig"].size.x = fw
+		r["label"].size.x = col_w - fw - 12
+		r["label"].text = pick_l
+
+
+## A reading's words, long to short (the designer's for the third: "With your parts moved over").
+static func _read_labels(row: Dictionary) -> Array:
+	return {"stand": ["As they stand"], "bare": ["Base to base"], "moved": ["With your parts moved over", "Your parts moved over", "Parts moved over"]}.get(str(row["key"]), [str(row["label"])])
+
+
+## A figure for a reading: whole numbers, thousands with a comma.
+static func _num(x: float) -> String:
+	return Fmt.num(x) if absf(x) >= 1000.0 else "%.0f" % x
+
+
 ## The right column as words: a kicker, a title and lines (a med's rig, a part's bench, nothing fitted).
 func show_right_words(kicker: String, title: String, lines: Array) -> void:
 	_boxes[1].visible = kicker != "" or title != "" or not lines.is_empty()     # no box round nothing
@@ -150,6 +242,7 @@ func show_right_words(kicker: String, title: String, lines: Array) -> void:
 	_kickers[1].text = kicker.to_upper()
 	_kickers[1].size.x = col_w
 	_right_title.visible = true
+	_right_title.add_theme_color_override("font_color", Pal.TEXT_2)
 	_right_title.text = title
 	for i in range(LINES):
 		_right_lines[i].visible = true
@@ -291,6 +384,10 @@ func _clear() -> void:
 	_empty_title.visible = false
 	for l in _empty_lines:
 		l.visible = false
+	for r in _reads:
+		for k in ["label", "fig", "line"]:
+			r[k].visible = false
+	readings = []
 	_verdict.visible = false
 	_verdict.text = ""
 	for l in _deltas:
@@ -320,29 +417,58 @@ static func _cells(it: Dictionary) -> String:
 
 
 ## What fitting the pick changes: [[delta, words], ...], the headline figure first, then each affix that differs.
+## Never a figure twice and never two units in one sum (29 Oct, the review): the headline only against the same unit (a
+## pair of gloves' grip against a pace pair is two figures, each its own line), and a stat the headline already counts
+## (armour, cells, loot quality) not again; a pair of gloves leads with its reloads, rate of fire and pace, each base and
+## affixes together. A worn base's built-in figure (its role's) counts with the affix of its stat, its pace with pace's.
 static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 	var out: Array = []
-	var a := Items.headline(it)
-	var b := Items.headline(fitted)
-	var d := float(a[0]) - float(b[0])
-	if absf(d) >= 0.5:
-		out.append([d, "%.0f %s" % [absf(d), {"armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
+	var covered := {}
+	if str(it.get("slot", "")) == Data.GLOVES and str(fitted.get("slot", "")) == Data.GLOVES:
+		var fa: Dictionary = Items.glove_figs(it)
+		var fb: Dictionary = Items.glove_figs(fitted)
+		for k in [["reload_pct", "reload"], ["attack_pct", "RoF"], ["pace", "pace"]]:
+			var dg: float = float(fa[k[0]]) - float(fb[k[0]])
+			if absf(dg) >= 0.5:
+				out.append([dg, "%d%% %s" % [int(round(absf(dg))), k[1]]])
+		covered = {"reload_pct": true, "attack_pct": true, "speed_pct": true}
+	else:
+		var a := Items.headline(it)
+		var b := Items.headline(fitted)
+		var d := float(a[0]) - float(b[0])
+		if str(a[1]) == str(b[1]) and absf(d) >= 0.5:
+			out.append([d, "%.0f %s" % [absf(d), {"armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
+		covered = {{"armour": "armour", "capacity": "capacity", "loot quality": "rarity_pct"}.get(str(a[1]), ""): true}
 	var seen := {}
 	for ax in Data.AFFIXES:
-		if seen.has(ax["stat"]):
+		if seen.has(ax["stat"]) or covered.has(ax["stat"]):
 			continue                         # a stat listed twice (a gun's row and an attachment's): one delta (13 Oct)
 		seen[ax["stat"]] = true
-		var da := Items.affix_total(it, ax["stat"]) - Items.affix_total(fitted, ax["stat"])
+		var da := _stat_of(it, str(ax["stat"])) - _stat_of(fitted, str(ax["stat"]))
 		if absf(da) >= (0.05 if Items.is_tenths(ax["stat"]) else 0.5):
-			out.append([da, "%s%s %s" % [Items.fig(ax["stat"], absf(da)), "%" if ax["stat"].ends_with("_pct") else "", ax["short"]]])
+			out.append([da, "%s%s %s" % [Items.fig(ax["stat"], absf(da)), "%" if ax["stat"].ends_with("_pct") or ax["stat"].ends_with("_res") or ax["stat"] == "guard_gang" else "", ax["short"]]])
 	return out
 
 
-## The verdict for a pick against what's worn, tried on (sim.compare, 11 Oct): [words, tone].
-static func verdict_for(sim, it: Dictionary) -> Array:
+## A stat on a piece as the deltas read it (29 Oct): its affixes and its base's built-in figure; a worn base's pace with
+## pace's, its resist with the resist's.
+static func _stat_of(it: Dictionary, stat: String) -> float:
+	if it.is_empty():
+		return 0.0
+	var v: float = Items.stat_total(it, stat)
+	if stat == "speed_pct" and not Items.is_gun(it):
+		v += Items.base_pace(it)
+	if stat.ends_with("_res"):
+		v += float(Items.base_of(it).get("res", {}).get(stat.trim_suffix("_res"), 0.0))
+	return v
+
+
+## The verdict for a pick against what's worn, tried on (sim.compare, 11 Oct): [words, tone]. `moved`: as "Swap, parts
+## and all" would leave it (the Kit, when it moves something); else as it stands (the fix round, 29 Oct).
+static func verdict_for(sim, it: Dictionary, moved := false) -> Array:
 	if sim.wear_lock(it) > 0:
 		return ["Level %d to wear" % sim.wear_lock(it), "bad"]     # gear gated by level (15 Oct): the deltas still say what it would do
-	match sim.compare(it):
+	match sim.compare(it, -1, moved):
 		1:
 			return ["▲ Upgrade", "good"]
 		-1:
@@ -361,16 +487,25 @@ static func lock_hints(sim, it: Dictionary) -> Array:
 
 ## The deltas, a gun's damage read as the runner's with it on (its own figure alone missed what a damage % on the
 ## whole does, the secondary's third, a unique's rule), then each affix that differs.
-static func deltas_for(sim, it: Dictionary, fitted: Dictionary) -> Array:
-	var out: Array = deltas_of(it, fitted)
+static func deltas_for(sim, it: Dictionary, fitted: Dictionary, moved := false) -> Array:
+	var out: Array = deltas_of(sim.moved_over(it) if moved else it, fitted)
+	# the shown ones say why (the fix round, 29 Oct, the UI review's B7): gains first on an upgrade, losses first on a
+	# downgrade, each side biggest first; the slot's own figure ahead of them all, below
+	var c: int = sim.compare(it, -1, moved) if fitted != null and not fitted.is_empty() else 0
+	out.sort_custom(func(x, y):
+		var xu: bool = float(x[0]) > 0.0
+		var yu: bool = float(y[0]) > 0.0
+		if xu != yu:
+			return xu if c >= 0 else yu
+		return absf(float(x[0])) > absf(float(y[0])))
 	if Data.SLOT_SCORE.get(str(it["slot"]), "") == "dps":
 		out = out.filter(func(d_in): return not str(d_in[1]).ends_with("dmg/s"))
-		var d: float = sim.fit_value(it) - sim.fit_value({}, str(it["slot"]))
+		var d: float = sim.fit_value(it, "", -1, moved) - sim.fit_value({}, str(it["slot"]))
 		if absf(d) >= 0.05:
 			out.push_front([d, ("%.1f dmg/s" if absf(d) < 10.0 else "%.0f dmg/s") % absf(d)])
 	elif str(it["slot"]) in sim.SURV_SLOTS and fitted != null and not fitted.is_empty():
 		# the body's figure first (12 Oct): what the arrow reads for a helmet or a coat, regen and resists in it
-		var sg: float = sim.survival_gain(it) * 100.0
+		var sg: float = sim.survival_gain(it, moved) * 100.0
 		if absf(sg) >= 0.5:
 			out.push_front([sg, "%.0f%% odds" % absf(sg)])
 	return out
@@ -399,6 +534,10 @@ func text_nodes() -> Array:
 	if _empty_title.visible:
 		out.append(_empty_title)
 		out.append_array(_empty_lines)
+	for r in _reads:
+		for k in ["label", "fig", "line"]:
+			if r[k].visible:
+				out.append(r[k])
 	if _verdict.visible:
 		out.append(_verdict)
 	for l in _deltas:

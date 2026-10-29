@@ -68,6 +68,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 			if x <= acc:
 				n = k
 				break
+		n += bodge(base)                       # something improvised: one more than another gun (29 Oct, the type edge)
 		for k in range(n):
 			attachments["socket %d" % (k + 1)] = null
 	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
@@ -182,6 +183,11 @@ static func slug(base: String) -> String:
 static var _art := {}      # slug -> Texture2D or null, once looked for
 
 
+## The name a base's pictures are under (the fix round, 29 Oct): its own, else the older one it was made as (Data.ART_AS).
+static func art_name(base: String) -> String:
+	return str(Data.ART_AS.get(base, base))
+
+
 ## The item's picture, if one has been made: res://art/items/<slug>.png.
 ## A unique has its own (grandad_s_shotgun.png) and falls back to its
 ## base's until that's made. Looked for once; null means text instead.
@@ -194,7 +200,7 @@ static func art(it: Dictionary) -> Texture2D:
 		var own := _art_named(slug(it["piece"]))
 		if own != null:
 			return own
-	var base := _art_named(slug(it["base"]))
+	var base := _art_named(slug(art_name(str(it["base"]))))
 	if base == null and is_paper(it) and not is_deeds(it):
 		return _art_named("paper")        # every paper is the same folded thing in the cell; the words tell them apart
 	return base
@@ -340,6 +346,15 @@ static func affix_def(stat: String) -> Dictionary:
 		if a["stat"] == stat:
 			return a
 	return {}
+
+
+## An affix's def for a slot (29 Oct): the slot's own where it has one - the gloves' armour rolls small, a gun part's damage
+## 2-6 against a gun's 4-24 (the fix round: the Bench re-rolled a part's on the gun's range) - else affix_def's.
+static func affix_def_for(stat: String, slot: String) -> Dictionary:
+	for a in Data.AFFIXES:
+		if a["stat"] == stat and slot in a.get("slots", []):
+			return a
+	return affix_def(stat)
 
 
 ## `n` distinct affixes for a slot, by weight, none already in `have`.
@@ -559,7 +574,7 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator,
 		var a: Dictionary = it["affixes"][k]
 		if a["stat"] != stat:
 			continue
-		var d := affix_def(stat)
+		var d := affix_def_for(stat, str(it.get("slot", "")))
 		var t: int = int(a.get("tier", 1))
 		var cap := maxi(rarity_cap(it), t)                     # one rule at the Bench (the pass, 6 Oct): the rarity's cap, the level's floor; a tier already past the cap (an old save) is left where it is
 		var lo := mini(tier_floor(ilvl(it)), cap)
@@ -604,6 +619,18 @@ static func strip_affixes(it: Dictionary) -> void:
 	it["affixes"] = []
 	it["rarity"] = 0
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[0]["value"]))
+
+
+## Something improvised's edge (29 Oct, docs/design/itemisation.md §3): its sockets, one more than another gun's, on
+## the roll, at the Bench and with the Pitch's Third socket. `b` a base (or an item: its base is read).
+static func bodge(b: Dictionary) -> int:
+	var base: Dictionary = base_of(b) if b.has("slot") and b.has("base") else b
+	return int(Data.EDGE["improvised"]["sockets"]) if (str(base.get("type", "")) == "improvised" and base.has("rof")) else 0
+
+
+## The sockets a piece can take: SOCKET_MAX, `extra` (the Pitch's Third socket), and an improvised gun's one more.
+static func socket_cap(it: Dictionary, extra := 0) -> int:
+	return Data.SOCKET_MAX + extra + bodge(it)
 
 
 static func add_socket(it: Dictionary, most := Data.SOCKET_MAX) -> bool:
@@ -660,7 +687,9 @@ static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1, 
 	if u.has("range") and not fixed_uniques:
 		var at: int = tier if tier > 0 else int(body["tier"])
 		if head:
-			at = maxi(at + 1, int(body["tier"]))
+			# a tier past the site's loot, floored at the unique's own range (29 Oct, the review: the Quartermaster's came off
+			# at its base's T6, over the City's T4) and never past the campaign's top on a campaign find
+			at = mini(maxi(at + 1, int(u["range"][0])), maxi(at, Data.CAMPAIGN_TIER)) if at <= Data.CAMPAIGN_TIER else maxi(at + 1, int(u["range"][0]))
 		body = unique_body(u, unique_tier(u, at)).duplicate()     # a copy: the cache's own stays plain (the review)
 	if head:
 		body["lift"] = float(body["lift"]) * Data.BOSS_UNIQUE_LIFT
@@ -778,6 +807,94 @@ static func _slot_curve(slot: String, tier: int) -> float:
 		if int(b["tier"]) <= tier and _body_ok(b):
 			top = maxf(top, _base_score(slot, b))
 	return top
+
+
+## A base's built-in figure for a stat (29 Oct, the itemisation's roles): the gloves' grip or rate of fire, a visor's
+## quicker searches, a specialist rig's Guard, a charm's element - read beside the affixes (Sim._affix_index), never an
+## affix itself, so a Blue Plaque leaves it standing.
+static func base_stat(it: Dictionary, stat: String) -> float:
+	return float(base_of(it).get("stats", {}).get(stat, 0.0))
+
+
+## A stat as worn on a piece: its base's built-in figure and its affixes'.
+static func stat_total(it: Dictionary, stat: String) -> float:
+	return base_stat(it, stat) + affix_total(it, stat)
+
+
+## A worn base's role (29 Oct, §2): heavy, light or specialist; a pair of gloves' grip, pace or rate. "" for the rest.
+static func role(it: Dictionary) -> String:
+	return str(base_of(it).get("role", ""))
+
+
+## A pair of gloves' figures as worn: quicker reloads, pace and rate of fire, each base and affixes.
+static func glove_figs(it: Dictionary) -> Dictionary:
+	return {"reload_pct": stat_total(it, "reload_pct"), "pace": base_pace(it) + affix_total(it, "speed_pct"), "attack_pct": stat_total(it, "attack_pct")}
+
+
+## The gloves' one figure, their role's (29 Oct: the headline, the card, the pick panel): [figure, words].
+## A pair of gloves' unit short, for a cell or a card with no room for the long (the fix round, 29 Oct, the UI review's B4):
+## "reload", "RoF", "pace" - the deltas' own.
+static func glove_unit_short(it: Dictionary) -> String:
+	return {"pace": "pace", "rate": "RoF"}.get(role(it), "reload")
+
+
+static func glove_headline(it: Dictionary) -> Array:
+	var f := glove_figs(it)
+	match role(it):
+		"pace":
+			return ["+%d%%" % int(round(f["pace"])), "pace"]
+		"rate":
+			return ["+%d%%" % int(round(f["attack_pct"])), "rate of fire"]
+	return ["+%d%%" % int(round(f["reload_pct"])), "quicker reloads"]
+
+
+## The gun type's edge as one line under the item's figure (29 Oct, §3; the style guide's mechanics voice, the number
+## first): "" for a gun that has none in its slot (an SMG or a blade carried second) and anything that isn't a gun.
+static func edge_words(it: Dictionary) -> String:
+	var f: Array = edge_forms(it)
+	return str(f[0]) if not f.is_empty() else ""
+
+
+## The edge's line, long to short (the fix round, 29 Oct, the language reviews: the rule said, the number first; the rifle's
+## middle form keeps both its halves for a head): [] for a gun with none (a secondary's SMG, rifle or shotgun).
+static func edge_forms(it: Dictionary) -> Array:
+	if not is_gun(it):
+		return []
+	var ty: String = str(base_of(it).get("type", ""))
+	var primary: bool = str(it.get("slot", "")) == "Primary"
+	if ty == "improvised":
+		var n: int = int(Data.EDGE["improvised"]["sockets"])
+		return ["%d more socket%s than other guns" % [n, "" if n == 1 else "s"], "+%d socket%s" % [n, "" if n == 1 else "s"]]
+	if ty == "pistol":
+		return ["Full rate of fire while the primary reloads", "Fires on through reloads"]
+	if ty == "melee":
+		if not primary:
+			return ["Never runs dry"]
+		var mx: int = int(round(float(Data.EDGE["melee"]["x"]) * 100.0))
+		var on: int = int(Data.EDGE["melee"]["on_you"])
+		return ["Never runs dry · +%d%% damage with %d or more on you" % [mx, on], "+%d%% with %d+ on you" % [mx, on]]
+	if not primary:
+		return []
+	match ty:
+		"rifle":
+			var pc: int = int(round(float(Data.EDGE["rifle"]["pierce"]) * 100.0))
+			var op: int = int(round(float(Data.EDGE["rifle"]["opener"]) * 100.0))
+			return ["%d%% of armour ignored · +%d%% damage with the first round at each man" % [pc, op], "%d%% armour ignored · +%d%% first round" % [pc, op]]     # both halves even short (the UI review's B5)
+		"shotgun":
+			var sx: int = int(round(float(Data.EDGE["shotgun"]["x"]) * 100.0))
+			return ["%d%% of each blast carries to the man behind" % sx, "%d%% carries to the man behind" % sx]
+		"smg":
+			var su: Array = base_of(it).get("sustain", [0, 0])
+			if int(su[0]) <= 0:
+				return []
+			return ["+%d%% damage for each second on the same gang, to +%d%%" % [int(su[0]), int(su[1])], "+%d%%/s on one gang, to +%d%%" % [int(su[0]), int(su[1])]]
+	return []
+
+
+## The edge's line short, for a row with no room (29 Oct).
+static func edge_short(it: Dictionary) -> String:
+	var f: Array = edge_forms(it)
+	return str(f[-1]) if not f.is_empty() else ""
 
 
 ## A base's own pace, as a percent (weight: a riot suit slows, leathers don't).
@@ -984,6 +1101,9 @@ static func score(it: Dictionary) -> float:
 			return att_stat(it, "damage_pct") + att_stat(it, "first_pct") / 3.0 + att_stat(it, "speed_pct") + att_stat(it, "patrol_pct") / 4.0
 		"find":
 			return find(it) + cash_pct(it) * 0.5
+		"grip":
+			var f := glove_figs(it)     # the gloves' job (29 Oct): rate of fire and pace a point each, a reload's what the fight
+			return float(f["attack_pct"]) + float(f["pace"]) + float(f["reload_pct"]) * GRIP_RELOAD_W     # pays for one (the fix round)
 	return 0.0
 
 
@@ -1039,6 +1159,10 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 ## where the slot has them - "Primary · rifle", "Secondary · melee", "Helmet",
 ## "Rounds · shotgun", "Gun part · optic", "Socketable", "Paper", "Charm", "Med".
 ## The mounts a bat or a blade has, not a gun: a part for one says so.
+## A quicker-reload point against a rate-of-fire one in the gloves' score (the fix round, 29 Oct, the review's B3): a
+## gun fires about 85% of the time, so 1% off a reload is about 0.15% more firing.
+const GRIP_RELOAD_W := 0.15
+
 const MELEE_MOUNTS := ["grip", "business end"]
 
 
@@ -1110,9 +1234,18 @@ static func base_res_words(it: Dictionary) -> String:
 	for ty in Data.ELEMENTS:
 		if res.has(ty):
 			out.append("%s resist %d%%" % [ty, int(res[ty])])
-	if base_of(it).has("sustain"):
-		var su: Array = base_of(it)["sustain"]
-		out.append("walking fire: damage +%d%% a second, up to +%d%%" % [int(su[0]), int(su[1])])     # the SMG line (7 Oct)
+	# a worn base's role figure (29 Oct): its pace and its built-in line, the number first - what the base gives before any
+	# affix; a pair of gloves' headline figure isn't said twice. A gun's edge is its own line (edge_words), walking fire too
+	if not is_gun(it):
+		var head: String = str(glove_headline(it)[1]) if str(it.get("slot", "")) == Data.GLOVES else ""
+		if base_pace(it) != 0.0 and head != "pace":
+			out.append("%s%d%% pace" % ["+" if base_pace(it) > 0.0 else "−", int(absf(base_pace(it)))])
+		var st: Dictionary = base_of(it).get("stats", {})
+		for k in st:
+			var d := affix_def(str(k))
+			if str(d.get("label", "")) == head:
+				continue
+			out.append("%s%s%% %s" % ["" if k == "guard_gang" else "+", fig(str(k), float(st[k])), str(d.get("label", k))])
 	return " · ".join(out)
 
 
@@ -1148,6 +1281,8 @@ static func headline(it: Dictionary) -> Array:
 		return ["Paper", ""]                    # its worth is nothing to say (16 Oct, Matt): the item head says what it is, with the sim
 	if it["slot"] == Data.CHARM:
 		return ["+%.0f%%" % find(it), "loot quality"]
+	if it["slot"] == Data.GLOVES:
+		return glove_headline(it)
 	return ["%d" % capacity(it), "capacity"]
 
 

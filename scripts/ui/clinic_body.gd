@@ -106,7 +106,7 @@ func _init(w: float, h: float) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%d|%d|%s|%d|%s|%.1f|%s|%d|%d" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate(), sim.cls, sim.supplies_held(), sim.supplies_in]
+	var sig := "%s|%d|%d|%s|%d|%s|%.1f|%s|%d|%d" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate_now(), sim.cls, sim.supplies_held(), sim.supplies_in]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -164,7 +164,7 @@ func show_state(s) -> void:
 		_bar_right.text = "Out on a run"
 		_bar_right.add_theme_color_override("font_color", Pal.TEXT_2)
 	else:
-		var rr: float = sim.rest_rate()
+		var rr: float = sim.rest_rate_now()     # between repeat runs, the repeat's rest (29 Oct)
 		var left: String = Fmt.mss((sim.max_hp() - sim.hp) / rr) if rr > 0.0 else ""
 		UI.fit(_bar_right, ["Resting +%.1f a second · full in %s" % [rr, left], "+%.1f/s · full in %s" % [rr, left], "full in %s" % left])
 		_bar_right.add_theme_color_override("font_color", Pal.TEXT_2)

@@ -31,7 +31,7 @@ const CARD_GAP := 8
 const PAD := 8
 const ART_INSET := 3                           # the art over the whole card, inside its line
 const LEFT := ["Backpack", "Primary", "Secondary"]            # Matt, 10 Oct: the pack big over the weapons down the left
-const RIGHT := ["Helmet", "Armour", "Rig", "Charm"]             # the charm where the pack was
+const RIGHT := ["Helmet", "Armour", "Gloves", "Rig", "Charm"]             # the charm where the pack was; the gloves between the armour and the rig, level with the hands (29 Oct, Matt: layout A)
 const WIDTH := Inventory.SIDE_W    # 608
 const HEIGHT := 648                            # the column (the pack's map went, 10 Oct: 516 → 648); each card its own height, below
 const GLASS := Pal.PANEL
@@ -75,7 +75,8 @@ var _shown := ""
 ## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
 const LEFT_W := 246
 const RIGHT_W := 150
-const HEIGHTS := {"Backpack": 240, "Primary": 192, "Secondary": 184, "Helmet": 140, "Armour": 240, "Rig": 118, "Charm": 110}     # each column fills the 648 with its gaps
+const HEIGHTS := {"Backpack": 240, "Primary": 192, "Secondary": 184, "Helmet": 120, "Armour": 156, "Gloves": 104, "Rig": 116, "Charm": 104}     # each column fills the 648 with its gaps (29 Oct: five down the right, the armour's shorter)
+const HANDS := 0.55                            # the hands, down the drawn figure: the gloves' card sits level with them (29 Oct)
 
 
 static func card_rect(slot: String) -> Rect2:
@@ -335,6 +336,9 @@ static func figure_forms(it: Dictionary) -> Array:
 		return ["%.0f dmg/s · %s" % [d, rounds], "%.0f dmg/s" % d]
 	if slot in ["Helmet", "Armour"]:
 		return ["%.0f armour" % Items.armour(it)]
+	if slot == "Gloves":
+		var gh: Array = Items.glove_headline(it)     # their role's figure (29 Oct)
+		return ["%s %s" % [gh[0], gh[1]], "%s %s" % [gh[0], Items.glove_unit_short(it)], str(gh[0])]     # the unit short before none (the fix round)
 	if slot == "Backpack":
 		return ["%d cells" % Items.capacity(it)]
 	if slot == "Rig":

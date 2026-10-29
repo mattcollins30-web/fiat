@@ -11,7 +11,10 @@ extends RefCounted
 ## icons and art can hang off it later without the sim changing.
 
 ## The body, in the order the Armoury shows it.
-const SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Charm"]
+## Gloves (29 Oct, docs/design/itemisation.md §4): the eighth slot, pace and the like; the Kit room shows them on the right,
+## level with the figure's hands.
+const SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"]
+const GLOVES := "Gloves"
 ## The charm: one cell on the body for the thing kept for luck. It carries
 ## magic find (rarer finds) and cash, and nothing else does much of either.
 const CHARM := "Charm"
@@ -42,7 +45,7 @@ const RADIO_EVERY := 3             # the radio comes on every this many runs hom
 ## pack, and the size its picture is drawn at (64 px a cell). The slot gives
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
-const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Rig": [3, 2], "Backpack": [3, 3],
+const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Gloves": [2, 2], "Rig": [3, 2], "Backpack": [3, 3],
 	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1]}
 const FOOTPRINTS := {
 	# melee
@@ -67,6 +70,13 @@ const FOOTPRINTS := {
 	"First aid kit": [2, 1], "Trauma kit": [2, 1], "Surgeon's kit": [2, 2], "Hospital kit": [2, 2],
 	# the deeds, and what the other heads hold (13 Oct, the gates)
 	"The deeds": [2, 2], "The vet's bag": [2, 2], "The Carpet Man's ledger": [2, 2], "A military radio": [2, 2], "The fitter's kit": [2, 2],
+	# the itemisation's (29 Oct)
+	"Lump hammer": [2, 1], "Billhook": [2, 1], "Bike chain": [2, 1], "Meat cleaver": [2, 1], "Hot poker": [3, 1], "Platelayer's maul": [3, 1], "Cattle prod": [3, 1],
+	"Cavalry sabre": [3, 1], "Collier's pick": [3, 1], "Felling axe": [3, 1], "Civic mace": [3, 1], "Court sword": [3, 1],
+	"Wartime SMG": [3, 1], "Unmarked SMG": [3, 1], "Customs SMG": [3, 1], "Navy SMG": [3, 1], "Briefcase SMG": [3, 1], "Spiral-mag SMG": [3, 1], "Ministerial SMG": [3, 1],
+	"Slam-fire shotgun": [3, 1], "Lathe-bored rifle": [5, 1], "Punt gun": [5, 1], "Big-game rifle": [5, 1], "Heavy-barrel rifle": [5, 1], "Prototype rifle": [5, 1],
+	"Derringer": [1, 1], "Pocket pistol": [1, 1], "Catapult": [1, 1], "Screwdriver": [1, 1], "Commando dagger": [1, 1], "Pen gun": [1, 1],
+	"Arctic smock": [3, 4], "Chainmail shark suit": [3, 4], "Mule pack": [3, 4], "Alpine pack": [3, 4], "Freefall pack": [3, 4],
 	# optics
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 }
@@ -116,7 +126,7 @@ const YARD := [
 		[{"id": "steady_hands", "name": "Steady hands", "short": "Re-roll values: tier-up ×2", "words": "Re-rolling values: twice the chance an affix goes up a tier"},
 		 {"id": "cheap_parts", "name": "Cheap parts", "short": "−25% on Bench jobs", "words": "Every job at the Bench costs 25% less"}],
 		[{"id": "two_locks", "name": "Two locks", "short": "A second padlock", "words": "A second padlock at the Bench: two affixes kept through a re-roll"},
-		 {"id": "third_socket", "name": "Third socket", "short": "Up to 3 sockets", "words": "A third socket can be cut in a gun, helmet or armour"}],
+		 {"id": "third_socket", "name": "Third socket", "short": "3 sockets (4 improvised)", "words": "A third socket can be cut in a gun, helmet or armour; a fourth in something improvised"}],
 		[{"id": "overbump", "name": "Overbump", "short": "+6 levels a bump", "words": "A bump raises an item 6 levels, not 3"},
 		 {"id": "gunsmith", "name": "Gunsmith", "short": "Built guns at your best site's level", "words": "Improvised guns you build come at the item level of your highest open site, if that is higher"}],
 		[{"id": "fine_tuning", "name": "Fine tuning", "short": "Never rolls down", "words": "Re-rolling values never takes an affix down a tier"},
@@ -208,10 +218,62 @@ const YARD := [
 		[{"id": "pack", "name": "The litter", "short": "+2 finds a search", "words": "Every search finds 2 more"},
 		 {"id": "champion", "name": "Champion", "short": "+20% quality", "words": "Loot quality +20%"}]],
 	 "rank": {"short": "+2% loot quality", "words": "Loot quality +2% a rank"}},
+	# the Bunkhouse (29 Oct, docs/design/trips.md 4): line A the repeat runs', line B the trips' (a stub: "stub" steps never
+	# build until the trips are in)
+	{"key": "bunkhouse", "name": "The Bunkhouse", "salvage": "army", "costs": [2000, 7000, 18000, 40000, 80000], "lines": ["Repeat", "Expeditions"], "picks": [
+		[{"id": "rr_ten", "name": "Ten in a row", "short": "×10 runs · 35% XP", "words": "Run it ×10 on a cleared site. Repeat runs earn 35% of a watched run's XP"},
+		 {"id": "trip_hand", "name": "A hand on an expedition", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		[{"id": "rr_list", "name": "Your own list", "short": "Loot rules decide · 45% XP", "words": "Your loot rules decide what a repeat keeps. Repeat runs earn 45% of a watched run's XP"},
+		 {"id": "trip_two_hands", "name": "Two hands", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		[{"id": "rr_twenty", "name": "Twenty in a row", "short": "×20 runs", "words": "Run it ×20 on a cleared site"},
+		 {"id": "trip_two", "name": "Two at once", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		[{"id": "rr_rest", "name": "Bunk beds", "short": "Rest twice as fast · 60% XP", "words": "Rest between repeat runs twice as fast. Repeat runs earn 60% of a watched run's XP"},
+		 {"id": "trip_roster", "name": "More bunks", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}],
+		[{"id": "rr_full", "name": "Till it's full", "short": "Till the stash is full", "words": "Repeat runs go on till the stash is full"},
+		 {"id": "trip_three", "name": "Three at once", "short": "Coming later", "words": "Comes with the expeditions", "stub": true}]],
+	 "rank": {"short": "5% quicker rest between runs", "words": "Rest between repeat runs 5% quicker a rank"}},
 ]
+## The repeat runs (29 Oct, docs/design/trips.md 1-2): "Run it ×5" on a cleared site at REPEAT_ODDS or better; the runs
+## unwatched, a bail at Sim.BAIL never a death; XP a share of a watched run's (the Bunkhouse raises it).
+const REPEAT_RUNS := 5
+const REPEAT_ODDS := 0.9
+const REPEAT_XP := [0.25, 0.35, 0.45, 0.60]        # from the start; Ten in a row; Your own list; Bunk beds
+const REPEAT_RANK_REST := 0.05                     # the Bunkhouse's rank: rest between repeat runs 5% quicker a rank
+const REPEAT_MAX := 200                            # Till it's full: runs at most, a guard
+const REPEAT_MED_UNDER := 0.4                      # an unwatched run's med, under 40% HP, as the bot's
+## Kev's wagers (29 Oct, docs/design/endgame_activities.md row 1): the harder words and what they pay, a watched run's.
+const WAGER_CONDS := [
+	{"id": "gang", "chip": "+50% men", "words": "50% more men in every gang"},
+	{"id": "no_meds", "chip": "No meds", "words": "No meds: the rig's heals and cures stay shut"},
+	{"id": "clock", "chip": "−50% clock", "words": "Half the clock"},
+	{"id": "hard", "chip": "+25% gang damage", "words": "The gang hits 25% harder"},
+]
+const WAGER_PAYS := [
+	{"id": "notes", "chip": "×1.5 notes", "x": 1.5},
+	{"id": "slot", "chip": "×3 %s finds", "x": 3},
+	{"id": "quality", "chip": "+50% loot quality", "x": 0.5},
+]
+const WAGER_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Backpack", "Rig", "Charm"]
+const WAGER_SLOT_WORDS := {"Primary": "gun", "Armour": "armour", "Helmet": "helmet", "Gloves": "gloves", "Backpack": "pack", "Rig": "rig", "Charm": "charm"}     # the slots as the chips say them (the language pass)
+const WAGER_GANG := 1.5
+const WAGER_HARD := 1.25
+const WAGER_CLOCK := 0.5
 ## The Pitch before two lines a building (28 Oct): each column's two picks as they were, by id - an old save's picks moved by id.
 const YARD_OLD := {"bench": [["steady_hands", "cheap_parts"], ["third_socket", "two_locks"], ["gunsmith", "strip_for_parts"], ["overbump", "fine_tuning"], ["masterwork", "salvage_line"]], "stash": [["shelving", "racks"], ["another_unit", "bins"], ["strongroom", "wall_of_fame"], ["lock_up", "filing_cabinet"], ["dry_store", "annex"]], "clinic": [["beds", "shelf"], ["ward", "stockroom"], ["surgery", "physio"], ["drip", "field_kit"], ["theatre", "med_lab"]], "fence": [["stall", "haggling"], ["shopfront", "contacts"], ["back_room", "fixer"], ["gamblers_table", "insurance_desk"], ["arms_dealer", "dealers_cut"]], "radio": [["weather_set", "night_set"], ["forecast", "dead_air"], ["scanner", "two_channels"], ["lorry_watch", "long_range"], ["jammer", "military_band"]], "generator": [["jerry_can", "rig_wiring"], ["dynamo", "floodlights"], ["battery", "kickback"], ["flywheel", "arc_lamps"], ["pilot_light", "charger"]], "lookout": [["spotter", "glasses"], ["lookout_post", "range_cards"], ["hold_fire", "tripwires"], ["early_warning", "watch_rota"], ["crows_nest", "flares"]], "kennel": [["a_dog", "good_nose"], ["guard_dog", "pedigree"], ["fetch", "second_dog"], ["tracker", "ratter"], ["pack", "champion"]]}
 
+
+
+## The Pitch's steps that can be built (29 Oct: the Bunkhouse's line B a stub until the expeditions are in), one building's
+## or every building's. The headline and the cards count these; a step made real stops being a stub and counts.
+static func yard_step_count(key := "") -> int:
+	var n := 0
+	for b in YARD:
+		if key != "" and str(b["key"]) != key:
+			continue
+		for col in b["picks"]:
+			for pk in col:
+				n += 0 if bool(pk.get("stub", false)) else 1
+	return n
 
 
 static func yard_building(key: String) -> Dictionary:
@@ -237,7 +299,7 @@ const RIG_CAP := 24
 
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
-	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour",
+	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour", "Gloves": "grip",     # gloves: the fight's damage a second, pace in (29 Oct)
 	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value",
 	"Charm": "find",
 }
@@ -260,11 +322,11 @@ const BASES := {
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Bolt gun", "type": "improvised", "tier": 1, "damage": 38.0, "rof": 0.4, "value": 70,
 			"attachments": ["muzzle"]},
-		{"name": "Pipe shotgun", "type": "improvised", "ammo": "shotgun", "tier": 1, "damage": 50.0, "rof": 0.3, "value": 60,
+		{"name": "Pipe shotgun", "type": "improvised", "ammo": "shotgun", "tier": 1, "damage": 50.0, "rof": 0.3, "value": 60, "mag": 11,
 			"attachments": ["stock"]},
 		{"name": "Crossbow", "type": "improvised", "tier": 2, "damage": 60.0, "rof": 0.45, "value": 75,
 			"attachments": ["optic", "stock"]},
-		{"name": "Garage-built rifle", "type": "improvised", "ammo": "rifle", "tier": 3, "damage": 30.0, "rof": 1.5, "value": 150,
+		{"name": "Garage-built rifle", "type": "improvised", "ammo": "rifle", "tier": 2, "damage": 19.0, "rof": 1.5, "value": 85, "mag": 18,     # the Retail Park's own: T3 to its site's T2 (29 Oct)
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		# shotguns - the Doorman's
 		{"name": "Farmer's shotgun", "type": "shotgun", "tier": 1, "damage": 45.0, "rof": 0.5, "value": 120,
@@ -273,20 +335,20 @@ const BASES := {
 			"attachments": ["stock"]},
 		{"name": "Pump shotgun", "type": "shotgun", "tier": 2, "damage": 42.0, "rof": 0.8, "value": 90,
 			"attachments": ["muzzle", "magazine", "stock"]},
-		{"name": "Riot shotgun", "type": "shotgun", "tier": 3, "damage": 50.0, "rof": 1.0, "value": 170,
+		{"name": "Riot shotgun", "type": "shotgun", "tier": 3, "damage": 50.0, "rof": 1.0, "value": 170, "mag": 11,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
-		{"name": "Semi-auto shotgun", "type": "shotgun", "tier": 3, "damage": 38.0, "rof": 1.4, "value": 180,
+		{"name": "Semi-auto shotgun", "type": "shotgun", "tier": 3, "damage": 38.0, "rof": 1.4, "value": 180, "mag": 11,
 			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
 		# rifles - the Poacher's
-		{"name": "Semi-auto .22", "type": "rifle", "tier": 2, "damage": 18.0, "rof": 1.7, "value": 90,
+		{"name": "Semi-auto .22", "type": "rifle", "tier": 2, "damage": 18.0, "rof": 1.7, "value": 90, "mag": 19,
 			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
 		{"name": "Old .303", "type": "rifle", "tier": 2, "damage": 65.0, "rof": 0.5, "value": 85,
 			"attachments": ["optic", "stock"]},
 		{"name": "Stalking rifle", "type": "rifle", "tier": 3, "damage": 58.0, "rof": 0.8, "value": 160,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
-		{"name": "Army bullpup", "type": "rifle", "tier": 3, "damage": 20.0, "rof": 2.6, "value": 180,
+		{"name": "Army bullpup", "type": "rifle", "tier": 3, "damage": 20.0, "rof": 2.6, "value": 180, "mag": 11,
 			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
-		{"name": "AR-pattern rifle", "type": "rifle", "tier": 3, "damage": 16.0, "rof": 3.0, "value": 170,
+		{"name": "AR-pattern rifle", "type": "rifle", "tier": 3, "damage": 16.0, "rof": 3.0, "value": 170, "mag": 17,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Battle rifle", "type": "rifle", "tier": 3, "damage": 36.0, "rof": 1.4, "value": 190,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
@@ -308,15 +370,15 @@ const BASES := {
 		# tiers 4 and 5: the town's, and past it
 		{"name": "Workshop carbine", "type": "improvised", "ammo": "smg", "tier": 4, "damage": 34.0, "rof": 1.9, "value": 260,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Drum shotgun", "type": "shotgun", "tier": 4, "damage": 44.0, "rof": 1.5, "value": 280,
+		{"name": "Drum shotgun", "type": "shotgun", "tier": 4, "damage": 44.0, "rof": 1.5, "value": 280, "mag": 12,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
 		{"name": "Scoped .308", "type": "rifle", "tier": 4, "damage": 80.0, "rof": 0.85, "value": 300,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
 		{"name": "Army SMG", "type": "smg", "tier": 4, "damage": 20.0, "rof": 3.4, "value": 290, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Tooled-up garage rifle", "type": "improvised", "ammo": "rifle", "tier": 5, "damage": 40.0, "rof": 2.3, "value": 420,
+		{"name": "Tooled-up garage rifle", "type": "improvised", "ammo": "rifle", "tier": 5, "damage": 40.0, "rof": 2.3, "value": 420, "mag": 20,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Automatic shotgun", "type": "shotgun", "tier": 5, "damage": 46.0, "rof": 2.0, "value": 460,
+		{"name": "Automatic shotgun", "type": "shotgun", "tier": 5, "damage": 46.0, "rof": 2.0, "value": 460, "mag": 15,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Sniper rifle", "type": "rifle", "tier": 5, "damage": 110.0, "rof": 0.85, "value": 480,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
@@ -353,7 +415,7 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Marksman rifle", "type": "rifle", "tier": 6, "damage": 90.0, "rof": 1.1, "value": 720,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Section gun", "type": "smg", "tier": 6, "damage": 27.0, "rof": 4.4, "value": 700, "sustain": [4, 40],     # lifted (7 Oct): 26 × 4.2 read 109 against the shotguns' 115
+		{"name": "Section gun", "type": "smg", "tier": 4, "damage": 16.5, "rof": 4.4, "value": 290, "sustain": [4, 40],     # the Barracks' own: T6 to T4 (29 Oct)     # lifted (7 Oct): 26 × 4.2 read 109 against the shotguns' 115
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40], "mag": 100, "reload": 3.0,     # its belt (28 Oct, magazines): draft
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
@@ -367,15 +429,15 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Range rifle", "type": "rifle", "tier": 7, "damage": 96.0, "rof": 1.4, "value": 1100,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Service rifle", "type": "rifle", "tier": 8, "damage": 104.0, "rof": 1.5, "value": 1500,
+		{"name": "Service rifle", "type": "rifle", "tier": 8, "damage": 104.0, "rof": 1.5, "value": 1500, "mag": 11,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Anti-materiel rifle", "type": "rifle", "tier": 9, "damage": 150.0, "rof": 1.2, "value": 2100,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
-		{"name": "Breaching shotgun", "type": "shotgun", "tier": 7, "damage": 60.0, "rof": 2.25, "value": 1050,
+		{"name": "Breaching shotgun", "type": "shotgun", "tier": 7, "damage": 60.0, "rof": 2.25, "value": 1050, "mag": 16,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Entry shotgun", "type": "shotgun", "tier": 8, "damage": 66.0, "rof": 2.4, "value": 1450,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Combat shotgun", "type": "shotgun", "tier": 9, "damage": 74.0, "rof": 2.55, "value": 2000,
+		{"name": "Combat shotgun", "type": "shotgun", "tier": 9, "damage": 74.0, "rof": 2.55, "value": 2000, "mag": 18,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Bolt-action garage rifle", "type": "improvised", "ammo": "rifle", "tier": 7, "damage": 112.0, "rof": 1.2, "value": 900,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
@@ -389,6 +451,101 @@ const BASES := {
 			"attachments": ["grip", "business end"]},
 		{"name": "Door ram", "type": "melee", "ammo": "none", "tier": 9, "damage": 195.0, "rof": 0.82, "value": 1700, "conv_bleed_pct": 5,
 			"attachments": ["grip", "business end"]},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Lump hammer", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.42, "value": 25, "conv_bleed_pct": 5,
+			"attachments": ["grip", "business end"]},
+		{"name": "Billhook", "type": "melee", "ammo": "none", "tier": 1, "damage": 24.0, "rof": 0.72, "value": 30, "conv_bleed_pct": 35,
+			"attachments": ["grip"]},
+		{"name": "Bike chain", "type": "melee", "ammo": "none", "tier": 2, "damage": 26.0, "rof": 1.05, "value": 65, "conv_bleed_pct": 40,
+			"attachments": ["grip"]},
+		{"name": "Meat cleaver", "type": "melee", "ammo": "none", "tier": 3, "damage": 46.0, "rof": 0.9, "value": 140, "conv_bleed_pct": 35,
+			"attachments": ["grip"]},
+		{"name": "Hot poker", "type": "melee", "ammo": "none", "tier": 3, "damage": 55.0, "rof": 0.78, "value": 150, "conv_fire_pct": 25,
+			"attachments": ["grip", "business end"]},
+		{"name": "Platelayer's maul", "type": "melee", "ammo": "none", "tier": 4, "damage": 100.0, "rof": 0.55, "value": 250, "conv_bleed_pct": 5,
+			"attachments": ["grip", "business end"]},
+		{"name": "Cattle prod", "type": "melee", "ammo": "none", "tier": 4, "damage": 45.0, "rof": 1.2, "value": 270, "conv_shock_pct": 30,
+			"attachments": ["grip"]},
+		{"name": "Cavalry sabre", "type": "melee", "ammo": "none", "tier": 5, "damage": 60.0, "rof": 1.2, "value": 430, "conv_bleed_pct": 35,
+			"attachments": ["grip"]},
+		{"name": "Collier's pick", "type": "melee", "ammo": "none", "tier": 6, "damage": 180.0, "rof": 0.55, "value": 650, "conv_bleed_pct": 20,
+			"attachments": ["grip", "business end"]},
+		{"name": "Felling axe", "type": "melee", "ammo": "none", "tier": 7, "damage": 210.0, "rof": 0.55, "value": 920, "conv_bleed_pct": 25,
+			"attachments": ["grip", "business end"]},
+		{"name": "Civic mace", "type": "melee", "ammo": "none", "tier": 8, "damage": 255.0, "rof": 0.55, "value": 1280, "conv_bleed_pct": 5,
+			"attachments": ["grip", "business end"]},
+		{"name": "Court sword", "type": "melee", "ammo": "none", "tier": 9, "damage": 120.0, "rof": 1.35, "value": 1720, "conv_bleed_pct": 35,
+			"attachments": ["grip"]},
+		{"name": "Speargun", "type": "improvised", "tier": 2, "damage": 70.0, "rof": 0.4, "value": 80,
+			"attachments": ["optic", "stock"]},
+		{"name": "Compound bow", "type": "improvised", "tier": 3, "damage": 90.0, "rof": 0.5, "value": 160,
+			"attachments": ["optic", "stock"]},
+		{"name": "Converted air rifle", "type": "improvised", "ammo": "rifle", "tier": 3, "damage": 20.0, "rof": 2.25, "value": 170, "mag": 36,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Slam-fire shotgun", "type": "improvised", "ammo": "shotgun", "tier": 3, "damage": 60.0, "rof": 0.75, "value": 150, "mag": 14,
+			"attachments": ["muzzle", "stock"]},
+		{"name": "Punt gun", "type": "improvised", "ammo": "shotgun", "tier": 4, "damage": 200.0, "rof": 0.33, "value": 270,
+			"attachments": ["stock"]},
+		{"name": "Paintball gun", "type": "improvised", "tier": 4, "damage": 26.0, "rof": 2.5, "value": 280, "mag": 120,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Arc-welder gun", "type": "improvised", "tier": 5, "damage": 46.0, "rof": 2.0, "value": 450, "conv_shock_pct": 35,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Lathe-bored rifle", "type": "improvised", "ammo": "rifle", "tier": 6, "damage": 228.0, "rof": 0.5, "value": 660,
+			"attachments": ["optic", "muzzle", "stock"]},
+		{"name": "Chain-driven repeater", "type": "improvised", "ammo": "smg", "tier": 7, "damage": 34.0, "rof": 3.95, "value": 960, "mag": 60,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Bench-made autocannon", "type": "improvised", "ammo": "rifle", "tier": 8, "damage": 260.0, "rof": 0.6, "value": 1300,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Prototype rifle", "type": "improvised", "ammo": "rifle", "tier": 9, "damage": 300.0, "rof": 0.6, "value": 1750,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Four-ten", "type": "shotgun", "tier": 1, "damage": 26.0, "rof": 0.8, "value": 90, "mag": 9,
+			"attachments": ["muzzle", "stock"]},
+		{"name": "Goose gun", "type": "shotgun", "tier": 2, "damage": 70.0, "rof": 0.48, "value": 90,
+			"attachments": ["muzzle", "stock"]},
+		{"name": "Over-and-under", "type": "shotgun", "tier": 2, "damage": 40.0, "rof": 0.85, "value": 110,
+			"attachments": ["optic", "muzzle", "handguard", "stock"]},
+		{"name": "Ten-bore", "type": "shotgun", "tier": 3, "damage": 105.0, "rof": 0.5, "value": 170,
+			"attachments": ["muzzle", "stock"]},
+		{"name": "Magnum pump", "type": "shotgun", "tier": 4, "damage": 120.0, "rof": 0.55, "value": 270,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Pigeon gun", "type": "shotgun", "tier": 4, "damage": 30.0, "rof": 2.2, "value": 290, "mag": 18,
+			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
+		{"name": "Rifled slug gun", "type": "shotgun", "tier": 5, "damage": 185.0, "rof": 0.5, "value": 470,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Marine shotgun", "type": "shotgun", "tier": 7, "damage": 245.0, "rof": 0.55, "value": 1060,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Dragon's-breath gun", "type": "shotgun", "tier": 8, "damage": 66.0, "rof": 2.4, "value": 1480, "conv_fire_pct": 30,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Siege shotgun", "type": "shotgun", "tier": 9, "damage": 345.0, "rof": 0.55, "value": 2050,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Lever-action rifle", "type": "rifle", "tier": 2, "damage": 40.0, "rof": 0.8, "value": 90, "mag": 14,
+			"attachments": ["optic", "magazine", "stock"]},
+		{"name": "Self-loading rifle", "type": "rifle", "tier": 4, "damage": 30.0, "rof": 2.25, "value": 290, "mag": 14,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Vermin rifle", "type": "rifle", "tier": 4, "damage": 34.0, "rof": 2.0, "value": 300, "mag": 20,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Regimental rifle", "type": "rifle", "tier": 5, "damage": 38.0, "rof": 2.45, "value": 470, "mag": 14,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Big-game rifle", "type": "rifle", "tier": 7, "damage": 268.0, "rof": 0.5, "value": 1080,
+			"attachments": ["optic", "muzzle", "stock"]},
+		{"name": "Heavy-barrel rifle", "type": "rifle", "tier": 8, "damage": 285.0, "rof": 0.55, "value": 1480,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Castle guard rifle", "type": "rifle", "tier": 9, "damage": 66.0, "rof": 2.75, "value": 2080, "mag": 13,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Wartime SMG", "type": "smg", "tier": 2, "damage": 22.0, "rof": 1.55, "value": 95, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Unmarked SMG", "type": "smg", "tier": 2, "damage": 11.0, "rof": 3.1, "value": 100, "sustain": [4, 40], "mag": 40,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Customs SMG", "type": "smg", "tier": 3, "damage": 24.0, "rof": 2.1, "value": 175, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Navy SMG", "type": "smg", "tier": 6, "damage": 35.0, "rof": 3.5, "value": 740, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Briefcase SMG", "type": "smg", "tier": 7, "damage": 41.0, "rof": 3.5, "value": 1040, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Spiral-mag SMG", "type": "smg", "tier": 8, "damage": 34.0, "rof": 4.9, "value": 1460, "sustain": [4, 40], "mag": 50,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Ministerial SMG", "type": "smg", "tier": 9, "damage": 52.0, "rof": 3.7, "value": 2010, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 	],
 	"Secondary": [
 		{"name": "Converted blank-firer", "type": "improvised", "ammo": "pistol", "tier": 1, "damage": 12.0, "rof": 1.5, "value": 40,
@@ -413,13 +570,13 @@ const BASES := {
 			"attachments": ["muzzle", "magazine", "stock"]},
 		{"name": "Big revolver", "type": "pistol", "tier": 3, "damage": 40.0, "rof": 0.8, "value": 90,
 			"attachments": ["optic", "muzzle"]},
-		{"name": "Tactical pistol", "type": "pistol", "tier": 4, "damage": 20.0, "rof": 2.2, "value": 150,
+		{"name": "Tactical pistol", "type": "pistol", "tier": 3, "damage": 15.0, "rof": 2.2, "value": 95,     # the Shopping Centre's own: T4 to T3 (29 Oct)
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Officer's revolver", "type": "pistol", "tier": 6, "damage": 48.0, "rof": 1.2, "value": 360,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Army machine pistol", "type": "smg", "tier": 6, "damage": 16.0, "rof": 4.6, "value": 380,
 			"attachments": ["muzzle", "magazine", "stock"]},
-		{"name": "Duty pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300,
+		{"name": "Duty pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300, "mag": 16,
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Automatic pistol", "type": "smg", "tier": 5, "damage": 14.0, "rof": 4.2, "value": 240,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
@@ -428,120 +585,290 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Bodyguard's pistol", "type": "pistol", "tier": 8, "damage": 27.0, "rof": 2.9, "value": 700,
 			"attachments": ["optic", "muzzle", "magazine"]},
-		{"name": "Special issue pistol", "type": "pistol", "tier": 9, "damage": 30.0, "rof": 3.1, "value": 950,
+		{"name": "Special issue pistol", "type": "pistol", "tier": 9, "damage": 30.0, "rof": 3.1, "value": 950, "mag": 16,
 			"attachments": ["optic", "muzzle", "magazine"]},
-		{"name": "Diplomatic machine pistol", "type": "smg", "tier": 7, "damage": 19.0, "rof": 4.6, "value": 530,
+		{"name": "Legation machine pistol", "type": "smg", "tier": 7, "damage": 19.0, "rof": 4.6, "value": 530,
 			"attachments": ["muzzle", "magazine", "stock"]},
 		{"name": "Embassy PDW", "type": "smg", "tier": 8, "damage": 21.0, "rof": 4.9, "value": 740,
 			"attachments": ["muzzle", "magazine", "stock"]},
 		{"name": "Protection squad PDW", "type": "smg", "tier": 9, "damage": 24.0, "rof": 5.0, "value": 1000,
 			"attachments": ["muzzle", "magazine", "stock"]},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Derringer", "type": "pistol", "tier": 1, "damage": 22.0, "rof": 0.7, "value": 30,
+			"attachments": []},
+		{"name": "Pocket pistol", "type": "pistol", "tier": 1, "damage": 8.0, "rof": 2.0, "value": 30,
+			"attachments": ["muzzle"]},
+		{"name": "Target pistol", "type": "pistol", "tier": 3, "damage": 11.0, "rof": 2.9, "value": 95, "mag": 16,
+			"attachments": ["optic", "magazine"]},
+		{"name": "Police revolver", "type": "pistol", "tier": 4, "damage": 55.0, "rof": 0.8, "value": 150,
+			"attachments": ["optic"]},
+		{"name": "Polymer pistol", "type": "pistol", "tier": 4, "damage": 18.0, "rof": 2.45, "value": 150,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Long-slide pistol", "type": "pistol", "tier": 4, "damage": 22.0, "rof": 2.0, "value": 160, "mag": 20,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Hunting revolver", "type": "pistol", "tier": 5, "damage": 62.0, "rof": 0.8, "value": 240,
+			"attachments": ["optic", "muzzle"]},
+		{"name": "Competition pistol", "type": "pistol", "tier": 5, "damage": 20.0, "rof": 2.5, "value": 250,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Cavalry revolver", "type": "pistol", "tier": 7, "damage": 84.0, "rof": 0.8, "value": 510,
+			"attachments": ["optic", "muzzle"]},
+		{"name": "Ambassador's revolver", "type": "pistol", "tier": 8, "damage": 98.0, "rof": 0.8, "value": 710,
+			"attachments": ["optic", "muzzle"]},
+		{"name": "Field marshal's revolver", "type": "pistol", "tier": 9, "damage": 116.0, "rof": 0.8, "value": 960,
+			"attachments": ["optic", "muzzle"]},
+		{"name": "Broomhandle pistol", "type": "smg", "tier": 2, "damage": 7.0, "rof": 3.1, "value": 45,
+			"attachments": ["muzzle", "magazine"]},
+		{"name": "Stockless SMG", "type": "smg", "tier": 2, "damage": 9.0, "rof": 2.4, "value": 45,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Three-round pistol", "type": "smg", "tier": 3, "damage": 12.0, "rof": 2.4, "value": 95,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Compact PDW", "type": "smg", "tier": 4, "damage": 10.0, "rof": 4.4, "value": 150,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Select-fire pistol", "type": "smg", "tier": 4, "damage": 15.0, "rof": 2.95, "value": 150, "mag": 30,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Folding PDW", "type": "smg", "tier": 5, "damage": 18.0, "rof": 3.3, "value": 245,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Escort PDW", "type": "smg", "tier": 6, "damage": 22.0, "rof": 3.35, "value": 375,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Consular PDW", "type": "smg", "tier": 7, "damage": 26.0, "rof": 3.35, "value": 525,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Overcoat machine pistol", "type": "smg", "tier": 8, "damage": 30.0, "rof": 3.43, "value": 735,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Crown PDW", "type": "smg", "tier": 9, "damage": 35.0, "rof": 3.43, "value": 990,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Catapult", "type": "improvised", "tier": 2, "damage": 18.0, "rof": 1.15, "value": 40,
+			"attachments": []},
+		{"name": "Screwdriver", "type": "melee", "ammo": "none", "tier": 2, "damage": 11.0, "rof": 1.9, "value": 40, "conv_bleed_pct": 30,
+			"attachments": ["grip"]},
+		{"name": "Bike lock", "type": "melee", "ammo": "none", "tier": 2, "damage": 26.0, "rof": 0.8, "value": 40, "conv_bleed_pct": 5,
+			"attachments": []},
+		{"name": "Hatchet", "type": "melee", "ammo": "none", "tier": 3, "damage": 26.0, "rof": 0.92, "value": 90, "conv_bleed_pct": 25,
+			"attachments": ["grip"]},
+		{"name": "Zip gun", "type": "improvised", "ammo": "pistol", "tier": 3, "damage": 30.0, "rof": 0.8, "value": 85,
+			"attachments": []},
+		{"name": "Extendable baton", "type": "melee", "ammo": "none", "tier": 3, "damage": 16.0, "rof": 1.5, "value": 90,
+			"attachments": ["grip"]},
+		{"name": "Commando dagger", "type": "melee", "ammo": "none", "tier": 4, "damage": 18.0, "rof": 1.65, "value": 150, "conv_bleed_pct": 40,
+			"attachments": ["grip"]},
+		{"name": "Wheel brace", "type": "melee", "ammo": "none", "tier": 4, "damage": 40.0, "rof": 0.75, "value": 145,
+			"attachments": []},
+		{"name": "Pen gun", "type": "improvised", "ammo": "pistol", "tier": 4, "damage": 30.0, "rof": 1.0, "value": 150,
+			"attachments": []},
+		{"name": "Spring gun", "type": "improvised", "tier": 4, "damage": 45.0, "rof": 0.67, "value": 150,
+			"attachments": ["optic"]},
 	],
 	## Armour and helmets: armour, and weight as pace - a riot suit stops a lot and
 	## slows you; leathers stop less and don't.
 	"Helmet": [
-		{"name": "Hard hat", "tier": 1, "armour": 5.0, "value": 20},
-		{"name": "Cycle helmet", "tier": 1, "armour": 4.0, "pace": 2, "value": 15},
-		{"name": "Riot helmet", "tier": 2, "armour": 12.0, "value": 40},
-		{"name": "Fire helmet", "tier": 2, "armour": 14.0, "pace": -3, "value": 35},
-		{"name": "Army helmet", "tier": 3, "armour": 22.0, "value": 80},
-		{"name": "Visored helmet", "tier": 3, "armour": 28.0, "pace": -5, "value": 110},
-		{"name": "Ballistic visor", "tier": 4, "armour": 36.0, "pace": -3, "value": 180},
-		{"name": "Full-face helmet", "tier": 5, "armour": 48.0, "pace": -6, "value": 280},
-		{"name": "Composite helmet", "tier": 6, "armour": 60.0, "pace": -4, "value": 420},
+		{"name": "Hard hat", "tier": 1, "armour": 5.0, "value": 20, "role": "heavy"},
+		{"name": "Cycle helmet", "tier": 1, "armour": 4.0, "pace": 2, "value": 15, "role": "light"},
+		{"name": "Riot helmet", "tier": 2, "armour": 12.0, "value": 40, "role": "heavy"},
+		{"name": "Fire helmet", "tier": 2, "armour": 14.0, "pace": -3, "value": 35, "role": "heavy"},
+		{"name": "Army helmet", "tier": 3, "armour": 22.0, "value": 80, "role": "heavy"},
+		{"name": "Visored helmet", "tier": 3, "armour": 28.0, "pace": -5, "value": 110, "role": "heavy"},
+		{"name": "Ballistic visor", "tier": 4, "armour": 36.0, "pace": -3, "value": 180, "role": "heavy"},
+		{"name": "Full-face helmet", "tier": 5, "armour": 48.0, "pace": -6, "value": 280, "role": "heavy"},
+		{"name": "Composite helmet", "tier": 6, "armour": 60.0, "pace": -4, "value": 420, "role": "heavy"},
 		## resist gear (6 Oct): a resist built into the base, read by resist() beside the affixes
-		{"name": "Welder's mask", "tier": 3, "armour": 22.0, "pace": -2, "value": 150, "res": {"fire": 35}},
-		{"name": "Station helmet, visored", "tier": 4, "armour": 40.0, "pace": -3, "value": 300, "res": {"fire": 25}},
-		{"name": "Bomb-squad helmet", "tier": 6, "armour": 72.0, "pace": -8, "value": 560, "res": {"fire": 20, "shock": 20}},
+		{"name": "Welder's mask", "tier": 3, "armour": 23.0, "pace": -2, "value": 150, "res": {"fire": 35}, "role": "specialist"},
+		{"name": "Station helmet, visored", "tier": 4, "armour": 40.0, "pace": -3, "value": 300, "res": {"fire": 25}, "role": "specialist"},
+		{"name": "Bomb-squad helmet", "tier": 6, "armour": 72.0, "pace": -8, "value": 560, "res": {"fire": 20, "shock": 20}, "role": "specialist"},
 		## the deep bases (10 Oct): tiers 7-9, about +18% armour a tier, and the resist line carried on
-		{"name": "High-cut helmet", "tier": 7, "armour": 70.0, "pace": -3, "value": 600},
-		{"name": "Special forces helmet", "tier": 8, "armour": 82.0, "pace": -3, "value": 850},
-		{"name": "CBRN helmet", "tier": 8, "armour": 70.0, "pace": -5, "value": 900, "res": {"poison": 30, "frost": 20}},
-		{"name": "Command helmet", "tier": 9, "armour": 96.0, "pace": -4, "value": 1200},
-		{"name": "Full EOD helmet", "tier": 9, "armour": 100.0, "pace": -8, "value": 1300, "res": {"fire": 25, "shock": 25}},
+		{"name": "High-cut helmet", "tier": 7, "armour": 70.0, "pace": -3, "value": 600, "role": "heavy"},
+		{"name": "Special forces helmet", "tier": 8, "armour": 82.0, "pace": -3, "value": 850, "role": "heavy"},
+		{"name": "CBRN helmet", "tier": 8, "armour": 70.0, "pace": -5, "value": 900, "res": {"poison": 30, "frost": 20}, "role": "specialist"},
+		{"name": "Command helmet", "tier": 9, "armour": 96.0, "pace": -4, "value": 1200, "role": "heavy"},
+		{"name": "Full EOD helmet", "tier": 9, "armour": 100.0, "pace": -8, "value": 1300, "res": {"fire": 25, "shock": 25}, "role": "specialist"},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Beekeeper's hat", "tier": 1, "armour": 4.0, "res": {"poison": 25}, "value": 25, "role": "specialist"},
+		{"name": "Caving helmet", "tier": 2, "armour": 10.0, "stats": {"search_pct": 10}, "value": 40, "role": "light"},
+		{"name": "Scrum cap", "tier": 2, "armour": 12.0, "res": {"bleed": 30}, "value": 40, "role": "specialist"},
+		{"name": "Comms headset", "tier": 3, "armour": 14.0, "stats": {"patrol_pct": 10}, "value": 90, "role": "light"},
+		{"name": "Bump helmet", "tier": 4, "armour": 26.0, "stats": {"search_pct": 14}, "value": 170, "role": "light"},
+		{"name": "Thermal headset", "tier": 5, "armour": 32.0, "stats": {"patrol_pct": 14}, "value": 270, "role": "light"},
+		{"name": "Respirator helmet", "tier": 5, "armour": 40.0, "pace": -2, "res": {"poison": 35}, "value": 290, "role": "specialist"},
+		{"name": "Night-sight helmet", "tier": 6, "armour": 42.0, "stats": {"search_pct": 16}, "value": 420, "role": "light"},
+		{"name": "Ghillie hood", "tier": 7, "armour": 48.0, "stats": {"patrol_pct": 18}, "value": 580, "role": "light"},
+		{"name": "Arctic helmet", "tier": 7, "armour": 58.0, "pace": -3, "res": {"frost": 35}, "value": 600, "role": "specialist"},
+		{"name": "Search-team helmet", "tier": 8, "armour": 58.0, "stats": {"search_pct": 20}, "value": 820, "role": "light"},
+		{"name": "Surveillance helmet", "tier": 9, "armour": 70.0, "stats": {"patrol_pct": 20}, "value": 1150, "role": "light"},
 	],
 	"Armour": [
 		{"name": "Work jacket", "tier": 1, "armour": 6.0, "value": 10, "start": true},     # the start: the worst there is, never found
-		{"name": "Stab vest", "tier": 1, "armour": 15.0, "value": 60},
-		{"name": "Padded jacket", "tier": 1, "armour": 10.0, "pace": 2, "value": 40},
-		{"name": "Police body armour", "tier": 2, "armour": 35.0, "value": 80},
-		{"name": "Motorbike leathers", "tier": 2, "armour": 25.0, "pace": 4, "value": 90},
-		{"name": "Army plates", "tier": 3, "armour": 60.0, "value": 160},
-		{"name": "Ceramic plates", "tier": 3, "armour": 72.0, "value": 220},
-		{"name": "Riot suit", "tier": 3, "armour": 85.0, "pace": -8, "value": 260},
-		{"name": "Ballistic vest", "tier": 4, "armour": 100.0, "pace": -2, "value": 420},
-		{"name": "Full plate carrier", "tier": 5, "armour": 140.0, "pace": -10, "value": 680},
-		{"name": "Light plates", "tier": 5, "armour": 110.0, "pace": 2, "value": 720},
-		{"name": "Stab plates", "tier": 6, "armour": 160.0, "pace": -6, "value": 900},
+		{"name": "Stab vest", "tier": 1, "armour": 15.0, "value": 60, "role": "heavy"},
+		{"name": "Padded jacket", "tier": 1, "armour": 10.0, "pace": 2, "value": 40, "role": "light"},
+		{"name": "Police body armour", "tier": 2, "armour": 35.0, "value": 80, "role": "heavy"},
+		{"name": "Motorbike leathers", "tier": 2, "armour": 25.0, "pace": 4, "value": 90, "role": "light"},
+		{"name": "Army plates", "tier": 3, "armour": 60.0, "value": 160, "role": "heavy"},
+		{"name": "Ceramic plates", "tier": 3, "armour": 72.0, "value": 220, "role": "heavy"},
+		{"name": "Riot suit", "tier": 3, "armour": 85.0, "pace": -8, "value": 260, "role": "heavy"},
+		{"name": "Ballistic vest", "tier": 3, "armour": 80.0, "pace": -2, "value": 220, "role": "heavy"},     # the Shopping Centre's own: T4 to T3 (29 Oct)
+		{"name": "Full plate carrier", "tier": 5, "armour": 140.0, "pace": -10, "value": 680, "role": "heavy"},
+		{"name": "Light plates", "tier": 3, "armour": 62.0, "pace": 2, "value": 230, "role": "light"},     # the Bank's own: T5 to T3 (29 Oct)
+		{"name": "Stab plates", "tier": 4, "armour": 105.0, "pace": -6, "value": 420, "role": "heavy"},     # the Barracks' own: T6 to T4 (29 Oct)
 		## resist gear (6 Oct): what the trades wore against their own hazards
-		{"name": "Fireman's tunic", "tier": 4, "armour": 55.0, "pace": -2, "value": 380, "res": {"fire": 40}},
-		{"name": "Lineman's rubber coat", "tier": 4, "armour": 45.0, "value": 360, "res": {"shock": 45}},
-		{"name": "Cold-store parka", "tier": 4, "armour": 40.0, "pace": -2, "value": 340, "res": {"frost": 45}},
-		{"name": "Hazmat suit", "tier": 5, "armour": 50.0, "pace": -4, "value": 520, "res": {"poison": 50}},
-		{"name": "Butcher's chainmail", "tier": 5, "armour": 90.0, "pace": -4, "value": 600, "res": {"bleed": 45}},
-		{"name": "Bomb suit", "tier": 6, "armour": 190.0, "pace": -14, "value": 1200, "res": {"fire": 20, "shock": 20}},
+		{"name": "Fireman's tunic", "tier": 4, "armour": 85.0, "pace": -2, "value": 380, "res": {"fire": 40}, "role": "specialist"},
+		{"name": "Lineman's rubber coat", "tier": 4, "armour": 85.0, "value": 360, "res": {"shock": 45}, "role": "specialist"},
+		{"name": "Cold-store parka", "tier": 4, "armour": 85.0, "pace": -2, "value": 340, "res": {"frost": 45}, "role": "specialist"},
+		{"name": "Hazmat suit", "tier": 5, "armour": 115.0, "pace": -4, "value": 520, "res": {"poison": 50}, "role": "specialist"},
+		{"name": "Butcher's chainmail", "tier": 5, "armour": 115.0, "pace": -4, "value": 600, "res": {"bleed": 45}, "role": "specialist"},
+		{"name": "Bomb suit", "tier": 6, "armour": 190.0, "pace": -14, "value": 1200, "res": {"fire": 20, "shock": 20}, "role": "heavy"},
 		## the deep bases (10 Oct): tiers 7-9, about +16% armour a tier, and the resist line carried on
-		{"name": "Military plate carrier", "tier": 7, "armour": 185.0, "pace": -6, "value": 1300},
-		{"name": "Fire service turnout gear", "tier": 7, "armour": 110.0, "pace": -4, "value": 1100, "res": {"fire": 50}},
-		{"name": "Special forces plates", "tier": 8, "armour": 215.0, "pace": -6, "value": 1700},
-		{"name": "CBRN suit", "tier": 8, "armour": 120.0, "pace": -6, "value": 1500, "res": {"poison": 55, "frost": 30}},
-		{"name": "Heavy armour suit", "tier": 9, "armour": 250.0, "pace": -12, "value": 2200},
-		{"name": "Full EOD suit", "tier": 9, "armour": 260.0, "pace": -16, "value": 2400, "res": {"fire": 30, "shock": 30}},
+		{"name": "Military plate carrier", "tier": 7, "armour": 185.0, "pace": -6, "value": 1300, "role": "heavy"},
+		{"name": "Turnout coat", "tier": 7, "armour": 150.0, "pace": -4, "value": 1100, "res": {"fire": 50}, "role": "specialist"},
+		{"name": "Special forces plates", "tier": 8, "armour": 215.0, "pace": -6, "value": 1700, "role": "heavy"},
+		{"name": "CBRN suit", "tier": 8, "armour": 175.0, "pace": -6, "value": 1500, "res": {"poison": 55, "frost": 30}, "role": "specialist"},
+		{"name": "Heavy armour suit", "tier": 9, "armour": 250.0, "pace": -12, "value": 2200, "role": "heavy"},
+		{"name": "Full EOD suit", "tier": 9, "armour": 260.0, "pace": -16, "value": 2400, "res": {"fire": 30, "shock": 30}, "role": "heavy"},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Spraying overalls", "tier": 1, "armour": 12.0, "res": {"poison": 30}, "value": 45, "role": "specialist"},
+		{"name": "Slash-proof jacket", "tier": 2, "armour": 28.0, "res": {"bleed": 35}, "value": 85, "role": "specialist"},
+		{"name": "Foundry coat", "tier": 3, "armour": 70.0, "pace": -2, "res": {"fire": 35}, "value": 230, "role": "specialist"},
+		{"name": "Low-profile vest", "tier": 4, "armour": 80.0, "pace": 3, "value": 400, "role": "light"},
+		{"name": "Prison officer's vest", "tier": 5, "armour": 110.0, "pace": 3, "value": 690, "role": "light"},
+		{"name": "Skeleton carrier", "tier": 6, "armour": 160.0, "pace": 3, "value": 880, "role": "light"},
+		{"name": "Arctic smock", "tier": 6, "armour": 155.0, "pace": -4, "res": {"frost": 45}, "value": 900, "role": "specialist"},
+		{"name": "Plainclothes vest", "tier": 7, "armour": 165.0, "pace": 3, "value": 1250, "role": "light"},
+		{"name": "Tailored body armour", "tier": 8, "armour": 190.0, "pace": 3, "value": 1650, "role": "light"},
+		{"name": "State protection vest", "tier": 9, "armour": 215.0, "pace": 3, "value": 2150, "role": "light"},
+		{"name": "Chainmail shark suit", "tier": 9, "armour": 210.0, "pace": -8, "res": {"bleed": 50}, "value": 2250, "role": "specialist"},
+	],
+	## Gloves (29 Oct, §4): a role each - grip (quicker reloads), pace, rate of fire - its figure built in (`stats`, read beside the
+	## affixes); three a tier. Quicker reloads is the gloves' alone.
+	"Gloves": [
+		{"name": "Gardening gloves", "tier": 1, "stats": {"reload_pct": 20}, "value": 25, "role": "grip"},
+		{"name": "Woolly gloves", "tier": 1, "pace": 2, "value": 25, "role": "pace"},
+		{"name": "Work gloves", "tier": 1, "stats": {"attack_pct": 3}, "value": 30, "role": "rate"},
+		{"name": "Rigger gloves", "tier": 2, "stats": {"reload_pct": 28}, "value": 55, "role": "grip"},
+		{"name": "Cycling mitts", "tier": 2, "pace": 3, "value": 55, "role": "pace"},
+		{"name": "Driving gloves", "tier": 2, "stats": {"attack_pct": 4}, "value": 60, "role": "rate"},
+		{"name": "Leather gloves", "tier": 3, "stats": {"reload_pct": 35}, "value": 110, "role": "grip"},
+		{"name": "Goalkeeper gloves", "tier": 3, "pace": 4, "value": 110, "role": "pace"},
+		{"name": "Shooting gloves", "tier": 3, "stats": {"attack_pct": 5}, "value": 120, "role": "rate"},
+		{"name": "Roofer's gloves", "tier": 4, "stats": {"reload_pct": 42}, "value": 210, "role": "grip"},
+		{"name": "Racing gloves", "tier": 4, "pace": 5, "value": 210, "role": "pace"},
+		{"name": "Tactical gloves", "tier": 4, "stats": {"attack_pct": 6}, "value": 220, "role": "rate"},
+		{"name": "Cut-resistant gloves", "tier": 5, "stats": {"reload_pct": 50}, "value": 350, "role": "grip"},
+		{"name": "Fell-runner's gloves", "tier": 5, "pace": 6, "value": 350, "role": "pace"},
+		{"name": "Armourer's gloves", "tier": 5, "stats": {"attack_pct": 7}, "value": 360, "role": "rate"},
+		{"name": "Riot gauntlets", "tier": 6, "stats": {"reload_pct": 58}, "value": 510, "role": "grip"},
+		{"name": "Pilot's gloves", "tier": 6, "pace": 7, "value": 510, "role": "pace"},
+		{"name": "Stalker's gloves", "tier": 6, "stats": {"attack_pct": 8}, "value": 520, "role": "rate"},
+		{"name": "Firefighter's gloves", "tier": 7, "stats": {"reload_pct": 65}, "value": 790, "role": "grip"},
+		{"name": "Paratrooper's gloves", "tier": 7, "pace": 8, "value": 790, "role": "pace"},
+		{"name": "Close-combat gloves", "tier": 7, "stats": {"attack_pct": 9}, "value": 800, "role": "rate"},
+		{"name": "Flight-deck gloves", "tier": 8, "stats": {"reload_pct": 72}, "value": 1090, "role": "grip"},
+		{"name": "Abseiling gloves", "tier": 8, "pace": 9, "value": 1090, "role": "pace"},
+		{"name": "Counter-sniper gloves", "tier": 8, "stats": {"attack_pct": 10}, "value": 1100, "role": "rate"},
+		{"name": "EOD gauntlets", "tier": 9, "stats": {"reload_pct": 80}, "value": 1490, "role": "grip"},
+		{"name": "Dress uniform gloves", "tier": 9, "pace": 10, "value": 1490, "role": "pace"},
+		{"name": "Special forces gloves", "tier": 9, "stats": {"attack_pct": 11}, "value": 1500, "role": "rate"},
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
 	"Rig": [
-		{"name": "Bum bag", "tier": 1, "capacity": 3, "value": 40},
-		{"name": "Fishing vest", "tier": 2, "capacity": 5, "value": 60},
-		{"name": "Paramedic's rig", "tier": 2, "capacity": 6, "pace": -2, "value": 90},
-		{"name": "Chest rig", "tier": 3, "capacity": 7, "value": 140},
-		{"name": "Webbing", "tier": 3, "capacity": 6, "pace": 3, "value": 120},
-		{"name": "Medic's harness", "tier": 4, "capacity": 9, "pace": -2, "value": 220},
-		{"name": "Plate rig", "tier": 5, "capacity": 8, "pace": 2, "value": 340},
-		{"name": "Assault rig", "tier": 6, "capacity": 9, "value": 460},
-		{"name": "Bomb-disposal rig", "tier": 6, "capacity": 11, "pace": -3, "value": 620},
+		{"name": "Bum bag", "tier": 1, "capacity": 3, "value": 40, "role": "heavy"},
+		{"name": "Fishing vest", "tier": 2, "capacity": 5, "value": 60, "role": "heavy"},
+		{"name": "Paramedic's rig", "tier": 2, "capacity": 6, "pace": -2, "value": 90, "role": "heavy"},
+		{"name": "Chest rig", "tier": 3, "capacity": 7, "value": 140, "role": "heavy"},
+		{"name": "Webbing", "tier": 3, "capacity": 6, "pace": 3, "value": 120, "role": "light"},
+		{"name": "Medic's harness", "tier": 4, "capacity": 9, "pace": -2, "value": 220, "role": "heavy"},
+		{"name": "Plate rig", "tier": 5, "capacity": 8, "pace": 2, "value": 340, "stats": {"guard_gang": 6}, "role": "specialist"},
+		{"name": "Assault rig", "tier": 6, "capacity": 9, "value": 460, "role": "heavy"},
+		{"name": "Bomb-disposal rig", "tier": 6, "capacity": 11, "pace": -3, "value": 620, "stats": {"guard_gang": 7}, "role": "specialist"},
 		## the deep bases (10 Oct): tiers 7-9
-		{"name": "Special forces rig", "tier": 7, "capacity": 12, "value": 800},
-		{"name": "Breacher's rig", "tier": 8, "capacity": 13, "pace": 2, "value": 1000},
-		{"name": "Command rig", "tier": 9, "capacity": 15, "pace": -2, "value": 1300},
+		{"name": "Special forces rig", "tier": 7, "capacity": 12, "value": 800, "role": "heavy"},
+		{"name": "Breacher's rig", "tier": 8, "capacity": 13, "pace": 2, "value": 1000, "role": "heavy"},
+		{"name": "Command rig", "tier": 9, "capacity": 15, "pace": -2, "value": 1300, "role": "heavy"},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Gardening apron", "tier": 1, "capacity": 2, "stats": {"med_speed_pct": 10}, "value": 30, "role": "light"},
+		{"name": "Body warmer", "tier": 1, "capacity": 2, "stats": {"guard_gang": 3}, "value": 35, "role": "specialist"},
+		{"name": "Lifeguard's vest", "tier": 2, "capacity": 4, "stats": {"med_speed_pct": 12}, "value": 60, "role": "light"},
+		{"name": "Tweed waistcoat", "tier": 2, "capacity": 4, "stats": {"guard_gang": 4}, "value": 70, "role": "specialist"},
+		{"name": "Door staff vest", "tier": 3, "capacity": 6, "stats": {"guard_gang": 5}, "value": 130, "role": "specialist"},
+		{"name": "Quick-release rig", "tier": 4, "capacity": 7, "stats": {"med_speed_pct": 15}, "value": 210, "role": "light"},
+		{"name": "Public order rig", "tier": 4, "capacity": 7, "stats": {"guard_gang": 6}, "value": 220, "role": "specialist"},
+		{"name": "Load carrier", "tier": 5, "capacity": 10, "value": 340, "role": "heavy"},
+		{"name": "Slick rig", "tier": 5, "capacity": 7, "stats": {"med_speed_pct": 18}, "value": 330, "role": "light"},
+		{"name": "Air ambulance vest", "tier": 6, "capacity": 8, "stats": {"med_speed_pct": 20}, "value": 470, "role": "light"},
+		{"name": "Pathfinder rig", "tier": 7, "capacity": 9, "stats": {"med_speed_pct": 22}, "value": 760, "role": "light"},
+		{"name": "Counter-terror rig", "tier": 7, "capacity": 10, "stats": {"guard_gang": 8}, "value": 800, "role": "specialist"},
+		{"name": "Hostage-rescue rig", "tier": 8, "capacity": 10, "stats": {"med_speed_pct": 24}, "value": 960, "role": "light"},
+		{"name": "Shield-team rig", "tier": 8, "capacity": 11, "stats": {"guard_gang": 9}, "value": 1000, "role": "specialist"},
+		{"name": "Desert patrol rig", "tier": 9, "capacity": 11, "stats": {"med_speed_pct": 26}, "value": 1250, "role": "light"},
+		{"name": "Royal escort rig", "tier": 9, "capacity": 12, "stats": {"guard_gang": 10}, "value": 1300, "role": "specialist"},
 	],
 	## a pack's "w" (Matt, 27 Oct, the pack as a real grid): its width in cells, never under 5 so a long gun lies flat;
 	## its capacity is its cells, row by row (the Plastic bag 9 to 15, 5x3: a rifle or a jacket; the School bag 12 to 18,
 	## the Carrier bags 10 to 16, 8x2, so no early pack is under the start); never over PACK_MAX_W, the grid's columns
 	"Backpack": [
 		{"name": "Plastic bag", "tier": 1, "capacity": 15, "w": 5, "value": 5, "start": true},     # the start: the worst there is, never found; 5x3, so a found vest (3×3) or a rifle (5×1) comes home
-		{"name": "School bag", "tier": 1, "capacity": 18, "w": 6, "value": 30},
-		{"name": "Carrier bags", "tier": 1, "capacity": 16, "w": 8, "pace": 3, "value": 15},     # two bags side by side, 8x2: long things, never a vest
-		{"name": "Hiking pack", "tier": 2, "capacity": 24, "w": 6, "value": 60},
-		{"name": "Holdall", "tier": 2, "capacity": 20, "w": 5, "pace": 2, "value": 70},
-		{"name": "Bergen", "tier": 3, "capacity": 40, "w": 8, "value": 110},
-		{"name": "Framed pack", "tier": 3, "capacity": 48, "w": 8, "pace": -5, "value": 160},
-		{"name": "Expedition pack", "tier": 4, "capacity": 56, "w": 8, "pace": -3, "value": 260},
-		{"name": "Cargo frame", "tier": 5, "capacity": 72, "w": 9, "pace": -8, "value": 400},
-		{"name": "Patrol pack", "tier": 6, "capacity": 60, "w": 10, "value": 480},
-		{"name": "Full bergen", "tier": 6, "capacity": 80, "w": 10, "pace": -6, "value": 640},
+		{"name": "School bag", "tier": 1, "capacity": 18, "w": 6, "value": 30, "role": "heavy"},
+		{"name": "Carrier bags", "tier": 1, "capacity": 16, "w": 8, "pace": 3, "value": 15, "role": "light"},     # two bags side by side, 8x2: long things, never a vest
+		{"name": "Hiking pack", "tier": 2, "capacity": 24, "w": 6, "value": 60, "role": "heavy"},
+		{"name": "Holdall", "tier": 2, "capacity": 20, "w": 5, "pace": 2, "value": 70, "role": "light"},
+		{"name": "Bergen", "tier": 3, "capacity": 40, "w": 8, "value": 110, "role": "heavy"},
+		{"name": "Framed pack", "tier": 3, "capacity": 48, "w": 8, "pace": -5, "value": 160, "role": "heavy"},
+		{"name": "Expedition pack", "tier": 4, "capacity": 56, "w": 8, "pace": -3, "value": 260, "role": "heavy"},
+		{"name": "Cargo frame", "tier": 4, "capacity": 64, "w": 8, "pace": -8, "value": 260, "role": "heavy"},     # the Services' own: T5 to T4 (29 Oct)
+		{"name": "Patrol pack", "tier": 6, "capacity": 60, "w": 10, "value": 480, "role": "heavy"},
+		{"name": "Full bergen", "tier": 6, "capacity": 80, "w": 10, "pace": -6, "value": 640, "role": "heavy"},
 		## the deep bases (10 Oct): tiers 7-9
-		{"name": "Assault pack", "tier": 7, "capacity": 72, "w": 9, "value": 820},
-		{"name": "Long-range bergen", "tier": 7, "capacity": 96, "w": 12, "pace": -6, "value": 860},
-		{"name": "Mountain-troop bergen", "tier": 8, "capacity": 104, "w": 13, "pace": -6, "value": 1100},
-		{"name": "Special forces bergen", "tier": 9, "capacity": 130, "w": 10, "pace": -6, "value": 1450},
+		{"name": "Assault pack", "tier": 7, "capacity": 72, "w": 9, "value": 820, "role": "heavy"},
+		{"name": "Long-range bergen", "tier": 7, "capacity": 96, "w": 12, "pace": -6, "value": 860, "role": "heavy"},
+		{"name": "Mountain-troop bergen", "tier": 8, "capacity": 104, "w": 13, "pace": -6, "value": 1100, "role": "heavy"},
+		{"name": "Special forces bergen", "tier": 9, "capacity": 130, "w": 10, "pace": -6, "value": 1450, "role": "heavy"},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Feed sack", "tier": 1, "capacity": 16, "w": 8, "stats": {"loot_pct": 10}, "value": 20, "role": "specialist"},
+		{"name": "Tartan shopper", "tier": 2, "capacity": 20, "w": 5, "stats": {"loot_pct": 12}, "value": 55, "role": "specialist"},
+		{"name": "Daysack", "tier": 3, "capacity": 32, "w": 8, "stats": {"search_pct": 10}, "value": 100, "role": "light"},
+		{"name": "Dumpy bag", "tier": 3, "capacity": 36, "w": 6, "stats": {"loot_pct": 14}, "value": 110, "role": "specialist"},
+		{"name": "Messenger bag", "tier": 4, "capacity": 40, "w": 8, "stats": {"search_pct": 12}, "value": 230, "role": "light"},
+		{"name": "Sailor's bag", "tier": 4, "capacity": 48, "w": 8, "stats": {"loot_pct": 16}, "value": 240, "role": "specialist"},
+		{"name": "Mule pack", "tier": 5, "capacity": 72, "w": 9, "pace": -6, "value": 390, "role": "heavy"},
+		{"name": "Sniper's drag bag", "tier": 5, "capacity": 56, "w": 8, "stats": {"search_pct": 14}, "value": 380, "role": "light"},
+		{"name": "Swag bag", "tier": 5, "capacity": 60, "w": 10, "stats": {"loot_pct": 18}, "value": 400, "role": "specialist"},
+		{"name": "Search-and-rescue pack", "tier": 6, "capacity": 64, "w": 8, "stats": {"search_pct": 16}, "value": 470, "role": "light"},
+		{"name": "Security van bag", "tier": 6, "capacity": 60, "w": 10, "stats": {"loot_pct": 20}, "value": 500, "role": "specialist"},
+		{"name": "Clamshell pack", "tier": 7, "capacity": 64, "w": 8, "stats": {"search_pct": 18}, "value": 800, "role": "light"},
+		{"name": "Ingot sack", "tier": 7, "capacity": 72, "w": 9, "stats": {"loot_pct": 22}, "value": 840, "role": "specialist"},
+		{"name": "Alpine pack", "tier": 8, "capacity": 80, "w": 10, "stats": {"search_pct": 20}, "value": 1080, "role": "light"},
+		{"name": "Strongroom bag", "tier": 8, "capacity": 80, "w": 10, "stats": {"loot_pct": 24}, "value": 1120, "role": "specialist"},
+		{"name": "Freefall pack", "tier": 9, "capacity": 100, "w": 10, "stats": {"search_pct": 22}, "value": 1420, "role": "light"},
+		{"name": "Wax-sealed bag", "tier": 9, "capacity": 100, "w": 10, "stats": {"loot_pct": 26}, "value": 1480, "role": "specialist"},
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.
 	"Charm": [
-		{"name": "Lucky penny", "tier": 1, "find": 5, "cash": 5, "value": 30},
-		{"name": "Rabbit's foot", "tier": 1, "find": 8, "cash": 0, "value": 40},
-		{"name": "St Christopher", "tier": 2, "find": 10, "cash": 5, "value": 90},
-		{"name": "Horseshoe nail", "tier": 2, "find": 6, "cash": 12, "value": 90},
-		{"name": "Wedding ring", "tier": 3, "find": 12, "cash": 10, "value": 180},
-		{"name": "Dog tag", "tier": 4, "find": 15, "cash": 8, "value": 320},
-		{"name": "Casino chip", "tier": 5, "find": 18, "cash": 15, "value": 520},
-		{"name": "Bank's own pen", "tier": 6, "find": 20, "cash": 20, "value": 800},
-		{"name": "Mayor's chain", "tier": 6, "find": 24, "cash": 24, "value": 1100},
+		{"name": "Lucky penny", "tier": 1, "find": 5, "cash": 5, "value": 30, "role": "heavy"},
+		{"name": "Rabbit's foot", "tier": 1, "find": 8, "cash": 0, "value": 40, "role": "light"},
+		{"name": "St Christopher", "tier": 2, "find": 10, "cash": 5, "value": 90, "role": "light"},
+		{"name": "Horseshoe nail", "tier": 2, "find": 6, "cash": 12, "value": 90, "role": "heavy"},
+		{"name": "Wedding ring", "tier": 3, "find": 12, "cash": 10, "value": 180, "role": "light"},
+		{"name": "Dog tag", "tier": 4, "find": 15, "cash": 8, "value": 320, "role": "light"},
+		{"name": "Casino chip", "tier": 5, "find": 18, "cash": 15, "value": 520, "role": "light"},
+		{"name": "Bank's own pen", "tier": 6, "find": 20, "cash": 20, "value": 800, "role": "light"},
+		{"name": "Mayor's chain", "tier": 6, "find": 24, "cash": 24, "value": 1100, "role": "heavy"},
 		## the deep bases (10 Oct): tiers 7-9
-		{"name": "Signet ring", "tier": 7, "find": 28, "cash": 26, "value": 1500},
-		{"name": "Regimental medal", "tier": 8, "find": 32, "cash": 30, "value": 2000},
-		{"name": "Gold sovereign", "tier": 9, "find": 36, "cash": 36, "value": 2700},
+		{"name": "Signet ring", "tier": 7, "find": 28, "cash": 26, "value": 1500, "role": "light"},
+		{"name": "Regimental medal", "tier": 8, "find": 32, "cash": 30, "value": 2000, "role": "light"},
+		{"name": "Gold sovereign", "tier": 9, "find": 36, "cash": 36, "value": 2700, "role": "heavy"},
+		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
+		{"name": "Box of matches", "tier": 1, "find": 2, "cash": 0, "stats": {"fire_pct": 8}, "value": 25, "role": "specialist"},
+		{"name": "Old spark plug", "tier": 2, "find": 3, "cash": 0, "stats": {"shock_pct": 10}, "value": 70, "role": "specialist"},
+		{"name": "Gold tooth", "tier": 3, "find": 6, "cash": 16, "value": 170, "role": "heavy"},
+		{"name": "Barber's razor", "tier": 3, "find": 4, "cash": 0, "stats": {"bleed_pct": 12}, "value": 170, "role": "specialist"},
+		{"name": "Pocket watch", "tier": 4, "find": 8, "cash": 20, "value": 300, "role": "heavy"},
+		{"name": "Brass canary", "tier": 4, "find": 5, "cash": 0, "stats": {"poison_pct": 14}, "value": 310, "role": "specialist"},
+		{"name": "Gold cufflinks", "tier": 5, "find": 10, "cash": 26, "value": 500, "role": "heavy"},
+		{"name": "Ice-hockey puck", "tier": 5, "find": 6, "cash": 0, "stats": {"frost_pct": 16}, "value": 510, "role": "specialist"},
+		{"name": "Dragon brooch", "tier": 6, "find": 7, "cash": 0, "stats": {"fire_pct": 18}, "value": 780, "role": "specialist"},
+		{"name": "Diamond tiepin", "tier": 7, "find": 16, "cash": 36, "value": 1450, "role": "heavy"},
+		{"name": "Glass insulator", "tier": 7, "find": 8, "cash": 0, "stats": {"shock_pct": 20}, "value": 1460, "role": "specialist"},
+		{"name": "Gold cigarette case", "tier": 8, "find": 18, "cash": 42, "value": 1950, "role": "heavy"},
+		{"name": "Sword knot", "tier": 8, "find": 9, "cash": 0, "stats": {"bleed_pct": 22}, "value": 1960, "role": "specialist"},
+		{"name": "Uncut diamond", "tier": 9, "find": 40, "cash": 20, "value": 2650, "role": "light"},
+		{"name": "Apothecary's vial", "tier": 9, "find": 10, "cash": 0, "stats": {"poison_pct": 24}, "value": 2660, "role": "specialist"},
 	],
 	## Papers: the before, on paper. Worth their value to the Fence and nothing
 	## else; the deeds are dropped by the Bank once; what's done with them is the player's.
@@ -686,6 +1013,13 @@ const SOCKET_OWN := 0.5           # and this share of them one of the class's ow
 ## fitted at all - the camp's cash sink.
 const ATTACHMENT := "Attachment"
 const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"]
+## Each gun type's edge (29 Oct, docs/design/itemisation.md §3; drafts for the pass): the primary's, in the fight and in the
+## figures that read it (Sim.edge_read). A rifle ignores `pierce` of a man's armour (their physical resist) and lands
+## `opener` more on its first round into each man; a shotgun's every round hits the next in line for `x` of it; a melee
+## weapon does `x` more with `on_you` or more on you; something improvised takes `sockets` more than another gun.
+## Walking fire (an SMG's) is its base's own `sustain`; the pistol's quick draw is the magazines' (it fires at full
+## while the primary reloads).
+const EDGE := {"rifle": {"pierce": 0.3, "opener": 0.5}, "shotgun": {"x": 0.4}, "melee": {"x": 0.2, "on_you": 2}, "improvised": {"sockets": 1}}
 const MELEE_INCOMING := 1.25       # in among them: their fire on you, with a melee primary
 const MELEE_WAIT := 1.0            # seconds: their first shot lands before your first swing, each gang
 ## Sockets: a gun, a helmet or armour rolls up to SOCKET_MAX of them; a
@@ -719,7 +1053,7 @@ const ZONE_TYPES := [
 	{"types": {"poison": 0.1}, "res": {}},                                   # the Outskirts (12 Oct): sticks, spades and the weedkiller
 	{"types": {"bleed": 0.15}, "res": {}},                                   # the estate: blades and bats; nothing on but a coat
 	{"types": {"fire": 0.15, "poison": 0.1}, "res": {"bleed": 0.2, "physical": 0.1}},   # the town: petrol and whatever's in the bottles; jackets
-	{"types": {"shock": 0.15, "fire": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2, "frost": 0.1, "poison": 0.15}},   # the city: army kit, greatcoats, gas masks (poison 0.15, 12 Oct: the poison builds ran the loop to 9-15 moves, fire and shock 1-6; bleed stays open - every zone leaves one, the band check)
+	{"types": {"shock": 0.15, "fire": 0.15, "frost": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2, "frost": 0.1, "poison": 0.15}},   # the city: army kit, greatcoats, gas masks (poison 0.15, 12 Oct: the poison builds ran the loop to 9-15 moves, fire and shock 1-6; bleed stays open - every zone leaves one, the band check)
 ]
 const ZONE_GROW := 0.02
 ## Harder gangs (B9, 15 Oct): from the second gang on, a gang can be the next zone's crew - their HP, their fire and
@@ -748,7 +1082,7 @@ const ATTACHMENTS := [
 	# magazines
 	{"name": "Extended magazine", "mount": "magazine", "tier": 1, "value": 70, "damage_pct": 8},
 	{"name": "Quick magazine", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 4, "speed_pct": 4},
-	{"name": "Drum magazine", "mount": "magazine", "tier": 3, "value": 110, "damage_pct": 14, "speed_pct": -8},
+	{"name": "Drum magazine", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 10, "speed_pct": -6},     # the Retail Park's own: T3 to T2 (29 Oct)
 	{"name": "Belt box", "mount": "magazine", "tier": 3, "value": 240, "damage_pct": 20, "speed_pct": -12, "type": "smg"},
 	# handguards
 	{"name": "Foregrip", "mount": "handguard", "tier": 1, "value": 50, "damage_pct": 6},
@@ -822,122 +1156,128 @@ const SITE_UNIQUE_DEPTH := [99, 12, 9, 6]   # a site's own unique, by zone: the 
 const SITE_UNIQUE_DROP := 0.03          # a find past that depth, on that site, until it is on the shelf
 const SITE_UNIQUE_AGAIN := 0.25         # of that, once it is: a second is for the Fence, not the chase
 const UNIQUES := [
-	{"name": "Grandad's Shotgun", "slot": "Primary", "base": "Farmer's shotgun", "rule": "grandads", "band": "levelling", "range": [1, 4],
+	{"name": "Grandad's Shotgun", "slot": "Primary", "base": "Farmer's shotgun", "rule": "grandads", "band": "levelling", "range": [1, 3],
 		"words": "Triple damage to the first of each gang", "short": "×3 damage to each gang's first", "affixes": [{"stat": "damage_pct", "value": 10}, {"stat": "first_lot_pct", "value": 20}]},
-	{"name": "The Postman's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "postman", "band": "levelling", "range": [1, 4],
+	{"name": "The Postman's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "postman", "band": "levelling", "range": [1, 3],
 		"words": "Every search finds 1 more", "short": "+1 find a search", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "loot_pct", "value": 15}]},
-	{"name": "The Doorman's Jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans", "band": "levelling", "range": [2, 5],
+	{"name": "The Doorman's Jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans", "band": "levelling", "range": [2, 3],
 		"words": "Take 25% less damage with three or more on you", "short": "−25% damage taken, 3+ on you", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 20}]},
-	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap", "band": "levelling", "range": [1, 4],
+	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap", "band": "levelling", "range": [1, 3],
 		"words": "Finds are half as likely to be common", "short": "Half the commons", "affixes": [{"stat": "loot_pct", "value": 20}, {"stat": "cash_per_kill", "value": 6}]},
 	# the bosses' - only from them; their rules are the affixes, for now
 	# the Gamekeeper's (15 Oct, Matt: "killing him and getting absolutely nothing felt bad")
-	{"name": "The Keeper's Twelve-Bore", "slot": "Primary", "base": "Pump shotgun", "rule": "keepers_gun", "band": "levelling", "range": [1, 4], "boss": true,
+	{"name": "The Keeper's Twelve-Bore", "slot": "Primary", "base": "Pump shotgun", "rule": "keepers_gun", "band": "levelling", "range": [1, 3], "boss": true,
 		"words": "Every kill heals 3% of max HP", "short": "A kill heals 3% max HP", "affixes": [{"stat": "damage_pct", "value": 12}, {"stat": "first_lot_pct", "value": 15}]},
-	{"name": "The Keeper's Wax Jacket", "slot": "Armour", "base": "Padded jacket", "rule": "keepers_wax", "band": "levelling", "range": [1, 4], "boss": true,
+	{"name": "The Keeper's Wax Jacket", "slot": "Armour", "base": "Padded jacket", "rule": "keepers_wax", "band": "levelling", "range": [1, 3], "boss": true,
 		"words": "Poison and bleed on you do half damage", "short": "Poison, bleed on you halved", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 15}]},
-	{"name": "The Van's Spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "band": "levelling", "range": [3, 6], "boss": true,
+	{"name": "The Van's Spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "band": "levelling", "range": [2, 4], "boss": true,
 		"words": "The secondary does 67% of its damage beside the primary, not 33%", "short": "Secondary at 67%", "affixes": [{"stat": "first_lot_pct", "value": 25}, {"stat": "cash_per_kill", "value": 4}]},     # 15 Oct, Matt: was at full and +18% damage - "nothing beats the Van's Spare"; Double tap takes it to full
-	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "band": "levelling", "range": [3, 6], "boss": true,
+	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "band": "levelling", "range": [2, 4], "boss": true,
 		"words": "The first 2 seconds of every gang's fire do no damage", "short": "No damage for each gang's first 2 s", "affixes": [{"stat": "armour", "value": 30}, {"stat": "hp", "value": 25}, {"stat": "speed_pct", "value": 6}]},
-	{"name": "The Manager's Coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "band": "core", "range": [5, 8], "boss": true,
+	{"name": "The Manager's Coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "band": "core", "range": [3, 7], "boss": true,
 		"words": "Tins from kills +50%; kills drop no notes", "short": "Kill tins ×1.5, no kill notes", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_per_kill", "value": 8}, {"stat": "hp", "value": 20}]},
-	{"name": "The Branch Pistol", "slot": "Secondary", "base": "Tactical pistol", "rule": "branch_pistol", "band": "core", "range": [5, 8], "boss": true,
+	{"name": "The Branch Pistol", "slot": "Secondary", "base": "Tactical pistol", "rule": "branch_pistol", "band": "core", "range": [3, 7], "boss": true,
 		"words": "The secondary does double damage under half HP", "short": "Secondary ×2 under ½ HP", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "damage_low_pct", "value": 25}, {"stat": "speed_pct", "value": 6}]},
-	{"name": "The Quartermaster's Rifle", "slot": "Primary", "base": "Marksman rifle", "rule": "qm_rifle", "band": "chase", "range": [7, 9], "boss": true,
+	{"name": "The Quartermaster's Rifle", "slot": "Primary", "base": "Marksman rifle", "rule": "qm_rifle", "band": "chase", "range": [4, 9], "boss": true,
 		"words": "Never runs out of rounds", "short": "Never runs dry", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_lot_pct", "value": 30}, {"stat": "damage_per_att", "value": 5}]},
-	{"name": "Issue Webbing", "slot": "Rig", "base": "Assault rig", "rule": "issue_webbing", "band": "chase", "range": [7, 9], "boss": true,
+	{"name": "Issue Webbing", "slot": "Rig", "base": "Assault rig", "rule": "issue_webbing", "band": "chase", "range": [4, 9], "boss": true,
 		"words": "The rig has twice as many pouches", "short": "Pouches ×2", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "armour", "value": 15}, {"stat": "loot_per_med", "value": 5}]},
 	# the pinnacles' - a charm each, from a crew's head at full strength
-	{"name": "The Van Keys", "slot": "Charm", "base": "Horseshoe nail", "rule": "van_keys", "band": "chase", "range": [6, 9], "boss": true, "pinnacle": 1,
+	{"name": "The Van Keys", "slot": "Charm", "base": "Horseshoe nail", "rule": "van_keys", "band": "chase", "range": [4, 9], "boss": true, "pinnacle": 1,
 		"words": "Pace +25%", "short": "Pace +25%", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "cash_pct", "value": 10}, {"stat": "loot_pct", "value": 8}]},
-	{"name": "The Manager's Pen", "slot": "Charm", "base": "Bank's own pen", "rule": "managers_pen", "band": "chase", "range": [7, 9], "boss": true, "pinnacle": 2,
+	{"name": "The Manager's Pen", "slot": "Charm", "base": "Bank's own pen", "rule": "managers_pen", "band": "chase", "range": [5, 9], "boss": true, "pinnacle": 2,
 		"words": "Notes from a run doubled", "short": "Notes ×2", "affixes": [{"stat": "rarity_pct", "value": 12}, {"stat": "cash_pct", "value": 15}, {"stat": "loot_pct", "value": 5}]},
-	{"name": "The Quartermaster's Ledger", "slot": "Charm", "base": "Dog tag", "rule": "qm_ledger", "band": "chase", "range": [7, 9], "boss": true, "pinnacle": 3,
+	{"name": "The Quartermaster's Ledger", "slot": "Charm", "base": "Dog tag", "rule": "qm_ledger", "band": "chase", "range": [5, 9], "boss": true, "pinnacle": 3,
 		"words": "Kill drops roll one loot tier higher", "short": "Kill drops a tier up", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "cash_pct", "value": 8}, {"stat": "loot_pct", "value": 10}]},
 	# the convoy's
-	{"name": "The Lorry's Load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "band": "chase", "range": [7, 9], "boss": true, "convoy": true,
+	{"name": "The Lorry's Load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "band": "chase", "range": [5, 9], "boss": true, "convoy": true,
 		"words": "Every empty pack cell comes home as notes, more on a higher signal", "short": "Empty cells home as notes", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "loot_pct", "value": 15}, {"stat": "cash_per_cell", "value": 3}]},
 	# the order's (18 Oct, docs/design/rebuild.md §5): one each from the true pinnacles, nowhere else
-	{"name": "The Lineman's Lamp", "slot": "Helmet", "base": "High-cut helmet", "rule": "linemans_lamp", "band": "chase", "range": [7, 9], "boss": true, "order": "grid",
+	{"name": "The Lineman's Lamp", "slot": "Helmet", "base": "High-cut helmet", "rule": "linemans_lamp", "band": "chase", "range": [5, 9], "boss": true, "order": "grid",
 		"words": "At night: no slower feet, and the dark's finds count double", "short": "Night: full pace, finds ×2", "affixes": [{"stat": "armour", "value": 24}, {"stat": "rarity_pct", "value": 15}]},
-	{"name": "The Registrar's Satchel", "slot": "Backpack", "base": "Assault pack", "rule": "registrars_satchel", "band": "chase", "range": [7, 9], "boss": true, "order": "archive",
+	{"name": "The Registrar's Satchel", "slot": "Backpack", "base": "Assault pack", "rule": "registrars_satchel", "band": "chase", "range": [5, 9], "boss": true, "order": "archive",
 		"words": "Papers turn up twice as often", "short": "Papers ×2", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "loot_pct", "value": 15}]},
-	{"name": "The Issuer's Robes", "slot": "Armour", "base": "Heavy armour suit", "rule": "issuers_robes", "band": "chase", "range": [8, 9], "boss": true, "order": "mint",
+	{"name": "The Issuer's Robes", "slot": "Armour", "base": "Heavy armour suit", "rule": "issuers_robes", "band": "chase", "range": [7, 9], "boss": true, "order": "mint",
 		"words": "A run's tins +1% for every point of the town's worth", "short": "Tins +1% a point of worth", "affixes": [{"stat": "armour", "value": 40}, {"stat": "hp", "value": 40}, {"stat": "cash_pct", "value": 10}]},
 	# a build to make of each (24 Oct, the endgame chase): beside the old one, the first win gives one of the two
-	{"name": "The Lineman's Tool Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "linemans_bag", "band": "chase", "range": [7, 9], "boss": true, "order": "grid",
+	{"name": "The Lineman's Tool Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "linemans_bag", "band": "chase", "range": [5, 9], "boss": true, "order": "grid",
 		"words": "Every shock you put on a man arcs to everyone else on you at half strength; shocked men take 20% more damage from your skills", "short": "Shock arcs to all; skills +20% on shocked", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "shock_pct", "value": 20}]},
-	{"name": "The Registrar's Stamp", "slot": "Charm", "base": "Bank's own pen", "rule": "registrars_stamp", "band": "chase", "range": [7, 9], "boss": true, "order": "archive",
+	{"name": "The Registrar's Stamp", "slot": "Charm", "base": "Bank's own pen", "rule": "registrars_stamp", "band": "chase", "range": [5, 9], "boss": true, "order": "archive",
 		"words": "Every third skill you use costs nothing and goes off twice", "short": "Every third skill: free, fires twice", "affixes": [{"stat": "cdr_pct", "value": 10}]},
-	{"name": "The Issuer's Revolver", "slot": "Secondary", "base": "Officer's revolver", "rule": "issuers_revolver", "band": "chase", "range": [8, 9], "boss": true, "order": "mint",
+	{"name": "The Issuer's Revolver", "slot": "Secondary", "base": "Officer's revolver", "rule": "issuers_revolver", "band": "chase", "range": [7, 9], "boss": true, "order": "mint",
 		"words": "A kill lands the killing hit again on the next man; a kill from that hit does the same", "short": "A kill's hit lands again on the next", "affixes": [{"stat": "damage_pct", "value": 20}]},
 	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep;
 	# nine of them are a site's own (`site`, endgame part 3, 7 Oct): found only on that site, past SITE_UNIQUE_DEPTH for its
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
 	# in the game and the Barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
-	{"name": "The Council's Weed Burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Council's Weed Burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "All damage is fire and hits everyone on you", "short": "All fire, hits all on you", "affixes": [{"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},     # its +40% fire off (the second review: it out-hit every element gun on five builds)
-	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "33% of damage becomes shock; shock hits everyone on you", "short": "33% as shock, hits all", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
-	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "Poison has no stack cap and carries to the next man when one dies", "short": "Poison uncapped, carries", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
-	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "band": "core", "range": [4, 9], "body": {"bleed_min": 25}, "depth": 6,
+	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "band": "core", "range": [3, 9], "body": {"bleed_min": 25}, "depth": 6,
 		"words": "Bleed does double damage and carries to the next man when one dies", "short": "Bleed ×2, carries", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
-	{"name": "The Gritter's Hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "band": "chase", "range": [6, 9], "site": 3,
+	{"name": "The Gritter's Hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "band": "chase", "range": [4, 9], "site": 3,
 		"words": "Everyone on you is always chilled, and only one can fire on you at once", "short": "Always chilled; 1 on you", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "armour", "value": 30}, {"stat": "frost_res", "value": 30}]},
-	{"name": "The Sparky's Gloves", "slot": "Charm", "base": "Horseshoe nail", "rule": "sparkys_gloves", "band": "core", "range": [4, 8], "site": 5,
+	{"name": "The Sparky's Gloves", "slot": "Gloves", "base": "Leather gloves",     # a charm till the gloves (29 Oct)
+		 "rule": "sparkys_gloves", "band": "core", "range": [3, 7], "site": 5,
 		"words": "Their shock resist is ignored; Earthed no longer costs armour", "short": "Shock resist ignored", "affixes": [{"stat": "shock_pct", "value": 30}, {"stat": "shock_res", "value": 40}]},
-	{"name": "The Quartermaster's Manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "band": "chase", "range": [7, 9], "site": 11,
+	{"name": "The Quartermaster's Manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "band": "chase", "range": [5, 9], "site": 11,
 		"words": "Every element tree costs normal points, and every element keystone is open", "short": "All element trees full price", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
-	{"name": "A Blue Plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "band": "chase", "range": [6, 9], "site": 8,
+	{"name": "A Blue Plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "band": "chase", "range": [4, 9], "site": 8,
 		"words": "All resists +40%; no other affix on your kit counts", "short": "Resists +40%, nothing else", "affixes": [{"stat": "all_res", "value": 40}]},
-	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "The first of each gang dies at once; gangs take twice as long to arrive", "short": "First of each gang dies; gangs ×2 later", "affixes": [{"stat": "first_pct", "value": 30}, {"stat": "patrol_pct", "value": 15}]},
-	{"name": "The Bookie's Pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Bookie's Pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "Loot quality ×2; tins from kills halved", "short": "Quality ×2, tins ½", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "band": "chase", "range": [6, 9], "site": 7,
+	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "band": "chase", "range": [4, 9], "site": 7,
 		"words": "Pace +40%, pack +50%; you carry no meds", "short": "Pace +40%; no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
-	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [4, 9], "body": {"pace_min": 0}, "depth": 6,
+	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [3, 9], "body": {"pace_min": 0}, "depth": 6,
 		"words": "Heals 3% of max HP a second; no armour at all", "short": "3% max HP/s, no armour", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
-	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "Every kill heals 10% of max HP; meds do nothing", "short": "10% HP a kill, no meds", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "attack_pct", "value": 15}]},
-	{"name": "A Traffic Warden's Hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "band": "levelling", "range": [2, 5],
+	{"name": "A Traffic Warden's Hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "band": "levelling", "range": [2, 3],
 		"words": "Every gang arrives one man short; kills drop double notes", "short": "Gangs one short, notes ×2", "affixes": [{"stat": "notes_pct", "value": 25}, {"stat": "armour", "value": 10}]},
-	{"name": "The Vicar's Thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "band": "chase", "range": [6, 9], "site": 10,
+	{"name": "The Vicar's Thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "band": "chase", "range": [4, 9], "site": 10,
 		"words": "A burn on you heals you instead; your fire resist is 0", "short": "Burns heal you", "affixes": [{"stat": "regen", "value": 1.0}, {"stat": "fire_pct", "value": 20}]},
-	{"name": "The Scout Leader's Whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "band": "levelling", "range": [1, 4],
+	{"name": "The Scout Leader's Whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "band": "levelling", "range": [1, 3],
 		"words": "Every gang after the first is one man", "short": "Gangs after the first: 1 man", "affixes": [{"stat": "patrol_pct", "value": 10}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The Sergeant's Whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "band": "chase", "range": [7, 9], "site": 4,
+	{"name": "The Sergeant's Whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "band": "chase", "range": [5, 9], "site": 4,
 		"words": "Damage +60%; 2 more on you at once", "short": "+60% damage, +2 on you", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 30}, {"stat": "crowd_less_pct", "value": 10}]},
-	{"name": "The Electrician's Tester", "slot": "Secondary", "base": "Compact pistol", "rule": "tester", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Electrician's Tester", "slot": "Secondary", "base": "Compact pistol", "rule": "tester", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "Shock lasts until the target is down; shock does half damage", "short": "Shock holds, does half", "affixes": [{"stat": "conv_shock_pct", "value": 25}, {"stat": "shock_pct", "value": 20}]},
-	{"name": "The Gamekeeper's Flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "band": "core", "range": [4, 8], "site": 6,
+	{"name": "The Gamekeeper's Flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "band": "core", "range": [3, 7], "site": 6,
 		"words": "Poison on you poisons them back", "short": "Poison on you poisons them", "affixes": [{"stat": "poison_res", "value": 30}, {"stat": "poison_pct", "value": 30}]},
-	{"name": "The Caretaker's Keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "band": "chase", "range": [7, 9], "depth": 12,
+	{"name": "The Caretaker's Keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "band": "chase", "range": [5, 9], "depth": 12,
 		"words": "An event on every run, and every locked crate opens", "short": "An event a run; locked crates open", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
 	{"name": "The Lorry Driver's Log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "site": 9,
 		"words": "Notes from a run doubled; insurance is free", "short": "Notes ×2, free insurance", "affixes": [{"stat": "notes_pct", "value": 50}]},
 	# the elements' own (6 Oct): one a type, each leaning the whole way into it, for the builds that break the game
-	{"name": "The Arsonist's Rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "band": "chase", "range": [7, 9], "depth": 14,
+	{"name": "The Arsonist's Rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "Every med used sets everyone on you alight", "short": "Meds set them alight", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "med_cap", "value": 2}, {"stat": "conv_fire_pct", "value": 20}]},
-	{"name": "The Gritter's Keys", "slot": "Charm", "base": "Wedding ring", "rule": "gritters_keys", "band": "chase", "range": [7, 9], "depth": 14,
+	{"name": "The Gritter's Keys", "slot": "Charm", "base": "Wedding ring", "rule": "gritters_keys", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "A chill lasts until the target dies; chilled targets take double frost damage", "short": "Chill holds, frost ×2", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "conv_frost_pct", "value": 25}]},
-	{"name": "The Rat Man's Overalls", "slot": "Armour", "base": "Motorbike leathers", "rule": "rat_mans_overalls", "band": "chase", "range": [7, 9], "depth": 14,
+	{"name": "The Rat Man's Overalls", "slot": "Armour", "base": "Motorbike leathers", "rule": "rat_mans_overalls", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "Poison stacks without limit and deals its damage twice as fast", "short": "Poison: no cap, ×2 speed", "affixes": [{"stat": "poison_pct", "value": 50}, {"stat": "poison_res", "value": 35}, {"stat": "armour", "value": 20}]},
-	{"name": "The Substation Key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "band": "chase", "range": [7, 9], "depth": 14,
+	{"name": "The Substation Key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "Shock hits everyone on you; shocked targets take 60% more damage", "short": "Shock spreads, +60%", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "conv_shock_pct", "value": 20}]},
-	{"name": "The Butcher's Apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "band": "chase", "range": [7, 9], "depth": 14,
+	{"name": "The Butcher's Apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "A bleed stacks to 3 and carries to the next man when one dies", "short": "Bleed carries, stacks to 3", "affixes": [{"stat": "bleed_pct", "value": 50}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "armour", "value": 25}]},
 	# the gaps' (12 Oct, docs/design/uniques.md): a chase secondary, a core helmet, a levelling and a core rig
-	{"name": "The Starting Pistol", "slot": "Secondary", "base": "Close quarters pistol", "rule": "starting_pistol", "band": "chase", "range": [7, 9], "depth": 12,
+	{"name": "The Starting Pistol", "slot": "Secondary", "base": "Close quarters pistol", "rule": "starting_pistol", "band": "chase", "range": [5, 9], "depth": 12,
 		"words": "Each man in every gang first takes a free shot from the secondary at triple damage", "short": "Free ×3 secondary shot", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_pct", "value": 25}]},
-	{"name": "The Miner's Lamp", "slot": "Helmet", "base": "Ballistic visor", "rule": "miners_lamp", "band": "core", "range": [4, 7], "depth": 6,
+	{"name": "The Miner's Lamp", "slot": "Helmet", "base": "Ballistic visor", "rule": "miners_lamp", "band": "core", "range": [3, 5], "depth": 6,
 		"words": "Searches take half as long", "short": "Searches twice as quick", "affixes": [{"stat": "search_pct", "value": 20}, {"stat": "loot_pct", "value": 10}, {"stat": "armour", "value": 10}]},
-	{"name": "The Paramedic's Bum Bag", "slot": "Rig", "base": "Bum bag", "rule": "paramedics_bumbag", "band": "levelling", "range": [1, 4],
+	{"name": "The Paramedic's Bum Bag", "slot": "Rig", "base": "Bum bag", "rule": "paramedics_bumbag", "band": "levelling", "range": [1, 3],
 		"words": "Meds heal 50% more; one is used by itself under 40% HP", "short": "Meds +50%, auto under 40%", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "hp", "value": 15}]},
-	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [4, 7], "depth": 6,
+	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [3, 5], "depth": 6,
 		"words": "Burns, poison and bleeds on them deal double; chills and shocks last twice as long", "short": "Damage over time ×2; chill, shock last ×2", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
+	# the gloves' (29 Oct, §4): a levelling pair and a chase pair
+	{"name": "The Milkman's Gloves", "slot": "Gloves", "base": "Woolly gloves", "rule": "milkmans", "band": "levelling", "range": [1, 3],
+		"words": "15% more pace until the site is cleared", "short": "+15% pace before the clear", "affixes": [{"stat": "reload_pct", "value": 10}, {"stat": "speed_pct", "value": 4}]},
+	{"name": "The Safecracker's Gloves", "slot": "Gloves", "base": "Leather gloves", "rule": "safecrackers", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Reloads take no time · −15% rate of fire", "short": "No reloads · −15% rate of fire", "affixes": [{"stat": "attack_pct", "value": 10}, {"stat": "cdr_pct", "value": 5}]},
 	# the mythics (16 Oct, Matt: "a really powerful unique per slot ... a flat % drop rate across the entire game ... if
 	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
 	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
@@ -1128,7 +1468,9 @@ const FX := {
 	"rule/sergeants_whistle.contact": 2,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
 	"rule/the_float.capacity": 1.5,     # The Float: Pace +40% and the pack half again; you carry no meds
 	"rule/the_float.pace": 1.4,     # The Float: Pace +40% and the pack half again; you carry no meds
-	"rule/van_keys": 1.25,     # The Van Keys: You drive: pace +25%
+	"rule/van_keys": 1.25,
+	"rule/milkmans": 1.15,     # The Milkman's Gloves: pace +15% until the site is cleared (29 Oct)
+	"rule/safecrackers": 0.85,     # The Safecracker's Gloves: reloads take no time; rate of fire −15% (29 Oct)     # The Van Keys: You drive: pace +25%
 	"rule/wardens_hat.gang": 1,     # A Traffic Warden's Hat: Every gang arrives one short; every kill's notes doubled
 	"rule/wardens_hat.notes": 2,     # A Traffic Warden's Hat: Every gang arrives one short; every kill's notes doubled
 	# set
@@ -1375,12 +1717,12 @@ const AFFIXES := [
 	{"stat": "armour_pct", "label": "armour", "short": "armour", "min": 3, "max": 18, "slots": ["Armour", "Helmet"]},
 	{"stat": "crowd_less_pct", "label": "less damage with three or more on you", "short": "less/crowd", "min": 4, "max": 16, "slots": ["Armour"]},
 	# the guns: rate of fire
-	{"stat": "attack_pct", "label": "rate of fire", "short": "RoF", "min": 3, "max": 15, "slots": ["Primary", "Secondary"]},
-	{"stat": "reload_pct", "label": "quicker reloads", "short": "reload", "min": 10, "max": 40, "slots": ["Primary", "Secondary"], "weight": 0.6},     # magazines (28 Oct): draft
+	{"stat": "attack_pct", "label": "rate of fire", "short": "RoF", "min": 3, "max": 15, "slots": ["Primary", "Secondary", "Gloves"]},
+	{"stat": "reload_pct", "label": "quicker reloads", "short": "reload", "min": 10, "max": 40, "slots": ["Gloves"]},     # magazines (28 Oct): draft; the gloves' alone (29 Oct)
 	# the carry: pouches, meds, searches, gangs later, notes
 	{"stat": "med_cap", "label": "pouch", "short": "pouch", "min": 1, "max": 3, "slots": ["Rig"], "flat": true},
-	{"stat": "med_speed_pct", "label": "quicker meds", "short": "med spd", "min": 5, "max": 30, "slots": ["Rig", "Helmet"]},
-	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet"]},
+	{"stat": "med_speed_pct", "label": "quicker meds", "short": "med spd", "min": 5, "max": 30, "slots": ["Rig", "Helmet", "Gloves"]},
+	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet", "Gloves"]},
 	{"stat": "patrol_pct", "label": "gangs later", "short": "gangs later", "min": 4, "max": 18, "slots": ["Helmet", "Charm"]},
 	{"stat": "notes_pct", "label": "notes", "short": "notes", "min": 5, "max": 25, "slots": ["Charm", "Backpack"]},
 	# the types: increased a type, a share of the hit as a type, resists
@@ -1410,9 +1752,10 @@ const AFFIXES := [
 	{"stat": "dot_pct", "label": "burn, poison and bleed damage", "short": "damage over time", "min": 8, "max": 40, "slots": ["Primary", "Secondary", "Charm"], "weight": 0.6},
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
 	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
+	{"stat": "armour", "label": "armour", "short": "arm", "min": 1, "max": 6, "slots": ["Gloves"], "flat": true, "weight": 0.6},     # the gloves' small armour (29 Oct, §4: "armour (small)")
 	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
 	{"stat": "capacity", "label": "pack cells", "short": "cells", "min": 1, "max": 6, "slots": ["Backpack"], "flat": true},
-	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Primary", "Secondary", "Armour"]},
+	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Armour", "Gloves"]},     # off the guns (29 Oct)
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
 	# Guard (12 Oct): anyone's, a little
 	{"stat": "overflow_pct", "label": "of its overheal as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
@@ -1428,8 +1771,8 @@ const AFFIXES := [
 	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
 	{"stat": "guard_pct", "label": "Guard cap", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
 	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
-	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "weight": 0.5},
-	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "weight": 0.5},
+	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
+	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
 	{"stat": "energy_max", "label": "max energy", "short": "max energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "flat": true, "weight": 0.5},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from
@@ -1478,41 +1821,43 @@ const TIERS := [
 	# the Outskirts (12 Oct): gentler than the Streets, no crew; finds at tier 1
 	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 240.0, "dps": 0.35, "drop": 0.35, "loot_tier": 1, "xp": 3, "cash": 3,     # E1-2 (17 Oct, Matt: the Outskirts pointless, the Parade at level 1-2): 120/0.2/1; E1 300/0.4 put the Gamekeeper at 0.8 h
 		"shape": {"pool": 14, "hp": 0.6, "dps": 0.7, "patrol": 0.9, "cash": 0.7},
-		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Backpack": 2}, "type": "melee", "only": ["A seed order", "An allotment waiting list"]}},
+		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Gloves": 1, "Backpack": 2}, "type": "melee", "only": ["A seed order", "An allotment waiting list"]}},
 	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 290.0, "dps": 0.42, "drop": 0.4, "loot_tier": 1, "xp": 3, "cash": 4,     # E1-2: 150/0.25/1
 		"shape": {"pool": 13, "hp": 0.7, "dps": 0.8, "patrol": 1.0, "cash": 0.9, "med": 1.5},
-		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "improvised", "only": ["A loyalty card"]}},
+		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "improvised", "only": ["A loyalty card"]}},
 	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 1, "xp": 6, "cash": 5,     # E1-2: 170/0.3/2
 		"shape": {"pool": 12, "hp": 0.8, "dps": 0.8, "patrol": 1.1, "cash": 1.0, "ammo": 1.5},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "shotgun", "only": ["A milk quota letter"]}},
-	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 1, "xp": 5, "cash": 6,     # E1-2: 200/0.4/2
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "shotgun", "only": ["A milk quota letter"]}},
+	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 2, "xp": 5, "cash": 6,     # E1-2: 200/0.4/2
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
-		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
-	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 3,     # 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
+		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
+	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 300.0,     # 280 to 300 (29 Oct: the Estate's T2 its gear now, the Streets' T2 brought to it - never easier than the Streets' first clear)
+		 "dps": 0.35, "drop": 0.4, "loot_tier": 2,     # 2 (29 Oct, one tier a zone); was 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
 		 "xp": 5, "cash": 9,     # E1: 3
 		"shape": {"pool": 12, "hp": 0.9, "dps": 0.8, "patrol": 1.0, "cash": 1.2},
-		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
-	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 10, "cash": 14,     # E1-2: 6
+		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
+	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 315.0, "dps": 0.61, "drop": 0.45, "loot_tier": 2, "xp": 10, "cash": 14,     # E1-2: 6
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 1.0, "cash": 1.0, "att": 2.0},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Drum magazine", "Wire stock"]}},
-	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 1100.0, "dps": 1.4, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Drum magazine", "Wire stock"]}},
+	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 520.0,     # ×0.75 to ×0.47 of 1100, its fire ×0.875 to ×0.47 (the fix round, 29 Oct: the Town's door on the Estate's T2 kit, the gate reads)
+		 "dps": 0.65, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},
-		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
-	{"name": "Shopping Centre", "zone": 2, "pool": 16, "hp": 1300.0, "dps": 1.8, "drop": 0.5, "loot_tier": 4, "xp": 24, "cash": 24,
+		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Gloves": 1, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
+	{"name": "Shopping Centre", "zone": 2, "pool": 16, "hp": 1235.0, "dps": 1.75, "drop": 0.5, "loot_tier": 3, "xp": 24, "cash": 24,
 		"shape": {"pool": 11, "hp": 1.1, "dps": 1.0, "patrol": 0.9, "cash": 1.1},
-		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
-	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 1500.0, "dps": 2.4, "drop": 0.5, "loot_tier": 5, "xp": 28, "cash": 30,
+		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
+	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 1200.0, "dps": 2.16, "drop": 0.5, "loot_tier": 3, "xp": 28, "cash": 30,
 		"shape": {"pool": 7, "hp": 1.4, "dps": 1.3, "patrol": 1.5, "cash": 1.6, "paper": 3.0},
-		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
-	{"name": "The Services", "zone": 3, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 37, "cash": 40,
+		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
+	{"name": "The Services", "zone": 3, "pool": 16, "hp": 1950.0, "dps": 2.56, "drop": 0.5, "loot_tier": 4, "xp": 37, "cash": 40,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
-		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},
-	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 45, "cash": 44,
+		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},
+	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 2376.0, "dps": 3.08, "drop": 0.5, "loot_tier": 4, "xp": 45, "cash": 44,
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
-		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
-	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 57, "cash": 50,
+		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Gloves": 2, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
+	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 2604.0, "dps": 3.58, "drop": 0.55, "loot_tier": 4, "xp": 57, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Gloves": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},
 ]
 
 const BANK := 8                    # the tier whose vault holds the deeds
@@ -1523,6 +1868,24 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five; D28 0.05: the strong builds out-earned the rest up the reach, level 50 from 9.3 h to never) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
 const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.08 to 0.12 (22 Oct, the web pass: the reach ran 11 to 70 in 1.4 h at 96% won at the reach, then 149; a probe at 0.12 held it to 39 by hour 6)
+## The gangs to the new tiers (29 Oct, docs/design/itemisation.md §1: tuned to T6 gear at the Barracks, down to T4's): the
+## campaign sites' own hp and dps above carry it (every level of them, the depths past the first clear too: 7 Oct's
+## curve is a floor under the site's own), each by the gear a runner brings to it now against before - the Retail Park
+## and the Pleasure Park ×0.75 (the Pleasure Park ×0.47 HP and fire, the fix round: the Estate's T2 at its door), the Shopping Centre ×0.95, the Bank ×0.8, the City ×0.62-0.75 (their fire half way
+## back to 1, the armour's share of it; the City's ×0.92 more for its new frost). The endgame curve by the level's gear
+## against before (the signals' T5 at 10 where it was T6): CURVE_K's figure from each level on, hp by it, fire half way.
+## Drafts for the balance pass.
+const CURVE_K := [[1, 0.7], [10, 0.75], [12, 0.69], [13, 0.82], [16, 0.86], [20, 0.88], [24, 1.0]]     # 12 at 0.69 (the fix round, the review's B5: the old gear stepped there, so its gangs did)
+
+
+static func curve_k(lv: int) -> float:
+	var k := 1.0
+	for row in CURVE_K:
+		if lv >= int(row[0]):
+			k = float(row[1])
+	return k
+
+
 const CURVE_LATE_FROM := 35       # 50 to 35 (Matt, 27 Oct: the reach stood at 40-50 in the 12% band, kit at 5%; docs/design/pinnacle_and_exploits.md)
                                   # past this level the crews grow CURVE_LATE_GROW a level, not CURVE's grow (24 Oct, Matt: an endgame "at least 30ish" hours -
 const CURVE_LATE_GROW := 0.07     # at 12% a level the kit's ~10% and the paragon's flat points fell behind by level 45-68 and the reach stood 7-19 h; a slope, not a wall)
@@ -1537,7 +1900,7 @@ const BOSSES := [
 	{"zone": 0, "name": "The Gamekeeper", "tier": 2, "hp": 5.0, "dps": 2.0, "notes": 10,     # the Outskirts' edge: soft
 		"words": "Top Farm's shoot had a keeper. It still has. He walks the hedges with the dogs and a gun, and he kept the vet's bag.",
 		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
-	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 8.0, "dps": 2.5, "notes": 20,     # D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
+	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 6.0, "dps": 2.0, "notes": 20,     # 8/2.5 to 6/2 (the fix round, 29 Oct: the Estate drops T2 now, his men the Retail Park's); D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
 		"words": "The crew in the carpet warehouse have a head. He had a van and a lock-up before; he has the car park now.",
 		"uniques": ["The Van's Spare", "Underlay"], "opens": {"workshop": "The fitter's kit"}},     # the Doorman his (24 Oct, milestone 8); the ledger went to the Manager's vault
 	{"zone": 2, "name": "The Manager", "tier": 8, "hp": 12.0, "dps": 3.5, "notes": 40,
@@ -1652,7 +2015,12 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
 ## heads, uniques, sets; everything else is sentence case; acronyms upper. A save from before carries the old
 ## names: `load_dict` reads them through this.
+## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
+const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear"}
+
 const RENAMES := {
+	"Diplomatic machine pistol": "Legation machine pistol",     # the fix round (29 Oct): the two over 24 characters
+	"Fire service turnout gear": "Turnout coat",
 	"A blue plaque": "A Blue Plaque",
 	"A traffic warden's hat": "A Traffic Warden's Hat",
 	"At the bench": "At the Bench",
@@ -3182,9 +3550,10 @@ const GAMBLE_KINDS := [
 	{"kind": "armour", "slot": "Armour", "type": "", "words": "Body armour"},
 	{"kind": "rig", "slot": "Rig", "type": "", "words": "A rig"},
 	{"kind": "backpack", "slot": "Backpack", "type": "", "words": "A pack"},
+	{"kind": "gloves", "slot": "Gloves", "type": "", "words": "Gloves"},
 	{"kind": "charm", "slot": "Charm", "type": "", "words": "A charm"},
 ]
-const GAMBLE_SHOWN := 5             # kinds on offer at once, of the eleven
+const GAMBLE_SHOWN := 5             # kinds on offer at once, of the twelve (the gloves the twelfth, 29 Oct)
 const GAMBLE_RUNS := 2.0            # the price, in runs' pay on the top open tier
 const GAMBLE_STEP := 0.15           # the most one run home moves the gamble's base, up or down (13 Oct)
 const GAMBLE_FLOOR := 300           # and never under this, at the opening day's prices
@@ -3230,7 +3599,7 @@ const CRATES := [
 	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "locks": true, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 1.6},
 	{"key": "safe", "name": "Safe", "searches": 3, "locks": true, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 2.0, "tins": true, "unique": 2.0},
 	{"key": "military", "name": "Military crate", "short": "Military", "searches": 4, "locks": true, "w": 0.4, "from_zone": 2, "depth_w": 0.3, "lean": 0.6,
-		"slots": ["Primary", "Secondary", "Helmet", "Armour"], "rarity": 0.4},
+		"slots": ["Primary", "Secondary", "Helmet", "Armour", "Gloves"], "rarity": 0.4},
 ]
 ## Locked crates (13 Oct, the Caretaker's Keys): a crate that `locks` comes locked CRATE_LOCK of the time, over and above
 ## the site's searches; without the Keys it's passed over, with them it opens, its finds CRATE_LOCK_RARITY better.
@@ -3528,9 +3897,9 @@ const WEAR_PER_ILVL := 2.0           # 2.5 - 1.5 from D8 to 18 Oct (D8: x3 had t
 ## gating is frustrating" - level 10 at the Bank, every drop for level 14), never past the site's own. Uniques, set pieces
 ## and mythics roll at the site's.
 const FIND_AT_MINE := 0.2
-const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
+const CAMPAIGN_TIER := 4          # gear tiers (29 Oct, one tier a zone): the Outskirts 1, the Estate 2, the Town 3, the City 4
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
-const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12
+const DEEP_TIER_LEVELS := [10, 13, 16, 20, 24]   # the signal level a tier past the campaign drops from (29 Oct): T5 from level 10, T6 13, T7 16, T8 20, T9 24
 static var _xp_table: Array = []
 const PARAGON_XP_GROW := 0.05     # a paragon level costs level 50's XP and this much more a level past it (24 Oct, Matt: an endgame "at least 30ish" hours)
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and

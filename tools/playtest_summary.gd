@@ -101,7 +101,8 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 		L.append("")
 		L.append("No playtest record beside the save: it's from before 11 Oct, or the game hasn't saved yet.")
 		return "\n".join(L) + "\n"
-	var runs: Array = ch.filter(func(e): return e["k"] == "run")
+	var repeat_n: int = ch.filter(func(e): return e["k"] == "run" and e.get("unwatched", false)).size()     # a repeat's runs (29 Oct): shown apart, not play
+	var runs: Array = ch.filter(func(e): return e["k"] == "run" and not e.get("unwatched", false))
 	var live: Array = runs.filter(func(e): return not e.get("away", false))
 	var away_s := 0.0
 	var sessions := 0
@@ -117,6 +118,9 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	L.append("| --- | --- | --- | --- | --- | --- |")
 	L.append("| %s | %s | %s | %d | %d (%d / %d) | %d |" % [_h(played), _h(float(s.get("elapsed", 0.0))), _h(away_s), sessions,
 		runs.size(), live.size(), runs.size() - live.size(), int(s.get("operators_lost", 0))])
+	if repeat_n > 0:
+		L.append("")
+		L.append("Repeat runs, unwatched (not counted as play here): %d" % repeat_n)
 	# ---- milestones
 	L.append("")
 	L.append("## Milestones")

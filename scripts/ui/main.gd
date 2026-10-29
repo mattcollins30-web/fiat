@@ -38,6 +38,7 @@ const Workshop := preload("res://scripts/ui/workshop.gd")
 const Run := preload("res://scripts/ui/run.gd")
 const Vendor := preload("res://scripts/ui/vendor.gd")
 const StatsRoom := preload("res://scripts/ui/stats_room.gd")
+const AwayCard := preload("res://scripts/ui/away_card.gd")
 
 const SAVE_FILE := "user://fiat.save"           # the autosave: the game in progress
 const SLOT_FILE := "user://fiat_slot%d.save"    # saves the player makes
@@ -48,7 +49,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 10              # 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 12              # 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -157,6 +158,9 @@ var _rail_rule: Panel              # the hairline under the heading
 var rail_folded := false           # the rail at its glyphs while the run's on screen (15 Oct, frame_mockup_B)
 var _x0 := 0.0                     # the layout's left edge, for the fold
 var _cog_btn: Button               # the top bar's cog: the pause
+var _away                          # the runner away on a repeat (away_card.gd, 29 Oct): a card at the rail's foot
+var _away_laid := false            # whether the rail's rows were last laid with it showing
+const RAIL_ROW_MIN := 72.0          # a row's least, a badge under the name (rail_button.gd's 66 and its padding)
 var _asked_runner := false         # the two-turn-up toast, said once per death
 
 
@@ -265,6 +269,9 @@ func _build() -> void:
 		b.pressed.connect(show_room.bind(nm))
 		_rail.add_child(b)
 		_rail_buttons[nm] = b
+	_away = AwayCard.new()
+	_away.acted.connect(refresh)
+	_rail.add_child(_away)
 	_grid = Control.new()
 	add_child(_grid)
 	for i in range(Pal.MAX_CARDS):
@@ -413,11 +420,7 @@ func layout(s: Vector2) -> void:
 	# the rail runs from the band's top to the log's bottom, the rows sharing what's under the heading (8 Oct)
 	var rail_h: float = maxf(s.y - Pal.BOTTOM - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * 72.0)     # a screen too short for the rows gets rows of 72 and a rail that runs under
 	_rail_panel.size.y = rail_h
-	var row_h: float = floorf((rail_h - Pal.RAIL_HEAD_H) / ROOMS.size())
-	for i in range(ROOMS.size()):
-		var b = _rail_buttons[ROOMS[i]]
-		b.position.y = Pal.RAIL_HEAD_H + i * row_h
-		b.set_row_height(row_h)
+	_lay_rail_rows()
 	_x0 = x0
 	_grid.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, band_y)
 	_yard_tree.position = _grid.position
@@ -434,6 +437,21 @@ func layout(s: Vector2) -> void:
 	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.BOTTOM - Pal.EVENTS_H)
 	_lay_fold()
 	_menu.layout(s)
+
+
+## The rail's rows down its height (8 Oct), sharing what's above the away card while it shows (29 Oct); on a screen too
+## short for that, rows of RAIL_ROW_MIN and the card under them.
+func _lay_rail_rows() -> void:
+	var rail_h: float = _rail_panel.size.y
+	_away_laid = _away.visible
+	var row_h: float = floorf((rail_h - Pal.RAIL_HEAD_H) / ROOMS.size())
+	if _away.visible:
+		row_h = maxf(RAIL_ROW_MIN, floorf((rail_h - Pal.RAIL_HEAD_H - _away.size.y - 8.0) / ROOMS.size()))
+	_away.position = Vector2(0, maxf(rail_h - _away.size.y, Pal.RAIL_HEAD_H + ROOMS.size() * row_h + 8.0))
+	for i in range(ROOMS.size()):
+		var b = _rail_buttons[ROOMS[i]]
+		b.position.y = Pal.RAIL_HEAD_H + i * row_h
+		b.set_row_height(row_h)
 
 
 ## The rail folded or not (15 Oct, Matt: frame_mockup_B, "B it is"): while the run's on screen the rail is its glyphs,
@@ -537,6 +555,8 @@ func _read_odds() -> void:
 			break
 		if sim.tier_open(i) and not sim.odds_settled(i):
 			sim.survival(i)
+	if room == MISSIONS and _missions.selected >= 0 and not sim._odds_time_up() and sim.tier_open(_missions.selected) and int(sim.best_depth[_missions.selected]) > 0:
+		sim.repeat_read(_missions.selected)       # the repeat's gate reads the runner whole (29 Oct, the designer)
 	if room == MISSIONS:
 		for p in Data.PINNACLES:
 			if sim._odds_time_up():
@@ -976,9 +996,10 @@ func show_room_intro(key: String) -> void:
 ## Resting at camp (17 Oct, Matt's playtest: a 0% everywhere read as stuck - HP comes back at camp, and nothing said so):
 ## "Resting, full in 1:50" while home and short of HP, "" otherwise.
 func resting_words() -> String:
-	if sim == null or sim.on_mission() or sim.hp >= sim.max_hp() - 0.5 or sim.rest_rate() <= 0.0:
+	if sim == null or sim.on_mission() or sim.hp >= sim.max_hp() - 0.5 or sim.rest_rate_now() <= 0.0:
 		return ""
-	return "Resting, full in %s" % Fmt.mss((sim.max_hp() - sim.hp) / sim.rest_rate())
+	var rate: float = sim.rest_rate_now()     # between repeat runs, the repeat's rest (29 Oct): the Clinic and the Map read the same
+	return "Resting, full in %s" % Fmt.mss((sim.max_hp() - sim.hp) / rate)
 
 
 ## A mythic found on the run (17 Oct, Matt: the item-colours canvas): its moment over everything, once a piece. A camp
@@ -1175,6 +1196,8 @@ func refresh() -> void:
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
 	_top_labels["where"].text = ("Out: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
+	if sim.unwatched():
+		_top_labels["where"].text = "Away: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))     # a repeat's run (29 Oct)
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()
@@ -1189,8 +1212,11 @@ func refresh() -> void:
 	# the Lock-up, the Caravan, the Bench and Runs are screens of their own,
 	# in the grid's place: Runs is the tiers between runs and the live run
 	# with the pack grid while the runner is out
-	var missions_screen: bool = room == MISSIONS and not sim.on_mission()
-	var run_screen: bool = room == MISSIONS and sim.on_mission()
+	var run_screen: bool = room == MISSIONS and sim.on_mission() and not sim.unwatched()     # a repeat's run isn't watched (29 Oct): the Map stays
+	var missions_screen: bool = room == MISSIONS and not run_screen
+	_away.show_state(sim)
+	if _away.visible != _away_laid:
+		_lay_rail_rows()                      # the rail's rows make room for the away card, or take it back
 	if run_screen != rail_folded:
 		rail_folded = run_screen
 		_lay_fold()
@@ -1323,7 +1349,7 @@ func _lay_top_right() -> void:
 	var place: String = _top_labels["where"].text
 	_top_glyphs["where"].tooltip_text = place
 	for step in range(5):
-		_top_labels["where"].text = place.trim_prefix("Out: ") if step >= 1 else place
+		_top_labels["where"].text = place.trim_prefix("Out: ").trim_prefix("Away: ") if step >= 1 else place
 		_top_labels["where"].visible = step < 3
 		var x: float = 1920.0 - 2 * Pal.MARGIN - TOP_BTN - 16     # the cog at the end
 		var first_x: float = x
@@ -1396,6 +1422,10 @@ func _rail_status(nm: String) -> Dictionary:
 			# the Yard's jobs were easy to miss: the rail says when one is affordable
 			return {"badge": "Can build" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
 		MISSIONS:
+			if sim.away():
+				return {"badge": Words.REPEAT["badge_away"], "badge_tone": "warn"}     # the repeat (29 Oct): away, then back
+			if not sim.repeat_report.is_empty():
+				return {"badge": Words.REPEAT["badge_back"], "badge_tone": "good"}
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
 			var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()     # the pools a press spends (25 Oct, the review: the elements' meters kept it lit for good; their points are the key's)

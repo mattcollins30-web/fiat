@@ -29,6 +29,7 @@ const RadioLine := preload("res://scripts/ui/radio_line.gd")
 const Town := preload("res://scripts/ui/town.gd")
 const KevStory := preload("res://scripts/ui/kev_story.gd")
 const Dashed := preload("res://scripts/ui/dashed.gd")
+const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -193,6 +194,8 @@ var _crafts: Array = []             # {button, name, words, key}
 var _set_off: Button
 var _crew_btns: Array = []           # [{button, name, odds, cls}]
 var _bin: Button
+var _wager_btn: Button              # Kev's wagers on the signal's run (29 Oct), between Set off and Bin it
+var _wagers_ov                      # their panel (wagers_panel.gd), over the papers and the decoder while open
 var _empty: Label
 var _empty2: Label
 var _others: Array = []             # {button, name, line, odds}
@@ -258,6 +261,12 @@ func _init() -> void:
 	_story = KevStory.new()
 	_story.visible = false
 	add_child(_story)
+	_wagers_ov = WagersPanel.new()
+	_wagers_ov.position = Vector2(0, BODY_Y)
+	_wagers_ov.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	_air.add_child(_wagers_ov)
 	# the tab bar over every view's band (28 Oct, RadioAir: "not small buttons lost in the painting")
 	_view_bar = UI.panel(self, Rect2(VIEWS_X - 6, VIEW_Y - 6, Pal.GRID_W - PAD - VIEWS_X + 12, VIEW_H + 12), UI.box(Color(Pal.BG, 0.86), 10, 1, Pal.CARD_LINE))
 	for k in range(VIEWS.size()):
@@ -514,6 +523,9 @@ func _build_signals() -> void:
 	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 356, bw, 46), false)
 	_bin.text = "Bin it"
 	_bin.pressed.connect(_on_bin)
+	_wager_btn = UI.button(_card, Rect2(16 + bw + 8, 356, bw - 8, 46), false)
+	_wager_btn.pressed.connect(_on_wagers)
+	_wager_btn.visible = false
 	var cbw: float = (cw - (CREW_COLS - 1) * 6) / CREW_COLS
 	for k in range(CREW_MAX):
 		var cb := Button.new()
@@ -724,6 +736,9 @@ func show_state(s) -> void:
 	var od: Array = sim.signal_odds_now(selected) if not sim.signals.is_empty() else [0.0, true]     # read in main's frame budget
 	var sig := "%s|%s|%d|%d|%d|%d|%s|%s|%d|%s|%s|%s|%d|%s|%s" % [str(chosen), str(have), paper_page, selected, sim.notes, sim.reach, str(sim.signals), str(sim.on_mission()), int(float(od[0]) * 100.0), str(od[1]),
 		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas) + book_kind + str(book_page) + str(sim.words_known().size()) + str(sim.candidates.size())]
+	if _wagers_ov.visible:
+		_wagers_ov.show_state(sim)
+	sig += "|%s|%s" % [str(sim.wagers), str(_wagers_ov.visible)]     # Kev's wagers (29 Oct)
 	sig += "|%d|%s|%s|%s" % [crew_pick, str(sim.materials), sim.cls, str(sim.crew_played().map(func(c): return sim.signal_odds_class(selected, str(c), true)) if not sim.signals.is_empty() else [])]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
@@ -1082,7 +1097,16 @@ func _show_signals(od: Array) -> void:
 		UI.fit(c["words"], [str(cd["words"]).replace("the site", "it"), ""] if why == "" else [why, ""])
 	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
 	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
-	UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
+	var wager_on: bool = sim.wager_signal_open(selected) and not picking     # Kev's wagers on the signal's run (29 Oct)
+	_wager_btn.visible = wager_on
+	_set_off.size.x = (_bin.position.x - 8 - 16) / 2.0 if wager_on else _bin.position.x - 8 - 16
+	if wager_on:
+		var on_n: int = sim.wagers.get(sim.wager_signal_key(selected), {}).get("taken", []).size()
+		UI.fit_button(_wager_btn, [Words.WAGERS["button_on"] % on_n, Words.WAGERS["button_n"] % on_n, "%d" % on_n] if on_n > 0 else [Words.WAGERS["button"]])
+	if sim.away() and not picking:
+		UI.fit_button(_set_off, ["Set off · " + Words.REPEAT["shut_away"].to_lower(), Words.REPEAT["shut_away"]])     # why it's shut (29 Oct)
+	else:
+		UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
 	_show_crew()
 	# the column's other places under the card (28 Oct, RadioAir): the signals held as rows that pick, then the empty
 	var y: float = CARD_TOP + _card.size.y + OTHER_GAP
@@ -1227,6 +1251,16 @@ func _on_set_off() -> void:
 	acted.emit()
 
 
+func _on_wagers() -> void:
+	var sg: Dictionary = sim.signal_at(selected)
+	if sg.is_empty():
+		return
+	_wagers_ov.open(sim, sim.wager_signal_key(selected), sim.signal_place(sg))
+	_wagers_ov.move_to_front()
+	_shown = ""
+	acted.emit()
+
+
 func _on_bin() -> void:
 	sim.bin_signal(selected)
 	_shown = ""
@@ -1274,6 +1308,14 @@ func _reset_map() -> void:
 
 
 func text_nodes() -> Array:
+	var out: Array = _text_nodes_base()
+	if _wagers_ov.visible and _air.visible:          # Kev's wagers over the air (29 Oct): what's under them isn't the screen's
+		var r: Rect2 = _wagers_ov.get_global_rect()
+		out = out.filter(func(n): return not r.intersects(n.get_global_rect())) + _wagers_ov.text_nodes()
+	return out
+
+
+func _text_nodes_base() -> Array:
 	var out: Array = _views.duplicate()
 	out.append(_view_note)
 	if view == "map":
@@ -1322,6 +1364,8 @@ func text_nodes() -> Array:
 	out.append(_signals_title)
 	if _card.visible:
 		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin])
+		if _wager_btn.visible:
+			out.append(_wager_btn)
 		for t in _card_tiles:
 			out.append_array([t["key"], t["value"]])
 		out.append_array(_card_codes.text_nodes())

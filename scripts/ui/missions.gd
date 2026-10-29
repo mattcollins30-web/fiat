@@ -23,6 +23,8 @@ const MapView := preload("res://scripts/ui/map_view.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const SkillPicker := preload("res://scripts/ui/skill_picker.gd")
 const SkillBar := preload("res://scripts/ui/skill_bar.gd")
+const RepeatReport := preload("res://scripts/ui/repeat_report.gd")
+const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
@@ -32,6 +34,7 @@ const PAD := 20
 const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
 const BOSS_W := 150                # the boss toggle beside Set off
+const REPEAT_W := 170              # "Run it ×5" beside Set off (29 Oct, docs/design/trips.md 1); Kev's wagers in its place before a first clear or a head
 const DEPTH_BTN := 48              # the −/+ stacked at the depth tile's right, the endgame's ladder
 const DEPTH_TILE := 4              # the depth tile's place in the six
 const BAND_H := 180                # the art band at the top of a column: the rooms' one height (12 Oct: 200, the 20 paid the resists' second row)
@@ -60,6 +63,8 @@ var county_on := false
 var _guide_btn: Button             # "What a site pays" (16 Oct, item 11): the map's tier guide, at the row's end
 var _guide
 var _came_open := false            # the card dropped down
+var _report                        # the repeat's report (repeat_report.gd, 29 Oct): over the map when they're back
+var _wagers                        # Kev's wagers (wagers_panel.gd, 29 Oct): over the map while open
 # back at level 1 (21 Oct, canvas "The code book and the death pick" 2): after a death the card's column is the trait
 # pick - the two who turned up as cards, what the death took and what stays, Set off shut till one's picked
 var _pick: Panel
@@ -193,6 +198,13 @@ func _init() -> void:
 		c["boss"].pressed.connect(_boss.bind(col))
 		c["boss"].visible = false
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		# the repeat runs (29 Oct): "Run it ×5" beside Set off, shut with its reason on the note; Kev's wagers in its place
+		# on a run he bets on (a first clear, a head armed)
+		c["repeat"] = UI.button(panel, Rect2(PAD + INNER - REPEAT_W, fy, REPEAT_W, Pal.BUTTON_H), false)
+		c["repeat"].pressed.connect(_repeat.bind(col))
+		c["wager"] = UI.button(panel, Rect2(PAD + INNER - REPEAT_W, fy, REPEAT_W, Pal.BUTTON_H), false)
+		c["wager"].pressed.connect(_wager_open.bind(col))
+		c["wager"].visible = false
 		_cols.append(c)
 	_build_pick()
 	_skill_pick = SkillPicker.new()
@@ -216,6 +228,18 @@ func _init() -> void:
 	_came.visible = false
 	_came.acted.connect(func(): acted.emit())
 	add_child(_came)
+	_wagers = WagersPanel.new()
+	_wagers.position = Vector2(0, TOP)
+	_wagers.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(_wagers)
+	_report = RepeatReport.new()
+	_report.position = Vector2(0, TOP)
+	_report.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(_report)
 	_guide_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W, 0, GUIDE_W, ZONE_H), false)
 	_guide_btn.tooltip_text = "What a site pays at each signal level, and where to farm"
 	_guide_btn.pressed.connect(_open_guide)
@@ -322,6 +346,9 @@ func show_state(s) -> void:
 		order_key = ""
 	zone = int(Data.TIERS[selected]["zone"])
 	_show_came_back()
+	_report.show_state(sim)                  # the repeat's card, while it waits to be put away (29 Oct)
+	if _wagers.visible:
+		_wagers.show_state(sim)
 	UI.fit_button(_guide_btn, ["What a site pays ?", "Site guide ?", "?"])
 	var place: String = str(Data.pinnacle(order_key)["place"]) if order_key != "" else str(Data.ZONES[zone]["name"])
 	var sky: String = sim.sky_words(selected, false)
@@ -383,7 +410,7 @@ func show_state(s) -> void:
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
-			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))]
+			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(sim.wager_site_open(selected)), str(sim.wagers.get(sim.wager_site_key(selected), {})), sim.repeat_count()]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -477,7 +504,7 @@ func show_state(s) -> void:
 		elif not boss.is_empty() and sim.is_pinnacle(i):
 			boss = {"name": "%s, at full strength" % boss["name"]}
 		c["boss"].visible = is_open and not boss.is_empty()
-		c["deploy"].size.x = INNER - BOSS_W - 8 if c["boss"].visible else INNER
+		_repeat_lay(c, i, is_open)
 		if c["boss"].visible:
 			var armed: bool = sim.boss_armed.get(i, false)
 			c["boss"].text = ("Convoy ✓" if armed else "Convoy") if convoy else ("Head ✓" if armed else "Head")
@@ -491,8 +518,11 @@ func show_state(s) -> void:
 		c["rig"].visible = is_open
 		c["rig"].disabled = sim.on_mission()
 		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode], "%s ▾" % Words.TOP_UP_TINY[sim.top_up_mode]])
+		var rep_why: String = sim.repeat_block(i) if c["repeat"].visible else ""
 		if not is_open:
 			c["note"].text = ""
+		elif sim.away():
+			UI.fit(c["note"], [Words.REPEAT["shut_away"]])
 		elif sim.hp < sim.max_hp() * 0.5:
 			c["note"].text = "The runner is under half HP"
 		elif c["boss"].visible and sim.boss_armed.get(i, false):
@@ -500,6 +530,9 @@ func show_state(s) -> void:
 			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %s, you have %s" % [boss["name"], Fmt.notes(cost), Fmt.notes(sim.notes)]), "%s: %s" % [boss["name"], Fmt.notes(cost)], boss["name"]])
 		elif c["boss"].visible and not sim.boss_armed.get(i, false) and sim.boss_cost(i) > 0 and sim.notes < sim.boss_cost(i):
 			UI.fit(c["note"], ["%s wants %s; you have %s" % [boss["name"], Fmt.notes(sim.boss_cost(i)), Fmt.notes(sim.notes)], "%s: %s" % [boss["name"], Fmt.notes(sim.boss_cost(i))], "Not enough notes"])
+		elif rep_why != "":
+			var cnt: int = sim.repeat_count()
+			UI.fit(c["note"], [(Words.REPEAT["note"] % [cnt, rep_why]) if cnt > 0 else Words.REPEAT["note_full"] % rep_why, rep_why])     # why "Run it ×5" is shut, on the card (29 Oct)
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
@@ -530,6 +563,8 @@ func select(i: int) -> void:
 		return
 	selected = i
 	order_key = ""
+	if _wagers.visible and _wagers.key != sim.wager_site_key(i):
+		_wagers.visible = false               # Kev's offer is the picked site's: another pin, another offer (the review)
 	_shown = ""
 	show_state(sim)
 
@@ -703,6 +738,42 @@ func _deploy(k: int) -> void:
 	acted.emit()
 
 
+## The Set off row (29 Oct): Set off, then "Run it ×5" (or Kev's wagers in its place on a run he bets on), then the head's
+## toggle when the site has one; Set off takes what's left.
+func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
+	var wager_on: bool = is_open and sim.wager_site_open(i)
+	c["wager"].visible = wager_on
+	c["repeat"].visible = is_open and not wager_on
+	var right: float = PAD + INNER - (BOSS_W + 8 if c["boss"].visible else 0)
+	for b in [c["repeat"], c["wager"]]:
+		b.position.x = right - REPEAT_W
+	c["deploy"].size.x = (right - REPEAT_W - 8.0 - PAD) if is_open else float(INNER)
+	if c["repeat"].visible:
+		var n: int = sim.repeat_count()
+		var why: String = sim.repeat_block(i)
+		c["repeat"].disabled = why != ""
+		UI.fit_button(c["repeat"], [Words.REPEAT["button"] % n, Words.REPEAT["button_short"] % n] if n > 0 else [Words.REPEAT["button_full"], Words.REPEAT["button_full_short"], Words.REPEAT["button_full_tiny"]])
+	if wager_on:
+		var key: String = sim.wager_site_key(i)
+		var on: int = sim.wagers.get(key, {}).get("taken", []).size()
+		UI.fit_button(c["wager"], [Words.WAGERS["button_on"] % on, Words.WAGERS["button_n"] % on, "%d" % on] if on > 0 else [Words.WAGERS["button"]])     # the count, never a second gold button (the review)
+
+
+func _repeat(k: int) -> void:
+	if sim.start_repeat(_tier(k)):
+		_skill_pick.visible = false
+	_shown = ""
+	acted.emit()
+
+
+func _wager_open(k: int) -> void:
+	var i := _tier(k)
+	_wagers.open(sim, sim.wager_site_key(i), Data.TIERS[i]["name"])
+	_wagers.move_to_front()
+	_shown = ""
+	acted.emit()
+
+
 func _boss(k: int) -> void:
 	var i := _tier(k)
 	sim.arm_boss(i, not sim.boss_armed.get(i, false))
@@ -771,8 +842,8 @@ static func odds_reasons(s, i: int) -> Array:
 		out.append({"forms": ["No meds"], "colour": "bad"})
 	if s.hp < s.max_hp() * 0.5:
 		var hp_forms: Array = ["HP %d of %d" % [s.hp_shown(), s.max_hp_shown()], "HP %d" % s.hp_shown()]
-		if not s.on_mission() and s.rest_rate() > 0.0:
-			var full: String = Fmt.mss((s.max_hp() - s.hp) / s.rest_rate())
+		if not s.on_mission() and s.rest_rate_now() > 0.0:
+			var full: String = Fmt.mss((s.max_hp() - s.hp) / s.rest_rate_now())
 			hp_forms = ["HP %d of %d, full in %s" % [s.hp_shown(), s.max_hp_shown(), full], "HP %d, full in %s" % [s.hp_shown(), full]] + hp_forms     # resting at camp mends it (17 Oct)
 		out.append({"forms": hp_forms, "colour": "bad"})
 	var gun = s.equipped["Primary"]
@@ -818,6 +889,15 @@ static func odds_reasons(s, i: int) -> Array:
 
 
 func text_nodes() -> Array:
+	var out: Array = _text_nodes_under()
+	for over in [_report, _wagers]:            # over the map (29 Oct): what's under it isn't the screen's
+		if over.visible:
+			var r: Rect2 = over.get_global_rect()
+			out = out.filter(func(n): return not r.intersects(n.get_global_rect())) + over.text_nodes()
+	return out
+
+
+func _text_nodes_under() -> Array:
 	var out: Array = []
 	out.append_array(_came.text_nodes())
 	if _came_btn.visible:
@@ -858,7 +938,7 @@ func text_nodes() -> Array:
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())
 		out.append_array(c["intel"].text_nodes())
-		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"], c["skills"]]:
+		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:

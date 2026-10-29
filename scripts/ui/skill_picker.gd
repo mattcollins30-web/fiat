@@ -128,7 +128,7 @@ func _fill_row(row: Dictionary, id: String, y: float) -> void:
 		b.set_meta("look", look)
 		for pair in [["normal", Pal.SELECT if on else Color.TRANSPARENT], ["hover", Pal.SELECT if learnt else Color.TRANSPARENT], ["pressed", Pal.BUTTON_PRESS if learnt else Color.TRANSPARENT], ["disabled", Color.TRANSPARENT]]:
 			b.add_theme_stylebox_override(pair[0], UI.box(pair[1], 8, 1, Pal.ACCENT if on else Color.TRANSPARENT))
-	b.disabled = not learnt or sim.on_mission()
+	b.disabled = not learnt or sim.runner_busy()     # away (29 Oct): the skills are the runner's
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if learnt else Control.CURSOR_ARROW
 	row["pic"].texture = SkillBar.picture(id)
 	var fade := 1.0 if learnt else 0.42

@@ -164,6 +164,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	for c in clauses:
 		if (c is Array and not c.is_empty() and str(c[0]) != "") or (c is String and c != ""):
 			tchips.append({"forms": c if c is Array else [c], "colour": Pal.TEXT_2})
+	var edge: Array = Items.edge_forms(it)
+	if not edge.is_empty():
+		tchips.push_front({"forms": edge, "colour": Pal.ACCENT})     # the gun type's edge, the first thing under its figure (29 Oct)
 	if Items.is_ammo(it):
 		var ab := Items.base_of(it)
 		h = [h[0], "rounds"]

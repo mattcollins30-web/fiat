@@ -31,6 +31,8 @@ const R2_H := 252
 const R3_Y := R2_Y + R2_H + GAP
 const R3_H := H - R3_Y
 const ROW_H := 24                          # 28 → 24 (Bands-U A)
+const CHAIN_ROWS := 6                       # the Attack card's chain (29 Oct: the gun type's edge a row of its own, so the rows add up)
+const CHAIN_H := 20                         # in the five rows' 120 px
 const BAR_TH := 10
 const FACE := 64                           # the band's face and the wall's: a clean half of the 128 px portraits
 const PLATE_W := 236
@@ -109,15 +111,15 @@ func _row(c: Dictionary, y: float, glyph: String) -> Dictionary:
 
 
 ## A bar row: its words, a bar, its figure.
-func _bar_row(c: Dictionary, y: float, tick := -1.0) -> Dictionary:
+func _bar_row(c: Dictionary, y: float, tick := -1.0, rh := ROW_H) -> Dictionary:
 	var r := {}
-	r["key"] = UI.label(self, Rect2(c["x"] + PAD, y, KEY_W, ROW_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	r["key"] = UI.label(self, Rect2(c["x"] + PAD, y, KEY_W, rh), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var bw: float = c["w"] - 2 * PAD - KEY_W - VAL_W - 16
-	r["track"] = UI.panel(self, Rect2(c["x"] + PAD + KEY_W + 8, y + (ROW_H - BAR_TH) / 2.0, bw, BAR_TH), UI.box(Pal.BG, 4))
+	r["track"] = UI.panel(self, Rect2(c["x"] + PAD + KEY_W + 8, y + (rh - BAR_TH) / 2.0, bw, BAR_TH), UI.box(Pal.BG, 4))
 	r["fill"] = UI.panel(r["track"], Rect2(0, 0, 0, BAR_TH), UI.box(Pal.ACCENT, 4))
 	if tick >= 0.0:
 		r["tick"] = UI.panel(r["track"], Rect2(bw * tick - 1, -3, 2, BAR_TH + 6), UI.box(Pal.TEXT_2, 0))
-	r["value"] = UI.label(self, Rect2(c["x"] + c["w"] - PAD - VAL_W, y, VAL_W, ROW_H), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+	r["value"] = UI.label(self, Rect2(c["x"] + c["w"] - PAD - VAL_W, y, VAL_W, rh), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
 	return r
 
 
@@ -159,8 +161,8 @@ func _build_attack() -> void:
 	var y: float = c["y"]
 	c["kicker"] = _small(c, y + 92)
 	c["chain"] = []
-	for k in range(5):
-		c["chain"].append(_bar_row(c, y + 116 + k * ROW_H))
+	for k in range(CHAIN_ROWS):
+		c["chain"].append(_bar_row(c, y + 116 + k * CHAIN_H, -1.0, CHAIN_H))
 	c["split"] = UI.panel(self, Rect2(c["x"] + PAD, y + 240, c["w"] - 2 * PAD, BAR_TH), UI.box(Pal.BG, 4))
 	c["segs"] = []
 	for ty in Data.TYPES:
@@ -351,7 +353,14 @@ func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	var on_top: float = ((1.0 + float(p["level"]) + float(p["pct"])) * (1.0 + float(p["attack"])) / (1.0 + float(p["level"])) - 1.0) * 100.0
 	_set_bar(c["chain"][2], "Affixes · tree", steps[2] / top, signed_pct(on_top), gold)
 	_set_bar(c["chain"][3], "Past", steps[3] / top, ("×%.2f" % float(p["past"])) if sim.cls != "" else "—", gold)
-	_set_bar(c["chain"][4], "= base", dps / top, "%.0f/s" % dps, Pal.ACCENT, Pal.ACCENT)     # before the types' own increases and the dots: the headline has those
+	# the gun type's edge (29 Oct, the itemisation): what the fight pays on the hits for the primary's type, as the headline reads it
+	var ex: float = sim.edge_read()
+	top = maxf(top, dps * ex)
+	_set_bar(c["chain"][4], edge_key(sim.equipped["Primary"]), dps * ex / top, ("×%.2f" % ex) if absf(ex - 1.0) >= 0.005 else "—", gold)
+	_set_bar(c["chain"][5], "= base", dps * ex / top, "%.0f/s" % (dps * ex), Pal.ACCENT, Pal.ACCENT)     # before the types' own increases and the dots: the headline has those
+	for k in range(4):
+		var r: Dictionary = c["chain"][k]
+		r["fill"].size.x = roundf(r["track"].size.x * clampf([steps[0], steps[1], steps[2], steps[3]][k] / top, 0.0, 1.0))     # against the top with the edge in
 	# the elements dealt: one bar, a segment a type, and the chips name them
 	var conv: Dictionary = sim.conversion()
 	var x := 0.0
@@ -379,9 +388,18 @@ func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	c["chips"].show_chips(chips)
 	var first_pct: float = sim.first_pct_total()     # the fight's own figure (21 Oct)
 	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
-	var firing: String = "Walking fire: SMG damage builds while firing" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
+	var firing: String = ("%s: %s" % [Items.type_word(sim.equipped["Primary"]).left(1).to_upper() + Items.type_word(sim.equipped["Primary"]).substr(1), Items.edge_words(sim.equipped["Primary"]).get_slice(" · ", 0)]) if (sim.equipped["Primary"] != null and Items.edge_words(sim.equipped["Primary"]) != "") else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
 	var extra: String = ("growth ×%.2f · first of each gang %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first of each gang %s" % signed_pct(first_pct)
 	UI.fit(c["status"], ["%s · %s" % [firing, extra], firing])
+
+
+## The edge row's name (the fix round, 29 Oct, the language review: "Type edge" named nothing): the primary's type, "Rifle
+## edge", "SMG edge"; "Gun's edge" with none in hand.
+static func edge_key(gun) -> String:
+	if gun == null:
+		return "Gun's edge"
+	var w: String = Items.type_word(gun)
+	return "%s edge" % (w.left(1).to_upper() + w.substr(1)) if w != "" else "Gun's edge"
 
 
 ## The elements the open sites fire.
@@ -670,7 +688,7 @@ const COLL_W := 1100
 const COLL_H := 880
 const COLL_TILE_H := 84
 const COLL_COLS := 4                        # the uniques' names, in columns
-const COLL_ROW := 26
+const COLL_ROW := 24                         # 26 to 24 (29 Oct: the gloves' two uniques put a fourteenth row in the grid)
 const COLL_MARK_W := 30
 
 

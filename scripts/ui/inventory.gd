@@ -54,7 +54,7 @@ static func height_for(n: int) -> int:
 ## The tabs (20 Oct, Matt: "stash tabs for uniques and set items ... paper has a tab that isn't used any more and the
 ## meds tab displays both meds and ammo"): slots, or "unique" / "set" for what the piece is. The deeds and a head's
 ## papers sit in All. Each tab is as wide as its words; the sort an icon at the end.
-const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helmet", "Armour", "Charm"]], ["Bags", ["Rig", "Backpack"]],
+const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helmet", "Armour", "Gloves", "Charm"]], ["Bags", ["Rig", "Backpack"]],
 	["Meds", ["Medical", "Grenade", "Supplies"]], ["Rounds", ["Ammo"]], ["Parts", ["Attachment"]], ["Uniques", "unique"], ["Sets", "set"]]
 const FILL_W := 100
 const KIND_PAD := 32                 # a button's margin round its words (the fit rule)
@@ -495,12 +495,14 @@ static func lies(it: Dictionary, rot = null) -> Vector2i:
 
 
 ## The upgrade's arrow (11 Oct, Matt's list): better than what's worn in its slot, wherever spares are shown - the
-## stash, the pack, the Fence's shelf, the Workshop's. `upgrades` off hides it.
+## stash, the pack, the Fence's shelf, the Workshop's. `upgrades` off hides it. `moved_reads`: read as the swap would wear
+## it (the Kit's stash, where the act is "Swap, parts and all"); else as it stands (the fix round, 29 Oct).
 var upgrades := true
+var moved_reads := false
 
 
 func _upgrade(it: Dictionary) -> bool:
-	return upgrades and sim != null and sim.is_upgrade(it)
+	return upgrades and sim != null and sim.is_upgrade(it, moved_reads)
 
 
 ## First-fit: each item in order takes the first free place, scanning rows

@@ -98,6 +98,10 @@ fails on them); flavour may use them only where a character is talking.
 | A save | game ("New game", "Load game") | camp |
 | Bandages, painkillers... | meds | medical, health items |
 | A trip out | run | mission, raid, deploy |
+| Runs the runner goes on unwatched, one after another ("Run it ×5", 29 Oct) | a repeat (the lot); a repeat run (each run of it) | auto-run, idle run, farm |
+| Any run that isn't a repeat run: the one on screen | a watched run | live run, normal run |
+| The runner while on a repeat, between runs too | away ("The runner is away") | gone |
+| A crew sent to a far place (the Bunkhouse's line B, 29 Oct; built with the trips) | expedition | trip (the glossary's "a trip out" is a run), journey |
 | Chance to clear | odds | chance, win rate |
 | HP | HP | health, life |
 | The bonus to the first man of each gang (Matt, 18 Oct) | damage to the first of each gang | first shot, first hit |

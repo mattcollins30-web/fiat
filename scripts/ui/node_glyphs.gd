@@ -142,6 +142,8 @@ const PICK_GLYPH := {
 	"early_warning": "search", "watch_rota": "clock", "crows_nest": "clock", "flares": "three",
 	"a_dog": "search", "good_nose": "quality", "guard_dog": "clock", "pedigree": "quality", "fetch": "dog", "second_dog": "search",
 	"tracker": "pen", "ratter": "poison", "pack": "search", "champion": "quality",
+	"rr_ten": "runs", "trip_hand": "where", "rr_list": "pen", "trip_two_hands": "three", "rr_twenty": "runs", "trip_two": "spread",     # the Bunkhouse (29 Oct)
+	"rr_rest": "hp", "trip_roster": "up", "rr_full": "pack", "trip_three": "three",
 }
 ## The map's nodes (10 Oct, Lanes-G): each its own.
 const ATLAS_GLYPH := {

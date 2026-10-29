@@ -481,9 +481,9 @@ func _branch_for(nm: String) -> Dictionary:
 
 func show_state(s) -> void:
 	sim = s
-	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
+	if _armed != "" and (sim.cls != _armed_cls or sim.runner_busy() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
 		_armed = ""                            # a swap's arm runs out like every ask-twice (Matt, 26 Oct)
-	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
+	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.runner_busy()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
 		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
@@ -555,7 +555,7 @@ func _show_card(k: int) -> void:
 	var armed: bool = _armed == nm
 	var open: bool = mine or sim.class_open(nm)     # each class after its head (milestone 8; skills.md §6)
 	var lit: bool = (mine or armed or sim.cls == "") and open
-	cb.disabled = sim.on_mission() or not open
+	cb.disabled = sim.runner_busy() or not open
 	var edge: Color = Pal.ACCENT if (mine or armed) else Pal.CARD_LINE
 	var w: int = 2 if (mine or armed) else 1
 	for pair in [["normal", 0.0], ["hover", 0.08], ["pressed", 0.12], ["hover_pressed", 0.12], ["disabled", 0.0]]:
@@ -939,7 +939,7 @@ func _show_panel() -> void:
 			UI.fit(_words, ["%s%s%s" % [", ".join(kit), (" · " + trt) if trt != "" else "", (" · " + state) if state != "" else ""], ", ".join(kit), ""])
 		_train.visible = true
 		_train.text = "Swap to the %s" % _armed
-		_train.disabled = sim.on_mission()
+		_train.disabled = sim.runner_busy()
 		_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
 	elif selected == "":
 		var cd: Dictionary = sim.class_data()
@@ -1034,12 +1034,12 @@ func _show_panel() -> void:
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
 	elif rk == "pitch":
 		_respec.text = (Words.ASK["again"] % Words.BUILD["pitch_sure"] if armed else Words.BUILD["pitch_sure"]) % Fmt.money(sim.pitch_reset_cost())
-		_respec.disabled = sim.pitch_nodes_spent() == 0 or sim.cash < sim.pitch_reset_cost() or sim.on_mission()
+		_respec.disabled = sim.pitch_nodes_spent() == 0 or sim.cash < sim.pitch_reset_cost() or sim.runner_busy()
 	elif rk.begins_with("el:"):
 		var el: String = rk.get_slice(":", 1)
 		var el_name: String = str(Data.element_tree_of(el).get("name", el))
 		_respec.text = (Words.ASK["again"] % Words.BUILD["element_sure"] if armed else Words.BUILD["element_sure"]) % [el_name, Fmt.money(sim.element_reset_cost(el))]
-		_respec.disabled = sim.element_spent(el) == 0 or sim.cash < sim.element_reset_cost(el) or sim.on_mission()
+		_respec.disabled = sim.element_spent(el) == 0 or sim.cash < sim.element_reset_cost(el) or sim.runner_busy()
 	else:
 		_respec.text = (Words.ASK["again"] % Words.BUILD["reset_sure"] if armed else Words.BUILD["reset_sure"]) % Fmt.money(sim.respec_cost())
 		_respec.disabled = not sim.can_respec()     # the sim's own test (28 Oct, the review: live with only the camp's nodes, then refused)
@@ -1147,7 +1147,7 @@ func _turn_page() -> void:
 ## A class button: a runner with no class takes the first pick as theirs; after that the first press arms a swap
 ## (the panel shows that class's runner), the second sends them out. Free.
 func _pick_class(nm: String) -> void:
-	if sim.on_mission() or nm == sim.cls:
+	if sim.runner_busy() or nm == sim.cls:
 		_armed = ""
 		show_state(sim)
 		return
