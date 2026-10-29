@@ -7154,3 +7154,20 @@ Each reviewed, its smoke area added, the device smoke green before its commit:
   because it changes the base damage ... we need a way to display the base stats vs base stats." Mocked on the canvas
   (Compare): A, three readings (as they stand, base to base, with your parts moved over - the verdict's, and a
   "Swap, parts and all"), recommended; B, two readings. Matt (29 Oct): A.
+
+## The overruled build (29 Oct, Matt: "build everything as planned"; real times, UTC = GMT)
+
+| Piece | Built | Review + fixes | Committed |
+|---|---|---|---|
+| Itemisation + the compare (A) | 52 min (lost to the container's restart), rebuilt 11:20-12:50 (90 min) | review 12:52-13:23; fixes 13:45-15:03 (78 min) | 2f8a734, 17:39 |
+| Repeat runs, the Bunkhouse line A, Kev's wagers | 60 min (lost), rebuilt 12:52-13:43 (51 min) | review 15:04-15:54; fixes 16:00-16:30 (30 min) | 2f8a734 |
+| The expeditions, the Bunkhouse line B | 16:30-17:23 (53 min) | review 17:40-19:30; fixes 19:30-19:59 (30 min) | 3ff30e3, 458fd2c |
+| Art manifests (items 179 jobs, expeditions 35) | 17:40-17:47 | lint clean | 458fd2c; the test batches flagged 20:05 |
+
+- Lesson (CLAUDE.md): the cloud scratchpad was wiped at 11:10 with two builds unsent; every workspace is now
+  snapshotted each phase, and each piece goes to this repo as soon as it's green.
+- Each piece had the three-stage review (game, UI, tests) and a language pass before its commit; every fix's check was
+  shown to fail without it. Matt's calls on the way: repeat runs cut XP only; "Expeditions" on screen; the expeditions
+  convert, never print (x0.85 base, hands capped x1.2).
+- Next: the `16 1 quick` pass on 458fd2c (dropped 20:09), the endgame read from the Radio's checkpoint, Matt's look at
+  the 14 test pictures, then the full art runs.
