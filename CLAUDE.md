@@ -62,6 +62,10 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
 
 - Do the job asked first. Something else caught on the way: stop and talk about it before fixing it - no unasked-for
   fixes bundled in. It's a two-way street.
+- The three-stage review (game, UI, tests and tools: docs/review/<date>/{game,ui,tools}.md, three agents side by
+  side, each finding fixed or put to Matt) runs after every major step and before any balance pass (29 Oct, Matt: "the
+  three stage review on changes should be run after every major step and before balance. We've previously encountered
+  issue with changes that have impacted balance and required another run"). The per-diff reviewer stays as well.
 - A reviewer agent reviews every commit's diff before it's committed; in balance work only code changes (bot,
   harness, sim), not pure number tweaks.
 - During a playtest, every item Matt raises is parked, not fixed: logged in docs/status.md's "Parked from the
