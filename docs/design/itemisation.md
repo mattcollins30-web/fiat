@@ -84,6 +84,20 @@ three are one of each (drafts; several bases carry a role today, the Fireman's t
 | Charm | tins | loot quality | an element's damage |
 | Gloves | grip: quicker reloads | pace | rate of fire |
 
+### Why the specialists lose today (Matt, 29 Oct: "by the time the cold weather parka and fireman's tunic drop
+### there's very little reason to swap from the plates you already have")
+
+- The T4 specialists carry half the armour of their tier's heavy: the Fireman's tunic 55 and the Cold-store parka 40
+  against the Ballistic vest's 100 (and the T3 Riot suit's 85).
+- Their resist covers a slice the gangs barely throw: the Town's damage is 15% fire and 10% poison, the City's 15%
+  fire and 15% shock (ZONE_TYPES). 40% fire resist on 15% of the hits is about 6% less damage, for 45 armour given up.
+- No campaign gang throws frost at all, so the parka's 45% frost resist does nothing until the signals.
+- **The rule after**: a tier's specialist carries at least 80% of its heavy's armour, and its element is one its tier's
+  sites throw hard - a site, a head or a gang type that leans on it, so there's a place where it's the right piece. The
+  frost specialists come with a frost threat (a City gang, or the signals'); otherwise they move to where frost is.
+- The same test for every role: each of a tier's three has a site or a build it's the best piece for. The balance
+  pass reads it (each base worn somewhere by the bot's picks, or named as never).
+
 ## 3. Each gun type's edge
 
 Damage a second stays close between types at a tier; the edge decides the fight. Two exist already (walking fire, a
