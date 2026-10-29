@@ -44,7 +44,8 @@ a draft for the language pass. Canvas boards: TierMap, BaseGrid, Gloves.
 
 Kept: every base, its stats and tier (Matt's call 2). New bases fill each gun type to three a tier in T1-4 and two in
 T5-9; rifles and SMGs start at T2 (the Outskirts have none, as today); the secondaries' melee and improvised stay in the
-campaign. The worn slots to two a tier throughout. Today / after (new):
+campaign. The worn slots the same (Matt, 29 Oct: "the exact same thing for all other slots"): three a tier in T1-4, two
+in T5-9. Today / after (new):
 
 | | T1 | T2 | T3 | T4 | T5 | T6 | T7 | T8 | T9 | New |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -56,14 +57,32 @@ campaign. The worn slots to two a tier throughout. Today / after (new):
 | Pistol (secondary) | 0/2 | 3/3 | 1/3 | 1/3 | 0/2 | 2/2 | 1/2 | 1/2 | 1/2 | 11 |
 | SMG (secondary) | - | 0/2 | 1/2 | 0/2 | 1/2 | 1/2 | 1/2 | 1/2 | 1/2 | 10 |
 | Melee, improvised (secondary) | 4/4 | 1/4 | 1/4 | 0/4 | - | - | - | - | - | 10 |
-| Helmet, armour, rig, pack, charm | | | | | | | | | | 18 |
-| Gloves | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 18 |
+| Helmet | 2/3 | 2/3 | 3/3 | 2/3 | 1/2 | 2/2 | 1/2 | 2/2 | 2/2 | 5 |
+| Armour | 2/3 | 2/3 | 3/3 | 4/3 | 4/2 | 2/2 | 2/2 | 2/2 | 2/2 | 2 |
+| Rig | 1/3 | 2/3 | 2/3 | 1/3 | 1/2 | 2/2 | 1/2 | 1/2 | 1/2 | 10 |
+| Backpack | 2/3 | 2/3 | 2/3 | 1/3 | 1/2 | 2/2 | 2/2 | 1/2 | 1/2 | 8 |
+| Charm | 2/3 | 2/3 | 1/3 | 1/3 | 1/2 | 2/2 | 1/2 | 1/2 | 1/2 | 10 |
+| Gloves | 0/3 | 0/3 | 0/3 | 0/3 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 | 22 |
 
-About 115 new bases (114; today 162): 47 primaries, 31 secondaries, 36 worn. Each with a picture (PixelLab).
+About 135 new bases (135; today 162): 47 primaries, 31 secondaries, 35 worn, 22 gloves. Each with a picture (PixelLab).
 
 **Sideways, not more of the same**: the three of a type at a tier differ in how they play, not only by a number - one
 heavy and slow, one quick and light, one with a quirk (a belt, an element lean, more attachment points, a bigger
 magazine). Their damage a second sits within about 10% of each other.
+
+### The worn slots: three roles a slot
+
+The guns' "sideways" for the worn kit: each base has a role, a built-in figure that says how it plays, and a tier's
+three are one of each (drafts; several bases carry a role today, the Fireman's tunic's fire resist, the Hazmat suit's):
+
+| Slot | Heavy | Light | Specialist |
+|---|---|---|---|
+| Armour | the most armour, −pace | less armour, +pace | an element's resist (the tunic, the hazmat suit, the parka) |
+| Helmet | the most armour | a visor: quicker searches or gangs later | an element's resist, or energy |
+| Rig | the most pouches | quicker meds | Guard (the plate rig, the bomb-disposal rig) |
+| Backpack | the most cells | quicker searches | loot quantity |
+| Charm | tins | loot quality | an element's damage |
+| Gloves | grip: quicker reloads | pace | rate of fire |
 
 ## 3. Each gun type's edge
 
@@ -86,10 +105,11 @@ them further ahead of rifles than the table's damage a second shows; the pass re
 
 - **Where** (Matt, 29 Oct: layout A): the Runner room's right column, between the armour and the rig, level with the
   figure's hands; the right takes five cards (helmet, armour, gloves, rig, charm), the armour's card shortens.
-- **Bases**: 18, two a tier, each with a small built-in figure: grip (quicker reloads) or pace. Drafts: Gardening
+- **Bases**: 22, three a tier in T1-4 and two in T5-9, each with a built-in figure (the roles above). Drafts: Gardening
   gloves, Work gloves; Rigger gloves, Fingerless gloves; Leather gloves, Motorbike gloves; Shooting gloves, Welder's
   gauntlets; Tactical gloves, Riot gauntlets; Kevlar-lined gloves, Firefighter's gloves; Assault gloves, Hazmat
-  gloves; Breacher's gloves, Pilot's gloves; Special forces gloves, EOD gauntlets.
+  gloves; Breacher's gloves, Pilot's gloves; Special forces gloves, EOD gauntlets. A third pair-name a tier in T1-4 at the
+  build (the language pass).
 - **Their affixes**: pace, quicker reloads, rate of fire, quicker meds, quicker searches, shorter cooldowns, energy
   gain, armour (small). Quicker reloads moves off the guns to gloves alone (it matters since the magazines); pace off
   the guns, kept on armour; rate of fire on both.
@@ -99,11 +119,11 @@ them further ahead of rifles than the table's damage a second shows; the pass re
 
 ## 5. What it costs
 
-- Data: the tier map, ~115 bases, the edges' rules, the gloves slot through the sim (equip, compare, the Bench, the
+- Data: the tier map, ~135 bases, the edges' rules, the gloves slot through the sim (equip, compare, the Bench, the
   Fence, the junk rules, the pack's sizes), the affix pools moved.
 - UI: the Runner room's eight cards (mockup on the canvas), the Kit room's slot filters, the Bench, the Fence's shelf.
 - The bot: gloves worn, the type edges read by its picks.
-- Art: ~115 base pictures, three unique gloves.
+- Art: ~135 base pictures, three unique gloves.
 - Balance: the campaign's gangs to T4 gear, the signals' T5-6, a full pass.
 - Size: the biggest piece since the skills: about a week of the 28 Oct's build days, then the balance pass.
 - SAVE_VERSION bumps (a new slot, re-tiered sites).
