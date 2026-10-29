@@ -2,7 +2,7 @@
 
 ## The queue after the playtest (28 Oct)
 
-Matt plays c252141 from a fresh camp to the County and a pinnacle first. Then, in order:
+Matt plays 23c71d1 from a fresh camp to the County and a pinnacle first. Then, in order:
 
 1. **Itemisation** (29 Oct, below; Matt: ahead of the trips, whose rewards sit on its tiers): the campaign's tiers
    cut to 1-4 with 5-6 from the early signals, more bases sideways within a tier, gloves as an eighth slot.
