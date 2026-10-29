@@ -427,6 +427,16 @@ func _init() -> void:
 		else:
 			reps.append("%s: %d runs in %d repeats of %d runs, %d bails" % [bd["build"], int(bd.get("repeat_runs", 0)), int(bd.get("repeats", 0)), int(bd["runs"]), int(bd.get("repeat_bails", 0))])
 	rows.append(["Repeat runs (shown)", "the runs the bot left unwatched after the campaign, and their bails", "; ".join(reps), null])
+	# the expeditions (29 Oct, shown, not a gate): sent, home, held and how each ended, the cargo out against the returns in
+	var exps: Array = []
+	for bd in full:
+		var x: Dictionary = bd.get("exp", {})
+		if x.is_empty() or int(x.get("sent", 0)) == 0:
+			exps.append("%s: none" % bd["build"])
+			continue
+		exps.append("%s: %d sent, %d home, %d held (%d fetched, %d paid, %d walked), cargo %d in %d out (x%.2f), wages %d" % [bd["build"], int(x["sent"]), int(x["back"]), int(x["held"]),
+			int(x.get("fetched", 0)), int(x.get("paid", 0)), int(x.get("walked", 0)), int(x["return_in"]), int(x["cargo_out"]), float(x["return_in"]) / maxf(1.0, float(x["cargo_out"])), int(x.get("wages", 0))])
+	rows.append(["Expeditions (shown)", "what the bot shipped after the Quartermaster and what came home", "; ".join(exps), null])
 	# the itemisation's reads (29 Oct, shown, not a gate): the bases worn longest a slot, the campaign's never worn, and the
 	# damage by gun type
 	rows.append_array(itemisation_rows(full))

@@ -968,7 +968,7 @@ func line_pairs() -> Array:
 
 # ------------------------------------------------------------------ the Expeditions tab (29 Oct, docs/design/trips.md 3)
 
-const EXP_BTN_W := 240             # "Expeditions" in the row, before the County's
+const EXP_BTN_W := 280             # "Expeditions" in the row, before the County's (the fix round: "Expeditions · 1 back" fits)
 var exp_on := false
 var _exp_btn: Button
 var _exp_panel                     # expeditions_panel.gd: over the map and the card while it's on
@@ -1017,7 +1017,7 @@ func _exp_state(picking: bool) -> bool:
 	if not open:
 		exp_on = false
 	var back: int = sim.expeditions.filter(func(e): return str(e["state"]) != "out").size()
-	UI.fit_button(_exp_btn, [E["tab_map"], E["tab_map_short"]] if exp_on else ([E["tab_back"] % back, E["tab"]] if back > 0 else [E["tab"], E["tab_short"]]))
+	UI.fit_button(_exp_btn, [E["tab_map"], E["tab_map_short"]] if exp_on else ([E["tab_back"] % back, E["tab_back_short"] % back] if back > 0 else [E["tab"], E["tab_short"]]))
 	UI.style_button(_exp_btn, exp_on or back > 0, "good" if exp_on else "")
 	_exp_report.show_state(sim)
 	_exp_report.move_to_front()
@@ -1031,7 +1031,8 @@ func _exp_state(picking: bool) -> bool:
 	for c in _cols:
 		c["panel"].visible = false
 		c["edge"].visible = false
-	UI.fit(_title, [E["title"] + " · " + E["progress"] % [sim.exp_busy(), sim.exp_at_once()], E["title"]])
+	var out_n: int = sim.exp_busy() - back
+	UI.fit(_title, [E["title"] + " · " + (E["progress_back"] % [out_n, back] if back > 0 else E["progress"] % [out_n, sim.exp_at_once()]), E["title"]])     # out and back apart (the UI review's B9)
 	_exp_panel.show_state(sim)
 	_shown = ""
 	_exp_report.move_to_front()

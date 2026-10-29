@@ -73,7 +73,7 @@ func _init(rect: Rect2) -> void:
 	better_faces.pressed.connect(func(): _reroll(true))
 	for b in [hire, let_go, new_faces, better_faces]:
 		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-	_note = UI.label(self, Rect2(PAD, fy - 26, iw, 22), "", "Regular", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_note = UI.label(self, Rect2(PAD + 300, ROSTER_HEAD_Y - 2, iw - 300, 22), "", "Regular", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)     # in the roster's head row, clear of the cells (the UI review's B7)
 
 
 func show_state(s) -> void:
@@ -103,14 +103,20 @@ func show_state(s) -> void:
 	else:
 		var lines: Array = [Items.hand_trade_line(ph)] + Items.hand_lines(ph, false)
 		var wage: String = E["wage"] % Fmt.money(sim.hand_wage(ph))
-		UI.fit(_detail, ["%s · %s · %s" % [str(ph["base"]), " · ".join(lines), wage], "%s · %s" % [str(ph["base"]), " · ".join(lines)], "%s · %s" % [str(ph["base"]), wage], str(ph["base"])])
+		var forms: Array = []
+		for n in range(lines.size(), 0, -1):
+			forms.append("%s: %s · %s" % [str(ph["base"]), ", ".join(lines.slice(0, n)), wage])     # the wage never dropped (the UI review's B6)
+		forms.append("%s · %s" % [str(ph["base"]), wage])
+		UI.fit(_detail, forms)
 	var in_pool: bool = pool.any(func(h): return int(h["id"]) == picked)
 	var why_hire: String = sim.hire_block(picked) if in_pool else E["pick_hand"]
 	hire.disabled = why_hire != ""
 	UI.fit_button(hire, [E["hire"]])
 	var on_roster: bool = not sim.hand_by_id(picked).is_empty()
 	let_go.disabled = not on_roster or sim.hand_out(sim.hand_by_id(picked))
-	UI.fit_button(let_go, [E["let_go"]])
+	if picked != _armed:
+		_armed = -1
+	UI.fit_button(let_go, [E["let_go_again"], E["let_go"]] if _armed >= 0 else [E["let_go"]])
 	var nf: String = sim.reroll_block(false)
 	new_faces.disabled = nf != ""
 	UI.fit_button(new_faces, [E["new_faces"] % Fmt.money(sim.reroll_cost(false)), E["new_faces"] % Fmt.money_k(sim.reroll_cost(false))])
@@ -126,6 +132,8 @@ func show_state(s) -> void:
 		note = why_hire
 	elif open and pool.is_empty():
 		note = E["pool_empty"]
+	elif open and sim.hands.is_empty():
+		note = E["roster_none"]
 	elif open and bf != "" and nf == "":
 		note = bf
 	UI.fit(_note, [note])
@@ -154,10 +162,22 @@ func _hire() -> void:
 		acted.emit()
 
 
+## Let go: a second press within ARM_MS (the UI review's D2: a Legendary level-10 hand lost on one click).
+const ARM_MS := 3000
+var _armed := -1
+var _armed_at := 0
 func _let_go() -> void:
-	if sim != null and sim.let_go(picked):
-		picked = -1
+	if sim == null:
+		return
+	if _armed != picked or Time.get_ticks_msec() - _armed_at > ARM_MS:
+		_armed = picked
+		_armed_at = Time.get_ticks_msec()
 		acted.emit()
+		return
+	_armed = -1
+	if sim.let_go(picked):
+		picked = -1
+	acted.emit()
 
 
 func _reroll(better: bool) -> void:

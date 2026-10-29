@@ -1,0 +1,152 @@
+{
+ "_readme": [
+  "FIAT ITEMS 29 - THE TEST (29 Oct): 8 of the full manifest's jobs (same out, seed, words), one of each new kind: gloves (a new slot, 2x2 cells - the black pair and the unique beside it), a 2x1 melee, a 5x1 gun (the wide aspect), a 1x1 pistol, a lettering risk (the door staff vest's blank back) and a dial (the pocket watch). Judged in the game before the other 171; a kept picture is skipped by the full run.",
+  "Regenerate with python3 tools/make_items29_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/items/work_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tan canvas-and-leather work gloves, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 122151,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Gloves, -, 2x2 cells"
+  },
+  {
+   "out": "art/items/leather_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of plain black leather gloves, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 122155,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Gloves, -, 2x2 cells"
+  },
+  {
+   "out": "art/items/the_safecracker_s_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of thin black kid-leather gloves, close-fitting and supple, the fingertips sanded pale, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 122502,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique on Leather gloves (Gloves)"
+  },
+  {
+   "out": "art/items/lump_hammer.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a short, square-headed club hammer with a stubby wooden handle, one object alone, lying flat, seen from above, laid level with its long axis left to right, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 122000,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Primary, melee, 2x1 cells"
+  },
+  {
+   "out": "art/items/punt_gun.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a barrel as long as a man, with a rope breeching loop and a block of punt plank still bolted under it, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 320,
+   "height": 64,
+   "no_background": true,
+   "seed": 122016,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Primary, improvised, 5x1 cells"
+  },
+  {
+   "out": "art/items/derringer.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a tiny over-and-under two-barrel pistol with a pearl grip, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 122047,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Secondary, pistol, 1x1 cells"
+  },
+  {
+   "out": "art/items/door_staff_vest.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a black vest with a blank white panel across the back, a hi-vis armband and a radio on the chest, no lettering anywhere, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 122105,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Rig, -, 3x2 cells"
+  },
+  {
+   "out": "art/items/pocket_watch.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a silver pocket watch on a chain, case open, a plain white face with no numbers, a single small object filling the frame, seen from above at a slight angle, lit from one side. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 122138,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Charm, -, 1x1 cells"
+  }
+ ]
+}

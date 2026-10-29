@@ -1322,6 +1322,7 @@ func issue_preview() -> Dictionary:
 	for it in _kit_held():
 		held += float(sell_price(it))
 	held += exchange_held_worth()              # and the exchange's held (28 Oct, Matt): tins parked in scrap or salvage don't either
+	held += exp_pile_worth()                   # and the expeditions out or waiting (the fix round, 29 Oct): a shipment doesn't dodge it
 	var pile: float = money + held
 	var k: float = (Data.FIAT_PILE_K * sqrt(pile)) / pile if pile > 0.0 else Data.FIAT_SCALE
 	return {"fiat": money * k, "kit_k": clampf(k / Data.FIAT_SCALE, 0.0, 1.0), "money": money, "held": held}
@@ -1336,6 +1337,7 @@ func issue() -> void:
 	for it in kit_held:
 		held += float(sell_price(it))
 	held += exchange_held_worth()              # the exchange's held, as the preview's (28 Oct, Matt)
+	held += exp_pile_worth()                   # the expeditions out or waiting, as the preview's (29 Oct)
 	var pile: float = money + held
 	fiat_issue_inf = inflation()
 	if mission != null:
@@ -1349,6 +1351,7 @@ func issue() -> void:
 	var hard: float = clampf(k / Data.FIAT_SCALE, 0.0, 1.0)            # the stash sells at the pile's rate, not the day's
 	for it in kit_held:
 		it["issue_k"] = hard                   # every piece held: at the pile's rate, and at the Issue's prices for good (the review: a small pile's kit went unstamped)
+	_exp_issue(k, hard)                        # the expeditions convert with the pile (29 Oct)
 	issue_moment = {"pile": int(round(cash)), "notes": _notes, "stash": int(round(held)), "fiat": int(round(fiat)), "kit_k": snappedf(hard, 0.01)}
 	_notes = 0
 	issued = true
@@ -12569,7 +12572,7 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 	var it := roll_gamble(k, unique_roll)
 	if not (stash_fits(it) or _stack_room(it)):
 		return {}
-	chron("gamble", {"kind": kind, "price": gamble_price(kind), "item": _chron_item(it)})
+	chron("gamble", {"kind": kind, "price": 0 if gamble_tokens > 0 else gamble_price(kind), "token": gamble_tokens > 0, "item": _chron_item(it)})
 	if gamble_tokens > 0:
 		gamble_tokens -= 1                    # Bristol's token (29 Oct): this one's free
 	else:
@@ -14875,6 +14878,54 @@ var rebuild_halves := 0            # Birmingham's quota: the next rebuild at hal
 var _exp_fetch := -1               # the hold-up being fetched: its head comes free for the run (boss_cost)
 var _exp_cache := {}               # "lead/place/..." -> the odds' cache, as a signal's
 var _exp_now := {}                 # and the last read, [odds, settled]: the screens read it, running none
+## The balance read's tallies (the fix round, 29 Oct): saved, all told.
+var exp_back_n := 0                # crews home with a return
+var exp_held_n := 0                # held up
+var exp_worth_out := 0.0           # the cargo's worth shipped
+var exp_return_in := 0.0           # the returns' worth rolled
+var exp_wages_paid := 0
+var exp_scrap_out := 0             # scrap shipped (spent, as the Bench's is)
+
+
+## The expeditions out or waiting, at their cargo's worth: what joins the Issue's pile (the review's A1).
+func exp_pile_worth() -> float:
+	var w := 0.0
+	for e in expeditions:
+		w += float(e["worth"])
+	return w
+
+
+## The Issue (the review's A1): every expedition out or waiting converts with the pile - its cargo's worth, a rolled
+## return's tins and budget at the pile's `k`, its finds stamped at the Issue's prices as the stash's are.
+func _exp_issue(k: float, hard: float) -> void:
+	for e in expeditions:
+		e["worth"] = float(e["worth"]) * k
+		e["quota_worth"] = float(e.get("quota_worth", 0.0)) * k
+		var res: Dictionary = e.get("res", {})
+		for key in ["due", "total"]:
+			if res.has(key):
+				res[key] = float(res[key]) * k
+		if res.has("cur") and res["cur"].has("tins"):
+			res["cur"]["tins"] = float(res["cur"]["tins"]) * k
+		for it in res.get("items", []):
+			it["issue_k"] = hard
+
+
+## A count and its cargo's name, grouped and singular at one (the UI review's A3: "1 fuses", "7972 scrap").
+func cargo_words(kind: String, n: int) -> String:
+	var noun: String = cargo_name(kind).to_lower()
+	if n == 1:
+		noun = {"fuses": "fuse", "cable drums": "cable drum", "meds": "med", "ledgers": "ledger", "notes": "note"}.get(noun, noun)
+	return "%s %s" % [_group(n), noun]
+
+
+static func _group(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("−" if n < 0 else "") + s + out
 
 
 ## The Quartermaster down: the expeditions open, and the Bunkhouse's line B with them.
@@ -14952,7 +15003,7 @@ func exp_level(p: int) -> int:
 ## The place's fight as a signal laid on the host site: its level's depth there, its gang's zone, no codes.
 func _exp_sig(p: int) -> Dictionary:
 	var pl := exp_place(p)
-	return {"id": Data.EXP_SIG_ID + p, "site": Data.EXP_HOST, "zone": int(pl["zone"]), "depth": maxi(1, exp_level(p) - lv_at(Data.EXP_HOST, 1) + 1), "words": [], "codes": [], "papers": [], "far": str(pl["key"])}
+	return {"id": Data.EXP_SIG_ID + p, "site": Data.EXP_HOST, "zone": int(pl["zone"]), "depth": maxi(2, exp_level(p) - lv_at(Data.EXP_HOST, 1) + 1), "words": [], "codes": [], "papers": [], "far": str(pl["key"])}
 
 
 ## The expeditions not yet put away: out, back or held.
@@ -15074,8 +15125,19 @@ func cargo_slot_worth(kind: String, n: int) -> float:
 			var k: int = mini(left, Items.stack_size(it))
 			w += float(sell_price(it)) / maxf(1.0, float(Items.stack_size(it))) * k
 			left -= k
-		return w
-	return float(n) * exchange_worth(kind)
+		return w * (1.0 - exchange_spread())
+	return float(n) * cargo_unit(kind)
+
+
+## A unit of cargo's worth, as a trade would value it (the fix round, 29 Oct: shipping is never a better exchange than
+## the exchange): the exchange's give rate to tins, its spread and the day's drift against you in; scrap - bought, never
+## sold - at what the find it came from would fetch at the Fence (its exchange worth over the Bench's scrap multipliers,
+## less the spread), so scrapping and shipping can't beat selling.
+func cargo_unit(kind: String) -> float:
+	if kind == "scrap":
+		var mult: float = (float(Data.FX["yard/strip_for_parts"]) if yard_has("strip_for_parts") else 1.0) * (float(Data.FX["node/salvage"]) if has_node("salvage") else 1.0)
+		return exchange_worth("scrap") * (1.0 - exchange_spread()) / maxf(1.0, mult)
+	return exchange_rate(kind, "tins")
 
 
 func cargo_worth(cargo: Array) -> float:
@@ -15166,7 +15228,7 @@ func exp_time(p: int, hand_ids: Array) -> float:
 ## A hand's wage an expedition (only a hand sent is paid): by tier and rarity, at today's prices, "−% wage" off it.
 func hand_wage(h: Dictionary) -> int:
 	var base: float = Data.HAND_WAGE * int(h.get("tier", 1)) * float(Data.RARITIES[clampi(int(h.get("rarity", 0)), 0, Data.RARITIES.size() - 1)]["value"])
-	return int(round(tins_now(base) * maxf(0.0, 1.0 - Items.hand_affix_sum(h, "x_wage") / 100.0)))
+	return int(round(_inf(base) * maxf(0.0, 1.0 - Items.hand_affix_sum(h, "x_wage") / 100.0)))     # at today's prices, before the Issue too (the fix round)
 
 
 func crew_wages(hand_ids: Array) -> int:
@@ -15180,24 +15242,34 @@ func crew_wages(hand_ids: Array) -> int:
 
 ## The return's worth before the roll: the cargo's (EXP_RETURN), the porters' and "+% finds" on top.
 func exp_return_worth(p: int, worth: float, hand_ids: Array) -> float:
-	return maxf(0.0, worth) * Data.EXP_RETURN * (1.0 + crew_fig(hand_ids, "finds", p) / 100.0)
+	return maxf(0.0, worth) * Data.EXP_RETURN * exp_bonus(hand_ids, p)
+
+
+## The hands' bonuses on the return, all told: the porters' and "+% finds", the crackers' crates (EXP_CRATE_SHARE of the
+## cargo a crate) - never past EXP_BONUS_CAP (the fix round, 29 Oct: two porters tripled a shipment).
+func exp_bonus(hand_ids: Array, p := -1) -> float:
+	return minf(Data.EXP_BONUS_CAP, _exp_bonus_raw(hand_ids, p))
+
+
+func _exp_bonus_raw(hand_ids: Array, p := -1) -> float:
+	return 1.0 + crew_fig(hand_ids, "finds", p) / 100.0 + crew_fig(hand_ids, "crates", p) * Data.EXP_CRATE_SHARE
 
 
 ## The return's loot quality: grows with the cargo's worth (a doubling over EXP_QUALITY_UNIT a step), "+% loot quality" on top.
 func exp_quality(worth: float, hand_ids: Array, p := -1) -> float:
 	if worth <= 0.0:
 		return 0.0
-	return Data.EXP_QUALITY_K * log(1.0 + worth / tins_now(Data.EXP_QUALITY_UNIT)) / log(2.0) + crew_fig(hand_ids, "quality", p) / 100.0
+	return Data.EXP_QUALITY_K * log(1.0 + worth / (Data.EXP_QUALITY_UNIT * inflation())) / log(2.0) + crew_fig(hand_ids, "quality", p) / 100.0     # the unit at today's prices (the fix round)
 
 
-## This week by the exchange's day (EXP_WEEK days a week), and the days left in it.
+## This week: EXP_WEEK_H hours of the world's played time (the fix round, 29 Oct: the exchange's day was a run home, a
+## "week" 16 minutes), and the hours left in it.
 func exp_week() -> int:
-	@warning_ignore("integer_division")
-	return exchange_day / Data.EXP_WEEK
+	return int(floor(elapsed / (Data.EXP_WEEK_H * 3600.0)))
 
 
-func exp_week_left() -> int:
-	return Data.EXP_WEEK - exchange_day % Data.EXP_WEEK
+func exp_week_left() -> float:
+	return (exp_week() + 1) * Data.EXP_WEEK_H * 3600.0 - elapsed
 
 
 ## A place's quota this week: {kind, n, item} - what it wants (one of the cargo kinds the camp has met), how many, and
@@ -15206,20 +15278,33 @@ func exp_quota(p: int) -> Dictionary:
 	var pl := exp_place(p)
 	if pl.is_empty() or not quotas_open():
 		return {}
-	var known: Array = ["scrap", "meds"] + salvage_kinds() + materials_met()
-	for k in Data.SALVAGE + Data.MATERIAL_ORDER:
-		if cargo_held(str(k)) > 0 and not known.has(k):
-			known.append(k)
+	var known: Array = quota_kinds_now()
+	if known.is_empty():
+		return {}
 	var r := RandomNumberGenerator.new()
 	r.seed = hash(["quota", str(pl["key"]), exp_week()])
 	var kind: String = str(known[r.randi_range(0, known.size() - 1)])
-	var unit: float = tins_now(Data.EXP_MED_UNIT) if kind == "meds" else float(Data.EXCHANGE_BASE.get(kind, 1.0)) * inflation()
-	var n: int = maxi(1, int(ceil(tins_now(float(Data.EXP_QUOTA_WORTH[p])) / maxf(unit, 0.01))))
+	var unit: float = Data.EXP_MED_UNIT * inflation() if kind == "meds" else float(Data.EXCHANGE_BASE.get(kind, 1.0)) * inflation()
+	var n: int = maxi(1, int(ceil(float(Data.EXP_QUOTA_WORTH[p]) * inflation() / maxf(unit, 0.01))))
 	var named: String = _quota_unique(r) if str(pl["quota"]) == "named" else ""
 	var out := {"kind": kind, "n": n, "item": _quota_item_words(p, named)}
 	if named != "":
 		out["unique"] = named
 	return out
+
+
+## The kinds a week's quotas are rolled from, frozen at the week's start (the fix round, 29 Oct: holding one copper moved
+## five places' quotas): meds, the salvage and materials the camp has met or holds - never scrap, which the exchange
+## sells at any time.
+var quota_kinds := {}              # {week, kinds}
+func quota_kinds_now() -> Array:
+	if int(quota_kinds.get("week", -1)) != exp_week():
+		var known: Array = ["meds"] + salvage_kinds() + materials_met()
+		for k in Array(Data.SALVAGE) + Array(Data.MATERIAL_ORDER):
+			if cargo_held(str(k)) > 0 and not known.has(k):
+				known.append(k)
+		quota_kinds = {"week": exp_week(), "kinds": known}
+	return quota_kinds["kinds"]
 
 
 func _quota_unique(r: RandomNumberGenerator) -> String:
@@ -15230,9 +15315,11 @@ func _quota_unique(r: RandomNumberGenerator) -> String:
 func _quota_item_words(p: int, named: String) -> String:
 	var q: String = str(exp_place(p)["quota"])
 	if q == "named":
-		return Words.EXPEDITIONS["q_named"] % named
+		return Words.EXPEDITIONS["q_named"] % Words.mid(named)
 	if q == "set":
 		return Words.EXPEDITIONS["q_issued"] if issued else Words.EXPEDITIONS["q_set"]
+	if q == "mythic":
+		return Words.EXPEDITIONS["q_mythic"] % int(round(Data.EXP_MYTHIC_CHANCE * 100.0))
 	return str(Words.EXPEDITIONS.get("q_" + q, q))
 
 
@@ -15296,19 +15383,29 @@ func send_expedition(p: int, lead: String, hand_ids: Array, cargo: Array, slot :
 	var odds: float = exp_crew_odds(p, lead, hand_ids)
 	var risk: float = exp_risk(p, lead, hand_ids, worth, odds)
 	var quota: bool = quota_met_by(p, goods)
+	var qd: Dictionary = exp_quota(p) if quota else {}     # read before the cargo leaves (the review's A5: the last of a kind moved the week's dice)
+	var quota_worth := 0.0
+	for c in goods:
+		if quota and str(c["kind"]) == str(qd["kind"]):
+			quota_worth += cargo_slot_worth(str(c["kind"]), int(c["n"]))
+	var xp_run: float = _exp_xp_run(p)
 	for c in goods:
 		_cargo_take(str(c["kind"]), int(c["n"]))
+		if str(c["kind"]) == "scrap":
+			exp_scrap_out += int(c["n"])
 	var wages: int = crew_wages(hand_ids)
 	cash -= wages
 	exp_seq += 1
 	exp_sent += 1
 	var e := {"id": exp_seq, "place": p, "lead": lead, "hands": hand_ids.map(func(x): return int(x)), "cargo": goods, "worth": worth, "odds": odds, "risk": risk,
 		"hold": exp_hold_chance(p, hand_ids, risk), "quota": quota, "t0": elapsed, "dur": exp_time(p, hand_ids), "slot": slot if slot != "" else "Primary",
-		"state": "out", "res": {}, "seen": false, "wages": wages, "lead_lv": crew_level(lead)}
+		"state": "out", "res": {}, "seen": false, "wages": wages, "lead_lv": crew_level(lead), "xp_run": xp_run, "quota_worth": quota_worth}
 	if quota:
 		quota_done[str(exp_place(p)["key"])] = exp_week()     # the week's quota is this shipment's, whatever the roll
-		e["quota_item"] = str(exp_quota(p).get("unique", ""))
+		e["quota_item"] = str(qd.get("unique", ""))
 	expeditions.append(e)
+	exp_worth_out += worth
+	exp_wages_paid += wages
 	log_event(Words.EXPEDITIONS["sent"] % [lead, Words.mid(str(exp_place(p)["name"])), _cash_words(worth)])
 	chron("expedition", {"place": str(exp_place(p)["key"]), "lead": lead, "hands": e["hands"].size(), "worth": int(worth), "odds": snappedf(odds, 0.01), "risk": snappedf(risk, 0.01), "quota": quota})
 	return true
@@ -15352,10 +15449,12 @@ func _exp_resolve(e: Dictionary) -> void:
 	var held: bool = rng.randf() < float(e["hold"])
 	var bonus: float = rng.randf_range(Data.EXP_QUOTA_BONUS[0], Data.EXP_QUOTA_BONUS[1]) if bool(e.get("quota", false)) else 0.0
 	e["res"] = {"bad": bad, "loss": loss, "bonus": bonus}
+	e["res"]["due"] = _exp_total(e)                # what's coming back after the roll: the ransom reads it
 	e["seen"] = false
 	var pname: String = Words.mid(str(exp_place(p)["name"]))
 	if held:
 		e["state"] = "held"
+		exp_held_n += 1
 		log_event(Words.EXPEDITIONS["held_log"] % pname)
 		chron("held_up", {"place": str(exp_place(p)["key"]), "risk": snappedf(float(e["risk"]), 0.01)})
 		return
@@ -15365,12 +15464,13 @@ func _exp_resolve(e: Dictionary) -> void:
 
 ## The crew home with the return (a fetch brings it whole): rolled now, put away with Take it; the hands' levels and
 ## hurts.
-func _exp_home(e: Dictionary, loss: float) -> void:
+func _exp_home(e: Dictionary, loss: float, unhurt := false) -> void:
 	var res: Dictionary = e["res"]
 	res["loss"] = loss
 	_exp_roll_return(e)
 	e["state"] = "back"
 	e["seen"] = false
+	exp_back_n += 1
 	var ups: Array = []
 	var hurt: Array = []
 	var medic: bool = e["hands"].any(func(id): return str(hand_by_id(int(id)).get("trade", "")) == "medic")
@@ -15383,11 +15483,36 @@ func _exp_home(e: Dictionary, loss: float) -> void:
 		@warning_ignore("integer_division")
 		h["lv"] = mini(Data.HAND_LV_MAX, 1 + int(h["xp"]) / Data.HAND_LV_EVERY)
 		ups.append([int(id), lv0, int(h["lv"])])
-		if bool(res.get("bad", false)) and not medic:
+		if bool(res.get("bad", false)) and not medic and not unhurt:
 			h["hurt_until"] = elapsed + float(e["dur"])     # hurt for one expedition (trips.md 3): as long as this one took
 			hurt.append(int(id))
 	res["ups"] = ups
 	res["hurt"] = hurt
+	var lead: String = str(e["lead"])
+	if roster.has(lead):
+		var got: float = float(e.get("xp_run", 0.0)) * repeat_xp_share()     # the lead's XP: a repeat run's share of a run there (the fix round, 29 Oct)
+		roster[lead]["xp"] = float(roster[lead].get("xp", 0.0)) + got
+		res["lead_xp"] = got
+
+
+## A run's XP at the far place, as a watched run there would earn it (the place's fight laid on: its gang's XP a man,
+## the pool) - the lead's share of it comes home with them.
+func _exp_xp_run(p: int) -> float:
+	if not _sig.is_empty() or mission != null and not _repeat_going:
+		return 0.0
+	var sg := _exp_sig(p)
+	_sig_on(sg)
+	var t := effective(int(sg["site"]))
+	_sig_off()
+	return float(t["xp"]) * float(t["pool"])
+
+
+## The return's worth after the roll: the cargo's at EXP_RETURN, the hands' bonus (capped), less the loss; the quota's
+## bonus on its own slot.
+func _exp_total(e: Dictionary) -> float:
+	var res: Dictionary = e.get("res", {})
+	var keep: float = 1.0 - float(res.get("loss", 0.0))
+	return (exp_return_worth(int(e["place"]), float(e["worth"]), e["hands"]) + float(e.get("quota_worth", 0.0)) * Data.EXP_RETURN * float(res.get("bonus", 0.0))) * keep
 
 
 ## The return: the place's kinds by share at the return's worth (the lead's class's kind takes EXP_CLASS_SHARE), less the
@@ -15398,7 +15523,10 @@ func _exp_roll_return(e: Dictionary) -> void:
 	var pl := exp_place(p)
 	var res: Dictionary = e["res"]
 	var hs: Array = e["hands"]
-	var total: float = exp_return_worth(p, float(e["worth"]), hs) * (1.0 + float(res.get("bonus", 0.0))) * (1.0 - float(res.get("loss", 0.0)))
+	var total: float = _exp_total(e)
+	var raw: float = _exp_bonus_raw(hs, p)
+	var crates: float = total * crew_fig(hs, "crates", p) * Data.EXP_CRATE_SHARE / raw if raw > 0.0 else 0.0     # the crates' share of it, inside the cap
+	total -= crates
 	var q: float = exp_quality(float(e["worth"]), hs, p)
 	var tier_v: int = best_tier_open()
 	var shares: Array = []
@@ -15412,9 +15540,9 @@ func _exp_roll_return(e: Dictionary) -> void:
 	for sh in shares:
 		var budget: float = total * float(sh[1])
 		_exp_fill(str(sh[0]), budget, q, tier_v, str(e.get("slot", "Primary")), items, cur)
-	if total > 0.0:
-		for k in range(int(crew_fig(hs, "crates", p))):
-			_exp_fill(str(pl["pays"][0][0]), tins_now(Data.EXP_CRATE * tier_v), q + 0.25, tier_v, str(e.get("slot", "Primary")), items, cur)
+	if crates > 0.0:
+		_exp_fill(str(pl["pays"][0][0]), crates, q + 0.25, tier_v, str(e.get("slot", "Primary")), items, cur)     # the crackers': the place's first kind, a better find
+	total += crates
 	var quota_it := {}
 	if bool(e.get("quota", false)) and total > 0.0:
 		quota_it = _exp_quota_item(e, tier_v)
@@ -15425,6 +15553,7 @@ func _exp_roll_return(e: Dictionary) -> void:
 	res["total"] = total
 	res["quota_item"] = Items.full_name(quota_it) if not quota_it.is_empty() else ""
 	res["quota_id"] = int(quota_it["id"]) if not quota_it.is_empty() else -1
+	exp_return_in += total
 
 
 ## A share of the return, `budget` its worth: items rolled until it's spent (the last at the chance of what's left),
@@ -15443,7 +15572,7 @@ func _exp_fill(kind: String, budget: float, q: float, tier_v: int, slot: String,
 				cur["tokens"] = int(cur.get("tokens", 0)) + n
 			return
 		"army", "fuses", "scrap":
-			var cn: int = int(round(budget / maxf(0.01, exchange_worth(kind))))
+			var cn: int = _exp_count(budget / maxf(0.01, exchange_worth(kind)))
 			if cn > 0:
 				cur[kind] = int(cur.get(kind, 0)) + cn
 			return
@@ -15453,7 +15582,7 @@ func _exp_fill(kind: String, budget: float, q: float, tier_v: int, slot: String,
 				mats = ["copper_wire"]
 			var each: float = budget / mats.size()
 			for mk in mats:
-				var mn: int = int(round(each / maxf(0.01, exchange_worth(str(mk)))))
+				var mn: int = _exp_count(each / maxf(0.01, exchange_worth(str(mk))))
 				if mn > 0:
 					cur[mk] = int(cur.get(mk, 0)) + mn
 			return
@@ -15462,17 +15591,24 @@ func _exp_fill(kind: String, budget: float, q: float, tier_v: int, slot: String,
 	while left > 0.0 and tries < 40:
 		tries += 1
 		if items.size() >= Data.EXP_ITEMS_MAX:
-			cur["scrap"] = int(cur.get("scrap", 0)) + int(round(left / maxf(0.01, exchange_worth("scrap"))))     # the rest as scrap
+			cur["scrap"] = int(cur.get("scrap", 0)) + _exp_count(left / maxf(0.01, exchange_worth("scrap")))     # the rest as scrap
 			return
 		var it := _exp_item(kind, q, tier_v, slot)
 		if it.is_empty():
 			cur["tins"] = float(cur.get("tins", 0.0)) + left
 			return
-		var w: float = maxf(tins_now(Data.EXP_ITEM_FLOOR), float(sell_price(it)) * maxf(1.0, float(Items.stack_size(it))))
+		var w: float = maxf(Data.EXP_ITEM_FLOOR * inflation(), float(sell_price(it)) * maxf(1.0, float(Items.stack_size(it))))
 		if w > left and rng.randf() >= left / w:
 			return                                  # the last at the chance of what's left
 		items.append(it)
 		left -= w
+
+
+## A count from a figure: its whole part, and one more at the chance of what's left (the review's B6: Birmingham's shares
+## rounded to nothing).
+func _exp_count(x: float) -> int:
+	var n: int = int(floor(maxf(0.0, x)))
+	return n + (1 if rng.randf() < x - n else 0)
 
 
 ## One find of a return's kind, at the camp's best tier with the return's quality.
@@ -15519,14 +15655,13 @@ func _exp_unique(slot: String, tier_v: int, named: String) -> Dictionary:
 func _exp_quota_item(e: Dictionary, tier_v: int) -> Dictionary:
 	match str(exp_place(int(e["place"]))["quota"]):
 		"mythic":
-			if rng.randf() < Data.EXP_MYTHIC_CHANCE:
+			if mythics_on and rng.randf() < Data.EXP_MYTHIC_CHANCE:
 				var u := mythic_pick()
 				if not u.is_empty():
 					return Items.roll_unique(u, rng, -1, tier_v)
 			return {}
 		"gamble":
-			_restock_gamble()
-			e["res"]["gamble"] = true
+			e["res"]["gamble"] = true                  # the Fence's gamble restocked on Take it (the review's C7: not under a plan)
 			return {}
 		"rebuild":
 			e["res"]["halves"] = 1
@@ -15564,7 +15699,7 @@ func _exp_got_words(e: Dictionary) -> String:
 		elif str(k) == "tokens":
 			parts.append(Words.EXPEDITIONS["tokens"] % [int(v), "" if int(v) == 1 else "s"])
 		else:
-			parts.append("%d %s" % [int(v), exchange_name(str(k)).to_lower()])
+			parts.append(cargo_words(str(k), int(v)))
 	return ", ".join(parts) if not parts.is_empty() else Words.EXPEDITIONS["rep_nothing"]
 
 
@@ -15585,7 +15720,7 @@ func exp_take(id: int) -> bool:
 				stash.append(it)                       # a mythic or the quota's item comes home whatever the room, as a mythic does
 			else:
 				var got := float(sell_price(it))
-				cash += got
+				_earn(got)                             # income, as a sale is (the fix round: the balance's cash in)
 				sold += 1
 				sold_tins += got
 	if sold > 0:
@@ -15594,12 +15729,14 @@ func exp_take(id: int) -> bool:
 		var v = res["cur"][k]
 		match str(k):
 			"tins":
-				cash += float(v)
+				_earn(float(v))                        # income (the fix round)
 			"tokens":
 				gamble_tokens += int(v)
 			_:
 				_exchange_add(str(k), int(v))
 	rebuild_halves += int(res.get("halves", 0))
+	if bool(res.get("gamble", false)):
+		_restock_gamble()
 	expeditions.erase(e)
 	chron("expedition_home", {"place": str(exp_place(int(e["place"]))["key"]), "worth": int(e["worth"]), "total": int(res.get("total", 0.0)), "bad": bool(res.get("bad", false)), "items": res.get("items", []).size()})
 	return true
@@ -15620,12 +15757,14 @@ func exp_report_due() -> Dictionary:
 	return {}
 
 
-## A hold-up's ransom: the cargo's worth times EXP_RANSOM, never under EXP_RANSOM_MIN, at today's prices.
+## A hold-up's ransom: half of what's coming back after the roll (the fix round, 29 Oct: half the cargo could be dearer
+## than the return), never under EXP_RANSOM_MIN at today's prices.
 func exp_ransom(id: int) -> int:
 	var e := exp_by_id(id)
 	if e.is_empty():
 		return -1
-	return int(round(maxf(tins_now(Data.EXP_RANSOM_MIN), float(e["worth"]) * Data.EXP_RANSOM)))
+	var due: float = float(e.get("res", {}).get("due", _exp_total(e)))
+	return int(round(maxf(Data.EXP_RANSOM_MIN * inflation(), due * Data.EXP_RANSOM)))
 
 
 func exp_pay(id: int) -> bool:
@@ -15684,8 +15823,8 @@ func exp_fetch_block(id: int) -> String:
 	return ""
 
 
-## Fetch them: the selected runner to the hold site, its head the holder (free), a watched run. Its head down brings the
-## crew home with the whole return (the bad roll's loss with it): _exp_fetched from the run's end.
+## Go after them: the selected runner to the hold site, its head the holder (free), a watched run. Its head down brings
+## the party home with the return as rolled, the hands unhurt: _exp_fetched from the run's end.
 func exp_fetch(id: int) -> bool:
 	if exp_fetch_block(id) != "":
 		return false
@@ -15703,14 +15842,15 @@ func exp_fetch(id: int) -> bool:
 	return true
 
 
-## A fetch's run home (_extract): the holder down, the crew home with all of it; else still held.
+## A fetch's run home (_extract): the holder down, the party home with the return as rolled and the hands unhurt; else
+## still held.
 func _exp_fetched(m: Dictionary) -> void:
 	var e := exp_by_id(int(m.get("exp_fetch", -1)))
 	if e.is_empty() or str(e["state"]) != "held":
 		return
 	var pname: String = Words.mid(str(exp_place(int(e["place"]))["name"]))
 	if m.has("boss") and not bool(m["boss"].get("alive", true)):
-		_exp_home(e, 0.0)
+		_exp_home(e, float(e["res"].get("loss", 0.0)), true)     # the return as rolled, no refund; the hands brought home unhurt (the fix round)
 		e["res"]["fetched"] = true
 		log_event(Words.EXPEDITIONS["fetched"] % pname)
 		chron("fetched", {"place": str(exp_place(int(e["place"]))["key"])})
@@ -15744,14 +15884,14 @@ func _fill_pool(better: bool) -> void:
 
 
 func reroll_cost(better: bool) -> int:
-	return _round_price(int(round(tins_now(float(Data.HAND_REROLL[1 if better else 0])))))
+	return _round_price(_inf(float(Data.HAND_REROLL[1 if better else 0])))     # at today's prices (the fix round)
 
 
 func reroll_block(better: bool) -> String:
 	if not pool_open():
 		return Words.EXPEDITIONS["hands_shut"]
 	if better and not better_faces_open():
-		return Words.EXPEDITIONS["hand_shut"] % "Two along"
+		return Words.EXPEDITIONS["better_shut"]
 	if cash < reroll_cost(better):
 		return Words.EXPEDITIONS["short_cash"] % money_word()
 	return ""
@@ -15804,7 +15944,8 @@ func let_go(id: int) -> bool:
 
 func exp_state() -> Dictionary:
 	return {"expeditions": expeditions, "hands": hands, "pool": hand_pool, "seq": exp_seq, "sent": exp_sent, "quota_done": quota_done,
-		"tokens": gamble_tokens, "halves": rebuild_halves}
+		"tokens": gamble_tokens, "halves": rebuild_halves, "quota_kinds": quota_kinds, "back_n": exp_back_n, "held_n": exp_held_n,
+		"worth_out": exp_worth_out, "return_in": exp_return_in, "wages": exp_wages_paid, "scrap_out": exp_scrap_out}
 
 
 func exp_load(d: Dictionary) -> void:
@@ -15816,6 +15957,15 @@ func exp_load(d: Dictionary) -> void:
 	quota_done = d.get("quota_done", {})
 	gamble_tokens = int(d.get("tokens", 0))
 	rebuild_halves = int(d.get("halves", 0))
+	quota_kinds = d.get("quota_kinds", {})
+	if quota_kinds.has("week"):
+		quota_kinds["week"] = int(quota_kinds["week"])
+	exp_back_n = int(d.get("back_n", 0))
+	exp_held_n = int(d.get("held_n", 0))
+	exp_worth_out = float(d.get("worth_out", 0.0))
+	exp_return_in = float(d.get("return_in", 0.0))
+	exp_wages_paid = int(d.get("wages", 0))
+	exp_scrap_out = int(d.get("scrap_out", 0))
 	_exp_cache = {}
 	_exp_now = {}
 	var top := 0
@@ -15834,9 +15984,9 @@ func exp_load(d: Dictionary) -> void:
 		for c in e.get("cargo", []):
 			c["n"] = int(c["n"])
 		for it in e.get("res", {}).get("items", []):
-			for k in ["id", "rarity", "tier"]:
+			for k in ["id", "rarity", "tier", "value", "rounds", "count", "ilvl"]:
 				if it.has(k):
-					it[k] = int(it[k])
+					it[k] = int(it[k])     # value and rounds too, as the stash's load (the review's C3)
 			top = maxi(top, int(it["id"]))
 	for k in quota_done.keys():
 		quota_done[k] = int(quota_done[k])

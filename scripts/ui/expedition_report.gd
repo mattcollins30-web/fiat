@@ -19,7 +19,7 @@ const H := 640
 const PAD := 24
 const INNER := W - 2 * PAD
 const GOT_ROWS := 4
-const HAND_LINES := 2
+const HAND_LINES := 3              # two hands and the lead's XP
 const BTN_W := 220
 
 var sim
@@ -58,9 +58,9 @@ func _init() -> void:
 	held_line = UI.label(self, Rect2(PAD, 136, INNER, 30), E["rep_held_line"], "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(3):
 		var y: float = 180 + k * 76
-		var b := UI.button(self, Rect2(PAD, y, 300, 56), k == 0)
+		var b := UI.button(self, Rect2(PAD, y, 340, 56), k == 0)
 		b.pressed.connect(_way.bind(k))
-		var n := UI.label(self, Rect2(PAD + 316, y, INNER - 316, 56), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var n := UI.label(self, Rect2(PAD + 356, y, INNER - 356, 56), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		ways.append({"button": b, "note": n})
 	var by: float = H - PAD - Pal.BUTTON_H
 	later = UI.button(self, Rect2(W - PAD - BTN_W, by, BTN_W, Pal.BUTTON_H), false)
@@ -86,16 +86,20 @@ func show_state(s) -> void:
 	var held: bool = str(e["state"]) == "held"
 	UI.fit(title, [(E["rep_held_title"] if held else E["rep_title"]) % Words.mid(str(pl["name"])), (E["rep_held_title"] if held else E["rep_title"]) % str(pl["short"])])
 	var nh: int = e["hands"].size()
-	UI.fit(sub, [E["rep_sub"] % [str(e["lead"]), nh, "" if nh == 1 else "s", Fmt.money(float(e["worth"]))], E["rep_sub"] % [str(e["lead"]), nh, "" if nh == 1 else "s", Fmt.money_k(float(e["worth"]))]])
+	if nh == 0:
+		UI.fit(sub, [E["rep_sub_alone"] % [str(e["lead"]), Fmt.money(float(e["worth"]))], E["rep_sub_alone"] % [str(e["lead"]), Fmt.money_k(float(e["worth"]))]])     # never "0 hands" (the UI review's A6)
+	else:
+		UI.fit(sub, [E["rep_sub"] % [str(e["lead"]), nh, "" if nh == 1 else "s", Fmt.money(float(e["worth"]))], E["rep_sub"] % [str(e["lead"]), nh, "" if nh == 1 else "s", Fmt.money_k(float(e["worth"]))]])
 	var res: Dictionary = e.get("res", {})
 	var top: Array = []
-	if bool(res.get("bad", false)):
+	if bool(res.get("bad", false)) and float(res.get("loss", 0.0)) > 0.0:
 		top.append({"forms": [E["rep_bad"] % int(round(float(res.get("loss", 0.0)) * 100.0))], "colour": Pal.BAD})
 	else:
 		top.append({"forms": [E["rep_good"]], "colour": Pal.GOOD})
 	if bool(e.get("quota", false)):
 		var qi: String = str(res.get("quota_item", ""))
-		top.append({"forms": [E["rep_quota"] % [int(round(float(res.get("bonus", 0.0)) * 100.0)), qi if qi != "" else _quota_words(e)], (E["rep_quota"] % [int(round(float(res.get("bonus", 0.0)) * 100.0)), ""]).trim_suffix(" and ")], "colour": Pal.ACCENT})
+		var pct: int = int(round(float(res.get("bonus", 0.0)) * 100.0))
+		top.append({"forms": [E["rep_quota"] % [pct, Words.mid(qi) if qi != "" else _quota_words(e)], E["rep_quota_only"] % pct], "colour": Pal.ACCENT})
 	chips.show_chips(top, 1, true)
 	for w in ways:
 		w["button"].visible = held
@@ -113,17 +117,32 @@ func show_state(s) -> void:
 		ways[0]["button"].disabled = fb != ""
 		UI.fit_button(ways[0]["button"], [E["fetch"]])
 		var site: String = Words.mid(str(Data.TIERS[i]["name"])) if i >= 0 else ""
-		UI.fit(ways[0]["note"], [E["fetch_note"] % site + ("" if fb == "" else " · " + fb), E["fetch_note"] % site])
+		UI.fit(ways[0]["note"], [E["fetch_note"] % site, E["fetch_note_short"] % site] if fb == "" else [fb])     # what a win and a loss mean (the UI review's B2)
 		var price: int = sim.exp_ransom(id)
 		ways[1]["button"].disabled = sim.cash < price
 		UI.fit_button(ways[1]["button"], [E["pay"] % Fmt.money(price), E["pay"] % Fmt.money_k(price)])
-		UI.fit(ways[1]["note"], [E["shut_held"] % sim.money_word() if sim.cash < price else ""])
-		UI.fit_button(ways[2]["button"], [E["walk"]])
-		UI.fit(ways[2]["note"], [E["walk_note"]])
+		UI.fit(ways[1]["note"], [E["shut_held"] % sim.money_word() if sim.cash < price else E["pay_note"]])
+		if _walk_armed != id:
+			_walk_armed = -1
+		UI.fit_button(ways[2]["button"], [E["walk_again"], E["walk"]] if _walk_armed == id else [E["walk"]])
+		var names: Array = e["hands"].map(func(hid): return str(sim.hand_by_id(int(hid)).get("base", ""))).filter(func(x): return x != "")
+		UI.fit(ways[2]["note"], [E["walk_note"] % " and ".join(names), E["walk_note"] % ("%d hand%s" % [names.size(), "" if names.size() == 1 else "s"])] if not names.is_empty() else [E["walk_note_none"]])
 	else:
 		var items: Array = []
+		var by: Dictionary = {}                   # finds of a name stacked: "Tourniquet ×4", in its best rarity's colour
+		var order: Array = []
 		for it in res.get("items", []):
-			items.append({"forms": [Items.full_name(it)], "colour": Pal.tone_color(Pal.item_tone(it)) if Pal.item_tone(it) != "" else Pal.TEXT_2})
+			var nm: String = Items.full_name(it)
+			if not by.has(nm):
+				by[nm] = {"n": 0, "it": it}
+				order.append(nm)
+			by[nm]["n"] = int(by[nm]["n"]) + 1
+			if int(it.get("rarity", 0)) > int(by[nm]["it"].get("rarity", 0)):
+				by[nm]["it"] = it
+		for nm in order:
+			var best: Dictionary = by[nm]["it"]
+			var cnt: int = int(by[nm]["n"])
+			items.append({"forms": [nm + ((" ×%d" % cnt) if cnt > 1 else "")], "colour": Pal.tone_color(Pal.item_tone(best)) if Pal.item_tone(best) != "" else Pal.TEXT_2})
 		for k in res.get("cur", {}):
 			var v = res["cur"][k]
 			var words := ""
@@ -133,10 +152,8 @@ func show_state(s) -> void:
 				"tokens":
 					words = E["tokens"] % [int(v), "" if int(v) == 1 else "s"]
 				_:
-					words = "%s %s" % [Fmt.group(int(v)), sim.exchange_name(str(k)).to_lower()]
+					words = sim.cargo_words(str(k), int(v))     # grouped, singular at one (the UI review's A3)
 			items.append({"forms": [words], "colour": Pal.TEXT})
-		if int(res.get("halves", 0)) > 0:
-			items.append({"forms": [E["halves"] % [int(res["halves"]), "" if int(res["halves"]) == 1 else "s"]], "colour": Pal.ACCENT})
 		if items.is_empty():
 			items.append({"forms": [E["rep_nothing"]], "colour": Pal.TEXT_3})
 		got.show_chips(items, GOT_ROWS, true)
@@ -150,6 +167,8 @@ func show_state(s) -> void:
 			if hurt:
 				line = E["rep_hurt"] % [line, _dur(float(e["dur"]))]
 			lines.append(line)
+		if float(res.get("lead_xp", 0.0)) > 0.0:
+			lines.append(E["rep_lead_xp"] % [str(e["lead"]), Fmt.group(int(round(float(res["lead_xp"]))))])
 		hands_head.visible = not lines.is_empty()
 		for k in range(hand_lines.size()):
 			hand_lines[k].visible = k < lines.size()
@@ -175,12 +194,20 @@ func _quota_words(e: Dictionary) -> String:
 			return Words.EXPEDITIONS["q_gamble"]
 		"rebuild":
 			return Words.EXPEDITIONS["q_rebuild"]
-	return Words.EXPEDITIONS["rep_no_quota"]
+		"mythic":
+			return Words.EXPEDITIONS["q_missed_mythic"]
+	return Words.EXPEDITIONS["q_missed"]
 
 
 func _way(k: int) -> void:
 	if sim == null or id < 0:
 		return
+	if k == 2 and (_walk_armed != id or Time.get_ticks_msec() - _walk_at > ARM_MS):
+		_walk_armed = id                       # Walk away: a second press (the UI review's D2: the hands go for good)
+		_walk_at = Time.get_ticks_msec()
+		acted.emit()
+		return
+	_walk_armed = -1
 	var ok := false
 	match k:
 		0:
@@ -193,6 +220,11 @@ func _way(k: int) -> void:
 		if k != 1:
 			id = -1
 		acted.emit()
+
+
+const ARM_MS := 3000
+var _walk_armed := -1
+var _walk_at := 0
 
 
 func _take() -> void:

@@ -1,0 +1,639 @@
+{
+ "_readme": [
+  "FIAT EXPEDITIONS (29 Oct): 35 jobs - six far places (688x296, $0.15 each), eighteen hands' faces (128x128), the Bunkhouse's three room-card strips (384x96) and its rail icon (64x64), seven cargo icons (64x64) - $0.08 each but the places. One file a job, straight to its name; the far places and the faces are found by name.",
+  "Run the test first: tools/pixellab_expeditions_test_manifest.json. Then this, ++ --parallel 3.",
+  "Regenerate with python3 tools/make_expeditions_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/places/far_swansea.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: a wet seafront promenade curving along a wide bay at dusk, the bay flat and grey, a tall hospital block behind the promenade with every window dark, empty railings and lamp posts unlit. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123000,
+   "single": true,
+   "style_image": "res://art/places/the_city.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place swansea: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/places/far_bristol.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: the approach road to a long suspension bridge over a deep river gorge, blocked by a wall of plain rusted shipping containers and a red-and-white barrier arm, floodlights on poles and coils of razor wire, the bridge's towers beyond. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123001,
+   "single": true,
+   "style_image": "res://art/places/the_city.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place bristol: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/places/far_salisbury.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: open rolling chalk downland under a huge pale sky, a long wire army-range fence with blank plates on its posts, a burnt-out armoured vehicle on a white chalk track, a small clump of trees on the skyline. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123002,
+   "single": true,
+   "style_image": "res://art/places/the_outskirts.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place salisbury: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/places/far_birmingham.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: a tangle of concrete motorway flyovers looping over each other above rows of long grey distribution sheds, their loading bays shuttered, plain unprinted walls, orange sodium light on the slip roads. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123003,
+   "single": true,
+   "style_image": "res://art/places/the_city.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place birmingham: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/places/far_liverpool.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: a long row of old brick dock warehouses and tall cranes along a wide grey river, stacks of plain containers on the quay, a ferry rusting at its berth, low cloud over the water. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123004,
+   "single": true,
+   "style_image": "res://art/places/the_city.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place liverpool: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/places/far_london.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama, far off and still: a great city's river skyline seen from far off across the water, many tall towers unlit, one of them smoking, a long bridge with a gap blown out of its middle, nothing moving. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 123005,
+   "single": true,
+   "style_image": "res://art/places/the_city.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the far place london: the Expeditions card (centre crop) and the Map's far edge"
+  },
+  {
+   "out": "art/hands/porter_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a tired young man under a huge rucksack strap, a plain hi-vis vest with no lettering, a woolly hat, who carries for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123100,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a porter hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/porter_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a broad woman with a frame pack and a cargo net over one shoulder, work gloves, who carries for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123101,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a porter hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/porter_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a grizzled old docker with a sack truck handle over his shoulder, a scarred, patient face, who carries for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123102,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a porter hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/hands/medic_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a teenage first-aider in a too-big green jacket, a bum bag of plasters, who patches up an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123103,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a medic hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/medic_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a nurse in faded scrubs under a parka, a stethoscope round the neck and a head torch, who patches up an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123104,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a medic hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/medic_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a field surgeon with a cropped grey head, a plain faded white armband from an old army uniform and a steady stare, who patches up an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123105,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a medic hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/hands/scout_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a wiry kid in a hoodie with cheap binoculars round his neck, who goes ahead of an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123106,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a scout hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/scout_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a rambler in a waxed jacket with a clear plastic map case on a cord, the map inside only green and brown shapes, and a walking pole, who goes ahead of an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123107,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a scout hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/scout_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a gaunt ex-soldier in a ghillie hood, a rangefinder pushed up on the brow, who goes ahead of an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123108,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a scout hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/hands/cracker_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a lad with a crowbar over his shoulder and a split lip, safety goggles on his forehead, who opens locked things for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123109,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a cracker hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/cracker_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a locksmith in a cardigan with a ring of lock picks and a stethoscope, who opens locked things for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123110,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a cracker hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/cracker_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of an old safe-breaker in a flat cap, a jeweller's loupe in one eye, a cigarette behind the ear, who opens locked things for an expedition crew. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123111,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a cracker hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/hands/driver_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a delivery driver in a plain polo shirt with a pale patch where a badge was unpicked, keys on a plain lanyard, who drives an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123112,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a driver hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/driver_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a lorry driver with a beard and a plain trucker's cap, a CB radio handset clipped to the collar, who drives an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123113,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a driver hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/driver_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a former getaway driver, a leather jacket, driving gloves, a calm half-smile, who drives an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123114,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a driver hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/hands/quartermaster_0.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a warehouse picker with a roll of pallet wrap and a pencil behind the ear, who loads an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123115,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a quartermaster hand's face, look 0 (Common/Uncommon)"
+  },
+  {
+   "out": "art/hands/quartermaster_1.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a stores clerk with a clipboard of blank paper and a tape gun, reading glasses on a cord, who loads an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123116,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a quartermaster hand's face, look 1 (Rare/Epic)"
+  },
+  {
+   "out": "art/hands/quartermaster_2.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of a retired regimental storeman, a pressed shirt, a closed plain ledger under his arm, thin and bald with a neat white moustache, who loads an expedition crew's van. Looking just past the viewer. Post-collapse Britain, grey light. One person centred, filling the frame, a clear face that still reads when shown very small. No text, no border, no lettering or badges, plain dark background.",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "seed": 123117,
+   "single": true,
+   "style_image": "res://art/people/fence.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "a quartermaster hand's face, look 2 (Legendary)"
+  },
+  {
+   "out": "art/room_boxes/bunkhouse_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 123200,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: rows of metal bunk beds in a portakabin, plain kit bags hung on hooks, a strip light on the ceiling. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the Bunkhouse room card's box 1"
+  },
+  {
+   "out": "art/room_boxes/bunkhouse_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 123201,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: a cork board of blank cream cards pinned in rows, nothing written on them, a road atlas pinned open showing only coloured roads and no names, plain mugs on a trestle table below. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the Bunkhouse room card's box 2"
+  },
+  {
+   "out": "art/room_boxes/bunkhouse_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 123202,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: a yard at dawn: a plain white van with no number plate and no lettering, its back doors open and loaded, three small figures of a crew climbing in, seen from behind. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the Bunkhouse room card's box 3"
+  },
+  {
+   "out": "art/rail/bunkhouse.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small steel-framed bunk bed, two thin mattresses and a folded grey army blanket on the top bunk, seen from the front at a slight angle, a single bold silhouette that still reads at a quarter of this size, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 123210,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: the Bunkhouse (when it gets a button)"
+  },
+  {
+   "out": "art/items/paving.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96310,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a stack of three grey paving slabs, one corner broken. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: paving (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/glass.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96311,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a pane of salvaged window glass in its old frame, one corner cracked. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: glass (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/ledgers.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96312,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a stack of three old bound ledgers tied with string. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: ledgers (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/cable_drums.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96313,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a wooden cable drum wound with thick black cable. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: cable_drums (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/army_kit.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96314,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a folded olive army tarpaulin with a webbing strap round it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: army_kit (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/fuses.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96315,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/reference/items/ref_03.png",
+   "description": "A realistic painted pixel-art still-life of a single a handful of ceramic cartridge fuses in a small tin. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "cargo icon: fuses (the order glyphs' job, as it is)"
+  },
+  {
+   "out": "art/items/meds_cargo.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small open plain unprinted cardboard box, no markings on it, of mixed medical supplies: plain unprinted foil blister packs, a bandage roll and a small brown bottle with no label, no red cross, no lettering, seen from above at a slight angle, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 123306,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "cargo icon: meds_cargo"
+  }
+ ]
+}

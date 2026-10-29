@@ -60,9 +60,12 @@ var _risk_bar: Panel
 var _risk_fill: Panel
 var _risk_label: Label
 var _risk_line: Label
+var _stakes: Label                 # what the hands sent risk (the fix round): shown with a hand picked
 var send: Button
 var note: Label
 var _out_head: Label
+var _out_none: Label
+var risk_word := ""                # the verdict shown: Safe, Risky, A bad idea (for the smoke)
 var _outs: Array = []              # {name, bar, fill, left, report}
 
 
@@ -140,13 +143,15 @@ func _init() -> void:
 	_risk_bar = UI.panel(right, Rect2(PAD, 522, BAR_W, 22), UI.box(Pal.BG, 6, 1, Pal.CARD_LINE))
 	_risk_fill = UI.panel(_risk_bar, Rect2(0, 0, 0, 22), UI.box(Pal.WARN, 6))
 	_risk_label = UI.label(right, Rect2(PAD + BAR_W + 16, 516, INNER - BAR_W - 16, 34), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_risk_line = UI.label(right, Rect2(PAD, 552, INNER, 24), "", "Regular", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	send = UI.button(right, Rect2(PAD, 588, 280, Pal.BUTTON_H), true)
+	_risk_line = UI.label(right, Rect2(PAD, 550, INNER, 24), "", "Regular", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_stakes = UI.label(right, Rect2(PAD, 574, INNER, 24), "", "Regular", 14, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT, false)
+	send = UI.button(right, Rect2(PAD, 604, 280, Pal.BUTTON_H), true)
 	send.pressed.connect(_send)
-	note = UI.label(right, Rect2(PAD + 296, 588, INNER - 296, Pal.BUTTON_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_out_head = UI.head(right, Rect2(PAD, 664, INNER, UI.HEAD_H), "")
+	note = UI.label(right, Rect2(PAD + 296, 604, INNER - 296, Pal.BUTTON_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_out_head = UI.head(right, Rect2(PAD, 674, INNER, UI.HEAD_H), "")
+	_out_none = UI.label(right, Rect2(PAD, 700, INNER, OUT_H), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(OUT_ROWS):
-		var y: float = 690 + k * (OUT_H + 8)
+		var y: float = 700 + k * (OUT_H + 8)
 		var o := {}
 		o["name"] = UI.label(right, Rect2(PAD, y, 430, OUT_H), "", "Medium", 14, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		o["bar"] = UI.panel(right, Rect2(PAD + 440, y + 12, 220, 16), UI.box(Pal.BG, 5, 1, Pal.CARD_LINE))
@@ -201,16 +206,17 @@ func show_state(s) -> void:
 		d["pic_word"].visible = tex == null
 		UI.fit(d["pic_name"], [str(pl["short"])])
 		UI.fit(d["name"], [str(pl["name"]), str(pl["short"])])
-		UI.fit(d["line"], ["%s · %s" % [E["level"] % sim.exp_level(k), dur(float(pl["time"]))]])
+		var lv_t: String = "%s · %s" % [E["level"] % sim.exp_level(k), dur(float(pl["time"]))]
+		UI.fit(d["line"], (["%s · %s" % [str(pl["line"]), lv_t]] if pl.has("line") else []) + [lv_t])     # Swansea's "Gone quiet"
 		UI.fit(d["pays"], [E["pays"] % pays_words(k), pays_words(k)])
 		var q: Dictionary = sim.exp_quota(k)
 		var done: bool = int(sim.quota_done.get(str(pl["key"]), -1)) == sim.exp_week()
 		if q.is_empty():
 			d["quota"].text = ""
 		elif done:
-			UI.fit(d["quota"], [E["quota_met"], "Met this week"])
+			UI.fit(d["quota"], [E["quota_met"], E["quota_met_short"]])
 		else:
-			UI.fit(d["quota"], [E["quota_chip"] % ("%d %s" % [int(q["n"]), sim.cargo_name(str(q["kind"])).to_lower()]), E["quota_chip"] % str(int(q["n"]))])
+			UI.fit(d["quota"], [E["quota_chip"] % sim.cargo_words(str(q["kind"]), int(q["n"])), sim.cargo_words(str(q["kind"]), int(q["n"]))])
 	_show_card()
 	_show_outs()
 
@@ -230,10 +236,9 @@ func _show_card() -> void:
 		UI.fit(_quota, [E["quota_met"]])
 		_quota.add_theme_color_override("font_color", Pal.GOOD)
 	else:
-		var kn: String = sim.cargo_name(str(q["kind"])).to_lower()
-		var left: int = sim.exp_week_left()
-		var days: String = E["quota_left"] % [left, "" if left == 1 else "s"]
-		UI.fit(_quota, ["%s · %s" % [E["quota"] % [int(q["n"]), kn, str(q["item"])], days], E["quota"] % [int(q["n"]), kn, str(q["item"])], E["quota_short"] % [int(q["n"]), kn, str(q["item"])]])
+		var kn: String = sim.cargo_words(str(q["kind"]), int(q["n"]))
+		var days: String = E["quota_left"] % dur(sim.exp_week_left())
+		UI.fit(_quota, ["%s · %s" % [E["quota"] % [kn, str(q["item"])], days], E["quota"] % [kn, str(q["item"])], E["quota_short"] % [kn, str(q["item"])]])
 		_quota.add_theme_color_override("font_color", Pal.GOOD if sim.quota_met_by(place, _cargo_now()) else Pal.ACCENT)
 	# the crew
 	if lead == "":
@@ -246,16 +251,20 @@ func _show_card() -> void:
 	for k in range(2):
 		var hb: Button = _hands[k]
 		if k >= most:
-			UI.fit_button(hb, [E["hand_shut"] % ("A hand along" if k == 0 else "Two along"), "Not yet"])
+			UI.fit_button(hb, [E["hand_shut"] % str(Data.yard_building("bunkhouse")["picks"][k][1]["name"])])     # the step's own name (Data)
 			hb.disabled = true
 			continue
 		hb.disabled = false
 		var h: Dictionary = sim.hand_by_id(int(crew[k]))
 		if h.is_empty():
-			UI.fit_button(hb, [E["hand_add"] if not _free_hands().is_empty() else E["hand_none"]])
+			UI.fit_button(hb, [E["hand_add"] if not _free_hands().is_empty() else (E["hand_none"] if not sim.hands.is_empty() else E["hand_none_hired"])])
 			hb.disabled = _free_hands().is_empty()
+			hb.add_theme_color_override("font_color", Pal.TEXT)
 		else:
-			UI.fit_button(hb, [E["hand"] % [str(h["base"]), Items.hand_trade_line(h)], E["hand"] % [str(h["base"]), Items.hand_trade_short(h)], str(h["base"])])
+			var t: int = int(h.get("tier", 1))
+			UI.fit_button(hb, [E["hand"] % [str(h["base"]), t, Items.hand_trade_line(h)], E["hand"] % [str(h["base"]), t, Items.hand_trade_short(h)], E["hand"] % [str(h["base"]), t, Items.hand_trade_tight(h)], E["hand_short"] % [str(h["base"]), t]])
+			var r: int = int(h.get("rarity", 0))
+			hb.add_theme_color_override("font_color", Pal.tone_color(Pal.rarity_tone(r)) if r > 0 else Pal.TEXT)     # two of a trade told apart (the UI review's B4)
 	# the cargo
 	var n_slots: int = sim.exp_slots(hs)
 	while cargo.size() < n_slots:
@@ -273,12 +282,14 @@ func _show_card() -> void:
 		if kind == "" or sim.cargo_held(kind) <= 0:
 			c["kind"] = ""
 			UI.fit_button(sd["kind"], [E["cargo_empty"]])
+			sd["kind"].tooltip_text = ""
 			UI.fit_button(sd["amt"], ["—"])
 			sd["amt"].disabled = true
 			continue
 		sd["amt"].disabled = false
 		var n: int = sim.cargo_share(kind, float(c["share"]))
-		UI.fit_button(sd["kind"], [E["cargo"] % [Fmt.group(n), sim.cargo_name(kind).to_lower()], E["cargo"] % [Fmt.short_num(n), sim.cargo_name(kind).to_lower()], sim.cargo_name(kind)])
+		var noun: String = sim.cargo_words(kind, n).substr(Fmt.group(n).length() + 1)
+		UI.fit_button(sd["kind"], [E["cargo"] % sim.cargo_words(kind, n), E["cargo"] % ("%s %s" % [Fmt.short_num(n), noun]), E["cargo"] % ("%s %s" % [Fmt.short_num(n), noun.get_slice(" ", 0)]), E["cargo"] % Fmt.short_num(n)])     # the count first, always (the UI review's A5)
 		var pct: String = E["amt_all"] if float(c["share"]) >= 1.0 else "%d%%" % int(round(float(c["share"]) * 100.0))
 		UI.fit_button(sd["amt"], [E["cargo_amt"] % [pct, Fmt.money_k(sim.cargo_slot_worth(kind, n))], pct])
 	_slot_btn.visible = str(pl["key"]) == "london"
@@ -290,7 +301,7 @@ func _show_card() -> void:
 	if worth <= 0.0:
 		UI.fit(_back, [E["back_none"]])
 	else:
-		UI.fit(_back, ["%s · %s" % [E["back"] % [Fmt.money(ret), pays_words(place)], E["quality"] % int(round(sim.exp_quality(worth, hs, place) * 100.0))], E["back"] % [Fmt.money(ret), pays_words(place)], E["back"] % [Fmt.money_k(ret), ""]])
+		UI.fit(_back, ["%s · %s" % [E["back"] % [Fmt.money_k(ret), pays_words(place)], E["quality"] % int(round(sim.exp_quality(worth, hs, place) * 100.0))], E["back"] % [Fmt.money_k(ret), pays_words(place)], (E["back"] % [Fmt.money_k(ret), ""]).trim_suffix(": ")])
 	var wages: int = sim.crew_wages(hs)
 	UI.fit(_back2, [E["time_line"] % [dur(sim.exp_time(place, hs)), Fmt.money(wages)] if wages > 0 else E["time_line_free"] % dur(sim.exp_time(place, hs))])
 	# the risk
@@ -300,24 +311,31 @@ func _show_card() -> void:
 	_risk_fill.size.x = BAR_W * risk
 	_risk_fill.visible = lead != "" and bool(odds_read[1])
 	_risk_fill.add_theme_stylebox_override("panel", UI.box(Pal.BAD if risk >= 0.5 else (Pal.WARN if risk >= 0.2 else Pal.GOOD), 6))
+	risk_word = ""
 	if lead == "" or not bool(odds_read[1]):
 		UI.fit(_risk_label, [E["shut_reading"] if lead != "" else "—"])
 		UI.fit(_risk_line, [E["risk_loss"]])
 	else:
-		UI.fit(_risk_label, [E["risk"] % int(round(risk * 100.0))])
+		risk_word = E["risk_safe"] if risk < 0.2 else (E["risk_risky"] if risk < 0.5 else E["risk_bad"])     # the Map's verdicts (the UI review's D1)
+		UI.fit(_risk_label, [E["risk_word"] % [int(round(risk * 100.0)), risk_word], E["risk"] % int(round(risk * 100.0))])
 		var hold: float = sim.exp_hold_chance(place, hs, risk)
 		UI.fit(_risk_line, ["%s · %s · %s" % [E["risk_odds"] % int(round(odds * 100.0)), E["risk_hold"] % int(round(hold * 100.0)), E["risk_loss"]],
 			"%s · %s" % [E["risk_odds"] % int(round(odds * 100.0)), E["risk_hold"] % int(round(hold * 100.0))]])
+	_risk_label.add_theme_color_override("font_color", Pal.BAD if risk >= 0.5 and risk_word != "" else Pal.TEXT)
+	UI.fit(_stakes, [E["stakes"], E["stakes_short"]] if not hs.is_empty() else [""])
 	var why: String = sim.exp_send_block(place, lead, hs, goods)
 	send.disabled = why != ""
+	UI.style_button(send, true, "bad" if risk >= 0.5 and risk_word != "" else "")     # above 50%: a warning, not shut (nobody dies)
 	UI.fit_button(send, [E["send"], E["send_short"]])
-	UI.fit(note, [why if why != "" else (E["lead_why"] if lead == "" else ""), ""])
+	var nobody: bool = lead == "" and sim.exp_leads().is_empty() and not sim.expeditions.any(func(e): return sim.roster.has(str(e["lead"])))
+	UI.fit(note, [E["lead_why"] if nobody else why, ""])     # how to get a lead, when there's nobody (the UI review's A4)
 	lead_said = _lead.text
 
 
 func _show_outs() -> void:
 	var E: Dictionary = Words.EXPEDITIONS
 	UI.fit(_out_head, [E["out_head"] % [sim.exp_busy(), sim.exp_at_once()]])
+	UI.fit(_out_none, [E["out_none"] if sim.expeditions.is_empty() else ""])
 	for k in range(_outs.size()):
 		var o: Dictionary = _outs[k]
 		var e: Dictionary = sim.expeditions[k] if k < sim.expeditions.size() else {}
@@ -443,7 +461,7 @@ func set_pick(p: int, lead_name: String, hand_ids: Array, goods: Array) -> void:
 func text_nodes() -> Array:
 	if not visible:
 		return []
-	var out: Array = [_title, _level, _sub, _quota_head, _quota, _crew_head, _lead, _cargo_head, _back_head, _back, _back2, _risk_head, _risk_label, _risk_line, send, note, _out_head]
+	var out: Array = [_title, _level, _sub, _quota_head, _quota, _crew_head, _lead, _cargo_head, _back_head, _back, _back2, _risk_head, _risk_label, _risk_line, _stakes, send, note, _out_head, _out_none]
 	out.append_array(_hands)
 	for d in _places:
 		out.append_array([d["name"], d["line"], d["pays"], d["quota"]])

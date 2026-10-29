@@ -147,10 +147,10 @@ func step(sim) -> int:
 	var t := -1
 	var t0 := Time.get_ticks_usec()
 	var fetched: bool = expeditions_on and not sim.on_mission() and _expeditions(sim)     # the expeditions (29 Oct): a hold-up fought is this step's run
+	t0 = _lap("step/expeditions", t0)         # every step (the tools review's C8: the sends' reads were booked to the next lap)
 	if fetched:
 		t = int(sim.mission["tier"])
 		last_tier = -1
-		t0 = _lap("step/expeditions", t0)
 	var okey: String = _pick_order(sim) if sim.campaign_done() and not fetched else ""
 	if okey != "":
 		var o_lv: int = sim.order_level(okey)
@@ -1863,11 +1863,15 @@ var exp_sent := 0
 var exp_held := 0
 var exp_fetched := 0
 var exp_walked := 0
-const EXP_RISK_AT := 0.35
-const EXP_ODDS_AT := 0.6
+var exp_paid := 0
+## The fix round (29 Oct, the review's B4: the bot never shipped): lower bars, so a camp past the Quartermaster ships its
+## spare scrap, salvage, notes and materials regularly - what the Bench, the Pitch, the heads and the rebuild don't want.
+const EXP_RISK_AT := 0.45
+const EXP_ODDS_AT := 0.45
 const EXP_RANSOM_SPARE := 2.0
-const EXP_SCRAP_KEEP := 3000
-const EXP_SALVAGE_KEEP := 60
+const EXP_SCRAP_KEEP := 1000
+const EXP_SALVAGE_KEEP := 40
+const EXP_NOTES_KEEP := 300
 
 
 ## Returns true when a hold-up's fetch has set off (the step's run).
@@ -1888,6 +1892,7 @@ func _expeditions(sim) -> bool:
 			exp_held += 1
 			if sim.cash >= sim.exp_ransom(id) * EXP_RANSOM_SPARE and sim.exp_pay(id):
 				sim.exp_take(id)
+				exp_paid += 1
 				bought.append([sim.elapsed, "expedition held up: ransom paid"])
 			elif sim.exp_walk(id):
 				exp_walked += 1
@@ -1914,6 +1919,28 @@ func _expeditions(sim) -> bool:
 	return false
 
 
+## The spare cargo: scrap over EXP_SCRAP_KEEP, salvage over EXP_SALVAGE_KEEP, notes over EXP_NOTES_KEEP (before the
+## Issue), each material over the most any rebuild's next rank wants of it. [kind, count].
+func exp_spare(sim) -> Array:
+	var out: Array = []
+	if sim.scrap > EXP_SCRAP_KEEP + 200:
+		out.append(["scrap", sim.scrap - EXP_SCRAP_KEEP])
+	for k in Data.SALVAGE:
+		var n: int = int(sim.salvage.get(k, 0)) - EXP_SALVAGE_KEEP
+		if n > 0:
+			out.append([k, n])
+	if not sim.issued and sim.notes > EXP_NOTES_KEEP + 50:
+		out.append(["notes", sim.notes - EXP_NOTES_KEEP])
+	for m in Data.MATERIAL_ORDER:
+		var want := 0
+		for r in Data.REBUILDS:
+			want = maxi(want, int(sim.rebuild_cost(str(r["key"])).get(m, 0)))
+		var n: int = sim.held_of(str(m)) - want
+		if n > 0:
+			out.append([m, n])
+	return out
+
+
 func _exp_send(sim) -> bool:
 	var leads: Array = sim.exp_leads()
 	if leads.is_empty():
@@ -1925,13 +1952,8 @@ func _exp_send(sim) -> bool:
 	var hs: Array = free.slice(0, sim.exp_hands_max()).map(func(h): return int(h["id"]))
 	while not hs.is_empty() and sim.cash < sim.crew_wages(hs):
 		hs.pop_back()
-	var spare: Array = []
-	if sim.scrap > EXP_SCRAP_KEEP * 2:
-		spare.append(["scrap", sim.scrap - EXP_SCRAP_KEEP])
-	for k in Data.SALVAGE:
-		var n: int = int(sim.salvage.get(k, 0)) - EXP_SALVAGE_KEEP
-		if n > 0:
-			spare.append([k, n])
+	var spare: Array = exp_spare(sim)
+	spare.sort_custom(func(a, b): return sim.cargo_slot_worth(str(a[0]), int(a[1])) > sim.cargo_slot_worth(str(b[0]), int(b[1])))
 	spare = spare.slice(0, sim.exp_slots(hs))
 	if spare.is_empty():
 		return false

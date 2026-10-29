@@ -458,7 +458,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			reach_seen = sim.reach
 			g["reach_log"].append([snappedf(sim.elapsed / 3600.0, 0.01), sim.reach])
 		if scrap_16 < 0.0 and sim.elapsed >= 16.0 * 3600.0:
-			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
+			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))     # shipped scrap is spent scrap (the expeditions)
 		if sim.issued and not g.has("cash_in_at_issue"):
 			g["cash_in_at_issue"] = sim.cash_in       # the money in from here is fiat (the third review: gate 14 added tins to fiat)
 		if sim.elapsed >= next_mark:
@@ -471,7 +471,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			mark_cash_from = sim.cash_in
 			mark_items = 0
 	if scrap_16 < 0.0:
-		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
+		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
@@ -531,6 +531,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	g["notes_end"] = int(sim.notes)
 	g["scrap_end"] = int(sim.scrap)
 	g["scrap_spent"] = int(g.get("scrap_spent", 0))
+	g["exp"] = exp_gates(sim, bot)               # the expeditions (29 Oct, shown, not judged)
 	g["level"] = sim.level()
 	g["best_tier"] = sim.best_tier
 	g["best_depth"] = sim.best_depth
@@ -856,8 +857,9 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	sim.odds_runs_max = 24
 	if sim.on_mission():
 		sim.extract_now()
-	if sim.cls != cls:
-		sim.set_class(cls)
+	sim.expeditions = []                     # a checkpoint's expeditions put away: a lead out can't be played (set_class refuses)
+	if sim.cls != cls and not sim.set_class(cls):
+		push_error("the read can't take %s from the save (%s)" % [cls, sim.cls])
 	var bot = Bot.new()
 	bot.cls = cls
 	bot.element = element
@@ -1213,8 +1215,9 @@ func _fixture(spec: Dictionary, plain: bool) -> Dictionary:
 	var kit0: Dictionary = sim.equipped.duplicate(true)
 	var rig0: Array = sim.rig.duplicate(true)
 	var xp0: float = float(sim.xp)
-	if sim.cls != cls:
-		sim.set_class(cls)
+	sim.expeditions = []                     # as the parity read's (29 Oct)
+	if sim.cls != cls and not sim.set_class(cls):
+		push_error("the fixture can't take %s (%s)" % [cls, sim.cls])
 	sim.xp = xp0
 	sim.equipped = kit0
 	sim.rig = rig0
@@ -1383,8 +1386,9 @@ func _parity(hours: float, cls: String, element: String) -> void:
 	var best0: int = int(sim.best_level)
 	var kit0: Dictionary = sim.equipped.duplicate(true)
 	var rig0: Array = sim.rig.duplicate(true)
-	if sim.cls != cls:
-		sim.set_class(cls)                   # a parity read takes the class whether the save had opened it or not
+	sim.expeditions = []                     # a checkpoint's expeditions put away: a lead out can't be played (29 Oct)
+	if sim.cls != cls and not sim.set_class(cls):     # a parity read takes the class whether the save had opened it or not
+		push_error("the parity read can't take %s (%s)" % [cls, sim.cls])
 	sim.xp = xp0
 	sim.training_points = pts0
 	sim.best_level = best0
@@ -1427,3 +1431,11 @@ func _parity(hours: float, cls: String, element: String) -> void:
 	p["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	print("PARITY " + JSON.stringify(p))
 	quit(0)
+
+
+
+## The expeditions in a read (29 Oct, the fix round; shown, not judged): sent, home, held, fetched, walked from, the
+## cargo's worth out and the returns' worth in, the wages, the scrap shipped.
+static func exp_gates(sim, bot) -> Dictionary:
+	return {"sent": int(bot.exp_sent), "back": int(sim.exp_back_n), "held": int(sim.exp_held_n), "fetched": int(bot.exp_fetched), "paid": int(bot.exp_paid),
+		"walked": int(bot.exp_walked), "cargo_out": int(sim.exp_worth_out), "return_in": int(sim.exp_return_in), "wages": int(sim.exp_wages_paid), "scrap_out": int(sim.exp_scrap_out)}

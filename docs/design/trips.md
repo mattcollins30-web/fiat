@@ -160,42 +160,50 @@ slot's finds, a rarity). Watching is where the risk is; the dead time goes to re
 - The far places' names and their quota items (the language pass).
 - The ransom's price, and whether a walked-away hand can turn up in the pool again.
 
-## Built: the expeditions (29 Oct, the trips' build)
+## Built: the expeditions (29 Oct, the trips' build and its fix round after review 29d)
 
 Section 3, line B of section 4 and section 6's expedition parts, with the designer's calls since: open after the
-Quartermaster; the selected runner never leads; cargo out, the return by its worth; six far places with weekly quotas
-by the exchange's day; the gate's dry read; the hold-up's three ways out; hands as gear; line B real. On screen
-"Expeditions" (a trip out is a run). Code: Sim's "expeditions" section, Items.roll_hand, Data.EXP_* and HAND_*,
+Quartermaster; the selected runner never leads; cargo out, the return by its worth; six far places with weekly quotas;
+the gate's dry read; the hold-up's three ways out; hands as gear; line B real. On screen "Expeditions" (a trip out is a
+run); the lead and the hands are "the party". Code: Sim's "expeditions" section, Items.roll_hand, Data.EXP_* and HAND_*,
 Words.EXPEDITIONS; the Map's tab (expeditions_panel.gd), the report (expedition_report.gd), the Bunkhouse's hands
-(hands_panel.gd, hand_cell.gd); the bot's `_expeditions`; smoke `-- only expeditions`. SAVE_VERSION 13.
+(hands_panel.gd, hand_cell.gd); the bot's `_expeditions`; the balance read's `exp` field and the summary's
+"Expeditions (shown)" row; smoke `-- only expeditions`. SAVE_VERSION 13.
 
-The calls made in the build (every number a placeholder for the balance pass):
+The calls (every number a placeholder for the balance pass):
 
+- Converts, never prints: the cargo is valued as a trade would value it - the exchange's give rate (its spread and the
+  day's drift against you), scrap at what the find it came from fetches at the Fence (its exchange worth over the
+  Bench's scrap multipliers, less the spread: scrapping and shipping can't beat selling), meds at the Fence's price less
+  the spread. The return is ×0.85 of that; the hands' bonuses all told (porters, "+% finds", the crackers' crates at 5%
+  of the cargo a crate, a better find of the place's first kind) are capped at ×1.2. At the best hands every place comes
+  back at about ×1.0 of the cargo's worth (the smoke rolls it 100 times a place). Returns are income (`_earn`).
 - A far place's fight: the hardest site (the Barracks) read as a signal at the place's level - its own floor (9 to 15)
-  or the reach plus its offset (−4 to +2), whichever is higher, so the far places climb with the camp - with its gang's
-  zone types. The lead reads it at full HP (rested), whatever their HP on the bench.
-- The risk: 0.3 × the cargo's worth over the lead's kit's worth, plus 0.8 × the odds short of 100%, less the hands'
-  "−% risk" and 2% a Bunkhouse rank; 2-95%. A bad roll is a roll under it. The hold-up: 4% + 25% of the risk, less
-  "−% hold-ups"; never with "Never held up in" the place.
-- The return: the cargo's worth (×1.0), the porters' and "+% finds" on top, the quota's +20-100%, less the loss; split
-  by the place's shares, 20% to the lead's class's kind (Scrapper gun parts, Paramedic the Clinic's supplies, Poacher
-  charms - there are no hides - Doorman tins, Drifter papers, Recruit army surplus). Loot quality: +10% a doubling of
-  the cargo's worth over 2,000 tins. Twelve finds at most; the rest of their worth as scrap. Finds with no stash room
-  are sold at the gate on Take it (a mythic and the quota's item come home whatever the room).
-- Bristol's gamble tokens: a free gamble at the Fence each. Birmingham's quota: the next rebuild at half (materials and
-  key items halved, rounded up). Salisbury's quota: a set piece, an issued piece after the Issue.
-- The quota: a cargo kind the camp has met (scrap, meds, its salvage and materials) and a count worth 3,000-9,000 tins
-  at today's prices, rolled for the week; met by shipping that many of it, once a week a place.
-- The hold-up: Fetch them sends the selected runner to the place's hold site (Swansea and Birmingham the Retail Park,
-  Bristol and Liverpool the Bank, Salisbury and London the Barracks) with its head armed free; the head down brings
-  the crew home with the whole return (the bad roll's loss refunded - "its own drop"); not down, they stay held. The
-  ransom is half the cargo's worth (500 tins at the least). Walk away: the hands sent leave for good (they don't come
-  back to the pool).
+  or the reach plus its offset (−4 to +2), whichever is higher - at depth 2 at the least (never the campaign's depth 1),
+  with its gang's zone types. The lead reads it at full HP.
+- The risk (the glossary: the chance of a bad roll): 0.3 × the cargo's worth over the lead's kit's worth, plus 0.8 × the
+  odds short of 100%, less the hands' "−% risk" and 2% a Bunkhouse rank; 2-95%. The card says Safe under 20%, Risky
+  under 50%, A bad idea from 50% (Send styled as a warning, not shut). The hold-up: 4% + 25% of the risk, less "−%
+  hold-ups"; never with "Never held up near" the place. A bad roll loses 25-100% of the return, a nurse's share less.
+- The return splits by the place's shares, 20% to the lead's class's kind (Scrapper gun parts, Paramedic the Clinic's
+  supplies, Poacher charms, Doorman tins, Drifter papers, Recruit army surplus). Loot quality: +10% a doubling of the
+  cargo's worth over 2,000 tins at today's prices. Twelve finds at most; the rest as scrap; a currency's fraction kept as
+  a chance. Finds with no stash room are sold to the Fence on Take it (a mythic and the quota's item come home).
+- The quota: a week of 7 hours of the world's played time; the kinds frozen at the week's start (meds, the salvage and
+  materials met or held - never scrap); a count worth 3,000-9,000 tins at today's prices; met once a week a place. Its
+  bonus, +20-50%, is on the quota's own slot. Swansea's mythic chance is 5% (an hour's finds at 1 in 10,000); London's
+  named unique is fixed when sent; Bristol's is the Fence's gamble restocked on Take it; Birmingham's the next rebuild at
+  half; Salisbury's a set piece (an issued piece after the Issue).
+- The Issue: expeditions out and returns waiting join the pile at their cargo's worth and convert with it (their worth,
+  a waiting return's tins and budget at the pile's rate; its finds stamped as the stash's).
+- The hold-up: Go after them sends the selected runner to the place's hold site (Swansea and Birmingham the Retail Park,
+  Bristol and Liverpool the Bank, Salisbury and London the Barracks) with its head free; the head down brings the party
+  home with the return as rolled, the hands unhurt; not down, they stay held. The ransom is half of what's coming back
+  after the roll (500 tins at today's prices at the least). Walk away: the hands sent leave for good. Walk away and Let
+  go take a second press.
+- The lead earns a repeat run's share of a run's XP there for the expedition.
 - The hands: hired free from the pool (the wage only for a hand sent: 50 × tier × the rarity's value, at today's
-  prices); New faces 2,000 and Better faces 16,000 tins (the top tier, no commons, the quality doubled). A level every
-  two expeditions home, to 10, each +10% on the trade's figure and the affixes' rolls. Hurt (a bad roll, no medic
-  along) for as long as that expedition took. The trades: porter +5% finds a tier, medic −6% of a bad roll's loss a
-  tier (nobody hurt with one along), scout +2% odds a tier, cracker a crate (a free find) a three tiers, driver −4%
-  time a tier, the quartermaster - "Loader" on screen, the Quartermaster being a head - one more cargo slot (two
-  from T5).
-- The Bunkhouse's rank does both lines' work: rest 5% quicker and the risk 2% lower a rank.
+  prices); New faces 2,000 and Better faces 16,000 tins at today's prices. A level every two expeditions home, to 10.
+  Hurt (a bad roll, no nurse along) for as long as that expedition took. Trades: porter, nurse (the design's medic),
+  scout, cracker, driver, loader (the design's quartermaster).
+- The Bunkhouse's rank does both lines' work: 5% quicker rest and −2% risk a rank.

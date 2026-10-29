@@ -1497,7 +1497,7 @@ static func hand_trade_line(it: Dictionary) -> String:
 		"finds":
 			return "+%d%% finds" % f
 		"bail":
-			return "−%d%% lost on a bad roll" % f
+			return "−%d%% lost on a bad roll · no one hurt" % f     # the nurse: the other hands come home unhurt too (the fix round)
 		"odds":
 			return "+%d%% odds" % f
 		"crates":
@@ -1509,12 +1509,19 @@ static func hand_trade_line(it: Dictionary) -> String:
 	return ""
 
 
+## The trade's line at its tightest: the figure and its word alone ("−6% loss").
+static func hand_trade_tight(it: Dictionary) -> String:
+	if str(hand_trade(it).get("stat", "")) == "bail":
+		return "−%d%% loss" % hand_fig(it)
+	return hand_trade_short(it)
+
+
 ## The trade's line, shorter for a small cell.
 static func hand_trade_short(it: Dictionary) -> String:
 	var f := hand_fig(it)
 	match str(hand_trade(it).get("stat", "")):
 		"bail":
-			return "−%d%% lost" % f
+			return "−%d%% loss · no one hurt" % f
 		"cargo":
 			return "+%d cargo" % f
 		"crates":

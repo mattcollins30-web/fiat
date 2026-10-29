@@ -11,8 +11,8 @@ const Items := preload("res://scripts/sim/items.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 
-const H := 126
-const PAD := 6
+const H := 136                     # the last affix line clear of the border (the UI review: its descenders sat on it; a label is 23 px at 11)
+const PAD := 5
 const FACE := 28
 const AFFIX_LINES := 4
 
@@ -87,7 +87,7 @@ func show_hand(h: Dictionary, state := "") -> void:
 		forms = forms.map(func(f): return "%s · %s" % [told, f]) + [told]
 	UI.fit(_sub, forms)
 	_sub.add_theme_color_override("font_color", Pal.TEXT_2 if state == "" else (Pal.WARN if state == "out" else Pal.BAD))
-	UI.fit(_trade, [Items.hand_trade_line(h), Items.hand_trade_short(h)])
+	UI.fit(_trade, [Items.hand_trade_line(h), Items.hand_trade_short(h), Items.hand_trade_tight(h)])
 	var long: Array = Items.hand_lines(h, false)
 	var short: Array = Items.hand_lines(h, true)
 	var tight: Array = Items.hand_lines(h, true, false, true)
