@@ -18,8 +18,9 @@ moments to come back to it. Each was missed at least once.
    where `24 1` was the rule).
 4. **Before giving Matt a command to run**: is there a flag or a handoff for it? (28 Oct: an art run line, where
    `art.flag` is the way.)
-5. **Any word on a mockup or a screen**: the glossary in docs/language/style_guide.md (28 Oct: "Depth 3" on the
-   trips boards, where depth is internal only and the player reads level).
+5. **Any word on a mockup, a screen, or to Matt**: the glossary in docs/language/style_guide.md - talk to Matt in the
+   game's words, not the code's (28 Oct: "Depth 3" on the trips boards, then "depth 5-15" in a chat answer; depth is
+   internal only, the player reads a site's level).
 
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
