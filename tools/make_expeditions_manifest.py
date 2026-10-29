@@ -38,8 +38,9 @@ PLACE_TAIL = (" Muted blue-grey and slate palette with sparse warm orange lights
               "frame or margin. No text, no signs, no lettering, no numbers anywhere.")
 FAR = [
     # key, style (a zone panorama), the look (tr_art.md), described, not named
-    ("swansea", "the_city", "a wet seafront promenade curving along a wide bay at dusk, the bay flat and grey, a tall "
-                            "hospital block behind the promenade with every window dark, empty railings and lamp posts unlit"),
+    ("swansea", "the_city", "a tall hospital block with every window dark standing in the very centre of the frame, a wet "
+                            "seafront promenade curving in front of it along a wide flat grey bay, empty railings and lamp "
+                            "posts unlit on both sides"),
     ("bristol", "the_city", "the approach road to a long suspension bridge over a deep river gorge, blocked by a wall of "
                             "plain rusted shipping containers and a red-and-white barrier arm, floodlights on poles and coils "
                             "of razor wire, the bridge's towers beyond"),
@@ -139,7 +140,7 @@ def main():
     for i, (key, style, look) in enumerate(FAR):
         jobs.append({"out": "art/places/far_%s.png" % key, "endpoint": "generate-image-v2",
                      "description": "Pixel art, wide side-on panorama, far off and still: " + look + "." + PLACE_TAIL,
-                     "width": 688, "height": 296, "no_background": False, "seed": 123000 + i, "single": True,
+                     "width": 688, "height": 296, "no_background": False, "seed": 123000 + i + (1000 if key == "swansea" else 0), "single": True,  # swansea rerolled 29 Oct (hospital off-centre)
                      "style_image": "res://art/places/%s.png" % style, "style_options": STYLE,
                      "_where": "the far place %s: the Expeditions card (centre crop) and the Map's far edge" % key})
     for i, (trade, look, who) in enumerate(FACES):
@@ -170,7 +171,7 @@ def main():
         else:
             jobs.append(still(out, what, 123300 + i, "cargo icon: %s" % key))
     for j in jobs:
-        assert not os.path.exists(os.path.join(ROOT, j["out"])), "already on disk: %s" % j["out"]
+        assert j["out"] in TEST or not os.path.exists(os.path.join(ROOT, j["out"])), "already on disk: %s" % j["out"]
     readme = [
         "FIAT EXPEDITIONS (29 Oct): %d jobs - six far places (688x296, $0.15 each), eighteen hands' faces (128x128), the "
         "Bunkhouse's three room-card strips (384x96) and its rail icon (64x64), seven cargo icons (64x64) - $0.08 each "

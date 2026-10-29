@@ -33,6 +33,9 @@ import make_item_manifests as items  # noqa: E402  (TAIL, REFS, CELL, slug, foot
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SEED0 = 122000
 SEED_UNIQUE = 122500
+# rerolled after the 29 Oct test (Matt: punt gun cropped, the Safecracker's a twin of leather, the vest tactical, the
+# derringer one barrel): a fixed seed gives near-identical rerolls, so these four take seed + 5000 (122xxx + 1000 lands on the 123xxx expeditions)
+SEED_BUMP = {"Punt gun": 5000, "Derringer": 5000, "Door staff vest": 5000, "The Safecracker's Gloves": 5000}
 STYLE = {"color_palette": True, "outline": True, "detail": True, "shading": True}
 TAIL = items.TAIL + " No floor, wall, ground or sky around it."
 PLAIN = "plain, unprinted, no lettering, no numbers, no logo"
@@ -59,7 +62,7 @@ LOOKS = {
     "Compound bow": "a camouflage compound bow with cams at each limb tip, lying on its side so it runs left to right",
     "Converted air rifle": "a wooden-stocked air rifle with a crude steel sleeve on the barrel",
     "Slam-fire shotgun": "a gun made of a galvanised scaffold tube with a scaffold coupler for a fore-grip and a door strap-hinge for a stock",
-    "Punt gun": "a barrel as long as a man, with a rope breeching loop and a block of punt plank still bolted under it",
+    "Punt gun": "a whole punt gun from muzzle to breech, both ends inside the frame with a little space around them: a barrel as long as a man, a rope breeching loop at the breech end and a short block of punt plank bolted under it",
     "Paintball gun": "a paintball marker with a big round hopper on top, " + PLAIN,                   # LESSON: usually branded
     "Arc-welder gun": "a gun built from an arc-welding torch, cables trailing to a battery pack",
     "Lathe-bored rifle": "a long heavy rifle with a thick turned-steel barrel and a plank stock",
@@ -94,7 +97,7 @@ LOOKS = {
     "Spiral-mag SMG": "an SMG with a long cylindrical spiral magazine along the top",
     "Ministerial SMG": "a black SMG with gilt detailing and a heavy barrel shroud",
     # Secondary - pistol
-    "Derringer": "a tiny over-and-under two-barrel pistol with a pearl grip",
+    "Derringer": "a tiny derringer with two short barrels stacked one above the other, both muzzles showing, a hammer, a spur trigger with no trigger guard and a pearl grip",
     "Pocket pistol": "a tiny pistol in a worn suede pocket holster, its blueing rubbed silver at the edges",
     "Target pistol": "a long-barrelled target pistol with a wooden thumbhole grip",
     "Police revolver": "a short-barrelled blued revolver in a black leather flap holster, no badge",
@@ -158,7 +161,7 @@ LOOKS = {
     "Body warmer": "a padded navy body warmer with zipped pockets",
     "Lifeguard's vest": "a red tabard with a plain yellow band, a whistle on a cord and one big front pouch, no lettering",  # LESSON: "yellow lettering"
     "Tweed waistcoat": "a brown tweed waistcoat with a leather shoulder patch and shell loops",
-    "Door staff vest": "a black vest with a blank white panel across the back, a hi-vis armband and a radio on the chest, "
+    "Door staff vest": "a plain black stab vest, smooth and slab-sided with no pouches or webbing, a clip-on badge holder on the chest with a blank card in it, a hi-vis armband, "
                        "no lettering anywhere",                                                    # LESSON: "SECURITY in white" is lettering
     "Quick-release rig": "a chest rig with bright pull tabs on each pouch",
     "Public order rig": "a padded police chest rig with shoulder guards, no badges or lettering",
@@ -240,7 +243,7 @@ UNIQUE_LOOKS = {
     "The Sparky's Gloves": "a pair of thick orange rubber electrician's insulating gauntlets reaching to the elbow, "
                            "cracked at the knuckles, " + PLAIN + ", no stamp",                       # LESSON: the old "test stamp"
     "The Milkman's Gloves": "a pair of fingerless grey-blue knitted woollen gloves, the cuffs unravelling, a darn at one thumb",
-    "The Safecracker's Gloves": "a pair of thin black kid-leather gloves, close-fitting and supple, the fingertips sanded pale",
+    "The Safecracker's Gloves": "a pair of thin black kid-leather fingerless gloves, every finger cut off at the first knuckle, the bare cut edges worn pale and the leather sanded thin",
 }
 UNIQUE_OUT = {"The Sparky's Gloves": "art/items_new/the_sparky_s_gloves.png"}     # its old picture holds the live name
 
@@ -324,7 +327,7 @@ def main():
         slot = section_of(name)
         assert slot, "not a base in data.gd: %s" % name
         w, h = items.footprint(slot, name)
-        jobs.append(job("art/items/%s.png" % items.slug(name), slot, name, look, seed,
+        jobs.append(job("art/items/%s.png" % items.slug(name), slot, name, look, seed + SEED_BUMP.get(name, 0),
                         "%s, %s, %dx%d cells" % (slot, base_type(name) or "-", w, h)))
         seed += 1
     seed = SEED_UNIQUE
@@ -332,13 +335,14 @@ def main():
     uniq = dict((n, (s, b)) for n, s, b in re.findall(r'\{"name": "([^"]+)", "slot": "(\w+)", "base": "([^"]+)"', body))
     for name, look in UNIQUE_LOOKS.items():
         slot, base = uniq[name]
-        jobs.append(job(UNIQUE_OUT.get(name, "art/items/%s.png" % items.slug(name)), slot, base, look, seed,
+        jobs.append(job(UNIQUE_OUT.get(name, "art/items/%s.png" % items.slug(name)), slot, base, look, seed + SEED_BUMP.get(name, 0),
                         "unique on %s (%s)" % (base, slot)))
         seed += 1
     # every new base in data.gd has a look (none missed, none extra)
     assert len(LOOKS) == 176, len(LOOKS)
+    tested = set(UNIQUE_OUT.get(n, "art/items/%s.png" % items.slug(n)) for n in TEST)  # the test run's, on disk by design
     for j in jobs:
-        assert not os.path.exists(os.path.join(ROOT, j["out"])), "already on disk: %s" % j["out"]
+        assert j["out"] in tested or not os.path.exists(os.path.join(ROOT, j["out"])), "already on disk: %s" % j["out"]
     readme = [
         "FIAT ITEMS 29 (29 Oct, the itemisation): the 176 new bases' pictures and the three unique gloves - %d jobs, "
         "all at $0.08 (every canvas under 65k px). One job a picture, straight to the live name art/items/<slug>.png "

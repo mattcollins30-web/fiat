@@ -7,11 +7,11 @@
   {
    "out": "art/places/far_swansea.png",
    "endpoint": "generate-image-v2",
-   "description": "Pixel art, wide side-on panorama, far off and still: a wet seafront promenade curving along a wide bay at dusk, the bay flat and grey, a tall hospital block behind the promenade with every window dark, empty railings and lamp posts unlit. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
+   "description": "Pixel art, wide side-on panorama, far off and still: a tall hospital block with every window dark standing in the very centre of the frame, a wet seafront promenade curving in front of it along a wide flat grey bay, empty railings and lamp posts unlit on both sides. Muted blue-grey and slate palette with sparse warm orange lights, low overcast cloud, dusk. Quiet, not busy; no people in the foreground. The subject sits in the middle of the frame (a card crops a small window from the centre), flat even detail side to side, darker at the bottom edge. Only the palette, light and painting style of the style image, not its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No text, no signs, no lettering, no numbers anywhere.",
    "width": 688,
    "height": 296,
    "no_background": false,
-   "seed": 123000,
+   "seed": 124000,
    "single": true,
    "style_image": "res://art/places/the_city.png",
    "style_options": {

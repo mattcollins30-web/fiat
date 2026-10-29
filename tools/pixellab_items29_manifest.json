@@ -298,11 +298,11 @@
   {
    "out": "art/items/punt_gun.png",
    "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a barrel as long as a man, with a rope breeching loop and a block of punt plank still bolted under it, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "description": "A realistic painted pixel-art still-life of a whole punt gun from muzzle to breech, both ends inside the frame with a little space around them: a barrel as long as a man, a rope breeching loop at the breech end and a short block of punt plank bolted under it, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
    "width": 320,
    "height": 64,
    "no_background": true,
-   "seed": 122016,
+   "seed": 127016,
    "single": true,
    "style_image": "res://art/reference/items/ref_01.png",
    "style_options": {
@@ -856,11 +856,11 @@
   {
    "out": "art/items/derringer.png",
    "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a tiny over-and-under two-barrel pistol with a pearl grip, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "description": "A realistic painted pixel-art still-life of a tiny derringer with two short barrels stacked one above the other, both muzzles showing, a hammer, a spur trigger with no trigger guard and a pearl grip, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
    "width": 64,
    "height": 64,
    "no_background": true,
-   "seed": 122047,
+   "seed": 127047,
    "single": true,
    "style_image": "res://art/reference/items/ref_04.png",
    "style_options": {
@@ -1900,11 +1900,11 @@
   {
    "out": "art/items/door_staff_vest.png",
    "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a black vest with a blank white panel across the back, a hi-vis armband and a radio on the chest, no lettering anywhere, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "description": "A realistic painted pixel-art still-life of a plain black stab vest, smooth and slab-sided with no pouches or webbing, a clip-on badge holder on the chest with a blank card in it, a hi-vis armband, no lettering anywhere, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
    "width": 192,
    "height": 128,
    "no_background": true,
-   "seed": 122105,
+   "seed": 127105,
    "single": true,
    "style_image": "res://art/reference/items/ref_02.png",
    "style_options": {
@@ -3214,11 +3214,11 @@
   {
    "out": "art/items/the_safecracker_s_gloves.png",
    "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a pair of thin black kid-leather gloves, close-fitting and supple, the fingertips sanded pale, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "description": "A realistic painted pixel-art still-life of a pair of thin black kid-leather fingerless gloves, every finger cut off at the first knuckle, the bare cut edges worn pale and the leather sanded thin, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
    "width": 128,
    "height": 128,
    "no_background": true,
-   "seed": 122502,
+   "seed": 127502,
    "single": true,
    "style_image": "res://art/reference/items/ref_03.png",
    "style_options": {
