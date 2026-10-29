@@ -23408,6 +23408,9 @@ func _fix_round_checks(main) -> void:
 	_check(Data.SLOTS.all(func(sl): return worn_row.contains(sl + ":")) and worn_row.contains("Gloves: none worn") and worn_row.contains("Old .303 2.0 h"), "the summary's bases worn: '%s'" % worn_row)
 	_check(str(srows[1][0]).contains("never") and never_row.contains("Woolly gloves") and not never_row.contains("Old .303") and not never_row.contains(str(Data.BASES["Primary"].filter(func(b): return int(b["tier"]) > Data.CAMPAIGN_TIER)[0]["name"])), "the summary's never worn: '%s'" % never_row.left(200))
 	_check(str(srows[2][2]) == "rifle 100%", "the summary's damage by type: '%s'" % str(srows[2][2]))
+	# a broken build's billions don't speak for the pass (29 Oct): each read's shares, the reads weighing the same
+	var srows2: Array = Sum.itemisation_rows([{"worn": {}, "dealt_by_type": {"melee": 15000000000.0}}, {"worn": {}, "dealt_by_type": {"rifle": 700.0, "shotgun": 300.0}}])
+	_check(str(srows2[2][2]) == "melee 50%, rifle 35%, shotgun 15%", "the summary's damage by type, two reads: '%s'" % str(srows2[2][2]))
 
 
 ## The Estate's door to the Town (the fix round, 29 Oct, the game review's B1: a wall on four builds' gate reads): a bot's
@@ -23682,7 +23685,10 @@ func _compare_readings_checks(main) -> void:
 		var gi: Dictionary = sim._plain("Gloves", str(b["name"]))
 		gc.show_item(gi, false, Vector2(Items.footprint(gi)) * float(Pal.CELL))
 		var fig_l: String = gc._lines[1].text if gc._lines.size() > 1 else ""
-		_check(fig_l.contains("pace") or fig_l.contains("reload") or fig_l.contains("RoF"), "%s's cell figure has no unit: '%s'" % [b["name"], fig_l])
+		if Items.art(gi) != null:             # the words stand in for a picture (29 Oct: the gloves' pictures landed): with one, the picture shows
+			_check(gc._art.visible and gc._art.texture == Items.art(gi), "%s's cell doesn't show its picture" % b["name"])
+		else:
+			_check(fig_l.contains("pace") or fig_l.contains("reload") or fig_l.contains("RoF"), "%s's cell figure has no unit: '%s'" % [b["name"], fig_l])
 	gc.queue_free()
 	# no parts on either: one reading, as before
 	var plain_a: Dictionary = sim._plain("Primary", "Pump shotgun")

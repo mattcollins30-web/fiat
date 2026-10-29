@@ -218,9 +218,14 @@ static func itemisation_rows(full: Array) -> Array:
 				worn_by[sl] = {}
 			for b in wn[sl]:
 				worn_by[sl][b] = float(worn_by[sl].get(b, 0.0)) + float(wn[sl][b])
+		# each read's own shares, every read weighing the same (29 Oct: one broken build's 15 billion melee read the
+		# whole pass as 98% melee)
 		var dl: Dictionary = bd.get("dealt_by_type", {})
+		var dl_tot := 0.0
 		for ty in dl:
-			dealt_by[ty] = float(dealt_by.get(ty, 0.0)) + float(dl[ty])
+			dl_tot += float(dl[ty])
+		for ty in dl:
+			dealt_by[ty] = float(dealt_by.get(ty, 0.0)) + float(dl[ty]) / maxf(1.0, dl_tot)
 	var rows: Array = []
 	var worn_words: Array = []
 	var never: Array = []
@@ -242,7 +247,7 @@ static func itemisation_rows(full: Array) -> Array:
 		dealt_tot += float(dealt_by[ty])
 	var dts: Array = dealt_by.keys()
 	dts.sort_custom(func(a, b): return float(dealt_by[a]) > float(dealt_by[b]))
-	rows.append(["Damage by gun type (shown)", "damage dealt each run, under the type of primary it set off with, every read", ", ".join(dts.map(func(ty): return "%s %.0f%%" % [ty, 100.0 * float(dealt_by[ty]) / maxf(1.0, dealt_tot)])) if not dts.is_empty() else "no read carried it", null])
+	rows.append(["Damage by gun type (shown)", "damage dealt each run, under the type of primary it set off with: each read's shares, the reads weighing the same", ", ".join(dts.map(func(ty): return "%s %.0f%%" % [ty, 100.0 * float(dealt_by[ty]) / maxf(1.0, dealt_tot)])) if not dts.is_empty() else "no read carried it", null])
 	return rows
 
 func _init() -> void:
