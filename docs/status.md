@@ -6131,6 +6131,12 @@ difficulty and length, the endgame placeholders.
    Centre, run 1 of 5). Fix: the label fits beside the badge (shrink or the badge moves to the corner). Smoke: every
    rail button with a badge, label and badge rects don't overlap and the label fits.
 
+3. UI: the Barracks' selected class card reads "✓ your past" (screenshot, the Poacher). It was the pick-once
+   wording; with swapping at will it should just say selected (Matt: "shouldnt say past anymore - just selected").
+   The literal is in barracks.gd's card paint (UI.fit on c["tag"]); the new word goes through words.gd and the
+   language pass ("✓ selected", or the style guide's word for the class you're playing). Smoke: the current class's
+   card tag reads the new word and never "past".
+
 ## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
 
 1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
