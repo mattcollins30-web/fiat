@@ -6143,12 +6143,18 @@ difficulty and length, the endgame placeholders.
    24-round pouch of shells. So the rounds were enough - the gap is the run: a found gun can be fitted from the pack
    (can_equip_from_pack) but nothing in the pack can go into the rig while a run's out (sim.gd _rig_take: no take
    with a mission on). The 28 Oct design (docs/design/meds_ammo_clinic.md) had "one by hand mid-run, slowly" - never
-   built. To design with Matt: rounds (and meds?) from the pack into a rig pouch mid-run, room
+   built. Matt's call (30 Oct): A - the hand-load as designed. Was weighed against: rounds (and meds?) from the pack into a rig pouch mid-run, room
    permitting, or the first gun's box loaded straight into the rig. Smoke: find a gun and its rounds mid-run, fit
    the gun, load a pouch from the pack, and the next fight fires the gun.
 5. UI: an ammo card's type chip reads lowercase ("Rounds" · "shotgun"; screenshot, Shells in the rig). The chip is
    item_head.gd's ammo branch (Items.type_word / the base's type, uncapitalised). Fix: sentence case on the chip
    (the SMG stays SMG). Smoke: every ammo base's card chips start with a capital.
+6. UI: the Clinic's cure card clips: the big "Stops bleed" line sits under its chip below (screenshot, the
+   Tourniquet; Matt: "we have so much extra space so it should be an easy one"). Seen with it on the same card: the
+   chip reads "heals 0 for you, over 0 s" - vendor.gd gives every med the heal tail, a cure included; a cure's tail
+   wants what it stops (or none). Fix: the head's figure line and its tail laid out with room (the card has plenty),
+   and the cure's own tail. Smoke: every cure and heal on the Clinic's shelf, the figure and tail rects don't
+   overlap, and no cure card reads "heals 0".
 
 ## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
 
