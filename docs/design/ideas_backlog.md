@@ -61,3 +61,14 @@ Later, if they still look right:
   A third of their fire off turning a certain death into a certain clear says the fight's knife-edge is too sharp at
   the frontier - or that contact is too strong a lever. A number for the balance phase: read the odds across every
   weather on the pass's saves, and the contact's share of the incoming.
+
+- **Magazines you find** (30 Oct, Matt, mid-playtest: "in practice the magazine thing doesnt hold - you need to be able
+  to find magazines and then fill them up out of boxes - then put them into the rig. That then allows us to increase
+  mag capacity via the attachements in the workshop"). Today (28 Oct design, docs/design/meds_ammo_clinic.md):
+  magazines aren't items - a rig pouch of rounds is 3 of the gun's magazines, filled free from the stash's boxes. Not
+  covered yet: the Workshop's magazine parts (Extended, Quick, Drum, Belt box, Hundred-round drum) give damage and pace,
+  not capacity - the review's design call 5. To design after the playtest, with parked item 4 (the hand-load mid-run,
+  which this reshapes) and call 5: a magazine an item by type (found in crates, sold by the Fence), filled from boxes at
+  home or by hand mid-run, carried in the rig; its size from the magazine, an Extended or Drum one bigger. Open: is a
+  bigger magazine an item of its own or a part on the gun; is a gun with rounds but no magazine dead, or does it load
+  one round at a time; the first gun's reward then carries a magazine too.
