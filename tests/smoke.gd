@@ -10000,6 +10000,18 @@ func _merge30_checks() -> void:
 	_check(str(g.equipped["Primary"]["base"]) == "Old .303" and bool(g.equipped["Primary"].get("stamped", false))
 		and str(g.equipped["Secondary"]["base"]) == "Service pistol" and bool(g.equipped["Secondary"].get("stamped", false)),
 		"the gauntlet's issued kit took the build's guns: %s, %s" % [str(g.equipped["Primary"]), str(g.equipped["Secondary"]["base"])])
+	# a read of a benched class keeps its own stash tabs with it (the merge's review: _read_back dropped them)
+	var t = Sim.new()
+	t.start()
+	if t.cls != "Poacher":
+		t.set_class("Poacher")
+	t.set_class("Doorman")
+	t.set_class("Poacher")
+	var tab_it: Dictionary = t._plain("Helmet", str(Data.BASES["Helmet"][0]["name"]))
+	t.roster["Doorman"]["tab_items"] = [tab_it]
+	var h_t: Dictionary = t._read_as("Doorman")
+	t._read_back(h_t)
+	_check(t.roster["Doorman"].get("tab_items", []).size() == 1, "a read of the benched Doorman dropped their stash tabs: %s" % str(t.roster["Doorman"].keys()))
 	# P6: a full half far outside 35-65% with the faint half fine is green
 	var Sum = load("res://tools/balance_summary.gd")
 	var p6: Array = Sum.signals_row([{"build": "A", "faint": [10, 9], "full_at_reach": [100, 95]}])
