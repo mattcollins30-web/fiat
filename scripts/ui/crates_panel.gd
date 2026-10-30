@@ -414,11 +414,6 @@ func _process(_dt: float) -> void:
 		_drop_hl.visible = on
 
 
-## Whether the floor lights for a drag (for the tests).
-func drop_lit() -> bool:
-	return _drop_hl != null and _drop_hl.visible
-
-
 func _tile_input(event: InputEvent, k: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and k < _tile_j.size() and int(_tile_j[k]) >= 0:
 		crate_picked.emit(int(_tile_j[k]))

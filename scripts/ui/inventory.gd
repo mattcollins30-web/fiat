@@ -309,7 +309,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	if selected >= 0 and not _has(selected):
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page * 1000 + top_row, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
-		(("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else "") + (str(sim.on_mission()) if scrapping and sim != null else "")]     # the lot's button reads the cash and the room (23 Oct); the Workshop's Scrap the run (28 Oct, the review)
+		(("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else "") + (str(sim.runner_busy()) if scrapping and sim != null else "")]     # the lot's button reads the cash and the room (23 Oct); the Workshop's Scrap the run (28 Oct, the review)
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
@@ -383,9 +383,9 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	if buying == "":
-		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not scrapping and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id)))) or (scrapping and not chosen.any(func(id): return _many_scraps(_item(id)))) or (scrapping and sim.on_mission())     # the Fence buys; shut till the Carpet Man (13 Oct); the Workshop scraps at home (the review)
-		if scrapping and sim.on_mission() and not chosen.is_empty():
-			_sell_button.tooltip_text = "Not while the runner's out"
+		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not scrapping and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id)))) or (scrapping and not chosen.any(func(id): return _many_scraps(_item(id)))) or (scrapping and sim.runner_busy())     # the Fence buys; shut till the Carpet Man (13 Oct); the Workshop scraps at home (the review)
+		if scrapping and sim.runner_busy() and not chosen.is_empty():
+			_sell_button.tooltip_text = "Not while the runner's out" if sim.on_mission() else sim.busy_words()     # away on a repeat too (30 Oct, refactor 5)
 		elif not _sell_button.disabled:
 			_sell_button.tooltip_text = ""         # a stale reason off (28 Oct, the review)
 	if pack_mode:

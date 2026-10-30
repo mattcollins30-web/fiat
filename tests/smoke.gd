@@ -109,7 +109,7 @@ func _behind_cap(tree_name: String) -> Array:
 
 
 ## The Outskirts (12 Oct): a zone before the Estate, three sites, no crew. A new yard starts there and the Streets
-## wait on it; it's done with its three cleared; a site's level reads past it; a save from before is moved up three;
+## wait on it; it's done with its three cleared; a site's level reads past it;
 ## Runs has the four zones and no map, the Radio has the map.
 func _outskirts_checks(main) -> void:
 	var sim = main.sim
@@ -132,17 +132,6 @@ func _outskirts_checks(main) -> void:
 	_check(fresh.zone_complete(0) and fresh.zone_open(1) and fresh.tier_open(3), "the Outskirts cleared and the Gamekeeper down did not open the Estate")
 	_check(Sim.lv_at(3, 1) == 1 and Sim.lv_at(11, 1) == 9 and Sim.lv_at(0, 1) == 1 and Sim.lv_at(0, 6) == 3, "a site's level does not read past the Outskirts")
 	_check(fresh.salvage_kinds().is_empty(), "the Outskirts drop salvage")
-	# a save from before the Outskirts: nine sites, three zones, the Bank at 5
-	var old := {"depth": [2, 1, 1, 1, 1, 1, 1, 1, 3], "best_depth": [2, 1, 1, 1, 1, 1, 0, 0, 0], "words": [[], [], [], [], [], [], [], [], []],
-		"sealed": [false, false, false, false, false, false, false, false, true], "worn": [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
-		"worn_depth": [1, 1, 1, 1, 1, 1, 1, 1, 1], "boss_paid": [[], [], [], [], [], [], [], [], []], "weather": ["Rain", "", ""], "bosses_beaten": [true, false, false],
-		"best_tier": 6, "last_report": {"tier": 5, "outcome": "Extracted"}, "best_dig": {"site": "The Bank", "tier": 5, "depth": 2}}
-	Sim._shift_sites(old)
-	_check(old["depth"] == [1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 3] and old["best_depth"].slice(0, 3) == [1, 1, 1] and old["sealed"][11] and old["weather"] == ["", "Rain", "", ""] and old["bosses_beaten"] == [true, true, false, false], "the old save's lists did not move up: %s" % str(old["depth"]))
-	_check(int(old["best_tier"]) == 9 and int(old["last_report"]["tier"]) == 8 and int(old["best_dig"]["tier"]) == 8 and int(old["sites_v"]) == Sim.SITES_V, "the old save's site numbers did not move up three")
-	var again: Dictionary = old.duplicate(true)
-	Sim._shift_sites(again)
-	_check(again == old, "a moved save moved twice")
 	# Runs: the four zones, the Outskirts first, no map; the Radio has it
 	main.show_room(main.MISSIONS)
 	var zn: Array = main._missions._map._zone_names
@@ -151,7 +140,7 @@ func _outskirts_checks(main) -> void:
 	main.refresh()
 	_check(main._radio._views.size() == 4 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()) and (main._radio._views[3].disabled == not sim.campaign_done()), "the Radio's map, town and story buttons do not follow the campaign")
 	_check_fit(main, "Radio (twelve sites)")
-	print("the Outskirts ok: first, three sites, no crew, the Estate after, levels, the old save moved, Runs' four zones, the Radio's map")
+	print("the Outskirts ok: first, three sites, no crew, the Estate after, levels, Runs' four zones, the Radio's map")
 
 
 ## The map, on the Radio (12 Oct: it moved there from Runs as the Outskirts took its tab).
@@ -779,7 +768,11 @@ func _init() -> void:
 	_fixa_repeat_cures_checks(main)           # S9
 	_fixa_skill_odds_checks(main)             # T1
 	_fixa_crew_odds_checks(main)              # T2
+	_class_read_checks(main)                  # refactor 2 (30 Oct): one read as another class, the Radio's row and the board agree
 	_fixa_rig_away_checks(main)               # T4
+	_r4_kit_away_checks(main)                 # refactor 5 (30 Oct, R4): runner_busy() on every kit move
+	_r4_art_names_checks()                    # refactor 5: the one art-name rule
+	_cleanup31_checks()                       # the clean-up's merge (30 Oct): the magazines' share before spare heals; the bot packs on "fill"
 	_fixa_gate_paint_checks(main)             # U1, U2
 	_fixa_repeat_refused_checks(main)         # U3
 	_wall_rule_checks()
@@ -1551,14 +1544,6 @@ func _narrative_checks(main) -> void:
 		sim._boss_down(sim.mission, sim.mission["t"])
 	sim.extract_now()
 	_check(sim.deeds_fate == "held" and sim.room_open("yard"), "bringing the deeds home did not end, or the Pitch isn't open: %s" % sim.deeds_fate)
-	# a save from before 15 Oct calls it "ending": it loads under its new name
-	var now_d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
-	var old_d: Dictionary = now_d.duplicate(true)
-	old_d.erase("deeds_fate")
-	old_d["ending"] = "sold"
-	sim.load_dict(old_d)
-	_check(sim.deeds_fate == "sold", "an old save's \"ending\" did not load as the deeds' fate: '%s'" % sim.deeds_fate)
-	sim.load_dict(now_d)
 	var held := {}
 	for it in sim.stash:
 		if Items.is_deeds(it):
@@ -2279,7 +2264,7 @@ func _tree_effect_checks(sim) -> void:
 
 ## The trees' rules (9 Oct, docs/design/trees.md §8): the lanes match the table; every joint's two halves in
 ## the fourth column, open on one, closed on both, for its class alone; a class change's price and its two
-## presses, free for a new runner; the camp's high-water mark; an old save's trees back as points, once.
+## presses, free for a new runner; the camp's high-water mark; the save.
 func _tree_rules_checks(main) -> void:
 	var sim = main.sim
 	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
@@ -2394,32 +2379,20 @@ func _tree_rules_checks(main) -> void:
 	sim.xp = Data.xp_for_level(12)
 	sim._earn_points(before)
 	_check(sim.training_points == pts0 + 2 and sim.best_level == 12, "past the camp's best a level did not earn a point: %d, best %d" % [sim.training_points - pts0, sim.best_level])
-	# saves: the layout version and the best level go in; an old save's tree comes back as points, once
+	# saves: the tree and the best level go in
 	sim.load_dict(saved)
 	sim.tree = ["The Pitch/0"]
 	var d: Dictionary = sim.to_dict()
-	_check(int(d.get("tree_v", 0)) == sim.TREE_V and d.has("best_level"), "the save has no layout version or best level")
-	d["tree_v"] = 1
+	_check(d.has("best_level"), "the save has no best level")
 	sim.load_dict(d)
-	_check(sim.tree.is_empty() and sim.points_free() == sim.training_points, "an old save's tree did not come back as points: %s" % str(sim.tree))
-	sim.tree = ["The Pitch/0"]
-	sim.load_dict(sim.to_dict())
-	_check(sim.tree == ["The Pitch/0"], "a save from this layout was refunded again")
-	var yd: Dictionary = sim.to_dict()
-	yd["tree"] = ["The Yard/0"]                # a save from before the Pitch (14 Oct)
-	sim.load_dict(yd)
-	_check(sim.tree == ["The Pitch/0"], "a save's Yard node did not become the Pitch's: %s" % str(sim.tree))
-	d.erase("tree_v")
-	d.erase("best_level")
-	sim.load_dict(d)
-	_check(sim.best_level == sim.level(), "an old save's best level is not its runner's: %d" % sim.best_level)
+	_check(sim.tree == ["The Pitch/0"], "a save's tree did not load as saved: %s" % str(sim.tree))
 	sim.load_dict(saved)
 	bk.alt = ""
 	bk._armed = ""
 	bk._shown = ""
 	main.refresh()
 	sim.core_gates = true
-	print("tree rules ok: the lanes, ten joints, a class change's price and presses, the high-water mark, the old saves")
+	print("tree rules ok: the lanes, ten joints, a class change's price and presses, the high-water mark, the save")
 	_joint_payoff_checks(main)
 
 
@@ -2545,7 +2518,6 @@ func _joint_payoff_checks(main) -> void:
 	# Flattened: a kill with the plain staggers the next of them, half their fire for two seconds
 	sim.cls = "Doorman"
 	sim.tree = ["Knuckles/10"]
-	sim.tops_open = true
 	m = fresh_run.call()
 	m["target_hp"] = 0.0
 	sim._fight(m, m["t"], 0.05)
@@ -2553,7 +2525,6 @@ func _joint_payoff_checks(main) -> void:
 	var flat_on: float = float(maxi(1, mini(int(m.get("remaining", 1)), sim.contact(m["t"]))))     # one man of those on you fires at half, not the gang (25 Oct, the review)
 	var flat_x: float = sim._joints_on_incoming(m, false, 0.1)
 	_check(flat_x <= 1.0 - 0.5 / flat_on + 0.001 and flat_x < 1.0, "Flattened did not halve the next man's fire: ×%.2f with %d on you" % [flat_x, int(flat_on)])
-	sim.tops_open = false
 	if sim.on_mission():
 		sim.extract_now()
 	# the sum strip's Physical chip, the Doorman's knuckles alone: what it ignores, never a "+0%"
@@ -3371,7 +3342,6 @@ func _element_checks(main) -> void:
 		for i in _behind_cap(tn):
 			if not sim.tree.has("%s/%d" % [tn, i]):
 				sim.tree.append("%s/%d" % [tn, i])
-	sim.tops_open = true
 	bk._shown = ""
 	main.refresh()
 	var crowd_tags: Array = []
@@ -3405,7 +3375,6 @@ func _element_checks(main) -> void:
 	_check_fit(main, "Caravan (the heaviest sum)")
 	sim.tree = crowd_tree
 	sim.elements_open = crowd_open
-	sim.tops_open = false
 	bk._shown = ""
 	main.refresh()
 	# the capstone sits at the wheel's centre, inside the keystones (the wheel, 23 Oct); the points key fits its box and
@@ -5412,8 +5381,6 @@ func _places_checks(main) -> void:
 	sim.words[3] = []
 	sim.yard_picks.erase("radio")              # the Radio's Weather set and Night set read the sky elsewhere
 	sim._yard_changed("")
-	for i in range(Data.TIERS.size()):
-		sim.worn[i] = -1.0
 	for z in range(Data.ZONES.size()):
 		sim.weather[z] = ""
 	sim.elapsed = 3600.0 * 2.0            # 11:00, day
@@ -5465,9 +5432,10 @@ func _places_checks(main) -> void:
 	sim.mission["ghost_pending"] = true           # a Ghost there: nothing opened is no clear (the review)
 	var cleared0: bool = sim.mission["cleared"]
 	sim.mission["cleared"] = false
-	sim.worn[3] = -5.0
+	var said0: int = sim.events_total
 	sim.extract_now()
-	_check(is_equal_approx(float(sim.worn[3]), -5.0), "a Ghost took a clear off a site already picked clean")
+	var said_new: Array = _said(sim).slice(-(sim.events_total - said0)) if sim.events_total > said0 else []
+	_check(sim.events_total > said0 and not said_new.any(func(x): return str(x).begins_with("Ghost:")), "a Ghost took a clear off a site already picked clean: %s" % str(said_new))     # the Ghost's clear says so (the worn record went, 30 Oct)
 	_check(cleared0, "the fixture: the run wasn't cleared")
 	sim.elapsed += sim.crate_trickle_s() * (n_all + 2)
 	_check(sim.site_state(3) == Words.SKY["fresh"], "the site didn't come back fresh: '%s'" % sim.site_state(3))
@@ -7508,9 +7476,10 @@ func _ammo_checks(sim) -> void:
 	sim.stash.append(sim._plain(Data.AMMO, "Slugs"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
-	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure): the primary's first pouch of magazines goes in,
-	# one bandage back to the stash - the gate no longer sends the gun out empty to keep a fourth bandage
-	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - 1,
+	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure; 30 Oct, the magazines' share before spare heals): the
+	# primary's magazines go in to their share, the bandages the rest - the gate no longer sends the gun out short to keep them
+	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return Items.is_ammo(x)).size() == ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
+		and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - ceili(sim.med_capacity() * Data.RIG_MAG_SHARE),
 		"a full rig of bandages went out without the primary's pouch: %s" % str(sim.rig.map(func(x): return str(x["base"]))))
 	sim.extract_now()
 	sim.stash = stash0
@@ -8719,9 +8688,7 @@ func _loot_roll_checks(main) -> void:
 	var rar_before: float = sim.rarity_bonus()
 	if not sim.tree.has(rat):
 		sim.tree.append(rat)
-	sim.tops_open = true                 # an element's top works with a joint closed there (9 Oct)
 	_check(is_equal_approx(sim.rarity_bonus(), rar_before) and sim.loot_bonus() < q, "Rat's share moved quality (%.3f → %.3f) or not quantity" % [rar_before, sim.rarity_bonus()])
-	sim.tops_open = false
 	# a rarity node a class: the Doorman's and the Paramedic's trees carry one now
 	for t in ["Muscle", "Triage"]:
 		_check(Data.tree_named(t)["nodes"].any(func(n): return n.get("effect", "") == "rarity"), "%s has no loot quality node" % t)
@@ -9532,6 +9499,8 @@ func _top_works_checks(main) -> void:
 		var kit: Dictionary = sim._plain(Data.MEDICAL, two["name"]) if (not two.is_empty() and sim.rig_used() + 2 <= pouches and sim.rig.size() % 3 == 0) else sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
 		sim.rig.append(kit)
 	_check(main._run.RIG_MAX >= Data.RIG_CAP and main._armoury._containers.RIG_MAX >= Data.RIG_CAP, "a rig display clips under the sim's cap")
+	var mode_was: String = sim.top_up_mode
+	sim.set_top_up("leave")                   # the fixture's rig as built: the gate would trade spare heals for magazines now (30 Oct)
 	sim.deploy(3)
 	main.show_room(main.MISSIONS)
 	main.refresh()
@@ -9552,6 +9521,7 @@ func _top_works_checks(main) -> void:
 			outlines_on += 1
 	_check(cells_on == sim.rig.size() and outlines_on == 0, "a full rig of kits and meds shows %d of %d items and %d free pouches" % [cells_on, sim.rig.size(), outlines_on])
 	_check_fit(main, "Run (a full rig)")
+	sim.set_top_up(mode_was)
 	# a kit at a row's end (12 Oct, Matt's playtest): singles to one short of the row, the kit, singles to full - every
 	# item shows and no pouch reads empty
 	if not two.is_empty():
@@ -11055,22 +11025,50 @@ func _review28_checks(main) -> void:
 			var pistol_n: int = s.rig.filter(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == "pistol").size()
 			_check(s.rig.any(func(x): return Items.is_heal(x)) and ammo_n <= share and ammo_n >= 1 and pistol_n == (1 if share >= 2 else 0) and s.rig_used() == s.med_capacity(), "the %s packed a %s: %d heals, %d pouches of rounds (share %d, %d the pistol's), %d of %d used" % [who, rig_name, s.rig.filter(func(x): return Items.is_heal(x)).size(), ammo_n, share, pistol_n, s.rig_used(), s.med_capacity()])
 		s.equipped["Secondary"] = null
-		# a rig full of last run's heals (28 Oct, the wall check: Drifter as fire out for twelve hours on one pouch of
-		# rounds): the bot repacks as a person would, the heals past the best back to the stash so the magazines reach
-		# their share; the gate's top-up leaves a full rig alone (a full rig takes no rounds at the gate, above)
+		# a rig full of last run's heals and cures, the primary's rounds only in the stash (30 Oct, review30 refactor 3:
+		# the gate's packer the only one): the gate and the bot alike pack the primary's first pouch, the same rig, and
+		# the run goes out with rounds in the gun (once, beside the bot's turn)
 		if who == "gate":
 			continue
-		s.equipped["Rig"] = s._plain("Rig", "Chest rig")
-		s.rig = []
-		while s.rig_room(1):
-			s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
-		var full_n: int = s.rig.size()
-		s.stash = [s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds")]
-		bt._restock_meds(s)
-		var share2: int = ceili(s.med_capacity() * Data.RIG_MAG_SHARE)
-		var mags2: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
-		var heals2: int = s.rig.filter(func(x): return Items.is_heal(x)).size()
-		_check(full_n >= 4 and mags2 == share2 and heals2 >= 1 and heals2 + mags2 == s.rig.size(), "the %s left a rig of %d heals with %d pouches of rounds (share %d) and %d heals" % [who, full_n, mags2, share2, heals2])
+		var rigs: Array = []
+		for packer in ["gate", "bot"]:
+			s = fresh.call()
+			s.cash = 0.0
+			s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
+			s.equipped["Secondary"] = null
+			s.equipped["Rig"] = s._plain("Rig", "Chest rig")
+			s.rig = [s._plain(Data.MEDICAL, "Bandage")]
+			for b in Data.BASES[Data.MEDICAL]:
+				if b.has("cure") and s.rig_room(1):
+					s.rig.append(s._plain(Data.MEDICAL, str(b["name"])))
+			while s.rig_room(1):
+				s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
+			var full_n: int = s.rig.size()
+			var had_cures: bool = s.rig.any(func(x): return Items.is_cure(x))
+			s.stash = [s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds")]
+			var gun: Dictionary = s.equipped["Primary"]
+			_check(full_n >= 4 and had_cures and not s.rig_room(1) and s.rounds_for(gun) == 0, "the fixture: a rig of %d, cures %s, full %s, %d rounds in it" % [full_n, str(had_cures), str(not s.rig_room(1)), s.rounds_for(gun)])
+			if packer == "gate":
+				s._top_up()
+			else:
+				bt._restock_meds(s)
+			rigs.append(s.rig.map(func(x): return str(x["base"]) + "/" + str(x.get("rounds", 0))))
+			_check(s.rounds_for(gun) > 0 and s.rig.any(func(x): return Items.is_heal(x)), "the %s packed a full rig of heals and cures with %d rounds for the primary: %s" % [packer, s.rounds_for(gun), str(rigs.back())])
+			if packer == "bot":
+				_check(rigs[0] == rigs[1], "the bot packed its own rig, not the gate's: the gate %s, the bot %s" % [str(rigs[0]), str(rigs[1])])
+				s.hp = s.max_hp()
+				s.deploy(0)
+				_check(s.on_mission() and s.rounds_for(gun) > 0, "the bot's run went out with %d rounds for the primary (on a run %s)" % [s.rounds_for(gun), str(s.on_mission())])
+				if s.on_mission():
+					s.extract_now()
+				# the stash without them too: the bot buys the dry primary's box with the rig full, the packer makes room
+				s.rig = s.rig.filter(func(x): return not Items.is_ammo(x))
+				while s.rig_room(1):
+					s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
+				s.stash = []
+				s.cash = 1.0e5
+				bt._restock_meds(s)
+				_check(s.rounds_for(gun) > 0, "the bot bought no rounds for a dry primary with the rig full: %s" % str(s.rig.map(func(x): return x["base"])))
 	# the bot buys off her shelf as the player does (B3): the cheapest heal that fits, a cure for the front, nothing off it
 	s = fresh.call()
 	s.cash = 1.0e5
@@ -11842,7 +11840,7 @@ func _mythic_checks(sim) -> void:
 	_check(is_equal_approx(sim.secondary_share(true), 1.0), "the Spare Key's secondary at %.2f" % sim.secondary_share(true))
 	wear_one.call("last_orders")
 	var cv: Dictionary = sim._conversion_raw()
-	_check(Data.ELEMENTS.all(func(e): return is_equal_approx(float(cv[e]), 1.0)) and is_equal_approx(float(cv["physical"]), 1.0) and sim._tops_open(Data.ELEMENT_TREES[0]["name"]),
+	_check(Data.ELEMENTS.all(func(e): return is_equal_approx(float(cv[e]), 1.0)) and is_equal_approx(float(cv["physical"]), 1.0),
 		"the Last Orders' hit: %s" % str(cv))
 	wear_one.call("removal_van")
 	_check(sim.capacity() == sim.capacity_raw() * Data.MYTHIC_PACK, "the Removal Van's pack holds %d of %d" % [sim.capacity(), sim.capacity_raw()])
@@ -13534,7 +13532,7 @@ func _kit_hands_checks(main) -> void:
 	# WALL_SOLID drawn, never above the picture's highest drawn row
 	var tips: Array = []
 	for t in Data.TIERS:
-		var key: String = RunView.site_key(str(t["name"]))
+		var key: String = Items.slug(str(t["name"]))
 		var ct: Texture2D = RunView.tex(key + "_cover")
 		if ct == null:
 			continue
@@ -13554,13 +13552,13 @@ func _kit_hands_checks(main) -> void:
 	for k in run.TILE_ICONS:
 		var there: bool = run.icon_tex(run.TILE_ICONS[k]) != null
 		_check(run._view == null or not there or run._six[k].has("icon"), "the six's tile %d has its art but no icon" % k)
-	_check(RunView.art_slug("Farmer's shotgun") == "farmer_s_shotgun" and RunView.art_slug("Semi-auto .22") == "semi_auto_22" and RunView.art_slug("Courier's SMG") == "courier_s_smg", "the hands' names aren't the manifest's: %s" % RunView.art_slug("Semi-auto .22"))
+	_check(Items.slug("Farmer's shotgun") == "farmer_s_shotgun" and Items.slug("Semi-auto .22") == "semi_auto_22" and Items.slug("Courier's SMG") == "courier_s_smg", "the hands' names aren't the manifest's: %s" % Items.slug("Semi-auto .22"))
 	var seen := 0
 	var bad: Array = []
 	for slot in ["Primary", "Secondary"]:
 		for b in Data.BASES[slot]:
 			var gun: Dictionary = sim._plain(slot, str(b["name"]))
-			var slug: String = RunView.art_slug(Items.art_name(str(b["name"])))     # a renamed base's pictures under its old name (the fix round)
+			var slug: String = Items.slug(Items.art_name(str(b["name"])))     # a renamed base's pictures under its old name (the fix round)
 			var own: Texture2D = RunView.tex("hands/" + slug)
 			var ht: Texture2D = RunView.hands_tex(gun)
 			if own == null:
@@ -13984,7 +13982,7 @@ func _run_view_checks(main) -> void:
 		hand_pics.append([ty, RunView.tex("hands_" + ty)])
 	for slot in ["Primary", "Secondary"]:
 		for b in Data.BASES[slot]:
-			hand_pics.append([str(b["name"]), RunView.tex("hands/" + RunView.art_slug(str(b["name"])))])     # the kit's (17 Oct)
+			hand_pics.append([str(b["name"]), RunView.tex("hands/" + Items.slug(str(b["name"])))])     # the kit's (17 Oct)
 	for pic in hand_pics:
 		var ty: String = pic[0]
 		var ht: Texture2D = pic[1]
@@ -14391,14 +14389,14 @@ func _full_art_checks(main, v) -> void:
 	var sim = main.sim
 	var own := 0
 	for i in range(Data.TIERS.size()):
-		var key: String = RunView.site_key(str(Data.TIERS[i]["name"]))
+		var key: String = Items.slug(str(Data.TIERS[i]["name"]))
 		_check(RunView.tex_of([key + "_plate", "parade_plate"]) != null and RunView.tex_of([key + "_cover", "parade_cover"]) != null, "%s has no plate or cover, its own or the test's" % key)
 		if RunView.tex(key + "_plate") != null and RunView.tex(key + "_cover") != null:
 			own += 1
 	print("the run view: %d of %d sites have their own plate and cover" % [own, Data.TIERS.size()])
 	# out on the site the check's on: its plate, its cover's top on the line
 	var m: Dictionary = sim.mission
-	var key0: String = RunView.site_key(str(Data.TIERS[int(m["tier"])]["name"]))
+	var key0: String = Items.slug(str(Data.TIERS[int(m["tier"])]["name"]))
 	_check(v._plate.texture == RunView.tex_of([key0 + "_plate", "parade_plate"]) and v._cover.texture == RunView.tex_of([key0 + "_cover", "parade_cover"]), "%s's plate or cover isn't up" % key0)
 	_check(absf(v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s - RunView.COVER_TOP) < 0.5, "the cover's body isn't on its line: %.0f" % (v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s))
 	# the zone's gang, when it's drawn
@@ -14421,7 +14419,7 @@ func _full_art_checks(main, v) -> void:
 		_check(absf(feet - (v.slot_of(k)["foot"].y - RunView.DUCK_SCENE * v._duck)) < 1.5, "figure %d's feet at %.0f, its slot's at %.0f" % [k, feet, v.slot_of(k)["foot"].y])
 	# the head when he's out, if he's drawn
 	for b in Data.BOSSES:
-		var hk: String = RunView.site_key(str(b["name"]))
+		var hk: String = Items.slug(str(b["name"]))
 		if RunView.tex("head_%s_stand" % hk) == null:
 			continue
 		v._figs[0]["boss"] = hk
@@ -14431,7 +14429,7 @@ func _full_art_checks(main, v) -> void:
 	# the head coming out on the last kill: the one who falls falls as himself, the head pops up as the head; and when
 	# the head's killed, he falls as the head (the review: the live key drew them as each other)
 	var gk: String = str(Data.BOSSES[0]["name"])
-	var hk0: String = RunView.site_key(gk)
+	var hk0: String = Items.slug(gk)
 	var had_boss: bool = m.has("boss")
 	var boss0 = m.get("boss", null)
 	for k in range(v._figs.size()):
@@ -14552,7 +14550,7 @@ func _full_art_checks(main, v) -> void:
 ## The Yard as lanes (9 Oct, docs/design/yard.md): eight buildings, five columns of two picks and a rank; a tile
 ## picks, the strip builds; the other side stays on show and refits for half; the columns open on the campaign
 ## and the depth and stay open; the rank at depth 9; the rail's Upgrade badge; every pick's figure where it lives;
-## salvage from the deep sites; the buildings move with the Yard; an old save's levels become picks.
+## salvage from the deep sites; the buildings move with the Yard.
 func _yard_wide_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -14996,22 +14994,6 @@ func _yard_pick_checks(main) -> void:
 	_yard_set(sim, "stash", 4, "a")
 	sim.yard_ranks["kennel"] = 3
 	sim.yard_mark_seen()
-	# an old save's levels become the matching picks, free
-	var old: Dictionary = sim.to_dict()
-	old.erase("yard_picks")
-	old.erase("yard_ranks")
-	old["stash_level"] = 3
-	old["comms_level"] = 2
-	old["kennel_level"] = 3
-	old.erase("yard_v")                         # a save from before the lanes is from before two lines a building too
-	sim.load_dict(old)
-	_check(sim.yard_has("shelving") and sim.yard_has("another_unit") and sim.yard_has("lock_up") and sim.yard_has("weather_set") and sim.yard_has("forecast") and not sim.yard_has("scanner") and sim.yard_has("fetch"), "an old save's levels did not become picks: %s" % str(sim.yard_picks))
-	# two lines a building (28 Oct): a save from before has its picks moved by id; a line climbs in order
-	var old2: Dictionary = sim.to_dict()
-	old2.erase("yard_v")
-	old2["yard_picks"] = {"bench": ["", "a", "b", "", ""], "kennel": ["", "", "", "b", ""]}     # Third socket, Strip for parts, Ratter where they stood
-	sim.load_dict(old2)
-	_check(sim.yard_side("bench", 1) == "b" and sim.yard_side("bench", 3) == "b" and sim.yard_has("third_socket") and sim.yard_has("strip_for_parts") and sim.yard_has("ratter") and sim.yard_side("kennel", 3) == "b", "an old save's picks didn't move by id: %s" % str(sim.yard_picks))
 	sim.yard_picks = {}
 	sim._yard_changed("")
 	sim.cash = 1.0e9
@@ -15020,7 +15002,7 @@ func _yard_pick_checks(main) -> void:
 	_check(sim.yard_rank_block("bench").begins_with("After a line's fifth") or sim.yard_cols() < Data.YARD_COLS, "a rank opened before a line's fifth step: '%s'" % sim.yard_rank_block("bench"))
 	sim.load_dict(saved)
 	main.refresh()
-	print("the Pitch's lanes ok: the screen, a build and its other side, the gates kept, salvage, ranks, every building's picks, the move, the old saves")
+	print("the Pitch's lanes ok: the screen, a build and its other side, the gates kept, salvage, ranks, every building's picks, the move")
 
 
 ## The sum strip's tiles sit inside their panel (7 Oct: the strip was sized by the node tile's height, four
@@ -16066,7 +16048,7 @@ func _map_screen_checks(main) -> void:
 	if filler_key != "":
 		at._pick(filler_key)
 		var fa: Dictionary = Data.atlas_of(filler_key)
-		_check(at._pic.visible == (at.WebView.picture("map_f_" + at.WebView.slug_of(str(fa.get("name", "")))) != null), "a filler's panel picture isn't its map_f_ one: %s" % filler_key)
+		_check(at._pic.visible == (at.WebView.picture("map_f_" + Items.slug(str(fa.get("name", "")))) != null), "a filler's panel picture isn't its map_f_ one: %s" % filler_key)
 		at._pick("lie_of_the_land")
 	_check((at._title.text.to_lower().contains("wants a path") or at._title.text.to_lower().contains("opens at %d points" % Data.MAP_KEYSTONE_POINTS) or sim.can_rank_atlas("lie_of_the_land")) and (at._take.disabled or sim.can_rank_atlas("lie_of_the_land")), "a shut node's panel does not say what it needs: '%s'" % at._title.text)
 	# a tile pressed picks it; the panel's words keep clear of its buttons
@@ -16114,12 +16096,12 @@ func _place_art_checks(main) -> void:
 	main.refresh()
 	var band = main._missions._cols[0]["band"]
 	var site: String = Data.TIERS[Data.ZONES[1]["tiers"][0]]["name"]
-	_check(band.has_art() == (UI.place_texture(site) != null), "the site band's art does not follow art/places/%s.png" % UI.place_slug(site))
+	_check(band.has_art() == (UI.place_texture(site) != null), "the site band's art does not follow art/places/%s.png" % Items.slug(site))
 	var img := Image.create(64, 21, false, Image.FORMAT_RGBA8)
 	img.fill(Color("8899aa"))
 	var tex := ImageTexture.create_from_image(img)
-	var had_site = UI._places.get(UI.place_slug(site), null)
-	UI._places[UI.place_slug(site)] = tex
+	var had_site = UI._places.get(Items.slug(site), null)
+	UI._places[Items.slug(site)] = tex
 	band._seed = 0
 	band.set_site(site)
 	_check(band.has_art() and band._art.texture == tex and band._art_fade.visible, "a painted site does not show in its band")
@@ -16128,9 +16110,9 @@ func _place_art_checks(main) -> void:
 	main.refresh()
 	_check_fit(main, "Runs (site art)")
 	if had_site == null:
-		UI._places.erase(UI.place_slug(site))
+		UI._places.erase(Items.slug(site))
 	else:
-		UI._places[UI.place_slug(site)] = had_site
+		UI._places[Items.slug(site)] = had_site
 	band._seed = 0
 	band.set_site(site)
 	main._missions._shown = ""
@@ -17093,7 +17075,7 @@ func _room_band_checks(main) -> void:
 		var head: Panel = art.get_parent()
 		var file := "res://art/places/%s.png" % r[2]
 		var painted: bool = ResourceLoader.exists(file) or FileAccess.file_exists(file)
-		_check(UI.place_slug(hb["place"]) == r[2], "%s's band names %s, not %s" % [r[2], UI.place_slug(hb["place"]), r[2]])
+		_check(Items.slug(hb["place"]) == r[2], "%s's band names %s, not %s" % [r[2], Items.slug(hb["place"]), r[2]])
 		_check(art.visible == painted and hb["shade"].visible == painted, "%s's band does not follow its art (painted %s)" % [r[2], str(painted)])
 		_check(art.get_index() == 0 and hb["shade"].get_index() == 1 and head.clip_contents and art.size == head.size - Vector2(2, 2) and art.position == Vector2(1, 1) and art.mouse_filter == Control.MOUSE_FILTER_IGNORE, "%s's band is not under the heading's words, or not inside its line" % r[2])
 		if stand_in != null and not painted:
@@ -17591,13 +17573,6 @@ func _chronicle_checks() -> void:
 	_check(t.chron_count == s.chron_count and t.chronicle.is_empty() and absf(t.played_s - s.played_s) < 0.01, "the count and the clock did not ride the save: %d of %d lines, %.0f of %.0f s" % [t.chron_count, s.chron_count, t.played_s, s.played_s])
 	t.tick_played(1.0)
 	_check(t.chronicle.is_empty(), "a loaded save snapshotted again at once")
-	# a save from the first build (v1) carried its lines: they wait to go out to the file, none lost
-	var v1: Dictionary = d.duplicate()
-	v1.erase("chron_count")
-	v1["chronicle"] = [{"k": "start", "t": 0.0, "p": 0.0}, {"k": "run", "t": 10.0, "p": 10.0}]
-	var u = Sim.new()
-	u.load_dict(JSON.parse_string(JSON.stringify(v1)))
-	_check(u.chronicle.size() == 2 and u.chron_count == 2, "a v1 save's record was dropped on loading: %d waiting, %d counted" % [u.chronicle.size(), u.chron_count])
 	var kept: int = s.chronicle.size()
 	_finish_campaign(s)
 	_check(s.chronicle.size() >= kept, "the campaign lost the record: %d lines of %d" % [s.chronicle.size(), kept])
@@ -17694,7 +17669,7 @@ func _record_file_checks(main) -> void:
 
 
 ## The junk rules (11 Oct, Matt's list): the rarity the Fence takes up to, never an upgrade on what's worn, never a
-## kind kept, the buttons going round, the line saying it, an old save's toggle read as commons, the rules saved.
+## kind kept, the buttons going round, the line saying it, the rules saved.
 func _junk_rule_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -17738,17 +17713,12 @@ func _junk_rule_checks(main) -> void:
 	_check(sim.is_junk(gun) == (not sim.is_upgrade(gun)), "with nothing kept the gun is not by the other rules")
 	sim.junk_upto = -1
 	_check(not sim.is_junk(spare), "the rules sell with the rule off")
-	# the save: the rules, and an old save's toggle as commons
+	# the save: the rules
 	sim.junk_upto = 2
 	sim.junk_keep = "bags"
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
 	_check(sim.junk_upto == 2 and sim.junk_keep == "bags", "the rules did not save: %d %s" % [sim.junk_upto, sim.junk_keep])
-	d.erase("junk_upto")
-	d.erase("junk_keep")
-	d["auto_sell"] = true
-	sim.load_dict(d)
-	_check(sim.junk_upto == 0 and sim.junk_keep == "", "an old save's junk toggle is not commons: %d" % sim.junk_upto)
 	sim.load_dict(saved)
 	main.refresh()
 	print("junk rules ok: the rarity, the upgrade kept, the kind kept, the buttons, the line, the save")
@@ -19016,7 +18986,7 @@ func _codes_checks(main) -> void:
 ## The gates (13 Oct, Matt; docs/design/campaign_gates.md): a fresh camp's Clinic, Fence, Yard, Radio and Workshop shut -
 ## the rail says Shut and won't open them, the sim won't do their jobs; each head drops his thing, home it opens his
 ## room with a line on the radio before and after; the deeds off the Manager, not the Bank; a death that loses the
-## thing brings it back next time; a save from before keeps its rooms; a move keeps them.
+## thing brings it back next time; a save keeps its rooms; a move keeps them.
 func _gates_checks(main) -> void:
 	var sim = main.sim
 	_check(sim.unlocked.is_empty(), "a fresh camp has rooms open: %s" % str(sim.unlocked))
@@ -19075,12 +19045,7 @@ func _gates_checks(main) -> void:
 	main.refresh()
 	for name in [main.MEDIC, main.MARKET, main.OVERVIEW, main.COMMS, main.WORKSHOP]:
 		_check(not main._rail_buttons[name].disabled and main._rail_buttons[name]._name.text == name, "the rail's %s is still shut or scrambled: '%s'" % [name, main._rail_buttons[name]._name.text])
-	# a save from before the gates keeps every room; a save with them keeps what it has; a move keeps them
-	var d: Dictionary = sim.to_dict()
-	d.erase("unlocked")
-	var old = load("res://scripts/sim/sim.gd").new()
-	old.load_dict(d)
-	_check(old.unlocked.size() == Data.ROOMS_SHUT.size(), "a save from before the gates lost its rooms")
+	# a save keeps the rooms it has open; a move keeps them
 	var fresh = load("res://scripts/sim/sim.gd").new()
 	fresh.start()
 	fresh.unlocked = ["clinic"]
@@ -19338,14 +19303,6 @@ func _room_intro_checks(main) -> void:
 	_check(main._room_card != null and main._room_card.key == "kit", "the card didn't come up once the menu went")
 	if main._room_card != null:
 		main._room_card.finish()
-	# a save from before the cards has met what it has open
-	var d: Dictionary = sim.to_dict()
-	d.erase("met")
-	sim.load_dict(d)
-	var all_in := true
-	for k in Words.ROOM_INTRO_FIRST + sim.unlocked:
-		all_in = all_in and (k in sim.met)
-	_check(all_in, "an old save's open rooms weren't counted met: %s" % str(sim.met))
 	_check(sim.to_dict().has("met"), "the save doesn't keep the rooms met")
 	for cn3 in Words.CLASS_CARDS:
 		if not ("class:" + cn3) in sim.met:
@@ -19401,7 +19358,7 @@ func _room_intro_checks(main) -> void:
 	sim.unlocked = unlocked0
 	main.intro = false
 	main.show_room(room0)
-	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves, after the opening, On the air")
+	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, after the opening, On the air")
 
 
 ## The words (18 Oct, the language pass, docs/language/style_guide.md): the mechanics lines in the data say each thing
@@ -19853,8 +19810,7 @@ func _dot_compare_checks(_main) -> void:
 
 
 ## The Radio's pile (18 Oct, Matt: contracts took his papers; "papers found never touch the stash"; "a signal run needs
-## to provide 2 of low quality"): a paper home goes to the pile, Kev's too with the stash full, an old save's stash
-## papers move there; a signal's run home brings two at the least, a death none; the deeds stay in the stash.
+## to provide 2 of low quality"): a paper home goes to the pile, Kev's too with the stash full; a signal's run home brings two at the least, a death none; the deeds stay in the stash.
 func _paper_pile_checks(_main) -> void:
 	var s = Sim.new()
 	s.start()
@@ -19889,13 +19845,6 @@ func _paper_pile_checks(_main) -> void:
 	var pile0: int = s.papers.size()
 	var kev: Dictionary = s.ask_kev()
 	_check(not kev.is_empty() and s.papers.size() == pile0 + 1 and not s.stash.has(kev), "Kev's paper didn't reach the pile with the stash full: '%s'" % s.kev_block())
-	# an old save's stash papers move to the pile
-	var d: Dictionary = s.to_dict()
-	d["stash"].append(d["papers"][0])
-	d["papers"] = d["papers"].slice(1)
-	var s2 = Sim.new()
-	s2.load_dict(d)
-	_check(s2.papers.size() == s.papers.size() and not s2.stash.any(func(x): return Sim.is_pile_paper(x)), "an old save's stash papers didn't move to the pile")
 	# a signal's run home: two at the least; a death, none
 	s.stash = []
 	s.papers = []
@@ -19990,7 +19939,7 @@ func _paper_pile_checks(_main) -> void:
 	_check(seen.filter(func(x): return int(x["rarity"]) == 2).size() == rare_before, "the trim took a rare paper")
 	_check(kev_kept < 0 or seen.any(func(x): return int(x["id"]) == kev_kept), "the trim took Kev's paper")
 	_check(seen.filter(func(x): return int(x["rarity"]) == 0).size() * 2 < Data.PILE_CAP, "the plainest didn't go first")
-	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted; the cap %d" % [Data.SIGNAL_PAPERS_HOME, Data.PILE_CAP])
+	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted; the cap %d" % [Data.SIGNAL_PAPERS_HOME, Data.PILE_CAP])
 
 
 
@@ -22990,9 +22939,9 @@ func _county_checks(main) -> void:
 					missing.append("%s %s" % [w, ps])
 		_check(missing.is_empty() and People.portrait("gang_" + ckey) != null, "the %s crew isn't whole: missing %s, face %s" % [ckey, str(missing), People.portrait("gang_" + ckey) != null])
 		var who: String = str(Data.COUNTY_ZONES[z]["head"])
-		var hk: String = RVc.site_key(who)
+		var hk: String = Items.slug(who)
 		_check(["stand", "fire", "down"].all(func(ps): return RVc.tex("head_%s_%s" % [hk, ps]) != null) and People.portrait(who) != null, "%s isn't drawn for his fight: %s" % [who, hk])
-	var pairs_in: Array = Data.COUNTY.filter(func(c): return RVc._pair_in(RVc.COUNTY_DIR, RVc.site_key(str(c["place"]))))
+	var pairs_in: Array = Data.COUNTY.filter(func(c): return RVc._pair_in(RVc.COUNTY_DIR, Items.slug(str(c["place"]))))
 	_check(pairs_in.is_empty() or pairs_in.size() == Data.COUNTY.size(), "only %d of the County's 12 plates and walls drawn" % pairs_in.size())
 	# (the issued kit's pictures: _art_inventory_checks, the fix round, 30 Oct)
 	# a remix head: one of the Issuer's people on a plain signal - his issued kit, no County run counted
@@ -23126,7 +23075,7 @@ func _county_checks(main) -> void:
 	_check(RV.county_gang({"signal": {"order": "truck_stop"}}) == "the_motorway" and RV.county_gang({"signal": {"county": "treasury", "zone": 1}}) == "" and RV.county_gang({}) == "", "the County's crew key: '%s'" % RV.county_gang({"signal": {"order": "truck_stop"}}))
 	_check(RV.county_key({"signal": {"order": "truck_stop"}}) == "the_truck_stop" and RV.county_key({"signal": {"county": "manor"}}) == "the_manor" and RV.county_key({}) == "", "the run's County place key: '%s'" % RV.county_key({"signal": {"order": "truck_stop"}}))
 	for c in Data.COUNTY:
-		var pk: String = RV.site_key(str(c["place"]))
+		var pk: String = Items.slug(str(c["place"]))
 		if RV._pair_in(RV.COUNTY_DIR, pk):
 			_check(RV.tex_from(pk + "_plate") == RV.COUNTY_DIR and RV.tex_from(pk + "_cover") == RV.COUNTY_DIR, "%s's pair isn't read from art/fight_county" % c["place"])
 			_check(RV.cover_reaches(RV.tex(pk + "_cover")), "%s's wall doesn't reach the frame's foot at the full duck" % c["place"])
@@ -23953,8 +23902,7 @@ func _fix_round_checks(main) -> void:
 	mitt_a["affixes"] = [{"stat": "armour", "value": 3, "tier": 3}]
 	var tf: Array = main._workshop.tier_figures(mitt_a, 0)
 	_check(float(tf[1]) <= 6.0 * Items.ilvl_mult(Items.ilvl(mitt_a)) + 0.5, "the Bench's figures for a gloves' armour read the body armour's: %s" % str(tf))
-	# the two names past 24 characters: renamed, a save's old ones read as the new, the pictures kept
-	_check(Sim._renamed("Diplomatic machine pistol") == "Legation machine pistol" and Sim._renamed("Fire service turnout gear") == "Turnout coat", "a save's old long names don't read as the new")
+	# the two names past 24 characters: renamed, the pictures kept
 	# (the renamed bases' pictures: _art_inventory_checks, the fix round, 30 Oct)
 	# the harness (the game review's A2): damage by type is each run's own dealt, summed - not the record's best run
 	var Bal = load("res://tests/balance.gd")
@@ -25325,6 +25273,100 @@ func _fixa_crew_odds_checks(main) -> void:
 	print("fix A crew odds ok")
 
 
+## Refactor 2 (30 Oct): another class read the one way (read_as_class). Lifted, at the level a press brings them out at;
+## not, at their own; rested, at full HP; nothing of the bench's or the one out's moved after. And a benched class
+## that the crew's floor doesn't lift, rested, reads the same odds on the Radio's crew row as on the expeditions board
+## for the same place - the place laid on the Radio as a held signal. Where they differ it's by design: the row reads
+## the level a press brings them out at and their own HP (a press swaps them in as they are), the board their own level
+## and full HP (a lead sets off rested and stays benched).
+func _class_read_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	_finish_campaign(sim)
+	var radio_seen: Array = []
+	var sim_lorries_seen := -1
+	sim.xp = maxf(sim.xp, Data.xp_for_level(30))     # the one out well past a new class's floor
+	var cls0: String = sim.cls
+	var other: String = "Doorman" if cls0 != "Doorman" else "Poacher"
+	_check(sim.set_class(other) and sim.set_class(cls0) and sim.roster.has(other), "class read: the fixture: the %s benched %s" % [other, str(sim.roster.has(other))])
+	if sim.roster.has(other):
+		var rr: Dictionary = sim.roster[other]
+		rr["hp"] = 1.0                             # hurt on the bench, and at level 1: under the crew's floor
+		rr["xp"] = 0.0
+		var jl: int = sim.join_level(other)
+		var own: int = sim.crew_level(other)
+		var x0: float = sim.xp
+		var hp0: float = sim.hp
+		var looks := func() -> Array:
+			return [sim.cls, sim.level(), sim.hp, sim.max_hp()]
+		var lifted: Array = sim.read_as_class(other, looks, true, false)
+		var board: Array = sim.read_as_class(other, looks, false, true)
+		var mine: Array = sim.read_as_class(cls0, looks, true, true)
+		_check(jl > own and str(lifted[0]) == other and int(lifted[1]) == jl and is_equal_approx(float(lifted[2]), 1.0), "class read: lifted and as they are, read at level %d HP %s (the floor %d, their own %d)" % [int(lifted[1]), str(lifted[2]), jl, own])
+		_check(str(board[0]) == other and int(board[1]) == own and is_equal_approx(float(board[2]), float(board[3])), "class read: as a lead, read at level %d HP %s of %s (their own %d)" % [int(board[1]), str(board[2]), str(board[3]), own])
+		_check(str(mine[0]) == cls0 and int(mine[1]) == sim.level() and is_equal_approx(float(mine[2]), float(mine[3])), "class read: the one out, rested, read as %s at HP %s of %s" % [str(mine[0]), str(mine[2]), str(mine[3])])
+		_check(sim.cls == cls0 and sim.xp == x0 and sim.hp == hp0 and float(sim.roster[other]["hp"]) == 1.0 and sim.crew_level(other) == own, "class read: a read moved something: class %s, XP %s, HP %s, the bench's HP %s, level %d" % [sim.cls, str(sim.xp - x0), str(sim.hp - hp0), str(sim.roster[other]["hp"]), sim.crew_level(other)])
+		# the bench at the crew's best, rested: no floor lifts them and both read them whole
+		rr = sim.roster[other]
+		rr["xp"] = maxf(float(rr.get("xp", 0.0)), sim.xp)
+		rr["equipped"] = sim.equipped.duplicate(true)     # the one out's kit, at a far place's floor: odds to read, not a wall
+		sim.reach = 0
+		var p := 0
+		for q in range(Data.EXP_PLACES.size()):
+			if sim.exp_level(q) < sim.exp_level(p):
+				p = q
+		# the Yard's prestige on everyone's damage and HP, raised till the far fight reads between 0 and 1 (the
+		# smoke's camp and an area's alone are kitted apart): a read the dice decide, not a wall or a walkover
+		var lorries_at := -1
+		for lv_l in [0, 5, 10, 15, 18, 20, 22, 25, 30, 40]:
+			sim.lorries = lv_l
+			var o_l: Array = [0.0, false]
+			for r in range(600):
+				o_l = sim.exp_odds(p, other)
+				if bool(o_l[1]):
+					break
+			if float(o_l[0]) > 0.0 and (lorries_at < 0 or float(o_l[0]) < 1.0):
+				lorries_at = lv_l
+			if float(o_l[0]) > 0.0 and float(o_l[0]) < 1.0:
+				break
+		sim.lorries = maxi(0, lorries_at)
+		var whole: float = float(sim.read_as_class(other, func() -> float: return sim.max_hp(), false, true))
+		sim.roster[other]["hp"] = whole            # a read puts the bench back as a new entry: set it there
+		sim.hp = sim.max_hp()
+		var sg: Dictionary = sim._exp_sig(p)
+		sim.signals.append(sg)
+		var k: int = sim.signals.size() - 1
+		var radio: Array = [0.0, false]
+		var brd: Array = [0.0, false]
+		for r in range(600):
+			if not bool(radio[1]):
+				radio = sim.signal_odds_class(k, other)
+			if not bool(brd[1]):
+				brd = sim.exp_odds(p, other)
+			if bool(radio[1]) and bool(brd[1]):
+				break
+		radio_seen = [radio, brd]
+		sim_lorries_seen = sim.lorries
+		_check(sim.join_level(other) == sim.crew_level(other) and bool(radio[1]) and bool(brd[1]) and float(radio[0]) > 0.0 and is_equal_approx(float(radio[0]), float(brd[0])),
+			"class read: the benched %s (level %d, the floor %d) reads %s on the Radio's row and %s on the board for %s" % [other, sim.crew_level(other), sim.join_level(other), str(radio), str(brd), str(sim.exp_place(p).get("key", ""))])
+		# hurt on the bench: the row reads them as a press brings them out, hurt; the board still rested
+		sim.roster[other]["hp"] = 1.0
+		var hurt: Array = [0.0, false]
+		var brd2: Array = [0.0, false]
+		for r in range(600):
+			if not bool(hurt[1]):
+				hurt = sim.signal_odds_class(k, other)
+			if not bool(brd2[1]):
+				brd2 = sim.exp_odds(p, other)
+			if bool(hurt[1]) and bool(brd2[1]):
+				break
+		_check(bool(hurt[1]) and float(hurt[0]) < float(radio[0]) and is_equal_approx(float(brd2[0]), float(brd[0])), "class read: hurt on the bench, the row read %s (whole %s), the board %s (whole %s)" % [str(hurt), str(radio), str(brd2), str(brd)])
+	sim.load_dict(saved)
+	main.refresh()
+	print("class read ok: the row and the board %s, %s" % [str(radio_seen), "the lorries' prestige " + str(sim_lorries_seen)])
+
+
 ## T4: between a repeat's runs the rig's the runner's - no med in or out, no stack split, no parts stripped, and the
 ## Clinic's Into the rig shut.
 func _fixa_rig_away_checks(main) -> void:
@@ -25373,6 +25415,241 @@ func _fixa_rig_away_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("fix A rig away ok")
+
+
+## Refactor 5 (30 Oct, review30; R4): runner_busy() on every kit move. Between a repeat's runs the Workshop's scrap,
+## crafts, builds, stamp and patterns and the Fence's Take refuse, and each one's button is off; then the same fixture
+## with the repeat taken off has every one of them open again, so each refusal is the guard's and not the fixture's.
+func _r4_kit_away_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var site := 0
+	_check(_fixa_gate(sim, site) and sim.start_repeat(site), "refactor 5: the fixture's repeat didn't set off: '%s'" % sim.repeat_block(site))
+	var g := 0
+	while sim.away() and int(sim.repeat.get("done", 0)) < 1 and g < 30000:
+		sim.advance(1.0)
+		g += 1
+	if sim.on_mission():
+		sim.extract_now()
+	_check(sim.away() and sim.mission == null, "refactor 5: the fixture: not resting between repeat runs")
+	if not (sim.away() and sim.mission == null):
+		sim.load_dict(saved)
+		main.refresh()
+		return
+	sim.cash = 1.0e7
+	sim.notes = 100000
+	sim.scrap = 100000
+	sim.issued = true                         # the stamp's own first gate
+	var piece: Dictionary = Items.roll("Primary", 6, sim.rng, 12)
+	piece["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "damage_pct", "value": 10.0, "tier": 1}]
+	piece.erase("unique")
+	piece.erase("set")
+	piece["rarity"] = Data.RARITIES.size() - 2      # under the top, room for another affix: the add job's open at home
+	var st_slot := ""
+	for sl in Data.SLOTS:
+		if st_slot == "" and not sim.issued_def(sl).is_empty():
+			st_slot = sl
+	var to_stamp: Dictionary = sim._plain(st_slot, str(Data.BASES[st_slot][0]["name"])) if st_slot != "" else {}
+	var u: Dictionary = Items.roll_unique(sim._unique_named("The Butcher's Steel"), sim.rng, 10)
+	var rare: Dictionary = sim._plain("Primary", "Machete") if not sim._plain("Primary", "Machete").is_empty() else sim._plain("Primary", _base_of_type("melee"))
+	rare["rarity"] = Data.PATTERN_RARITY
+	sim.patterns = [{"unique": "The Butcher's Steel", "slot": "Primary", "rule": str(u.get("rule", ""))}]
+	var c: Dictionary = sim.pattern_cost(rare)
+	sim.key_items[str(c["key"])] = 1
+	sim.materials[str(c["material"])] = int(c["material_n"])
+	var nade: Dictionary = sim._plain(Data.GRENADE, str(Data.BASES[Data.GRENADE][0]["name"]))
+	sim.rig = []                              # pouches free for the Take (the whole smoke's bot leaves it full)
+	if sim.med_capacity() == 0:
+		sim.equipped["Rig"] = sim._plain("Rig", str(Data.BASES["Rig"][0]["name"]))
+	sim.stash.append_array([piece, u, rare, nade] + ([to_stamp] if not to_stamp.is_empty() else []))
+	var med := ""
+	for o in sim.build_options("med"):
+		if med == "" and str(o["from"]) == "":
+			med = str(o["name"])
+	var ws = main._workshop
+	var fe = main._fence
+	# the sim's answers and the buttons', read the same way away and at home
+	var read := func() -> Dictionary:
+		var r := {}
+		r["can_craft"] = sim.can_craft(int(piece["id"]), "add")
+		r["build_ok"] = bool(sim.build_option("med", med).get("ok", false))
+		r["stamp"] = sim.stamp_block(to_stamp) == "" if not to_stamp.is_empty() else false
+		r["break"] = sim.can_break(u) == ""
+		r["pattern"] = sim.pattern_block(rare, 0) == ""
+		main.show_room(main.WORKSHOP)
+		ws._set_view("craft")
+		ws.sel_id = int(piece["id"])
+		ws._shown = ""
+		main.refresh()
+		r["add_tile"] = not ws._job_tiles[ws.JOBS.find("add")]["button"].disabled
+		r["scrap_tile"] = not ws._job_tiles[ws.JOBS.find("scrap")]["button"].disabled
+		r["reroll"] = ws._affix_buttons[0].visible and not ws._affix_buttons[0].disabled
+		if not to_stamp.is_empty():
+			ws.sel_id = int(to_stamp["id"])
+			ws._shown = ""
+			main.refresh()
+			r["stamp_tile"] = not ws._job_tiles[ws.JOBS.find("stamp")]["button"].disabled
+		if not ws._inv.many:
+			ws._inv._toggle_many()
+		ws._inv.chosen = [int(piece["id"])]
+		ws._inv._shown = ""
+		ws._shown = ""
+		main.refresh()
+		r["scrap_many"] = ws._inv._sell_button.visible and not ws._inv._sell_button.disabled
+		ws._inv._toggle_many()
+		ws._set_view("build")
+		ws.build_kind = "med"
+		ws.sel_build = med
+		ws._shown = ""
+		main.refresh()
+		r["build_button"] = ws._pick._buttons[0].visible and not ws._pick._buttons[0].disabled
+		r["build_foot"] = ws._builds_foot.text
+		ws._set_view("patterns")
+		ws.sel_id = int(u["id"])
+		ws._shown = ""
+		main.refresh()
+		r["break_button"] = not ws._pat_break.disabled
+		ws.sel_id = int(rare["id"])
+		ws.sel_pattern = 0
+		ws._shown = ""
+		main.refresh()
+		r["put_button"] = not ws._pat_put.disabled
+		ws.sel_pattern = -1
+		ws.sel_id = -1
+		ws._set_view("guns")
+		main.show_room(main.MARKET)
+		fe._show("stash")
+		fe._stash.tab = ""                    # the shared tab, its first page, no filter: where the grenade lies (the whole smoke leaves it elsewhere)
+		fe._stash.page = 0
+		fe._stash.kind = 0
+		fe._stash.rarity = -1
+		if fe._stash.many:
+			fe._stash._toggle_many()
+		main.refresh()
+		var k: int = fe._stash.cell_of(int(nade["id"]))
+		for p in range(8):
+			if k < 0:
+				fe._stash._turn(1)
+				main.refresh()
+				k = fe._stash.cell_of(int(nade["id"]))
+		if k >= 0:
+			fe._stash._pick(k)
+			main.refresh()
+		r["take"] = k >= 0 and fe._buttons[0].visible and fe._buttons[0].text == "Take" and not fe._buttons[0].disabled
+		r["take_room"] = "%d %s" % [k, str(sim.rig_room(Items.size(nade)))]     # for the message, not a verdict
+		fe._show("shelf")
+		return r
+	var away: Dictionary = read.call()
+	var lit: Array = away.keys().filter(func(key): return not (key in ["build_foot", "take_room"]) and bool(away[key]))
+	_check(lit.is_empty(), "refactor 5: between repeat runs these kit moves are open: %s" % str(lit))
+	_check(not sim.scrap_item(int(piece["id"])) and sim.stash.has(piece) and not sim.craft(int(piece["id"]), "add") and piece["affixes"].size() == 2 and not sim.build("med", med)
+		and not sim.break_unique(u) and sim.stash.has(u) and not sim.apply_pattern(rare, 0) and not rare.has("pattern") and (to_stamp.is_empty() or not sim.stamp(int(to_stamp["id"]))),
+		"refactor 5: between repeat runs a kit move went through: stash %d, affixes %d, patterns %d, rare %s" % [sim.stash.size(), piece["affixes"].size(), sim.patterns.size(), str(rare.get("pattern", ""))])
+	_check(sim.build_option("med", med).get("why", "") == Words.REPEAT["shut_away"] and away["build_foot"] == "%s: the Bench waits" % Words.REPEAT["shut_away"] and sim.can_break(u) == Words.REPEAT["shut_away"],
+		"refactor 5: away, the Bench doesn't say the runner's away: build '%s', foot '%s', break '%s'" % [sim.build_option("med", med).get("why", ""), away["build_foot"], sim.can_break(u)])
+	_check(not to_stamp.is_empty() and away.has("stamp_tile"), "refactor 5: the fixture has no slot with an issued piece to stamp")
+	# the control: the repeat off, the very same things open
+	var rep: Dictionary = sim.repeat
+	sim.repeat = {}
+	var home: Dictionary = read.call()
+	var shut: Array = home.keys().filter(func(key): return not (key in ["build_foot", "take_room"]) and not bool(home[key]))
+	_check(shut.is_empty() and home["build_foot"] == "", "refactor 5: the control: with the repeat off these are still shut (the fixture, not the guard): %s, foot '%s', the Take's cell and rig room %s" % [str(shut), home["build_foot"], home["take_room"]])
+	sim.repeat = rep
+	sim.load_dict(saved)
+	main.refresh()
+	print("refactor 5 kit away ok")
+
+
+## Refactor 5's art rule (30 Oct, R4): Items.slug is the one art-name rule (the old site key dropped apostrophes and
+## kept hyphens; the items', hands', nodes' and places' rules were copies). Every site, zone, head and County picture on
+## disk is the slug of a name the game has, so none is orphaned by the rule; the rule's own cases.
+## The clean-up's merge (30 Oct): a rig left full of heals (from a bat's days) still gets the gun's magazines to their
+## share, its best heal kept; and the bot packs its rig on "fill" even from a save set to "Leave it", buying no heal it
+## can't pack.
+func _cleanup31_checks() -> void:
+	var s = Sim.new()
+	s.start()
+	s.equipped["Rig"] = s._plain("Rig", "Chest rig")
+	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
+	s.equipped["Secondary"] = null
+	var cap: int = s.med_capacity()
+	var pouch: Dictionary = s._plain(Data.AMMO, "SMG rounds")
+	Items.set_stack(pouch, Items.pouch_cap(pouch))
+	s.rig = [pouch]
+	while s.rig_used() < cap:
+		s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
+	s.stash = [s._plain(Data.AMMO, "SMG rounds")]
+	Items.set_stack(s.stash[0], 3000)
+	s.set_top_up("fill")
+	s._top_up()
+	var share: int = ceili(cap * Data.RIG_MAG_SHARE)
+	var pouches: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
+	_check(cap >= 4 and pouches == share and s.rig.any(func(x): return Items.is_heal(x)) and s.rig_used() <= cap,
+		"a rig full of heals kept the gun at %d pouches of its %d: %s" % [pouches, share, str(s.rig.map(func(x): return str(x["base"])))])
+	# the bot on a save set to "Leave it"
+	var b = Sim.new()
+	b.start()
+	b.equipped["Rig"] = b._plain("Rig", "Chest rig")
+	b.equipped["Primary"] = b._plain("Primary", _base_of_type("smg"))
+	b.equipped["Secondary"] = null
+	b.rig = []
+	b.stash = [b._plain(Data.AMMO, "SMG rounds"), b._plain(Data.MEDICAL, "Bandage"), b._plain(Data.MEDICAL, "Bandage")]
+	Items.set_stack(b.stash[0], 3000)
+	b.cash = 5000
+	b.set_top_up("leave")
+	var bot = Bot.new()
+	var heals: Array = []
+	for k in range(3):
+		bot._restock_meds(b)
+		heals.append(b.stash.filter(func(x): return Items.is_heal(x)).size())
+	_check(b.rounds_for(b.equipped["Primary"]) > 0 and b.rig.any(func(x): return Items.is_heal(x)) and heals[2] <= heals[0],
+		"the bot on 'Leave it': %d rounds packed, heals in the stash %s, rig %s" % [b.rounds_for(b.equipped["Primary"]), str(heals), str(b.rig.map(func(x): return str(x["base"])))])
+	print("the clean-up's merge ok: magazines to their share past spare heals, the bot packs on fill")
+
+
+func _r4_art_names_checks() -> void:
+	_check(Items.slug("The Rat Man's Bag") == "the_rat_man_s_bag" and Items.slug("Semi-auto .22") == "semi_auto_22" and Items.slug("AR-pattern rifle") == "ar_pattern_rifle" and Items.slug("  The Allotments ") == "the_allotments",
+		"the art-name rule: %s" % str([Items.slug("The Rat Man's Bag"), Items.slug("Semi-auto .22"), Items.slug("AR-pattern rifle"), Items.slug("  The Allotments ")]))
+	var keys := {}
+	for t in Data.TIERS:
+		keys[Items.slug(str(t["name"]))] = true
+	for z in Data.ZONES:
+		keys[Items.slug(str(z["name"]))] = true
+	for b in Data.BOSSES:
+		keys[Items.slug(str(b["name"]))] = true
+	for p in Data.PINNACLES:
+		for f in ["who", "place", "art"]:
+			if p.has(f):
+				keys[Items.slug(str(p[f]))] = true
+	for c in Data.COUNTY:
+		for f in ["place", "who"]:
+			if c.has(f):
+				keys[Items.slug(str(c[f]))] = true
+	for z in Data.COUNTY_ZONES:
+		keys[Items.slug(str(z["name"]))] = true
+		keys[Items.slug(str(z["head"]))] = true
+	var seen := 0
+	var orphans: Array = []
+	for dir in ["res://art/fight_boss", "res://art/fight_county", "res://art/fight_walls", "res://art/fight_new", "res://art/fight"]:
+		for f in DirAccess.get_files_at(dir):
+			if not f.ends_with(".png"):
+				continue
+			var stem: String = f.get_basename()
+			var key := ""
+			if stem.ends_with("_plate") or stem.ends_with("_cover"):
+				key = stem.substr(0, stem.length() - 6)
+			elif stem.begins_with("head_") or stem.begins_with("gang_"):
+				var parts: PackedStringArray = stem.substr(5).split("_")
+				var drop: int = 1 if stem.begins_with("head_") else 2          # head_<key>_<pose>, gang_<key>_<a|b>_<pose>
+				key = "_".join(parts.slice(0, parts.size() - drop))
+			else:
+				continue                                  # the hands: a gun's or a kind's, not a place's
+			seen += 1
+			if not keys.has(key):
+				orphans.append("%s/%s" % [dir.get_file(), f])
+	_check(seen > 0 and orphans.is_empty(), "a place's or a head's picture no name finds by the art rule (%d read): %s" % [seen, str(orphans)])
+	print("refactor 5 art names ok: %d pictures" % seen)
 
 
 ## U1, U2: hurt, the repeat's gate read as the shell reads it - an odds frame, then a paint - never disagrees with the

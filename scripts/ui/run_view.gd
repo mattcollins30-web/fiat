@@ -303,20 +303,6 @@ static func used_of(t: Texture2D) -> Rect2:
 	return _used[key]
 
 
-## A site's name as its files' (The Allotments -> the_allotments).
-## An item's art name, as the manifests write it (make_*_manifest.py's slug): lower case, every run of anything but
-## letters and digits one underscore, none at the ends - "Farmer's shotgun" is farmer_s_shotgun.
-static var _slug_re: RegEx = null
-static func art_slug(nm: String) -> String:
-	if _slug_re == null:
-		_slug_re = RegEx.create_from_string("[^a-z0-9]+")
-	return _slug_re.sub(nm.to_lower(), "_", true).strip_edges().trim_prefix("_").trim_suffix("_")
-
-
-static func site_key(nm: String) -> String:
-	return nm.to_lower().replace(" ", "_").replace("'", "")
-
-
 static func has_art() -> bool:
 	return tex("parade_plate") != null
 
@@ -608,14 +594,14 @@ static func county_gang(m: Dictionary) -> String:
 	var sg: Dictionary = m.get("signal", {})
 	var k: String = str(sg.get("order", ""))     # a County run's own crew; a remixed signal brings the crew it was aimed with (the third review's E1)
 	var c: Dictionary = Data.county(k)
-	return site_key(str(Data.COUNTY_ZONES[int(c["cz"])]["name"])) if not c.is_empty() else ""
+	return Items.slug(str(Data.COUNTY_ZONES[int(c["cz"])]["name"])) if not c.is_empty() else ""
 
 
 ## The County place a run is on (its own, or a remixed signal's), "" for none.
 static func county_key(m: Dictionary) -> String:
 	var sg: Dictionary = m.get("signal", {})
 	var k: String = str(sg.get("county", sg.get("order", "")))
-	return site_key(str(Data.county(k)["place"])) if not Data.county(k).is_empty() else ""
+	return Items.slug(str(Data.county(k)["place"])) if not Data.county(k).is_empty() else ""
 
 
 ## A figure's picture for a pose: the head's when he's out, else the zone's member it was given, else the slice's.
@@ -790,9 +776,9 @@ func show_state(sim, m: Dictionary) -> void:
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	# the site's own art, its zone's gang, the head when he's out
 	var site: Dictionary = Data.TIERS[int(m["tier"])]
-	_boss_key = site_key(str(m["boss"]["name"])) if boss_on else ""
+	_boss_key = Items.slug(str(m["boss"]["name"])) if boss_on else ""
 	var place_key: String = county_key(m)
-	var scene_key: String = _boss_key if _boss_key != "" and _pair_in(BOSS_DIR, _boss_key) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else site_key(str(site["name"])))     # his den while he's out, when it's drawn; a County place's own (26 Oct)
+	var scene_key: String = _boss_key if _boss_key != "" and _pair_in(BOSS_DIR, _boss_key) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else Items.slug(str(site["name"])))     # his den while he's out, when it's drawn; a County place's own (26 Oct)
 	if scene_key != _site_key:
 		_site(scene_key)
 	_zone_key = ZONE_KEYS[mini(int(m.get("signal", {}).get("zone", site["zone"])), ZONE_KEYS.size() - 1)]     # the signal's crew, the one the Radio names
@@ -857,7 +843,7 @@ func show_state(sim, m: Dictionary) -> void:
 			_hs = hands_scale(ht)
 			_hands.scale = Vector2(_hs, _hs)
 			_hands_at = HANDS_CORNER - used_of(ht).end * _hs
-			_mz = muzzle_of(ht, _kind, art_slug(Items.art_name(str(gun["base"]))))
+			_mz = muzzle_of(ht, _kind, Items.slug(Items.art_name(str(gun["base"]))))
 		_set_swing_parts(ht)
 	_hands.visible = ht != null
 	# the search: the view pans along to the crates in the street, the next three
@@ -1313,7 +1299,7 @@ static func gun_in_hand(sim) -> Variant:
 static func hands_tex(gun) -> Texture2D:
 	if gun == null:
 		return null
-	var own: Texture2D = tex("hands/" + art_slug(Items.art_name(str(gun["base"]))))
+	var own: Texture2D = tex("hands/" + Items.slug(Items.art_name(str(gun["base"]))))
 	if own != null:
 		return own
 	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"])

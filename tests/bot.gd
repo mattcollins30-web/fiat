@@ -207,7 +207,9 @@ func target_levelling(sim) -> bool:
 
 ## Another played class's odds at the wall, read on a copy of the camp (the review: a trial swap on the real one sold
 ## spares, spent cash, healed the bench and reset the lorry's read): that class out, its kit looked over, at full HP.
-## The bot's own state is put back after.
+## The bot's own state is put back after. A swap, not the game's read_as_class: the wall asks what the class would do
+## swapped in and tidied - its own stash tabs, the crew's floor's points trained - which a read can't give without moving
+## the camp; the read itself goes through read_as_class on the copy, at the floor and rested (30 Oct, refactor 2).
 func class_wall_odds(sim, name: String, wall: Array) -> float:
 	var c = sim.get_script().new()
 	c.load_dict(sim.to_dict())
@@ -219,8 +221,7 @@ func class_wall_odds(sim, name: String, wall: Array) -> float:
 	var o := 0.0
 	if name == c.cls or _crew_out(c, name, true):
 		_tidy_kit(c)
-		c.hp = c.max_hp()
-		o = wall_odds(c, wall)
+		o = float(c.read_as_class(c.cls, func() -> float: return wall_odds(c, wall), true, true))
 	for k in keep:
 		set(k, keep[k])
 	bought.resize(n_bought)
@@ -1792,28 +1793,35 @@ func _next_in(sim, b: Dictionary) -> String:
 
 ## The rig for the next run (28 Oct, Matt: HEAL, MAGAZINE, CURE): the supplies handed in, the stash stocked - boxes
 ## for the guns at the Fence, a cure for each of the front's elements and a heal off the Clinic's shelf, as a player
-## buys them (the review: the bot bought any med the list had, any number, off no shelf) - then packed as the gate
-## packs (Sim.pack_rig), and the pouches left filled with heals off her shelf.
+## buys them (the review: the bot bought any med the list had, any number, off no shelf) - then packed by the gate's
+## own packer (Sim._top_up, Sim.pack_rig), never by hand (30 Oct, review30 refactor 3: the balance reads measure the
+## packing the player gets); a pouch still free, a heal off her shelf bought into the stash and the packer run again.
+## The gate's packing, on "fill" whatever the save's setting (the clean-up's review: a save on "Leave it" left the bot's
+## rig unpacked, and every restock bought a heal that never went in): the reads measure the packer a player gets by default.
+func _pack(sim) -> void:
+	if sim.on_mission():
+		return
+	sim._fill_mags()
+	sim.pack_rig("fill")
+
+
 func _restock_meds(sim) -> void:
 	if sim.can_hand_in():
 		sim.hand_in_supplies()                # the medic's supplies, as a person hands them over coming home (28 Oct)
-	_unpack_heals(sim)
 	_restock_rounds(sim)
 	_stock_cures(sim)
 	if not sim.rig.any(func(x): return Items.is_heal(x)) and not sim.stash.any(func(x): return Items.is_heal(x)):
 		_buy_shelf_heal(sim, sim.med_capacity() - sim.rig_used())
-	sim.pack_rig()
+	_pack(sim)
 	var guard := 0
 	while sim.rig_room(1) and guard < 40:
 		guard += 1
-		var free: int = sim.med_capacity() - sim.rig_used()
-		var took := false
-		for it in sim.stash:
-			if Items.is_heal(it) and Items.size(it) <= free and sim.take(it["id"]):
-				took = true
-				break
-		if not took and not _buy_shelf_heal(sim, free):
+		var used: int = sim.rig_used()
+		if not _buy_shelf_heal(sim, sim.med_capacity() - used):
 			return
+		_pack(sim)
+		if sim.rig_used() == used:
+			return                            # the packer took nothing more: the rig's as the gate leaves it
 
 
 ## The cheapest heal on the Clinic's shelf that fits so many pouches, bought into the stash (28 Oct, the review: her
@@ -1846,45 +1854,15 @@ func _stock_cures(sim) -> void:
 
 
 ## The cures stocked and packed, as the gate packs them (the smoke's fixture reads it alone).
-## The rig repacked at home as a person would (28 Oct, the wall check: Drifter as fire went out for twelve hours on
-## one pouch of rounds, the rig's pouches all last run's heals, and the gate's top-up leaves a full rig alone by design):
-## the heals past the best go back to the stash, the weakest first, until the primary's magazines can reach their share.
-func _unpack_heals(sim) -> void:
-	var gun = sim.equipped["Primary"]
-	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
-		return
-	var short: int = sim.mag_pouch_room() - (sim.med_capacity() - sim.rig_used())
-	if short <= 0:
-		return
-	var spare: Array = sim.rig.filter(func(x): return Items.is_heal(x))
-	spare.sort_custom(func(a, b): return sim.med_heal(a) > sim.med_heal(b))
-	spare = spare.slice(1)                    # the best heal stays
-	spare.reverse()
-	for it in spare:
-		if short <= 0:
-			break
-		var sz: int = Items.size(it)
-		if sim.leave(int(it["id"])):
-			short -= sz
-
-
 func _pack_cures(sim) -> void:
 	_stock_cures(sim)
 	sim.pack_rig()
 
 
-## Rounds for both guns: two runs' worth for the primary, one for the
-## secondary; bought by the box when the stash has none. A stack in the rig
-## for a type neither gun fires goes back to the stash first (a gun swapped
-## leaves its old rounds behind), and sells with the spares.
+## Rounds for both guns into the stash: two runs' worth for the primary, one for the secondary; bought by the box when
+## the stash has none. The rig's packing is the gate's (Sim.pack_rig: a dry primary's first pouch before a cure or a
+## spare heal, rounds neither gun fires back to the stash); the bot only buys.
 func _restock_rounds(sim) -> void:
-	var types: Array = []
-	for s in ["Primary", "Secondary"]:
-		if sim.equipped[s] != null and not Items.free_rounds(sim.equipped[s]):
-			types.append(Items.ammo_type(sim.equipped[s]))
-	for it in sim.rig.duplicate():
-		if Items.is_ammo(it) and not (Items.base_of(it)["type"] in types):
-			sim.leave(it["id"])
 	for pair in [["Primary", 2.0], ["Secondary", 1.0]]:
 		var gun = sim.equipped[pair[0]]
 		if gun == null or Items.ammo_type(gun) == "none" or Items.free_rounds(gun):
@@ -1892,14 +1870,14 @@ func _restock_rounds(sim) -> void:
 		var type: String = Items.ammo_type(gun)
 		# rounds for a run: the gun's rate over two minutes
 		var want: int = int(Items.base_of(gun)["rof"] * 120.0 * pair[1])
-		if pair[0] == "Primary" and sim.rounds_for(gun) == 0 and not sim.rig_room(1) and sim.med_capacity() > 0:
-			sim.leave(sim.rig.back()["id"])     # a dry primary beats a third bandage
 		var guard := 0
 		# magazines (28 Oct): the stash stocked for the pouches the gate packs (Sim.pack_rig, at its share of the rig; the
-		# secondary of another type its one) - the rounds the run wants, as far as those pouches hold
+		# secondary of another type its one) - the rounds the run wants, as far as those pouches hold; a dry primary's
+		# bought with the rig full, the packer making its pouch room
 		var pouches: int = maxi(1, sim.mag_pouch_room()) if pair[0] == "Primary" else 1
 		var need: int = mini(want - sim.rounds_for(gun), pouches * Items.pouch_cap_of(type))
-		while _stash_rounds(sim, type) < need and sim.rig_room(1) and guard < 6:
+		var dry: bool = pair[0] == "Primary" and sim.rounds_for(gun) == 0 and sim.med_capacity() > 0
+		while _stash_rounds(sim, type) < need and (sim.rig_room(1) or dry) and guard < 6:
 			guard += 1
 			if not sim.buy_ammo(type):
 				if sim.stash_room(1):

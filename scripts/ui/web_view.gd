@@ -15,6 +15,7 @@ signal picked(id: String)
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const Items := preload("res://scripts/sim/items.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const STEP := 80.0                 # a column along a region's axis
@@ -540,25 +541,7 @@ func picture_slug(nd: Dictionary) -> String:
 		return "ring_" + str(nd.get("key", ""))
 	if nd.has("skill"):
 		return "skill/" + str(nd["skill"])         # a skill node draws the skill's own picture (art/skills/<id>.png, 24 Oct)
-	return slug_of(str(nd.get("name", "")))
-
-
-static var _slugs := {}
-static func slug_of(words: String) -> String:
-	if _slugs.has(words):
-		return _slugs[words]                  # built once a name (the review: every node, every redraw and hover)
-	var out := ""
-	var gap := false
-	for ch in words.to_lower():
-		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
-			if gap and out != "":
-				out += "_"
-			gap = false
-			out += ch
-		else:
-			gap = true
-	_slugs[words] = out
-	return out
+	return Items.slug(str(nd.get("name", "")))
 
 
 static func picture(slug: String) -> Texture2D:
@@ -756,7 +739,7 @@ func _lit_wheel(tn: String) -> bool:
 ## A region's emblem beside its label (23 Oct, the manifest): art/web/region_<slug>.png, drawn EMBLEM tall.
 const EMBLEM := 26.0
 func emblem_of(tn: String) -> Texture2D:
-	return art_at("res://art/web/region_%s.png" % slug_of(tn))
+	return art_at("res://art/web/region_%s.png" % Items.slug(tn))
 
 
 func radius_of(nd: Dictionary) -> float:

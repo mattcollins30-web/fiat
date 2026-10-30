@@ -109,9 +109,3 @@ func glyph_of(nd: Dictionary) -> String:
 func draw_between(_view: Rect2) -> void:
 	pass
 
-
-func focus_named(words: String) -> void:
-	if words == "The whole Pitch":
-		focus_all()
-	else:
-		focus_tree(words)

@@ -217,9 +217,14 @@ static func size(it: Dictionary) -> int:
 	return f.x * f.y
 
 
-## The file stem a base's picture is kept under: lowercase, every run of
-## anything but a letter or digit one underscore. "Semi-auto .22" -> semi_auto_22.
+## The file stem every picture is kept under, the game's one art-name rule (30 Oct, the review's refactor 5: the items',
+## the fight's hands, Training's nodes, the places, and the sites', heads' and County's fight art all by it; the
+## manifests' slug() writes the same): lowercase, every run of anything but a letter or digit one underscore, none at
+## the ends. "Semi-auto .22" -> semi_auto_22, "Farmer's shotgun" -> farmer_s_shotgun, "The Allotments" -> the_allotments.
+static var _slugs := {}
 static func slug(base: String) -> String:
+	if _slugs.has(base):
+		return _slugs[base]                   # built once a name (the review: every node, every redraw and hover)
 	var out := ""
 	var gap := false
 	for ch in base.to_lower():
@@ -230,6 +235,7 @@ static func slug(base: String) -> String:
 			out += ch
 		else:
 			gap = true
+	_slugs[base] = out
 	return out
 
 
@@ -942,12 +948,6 @@ static func edge_forms(it: Dictionary) -> Array:
 	return []
 
 
-## The edge's line short, for a row with no room (29 Oct).
-static func edge_short(it: Dictionary) -> String:
-	var f: Array = edge_forms(it)
-	return str(f[-1]) if not f.is_empty() else ""
-
-
 ## A base's own pace, as a percent (weight: a riot suit slows, leathers don't).
 static func base_pace(it: Dictionary) -> float:
 	return float(base_of(it).get("pace", 0))
@@ -1298,13 +1298,6 @@ static func base_res_words(it: Dictionary) -> String:
 				continue
 			out.append("%s%s%% %s" % ["" if k == "guard_gang" else "+", fig(str(k), float(st[k])), str(d.get("label", k))])
 	return " · ".join(out)
-
-
-static func affix_options(it: Dictionary) -> Array:
-	if it["affixes"].is_empty():
-		return ["No affixes"]
-	var n: int = it["affixes"].size()
-	return [", ".join(affix_lines(it)), ", ".join(affix_lines(it, true)), "%d affix%s" % [n, "" if n == 1 else "es"]]
 
 
 ## The headline figure and its unit for a card.

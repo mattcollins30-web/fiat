@@ -1285,18 +1285,6 @@ func _pick_other(k: int) -> void:
 	acted.emit()
 
 
-## For the smoke: a paper's row, the decoder's button, the card's buttons.
-func paper_row(k: int) -> Dictionary:
-	return _paper_rows[k]
-
-
-func craft_button(key: String) -> Button:
-	for c in _crafts:
-		if c["key"] == key:
-			return c["button"]
-	return null
-
-
 ## The air or the map (12 Oct): the map once the campaign's done.
 func _pick_view(v: String) -> void:
 	if v != "air" and not sim.campaign_done():

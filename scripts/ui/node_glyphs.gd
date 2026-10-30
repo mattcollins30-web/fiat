@@ -156,10 +156,6 @@ const ATLAS_GLYPH := {
 }
 
 
-static func of_atlas(key: String) -> String:
-	return ATLAS_GLYPH.get(key, "star")
-
-
 const BUILDING_GLYPH := {"bench": "wrench", "stash": "pack", "clinic": "med", "fence": "cash", "radio": "loud", "generator": "shock", "lookout": "search", "kennel": "dog"}
 
 

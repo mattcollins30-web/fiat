@@ -5,6 +5,7 @@ extends RefCounted
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Items := preload("res://scripts/sim/items.gd")
 
 static var _fonts := {}
 
@@ -107,22 +108,8 @@ static var _glyph_mono := {}
 ## and behind the run's clock). Any size; shown to cover its box from the centre. Null when not painted yet:
 ## the band draws its skyline instead. Loaded like the glyphs: imported, or from the file when not yet.
 static var _places := {}
-static func place_slug(name: String) -> String:
-	var out := ""
-	var gap := false
-	for ch in name.to_lower():
-		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
-			if gap and out != "":
-				out += "_"
-			out += ch
-			gap = false
-		else:
-			gap = true
-	return out
-
-
 static func place_texture(name: String) -> Texture2D:
-	var s := place_slug(name)
+	var s := Items.slug(name)     # the one art-name rule (30 Oct, refactor 5)
 	if _places.has(s):
 		return _places[s]
 	var path := "res://art/places/%s.png" % s

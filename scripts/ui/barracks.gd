@@ -435,11 +435,6 @@ static func lane_colour(t: Dictionary) -> Color:
 	return Pal.CARD_LINE
 
 
-## A joint's colour: its element tree's.
-static func joint_colour(j: Dictionary) -> Color:
-	return lane_colour(Data.tree_named(j["element_tree"]))
-
-
 ## The drawer's and the shelf's cards: as the tiles were before the glyphs (a found one lit with the accent's bar).
 func _style_card(b: Button, look: String) -> void:
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:

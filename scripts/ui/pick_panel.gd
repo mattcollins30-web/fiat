@@ -286,11 +286,6 @@ func set_verdict(verdict: String, tone: String, deltas: Array) -> void:
 	_lay_foot()                                         # a verdict takes the foot's first row: the item's line to its second
 
 
-## A hint in place of the item's own line: what stops the button, mostly.
-func set_hint(text: String) -> void:
-	set_hint_options([text])
-
-
 ## A hint in forms long to short: a warning chip at the front of the pick's tail (18 Oct, Matt: the foot is the item's
 ## own line, always), the first form that fits.
 func set_hint_options(options: Array) -> void:

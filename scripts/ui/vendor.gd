@@ -445,16 +445,8 @@ func _buy_mate() -> void:
 	show_state(sim)
 
 
-func _stash_meds() -> int:
-	var n := 0
-	for it in sim.stash:
-		if Items.is_medical(it):
-			n += 1
-	return n
-
-
 func _signature() -> String:
-	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(_shelf.many) + str(_shelf.chosen), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
+	var parts := [kind, showing, str(selected), str(sim.on_mission()) + str(sim.away()), str(int(sim.cash)), str(_stash.many), str(_shelf.many) + str(_shelf.chosen), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
 		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.exchange_day), str(sim.mate), str(sim.notes), str(sim.scrap), str(sim.salvage), str(sim.materials), str(sim.wounds.keys()),
 		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
@@ -488,37 +480,6 @@ func _show_treatment() -> void:
 		_band.chips.show_chips(cuts, 1, true)
 	if _body != null:
 		_body.show_state(sim)
-
-
-func _side_button(i: int, y: float, text: String, action: Callable, enabled: bool, tone := "", primary := false, x := float(PAD), w := float(INNER)) -> void:
-	var b := _side_buttons[i]
-	b.visible = true
-	b.position = Vector2(x, y)
-	b.size.x = w
-	b.text = text
-	b.disabled = not enabled
-	UI.style_button(b, primary, tone)
-	_side_actions[i] = action
-
-
-## A tile-shaped button: its key over its figure, the figure in a tone; `w` wide at (x, y).
-func _side_tile(i: int, x: float, y: float, w: float, key: String, options: Array, tone: Color, action: Callable, enabled: bool) -> void:
-	var t: Dictionary = _side_tiles[i]
-	var b: Button = t["button"]
-	b.visible = true
-	b.position = Vector2(x, y)
-	b.size = Vector2(w, UI.TILE_H)
-	b.disabled = not enabled
-	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		b.add_theme_stylebox_override(state, UI.box(Pal.BG if state != "hover" else Pal.SELECT, 6))
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 6, 2, Pal.TEXT))
-	t["key"].size.x = w - 20
-	t["value"].size.x = w - 20
-	t["key"].text = key
-	UI.fit(t["value"], options)
-	t["value"].add_theme_color_override("font_color", tone if enabled else Pal.TEXT_3)
-	t["key"].add_theme_color_override("font_color", Pal.TEXT_2 if enabled else Pal.TEXT_3)
-	_side_actions[i] = action
 
 
 ## The vendor's own business, down the left, under the band.
@@ -731,7 +692,7 @@ func _show_panel() -> void:
 		if (kind == "clinic" and Items.is_medical(it)) or Items.is_ammo(it) or Items.is_grenade(it):
 			var room: bool = sim.rig_room(Items.size(it))
 			_right_lines[0].text = "" if room else ("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
-			_button(0, "Take", sim.take.bind(it["id"]), not sim.on_mission() and room)
+			_button(0, "Take", sim.take.bind(it["id"]), not sim.runner_busy() and room)     # as take (T4): not between a repeat's runs
 			_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
 		else:
 			_button(0, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)

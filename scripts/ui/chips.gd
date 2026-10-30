@@ -178,16 +178,6 @@ func _lay(k: int, d: Dictionary, room: float) -> float:
 	return w
 
 
-## The width the chips showing take, to lay something after them.
-func used_width() -> float:
-	if _shown == 0:
-		return 0.0
-	var right := 0.0
-	for k in range(_shown):
-		right = maxf(right, _panels[k].position.x + _panels[k].size.x)
-	return right
-
-
 ## How many chips are showing.
 func shown() -> int:
 	return _shown

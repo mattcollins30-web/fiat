@@ -41,7 +41,6 @@ func _init() -> void:
 		else:
 			var ch: Array = read_record(record_path(path))
 			ch.append_array(d["sim"].get("chronicle", []))     # a save written by a script (the bot's), lines and all
-			Sim._shift_sites(d["sim"])                          # a save from before the Outskirts (12 Oct): its sites up three
 			for e in ch:
 				if not e.has("sv") and e.has("tier") and str(e.get("k", "")) in ["clear", "run", "boss", "word"]:     # a site's index, never an item's tier
 					e["tier"] = int(e["tier"]) + Data.OUTSKIRTS_SITES     # a line from before the Outskirts: the site's index then

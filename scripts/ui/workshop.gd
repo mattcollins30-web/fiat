@@ -424,7 +424,7 @@ func build_words(o: Dictionary) -> Array:
 
 
 func _show_build() -> void:
-	var on_bench: bool = not sim.on_mission()
+	var on_bench: bool = not sim.runner_busy()     # away on a repeat too (30 Oct, refactor 5): as the sim's guards
 	for k in range(BUILD_KINDS.size()):
 		var t: Dictionary = _kind_tiles[k]
 		var kind: String = str(BUILD_KINDS[k][0])
@@ -461,7 +461,7 @@ func _show_build() -> void:
 		c["cost"].add_theme_color_override("font_color", Pal.ACCENT if ok else Pal.TEXT_3)
 		c["words"].add_theme_color_override("font_color", Pal.TEXT_2 if ok else Pal.BAD)
 		_style(b, str(o["name"]) == sel_build, "", not ok)
-	_builds_foot.text = "" if on_bench else "The runner is out: the Bench waits"
+	_builds_foot.text = "" if on_bench else "%s: the Bench waits" % sim.busy_words()
 	# the pick panel: the build, or what to do
 	var picked: Dictionary = sim.build_option(build_kind, sel_build) if sel_build != "" else {}
 	if picked.is_empty():
@@ -970,7 +970,7 @@ func _craftable() -> Array:
 ## The Craft view: the piece as a card with its affixes as rows, THE JOBS
 ## priced under it, the pick panel at the right with the piece's figures.
 func _show_craft(it: Dictionary) -> void:
-	var on_bench: bool = not sim.on_mission()
+	var on_bench: bool = not sim.runner_busy()     # away on a repeat too (30 Oct, refactor 5): as the sim's guards
 	for l in _piece_words:
 		l.text = ""
 	_piece_figure.text = ""

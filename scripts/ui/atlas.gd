@@ -16,6 +16,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const MapWeb := preload("res://scripts/ui/map_web.gd")
 const WebView := preload("res://scripts/ui/web_view.gd")
+const Items := preload("res://scripts/sim/items.gd")
 
 const W := Pal.GRID_W
 const PAD := 20
@@ -161,7 +162,7 @@ func _show_panel() -> void:
 	# the words from the picture (or the edge) to the buttons
 	var tex: Texture2D = null
 	if not a.is_empty():
-		tex = WebView.picture(("map_f_" + WebView.slug_of(str(a.get("name", "")))) if a.get("filler", false) else ("map_" + selected))
+		tex = WebView.picture(("map_f_" + Items.slug(str(a.get("name", "")))) if a.get("filler", false) else ("map_" + selected))
 	_pic.texture = tex
 	_pic.visible = tex != null
 	var left: float = PAD + (PIC + 16 if tex != null else 0)

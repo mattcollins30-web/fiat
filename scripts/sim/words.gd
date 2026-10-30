@@ -111,7 +111,6 @@ const ROOM_INTROS := {
 		"Keep listening anyway."],
 		"tiles": [["The decoder", "Three papers make a signal"], ["Signals", "A site to run, once"], ["The Dial", "Points from your reach"]]},
 }
-const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from the start; an old save has met them
 
 ## The radio: three voices on the air, a line after every few runs home (RADIO_EVERY), the first unheard one whose
 ## gate is open: a zone open ("zone"), or lorries beaten ("lorries"). The official loop wears down, a pirate comes on in
@@ -219,7 +218,6 @@ const SIGNAL_LOST := "The signal's gone with the run"
 const SIGNAL_PAPERS := "Off the signal, for the Radio: %s"
 const PILE_FULL := "The papers are at %d, the cap: the lowest one was burnt"     # the Radio's pile at its cap (23 Oct; the language pass: mechanics, one sentence, the panel's name)
 const TOPPED_UP := "Topped up: %d rounds and %d meds from the stash into the rig"     # the rig at the gate (23 Oct)
-const TOP_UP := {"leave": "Leave it", "fill": "Top up", "best": "Best grades only"}     # the rig at the gate, the Map's button (23 Oct; "Top up" as the log's "Topped up", the language pass)
 const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
 const TOPPED_UP_MEDS := "Topped up: %d meds from the stash into the rig"     # meds alone
 const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Rounds go in the rig as magazines", "Not loose in the rig"]]     # a box found on a run (28 Oct)
@@ -1193,7 +1191,91 @@ const ITEMS := {
 
 # ------------------------------------------------------------------ the Yard's own
 
-## The log's words for the moments the sim marks.
+## The log's own lines (30 Oct, the review's refactor 6: out of the sim, so the language pass sees them), by what
+## they mark. The sim fills the %s; the toasts and the smoke read some of them, so a line changes here or nowhere.
+const LOG := {
+	# training and the Pitch
+	"paragon_reset": "Paragon reset: the points are free to spend again",
+	"pitch_reset": "The Pitch reset: its points are free to spend again",
+	"element_reset": "%s reset: its points are free to spend again",
+	"element_closed": "%s closed for the %s",
+	"element_opened": "%s opened for the %s",
+	"element_earned": "%s: %d point%s earned by use",
+	"let_go": "Let go: %s",
+	"trained": "Trained: %s",
+	"training_reset": "Training reset: the points are free to spend again",
+	"level_points": "Level %d: %d training point%s",
+	"level_no_point": "Level %d: no training point – the Pitch has had a runner at level %d",
+	# the runner and the crew
+	"class_before": "The runner was a %s, before",
+	"runner_stays": "The one who stays is %s. The other moved on.%s",
+	"wall": "On the Pitch's list of the dead: a %s. %s",
+	# the Fence, the exchange and the stash
+	"exchange": "At the exchange: %d %s for %d %s",
+	"mate": "From the Fence's mate, for %d notes: %s",
+	"gamble_word": "A word in the right ear: %s",
+	"junk_sold": "The Fence took the junk: %d thing%s, %s",
+	"binned": "Binned: %s",
+	"binned_n": "Into the bins: %d thing%s, %d scrap",
+	"insured": "Insured for %s. %s",
+	"insured_pack": "The insurance paid on the pack too: %d thing%s",
+	"back_pocket": "The Fence had %s in his back pocket",
+	# the Workshop and the kit
+	"built": "In the Workshop, for %d scrap: %s",
+	"crafted_notes": "In the Workshop, for %d notes, %s: %s",
+	"crafted": "In the Workshop, for %s, %s: %s",
+	"stripped": "Stripped the %s: %d part%s back to the stash%s",
+	"swapped": "Swapped to %s, parts and all: %d moved over%s",
+	"equipped": "%s equipped",
+	"equipped_into_pack": "%s equipped, %s into the pack",
+	"into_pack": "%s into the pack",
+	"put_on": "Put on: %s",
+	# the Radio, the papers and the codes
+	"paper_code": "%s: a code on it. The Radio has %s now.",
+	"kev_sold": "%s %s",
+	"word_craft": "%s on %s: %s",
+	"twist_tier": "Twisted: %s goes to tier IV",
+	"twist_air": "Twisted: %s comes on the air",
+	"twist_none": "Twisted: nothing changes",
+	"twist_all": "Twisted: every code again, at tier %s",
+	# the Yard
+	"yard_built": "%s built: %s",
+	"yard_rank": "%s, rank %d: %s",
+	# a run: out, the fight, home
+	"out_to": "Out to %s, %s%s%s",
+	"out_of_rounds": "%s: out of rounds",
+	"cure_used": "%s used: %s stopped for %d s",
+	"med_used": "%s used: +%d HP (%d of %d)%s",
+	"thrown": "%s thrown: %.0f %s to %d of them",
+	"code_blue": "Code blue: back up on %d HP",
+	"guard_gone": "Guard gone",
+	"convoy_event": "%s %s",
+	"found": "Found: %s",
+	"cleared": "%s cleared. Picking it over; more will come.",
+	"picked_clean": "%s picked clean: every crate open",
+	"ditched": "Ditched: %s",
+	"way_out": "Making for the way out, %d at the door",
+	"seen_off": "Seen off at the door. Out with the pack.",
+	"ghost": "Ghost: the pack's full, and %s counts as cleared",
+	"left_at_gate": "No room for the %s: left at the gate",
+	"home": "%s from %s: %d kill%s, %d item%s, %s",
+	"out_of_time": "Out of time in %s. The pack's gone%s%s%s.",
+	"dog_home": "The dog came home with %s",
+	"dog_rig": "The dog came home with the rig: %d pouch%s",
+	# the heads
+	"head_armed": "%s: %s",
+	"head_out": "%s comes out%s. %s",
+	"head_down": "%s is down. %s",
+	"head_down_found": "%s is down. %s Found: %s.",
+	"second_unique": "And a second: %s.",
+	"convoy_done": "The convoy's done. Found: %s.",
+	"order_down": "%s is down.",
+	"order_down_found": "%s is down. Found: %s.",
+	"brought_home": "Brought home: %s",
+	# a death
+	"dead": "Dead in %s. Kit lost (%s). %s",
+	"dead_insured": "Dead in %s. %s",
+}
 ## The sets' pieces: whose they were.
 const SET_PIECES := {
 	"Council hi-vis": "Orange, with the crest and a name in marker on the back. He was in Highways. He's not now.",

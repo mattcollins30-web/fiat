@@ -39,7 +39,7 @@ func _initialize() -> void:
 		m["event_at"] = -1.0
 		m["remaining"] = 3
 		var img := _shot(view, sim, m)
-		var key: String = RunView.site_key(str(Data.TIERS[i]["name"]))
+		var key: String = Items.slug(str(Data.TIERS[i]["name"]))
 		img.resize(img.get_width() * 2, img.get_height() * 2, Image.INTERPOLATE_NEAREST)
 		img.save_png(ProjectSettings.globalize_path(OUT + "site_%s.png" % key))
 		sites.append([img, "%s  %s" % [str(Data.TIERS[i]["name"]), "kit" if RunView.kit_pair(key) else "OLD ART"], str(gun["base"])])
@@ -226,7 +226,7 @@ func _hands_sheet(guns: Array) -> Image:
 	for k in range(guns.size()):
 		var gun: Dictionary = guns[k]
 		var at := Vector2i(8 + (k % HANDS_COLS) * (cw + 8), 8 + int(k / float(HANDS_COLS)) * (ch + 8))
-		var slug: String = RunView.art_slug(str(gun["base"]))
+		var slug: String = Items.slug(str(gun["base"]))
 		var t: Texture2D = RunView.hands_tex(gun)
 		var own: bool = RunView.tex("hands/" + slug) != null
 		if t != null:

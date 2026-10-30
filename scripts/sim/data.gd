@@ -263,19 +263,6 @@ const YARD_OLD := {"bench": [["steady_hands", "cheap_parts"], ["third_socket", "
 
 
 
-## The Pitch's steps that can be built (29 Oct: the Bunkhouse's line B a stub until the expeditions are in), one building's
-## or every building's. The headline and the cards count these; a step made real stops being a stub and counts.
-static func yard_step_count(key := "") -> int:
-	var n := 0
-	for b in YARD:
-		if key != "" and str(b["key"]) != key:
-			continue
-		for col in b["picks"]:
-			for pk in col:
-				n += 0 if bool(pk.get("stub", false)) else 1
-	return n
-
-
 static func yard_building(key: String) -> Dictionary:
 	for b in YARD:
 		if b["key"] == key:
@@ -1131,7 +1118,7 @@ const UNIQUE_DROP := 0.01
 ## The loot tables (15 Oct, the loot read, Matt's picks): a loose unique from the Town on at UNIQUE_CAMPAIGN a find,
 ## growing UNIQUE_DROP a depth past the first and never past UNIQUE_CAP; set pieces, SET_DROP a depth, to SET_CAP; and
 ## a zone's quality on the rarity roll (the Outskirts' nothing to the City's +45%), so a City drop is rarer.
-const UNIQUE_CAMPAIGN := 0.02     # D6-7: 0.005 and 0.01 put a loose unique by the Quartermaster on 2-4 builds in 10
+const UNIQUE_CAMPAIGN := 0.02     # a loose unique's chance in the campaign
 const UNIQUE_FROM_ZONE := 2
 const UNIQUE_CAP := 0.04
 ## The mythics (16 Oct, docs/design/mythics.md): one find in MYTHIC_ODDS_IN is one, everywhere alike - no depth,
@@ -1152,7 +1139,7 @@ const MYTHIC_SEARCH_FINDS := 2         # the Removal Van: finds a search, more
 const MYTHIC_PACK := 4                 # and the pack this many times over
 const MYTHIC_PAY := 2.0                # the Freedom of the Borough: tins, notes and XP
 const SET_CAP := 0.02
-const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.32]     # E1 (17 Oct): .38 to .32, the City read 18% epic or better (gate 12: 8-16%). D7: the City at .45 read 18% epic or better in its gear (gate 12: 8-16%)
+const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.32]     # by zone, on the rarity roll: the City's held to gate 12's 8-16% epic or better
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but a paper has a band and a range of tiers. It drops at
 ## the find's loot tier inside its range, on the best base of its slot (and gun type) at that tier; a loose one only where
 ## the find's tier is inside its range, the band's weight picking among those that can.
@@ -1320,9 +1307,6 @@ const SKILL_RULES := {"ready": "When ready", "on_you_2": "2+ on you", "on_you_3"
 	"poison_burn": "Poisoned or burning", "ailments_2": "2+ ailments", "low_rounds": "Low on rounds", "no_grenade": "No grenade",
 	"last_stand": "Last stand", "on_you_3_half": "3+ on you, over half HP"}
 const LOW_ROUNDS := 60                   # the Low on rounds rule: fewer in the rig for the gun in hand
-## The rules' tooltips (skills.md §11).
-const SKILL_RULE_TIPS := {"ailing": "An ailment on you: a bleed, burn, poison, chill or shock", "finisher": "Fires when a man on you is under 25% HP",
-	"opener": "Fires in the first 5 seconds of a fight", "last_stand": "Fires when a hit would kill you; its energy is kept back all run"}
 ## A skill: its class and lane, cost, cooldown (s), its kind (damage, cleanse, control, defence: the bot's pick reads
 ## it), rule and what it does (`fx`, read by sim._skill_fire). Names and
 ## lines are the language pass's; `fx` figures are first figures for the balance pass.
@@ -1814,8 +1798,7 @@ const AFFIX_SHOWN := {
 ## complete: its three sites cleared and its boss beaten. All three complete
 ## is the campaign; then the depth ladder and the radio's call-in open.
 ## The Outskirts (12 Oct): a zone before the Estate - the allotments, the garden centre, the farm - with no crew and no
-## head: the first runs, before the streets. Every site's index moved up three with it, and every zone's up one (a save
-## from before is moved on load: Sim._shift_sites).
+## head: the first runs, before the streets. Every site's index moved up three with it, and every zone's up one.
 const ZONES := [
 	{"name": "The Outskirts", "words": "The Allotments, the Garden Centre, Top Farm – the edge of it, where it started.", "tiers": [0, 1, 2]},
 	{"name": "The Estate", "words": "Ransacked Streets, the Parade, the Retail Park.", "tiers": [3, 4, 5]},
@@ -1875,9 +1858,9 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## The endgame's depth curve: once the campaign is done, every site fights
 ## at the depth's numbers bent by its shape, so the choice between sites is
 ## what they drop, not how hard they are. Depth 2 is the first rung.
-## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five; D28 0.05: the strong builds out-earned the rest up the reach, level 50 from 9.3 h to never) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
-## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.08 to 0.12 (22 Oct, the web pass: the reach ran 11 to 70 in 1.4 h at 96% won at the reach, then 149; a probe at 0.12 held it to 39 by hour 6)
+## The reach is the runner's power against this slope (signals since D3): too steep a grow and a signal past the reach
+## goes from won to lost in one level.
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.12 holds the reach to a climb, not a run
 ## The gangs to the new tiers (29 Oct, docs/design/itemisation.md §1: tuned to T6 gear at the Barracks, down to T4's): the
 ## campaign sites' own hp and dps above carry it (every level of them, the depths past the first clear too: 7 Oct's
 ## curve is a floor under the site's own), each by the gear a runner brings to it now against before - the Retail Park
@@ -1935,9 +1918,9 @@ const PINNACLE_HP := 2.0
 const PINNACLE_DPS := 1.0
 const PINNACLE_COST := 2
 const CONVOY_DEPTH := 8           # back from 10 (12 Oct, the lorry-fix read: fire and shock stall at Services depth 6-8 and never reached 10; poison was the outlier, not the lorry): level 14 on the Services, plus the moves made (the sixteenth read: the end kit holds level 14, not 16)
-const CONVOY_HP := 0.55           # 0.25 to 0.4 to 0.7 to 0.55 (12 Oct: at 0.7/1.0 the fire Drifter and the shock Scrapper never took it and the Paramedics still did at 1.8-3 h - the halfway, for the playtest); the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load (the probe, 7 Oct: at 35%/full fire a Poacher read 0.80 and a stronger Doorman 0.00 - the Poacher's first-of-the-gang bonus counts on every head; at 25%/0.75 both read 0.93-1.00)
-const CONVOY_DPS := 0.85          # 0.75 to 1.0 to 0.85 (12 Oct, with CONVOY_HP)
-const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, the moves in 16 h fell from 9-20 to 1-9 - the ×1.25 outran a depth's ×1.14 and each leg came easier than the last); the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
+const CONVOY_HP := 0.55           # the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load
+const CONVOY_DPS := 0.85          # the convoy's heads' fire, with CONVOY_HP
+const LORRY_MULT := 1.12          # the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige; under a depth's step, so each leg stays harder than the last
 ## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
 const PARAGON_COMPOUND := ["damage", "hp"]     # the rows that compound, each point on the last (25 Oct); the rest add
 const PARAGON_BOARD := [
@@ -2000,9 +1983,7 @@ const COMBOS := {
 ## Gear scaling (21 Oct, the crew; docs/design/vision.md): past the deep tier a base's damage and armour, and the flat
 ## combat lines, compound this a level - a little under the crews' CURVE grow - every rarity the same; the armour's cut
 ## reads against the level fought at the same rate, so it holds its share rather than run to a hundred.
-const ILVL_GROW := 0.05            # 0.07 to 0.05 (21 Oct, the crew's reads and a kit probe): at 0.07 an at-level kit kept pace with the
-                                   # crews (an edge's half-life 25 levels) and the bot's edge - uniques, the Bench, paragon - ran the
-                                   # reach to 221; at 0.05 an edge halves in about 10 levels: a few levels a find, then the next
+const ILVL_GROW := 0.05            # an edge halves in about 10 levels: a few levels a find, then the next
 ## A head's own unique off the head (21 Oct, Matt's playtest: the Keeper's Twelve-Bore read 23 dmg/s against a 34 Pump
 ## found before him - "the unique here is pointless and should be the first big find of the game"): its body one
 ## tier past the site's loot (never under its own base's), and BOSS_UNIQUE_LIFT on its figure.
@@ -2023,75 +2004,9 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## A point a level; respec costs RESPEC_CASH a point spent; changing class
 ## refunds its two trees for nothing.
 ## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
-## heads, uniques, sets; everything else is sentence case; acronyms upper. A save from before carries the old
-## names: `load_dict` reads them through this.
+## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
 const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear"}
-
-const RENAMES := {
-	"Diplomatic machine pistol": "Legation machine pistol",     # the fix round (29 Oct): the two over 24 characters
-	"Fire service turnout gear": "Turnout coat",
-	"A blue plaque": "A Blue Plaque",
-	"A traffic warden's hat": "A Traffic Warden's Hat",
-	"At the bench": "At the Bench",
-	"Grandad's shotgun": "Grandad's Shotgun",
-	"Issue webbing": "Issue Webbing",
-	"Jump leads": "Jump Leads",
-	"Lucky cap": "Lucky Cap",
-	"Nan's cardigan": "Nan's Cardigan",
-	"Ransacked streets": "Ransacked Streets",
-	"Shopping centre": "Shopping Centre",
-	"The Doorman's jacket": "The Doorman's Jacket",
-	"The Postman's bag": "The Postman's Bag",
-	"The ambulance's": "The Ambulance's",
-	"The army's": "The Army's",
-	"The arsonist's rig": "The Arsonist's Rig",
-	"The bank": "The Bank",
-	"The bank's": "The Bank's",
-	"The barracks": "The Barracks",
-	"The bookie's pencil": "The Bookie's Pencil",
-	"The branch pistol": "The Branch Pistol",
-	"The butcher's apron": "The Butcher's Apron",
-	"The butcher's steel": "The Butcher's Steel",
-	"The caretaker's keys": "The Caretaker's Keys",
-	"The carpet man": "The Carpet Man",
-	"The carpet man's": "The Carpet Man's",
-	"The council's": "The Council's",
-	"The council's weed burner": "The Council's Weed Burner",
-	"The dinner lady's ladle": "The Dinner Lady's Ladle",
-	"The electrician's tester": "The Electrician's Tester",
-	"The fire crew's": "The Fire Crew's",
-	"The float": "The Float",
-	"The gamekeeper's flask": "The Gamekeeper's Flask",
-	"The gritter's hopper": "The Gritter's Hopper",
-	"The gritter's keys": "The Gritter's Keys",
-	"The hospital": "The Hospital",
-	"The lollipop lady's sign": "The Lollipop Lady's Sign",
-	"The lorry driver's log": "The Lorry Driver's Log",
-	"The lorry's load": "The Lorry's Load",
-	"The manager": "The Manager",
-	"The manager's coat": "The Manager's Coat",
-	"The manager's pen": "The Manager's Pen",
-	"The parade": "The Parade",
-	"The pleasure park": "The Pleasure Park",
-	"The quartermaster": "The Quartermaster",
-	"The quartermaster's ledger": "The Quartermaster's Ledger",
-	"The quartermaster's manual": "The Quartermaster's Manual",
-	"The quartermaster's rifle": "The Quartermaster's Rifle",
-	"The rat man's bag": "The Rat Man's Bag",
-	"The rat man's overalls": "The Rat Man's Overalls",
-	"The retail park": "The Retail Park",
-	"The scout leader's whistle": "The Scout Leader's Whistle",
-	"The sergeant's whistle": "The Sergeant's Whistle",
-	"The services": "The Services",
-	"The sparky's gloves": "The Sparky's Gloves",
-	"The substation key": "The Substation Key",
-	"The van keys": "The Van Keys",
-	"The van's spare": "The Van's Spare",
-	"The vicar's thermos": "The Vicar's Thermos",
-	"The yard": "The Pitch",
-	"The Yard": "The Pitch",          # renamed 14 Oct
-}
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [
@@ -2810,12 +2725,11 @@ static func _web_named(nodes: Array, nm: String) -> int:
 
 
 const AFFINITY := {"Drifter": ["fire", "bleed"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["shock", "frost"], "Recruit": ["physical", "poison"]}     # joints B (24 Oct, Matt): every element between the two classes that join it (the Recruit Knuckles and the Rat Man)     # the Recruit: Knuckles and Blades, his joints (24 Oct)
-const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
 ## The joints (9 Oct, docs/design/trees.md): one notable split across a class tree and an element tree of the
 ## class's pair, in column 4 of both. Each half works alone; both trained, the joint closes and its payoff
-## holds. An element tree's last two columns want a closed joint in that tree. `lane` is the class tree's
-## place on the Training screen: the first tree joins lane 2's element, the second lane 4's.
+## holds. `lane` is the class tree's place on the Training screen: the first tree joins lane 2's element, the second
+## lane 4's.
 const JOINTS := [
 	{"key": "drifter_fire", "class": "Drifter", "tree": "Moving on", "element_tree": "Petrol", "words": "With an SMG, your hits set them burning; burning gangs take 25% more SMG damage"},
 	{"key": "drifter_bleed", "class": "Drifter", "tree": "Luck", "element_tree": "Blades", "words": "A bleeding man you kill rolls his drop's rarity twice and keeps the better"},
@@ -2831,7 +2745,6 @@ const JOINTS := [
 	{"key": "recruit_poison", "class": "Recruit", "tree": "Drill", "element_tree": "The Rat Man", "words": "Hits and throws from your skills poison the men they hit"},
 ]
 const JOINT_COL := 3               # the column both halves sit in (the fourth)
-const ELEMENT_GATED_COL := 4       # an element tree's columns from here want a closed joint
 
 
 static func joint(key: String) -> Dictionary:
@@ -2896,8 +2809,8 @@ const BUMP_CAP := 20
 ## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap
 ## plus the element's socketable. Costs are untuned until the pass.
 const SCRAP_PER_POUND := 24         # 20 to 24 (12 Oct, the read: 7.1-9.0 crafts an hour against 7, the Scrapper 10.7-11.8 against 8)
-const SCRAP_SEARCH := 0.35          # 0.5 to 0.35 (12 Oct, the same read). The pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
-const SCRAP_HANDFUL := [5, 10]      # the pass (6 Oct): [3, 6], [4, 8], then [6, 12] which read 3-5 crafts an hour on the builds that run most
+const SCRAP_SEARCH := 0.35          # scrap off a search, with SCRAP_PER_POUND for about seven crafts an hour
+const SCRAP_HANDFUL := [5, 10]      # a handful of scrap: its low and high
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
 const BUILD_MED := 8                # a med, times its tier, with the one below (painkillers and a bandage: scrap alone)
@@ -3371,14 +3284,6 @@ static func element_tree_of(ty: String) -> Dictionary:
 	return {}
 
 
-## The tree of an element ("fire" -> Petrol).
-static func tree_of_element(element: String) -> Dictionary:
-	for t in ELEMENT_TREES:
-		if t["element"] == element:
-			return t
-	return {}
-
-
 static func tree_named(name: String) -> Dictionary:
 	for t in ELEMENT_TREES:
 		if t["name"] == name:
@@ -3492,15 +3397,13 @@ const CAMPAIGN_LEVEL_FREE := 3     # a site cleared this many levels ago fights 
                                    # level 6, so the frontier itself hardened to x2 as the runner levelled under it; a site never cleared
                                    # takes no tax now)...
 const CAMPAIGN_LEVEL_GROW := 0.04  # ...and past that its heads' HP and fire compound by this a level you've gained since (5 levels on: x1.22)...
-const CAMPAIGN_LEVEL_MAX := 1.5    # 1.3 to 1.5 (22 Oct, the web pass: every site 100%); was ...to 1.3 at most (7 levels on). 0.08 to x2 (22 Oct, the second pass): a Scrapper whose kit stalled at
-                                   # level 14's while its level ran to 28 found both its sites at the cap and the Bank out of reach, for
-                                   # 20 h - levels come steadily, kit is luck (Matt's stance): a lagging runner slows, never sticks
+const CAMPAIGN_LEVEL_MAX := 1.5    # ...to x1.5 at most: levels come steadily, kit is luck (Matt's stance) - a lagging runner slows, never sticks
 const CAMPAIGN_POOL := 1.0         # the campaign's pools as they are (1.5 read Matt's Pleasure Park 75% to 0%: the length comes from the gangs)
 const PATROL_FIRST := 2.0          # the first gang after the clear waits twice the gap (the run's length, 4-5 min: Matt's runs ended at the first
                                    # gang, "Back, chased", two searches in); the gangs after come at the zone's gap
 const PATROL_ZONE := [1.0, 0.9, 0.8, 0.7]     # the gangs' gap by zone: the City's a third sooner
 const CLOCK_SEARCH_RATE := 0.5     # the clock runs through a search at half pace (it stood while the site was clear)
-const CAMPAIGN_HOSTILE := [0.9, 1.15, 1.3, 1.3]     # 22 Oct, the web pass (the fillers +40-60% by level 30, web.md §8): the Estate +15%, the Town and the City +30%; the Outskirts as Matt played them.     # by zone (the pass, 20 Oct): the Outskirts as they were, the Town and the City harder (six-hour reads: Town 1.15 and City 1.2 left three builds of ten short of the Quartermaster; 1.25 and 1.4 five) - 0.9 everywhere had the Bank at 29 min by hand, every run at 100% and no death in 41; 1.5 everywhere killed eleven builds of fifteen at level 1. D20: 0.9, with XP_SCALE 2.9 the Bank at 1.9 h
+const CAMPAIGN_HOSTILE := [0.9, 1.15, 1.3, 1.3]     # by zone: the Outskirts as Matt played them, the Estate +15%, the Town and the City +30% (the web's fillers, web.md §8)
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
 const DEPTH_DROP := 0.03
@@ -3905,7 +3808,7 @@ const OVER_LEVEL_FLOOR := 0.1
 ## the Parade 2, the Retail Park 4 ... the Barracks 16). Each site also opens at its drops' level less one (site_gate).
 const WEAR_OFFSET := 2.0
 const WEAR_FLAT := 16               # past this a find's wear is its item level (21 Oct): the endgame's finds are their signal's level
-const WEAR_PER_ILVL := 2.0           # 2.5 - 1.5 from D8 to 18 Oct (D8: x3 had the City's drops at wear 19-25); 2 - 2 now: the City's 12-16
+const WEAR_PER_ILVL := 2.0           # with WEAR_OFFSET 2: the City's drops at wear 12-16
 ## A fifth of a site's or a signal's plain gear finds at the level the runner can wear (16 Oct, Matt's playtest: "the gear
 ## gating is frustrating" - level 10 at the Bank, every drop for level 14), never past the site's own. Uniques, set pieces
 ## and mythics roll at the site's.
@@ -3917,7 +3820,7 @@ static var _xp_table: Array = []
 const PARAGON_XP_GROW := 0.05     # a paragon level costs level 50's XP and this much more a level past it (24 Oct, Matt: an endgame "at least 30ish" hours)
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
-const XP_SCALE := 3.3     # 22 Oct, the web pass: 2.9 to 3.3 (level 25-34 at the Quartermaster against 20-24; the sites cleared 5-8 levels over their gear). D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
+const XP_SCALE := 3.3     # keeps the sites cleared near their gear's level, not 5-8 over
 ## D11: past the campaign the scale eases, XP_SCALE at XP_TAPER_FROM to XP_TAPER_END at XP_TAPER_TO and on: the reads had
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 ## The first levels (16 Oct, Matt's playtest: level 2 at 27 minutes on the Retail Park, every drop four levels over him):
@@ -3926,7 +3829,7 @@ const XP_RAMP_FROM := 1.0
 const XP_RAMP_TO := 12
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 3.1     # 3.4 to 3.1 (the third pass: level 50's median at 31 h, 11 of 24 never; want 12-24);  D29 3.4 (D28's slower pay: six ended at 41-49 at 24 h); D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
+const XP_TAPER_END := 3.1     # the scale from level 40 on: level 50 wanted at 12-24 h
 
 
 static func xp_scale(l: int) -> float:

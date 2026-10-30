@@ -272,16 +272,6 @@ static func painting() -> Texture2D:
 	return art("map")
 
 
-## The drawing's box round a zone's shape: its ground's picture covers it.
-static func zone_box(z: int) -> Rect2:
-	var lo := Vector2(INF, INF)
-	var hi := Vector2(-INF, -INF)
-	for p in ZONE_SHAPES[z]["points"]:
-		lo = lo.min(p)
-		hi = hi.max(p)
-	return Rect2(lo, hi - lo)
-
-
 ## A pin's name: its box on the side asked, kept inside the map.
 func _pin_label(p: Vector2, side: int, col: Color) -> Label:
 	var r := Rect2(p.x - LABEL_W / 2.0, p.y + PIN_R + 6, LABEL_W, LABEL_H)

@@ -20,3 +20,6 @@ docs/art/handoff/
 # leftovers
 *.tmp
 *.stale
+# stray editor copies (30 Oct)
+*-[0-9].gd
+*-[0-9].gd.uid
