@@ -6118,6 +6118,19 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## Parked from the playtest (30 Oct, 0.10.1 plus the clean-up; taken up after it)
+
+1. Bug: a smaller rig keeps the bigger one's load. Three bandages in a Bum bag, swapped to a Body warmer (2 pouches):
+   the Kit reads "Rig 3 / 2 pouches", the run shows two, and using one counts down from the three (Matt: "fight showed
+   two but i used one and it counted it from the three"). Likely: equipping a rig doesn't send what's over its
+   pouches back to the stash, and the run's view clips to capacity while the count reads the whole list. Fix: on a rig
+   swap, the overflow goes to the stash (last packed first), or the swap is refused with no stash room. Smoke: swap a
+   full Bum bag for a Body warmer, assert rig_used() <= med_capacity(), the overflow in the stash, and the run's meds
+   count equal to the Kit's.
+2. UI: while away, the rail's room labels clip through the "Away" badge ("The Map" under it; screenshot, Garden
+   Centre, run 1 of 5). Fix: the label fits beside the badge (shrink or the badge moves to the corner). Smoke: every
+   rail button with a badge, label and badge rects don't overlap and the label fits.
+
 ## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
 
 1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
