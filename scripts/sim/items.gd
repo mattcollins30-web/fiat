@@ -41,7 +41,15 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 				typed.append(b)
 		if not typed.is_empty():
 			pool = typed
-	var base: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+	var base: Dictionary = _tier_pick(slot, pool, max_tier, rng)
+	return roll_on(slot, base, rng, rarity_bonus, no_commons, fewer_commons, depth, level)
+
+
+## A new item on this very base (30 Oct, the review's I1-I3): its rarity, affixes, mounts and sockets from `base` itself -
+## the sockets to its own cap, an improvised body's one more - so a unique or a set piece is rolled on its own body, never
+## on whatever base a plain roll drew.
+static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, rarity_bonus := 0.0, no_commons := false, fewer_commons := false,
+		depth := 0, level := -1) -> Dictionary:
 	var r := _roll_rarity(rng, rarity_bonus)
 	if no_commons and r == 0:
 		r = 1
@@ -95,6 +103,51 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		it["count"] = 1
 	_next_id += 1
 	return it
+
+
+## A find's base from its pool, weighted toward the find's own tier (30 Oct, the designer's call on the review's loot
+## rolls): the find's tier LOOT_OWN_TIER, one under LOOT_TIER_UNDER, every tier lower LOOT_LOWER shared evenly; a tier
+## with no base in the pool hands its share down to the next tier that has one (the lowest present takes what's left).
+## Gear and gun parts only: rounds, meds, papers, grenades and supplies draw evenly, their tiers kinds, not power.
+static func _tier_pick(slot: String, pool: Array, max_tier: int, rng: RandomNumberGenerator) -> Dictionary:
+	if not (slot in Data.SLOTS or slot == Data.ATTACHMENT) or max_tier <= 1:
+		return pool[rng.randi_range(0, pool.size() - 1)]
+	var by := {}
+	for b in pool:
+		var t: int = int(b["tier"])
+		if not by.has(t):
+			by[t] = []
+		by[t].append(b)
+	if by.size() == 1:
+		return pool[rng.randi_range(0, pool.size() - 1)]
+	var total: float = Data.LOOT_OWN_TIER + Data.LOOT_TIER_UNDER + (Data.LOOT_LOWER if max_tier > 2 else 0.0)
+	var w := {}
+	var carry := 0.0
+	var lowest: int = max_tier
+	for t in range(max_tier, 0, -1):
+		if t == max_tier:
+			carry += Data.LOOT_OWN_TIER / total
+		elif t == max_tier - 1:
+			carry += Data.LOOT_TIER_UNDER / total
+		else:
+			carry += Data.LOOT_LOWER / total / float(max_tier - 2)
+		if by.has(t):
+			w[t] = carry
+			carry = 0.0
+			lowest = t
+	if carry > 0.0 and w.has(lowest):
+		w[lowest] += carry
+	var x := rng.randf()
+	var pick: int = lowest
+	for t in range(max_tier, 0, -1):
+		if not w.has(t):
+			continue
+		x -= float(w[t])
+		if x <= 0.0:
+			pick = t
+			break
+	var at: Array = by[pick]
+	return at[rng.randi_range(0, at.size() - 1)]
 
 
 ## Rarity weights, shifted toward the rare end by loot find.
@@ -346,6 +399,12 @@ static func affix_def(stat: String) -> Dictionary:
 		if a["stat"] == stat:
 			return a
 	return {}
+
+
+## An affix's def for a card's words (30 Oct, the review's I5): affix_def's, else a unique's or a set's own stat's words.
+static func shown_def(stat: String) -> Dictionary:
+	var d := affix_def(stat)
+	return d if not d.is_empty() else Dictionary(Data.AFFIX_SHOWN.get(stat, {}))
 
 
 ## An affix's def for a slot (29 Oct): the slot's own where it has one - the gloves' armour rolls small, a gun part's damage
@@ -644,9 +703,10 @@ static func add_socket(it: Dictionary, most := Data.SOCKET_MAX) -> bool:
 ## pieces dropping became useless") it keeps its own base - its resist, its conversion, its look - lifted to the best
 ## figure of its type at that tier, as a unique past its type's top is.
 static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator, level := -1, tier := -1) -> Dictionary:
-	var it := roll(piece["slot"], int(base_named(piece["slot"], piece["base"]).get("tier", Data.CAMPAIGN_TIER)), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its own base's tier: a deep throwaway would set its level (10 Oct)
-	it["base"] = piece["base"]
+	var it := roll_on(piece["slot"], base_named(piece["slot"], piece["base"]), rng, 0.0, false, false, 0, level)     # on its own base: its mounts, its sockets (30 Oct, the review's I1)
 	it["tier"] = base_of(it)["tier"]
+	if level < 0:
+		it["ilvl"] = maxi(ilvl(it), int(it["tier"]))     # never under its own tier (the review's I3), as a unique
 	var lift := set_lift(piece, tier)
 	if lift > 1.0:
 		it["lift"] = lift
@@ -693,19 +753,10 @@ static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1, 
 		body = unique_body(u, unique_tier(u, at)).duplicate()     # a copy: the cache's own stays plain (the review)
 	if head:
 		body["lift"] = float(body["lift"]) * Data.BOSS_UNIQUE_LIFT
-	var it := roll(u["slot"], int(body["tier"]), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its body's tier: a deep throwaway would set its level (10 Oct)
-	it["base"] = body["base"]
+	var it := roll_on(u["slot"], base_named(u["slot"], str(body["base"])), rng, 0.0, false, false, 0, level)     # on its body: its mounts, its sockets to its own cap (30 Oct, the review's I2)
 	it["tier"] = int(body["tier"])
 	if float(body["lift"]) > 1.0:
 		it["lift"] = float(body["lift"])
-	# the mounts are the body's own (roll() drew them off whatever base it picked); the sockets it rolled stay
-	var att := {}
-	for name in base_of(it).get("attachments", []):
-		att[name] = null
-	for k in it["attachments"]:
-		if str(k).begins_with("socket"):
-			att[k] = null
-	it["attachments"] = att
 	if level < 0:
 		it["ilvl"] = maxi(ilvl(it), int(body["tier"]))
 	it["rarity"] = Data.RARITIES.size() - 1
@@ -835,7 +886,7 @@ static func glove_figs(it: Dictionary) -> Dictionary:
 ## A pair of gloves' unit short, for a cell or a card with no room for the long (the fix round, 29 Oct, the UI review's B4):
 ## "reload", "RoF", "pace" - the deltas' own.
 static func glove_unit_short(it: Dictionary) -> String:
-	return {"pace": "pace", "rate": "RoF"}.get(role(it), "reload")
+	return {"pace": "pace", "rate": "rate"}.get(role(it), "reload")
 
 
 static func glove_headline(it: Dictionary) -> Array:
@@ -1137,7 +1188,7 @@ static func sockets(it: Dictionary) -> int:
 static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array:
 	var out: Array = []
 	for a in it["affixes"]:
-		var d := affix_def(a["stat"])
+		var d := shown_def(str(a["stat"]))
 		var label: String = str(d.get("short" if short else "label", a["stat"]))
 		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] in ["loot_per_lot", "guard_gang"]     # guard_gang is a share of max HP (18 Oct)
 		var line: String

@@ -69,19 +69,22 @@ func _init() -> void:
 				int(cap.trim_prefix("cap")) if cap.begins_with("cap") else 0)
 		return
 	if cls == "parity":
-		_parity(hours, args[2] if args.size() > 2 else "Poacher", args[3] if args.size() > 3 else "")
+		# `-- 4 parity Drifter fire [cap20]`: a cap is the quick pass's wall limit in minutes (the fix round); else PARITY_WALL_MIN
+		var pcap: String = str(args[4]) if args.size() > 4 else ""
+		_parity(hours, args[2] if args.size() > 2 else "Poacher", args[3] if args.size() > 3 else "", int(pcap.trim_prefix("cap")) if pcap.begins_with("cap") else PARITY_WALL_MIN)
 		return
 	if cls == "probe":
 		_probe()
 		return
 	if cls == "broken":
 		# `-- 0 broken embers`: a broken build's gauntlet (26 Oct, Matt) from its class's one-save end state, its pieces
-		# and recipe on; `-- 0 broken hunt0`: the hunt's best
-		_broken(hours, args[2] if args.size() > 2 else "embers")
+		# and recipe on; `-- 0 broken hunt0`: the hunt's best; `-- 0 broken embers 2`: from the pass's second read's end state
+		_broken(hours, args[2] if args.size() > 2 else "embers", false, str(args[3]) if args.size() > 3 else "")
 		return
 	if cls == "gauntlet":
-		# `-- 0 gauntlet Drifter fire`: the build's one-save end state as played, through the gauntlet (26 Oct, Matt)
-		var gb: Dictionary = _gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", {})
+		# `-- 0 gauntlet Drifter fire`: the build's one-save end state as played, through the gauntlet (26 Oct, Matt);
+		# `-- 0 gauntlet Drifter fire 2`: from the pass's second read's end state (the fix round: both tries read the first's)
+		var gb: Dictionary = _gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", {}, str(args[4]) if args.size() > 4 else "")
 		gb["build"] = "%s-%s" % [gb["class"], gb["element"]]
 		print("GAUNTLET " + JSON.stringify(gb))
 		quit(0)
@@ -309,7 +312,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	print("Fiat gate read: %.0f h, %s%s" % [hours, build, " (one save, from the %s)" % start_cls if one_save else ""])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
-		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0,
+		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [],
 		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
 		"manager_at": -1.0, "first_death_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
@@ -473,6 +476,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			mark_items = 0
 	if scrap_16 < 0.0:
 		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))
+	# the end's figures are the read's build's (the fix round, H3: a walled class out read its own odds, level and kit)
+	if one_save:
+		end_as_build(sim, bot, cls)
+	g["end_class"] = sim.cls                  # the runner the end's figures read: the build's class, or why not in `route`
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
@@ -541,7 +548,6 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	for k in sim.yard_ranks:
 		ranks += int(sim.yard_ranks[k])
 	g["yard_ranks"] = ranks
-	g["top_bench"] = 14000                       # the old top Bench's price: the summary's cash-held yardstick when nothing was earned
 	g["dearest_build"] = Data.BUILD_GUN * 3
 	g["elapsed_h"] = snappedf(sim.elapsed / 3600.0, 0.01)
 	@warning_ignore("integer_division")
@@ -553,7 +559,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
 	g["tempers"] = bot.tempers           # the Bench's tempers the read made (25 Oct)
-	g["walls"] = bot.walls                    # the wall's swaps (30 Oct): [hour, tier, a head?, from, to, odds]
+	g["walls"] = bot.walls                    # the wall's swaps (30 Oct): [hour, tier, a head?, from, to, to's odds, from's odds]
 	g["crew_swaps"] = bot.crew_swaps     # the crew (21 Oct, step 7): swaps, the classes played, the board's level
 	g["route"] = bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target")).map(func(x): return [snappedf(float(x[0]) / 3600.0, 0.01), str(x[1])])     # the one save's classes, when (25 Oct)
 	g["crew"] = sim.crew_played().map(func(c): return "%s %d" % [c, sim.crew_level(c)])
@@ -634,7 +640,6 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		g["prof"]["step_s"], g["prof"]["surv_s"], pr["surv_reads"], pr["surv_calls"], pr["dry_runs"], pr["dry_ticks"], g["prof"]["snap_s"], pr["real_ticks"], g["prof"]["real_s"], g["prof"]["tidy_s"], str(tidy_parts), g["prof"]["ladder_s"]])
 	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
 	g["bails_per_h"] = snappedf(float(g["bails"]) / maxf(0.01, sim.elapsed / 3600.0), 0.01)
-	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(g["bails"])), 0.1) if int(g["bails"]) > 0 else 999.0
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
@@ -646,6 +651,17 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		g["end_save"] = save_path
 	print("GATES " + JSON.stringify(g))
 	quit(0)
+
+
+## The read's build out for the end's figures (the fix round, H3): the odds, the gang clock, the level and the kit are
+## the runner's out, so a one-save read the wall or the crew left on another class puts its target back first - from
+## the roster, its own tree and kit, quietly (no swap counted). A target never played, or busy, stays as it is.
+static func end_as_build(sim, bot, cls: String) -> void:
+	if sim.cls == cls or sim.on_mission() or not (cls in sim.crew_played()):
+		return
+	bot._crew_out(sim, cls, true)
+	bot._tidy_kit(sim)                         # the crew's floor lifts it on the swap: its points spent and its kit looked over, as the bot would
+	sim.hp = sim.max_hp()
 
 
 ## A run's odds at the gate (25 Oct, P3), from its chronicle line past `c0`: a first clear (the site never cleared
@@ -803,7 +819,7 @@ const BROKEN_ELEMENT := {"embers": "fire", "clean_kills": "frost", "flatline": "
 const STAY_OUT := 20                     # Matt, 26 Oct: "until HP bail or 20 patrols"
 const HUNT_DIR := "res://docs/balance/pass/"     # pass/hunt-s<stage>-<shard>.txt (tools\\balance.bat <hours> 0 hunt)
 const HUNT_TOP := 20                     # the first stage's builds the second tries every unique on (Matt, 26 Oct: two stages)
-func _broken(_hours: float, key: String, _plain := false) -> void:
+func _broken(_hours: float, key: String, _plain := false, read_n := "") -> void:
 	var spec: Dictionary = {}
 	if key.begins_with("hunt") and key.substr(4).is_valid_int():
 		var ranked: Array = _hunt_ranked(2)
@@ -817,7 +833,7 @@ func _broken(_hours: float, key: String, _plain := false) -> void:
 		print("BROKEN " + JSON.stringify({"build": key, "error": "no such build"}))
 		quit(0)
 		return
-	var b: Dictionary = _gauntlet(str(spec["class"]), str(spec["element"]), spec)
+	var b: Dictionary = _gauntlet(str(spec["class"]), str(spec["element"]), spec, read_n)
 	b["build"] = key
 	print("BROKEN " + JSON.stringify(b))
 	quit(0)
@@ -835,13 +851,16 @@ const STANDARD_ROLLS := 30        # finds a slot, the best kept
 const STANDARD_PARAGON := 30      # the camp's paragon points (Matt, 27 Oct)
 const GAUNTLET_TRIES := 3
 const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
-func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
+const GAUNTLET_WALL_MIN := 50     # minutes of wall before the read stops and says so (the fix round, H1: balance.bat kills it at 60)
+func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "") -> Dictionary:
 	var out := spec.duplicate(true)
 	out["class"] = cls
 	out["element"] = element
 	var d = null
 	var path := ""
-	for n in ["-1", "-2", ""]:                 # the pass's first read, else its second (the review: one file both wrote)
+	# the pass's read `read_n` (balance.bat's second gauntlet reads the second end state: the fix round), else its
+	# first, else its second (the review: one file both wrote)
+	for n in (["-" + read_n] if read_n != "" else []) + ["-1", "-2", ""]:
 		path = "res://docs/balance/pass/%s-%s%s.save" % [cls, element, n]
 		var text := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 		d = JSON.parse_string(text) if text != "" else null
@@ -909,18 +928,58 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 	for z in range(Data.COUNTY_ZONES.size()):
 		content.append_array(Sim.county_places(z))
 	content.append_array(["grid", "archive", "mint"].filter(func(k): return not content.has(k)))
+	var run: Dictionary = gauntlet_run(sim, bot, content, GAUNTLET_WALL_MIN * 60000)
+	var rows: Array = run["rows"]
+	out["cut_short"] = run["cut"]             # stopped at its wall limit: the places after it not fought (H1)
+	out["gauntlet"] = rows
+	out["won"] = rows.filter(func(r): return r["won"]).size()
+	out["of"] = rows.size()
+	out["beaten"] = {}
+	for r in rows:
+		if r["won"]:
+			out["beaten"][str(r["key"])] = int(r["tries"])
+	out["missing"] = rows.filter(func(r): return not r["won"]).map(func(r): return str(r["key"]))
+	out["deaths"] = run["deaths"]
+	out["wounds"] = run["wounds"]
+	out["tries"] = run["tries"]
+	out["first_try"] = rows.filter(func(r): return r["won"] and int(r["tries"]) == 1).size()
+	out["issued_worn"] = sim.issued_worn()
+	out["on_at_end"] = sim.combo_on(combo) if combo != "" else false
+	out["combo_on"] = Data.COMBOS.keys().filter(func(kk): return sim.combo_on(str(kk)))
+	out["kit"] = _kit(sim)
+	@warning_ignore("integer_division")
+	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	return out
+
+
+## The gauntlet's places in order (_gauntlet's): each fought up to GAUNTLET_TRIES times, the camp put back after a lost
+## try; past `limit_ms` of the process's wall (the engine's own clock, the one balance.bat's kill reads) the rest go
+## unfought, "cut short" (the fix round, H1: killed at 60 min, it wrote no line). {rows, deaths, wounds, tries, cut}.
+static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 	var rows: Array = []
 	var deaths := 0
 	var wounds := 0
 	var tries_all := 0
+	var cut := false
 	for k in content:
+		if not cut and Time.get_ticks_msec() >= limit_ms:
+			cut = true
+		if cut:
+			rows.append({"key": k, "level": sim.order_level(k), "won": false, "tries": 0, "forced": false, "why": "cut short: the read's wall limit", "ends": []})
+			continue
 		var no_kit := ""
 		if Sim.is_county(k):
 			no_kit = _gauntlet_issued(sim, bot, sim.county_want(int(Data.county(k)["cz"])))
 		var row := {"key": k, "level": sim.order_level(k), "won": false, "tries": 0, "forced": false, "why": "", "ends": []}
 		for n in range(GAUNTLET_TRIES):
+			if Time.get_ticks_msec() >= limit_ms:
+				cut = true
+				row["why"] = "cut short: the read's wall limit"
+				if not row["won"]:
+					row["tries"] = 0             # shown cut, not lost three times (the merge's review)
+				break
 			bot.tidy(sim)
-			sim.hp = sim.max_hp()
+			gauntlet_ready(sim, bot, k)
 			var why: String = sim.order_block(k)
 			if why != "":
 				row["why"] = why + ((" (the Issuer: %s)" % no_kit) if no_kit != "" else "")
@@ -967,25 +1026,18 @@ func _gauntlet(cls: String, element: String, spec: Dictionary) -> Dictionary:
 			if k == "mint" and not sim.issued:
 				sim.issue()
 		rows.append(row)
-	out["gauntlet"] = rows
-	out["won"] = rows.filter(func(r): return r["won"]).size()
-	out["of"] = rows.size()
-	out["beaten"] = {}
-	for r in rows:
-		if r["won"]:
-			out["beaten"][str(r["key"])] = int(r["tries"])
-	out["missing"] = rows.filter(func(r): return not r["won"]).map(func(r): return str(r["key"]))
-	out["deaths"] = deaths
-	out["wounds"] = wounds
-	out["tries"] = tries_all
-	out["first_try"] = rows.filter(func(r): return r["won"] and int(r["tries"]) == 1).size()
-	out["issued_worn"] = sim.issued_worn()
-	out["on_at_end"] = sim.combo_on(combo) if combo != "" else false
-	out["combo_on"] = Data.COMBOS.keys().filter(func(kk): return sim.combo_on(str(kk)))
-	out["kit"] = _kit(sim)
-	@warning_ignore("integer_division")
-	out["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
-	return out
+	return {"rows": rows, "deaths": deaths, "wounds": wounds, "tries": tries_all, "cut": cut}
+
+
+## Before each of the gauntlet's tries (the fix round, H8): whole, as a person sets off from the Clinic - the HP and
+## every wound seen to (the fixture's Clinic, free: the issued kit's money is the fixture's too) - and the bot's three
+## skills picked for the place's site, as its step picks them before a run.
+static func gauntlet_ready(sim, bot, k: String) -> void:
+	sim.hp = sim.max_hp()
+	if not sim.wounds.is_empty():
+		sim.wounds = {}
+		sim._dry_memo.clear()
+	bot.pick_skills(sim, int(Data.pinnacle(k)["site"]))
 
 
 ## The standard camp (Matt, 27 Oct, docs/design/pinnacle_and_exploits.md): the reach at STANDARD_REACH, the paragon at
@@ -1063,7 +1115,7 @@ func _standard_camp(sim, bot) -> void:
 
 ## Room in the stash for an issued piece (27 Oct: a full stash kept a Recruit out of the County): the cheapest pieces
 ## that aren't issued go to the Fence till there's room for the biggest piece.
-func _gauntlet_room(sim) -> void:
+static func _gauntlet_room(sim) -> void:
 	var guard := 0
 	while not sim.stash_room(6) and guard < 400:
 		var spare: Array = sim.stash.filter(func(x): return x is Dictionary and not x.get("issued", false) and not x.has("deeds"))
@@ -1076,7 +1128,7 @@ func _gauntlet_room(sim) -> void:
 
 ## Issued kit for a County zone: bought at the counter (the fixture's money) and worn, the slots the build holds kept,
 ## till `want` are on. Why a piece wasn't bought, if one wasn't ("Wear at level 50": the runner's under the County).
-func _gauntlet_issued(sim, bot, want: int) -> String:
+static func _gauntlet_issued(sim, bot, want: int) -> String:
 	var why := ""
 	var cash0: float = sim.cash               # the fixture's money buys the issued kit alone (the review: the shop spent the rest)
 	for sl in ISSUED_ORDER:
@@ -1086,6 +1138,14 @@ func _gauntlet_issued(sim, bot, want: int) -> String:
 			continue
 		var w = sim.equipped.get(sl)
 		if w != null and w.get("issued", false):
+			continue
+		if sl in ["Primary", "Secondary"] and w != null:
+			# the build's own gun stamped, never swapped for the Issuer's (as Bot._issued; the fix round's analyst: the
+			# gauntlet bought issued guns over the build's, and the poison builds' 'losses' were the issued guns')
+			if not w.get("stamped", false):
+				sim.cash = maxf(sim.cash, float(sim.stamp_price(w)) * 2.0)
+				if not sim.stamp(int(w["id"])):
+					why = sim.stamp_block(w)
 			continue
 		sim.cash = maxf(sim.cash, float(sim.issued_price(sl)) * 2.0)
 		_gauntlet_room(sim)
@@ -1369,7 +1429,8 @@ func _walk(sim, id: String) -> bool:
 	return false
 
 
-func _parity(hours: float, cls: String, element: String) -> void:
+const PARITY_WALL_MIN := 50      # minutes of wall before a parity read stops and says so (the fix round, H1: balance.bat kills it at 60)
+func _parity(hours: float, cls: String, element: String, cap_min := PARITY_WALL_MIN) -> void:
 	var text := FileAccess.get_file_as_string(CHECKPOINT)
 	var d = JSON.parse_string(text) if text != "" else null
 	if not (d is Dictionary) or not d.has("sim"):
@@ -1400,16 +1461,33 @@ func _parity(hours: float, cls: String, element: String) -> void:
 	sim.skill_slots = ["", "", ""]
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp()
-	var start_s: float = sim.elapsed
+	var p: Dictionary = parity_play(sim, parity_bot(cls, element), hours, cap_min * 60000)
+	p.merge({"build": "%s as %s" % [cls, element], "class": cls, "element": element, "from_h": float(d.get("hour", 0.0)), "wall_cap_min": cap_min}, true)
+	p["kit"] = _kit(sim)
+	print("PARITY " + JSON.stringify(p))
+	quit(0)
+
+
+## The parity read's bot: the build's own class for the whole spell (no crew), and no repeat runs (the fix round, H7:
+## a repeat set off near the spell's end ran on past it, so the reads' spells differed).
+static func parity_bot(cls: String, element: String):
 	var bot = Bot.new()
 	bot.cls = cls
 	bot.element = element
 	bot.crew_on = false                      # one class for the spell: the comparison is the build's own
-	var p := {"build": "%s as %s" % [cls, element], "class": cls, "element": element, "hours": hours, "from_h": float(d.get("hour", 0.0)),
-		"reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0, "signals_won": 0, "signals_run": 0}
+	bot.repeats = false
+	return bot
+
+
+## The parity read's spell: `hours` of the yard's time from where the sim stands, or till `limit_ms` of the process's
+## wall (the engine's clock, the one balance.bat's kill reads; the fix round, H1), the line saying which (cut_short).
+static func parity_play(sim, bot, hours: float, limit_ms: int) -> Dictionary:
+	var start_s: float = sim.elapsed
+	var p := {"hours": hours, "reach0": sim.reach, "level0": sim.level(), "dps0": snappedf(float(sim.damage_split()["total"]), 0.1), "runs": 0, "deaths": 0,
+		"signals_won": 0, "signals_run": 0, "norepeat": not bot.repeats}
 	var t_end: float = sim.elapsed + hours * 3600.0
 	var t0 := Time.get_ticks_msec()
-	while sim.elapsed < t_end and Time.get_ticks_msec() - t0 < 7200000:
+	while sim.elapsed < t_end and Time.get_ticks_msec() < limit_ms:
 		var lost: int = sim.operators_lost
 		var t: int = bot.step(sim)
 		if t >= 0:
@@ -1418,7 +1496,7 @@ func _parity(hours: float, cls: String, element: String) -> void:
 				p["deaths"] += 1
 			bot.tidy(sim)
 	for e in sim.chronicle:
-		if str(e.get("k", "")) == "signal_done" and float(e.get("t", 0.0)) >= float(d["sim"].get("elapsed", 0.0)):
+		if str(e.get("k", "")) == "signal_done" and float(e.get("t", 0.0)) >= start_s:
 			p["signals_run"] += 1
 			p["signals_won"] += 1 if e.get("won", false) else 0
 	p["reach1"] = sim.reach
@@ -1428,11 +1506,9 @@ func _parity(hours: float, cls: String, element: String) -> void:
 	p["cut_short"] = sim.elapsed < t_end
 	p["reach_gain"] = int(p["reach1"]) - int(p["reach0"])
 	p["level_gain"] = int(p["level1"]) - int(p["level0"])
-	p["kit"] = _kit(sim)
 	@warning_ignore("integer_division")
 	p["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
-	print("PARITY " + JSON.stringify(p))
-	quit(0)
+	return p
 
 
 

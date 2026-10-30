@@ -164,15 +164,9 @@ func _init() -> void:
 	visible = false
 
 
-## A duration as the place cards say it: "30 min", "1 h 20 min", "3 h".
+## A duration as the place cards say it: "30 min", "1 h 20 min", "3 h" (Fmt.dur, the report's too).
 static func dur(seconds: float) -> String:
-	var m: int = int(round(seconds / 60.0))
-	@warning_ignore("integer_division")
-	var h: int = m / 60
-	m = m % 60
-	if h == 0:
-		return "%d min" % m
-	return ("%d h" % h) if m == 0 else ("%d h %d min" % [h, m])
+	return Fmt.dur(seconds)
 
 
 ## What a far place pays, in words: "meds, the Clinic's supplies".
@@ -416,7 +410,7 @@ func _next_hand(k: int) -> void:
 func _next_kind(k: int) -> void:
 	var kinds: Array = sim.cargo_kinds()
 	var taken: Array = []
-	for j in range(cargo.size()):
+	for j in range(mini(cargo.size(), sim.exp_slots(_crew_ids()))):     # a slot hidden by a smaller party holds nothing (the fix round)
 		if j != k:
 			taken.append(str(cargo[j]["kind"]))
 	var opts: Array = kinds.filter(func(x): return not (x in taken))

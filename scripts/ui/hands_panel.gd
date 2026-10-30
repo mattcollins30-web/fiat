@@ -12,6 +12,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const HandCell := preload("res://scripts/ui/hand_cell.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const PAD := 16
 const GAP := 8
@@ -114,9 +115,7 @@ func show_state(s) -> void:
 	UI.fit_button(hire, [E["hire"]])
 	var on_roster: bool = not sim.hand_by_id(picked).is_empty()
 	let_go.disabled = not on_roster or sim.hand_out(sim.hand_by_id(picked))
-	if picked != _armed:
-		_armed = -1
-	UI.fit_button(let_go, [E["let_go_again"], E["let_go"]] if _armed >= 0 else [E["let_go"]])
+	UI.fit_button(let_go, [E["let_go_again"], E["let_go"]] if _arm.holds(picked) else [E["let_go"]])     # armed on this hand, in the window
 	var nf: String = sim.reroll_block(false)
 	new_faces.disabled = nf != ""
 	UI.fit_button(new_faces, [E["new_faces"] % Fmt.money(sim.reroll_cost(false)), E["new_faces"] % Fmt.money_k(sim.reroll_cost(false))])
@@ -162,19 +161,15 @@ func _hire() -> void:
 		acted.emit()
 
 
-## Let go: a second press within ARM_MS (the UI review's D2: a Legendary level-10 hand lost on one click).
-const ARM_MS := 3000
-var _armed := -1
-var _armed_at := 0
+## Let go: a second press on the same hand inside arm.gd's window (the UI review's D2: a Legendary level-10 hand lost on
+## one click; the fix round, 30 Oct: the shared arm and its 4 s, not a 3 s of its own; cleared when the panel hides).
+var _arm := Arm.new()
 func _let_go() -> void:
 	if sim == null:
 		return
-	if _armed != picked or Time.get_ticks_msec() - _armed_at > ARM_MS:
-		_armed = picked
-		_armed_at = Time.get_ticks_msec()
+	if not _arm.press(picked):
 		acted.emit()
 		return
-	_armed = -1
 	if sim.let_go(picked):
 		picked = -1
 	acted.emit()
@@ -184,6 +179,11 @@ func _reroll(better: bool) -> void:
 	if sim != null and sim.reroll_pool(better):
 		picked = -1
 		acted.emit()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_arm.clear()
 
 
 ## For the smoke: the cells shown, the pool's then the roster's.

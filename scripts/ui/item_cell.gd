@@ -48,6 +48,7 @@ void fragment() {
 	COLOR = vec4(tint.rgb, tint.a * band * band);
 }
 """
+static var no_pics := false        # the smoke (the fix round, 30 Oct): the words path whether or not the art's in, as web_view's assume_pics
 static var _glow_shader: Shader
 static var _sheen_shader: Shader
 static var _wash_tex: GradientTexture2D
@@ -378,7 +379,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	f = Vector2i(maxi(1, roundi((size.x + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))), maxi(1, roundi((size.y + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))))
 	_style(on, rarity_tone(it))
 	_dress(it, rarity_tone(it))
-	var tex := Items.art(it)
+	var tex: Texture2D = null if no_pics else Items.art(it)
 	for l in _lines:
 		l.visible = false
 	_corner.visible = false

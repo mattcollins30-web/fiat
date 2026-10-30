@@ -140,6 +140,18 @@ static func clock(seconds: float) -> String:
 	return "%d:%02d:%02d" % [s / 3600, (s % 3600) / 60, s % 60]
 
 
+## A duration as the expeditions say it (the fix round, 30 Oct: one helper, the board's and the report's): "30 min",
+## "1 h 20 min", "3 h".
+static func dur(seconds: float) -> String:
+	var m: int = int(round(seconds / 60.0))
+	@warning_ignore("integer_division")
+	var h: int = m / 60
+	m = m % 60
+	if h == 0:
+		return "%d min" % m
+	return ("%d h" % h) if m == 0 else ("%d h %d min" % [h, m])
+
+
 ## A span in hours: 2 hours, 1 hour, 30 minutes.
 static func hours(h: float) -> String:
 	if h < 1.0:

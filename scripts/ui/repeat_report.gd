@@ -63,9 +63,9 @@ func _init() -> void:
 		show_state(sim))
 	@warning_ignore("integer_division")
 	var cw: float = (INNER - 16) / 2.0
-	for k in range(2 * LINES_ROWS + 1):
+	for k in range(2 * LINES_ROWS):                 # two columns, no spare (the fix round, 30 Oct)
 		var col: int = 0 if k < LINES_ROWS else 1
-		var row: int = k % LINES_ROWS if k < 2 * LINES_ROWS else LINES_ROWS
+		var row: int = k % LINES_ROWS
 		lines.append(UI.label(self, Rect2(PAD + col * (cw + 16), ey + 48 + row * LINE_H, cw, LINE_H - 2), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	var by: float = H - PAD - Pal.BUTTON_H
 	done = UI.button(self, Rect2(W - PAD - BTN_W, by, BTN_W, Pal.BUTTON_H), false)
@@ -85,20 +85,20 @@ func show_state(s) -> void:
 		unfolded = false
 		return
 	if not was:
-		unfolded = rep.get("runs", []).size() <= 2 * LINES_ROWS - 1     # open when every run's line fits (the review: an empty card folded)
+		unfolded = rep.get("runs", []).size() <= 2 * LINES_ROWS     # open when every run's line fits (the review: an empty card folded)
 	_site = int(rep["site"])
 	var site: String = str(Data.TIERS[_site]["name"])
 	var tot: Dictionary = Sim.repeat_totals(rep)
 	var n: int = int(tot["runs"])
 	UI.fit(title, [Words.REPEAT["title"] % Words.mid(site), Words.REPEAT["title"] % Words.mid(site.trim_prefix("The "))])
-	UI.fit(sub, [Words.REPEAT["sub"] % [n, "" if n == 1 else "s", Fmt.mss(float(rep.get("time", 0.0)))]])
+	UI.fit(sub, [Words.REPEAT["sub"] % [n, "" if n == 1 else "s", Fmt.clock(float(rep.get("time", 0.0)))]])
 	var b: int = int(tot["bails"])
 	var wn: int = int(tot["wounds"])
 	chips.show_chips([{"forms": [Words.REPEAT["cleared"] % int(tot["cleared"])], "colour": Pal.GOOD},
 		{"forms": [Words.REPEAT["bailed"] % [b, "" if b == 1 else "s"]], "colour": Pal.BAD if b > 0 else Pal.TEXT_2},
 		{"forms": [Words.REPEAT["wounds"] % [wn, "" if wn == 1 else "s"]], "colour": Pal.WARN if wn > 0 else Pal.TEXT_2}], 1, true)
 	var end_w: String = str(Words.REPEAT.get("ended_" + str(rep.get("ended", "done")), ""))
-	UI.fit(ended, [end_w % str(rep.get("reason", "")).to_lower() if end_w.contains("%s") else end_w])     # the reason it ended, said (the language pass)
+	UI.fit(ended, [end_w % str(rep.get("reason", "")) if end_w.contains("%s") else end_w])     # the reason it ended, said (the language pass), kept mid-sentence by the sim (U3: no lowered HP)
 	var lv0: int = int(rep.get("lv0", 1))
 	var lv1: int = int(rep.get("lv1", lv0))
 	var sold: int = int(tot["sold"])
@@ -149,11 +149,9 @@ func show_state(s) -> void:
 		l.text = ""
 		if not unfolded:
 			continue
-		var n_hidden: int = maxi(0, runs.size() - (2 * LINES_ROWS - 1))     # past the lines: the latest shown, the first line says which aren't
-		if k == lines.size() - 1:
-			continue
+		var n_hidden: int = run_hidden(runs.size())     # past the lines: the latest shown, the first line says which aren't
 		if n_hidden > 0 and k == 0:
-			l.text = Words.REPEAT["not_shown"] % n_hidden
+			l.text = Words.REPEAT["not_shown_one"] if n_hidden == 1 else Words.REPEAT["not_shown"] % n_hidden
 			l.add_theme_color_override("font_color", Pal.TEXT_3)
 			continue
 		var j: int = (n_hidden + k - 1) if n_hidden > 0 else k
@@ -170,6 +168,12 @@ func show_state(s) -> void:
 	UI.fit_button(again, [Words.REPEAT["again"], (Words.REPEAT["button_short"] % cnt_n) if cnt_n > 0 else Words.REPEAT["button_full_short"]])
 	UI.fit(note, [why, ""])
 	UI.fit_button(done, [Words.REPEAT["done"]])
+
+
+## The runs a report's lines leave out (the fix round, 30 Oct): none while every run has a line; past that the first line
+## says which aren't shown and the rest show the latest.
+static func run_hidden(n_runs: int) -> int:
+	return 0 if n_runs <= 2 * LINES_ROWS else n_runs - (2 * LINES_ROWS - 1)
 
 
 func _again() -> void:

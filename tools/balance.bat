@@ -6,7 +6,8 @@ rem   tools\balance.bat           thirty-two simulated hours a one-save read (th
 rem   tools\balance.bat 8         eight hours a read
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build
 rem   tools\balance.bat 16 1 quick  the quick pass for iterating (28 Oct, Matt: "buy time on balance passes"): each
-rem                                  one-save read stopped at 20 minutes of wall (its GATES line says where), no gauntlet
+rem                                  one-save read and each parity read stopped at 20 minutes of wall (its GATES or
+rem                                  PARITY line says where), no gauntlet
 rem   tools\balance.bat 0 0 broken    the six broken builds' gauntlets alone, from the last pass's end states (a pass
 rem                                  first): docs\balance\broken.md, the pass's own files left
 rem   tools\balance.bat 0 0 gauntlet  the gauntlet alone (27 Oct, the retune): every build's as played and the six pinnacle
@@ -20,7 +21,8 @@ rem First the checkpoint: one save from a new game (the Poacher) to the Radio's 
 rem docs\balance\radio_checkpoint.save. Then side by side:
 rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
 rem   beaten, or Kev's first story for the Drifter), the crew's swaps after - twice each (READS); every gate judges them;
-rem - the parity reads: every build four hours from the checkpoint, the same world (docs\balance\parity-*.txt);
+rem - the parity reads: every build four hours from the checkpoint, the same world, no repeat runs, each stopping
+rem   itself at 50 minutes of wall under its 60-minute kill (cut_short on its line) (docs\balance\parity-*.txt);
 rem - the loot probe and the loot read.
 rem Each writes docs\balance\pass\<build>-N.txt (the pass's own folder, 25 Oct: the smoke's log and the playtest read
 rem stay where they are); every read runs under a time limit (tools\balance_read.bat); the summary lands in
@@ -83,7 +85,7 @@ for /l %%S in (1,1,2) do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			set /a N+=1
 			>>docs\balance\pass\expected.txt echo parity-%%B-%%A-%%S
-			start "" /b cmd /c tools\balance_read.bat parity-%%B-%%A-%%S 60 %PARITY_HOURS% parity %%B %%A
+			start "" /b cmd /c tools\balance_read.bat parity-%%B-%%A-%%S 60 %PARITY_HOURS% parity %%B %%A %CAPARG%
 		)
 	)
 )
@@ -130,17 +132,19 @@ rem the quick pass has no gauntlet (28 Oct): straight to the summary
 if /i "%~3"=="quick" goto summary
 rem the gauntlet (26 Oct, Matt: "test they are broken and can smash all content at least once"; its kit "the final
 rem pass's end states"): each build's end state as played, and the six broken builds' pieces on their class's
-rem each twice (27 Oct, Matt): the summary takes the better of the two, a build's run of luck either way read out
+rem each twice (27 Oct, Matt): the summary takes the better of the two, a build's run of luck either way read out; the
+rem Nth from the pass's Nth read's end state (pass\<Class>-<element>-N.save, the fix round), the first's if it has none;
+rem each stops itself at 50 minutes of wall under its 60-minute kill, the places left "cut short"
 for /l %%S in (1,1,2) do (
 	for %%E in ("fire Drifter" "bleed Drifter" "poison Poacher" "frost Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "shock Paramedic" "frost Paramedic" "physical Recruit" "poison Recruit") do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			>>docs\balance\pass\expected.txt echo gauntlet-%%B-%%A-%%S
-			start "" /b cmd /c tools\balance_read.bat gauntlet-%%B-%%A-%%S 60 0 gauntlet %%B %%A
+			start "" /b cmd /c tools\balance_read.bat gauntlet-%%B-%%A-%%S 60 0 gauntlet %%B %%A %%S
 		)
 	)
 	for %%K in (embers clean_kills flatline opened_for_good live_load drilled) do (
 		>>docs\balance\pass\expected.txt echo broken-%%K-%%S
-		start "" /b cmd /c tools\balance_read.bat broken-%%K-%%S 60 0 broken %%K
+		start "" /b cmd /c tools\balance_read.bat broken-%%K-%%S 60 0 broken %%K %%S
 	)
 )
 echo The gauntlet: 36 reads running.
@@ -197,8 +201,8 @@ if %DONE% lss %~2 goto wf_loop
 exit /b 0
 
 :badflag
-echo Bad flag: "%*" - expected ^<hours^> [reads] [broken^|hunt]. Nothing was run or deleted.
->docs\balance\flag_error.txt echo bad flag: "%*" - expected ^<hours^> [reads] [broken^|hunt]; nothing run or deleted
+echo Bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt]. Nothing was run or deleted.
+>docs\balance\flag_error.txt echo bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt]; nothing run or deleted
 endlocal
 exit /b 1
 

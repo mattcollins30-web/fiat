@@ -115,7 +115,7 @@ func med_lines(it: Dictionary) -> Array:
 func show_state(s) -> void:
 	sim = s
 	var list := meds()
-	var sig := "%s|%s|%d|%d|%s" % [str(list.map(func(m): return [m[0], m[2], m[3]])), picked, sim.rig_used(), sim.med_capacity(), str(sim.on_mission())]
+	var sig := "%s|%s|%d|%d|%s" % [str(list.map(func(m): return [m[0], m[2], m[3]])), picked, sim.rig_used(), sim.med_capacity(), str(sim.runner_busy())]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -170,7 +170,7 @@ func show_state(s) -> void:
 	_into.visible = in_stash
 	if in_stash:
 		UI.fit_button(_into, ["%s into the rig" % picked, "Into the rig"])
-		_into.disabled = sim.on_mission() or not sim.rig_room(1)
+		_into.disabled = sim.runner_busy() or not sim.rig_room(1)     # between a repeat's runs too (T4)
 		UI.style_button(_into, false)
 
 

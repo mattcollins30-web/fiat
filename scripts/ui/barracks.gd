@@ -142,6 +142,8 @@ var _code_cancel: Button
 var pending_build := {}             # the code read, waiting on Retrain
 var _code_str := ""                # the code shown, planned again whenever the screen changes under it
 var paste_text := ""                # the tests' clipboard: when set, Paste reads it instead of the system's
+static var clip_off := false       # the tests (the fix round, 30 Oct): a copy lands in `copied`, never the system's clipboard
+var copied := ""                   # what the last copy would have put on the clipboard, while clip_off
 
 
 func _init() -> void:
@@ -531,7 +533,14 @@ func _show_head() -> void:
 	if _armed != "":
 		_notice.add_theme_color_override("font_color", Pal.ACCENT)
 		var lv: int = sim.crew_level(_armed)
-		if lv > 0:
+		var jl: int = sim.join_level(_armed)     # the crew's floor (30 Oct): the level they'd join at, when it lifts them
+		var C: Dictionary = Words.CREW
+		if jl > maxi(1, lv):
+			if lv > 0:
+				UI.fit(_notice, [C["join_long"] % [_armed, jl, lv], C["join_mid"] % [_armed, jl], C["join_new_mid"] % [_armed, jl]])
+			else:
+				UI.fit(_notice, [C["join_new"] % [_armed, jl], C["join_mid"] % [_armed, jl], C["join_new_mid"] % [_armed, jl]])
+		elif lv > 0:
 			UI.fit(_notice, ["Swap to the %s: level %d, their own tree and kit – press again" % [_armed, lv], "Swap to the %s, level %d – press again" % [_armed, lv], "%s – press again" % _armed])
 		else:
 			UI.fit(_notice, ["Swap to the %s: a new runner at level 1 – press again" % _armed, "Swap to the %s – press again" % _armed, "%s – press again" % _armed])
@@ -1225,7 +1234,7 @@ func _on_respec() -> void:
 	else:
 		done = sim.respec()
 		if done:
-			DisplayServer.clipboard_set(code)
+			_clip(code)
 			sim.log_event(Words.BUILD["reset_copied"])
 	if done:
 		acted.emit()
@@ -1284,9 +1293,17 @@ func _build_code_panel() -> void:
 
 func _copy_code() -> void:
 	var code: String = sim.build_code()
-	DisplayServer.clipboard_set(code)
+	_clip(code)
 	sim.log_event(Words.BUILD["copied"])
 	acted.emit()
+
+
+## A code to the clipboard; to `copied` instead while the smoke runs (it ran beside Matt's work and wrote his clipboard).
+func _clip(code: String) -> void:
+	if clip_off:
+		copied = code
+	else:
+		DisplayServer.clipboard_set(code)
 
 
 func _paste_code() -> void:

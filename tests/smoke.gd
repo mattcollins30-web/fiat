@@ -271,6 +271,7 @@ const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of 
 
 
 func _init() -> void:
+	load("res://scripts/ui/barracks.gd").clip_off = true     # the smoke never writes the system clipboard (the fix round, 30 Oct: it ran beside Matt's work)
 	Sim.exploits_off = true     # no other check meets an exploit by chance (the review); _exploit_checks turns them on
 	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
@@ -772,7 +773,20 @@ func _init() -> void:
 	_clinic_supply_checks(main)
 	_magazine_checks(main)
 	_repeat_checks(main)
+	_fixa_resale_checks(main)                 # fix round A (30 Oct, review30): S1, S2
+	_fixa_wound_save_checks(main)             # S3
+	_fixa_hard_wager_checks(main)             # S7
+	_fixa_repeat_cures_checks(main)           # S9
+	_fixa_skill_odds_checks(main)             # T1
+	_fixa_crew_odds_checks(main)              # T2
+	_fixa_rig_away_checks(main)               # T4
+	_fixa_gate_paint_checks(main)             # U1, U2
+	_fixa_repeat_refused_checks(main)         # U3
 	_wall_rule_checks()
+	_harness_fix_checks()                     # the fix round's harness (30 Oct): H1-H8 and the summary's merge
+	_merge30_checks()                         # the fix round's merge (30 Oct): the target's one extra clock, the gauntlet's own guns, P6
+	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
+	_exp_lead_xp_checks(main)                 # an expedition lead's XP: points, the cap, the run out, the lead's level (30 Oct, S4-S6)
 	_review28_checks(main)
 	_skills_checks(main.sim)
 	_skills_ui_checks(main)
@@ -780,8 +794,12 @@ func _init() -> void:
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_itemisation_checks(main)
+	_fix30b_checks(main)                      # the fix round (30 Oct, builder B)
 	_compare_readings_checks(main)
 	_expeditions_checks(main)                 # the expeditions (29 Oct)
+	_ui30c_checks(main)                       # the fix round's UI oddities (30 Oct, builder C)
+	_wager_take_checks(main)                  # Kev's every word and pay through the take path (30 Oct, builder C)
+	_art_inventory_checks(main)               # the pictures the copy should hold, apart from the logic (30 Oct, builder C)
 	_finish()
 
 
@@ -2327,7 +2345,7 @@ func _tree_rules_checks(main) -> void:
 	main.refresh()
 	bk._pick_class("Poacher")
 	_check(sim.cls == "Poacher" and is_equal_approx(sim.cash, cash0) and sim.tree.has("The Pitch/0") and sim.tree.has("The Rat Man/0") and sim.roster.is_empty(), "the first pick did not make this runner the Poacher: %s %s" % [sim.cls, str(sim.tree)])
-	# a swap: two presses, free; the Poacher's own kept by the crew; a class not played comes in at level 1 with the arrival's kit
+	# a swap: two presses, free; the Poacher's own kept by the crew; a class not played comes in with the arrival's kit, at the crew's floor (30 Oct)
 	sim.xp = Data.xp_for_level(12)
 	var poacher_gun = sim.equipped["Primary"]
 	bk._shown = ""
@@ -2337,7 +2355,7 @@ func _tree_rules_checks(main) -> void:
 	_check(bk._title.text.begins_with("Doorman"), "the armed swap's panel does not show the Doorman: '%s'" % bk._title.text)
 	_check_fit(main, "Caravan (a swap armed)")
 	bk._pick_class("Doorman")
-	_check(sim.cls == "Doorman" and sim.level() == 1 and is_equal_approx(sim.cash, cash0) and sim.tree.filter(func(id): return not sim.is_camp(str(id))).is_empty() and sim.tree.has("The Pitch/0") and sim.node_active("The Pitch/0") and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
+	_check(sim.cls == "Doorman" and sim.level() == 12 - Data.CREW_FLOOR_UNDER and is_equal_approx(sim.cash, cash0) and sim.tree.filter(func(id): return not sim.is_camp(str(id))).is_empty() and sim.tree.has("The Pitch/0") and sim.node_active("The Pitch/0") and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
 	_check(sim.roster.has("Poacher") and sim.crew_level("Poacher") == 12 and is_same(sim.roster["Poacher"]["equipped"]["Primary"], poacher_gun), "the crew did not keep the Poacher's own: %s" % str(sim.roster.keys()))
 	_check(poacher_gun == null or sim.item_by_id(int(poacher_gun["id"])).is_empty(), "the Poacher's gun is still the Doorman's to reach")
 	_check(bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text.contains("12"), "the Poacher's card does not say his level: '%s'" % bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text)
@@ -2354,8 +2372,8 @@ func _tree_rules_checks(main) -> void:
 	var crew_d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	var cfresh = Sim.new()
 	cfresh.load_dict(crew_d)
-	_check(cfresh.cls == "Poacher" and cfresh.roster.has("Doorman") and cfresh.crew_level("Doorman") == 1 and cfresh.roster["Doorman"]["equipped"]["Primary"] != null, "the crew did not survive a save: %s" % str(cfresh.roster.keys()))
-	_check(cfresh.set_class("Doorman") and cfresh.level() == 1 and cfresh.equipped["Primary"] != null and typeof(cfresh.equipped["Primary"]["rarity"]) == TYPE_INT and typeof(cfresh.equipped["Primary"]["id"]) == TYPE_INT, "a loaded crew's runner would not come out, or came out with float figures")
+	_check(cfresh.cls == "Poacher" and cfresh.roster.has("Doorman") and cfresh.crew_level("Doorman") == 12 - Data.CREW_FLOOR_UNDER and cfresh.roster["Doorman"]["equipped"]["Primary"] != null, "the crew did not survive a save: %s" % str(cfresh.roster.keys()))
+	_check(cfresh.set_class("Doorman") and cfresh.level() == 12 - Data.CREW_FLOOR_UNDER and cfresh.equipped["Primary"] != null and typeof(cfresh.equipped["Primary"]["rarity"]) == TYPE_INT and typeof(cfresh.equipped["Primary"]["id"]) == TYPE_INT, "a loaded crew's runner would not come out, or came out with float figures")
 	# the Pitch's tree is the camp's, its own points (21 Oct, Matt): one a level of the crew's best class
 	_check(sim.pitch_points() == sim.crew_best_level() - 1 and sim.free_for("The Pitch/1") == sim.pitch_free() and sim.free_for("Stalking/0") == sim.points_free(), "the Pitch's points are off: %d of best %d" % [sim.pitch_points(), sim.crew_best_level()])
 	# a node picked disarms a swap
@@ -6916,7 +6934,7 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	_check(main._fence._right_lines[0].text.begins_with("A socketable"), "the Fence does not say salt is a socketable: %s" % main._fence._right_lines[0].text)
 	_check_fit(main, "Fence (salt)")
-	_check(Items.art(sim._plain(Data.PAPER, "A P45")) != null and Items.art(sim._plain(Data.PAPER, "A boarding pass")) == Items.art(sim._plain(Data.PAPER, "A P45")), "papers have no picture in the cell, or not the same one")
+	# (the papers' picture: _art_inventory_checks, the fix round, 30 Oct)
 	sim.load_dict(saved)
 	# the boss toggle on the Runs card: one press, one toast, however many refreshes follow
 	_finish_campaign(sim)
@@ -8460,7 +8478,7 @@ func _check_fit(main, where: String) -> void:
 				var rail := Rect2(main._rail.position, Vector2(Pal.RAIL_W, main._rail_panel.size.y))     # the rail unfolded's, folded or not (15 Oct)
 				_check(pr.is_equal_approx(rail), "%s menu: the drawer is not the rail's rect (%s vs %s)" % [where, pr, rail])
 				_check(mn._kicker.visible and mn._kicker.text.begins_with("PAUSED"), "%s menu: the drawer's kicker is '%s'" % [where, mn._kicker.text])
-				_check(mn._items.all(func(_it): return true) and mn._details[0].text == "" and mn._details[1].text == "", "%s menu: the drawer's rows carry details" % where)
+				_check(mn._details.size() > 0 and mn._details.all(func(dl): return dl.text == ""), "%s menu: the drawer's rows carry details" % where)
 			_:
 				_check(mn._title.visible, "%s menu: the card has no heading" % where)
 	bad += _check_nodes(main._juice.text_nodes(), [], where + " toasts")
@@ -9930,12 +9948,16 @@ func _wall_rule_checks() -> void:
 	for i in Data.ZONES[0]["tiers"]:
 		w2.best_depth[i] = 1
 	w2.bosses_beaten[0] = true
-	var bt2 = Bot.new()
+	var bt2 = _wall_bot()
 	bt2.wall_on = true
 	bt2.wall_note(w2, int(Data.ZONES[0]["tiers"][0]))
-	bt2.wall_note(w2, int(wall[0]))           # the next site tried: a step forward
+	bt2.pick = 0.5
+	bt2.wall_note(w2, int(wall[0]))           # the next site tried under FIRST (a fallback pick): no step forward (the fix round)
+	_check(bt2._wall_from >= 0.0, "a first clear tried under FIRST stopped the wall's clock")
+	bt2.pick = 0.7
+	bt2.wall_note(w2, int(wall[0]))           # at FIRST or better: a step forward
 	w2.elapsed += bt2.WALL_S * 2.0
-	_check(not bt2.wall_check(w2) and w2.cls == "Poacher", "a first clear tried didn't stop the wall's clock")
+	_check(not bt2.wall_check(w2) and w2.cls == "Poacher", "a first clear tried at FIRST didn't stop the wall's clock")
 	var bt3 = Bot.new()
 	bt3.wall_note(w2, int(Data.ZONES[0]["tiers"][0]))
 	w2.elapsed += bt3.WALL_S * 2.0
@@ -9943,7 +9965,460 @@ func _wall_rule_checks() -> void:
 	var Sum = load("res://tools/balance_summary.gd")
 	var wr: Array = Sum.walls_row([{"build": "Drifter as bleed", "one_save": true, "walls": [[3.7, 8, true, "Poacher", "Paramedic", -1.0]]}, {"build": "Doorman as bleed", "one_save": true, "walls": []}])
 	_check(str(wr[2]) == "Drifter as bleed: 3.7 h head on 8, Paramedic for Poacher; Doorman as bleed: none", "the summary's walls: '%s'" % str(wr[2]))
+	_wall_branch_checks()
 	print("the wall ok: the clock, the swap to a new class, a step forward, off")
+
+
+## The fix round's merge (30 Oct): the read's own build is spared the wall one extra clock at most; the gauntlet stamps a
+## build's own guns, never buys the Issuer's over them; P6 judges the faint half alone.
+func _merge30_checks() -> void:
+	var w = Sim.new()
+	w.start()
+	if w.cls != "Poacher":
+		w.set_class("Poacher")
+	var b = Bot.new()
+	b.target_cls = "Poacher"
+	b._tgt_lv_at = w.elapsed
+	var first: bool = b.target_levelling(w)
+	w.elapsed += b.WALL_S * 0.5
+	b._tgt_lv_at = w.elapsed                 # levelled again
+	var second: bool = b.target_levelling(w)
+	w.elapsed += b.WALL_S * 0.6
+	b._tgt_lv_at = w.elapsed                 # and again: still levelling, but its extra clock's spent
+	_check(first and second and not b.target_levelling(w), "the read's own build was spared the wall past one extra clock")
+	# the gauntlet: the build's own guns stamped, the rest issued
+	var Bal = load("res://tests/balance.gd")
+	var g = Sim.new()
+	g.start()
+	if g.cls != "Poacher":
+		g.set_class("Poacher")
+	g.issued = true
+	g.equipped["Primary"] = g._plain("Primary", "Old .303")
+	g.equipped["Secondary"] = g._plain("Secondary", "Service pistol")
+	var gb = Bot.new()
+	Bal._gauntlet_issued(g, gb, 6)
+	_check(str(g.equipped["Primary"]["base"]) == "Old .303" and bool(g.equipped["Primary"].get("stamped", false))
+		and str(g.equipped["Secondary"]["base"]) == "Service pistol" and bool(g.equipped["Secondary"].get("stamped", false)),
+		"the gauntlet's issued kit took the build's guns: %s, %s" % [str(g.equipped["Primary"]), str(g.equipped["Secondary"]["base"])])
+	# P6: a full half far outside 35-65% with the faint half fine is green
+	var Sum = load("res://tools/balance_summary.gd")
+	var p6: Array = Sum.signals_row([{"build": "A", "faint": [10, 9], "full_at_reach": [100, 95]}])
+	_check(str(p6[0]) == "P6. The signals" and p6[3] == true, "P6 judged the full half: %s" % str(p6))
+
+
+## A bot whose wall reads are set by hand (the fix round): `odds` a class's at the wall, `pick` a pick's (-1: the real read).
+func _wall_bot():
+	var gs := GDScript.new()
+	gs.source_code = "extends \"res://tests/bot.gd\"\nvar odds := {}\nvar pick := -1.0\n" + \
+		"func class_wall_odds(_sim, name: String, _wall: Array) -> float:\n\treturn float(odds.get(name, 0.0))\n" + \
+		"func pick_odds(sim, t: int) -> float:\n\treturn pick if pick >= 0.0 else super(sim, t)\n"
+	gs.reload()
+	return gs.new()
+
+
+## The wall rule's branches (the fix round, the review's "three of four untested"): a played class at FIRST, the best
+## of two, the 0.05 fallback, the from-class's odds logged, the target levelling kept out, the walled one read again
+## and back, H4's target taken from the first step, and the read's build home when the campaign's done.
+func _wall_branch_checks() -> void:
+	var dice0: Array = [Sim._seed_n, Items._next_id]     # the camps and finds made here leave the later checks' dice as they were
+	var w = Sim.new()
+	w.start()
+	if w.cls != "Poacher":
+		w.set_class("Poacher")
+	for i in Data.ZONES[0]["tiers"]:
+		w.best_depth[i] = 1
+	w.bosses_beaten[0] = true                 # the Paramedic open
+	w.bosses_beaten[1] = true                 # and the Doorman (the Estate's sites still to clear: the wall stands there)
+	_check(w.set_class("Paramedic") and w.set_class("Doorman") and w.set_class("Poacher"), "the wall's fixture: the three classes not played")
+	_check(not w.class_open("Scrapper") and not w.class_open("Recruit") and not w.class_open("Drifter"), "the wall's fixture: a class open past the three")
+	var bt = _wall_bot()
+	bt.wall_on = true
+	var wall: Array = bt.wall_at(w)
+	var farm: int = int(Data.ZONES[0]["tiers"][0])
+	_check(int(wall[0]) >= 0, "the wall's fixture: no wall")
+	# the best of two played classes at FIRST, and the walled one's odds in the entry
+	bt.odds = {"Poacher": 0.3, "Paramedic": 0.66, "Doorman": 0.8}
+	bt.wall_note(w, farm)
+	w.elapsed += bt.WALL_S
+	_check(bt.wall_check(w) and w.cls == "Doorman" and bt.walls.size() == 1 and bt.walls[0].size() == 7 and is_equal_approx(float(bt.walls[0][5]), 0.8) and is_equal_approx(float(bt.walls[0][6]), 0.3),
+		"walled, the best played class at FIRST didn't go out with both odds logged: %s out, %s" % [w.cls, str(bt.walls)])
+	# none at FIRST and none new: the nearest, only when it reads 0.05 over the one out
+	bt.odds = {"Poacher": 0.3, "Paramedic": 0.5, "Doorman": 0.48}
+	bt.wall_note(w, farm)
+	w.elapsed += bt.WALL_S
+	_check(not bt.wall_check(w) and w.cls == "Doorman", "the fallback swapped for under 0.05 better")
+	bt.odds["Doorman"] = 0.4
+	bt.wall_note(w, farm)
+	w.elapsed += bt.WALL_S
+	_check(bt.wall_check(w) and w.cls == "Paramedic" and is_equal_approx(float(bt.walls.back()[5]), 0.5) and is_equal_approx(float(bt.walls.back()[6]), 0.4),
+		"none at FIRST: the class 0.05 nearer didn't go out: %s, %s" % [w.cls, str(bt.walls.back())])
+	# the walled one read again: not before its clock or a level, back when it reads FIRST
+	bt.odds = {"Poacher": 0.5, "Paramedic": 0.3, "Doorman": 0.7}
+	_check(not bt.wall_return(w) and w.cls == "Paramedic", "a walled class came back before its clock or a level, or read under FIRST: %s" % w.cls)     # the Poacher due and under; the Doorman not due
+	w.elapsed += 60.0
+	w.roster["Doorman"]["xp"] = Data.xp_for_level(w.crew_level("Doorman") + 1)     # a level on the bench: read again now
+	_check(bt.wall_return(w) and w.cls == "Doorman" and str(bt.walls.back()[3]) == "Paramedic" and str(bt.walls.back()[4]) == "Doorman" and not bt._walled.has("Doorman"),
+		"a walled class that levelled and reads FIRST didn't come back: %s, %s" % [w.cls, str(bt.walls.back())])
+	bt.odds["Poacher"] = 0.7
+	w.elapsed += bt.WALL_S
+	_check(bt.wall_return(w) and w.cls == "Poacher" and bt._walled.is_empty(), "a walled class read again on its clock at FIRST didn't come back: %s" % w.cls)
+	# the target still levelling isn't walled away; once it stops, it is
+	var tb = _wall_bot()
+	tb.wall_on = true
+	tb.target_cls = "Poacher"
+	tb._target_taken = true
+	tb.odds = {"Poacher": 0.2, "Paramedic": 0.9, "Doorman": 0.9}
+	tb.wall_note(w, farm)
+	w.elapsed += tb.WALL_S - 100.0
+	w.xp = Data.xp_for_level(w.level() + 1)
+	tb.wall_note(w, farm)                     # a level up 100 s before the clock runs out
+	w.elapsed += 100.0
+	_check(not tb.wall_check(w) and w.cls == "Poacher", "the target was walled away while still levelling")
+	w.elapsed += tb.WALL_S
+	_check(tb.wall_check(w) and w.cls != "Poacher", "the target that stopped levelling was never walled")
+	# H4: a read that starts as its target takes it at once, so the wall's swap isn't undone on the next step
+	var h = Sim.new()
+	h.start()
+	if h.cls != "Poacher":
+		h.set_class("Poacher")
+	h.bosses_beaten[0] = true
+	var hb = Bot.new()
+	hb.wall_on = true
+	hb.target_cls = "Poacher"
+	hb.target_el = "frost"
+	hb.take_target(h)
+	_check(hb._target_taken, "a read that starts as its target didn't take it")
+	hb._crew_out(h, "Paramedic")              # the wall's swap
+	hb.take_target(h)
+	_check(h.cls == "Paramedic", "the Poacher's read took the Poacher back over the wall's swap")
+	# the campaign done: the read's own build back out, once
+	for i in range(Data.TIERS.size()):
+		h.best_depth[i] = maxi(1, int(h.best_depth[i]))
+	for z in range(h.bosses_beaten.size()):
+		h.bosses_beaten[z] = true
+	h.depot_cleared = true
+	_check(h.campaign_done(), "the wall's fixture: the campaign not done")
+	hb.wall_home(h)
+	_check(h.cls == "Poacher" and hb._wall_home, "the campaign done, the read's own build didn't come back out: %s" % h.cls)
+	hb._crew_out(h, "Paramedic")
+	hb.wall_home(h)
+	_check(h.cls == "Paramedic", "the read's build came home twice")
+	Sim._seed_n = int(dice0[0])
+	Items._next_id = int(dice0[1])
+	print("the wall's branches ok: the best at FIRST, the 0.05 fallback, the odds logged, the walled read again, the target, home")
+
+
+## The fix round's harness (30 Oct, docs/review30.md's "Balance harness"): the read's end figures off its own build (H3),
+## a normal run home on a short clock after the clear (H2), the gauntlet's tries treated and their skills picked (H8),
+## the parity read without repeats (H7) and both stopping under their kill with a line (H1), the expeditions' counts and
+## sends, and the summary's merge of two reads (H6), gate 16's nevers and gate 15's shipped scrap; the bats.
+func _harness_fix_checks() -> void:
+	var dice0: Array = [Sim._seed_n, Items._next_id]     # the camps and finds made here leave the later checks' dice as they were
+	var Bal = load("res://tests/balance.gd")
+	var Sum = load("res://tools/balance_summary.gd")
+	# H3: the read's build out for the end's figures
+	var e = Sim.new()
+	e.start()
+	if e.cls != "Poacher":
+		e.set_class("Poacher")
+	e.bosses_beaten[0] = true
+	e.xp = Data.xp_for_level(9)
+	var eb = Bot.new()
+	_check(eb._crew_out(e, "Paramedic") and e.level() != 9, "the end's fixture: no other class out")
+	Bal.end_as_build(e, eb, "Poacher")
+	_check(e.cls == "Poacher" and e.level() == 9 and eb.crew_swaps == 1, "the end's figures not the read's build: %s at level %d, %d swaps" % [e.cls, e.level(), eb.crew_swaps])
+	# H2: a normal run home on a short clock after the clear, not sat out waiting for its second gang
+	var r = _fresh_run(0)
+	if r == null:
+		_check(false, "the short clock's fixture: no run")
+	else:
+		var m: Dictionary = r.mission
+		m["remaining"] = 0
+		m["cleared"] = true
+		m["crates_off"] = true
+		m["kills"] = 10
+		m["clock_used"] = 100.0
+		m["patrols"] = 0
+		var rb = Bot.new()
+		m["clock"] = 1e6
+		_check(not rb.should_leave(r), "a long clock after the clear sent the run home")
+		m["clock"] = 5.0
+		_check(rb.should_leave(r), "a normal run sat out a short clock after the clear")
+		r.extract_now()
+	# H8: each gauntlet try from whole - wounds seen to, the three skills picked for the place
+	var g = Sim.new()
+	g.start()
+	g.wounds = {str(Data.WOUND_AREAS[0]): {"stat": "pace", "what": "a cut", "from": "the smoke", "hp_pct": 0.1}}
+	g.hp = 1.0
+	g.skill_slots = ["junk", "", ""]
+	Bal.gauntlet_ready(g, Bot.new(), "grid")
+	_check(g.wounds.is_empty() and is_equal_approx(g.hp, g.max_hp()) and g.skill_slots.size() == 3 and not ("junk" in g.skill_slots), "a gauntlet try set off hurt or with the last place's skills: %s, %s" % [str(g.wounds), str(g.skill_slots)])
+	# H1: past its wall limit the gauntlet stops and says so, every place left named
+	var gr: Dictionary = Bal.gauntlet_run(g, Bot.new(), ["grid", "archive"], 0)
+	_check(bool(gr["cut"]) and gr["rows"].size() == 2 and gr["rows"].all(func(gw): return int(gw["tries"]) == 0 and str(gw["why"]).begins_with("cut short")) and int(gr["tries"]) == 0,
+		"the gauntlet past its wall limit: %s" % str(gr))
+	# H7 and H1: the parity read without repeats, cut short at its wall limit with its figures
+	var pb = Bal.parity_bot("Poacher", "frost")
+	_check(not pb.repeats and not pb.crew_on, "the parity read's bot repeats or swaps")
+	var ps = Sim.new()
+	ps.start()
+	var pp: Dictionary = Bal.parity_play(ps, pb, 0.5, 0)
+	_check(bool(pp["cut_short"]) and float(pp["played_h"]) == 0.0 and bool(pp["norepeat"]) and int(pp["runs"]) == 0, "the parity read past its wall limit: %s" % str(pp))
+	# the expeditions: a held crew counted once however many fetches; nothing sent where no place reads EXP_ODDS_AT
+	var fs := GDScript.new()
+	fs.source_code = "extends \"res://scripts/sim/sim.gd\"\nvar fake_odds := 0.2\n" + \
+		"func expeditions_open() -> bool:\n\treturn true\n" + \
+		"func exp_take(_id: int) -> bool:\n\treturn false\n" + \
+		"func exp_hold_site(_id: int) -> int:\n\treturn 0\n" + \
+		"func exp_fetch_block(_id: int) -> String:\n\treturn \"\"\n" + \
+		"func odds_ready(_i: int) -> bool:\n\treturn true\n" + \
+		"func odds_now(_i: int) -> float:\n\treturn 1.0\n" + \
+		"func exp_fetch(_id: int) -> bool:\n\treturn true\n" + \
+		"func exp_leads() -> Array:\n\treturn [\"Paramedic\"]\n" + \
+		"func exp_odds(_p: int, _lead: String, _now := false) -> Array:\n\treturn [fake_odds, true]\n" + \
+		"func exp_crew_odds(_p: int, _lead: String, _hand_ids: Array, _now := true) -> float:\n\treturn 0.9\n" + \
+		"func exp_risk(_p: int, _lead: String, _hand_ids: Array, _worth: float, _odds: float) -> float:\n\treturn 0.0\n" + \
+		"func lead_strength(_lead: String) -> float:\n\treturn 1e9\n" + \
+		"func send_expedition(_p: int, _lead: String, _hand_ids: Array, _cargo: Array, _slot := \"\") -> bool:\n\treturn true\n"
+	fs.reload()
+	var x = fs.new()
+	x.start()
+	x.expeditions = [{"id": 7, "state": "held"}]
+	var xb = Bot.new()
+	var f1: bool = xb._expeditions(x)
+	var f2: bool = xb._expeditions(x)
+	_check(f1 and f2 and xb.exp_fetched == 2 and xb.exp_held == 1, "a held crew fetched twice counted %d times held (fetched %d)" % [xb.exp_held, xb.exp_fetched])
+	x.expeditions = []
+	x.scrap = 50000
+	x.fake_odds = 0.2
+	_check(not xb._exp_send(x), "an expedition went where no place read EXP_ODDS_AT")
+	x.fake_odds = 0.9
+	_check(xb._exp_send(x), "the send's fixture: nothing went where every place reads")
+	# H6: two reads merged - walls joined, the repeats and the expeditions summed, the bases worn summed, each read's
+	# damage shares weighing the same
+	var r1 := {"build": "Drifter as fire", "element": "fire", "hours": 16.0, "walls": [[1.0, 8, false, "Poacher", "Paramedic", 0.7, 0.3]], "repeats": 1, "repeat_runs": 5, "repeat_bails": 1,
+		"exp": {"sent": 2, "scrap_out": 1000}, "worn": {"Primary": {"Pistol": 1.0}}, "dealt_by_type": {"smg": 100.0}}
+	var r2 := {"build": "Drifter as fire", "element": "fire", "hours": 16.0, "walls": [[2.0, 9, true, "Paramedic", "Drifter", 0.8, 0.2]], "repeats": 2, "repeat_runs": 7, "repeat_bails": 0,
+		"exp": {"sent": 3, "scrap_out": 3000}, "worn": {"Primary": {"Pistol": 0.5, "Rifle": 2.0}}, "dealt_by_type": {"rifle": 1e9}}
+	var mg: Dictionary = Sum._merged([r1, r2])
+	_check(mg["walls"].size() == 2 and int(mg["repeats"]) == 3 and int(mg["repeat_runs"]) == 12 and int(mg["repeat_bails"]) == 1 and int(mg["exp"]["sent"]) == 5 and int(mg["exp"]["scrap_out"]) == 4000,
+		"two reads merged kept the first's walls, repeats or expeditions: %s" % str([mg["walls"], mg.get("repeats"), mg.get("repeat_runs"), mg.get("exp")]))
+	_check(is_equal_approx(float(mg["worn"]["Primary"]["Pistol"]), 1.5) and is_equal_approx(float(mg["worn"]["Primary"]["Rifle"]), 2.0) and is_equal_approx(float(mg["dealt_by_type"]["smg"]), 1.0) and is_equal_approx(float(mg["dealt_by_type"]["rifle"]), 1.0),
+		"two reads merged: the bases worn or the damage shares off: %s, %s" % [str(mg["worn"]), str(mg["dealt_by_type"])])
+	# gate 15: the scrap shipped is scrap earned (a merged build's shipping a mean over its reads)
+	var sc: Dictionary = {"build": "Drifter as fire", "scrap_end": 3000, "scrap_spent": 0, "elapsed_h": 3.0, "exp": {"scrap_out": 4000}, "reads": 2}     # 1.8 h held with the shipping, 3 h without
+	_check(bool(Sum.scrap_row([sc])[3]), "gate 15 left the shipped scrap out of the income: %s" % str(Sum.scrap_row([sc])[2]))
+	# gate 16: a build that never cleared a site counts later than any
+	var all_lv := {}
+	for i in range(Data.OUTSKIRTS_SITES + 1, Data.TIERS.size()):
+		all_lv[str(i)] = Sim.wear_of(Sim.lv_at(i, 1))
+	var some_lv: Dictionary = all_lv.duplicate()
+	some_lv.erase(str(Data.OUTSKIRTS_SITES + 1))
+	var sl_ok: Array = Sum.site_levels_row([{"build": "A", "first_clear_lv": all_lv}, {"build": "B", "first_clear_lv": all_lv}])
+	var sl_nv: Array = Sum.site_levels_row([{"build": "A", "first_clear_lv": all_lv}, {"build": "B", "first_clear_lv": some_lv}])
+	_check(bool(sl_ok[3]) and not bool(sl_nv[3]) and str(sl_nv[2]).contains("never: B"), "gate 16 left out a build that never cleared a site: %s / %s" % [str(sl_ok[2]), str(sl_nv[2])])
+	# the bats: every argument after the minutes goes through, the bad flag names every flag, CRLF kept
+	var rd: String = FileAccess.get_file_as_string("res://tools/balance_read.bat")
+	var bb: String = FileAccess.get_file_as_string("res://tools/balance.bat")
+	_check(rd.contains("shift /3") and not rd.contains("%9") and rd.count("\n") == rd.count("\r\n"), "balance_read.bat drops arguments past the ninth, or lost its CRLF")
+	_check(bb.contains("[quick^|gauntlet^|broken^|hunt]") and bb.contains("gauntlet %%B %%A %%S") and bb.contains("parity %%B %%A %CAPARG%") and bb.count("\n") == bb.count("\r\n"),
+		"balance.bat: the bad flag's words, the gauntlet's read N, the quick parity cap, or its CRLF")
+	Sim._seed_n = int(dice0[0])
+	Items._next_id = int(dice0[1])
+	print("the harness ok: the end's build, the short clock, the gauntlet's tries and cut, parity, expeditions, the merge, gates 15 and 16, the bats")
+## The events' text, newest last: what the log said.
+func _said(sim) -> Array:
+	return sim.events.map(func(ev): return str(ev[1]))
+
+
+## The crew's floor (30 Oct, Matt, shared XP option B: "felt annoying to have a level 1 class when your other was 15"):
+## `-- only crew_floor`. A class swapped in (new or benched) joins at the best other class's level less CREW_FLOOR_UNDER,
+## its XP at that level's threshold and the levels' points through _earn_points; a benched class keeps its stored level;
+## a death still costs its class its levels till it next comes in after another class was out, and earns no points twice;
+## no floor past the cap, the paragon untouched; the log says it; Training's swap notice and the Radio's crew row say
+## the level they'd join at, and fit.
+func _crew_floor_checks(main) -> void:
+	var u: int = Data.CREW_FLOOR_UNDER
+	var f = Sim.new()
+	f.start()
+	f.mythics_on = false
+	if f.cls != "Poacher":
+		f.set_class("Poacher")
+	f.xp = Data.xp_for_level(15)
+	f.best_level = 15
+	f.training_points = 14
+	f.hp = f.max_hp()
+	_check(f.join_level("Doorman") == 15 - u and f.crew_level("Doorman") == 0, "a new class would join at %d, not %d" % [f.join_level("Doorman"), 15 - u])
+	_check(f.set_class("Doorman") and f.level() == 15 - u and is_equal_approx(f.xp, Data.xp_for_level(15 - u)) and f.training_points == 15 - u - 1 and f.best_level == 15 - u and is_equal_approx(f.hp, f.max_hp()),
+		"a new class swapped in under the floor: level %d, XP %.0f, %d points, best %d, HP %.0f of %.0f" % [f.level(), f.xp, f.training_points, f.best_level, f.hp, f.max_hp()])
+	var said: Array = _said(f)
+	_check(said.has(Words.CREW["floor"] % ["Doorman", 15 - u, u]) and said.any(func(t): return t.begins_with("Level %d: %d training points" % [15 - u, 15 - u - 1])), "the floor's lift went unsaid: %s" % str(said.slice(-4)))
+	_check(f.set_class("Poacher") and f.level() == 15 and f.crew_level("Doorman") == 15 - u and f.join_level("Doorman") == 15 - u, "the swap back moved the Poacher, or the Doorman's stored level: %d, Doorman %d" % [f.level(), f.crew_level("Doorman")])
+	# the benched class keeps its stored level; join_level is the floor's, a swap takes it
+	f.xp = Data.xp_for_level(25)
+	f.best_level = 25
+	var tp_d: int = int(f.roster["Doorman"]["training_points"])
+	_check(f.crew_level("Doorman") == 15 - u and f.join_level("Doorman") == 25 - u, "the bench: stored %d (want %d), joins at %d (want %d)" % [f.crew_level("Doorman"), 15 - u, f.join_level("Doorman"), 25 - u])
+	_check(f.set_class("Doorman") and f.level() == 25 - u and f.training_points == tp_d + 10, "a benched class swapped in: level %d, %d points (had %d)" % [f.level(), f.training_points, tp_d])
+	# a death: back to level 1 while the crew carries on; not lifted while out; lifted when it next comes in, no points twice
+	f.hp = f.max_hp()
+	f.deploy(0)
+	_check(f.on_mission(), "the fixture: the Doorman didn't set off")
+	f._kia()
+	_check(f.cls == "Doorman" and f.level() == 1 and f.join_level("Doorman") == 1, "a death didn't cost the class its levels: %s at %d" % [f.cls, f.level()])
+	f.advance(5.0)
+	_check(f.level() == 1, "the dead class was lifted while out: level %d" % f.level())
+	var tp0: int = f.training_points
+	_check(f.set_class("Poacher") and f.level() == 25, "the Poacher came back lifted or lowered: %d" % f.level())
+	_check(f.set_class("Doorman") and f.level() == 25 - u and f.training_points == tp0 and f.best_level == 25 - u, "the dead class back in after the Poacher: level %d, %d points (had %d)" % [f.level(), f.training_points, tp0])
+	# the cap: no floor past it, the paragon untouched
+	f.set_class("Poacher")
+	f.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	f.paragon_xp = 1234.0
+	_check(f.join_level("Scrapper") == Data.MAX_LEVEL - u and f.set_class("Scrapper") and f.level() == Data.MAX_LEVEL - u and is_equal_approx(f.paragon_xp, 1234.0),
+		"a new class under a capped one: level %d, paragon XP %.0f" % [f.level(), f.paragon_xp])
+	# the screens: Training's armed swap and the Radio's crew row say the level they'd join at, and fit
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	if sim.away():
+		sim.bring_back()
+	var saved: Dictionary = sim.to_dict()
+	var room0 = main.room
+	sim.mission = null
+	var home: String = sim.cls
+	var low: String = "Recruit" if home != "Recruit" else "Paramedic"
+	if not sim.roster.has(low):
+		sim.set_class(low)
+		sim.set_class(home)
+	sim.xp = maxf(sim.xp, Data.xp_for_level(20))
+	sim.roster[low]["xp"] = 0.0
+	var jl: int = sim.join_level(low)
+	_check(jl > 1 and sim.crew_level(low) == 1, "the fixture: %s would join at %d" % [low, jl])
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk._armed = ""
+	bk._shown = ""
+	main.refresh()
+	bk._pick_class(low)
+	_check(sim.cls == home and bk._armed == low and bk._notice.text.contains("joins at level %d" % jl), "the armed swap doesn't say the level the %s joins at (%d): '%s'" % [low, jl, bk._notice.text])
+	var UI_v = load("res://scripts/ui/ui.gd")
+	_check(UI_v.text_width(bk._notice, bk._notice.text) <= bk._notice.size.x, "the swap's join line overflows: '%s'" % bk._notice.text)
+	_check_fit(main, "Training (a lifted swap armed)")
+	for nm in [Data.CLASSES[0]["name"], "Doorman"]:
+		bk._armed = str(nm)
+		bk._shown = ""
+		bk.show_state(sim)
+		_check(UI_v.text_width(bk._notice, bk._notice.text) <= bk._notice.size.x, "the swap's line overflows for the %s: '%s'" % [nm, bk._notice.text])
+	bk._armed = ""
+	sim.signal_seq += 1
+	sim.signals.append({"id": sim.signal_seq, "site": 0, "zone": 0, "depth": sim.depth_for_level(0, maxi(Data.REACH_START, sim.reach)), "codes": [], "papers": [],
+		"head": false, "convoy": false, "line": 0, "grade": 1})     # a plain signal for the crew row to read
+	main.show_room(main.COMMS)
+	main._radio._pick_view("air")
+	main._radio.selected = sim.signals.size() - 1
+	main._radio._shown = ""
+	main.refresh()
+	var row: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible and str(t["cls"]) == low)
+	_check(row.size() == 1 and str(row[0]["name"].text).contains("%d" % jl) and UI_v.text_width(row[0]["name"], row[0]["name"].text) <= row[0]["name"].size.x,
+		"the Radio's crew row doesn't say the %s joins at %d, or overflows: %s" % [low, jl, str(row.map(func(t): return t["name"].text))])
+	_check_fit(main, "the Radio, a lifted class in the crew")
+	# the crew row's odds are read at the level the swap brings them out at: the press carries a read that holds
+	var k_sel: int = sim.signals.size() - 1
+	var o_b: Array = [0.0, false]
+	for i in range(400):
+		o_b = sim.signal_odds_class(k_sel, low)
+		if bool(o_b[1]):
+			break
+	_check(bool(o_b[1]) and sim.crew_level(low) == 1 and sim.cls == home, "the fixture: the %s's odds didn't read, or the read moved them" % low)
+	_check(sim.set_class(low) and sim.level() == jl and bool(sim.signal_odds_now(k_sel)[1]) and is_equal_approx(float(sim.signal_odds_now(k_sel)[0]), float(o_b[0])),
+		"the crew row read the %s below the level they joined at: %s carried, %s now" % [low, str(o_b), str(sim.signal_odds_now(k_sel))])
+	sim.load_dict(saved)
+	main.show_room(room0)
+	main.refresh()
+	print("the crew's floor ok: new and benched classes lifted, the bench stored, a death's reset, the cap, said, the screens")
+
+
+## An expedition lead's XP (30 Oct, the review's S4-S6): `-- only exp_lead_xp`. The lead's XP goes through the one
+## roster-side path (training points for the levels risen, to MAX_LEVEL, the rest to the crew's paragon); a send's
+## shut while a run's out, with words for why; the run's XP is cut by the lead's level, not the runner out's.
+func _exp_lead_xp_checks(_main) -> void:
+	var E: Dictionary = Words.EXPEDITIONS
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	if s.cls != "Poacher":
+		s.set_class("Poacher")
+	var lead := "Scrapper"
+	s.set_class(lead)
+	s.set_class("Poacher")
+	for i in range(Data.TIERS.size()):
+		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+	for z in range(s.bosses_beaten.size()):
+		s.bosses_beaten[z] = true
+	s.cash = 1e7
+	s.scrap = 200000
+	s.hands = []
+	s.expeditions = []
+	s.roster[lead]["xp"] = Data.xp_for_level(20)
+	s.roster[lead]["best_level"] = 20
+	s.roster[lead]["training_points"] = 19
+	var goods: Array = [{"kind": "scrap", "n": 1000}]
+	for k in range(400):
+		if bool(s.exp_odds(0, lead)[1]):
+			break
+	_check(s.expeditions_open() and s.exp_send_block(0, lead, [], goods) == "", "the fixture: no send: '%s'" % s.exp_send_block(0, lead, [], goods))
+	# S5: a run out shuts the send, with its words (before: it went, and its lead's XP was 0)
+	s.hp = s.max_hp()
+	s.deploy(0)
+	_check(s.on_mission() and s.exp_send_block(0, lead, [], goods) == E["shut_run_out"] and not s.send_expedition(0, lead, [], goods) and s.expeditions.is_empty(),
+		"an expedition went with a run out: '%s', %d out" % [s.exp_send_block(0, lead, [], goods), s.expeditions.size()])
+	s.extract_now()
+	s.mission = null
+	_check(s.send_expedition(0, lead, [], goods) and float(s.expeditions.back()["xp_run"]) > 0.0, "the run home, the send went without its lead's XP: '%s'" % s.exp_send_block(0, lead, [], goods))
+	# S4: home with three levels' XP: the points for them, the log's line
+	var e: Dictionary = s.expeditions.back()
+	e["risk"] = 0.0
+	e["hold"] = 0.0
+	e["xp_run"] = (Data.xp_for_level(23) - Data.xp_for_level(20) + 1.0) / s.repeat_xp_share()
+	e["t0"] = s.elapsed - float(e["dur"])
+	s._exp_tick()
+	var r: Dictionary = s.roster[lead]     # the roster's dict as it is now (a read puts a new one back)
+	_check(s.crew_level(lead) == 23 and int(r["training_points"]) == 22 and int(r["best_level"]) == 23, "a lead's three levels on an expedition: level %d, %d points, best %d" % [s.crew_level(lead), int(r["training_points"]), int(r["best_level"])])
+	_check(_said(s).has(Words.CREW["lead_level"] % [lead, 23, 3, "s"]), "the lead's levels went unsaid: %s" % str(_said(s).slice(-3)))
+	_check(s.cls == "Poacher" and s.training_points == 0, "the lead's points went to the runner out: %d" % s.training_points)
+	s.exp_take(int(e["id"]))
+	s.expeditions = []
+	# S4: past the cap the rest is the crew's paragon
+	r["xp"] = Data.xp_for_level(Data.MAX_LEVEL - 1)
+	r["best_level"] = Data.MAX_LEVEL - 1
+	var p0: float = s.paragon_xp
+	var over: float = 5000.0
+	var g: float = Data.xp_for_level(Data.MAX_LEVEL) - Data.xp_for_level(Data.MAX_LEVEL - 1) + over
+	for k in range(400):
+		if bool(s.exp_odds(0, lead)[1]):
+			break
+	_check(s.send_expedition(0, lead, [], goods), "the fixture: no second send: '%s'" % s.exp_send_block(0, lead, [], goods))
+	e = s.expeditions.back()
+	e["risk"] = 0.0
+	e["hold"] = 0.0
+	e["xp_run"] = g / s.repeat_xp_share()
+	e["t0"] = s.elapsed - float(e["dur"])
+	s._exp_tick()
+	r = s.roster[lead]
+	_check(is_equal_approx(float(r["xp"]), Data.xp_for_level(Data.MAX_LEVEL)) and is_equal_approx(s.paragon_xp - p0, over) and int(r["best_level"]) == Data.MAX_LEVEL,
+		"a lead past the cap: XP %.0f (cap %.0f), paragon +%.0f (want %.0f)" % [float(r["xp"]), Data.xp_for_level(Data.MAX_LEVEL), s.paragon_xp - p0, over])
+	# S6: the cut is the lead's level, whatever the runner out's
+	s.roster[lead]["xp"] = Data.xp_for_level(5)
+	s.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	var x_hi: float = s._exp_xp_run(0, lead)
+	s.xp = Data.xp_for_level(5)
+	var x_lo: float = s._exp_xp_run(0, lead)
+	s.roster[lead]["xp"] = Data.xp_for_level(Data.MAX_LEVEL)
+	var x_lead_hi: float = s._exp_xp_run(0, lead)
+	_check(x_hi > 0.0 and is_equal_approx(x_hi, x_lo) and x_lead_hi < x_lo, "the lead's XP is cut by the runner out's level: %.0f with the runner at 50, %.0f at 5 (the lead at 50: %.0f)" % [x_hi, x_lo, x_lead_hi])
+	_check(s.cls == "Poacher" and is_equal_approx(s.xp, Data.xp_for_level(5)) and is_equal_approx(float(s.roster[lead]["xp"]), Data.xp_for_level(Data.MAX_LEVEL)), "the lead's read moved the crew")
+	print("an expedition lead's XP ok: points, the cap's paragon, shut with a run out, the lead's level")
 
 
 func _fresh_run(i := 0):
@@ -10178,6 +10653,7 @@ func _clinic_supply_checks(main) -> void:
 	_check(rolled.any(func(x): return int(x["rarity"]) == 1) and rolled.any(func(x): return int(x["rarity"]) == 2) and rolled.all(func(x): return not Items.is_cure(x) and x["affixes"].size() == int(Data.RARITIES[int(x["rarity"])]["affixes"]) and x["affixes"].all(func(af): return allowed.has(str(af["stat"])))), "her Magic and Rare meds: %d rolled" % rolled.size())
 	# a rolled med's own: quicker to use, a beat of Guard, a cure built in
 	var s2 = _fresh_run(0)
+	_check(s2 != null, "the fixture: no fresh run for the rolled med's checks")     # never skipped silently (the fix round, 30 Oct)
 	if s2 != null:
 		var mm: Dictionary = s2.mission
 		var med: Dictionary = s2._plain(Data.MEDICAL, "Bandage")
@@ -10695,11 +11171,10 @@ func _review28_ui_checks(main) -> void:
 	bk._shown = ""
 	main.refresh()
 	_check(bk._respec.disabled and not sim.can_respec(), "Training's reset is live with only the camp's nodes: '%s'" % bk._respec.text)
-	DisplayServer.clipboard_set("smoke: keep")
-	if DisplayServer.clipboard_get() == "smoke: keep":
-		bk._on_respec()
-		bk._on_respec()
-		_check(DisplayServer.clipboard_get() == "smoke: keep", "a refused reset still wrote the clipboard")
+	bk.copied = "smoke: keep"                 # the barracks' test clipboard (the fix round, 30 Oct: the smoke never writes Matt's)
+	bk._on_respec()
+	bk._on_respec()
+	_check(bk.copied == "smoke: keep", "a refused reset still wrote the clipboard")
 	# the element names in the key and the lanes (the tools review): the name alone
 	for r in bk._key._rows:
 		if Data.ELEMENTS.has(str(r[1])):
@@ -10723,18 +11198,32 @@ func _review28_ui_checks(main) -> void:
 	sim.rig = [band, pouch, tq]
 	ct._shown = ""
 	main.refresh()
+	var n_cure := 0
 	for c in ct._rig_cells:
 		if c.visible and int(c.id) == int(band["id"]):
 			_check(not str(c.tooltip_text).contains("mag") and str(c.tooltip_text).begins_with("Bandage"), "a med's rig cell kept a pouch's words: '%s'" % c.tooltip_text)
 		if c.visible and int(c.id) == int(tq["id"]):
+			# both paths every run (the fix round, 30 Oct, the tests review): the words forced, then the picture if there is one
+			n_cure += 1
+			var csz: Vector2 = c.size
+			c.no_pics = true
+			c.show_item(tq, false, csz)
+			c.no_pics = false
 			var words: Array = c.text_nodes().map(func(l): return str(l.text))
-			if Items.art(tq) == null:     # no picture: its words name the element (on the device the cures have their art since 28 Oct)
-				_check(words.has("Bleed") and not words.has("Stops"), "a cure's one cell reads %s" % str(words))
-			else:
-				_check(c._art.visible and c._art.texture != null and not words.has("Stops"), "a cure's one cell has its art %s, its words %s" % [c._art.visible, str(words)])
+			_check(not c._art.visible and words.has("Bleed") and not words.has("Stops"), "a cure's one cell, no picture, reads %s" % str(words))
+			var toned := 0
 			for l in c.text_nodes():
 				if l.text == "Bleed":
+					toned += 1
 					_check(l.get_theme_color("font_color") == Pal.ELEMENT_COLOURS["bleed"], "the cure's element isn't in its tone")
+			_check(toned == 1, "the cure's element line wasn't met: %s" % str(words))
+			if Items.art(tq) != null:
+				c.show_item(tq, false, csz)
+				var pw: Array = c.text_nodes().map(func(l): return str(l.text))
+				_check(c._art.visible and c._art.texture != null and not pw.has("Stops"), "a cure's one cell has its art %s, its words %s" % [c._art.visible, str(pw)])
+	_check(n_cure == 1, "the cure's rig cell wasn't met: %d" % n_cure)
+	ct._shown = ""
+	main.refresh()                        # the cells as the room draws them, after the forced words
 	_check_fit(main, "Kit (a cure in the rig)")
 	sim.rig = [band]
 	var box: Dictionary = sim._plain(Data.AMMO, "SMG rounds")
@@ -18970,7 +19459,8 @@ func _words_checks(main) -> void:
 			main._radio._shown = ""
 			main.refresh()
 			var rd = main._radio
-			_check(rd._make_head.text.contains("FAINT") and rd._slots[1]["n"].text.contains("optional") and rd._slots[2]["n"].text.contains("optional")
+			# "optional" either way: the caps pass (UI.dots_under, 27 Oct) makes it "2 · Optional" once the Radio's been shown (the merge)
+			_check(rd._make_head.text.contains("FAINT") and rd._slots[1]["n"].text.to_lower().contains("optional") and rd._slots[2]["n"].text.to_lower().contains("optional")
 				and rd._make_sub2.text.begins_with("Never moves your reach") and rd._decrypt.text == "Decrypt · 1 paper" and not rd._decrypt.disabled,
 				"one paper in, the decoder reads '%s' / '%s' / '%s' / '%s'" % [rd._make_head.text, rd._slots[1]["n"].text, rd._make_sub2.text, rd._decrypt.text])
 		sim.reach = reach_ui
@@ -20220,11 +20710,12 @@ func _skills_checks(sim) -> void:
 	sim.set_skill_slot(1, "collared")
 	_check(not sim.set_skill_slot(0, "no_such_skill"), "a skill that isn't one went in a slot")
 	var key0: int = sim._kit_key()
+	var okey0: Array = sim._odds_key(0)
 	sim.set_skill_auto(0, false)
-	_check(sim._kit_key() != key0, "the odds' key doesn't read a slot's rule switched off")
+	_check(sim._kit_key() != key0 and sim._odds_key(0) != okey0, "the odds' key doesn't read a slot's rule switched off")
 	sim.set_skill_auto(0, true)
 	sim.set_skill_slot(2, "decoy")
-	_check(sim._kit_key() != key0, "the odds' key doesn't read the loadout")
+	_check(sim._kit_key() != key0 and sim._odds_key(0) != okey0, "the odds' key doesn't read the loadout")
 	sim.set_skill_slot(2, "gin_trap")
 	sim.hp = sim.max_hp()
 	sim.deploy(0)
@@ -22491,8 +22982,7 @@ func _county_checks(main) -> void:
 		_check(["stand", "fire", "down"].all(func(ps): return RVc.tex("head_%s_%s" % [hk, ps]) != null) and People.portrait(who) != null, "%s isn't drawn for his fight: %s" % [who, hk])
 	var pairs_in: Array = Data.COUNTY.filter(func(c): return RVc._pair_in(RVc.COUNTY_DIR, RVc.site_key(str(c["place"]))))
 	_check(pairs_in.is_empty() or pairs_in.size() == Data.COUNTY.size(), "only %d of the County's 12 plates and walls drawn" % pairs_in.size())
-	for u in Data.ISSUED:
-		_check(Items.art(sim.issued_piece(str(u["slot"]))) != null, "no picture for the %s" % u["name"])
+	# (the issued kit's pictures: _art_inventory_checks, the fix round, 30 Oct)
 	# a remix head: one of the Issuer's people on a plain signal - his issued kit, no County run counted
 	_check(sim.signal_head_name({"county_head": "manor", "zone": 1}) == "The Collector" and sim.signal_head_name({"zone": 1}) == "The Carpet Man", "the Radio names a remix head '%s'" % sim.signal_head_name({"county_head": "manor", "zone": 1}))
 	sim.hp = sim.max_hp()
@@ -23170,12 +23660,17 @@ func _glove_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	var bd = main._armoury._body
+	if bd != null:
+		bd._set_figure("Doorman")             # one figure every run (the fix round, 30 Oct, the tests review): the class the smoke reached had varied the drawing
+	_check(bd != null and bd.figure_path == Body.figure_for("Doorman") and bd.figure_path != "", "the fixture: the Kit room's figure isn't the pinned class's: '%s'" % (bd.figure_path if bd != null else "none"))
 	_check(bd != null and bd.figure_drawn().y > 0.0, "the Kit room has no drawn figure to read the hands off")
 	if bd != null:
 		var drawn: Vector2 = bd.figure_drawn()
 		var top: float = Body.FIGURE_Y + (Body.FIGURE_H - drawn.y) / 2.0
 		hands = top + drawn.y * Body.HANDS
 	_check(absf(gr.get_center().y - hands) <= gr.size.y / 2.0, "the gloves' card (%.0f-%.0f) isn't level with the hands (%.0f)" % [gr.position.y, gr.end.y, hands])
+	if bd != null:
+		bd._set_figure(sim.cls)
 	_check(Words.LOOT_RULES["body_tip"].to_lower().contains("gloves"), "the loot rules' Body doesn't name the gloves")
 	# the item's head: a gun's edge the first line under its figure, a pair of gloves' figure its role's, a worn piece's
 	# pace and built-in figure under it (the pick panel's, the Fence's, the Workshop's)
@@ -23258,17 +23753,30 @@ func _itemisation_fix_checks(main) -> void:
 	sim.equipped["Primary"] = hold_p
 	_check(Items.edge_words(imp) == "1 more socket than other guns", "an improvised gun's edge line doesn't say its socket")
 	# every base's name in its cell, with no picture, at its footprint: the name, never the slot's code (cells two or more across)
+	# both paths every run (the fix round, 30 Oct, the tests review: with the art in, the words' check checked nothing): the
+	# words forced for every base, and the picture shown where there is one
 	var Cell = load("res://scripts/ui/item_cell.gd")
 	var cell = Cell.new()
 	main.add_child(cell)
+	var n_words := 0
+	var n_pics := 0
 	for sl in Data.SLOTS:
 		for b in Data.BASES[sl]:
 			var it: Dictionary = sim._plain(sl, str(b["name"]))
-			if Items.art(it) != null or Items.footprint(it).x < 2:
+			if Items.footprint(it).x < 2:
 				continue
+			Cell.no_pics = true
 			cell.show_item(it, false)
+			Cell.no_pics = false
 			var first: Label = cell._lines[0]
-			_check(first.visible and first.text == str(b["name"]) and UI_v_width(first) <= first.size.x + 0.5, "%s in its cell reads '%s'" % [b["name"], first.text])
+			n_words += 1
+			_check(not cell._art.visible and first.visible and first.text == str(b["name"]) and UI_v_width(first) <= first.size.x + 0.5, "%s in its cell, no picture, reads '%s'" % [b["name"], first.text])
+			if Items.art(it) != null:
+				cell.show_item(it, false)
+				n_pics += 1
+				_check(cell._art.visible and cell._art.texture == Items.art(it) and cell._lines.all(func(l): return not l.visible), "%s's cell doesn't show its picture alone" % b["name"])
+	_check(n_words > 0, "the base names' cell check met no base two or more across")
+	print("every base's name in its cell: %d by its words, %d by its picture too" % [n_words, n_pics])
 	cell.queue_free()
 	# the bot: gloves worn and benched, reloads never a gun's utility
 	_check(Bot.BENCH_SLOTS.has("Gloves") and not Bot.UTILITY.has("reload_pct"), "the bot's Bench leaves the gloves out, or keeps reloads as utility")
@@ -23435,7 +23943,7 @@ func _fix_round_checks(main) -> void:
 	_check(float(tf[1]) <= 6.0 * Items.ilvl_mult(Items.ilvl(mitt_a)) + 0.5, "the Bench's figures for a gloves' armour read the body armour's: %s" % str(tf))
 	# the two names past 24 characters: renamed, a save's old ones read as the new, the pictures kept
 	_check(Sim._renamed("Diplomatic machine pistol") == "Legation machine pistol" and Sim._renamed("Fire service turnout gear") == "Turnout coat", "a save's old long names don't read as the new")
-	_check(Items.art(sim._plain("Secondary", "Legation machine pistol")) != null and Items.art(sim._plain("Armour", "Turnout coat")) != null, "a renamed base lost its picture")
+	# (the renamed bases' pictures: _art_inventory_checks, the fix round, 30 Oct)
 	# the harness (the game review's A2): damage by type is each run's own dealt, summed - not the record's best run
 	var Bal = load("res://tests/balance.gd")
 	var bs = Sim.new()
@@ -23483,47 +23991,78 @@ func _fix_round_checks(main) -> void:
 ## first clear at FIRST).
 const ESTATE_LV := 10                 # the base reads' level at the Pleasure Park's first clear (10-12), an hour past the Retail Park's
 func _estate_odds_checks() -> void:
+	# the read's dice are keyed off the kit's item ids (a static counter) and the camp's seed count, so one read moved with
+	# how many camps and items earlier areas made (30 Oct, the merge: 0.38 to 0.83 on the same kit): four reads at pinned
+	# counters, the mean judged, the counters put back
+	var ids_was: int = Items._next_id
+	var seeds_was: int = Sim._seed_n
 	for cls in ["Doorman", "Poacher", "Recruit", "Drifter"]:
-		var s = Sim.new()
-		s.loot_by_hand = false
-		s.start()
-		s.set_class(cls)
-		s.odds_runs_max = 24
-		s.rng.seed = 11
-		for i in range(6):
-			s.best_depth[i] = 1
-		s.bosses_beaten[0] = true
-		var lv0: int = s.level()
-		s.xp = maxf(s.xp, Data.xp_for_level(ESTATE_LV))
-		s._earn_points(lv0)                    # the level's training points, as a run earns them
-		s.stash = []
-		for sl in Data.SLOTS:
-			for b in Data.BASES[sl]:
-				if int(b["tier"]) <= 2 and not b.get("start", false):
-					s.stash.append(s._plain(sl, str(b["name"])))
-		for ty in ["shotgun", "rifle", "pistol", "smg", "improvised"]:
-			var box: Dictionary = s._plain(Data.AMMO, s.ammo_box(ty)["name"])
-			box["rounds"] = 100000
-			s.stash.append(box)
-		s.rig = []
-		for k in range(3):
-			s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
-		s.cash = 20000
-		var bot = Bot.new()
-		bot.cls = cls
-		bot.keystones_first = true
-		bot._tidy_kit(s)                       # worn, held to its type, trained and fitted as the bot does it
-		bot.pick_skills(s, 5)
-		s._top_up()
-		s.hp = s.max_hp()
-		s._dry_memo.clear()
-		s.arm_boss(5, true)
-		var cm: float = s.survival(5)
-		s.arm_boss(5, false)
-		s.bosses_beaten[1] = true              # the Town open behind him
-		s._dry_memo.clear()
-		var pp: float = s.survival(6) if s.tier_open(6) else -1.0
-		_check(cm >= Bot.COIN and pp >= Bot.COIN, "the %s on the Estate's kit at level %d (%.0f dmg/s, %.0f HP, %.0f armour) reads the Carpet Man at %.2f and the Pleasure Park at %.2f, under a coin flip's %.2f" % [cls, s.level(), s.dps(), s.max_hp(), s.armour(), cm, pp, Bot.COIN])
+		var sums := [0.0, 0.0]
+		var fig: Array = []
+		for rep in range(4):
+			Items._next_id = 900000 + rep * 10000
+			Sim._seed_n = 500 + rep
+			var r: Array = _estate_read(cls)
+			sums[0] += float(r[0]) / 4.0
+			sums[1] += float(r[1]) / 4.0
+			fig = r
+		var cm: float = sums[0]
+		var pp: float = sums[1]
+		var s = {"dps": fig[2], "hp": fig[3], "arm": fig[4]}
+		_check(cm >= Bot.COIN and pp >= Bot.COIN, "the %s on the Estate's kit at level %d (%.0f dmg/s, %.0f HP, %.0f armour) reads the Carpet Man at %.2f and the Pleasure Park at %.2f, under a coin flip's %.2f" % [cls, ESTATE_LV, s["dps"], s["hp"], s["arm"], cm, pp, Bot.COIN])
+
+	Items._next_id = maxi(ids_was, Items._next_id)
+	Sim._seed_n = seeds_was
+
+
+## One read of the Estate's door for a class (see _estate_odds_checks): [Carpet Man, Pleasure Park, dps, HP, armour].
+func _estate_read(cls: String) -> Array:
+	var s = Sim.new()
+	s.loot_by_hand = false
+	s.start()
+	s.set_class(cls)
+	s.odds_runs_max = 24
+	s.rng.seed = 11
+	for i in range(6):
+		s.best_depth[i] = 1
+	s.bosses_beaten[0] = true
+	var lv0: int = s.level()
+	s.xp = maxf(s.xp, Data.xp_for_level(ESTATE_LV))
+	s._earn_points(lv0)                    # the level's training points, as a run earns them
+	s.stash = []
+	for sl in Data.SLOTS:
+		for b in Data.BASES[sl]:
+			if int(b["tier"]) <= 2 and not b.get("start", false):
+				s.stash.append(s._plain(sl, str(b["name"])))
+	for ty in ["shotgun", "rifle", "pistol", "smg", "improvised"]:
+		var box: Dictionary = s._plain(Data.AMMO, s.ammo_box(ty)["name"])
+		box["rounds"] = 100000
+		s.stash.append(box)
+	s.rig = []
+	for k in range(3):
+		s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
+	s.cash = 20000
+	# Equip if better wears the best of each slot first with the room to (30 Oct: it never overfills the stash now, the
+	# review's I6), then the stash back over full as it stood, so the bot's tidy finds what it found before
+	s.yard_ranks["stash"] = 100
+	for sl in Data.SLOTS:
+		s.equip_best(sl)
+	s.yard_ranks.erase("stash")
+	var bot = Bot.new()
+	bot.cls = cls
+	bot.keystones_first = true
+	bot._tidy_kit(s)                       # worn, held to its type, trained and fitted as the bot does it
+	bot.pick_skills(s, 5)
+	s._top_up()
+	s.hp = s.max_hp()
+	s._dry_memo.clear()
+	s.arm_boss(5, true)
+	var cm: float = s.survival(5)
+	s.arm_boss(5, false)
+	s.bosses_beaten[1] = true              # the Town open behind him
+	s._dry_memo.clear()
+	var pp: float = s.survival(6) if s.tier_open(6) else -1.0
+	return [cm, pp, s.dps(), s.max_hp(), s.armour()]
 
 
 ## The compare's three readings (29 Oct, Matt's layout A on the Compare board): a gun with parts or socketables on either
@@ -23713,7 +24252,9 @@ func _compare_readings_checks(main) -> void:
 	main.refresh()
 	_check(main._run._pick._verdict.text == "▼ Downgrade", "a run's pack reads a find as it'd be with your parts on it: '%s'" % main._run._pick._verdict.text)
 	var d_before: float = sim.damage_total()
-	if sim.equip_from_pack(int(good3["id"])):
+	var equipped_ok: bool = sim.equip_from_pack(int(good3["id"]))
+	_check(equipped_ok, "the fixture: Equip on a run refused the Riot shotgun")     # never skipped silently (the fix round, 30 Oct)
+	if equipped_ok:
 		_check(sim.equipped["Primary"] == good3 and good3["attachments"].get("muzzle") == null and weak_worn["attachments"]["muzzle"] == big and sim.damage_total() < d_before, "Equip on a run moved a part")
 	sim.extract_now()
 	main.show_room(main.ARMOURY)
@@ -23744,14 +24285,20 @@ func _compare_readings_checks(main) -> void:
 	var Cell = load("res://scripts/ui/item_cell.gd")
 	var gc = Cell.new()
 	main.add_child(gc)
+	var n_gl := 0
 	for b in Data.BASES["Gloves"]:
 		var gi: Dictionary = sim._plain("Gloves", str(b["name"]))
+		# the words path every run, art or none (the fix round, 30 Oct, the tests review), then the picture where there is one
+		gc.no_pics = true
 		gc.show_item(gi, false, Vector2(Items.footprint(gi)) * float(Pal.CELL))
+		gc.no_pics = false
 		var fig_l: String = gc._lines[1].text if gc._lines.size() > 1 else ""
-		if Items.art(gi) != null:             # the words stand in for a picture (29 Oct: the gloves' pictures landed): with one, the picture shows
+		n_gl += 1
+		_check(not gc._art.visible and (fig_l.ends_with("pace") or fig_l.ends_with("reload") or fig_l.ends_with("reloads") or fig_l.ends_with("rate of fire") or fig_l.ends_with(" rate")), "%s's cell figure has no unit: '%s'" % [b["name"], fig_l])
+		if Items.art(gi) != null:             # with a picture, the picture shows
+			gc.show_item(gi, false, Vector2(Items.footprint(gi)) * float(Pal.CELL))
 			_check(gc._art.visible and gc._art.texture == Items.art(gi), "%s's cell doesn't show its picture" % b["name"])
-		else:
-			_check(fig_l.contains("pace") or fig_l.contains("reload") or fig_l.contains("RoF"), "%s's cell figure has no unit: '%s'" % [b["name"], fig_l])
+	_check(n_gl > 0, "the gloves' unit check met no gloves")
 	gc.queue_free()
 	# no parts on either: one reading, as before
 	var plain_a: Dictionary = sim._plain("Primary", "Pump shotgun")
@@ -24066,6 +24613,7 @@ func _repeat_checks(main) -> void:
 	var uq: Dictionary = Items.roll_unique(Data.UNIQUES[0], sim.rng, 10, 2)
 	var junk3: Dictionary = sim._plain("Armour", "Work jacket")
 	var worn_p: Dictionary = sim.equipped["Primary"]
+	sim.xp = maxf(sim.xp, Data.xp_for_level(Items.wear_level(worn_p)))     # the fixture: its copies wearable (30 Oct: the bot's finds weighted to their tier left a gun past the runner's level on)
 	var ups: Array = []
 	for k in range(2):
 		var u: Dictionary = worn_p.duplicate(true)
@@ -24310,6 +24858,7 @@ func _repeat_checks(main) -> void:
 						m5["patrol_timer"] = 9999.0
 						var r0: int = int(m5["remaining"])
 						sim._tick(0.5)
+						_check(sim.mission != null, "the fixture: the run ended before the next gang came")     # never skipped silently (the fix round, 30 Oct)
 						if sim.mission != null:
 							_check(int(sim.mission["remaining"]) - r0 >= ceili(sim.PATROL_BASE * 1.5), "a bigger gang: the next gang %d, not 50%% more" % (int(sim.mission["remaining"]) - r0))
 				if sim.mission != null:
@@ -24416,6 +24965,468 @@ func _repeat_checks(main) -> void:
 	main._missions._wagers.visible = false
 	main.refresh()
 	print("the repeat runs ok: the button's shut states, the gate at full HP, away and its locks, the rest, the report's sums, the bail, two bails, uniques home, the best upgrade, a full stash, manual skills unwatched, the XP's share, the Bunkhouse, line B shut, Kev's wagers and their gate, save mid-repeat")
+
+
+## Fix round A (30 Oct, docs/review30.md): the camp the fixes' checks start from, as _repeat_checks has it - no run out,
+## nothing to pick, room in the stash, the runner whole. The caller keeps the save and puts it back.
+func _fixa_prep(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	sim.candidates = []
+	sim.auto_equip = false
+	sim.repeat = {}
+	sim.repeat_report = {}
+	sim.unlock_all()
+	sim.stash = []
+	sim.came_back_seen()
+	sim.wounds = {}
+	sim._caches_out()
+	sim.hp = sim.max_hp()
+
+
+## The repeat's gate read open on a site, as the shell reads it a frame at a time; whether it opened.
+func _fixa_gate(sim, site: int) -> bool:
+	sim._dry_memo.clear()
+	var g := 0
+	while not sim.can_repeat(site) and g < 400:
+		sim.survival(site)
+		sim.repeat_read(site)
+		g += 1
+	return sim.can_repeat(site)
+
+
+## A repeat set off on a site by hand, as start_repeat lays it (for a gate the fixture can't open by its odds).
+func _fixa_repeat_at(sim, site: int) -> void:
+	sim.repeat = {"site": site, "of": 5, "done": 0, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": sim.elapsed, "run_t0": sim.elapsed, "lv0": sim.level(), "wounds0": sim.wounds.duplicate(true), "share": sim.repeat_xp_share(), "own_list": false, "first": true}
+
+
+## S1, S2: nothing the Fence or the Clinic sells comes back for what it cost - Buyer's market on, the Fencing tree's sell
+## bonus, fifty Fence ranks, the market hall and the pumping station at their caps; the boxes and meds pay the shelf's
+## buy multipliers; a piece that never was on the shelf still sells at the full rate.
+func _fixa_resale_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	_set_cls(sim, "Scrapper")
+	var fencing: Dictionary = Data.tree_named("Fencing")
+	var bm_id := ""
+	for k in range(fencing["nodes"].size()):
+		var eff: String = str(fencing["nodes"][k].get("effect", ""))
+		if eff in ["sell_pct", "buyers_market"] and not sim.tree.has("Fencing/%d" % k):
+			sim.tree.append("Fencing/%d" % k)
+		if eff == "buyers_market":
+			bm_id = "Fencing/%d" % k
+	sim.yard_ranks["fence"] = 50
+	sim._yard_dirty = true
+	sim.rebuilt["market_hall"] = 20
+	sim.rebuilt["pumping"] = 20
+	sim._caches_out()
+	sim.cash = 1.0e9
+	_check(sim.has_node("buyers_market") and sim.tree_sum("sell_pct") >= 35.0 and sim.yard_sell_pct() >= 100.0 and sim.town_stat("fence_pct") >= 40.0 and sim.town_stat("clinic_pct") >= 40.0,
+		"S1: the fixture: Buyer's market %s, sell +%.0f%%, the Yard +%.0f%%, the hall −%.0f%%, the station −%.0f%%" % [str(sim.has_node("buyers_market")), sim.tree_sum("sell_pct"), sim.yard_sell_pct(), sim.town_stat("fence_pct"), sim.town_stat("clinic_pct")])
+	# every standard box: bought and sold straight back, the purse down
+	var types: Array = []
+	for b in Data.BASES[Data.AMMO]:
+		if not b.has("damage_pct") and not (str(b["type"]) in types):
+			types.append(str(b["type"]))
+	var bad: Array = []
+	var n := 0
+	for ty in types:
+		sim.stash = []
+		var c0: float = sim.cash
+		var paid: int = sim.ammo_price(ty)
+		if not sim.buy_ammo(ty) or sim.stash.is_empty():
+			bad.append("%s not bought" % ty)
+			continue
+		var got: Dictionary = sim.stash.back()
+		var back: int = sim.sell_price(got)
+		if not sim.sell(got):
+			bad.append("%s not sold" % ty)
+			continue
+		n += 1
+		if sim.cash >= c0 or back >= paid:
+			bad.append("%s: %d paid, %d back" % [ty, paid, back])
+	_check(n >= 3 and bad.is_empty(), "S1: a box of rounds sold straight back for what it cost or more (%d boxes): %s" % [n, str(bad)])
+	# every med on her list, and her shelf's
+	bad = []
+	n = 0
+	for b in sim.med_stock():
+		sim.stash = []
+		var c0: float = sim.cash
+		var paid: int = sim.med_price(b)
+		if not sim.buy_med(str(b["name"])) or sim.stash.is_empty():
+			bad.append("%s not bought" % str(b["name"]))
+			continue
+		var got: Dictionary = sim.stash.back()
+		var back: int = sim.sell_price(got)
+		sim.sell(got)
+		n += 1
+		if sim.cash >= c0 or back >= paid:
+			bad.append("%s: %d paid, %d back" % [str(b["name"]), paid, back])
+	sim._restock_clinic()
+	for it in sim.clinic.duplicate():
+		sim.stash = []
+		var c0: float = sim.cash
+		var paid: int = sim.clinic_price(it)
+		if not sim.buy_clinic(int(it["id"])):
+			bad.append("the shelf's %s not bought" % str(it["base"]))
+			continue
+		var back: int = sim.sell_price(it)
+		sim.sell(it)
+		n += 1
+		if sim.cash >= c0 or back >= paid:
+			bad.append("the shelf's %s: %d paid, %d back" % [str(it["base"]), paid, back])
+	_check(n >= 3 and bad.is_empty(), "S1: a med sold straight back to the Fence for what the Clinic charged or more (%d meds): %s" % [n, str(bad)])
+	# the buy multipliers on the boxes and the meds: Buyer's market doubles them, the hall and the station take their 40%
+	var ty0: String = types[0]
+	var mb: Dictionary = sim.med_stock()[0]
+	var a_on: int = sim.ammo_price(ty0)
+	var m_on: int = sim.med_price(mb)
+	sim.tree.erase(bm_id)
+	sim._caches_out()
+	var a_off: int = sim.ammo_price(ty0)
+	var m_off: int = sim.med_price(mb)
+	sim.rebuilt["market_hall"] = 0
+	sim.rebuilt["pumping"] = 0
+	var a_none: int = sim.ammo_price(ty0)
+	var m_none: int = sim.med_price(mb)
+	_check(not sim.has_node("buyers_market") and absi(a_on - 2 * a_off) <= 1 and absi(m_on - 2 * m_off) <= 1 and absf(float(a_off) - a_none * 0.6) <= 1.0 and absf(float(m_off) - m_none * 0.6) <= 1.0,
+		"S1: the boxes and meds don't take the shelf's buy multipliers: a box %d with Buyer's market, %d without, %d with no hall; a med %d, %d, %d" % [a_on, a_off, a_none, m_on, m_off, m_none])
+	sim.tree.append(bm_id)
+	sim.rebuilt["market_hall"] = 20
+	sim.rebuilt["pumping"] = 20
+	sim._caches_out()
+	# S2: every piece on the Fence's shelf, bought and sold straight back, the purse down
+	sim._restock_market()
+	var shelf: Array = sim.market.duplicate()
+	bad = []
+	n = 0
+	var gear: Dictionary = {}
+	for it in shelf:
+		sim.stash = []
+		var c0: float = sim.cash
+		var paid: int = sim.price(it)
+		if gear.is_empty() and str(it.get("slot", "")) in Data.SLOTS:
+			gear = it.duplicate(true)
+		if not sim.buy_id(int(it["id"])):
+			bad.append("%s not bought" % str(it["base"]))
+			continue
+		var got: Dictionary = sim.stash.back()
+		var back: int = sim.sell_price(got)
+		sim.sell(got)
+		n += 1
+		if sim.cash >= c0 or back >= paid:
+			bad.append("%s: %d paid, %d back" % [str(it["base"]), paid, back])
+	_check(n >= 3 and bad.is_empty(), "S2: a piece off the Fence's shelf sold straight back for what it cost or more (%d pieces): %s" % [n, str(bad)])
+	_check(not gear.is_empty() and sim.sell_price(gear) > sim.price(gear), "S2: a piece that never was on the shelf is capped at the shelf's price too: %d against %d" % [sim.sell_price(gear) if not gear.is_empty() else -1, sim.price(gear) if not gear.is_empty() else -1])
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A resale ok: boxes, meds and the shelf's pieces sell back under their price")
+
+
+## S3: a save and a load during a repeat keep the runner's wounds from before it - the first run home rests off only the
+## repeat's own.
+func _fixa_wound_save_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var site := 0
+	sim.wounds["chest"] = {"stat": "armour", "what": "cracked ribs", "from": "test", "hp_pct": 40}     # an earlier run's wound, as a run gives it
+	sim._caches_out()
+	sim.hp = sim.max_hp()
+	_check(_fixa_gate(sim, site) and sim.start_repeat(site) and sim.away(), "S3: the fixture's repeat didn't set off: '%s'" % sim.repeat_block(site))
+	var back = Sim.new()
+	back.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	var g := 0
+	while back.away() and int(back.repeat.get("done", 0)) < 1 and g < 30000:
+		back.advance(1.0)
+		g += 1
+	_check(not back.away() or int(back.repeat["done"]) >= 1, "S3: the loaded repeat's first run never came home")
+	_check(sim.repeat.get("wounds0", {}).has("chest") and back.wounds.has("chest") and str(back.wounds["chest"].get("what", "")) == "cracked ribs", "S3: a save and load mid-repeat, and the first run home healed the wound from before it: %s" % str(back.wounds))
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A wounds ok: a wound from before a repeat stays through a save")
+
+
+## S7: Kev's "they hit harder" reaches the head, and every head of the convoy after it.
+func _fixa_hard_wager_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	_finish_campaign(sim)
+	var head := -1
+	for i in range(Data.TIERS.size()):
+		if not sim.boss_of(i).is_empty() and sim.tier_open(i) and not sim.is_convoy(i) and i != Data.CONVOY_TIER:
+			head = i
+			break
+	sim.best_depth[Data.CONVOY_TIER] = maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth())
+	sim.depth[Data.CONVOY_TIER] = sim.convoy_depth()     # the Services at the convoy's level
+	var sites: Array = [head, Data.CONVOY_TIER]
+	_check(head >= 0 and sim.is_convoy(Data.CONVOY_TIER), "S7: the fixture: a head %d, the convoy %s" % [head, str(sim.is_convoy(Data.CONVOY_TIER))])
+	var mid: Dictionary = sim.to_dict()
+	for i in sites:
+		if i < 0:
+			continue
+		sim.load_dict(mid)
+		sim.boss_armed[i] = true
+		sim.notes = 10000000
+		sim._caches_out()
+		var t: Dictionary = sim.effective(i)
+		var plain: Array = ([t["boss"]] + t.get("boss_queue", [])).map(func(b): return float(b["dps"])) if t.has("boss") else []
+		var key: String = sim.wager_site_key(i)
+		var hit := false
+		for sq in range(1, 400):
+			sim.wagers[key] = {"seq": sq, "taken": []}
+			var of: Array = sim.wager_offer(key)
+			for k in range(of.size()):
+				if not hit and str(of[k]["cond"]) == "hard":
+					sim.wagers[key]["taken"] = [k]
+					hit = true
+			if hit:
+				break
+		sim.hp = sim.max_hp()
+		sim.deploy(i)
+		var m = sim.mission
+		var now: Array = ([m["boss"]] + m.get("boss_queue", [])).map(func(b): return float(b["dps"])) if m != null and m.has("boss") else []
+		var all_up: bool = plain.size() >= 1 and now.size() == plain.size() and range(plain.size()).all(func(k): return absf(float(now[k]) - float(plain[k]) * Data.WAGER_HARD) <= 0.001 * float(plain[k]) + 0.0001)
+		_check(hit and m != null and m.get("wagers", []).any(func(w): return str(w["cond"]) == "hard") and all_up, "S7: Kev's harder hits didn't reach the head%s at %d: %s against %s" % [" and the convoy" if i == Data.CONVOY_TIER else "", i, str(now), str(plain)])
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A hard wager ok: the head and the convoy hit harder")
+
+
+## S9: a repeat packs the cures for its own site's zone, not the front's: one for another zone goes back for it.
+func _fixa_repeat_cures_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var cure_base := func(el: String) -> String:
+		for b in Data.BASES[Data.MEDICAL]:
+			if str(b.get("cure", "")) == el:
+				return str(b["name"])
+		return ""
+	var fe: Array = sim.zone_elements(sim.front_tier()).slice(0, Data.TOP_UP_CURES)
+	var site := -1
+	var want := ""
+	for i in range(Data.TIERS.size()):
+		if site >= 0 or not sim.tier_open(i) or int(sim.best_depth[i]) <= 0:
+			continue
+		for el in sim.zone_elements(i).slice(0, Data.TOP_UP_CURES):
+			if site < 0 and not (el in fe) and cure_base.call(el) != "":
+				site = i
+				want = el
+	_check(site >= 0 and sim.med_capacity() >= 2, "S9: the fixture: no cleared site throwing an element the front (%d, %s) doesn't, or no rig (%d pouches)" % [sim.front_tier(), str(fe), sim.med_capacity()])
+	if site >= 0:
+		var site_els: Array = sim.zone_elements(site).slice(0, Data.TOP_UP_CURES)
+		var others: Array = Data.ELEMENTS.filter(func(el): return not (el in site_els) and cure_base.call(el) != "")
+		sim.rig = []
+		while sim.rig_room(1) and sim.rig.size() < 40 and not others.is_empty():
+			sim.rig.append(sim._plain(Data.MEDICAL, cure_base.call(others[sim.rig.size() % others.size()])))     # the rig full of another zone's cures
+		sim.stash = [sim._plain(Data.MEDICAL, cure_base.call(want))]
+		_check(not others.is_empty() and not sim.rig_room(1), "S9: the fixture: the rig not full of other zones' cures")
+		_fixa_repeat_at(sim, site)
+		sim._repeat_go()
+		_check(sim.unwatched() and sim.rig.any(func(x): return Items.cure_of(x) == want), "S9: a repeat at %s packed no cure for its %s: %s" % [str(Data.TIERS[site]["name"]), want, str(sim.rig.map(func(x): return str(x["base"])))])
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A repeat cures ok: the site's own")
+
+
+## T1: slotting a skill, or switching its rule, re-reads the site's odds.
+func _fixa_skill_odds_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var sk := ""
+	for ct in Data.trees_for(sim.cls):
+		for k in range(ct.get("nodes", []).size()):
+			if sk == "" and ct["nodes"][k].has("skill"):
+				sim.tree.append("%s/%d" % [ct["name"], k])
+				sk = str(ct["nodes"][k]["skill"])
+	sim._caches_out()
+	sim.skill_slots = ["", "", ""]
+	sim.skill_auto = [true, true, true]
+	var g := 0
+	while not sim.odds_settled(0) and g < 400:
+		sim.survival(0)
+		g += 1
+	var key0: Array = sim._odds_key(0)
+	_check(sk != "" and sim.odds_settled(0) and sim.set_skill_slot(0, sk), "T1: the fixture: skill '%s', settled %s" % [sk, str(sim.odds_settled(0))])
+	_check(sim._odds_key(0) != key0 and not sim.odds_settled(0), "T1: a skill slotted, the site kept its old odds")
+	g = 0
+	while not sim.odds_settled(0) and g < 400:
+		sim.survival(0)
+		g += 1
+	var key1: Array = sim._odds_key(0)
+	sim.set_skill_auto(0, false)
+	_check(sim._odds_key(0) != key1 and not sim.odds_settled(0), "T1: a slot's rule switched off, the site kept its old odds")
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A skill odds ok")
+
+
+## T2: the Radio's crew row reads again when the benched class's runner moves - their XP, kit, tree or HP.
+func _fixa_crew_odds_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	if not ("radio" in sim.unlocked):
+		sim.unlocked.append("radio")
+	_finish_campaign(sim)
+	sim.signals = []
+	sim.papers = []
+	for p in Words.PAPERS:
+		if p.has("code") and sim.word_taught_by(str(p["name"])) != "" and sim.stash.size() < 1:
+			sim.stash_put(sim._plain(Data.PAPER, str(p["name"])))
+	var ps: Array = sim.signal_papers()
+	var made: Dictionary = sim.decrypt(ps.slice(0, 1).map(func(x): return int(x["id"])), -1) if not ps.is_empty() else {}
+	var cls0: String = sim.cls
+	var other: String = "Doorman" if cls0 != "Doorman" else "Poacher"
+	_check(not made.is_empty() and sim.set_class(other) and sim.set_class(cls0) and sim.roster.has(other), "T2: the fixture: a signal %s, the %s benched %s" % [str(not made.is_empty()), other, str(sim.roster.has(other))])
+	if not made.is_empty() and sim.roster.has(other):
+		var k: int = sim.signals.size() - 1
+		var settle := func() -> bool:
+			for r in range(600):
+				if bool(sim.signal_odds_class(k, other)[1]):
+					return true
+			return false
+		for mv in ["best", "XP", "HP", "kit"]:
+			var ok: bool = settle.call()
+			var before: Array = sim.signal_odds_class(k, other, true)
+			var rr: Dictionary = sim.roster[other]
+			if mv == "best":                  # the crew's best moved, the bench's own didn't: the level a press brings them out at did (the merge)
+				sim.xp = maxf(sim.xp, Data.xp_for_level(mini(Data.MAX_LEVEL, maxi(sim.level(), Data.level_for_xp(float(rr.get("xp", 0.0)))) + 12)))
+			elif mv == "XP":
+				rr["xp"] = float(rr.get("xp", 0.0)) + Data.xp_for_level(30)
+			elif mv == "HP":
+				rr["hp"] = float(rr.get("hp", 1.0)) * 0.3
+			elif rr["equipped"].get("Primary", null) != null:
+				var g2: Dictionary = rr["equipped"]["Primary"].duplicate(true)
+				Items._next_id += 1
+				g2["id"] = Items._next_id
+				rr["equipped"]["Primary"] = g2
+			var after: Array = sim.signal_odds_class(k, other, true)
+			_check(ok and bool(before[1]) and not bool(after[1]), "T2: the benched %s's %s moved, the crew row kept its read: %s then %s" % [other, mv, str(before), str(after)])
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A crew odds ok")
+
+
+## T4: between a repeat's runs the rig's the runner's - no med in or out, no stack split, no parts stripped, and the
+## Clinic's Into the rig shut.
+func _fixa_rig_away_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var site := 0
+	_check(_fixa_gate(sim, site) and sim.start_repeat(site), "T4: the fixture's repeat didn't set off: '%s'" % sim.repeat_block(site))
+	var g := 0
+	while sim.away() and int(sim.repeat.get("done", 0)) < 1 and g < 30000:
+		sim.advance(1.0)
+		g += 1
+	if sim.on_mission():
+		sim.extract_now()
+	_check(sim.away() and sim.mission == null, "T4: the fixture: not resting between repeat runs")
+	if sim.away() and sim.mission == null:
+		var med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		sim.stash.append(med)
+		if sim.rig.is_empty():
+			sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+		var in_rig: Dictionary = sim.rig[0]
+		var box := {}
+		for b in Data.BASES[Data.AMMO]:
+			if box.is_empty() and not b.has("damage_pct") and int(b["rounds"]) >= 2:
+				box = sim._plain(Data.AMMO, str(b["name"]))
+		sim.stash.append(box)
+		var gun = sim.equipped["Primary"]
+		var part_on := false
+		if gun != null:
+			for mount in gun["attachments"]:
+				if part_on or gun["attachments"][mount] != null:
+					part_on = part_on or gun["attachments"][mount] != null
+					continue
+				for ab in Data.ATTACHMENTS:
+					if not part_on and str(ab.get("mount", "")) == str(mount):
+						gun["attachments"][mount] = sim._plain(Data.ATTACHMENT, str(ab["name"]))
+						part_on = true
+		_check(not sim.take(int(med["id"])) and sim.stash.has(med) and not sim.leave(int(in_rig["id"])) and sim.rig.has(in_rig) and not sim.can_split(int(box["id"])) and part_on and not sim.can_strip_any("Primary"),
+			"T4: between repeat runs the rig moved: take %s, leave %s, split %s, strip all lit %s" % [str(not sim.stash.has(med)), str(not sim.rig.has(in_rig)), str(sim.can_split(int(box["id"]))), str(sim.can_strip_any("Primary"))])
+		main.show_room(main.MEDIC)
+		main._clinic._show("stash")
+		main.refresh()
+		var mc = main._clinic._meds
+		_check(mc.visible and mc._into.visible and mc._into.disabled, "T4: the Clinic's Into the rig live between repeat runs: shown %s, shut %s" % [str(mc._into.visible), str(mc._into.disabled)])
+		main._clinic._show("shelf")
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A rig away ok")
+
+
+## U1, U2: hurt, the repeat's gate read as the shell reads it - an odds frame, then a paint - never disagrees with the
+## press, settles to ready, and leaves the site's hurt read as it was.
+func _fixa_gate_paint_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var site := 0
+	main.show_room(main.MISSIONS)
+	main._missions.select(site)
+	main._missions._shown = ""
+	main.refresh()
+	var cols: Dictionary = main._missions._cols[0]
+	sim.hp = sim.max_hp() * 0.45
+	sim._caches_out()
+	var mism: Array = []
+	var ready_at := -1
+	for f in range(3000):
+		main._read_odds()
+		main.refresh()
+		var verdict: bool = sim.can_repeat(site)
+		if cols["repeat"].visible and cols["repeat"].disabled == verdict:
+			mism.append([f, verdict, sim.repeat_block(site)])
+		if verdict and cols["repeat"].visible and not cols["repeat"].disabled:
+			ready_at = f
+			break
+	_check(mism.is_empty(), "U2: the repeat button disagreed with the press %d times: %s" % [mism.size(), str(mism.slice(0, 3))])
+	_check(ready_at >= 0, "U1: hurt, Run it ×5 never settled to ready: '%s', '%s'" % [sim.repeat_block(site), cols["repeat"].text])
+	_check(sim._surv_cache.has(site) and sim._surv_cache[site][0] == sim._odds_key(site), "U1: the full-HP read took the site's hurt read")
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A gate paint ok: settled at frame %d" % ready_at)
+
+
+## U3: a refused repeat says why (the gate's reason with the repeat out of it), mid-sentence on the card - HP kept.
+func _fixa_repeat_refused_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_fixa_prep(sim)
+	var zt: Array = Data.ZONES[0]["tiers"]
+	var site: int = int(zt[1])
+	sim.best_depth[site] = maxi(1, int(sim.best_depth[site]))
+	_fixa_repeat_at(sim, site)
+	sim.best_depth[int(zt[0])] = 0                 # the site shut behind them: the next run can't go
+	sim._repeat_go()
+	var rep: Dictionary = sim.repeat_report
+	var want: String = Words.mid_base(Words.REPEAT["shut_site"])
+	_check(not sim.away() and str(rep.get("ended", "")) == "blocked" and str(rep.get("reason", "")) == want, "U3: a refused repeat's reason: ended '%s', '%s' (want '%s')" % [str(rep.get("ended", "")), str(rep.get("reason", "")), want])
+	sim.best_depth[int(zt[0])] = 1
+	main.show_room(main.MISSIONS)
+	main._missions.select(site)
+	main._missions._shown = ""
+	main.refresh()
+	var rc = main._missions._report
+	_check(rc.visible and rc.ended.text == Words.REPEAT["ended_blocked"] % want, "U3: the card's end: '%s'" % rc.ended.text)
+	var hp_why: String = Words.mid_base(Words.REPEAT["shut_odds"] % 85)
+	sim.repeat_report["reason"] = hp_why
+	rc.visible = false
+	main._missions._shown = ""
+	main.refresh()
+	_check(rc.ended.text == Words.REPEAT["ended_blocked"] % hp_why and rc.ended.text.contains("HP"), "U3: a reason's HP lowered on the card: '%s'" % rc.ended.text)
+	sim.repeat_seen()
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix A repeat refused ok")
 
 
 ## The expeditions (29 Oct, docs/design/trips.md 3, 4 line B, 6): `-- only expeditions`. The gate (after the
@@ -24707,8 +25718,9 @@ func _expeditions_checks(main) -> void:
 	var held: Array = []
 	for k in range(3):
 		sim.scrap = 50000
-		_check(_exp_go(sim, k, lead_cls if k == 0 else _exp_other_lead(sim, lead_cls, home), [], [{"kind": "scrap", "n": 2000}]) or k > 0, "the fixture: a hold-up's expedition didn't go")
+		_check(_exp_go(sim, k, lead_cls if k == 0 else _exp_other_lead(sim, lead_cls, home), [], [{"kind": "scrap", "n": 2000}]), "the fixture: hold-up %d's expedition didn't go" % k)
 	held = sim.expeditions.duplicate()
+	_check(held.size() == 3, "the fixture: %d hold-ups out, not 3 (pay, fetch and a failed fetch each want one)" % held.size())
 	for e in held:
 		e["hold"] = 1.0
 		e["risk"] = 0.0
@@ -24876,6 +25888,328 @@ func _expeditions_checks(main) -> void:
 	sim.hands = []
 	sim.hand_pool = []
 	_expeditions_fix_checks(main)             # the fix round (29 Oct, review 29d)
+
+
+## The away card's sim, for its clock alone (the fix round, 30 Oct): a repeat's time left past the hour.
+class _FakeAway:
+	var left := 0.0
+	func away() -> bool:
+		return true
+	func repeat_progress() -> Dictionary:
+		return {"site": 1, "n": 2, "of": 40, "share": 0.1, "left": left, "bails": 0, "out": true, "stop": false, "first": false}
+
+
+## The fix round's UI oddities (30 Oct, docs/review30.md "UI oddities", builder C): the ask-twice of the hands and the
+## hold-up on arm.gd's 4 s and cleared on hide, the walk-away's singular, the repeat's clock past the hour and its lines,
+## "rate of fire", the held-up log's dash, the top bar away between runs, the report's chips never dropped, a hidden cargo
+## slot free, one duration helper, the version in CLAUDE.md. `-- only ui30c`. Each fails without its fix.
+func _ui30c_checks(main) -> void:
+	var sim = main.sim
+	var E: Dictionary = Words.EXPEDITIONS
+	if sim.on_mission():
+		sim.extract_now()
+	sim.mission = null
+	sim.repeat = {}
+	sim.repeat_report = {}
+	sim.odds_budget = 0
+	var saved: Dictionary = sim.to_dict()
+	sim.expeditions = []
+	sim.hands = []
+	sim.hand_pool = []
+	var home: String = sim.cls
+	var lead: String = "Scrapper" if home != "Scrapper" else "Drifter"
+	if not sim.roster.has(lead):
+		_check(sim.set_class(lead) and sim.set_class(home), "the fixture: no lead")
+	_exp_strong_lead(sim, lead)
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.yard_open = maxi(sim.yard_open, 5)
+	sim.cash = 1e9
+	sim.scrap = 50000
+	sim.salvage["copper"] = 400
+	sim.salvage["army"] = 999
+	sim.yard_picks.erase("bunkhouse")
+	sim._yard_dirty = true
+	for c in range(5):
+		_check(sim.yard_pick("bunkhouse", c, "b"), "the fixture: line B step %d: '%s'" % [c + 1, sim.yard_pick_block("bunkhouse", c, "b")])
+	var hr := RandomNumberGenerator.new()
+	hr.seed = 3003
+	var h1: Dictionary = Items.roll_hand(5, hr, 0.0, true, "porter", sim.exp_place_keys())
+	sim.hand_pool.append(h1)
+	_check(sim.hire_hand(int(h1["id"])), "the fixture: the porter wasn't hired: '%s'" % sim.hire_block(int(h1["id"])))
+	# --- the hands' Let go: arm.gd's arm (4 s), a second press at 3.5 s still lets go; hidden, the arm's off
+	main.show_room(main.OVERVIEW)
+	main._yard_tree._pick_building("bunkhouse")
+	main.refresh()
+	var hp = main._yard_tree.hands
+	_check(hp.visible, "the fixture: the Bunkhouse's hands aren't showing")
+	_check("_arm" in hp and hp._arm is Arm, "the hands' Let go has an ask-twice of its own, not arm.gd's")
+	if "_arm" in hp:
+		hp.picked = int(h1["id"])
+		hp._let_go()
+		main.refresh()
+		_check(sim.hands.has(h1) and hp._arm.holds(int(h1["id"])) and hp.let_go.text == E["let_go_again"], "the hands' first Let go didn't arm: '%s'" % hp.let_go.text)
+		hp.visible = false                    # hidden (the smoke's window isn't drawn, so the room's hide doesn't reach it: the panel's own)
+		_check(hp._arm.key == null, "the hands' Let go stayed armed with the panel hidden")
+		hp.visible = true
+		hp.picked = int(h1["id"])
+		hp._let_go()
+		hp._arm._at = Time.get_ticks_msec() - 3500     # 3.5 s on: past the old 3 s, inside the designer's 4
+		hp._let_go()
+		_check(not sim.hands.has(h1), "a second Let go 3.5 s after the first didn't let the hand go (arm.gd's window is %.1f s)" % Arm.WINDOW_S)
+		_check(Arm.WINDOW_S == 4.0, "arm.gd's window isn't the designer's 4 s: %.1f" % Arm.WINDOW_S)
+	sim.hand_pool.append(h1)
+	_check(sim.hire_hand(int(h1["id"])), "the fixture: the porter wasn't hired back")
+	# --- a hold-up with one hand: "Porter leaves", Walk away on arm.gd's arm, cleared on hide; the log's dash
+	_check(_exp_go(sim, 0, lead, [int(h1["id"])], [{"kind": "scrap", "n": 2000}]), "the fixture: the hold-up's expedition didn't go: '%s'" % sim.exp_send_block(0, lead, [int(h1["id"])], [{"kind": "scrap", "n": 2000}]))
+	var eh: Dictionary = sim.expeditions.back() if not sim.expeditions.is_empty() else {}
+	_check(not eh.is_empty(), "the fixture: no expedition out")
+	if not eh.is_empty():
+		eh["hold"] = 1.0
+		eh["risk"] = 0.0
+		sim.advance(float(eh["dur"]) + 1.0)
+		_check(str(eh["state"]) == "held", "the fixture: a sure hold-up came back")
+		var log_l: String = str(sim.events.back()[1]) if not sim.events.is_empty() else ""
+		_check(log_l.begins_with("Held up: ") and not log_l.contains(" - ") and not str(E["held_log"]).contains(" - "), "the held-up log has a spaced hyphen: '%s'" % log_l)
+		var ER = load("res://scripts/ui/expedition_report.gd")
+		var rep = ER.new()
+		root.add_child(rep)
+		rep.id = int(eh["id"])
+		rep.show_state(sim)
+		var walk_n: String = rep.ways[2]["note"].text
+		_check(rep.visible and walk_n == E["walk_note_one"] % str(h1["base"]) and walk_n.contains("leaves for good"), "one hand's walk-away reads '%s'" % walk_n)
+		_check(UI_v_width(rep.ways[2]["note"]) <= rep.ways[2]["note"].size.x + 0.5, "the walk-away note runs out of its box: '%s'" % walk_n)
+		_check("_arm" in rep and rep._arm is Arm, "Walk away has an ask-twice of its own, not arm.gd's")
+		if "_arm" in rep:
+			rep._way(2)
+			rep.show_state(sim)
+			_check(str(eh["state"]) == "held" and rep._arm.holds(int(eh["id"])) and rep.ways[2]["button"].text == E["walk_again"], "the first Walk away didn't arm: '%s'" % rep.ways[2]["button"].text)
+			rep.visible = false
+			_check(rep._arm.key == null, "Walk away stayed armed with the report hidden")
+			rep.visible = true
+			rep._way(2)
+			rep._arm._at = Time.get_ticks_msec() - 3500
+			rep._way(2)
+			_check(sim.exp_by_id(int(eh["id"])).is_empty() and not sim.hands.has(h1), "a second Walk away 3.5 s after the first didn't walk")
+		rep.queue_free()
+	sim.expeditions = []
+	# --- a report with many finds: the tins and the tokens first, what doesn't fit a count, never dropped
+	var finds: Array = []
+	for sl in Data.SLOTS:
+		for b in Data.BASES[sl]:
+			if finds.size() < 40:
+				finds.append(sim._plain(sl, str(b["name"])))
+	var big: Dictionary = {"id": 9301, "place": 0, "lead": lead, "hands": [], "cargo": [], "worth": 1000.0, "odds": 1.0, "risk": 0.0, "hold": 0.0,
+		"t0": sim.elapsed, "dur": 600.0, "state": "back", "quota": false, "seen": false,
+		"res": {"bad": false, "loss": 0.0, "bonus": 0.0, "items": finds, "cur": {"tins": 4321.0, "tokens": 2}, "ups": [], "hurt": [], "lead_xp": 0.0}}
+	sim.expeditions = [big]
+	var ER2 = load("res://scripts/ui/expedition_report.gd")
+	var rep2 = ER2.new()
+	root.add_child(rep2)
+	rep2.id = 9301
+	rep2.show_state(sim)
+	var chip_w: Array = []
+	for k in range(rep2.got.shown()):
+		chip_w.append(rep2.got.words(k))
+	var all_n: int = finds.size() + 2
+	var more_w: String = str(chip_w.back()) if not chip_w.is_empty() else ""
+	var more_n: int = int(more_w.get_slice(" ", 0)) if more_w.ends_with(" more") else 0
+	_check(rep2.visible and chip_w.size() >= 3 and chip_w.has(Fmt.money(4321.0)) and chip_w.has(E["tokens"] % [2, "s"]), "a full report dropped the tins or the tokens: %s" % str(chip_w))
+	_check(more_n > 0 and chip_w.size() - 1 + more_n == all_n, "a full report's chips don't count what they leave off: %d shown + '%s' of %d" % [chip_w.size(), more_w, all_n])
+	rep2.queue_free()
+	sim.expeditions = []
+	# --- a hidden cargo slot holds nothing: the next kind for the first can be what the hidden one had
+	var EP = load("res://scripts/ui/expeditions_panel.gd")
+	var ep = EP.new()
+	ep.sim = sim
+	var kinds: Array = sim.cargo_kinds()
+	_check(kinds.size() >= 2, "the fixture: fewer than two cargo kinds held: %s" % str(kinds))
+	if kinds.size() >= 2:
+		var n_vis: int = sim.exp_slots([])
+		var goods: Array = []
+		for k in range(n_vis + 1):
+			goods.append({"kind": "", "share": 1.0})
+		goods[0]["kind"] = str(kinds[0])
+		goods[n_vis]["kind"] = str(kinds[1])     # a slot a bigger party had, hidden now
+		ep.set_pick(0, lead, [], goods)
+		ep._next_kind(0)
+		_check(str(ep.cargo[0]["kind"]) == str(kinds[1]), "a hidden cargo slot still counts as taken: the next after %s is '%s', not %s" % [kinds[0], ep.cargo[0]["kind"], kinds[1]])
+	ep.free()
+	# --- one duration helper: the board's and the report's
+	_check(Fmt.dur(4800.0) == "1 h 20 min" and Fmt.dur(1800.0) == "30 min" and Fmt.dur(10800.0) == "3 h" and EP.dur(4800.0) == Fmt.dur(4800.0), "the expeditions' durations: '%s'" % Fmt.dur(4800.0))
+	_check(not ER2.get_script_method_list().any(func(mi): return str(mi["name"]) == "_dur"), "the expedition report keeps its own duration helper")
+	# --- the repeat's report: past the hour h:mm:ss; twelve runs, twelve lines; more, the first says which aren't shown
+	sim.repeat = {}
+	var RR = load("res://scripts/ui/repeat_report.gd")
+	var rr = RR.new()
+	root.add_child(rr)
+	var mk_rep := func(n: int, t: float) -> Dictionary:
+		var runs: Array = []
+		for k in range(n):
+			runs.append({"n": k + 1, "cleared": true, "kills": 3, "tins": 10.0})
+		return {"site": 1, "time": t, "runs": runs, "ended": "done", "kept": [], "lv0": 10, "lv1": 10, "share": 0.25}
+	sim.repeat_report = mk_rep.call(12, 8592.0)
+	rr.show_state(sim)
+	var shown_l: Array = rr.lines.filter(func(l): return l.visible and l.text != "")
+	_check(rr.visible and rr.sub.text.ends_with("2:23:12") and not rr.sub.text.contains("143:"), "a repeat over the hour reads '%s'" % rr.sub.text)
+	_check(rr.lines.size() == 2 * rr.LINES_ROWS and shown_l.size() == 12 and not shown_l.any(func(l): return l.text.contains("not shown")), "twelve repeat runs don't take the twelve lines: %d labels, %d shown, '%s'" % [rr.lines.size(), shown_l.size(), shown_l[0].text if not shown_l.is_empty() else ""])
+	_check(rr.lines.all(func(l): return l.position.y + l.size.y <= rr.again.position.y), "a repeat line runs under the buttons")
+	sim.repeat_report = mk_rep.call(13, 600.0)
+	rr.unfolded = true
+	rr.show_state(sim)
+	shown_l = rr.lines.filter(func(l): return l.visible and l.text != "")
+	_check(shown_l.size() == 12 and shown_l[0].text == Words.REPEAT["not_shown"] % 2 and shown_l.back().text.begins_with("Run 13 "), "thirteen repeat runs: '%s' … '%s'" % [shown_l[0].text if not shown_l.is_empty() else "", shown_l.back().text if not shown_l.is_empty() else ""])
+	_check(RR.run_hidden(12) == 0 and RR.run_hidden(13) == 2 and Words.REPEAT["not_shown_one"] == "Run 1 not shown", "the hidden runs: %d at 12, %d at 13" % [RR.run_hidden(12), RR.run_hidden(13)])
+	rr.queue_free()
+	sim.repeat_report = {}
+	# the away card's time left past the hour
+	var AC = load("res://scripts/ui/away_card.gd")
+	var ac = AC.new()
+	root.add_child(ac)
+	var fake := _FakeAway.new()
+	fake.left = 8592.0
+	ac.show_state(fake)
+	_check(ac.left_l.text.contains("2:23:12") and not ac.left_l.text.contains("143:"), "the away card's time left over the hour reads '%s'" % ac.left_l.text)
+	_check(UI_v_width(ac.left_l) <= ac.left_l.size.x + 0.5, "the away card's time left runs out of its box: '%s'" % ac.left_l.text)
+	ac.queue_free()
+	# --- the top bar between repeat runs: away, at the site, not resting
+	sim.repeat = {"site": 1, "of": 5, "done": 1, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": sim.elapsed - 600.0, "run_t0": sim.elapsed - 600.0, "lv0": sim.level(), "wounds0": {}, "share": 0.25, "own_list": false}
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var where_t: String = main._top_glyphs["where"].tooltip_text     # the bar's place in full (the bar drops "Away: " when it's tight)
+	_check(sim.away() and not sim.on_mission() and where_t == "Away: " + str(Data.TIERS[1]["name"]), "the top bar between repeat runs reads '%s'" % where_t)
+	sim.hp = sim.max_hp() * 0.5                # hurt between runs: away, and the rest's time beside it
+	main.refresh()
+	where_t = main._top_glyphs["where"].tooltip_text
+	_check(where_t.begins_with("Away: " + str(Data.TIERS[1]["name"]) + " · full in ") and not where_t.contains("Resting"), "the top bar resting between repeat runs reads '%s'" % where_t)
+	sim.hp = sim.max_hp()
+	sim.repeat = {}
+	main.refresh()
+	# --- "rate of fire", never "RoF": the pick's deltas and the gloves' short unit
+	var rate_g: Dictionary = {}
+	var other_g: Dictionary = {}
+	for b in Data.BASES["Gloves"]:
+		var g: Dictionary = sim._plain("Gloves", str(b["name"]))
+		if Items.role(g) == "rate" and rate_g.is_empty():
+			rate_g = g
+		elif Items.role(g) != "rate" and other_g.is_empty():
+			other_g = g
+	_check(not rate_g.is_empty() and not other_g.is_empty(), "the fixture: no rate-of-fire gloves, or none other")
+	if not rate_g.is_empty() and not other_g.is_empty():
+		var dd: Array = PickPanel.deltas_of(rate_g, other_g)
+		_check(dd.any(func(d): return str(d[1]).ends_with("rate of fire")) and not dd.any(func(d): return str(d[1]).contains("RoF")), "the gloves' deltas: %s" % str(dd))
+		_check(Items.glove_unit_short(rate_g) != "RoF" and not Items.glove_unit_short(rate_g).contains("RoF"), "the gloves' short unit is '%s'" % Items.glove_unit_short(rate_g))
+	# --- the build code's copy goes to the test clipboard, never the system's, while the smoke runs
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk.copied = ""
+	bk._copy_code()
+	_check(bk.clip_off and bk.copied == sim.build_code() and bk.copied != "", "the build code's copy missed the test clipboard: '%s'" % bk.copied)
+	# --- the version in CLAUDE.md is the game's
+	var cf := FileAccess.open("res://CLAUDE.md", FileAccess.READ)
+	var cmd: String = cf.get_as_text() if cf != null else ""
+	var ver: String = str(load("res://scripts/ui/menu.gd").VERSION)
+	_check(cmd.contains("%s is current" % ver), "CLAUDE.md's current version isn't the game's %s" % ver)
+	sim.load_dict(saved)
+	sim.expeditions = []
+	sim.hands = []
+	sim.hand_pool = []
+	main.refresh()
+	print("the fix round's UI oddities ok (builder C, 30 Oct)")
+
+
+## The art inventory (the fix round, 30 Oct, the tests review): the asserts that a picture is in the copy, apart from the
+## logic checks so a missing file reads as what it is. The cloud copy's art can trail the designer's machine.
+func _art_inventory_checks(main) -> void:
+	var sim = main.sim
+	_check(Items.art(sim._plain(Data.PAPER, "A P45")) != null and Items.art(sim._plain(Data.PAPER, "A boarding pass")) == Items.art(sim._plain(Data.PAPER, "A P45")), "art: papers have no picture in the cell, or not the same one")
+	_check(Items.art(sim._plain("Secondary", "Legation machine pistol")) != null and Items.art(sim._plain("Armour", "Turnout coat")) != null, "art: a renamed base lost its picture")
+	var n := 0
+	for u in Data.ISSUED:
+		n += 1
+		_check(Items.art(sim.issued_piece(str(u["slot"]))) != null, "art: no picture for the %s" % u["name"])
+	_check(n > 0, "art: no issued kit to look for")
+
+
+## Kev's wagers, every word and every pay through the take path (the fix round, 30 Oct, the tests review: quality and the
+## slot pay were never asserted, hard and no meds only when the seeded offer held them): each found on an offer there,
+## taken as the panel takes it, and its effect read off the run it goes on.
+func _wager_take_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.mission = null
+	sim.repeat = {}
+	var nsite := 1
+	var depth_was: int = int(sim.best_depth[nsite])
+	var wagers_was: Dictionary = sim.wagers.duplicate(true)
+	var key: String = sim.wager_site_key(nsite)
+	var wants: Array = []
+	for c in Data.WAGER_CONDS:
+		wants.append(["cond", str(c["id"])])
+	for p in Data.WAGER_PAYS:
+		wants.append(["pay", str(p["id"])])
+	var met := 0
+	for want in wants:
+		var found := false
+		for sq in range(200):
+			if found:
+				break
+			sim.wagers[key] = {"seq": sq, "taken": []}
+			var of: Array = sim.wager_offer(key)
+			for k in range(of.size()):
+				if found or str(of[k][want[0]]) != want[1]:
+					continue
+				found = true
+				sim.best_depth[nsite] = 0
+				sim.hp = sim.max_hp()
+				_check(sim.wager_site_open(nsite) and sim.take_wager(key, k) and sim.wager_taken(key, k), "the fixture: Kev's %s wager wasn't taken" % want[1])
+				var w: Dictionary = of[k]
+				var plain_t: Dictionary = sim.effective(nsite)
+				var clock0: float = sim.clock_budget(plain_t)
+				sim.deploy(nsite)
+				var m = sim.mission
+				_check(m != null and m.has("wagers") and m["wagers"].size() == 1, "the fixture: the %s wager didn't go on the run" % want[1])
+				if m == null:
+					continue
+				met += 1
+				match want[1]:
+					"gang":
+						_check(int(m["t"]["pool"]) == ceili(float(plain_t["pool"]) * Data.WAGER_GANG) and is_equal_approx(float(m.get("wager_gang", 1.0)), Data.WAGER_GANG), "the gang wager: pool %d against %d" % [int(m["t"]["pool"]), int(plain_t["pool"])])
+					"no_meds":
+						var bd: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+						sim.rig.append(bd)
+						sim.hp = sim.max_hp() * 0.3
+						_check(bool(m["t"].get("no_meds", false)) and not sim.use_med(int(bd["id"])), "the no-meds wager: a med went in")
+						sim.rig.erase(bd)
+					"clock":
+						_check(is_equal_approx(float(m["clock"]), clock0 * Data.WAGER_CLOCK), "the clock wager: %.1f against %.1f" % [float(m["clock"]), clock0])
+					"hard":
+						_check(is_equal_approx(float(m["t"]["dps"]), float(plain_t["dps"]) * Data.WAGER_HARD), "the hard wager: %.2f against %.2f" % [float(m["t"]["dps"]), float(plain_t["dps"])])
+					"notes":
+						_check(is_equal_approx(float(m.get("wager_notes", 1.0)), 1.5), "the notes wager not marked")
+					"slot":
+						var sl: String = str(w["slot"])
+						_check(sl in Data.WAGER_SLOTS and int(m.get("wager_slots", {}).get(sl, 1)) == 3, "the slot wager: %s" % str(m.get("wager_slots", {})))
+						var got := 0
+						for j in range(60):
+							var f: Dictionary = sim._find(m, m["t"], false, {"slots": [sl], "lean": 1.0})
+							if str(f.get("it", {}).get("slot", "")) == sl and not f["it"].has("unique") and not f["it"].get("mythic", false):
+								got += 1
+						_check(got > 0 and int(m.get("wager_finds", 0)) == 2 * got, "the slot wager: %d %s finds, %d more" % [got, sl, int(m.get("wager_finds", 0))])
+						m["found"] = []
+					"quality":
+						_check(is_equal_approx(float(m["t"].get("rarity", 0.0)), float(plain_t.get("rarity", 0.0)) + 0.5), "the quality wager: %.2f against %.2f" % [float(m["t"].get("rarity", 0.0)), float(plain_t.get("rarity", 0.0))])
+				if sim.mission != null:
+					sim.extract_now()
+		_check(found, "no offer with Kev's %s in 200" % want[1])
+	_check(met == wants.size() and wants.size() == Data.WAGER_CONDS.size() + Data.WAGER_PAYS.size(), "Kev's wagers met through the take path: %d of %d" % [met, wants.size()])
+	sim.best_depth[nsite] = depth_was
+	sim.wagers = wagers_was
+	sim.hp = sim.max_hp()
 
 
 ## Another class's runner to lead, for the fixtures: one played, else made.
@@ -25389,3 +26723,264 @@ func _yard_pick_by_id(sim, id: String) -> bool:
 					sim._yard_dirty = true
 					return sim.yard_has(id)
 	return false
+
+
+## The fix round of 30 Oct, builder B (docs/review30.md I1-I6, U4, the loot weighting): uniques and set pieces on their
+## own bodies, a secondary's conversion hidden, every stat a card's words, Equip if better within the stash's room, the
+## swap lit only when it can happen, finds weighted to their tier.
+func _fix30b_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	_fix30b_bodies()
+	_fix30b_words()
+	_fix30b_secondary_conv(main)
+	_fix30b_equip_best(main)
+	_fix30b_swap_lit(main)
+	_fix30b_loot_weights()
+	sim.load_dict(hold)
+	main.refresh()
+	print("the fix round (B) ok: own bodies, a card's words, the secondary's chip, Equip if better, the swap's room, the tier weights")
+
+
+## A plain piece on its own mounts (sim._plain keeps the mounts of whatever base its roll drew: the fixtures need the
+## base's own).
+func _fix30b_plain(sim, slot: String, base: String) -> Dictionary:
+	var it: Dictionary = sim._plain(slot, base)
+	var att := {}
+	for m in Items.base_named(slot, base).get("attachments", []):
+		att[m] = null
+	it["attachments"] = att
+	if slot == Data.ATTACHMENT:
+		it["attachments"] = {}
+		it["mount"] = str(Items.base_named(slot, base).get("mount", ""))
+	return it
+
+
+## A piece's mounts, its sockets apart: the names, sorted.
+func _fix30b_mounts(it: Dictionary) -> Array:
+	var out: Array = []
+	for k in it.get("attachments", {}):
+		if not str(k).begins_with("socket"):
+			out.append(str(k))
+	out.sort()
+	return out
+
+
+## I1-I3: hundreds of uniques and set pieces, each on its own base - its mounts, its sockets to its own cap (an improvised
+## body's one more, always), a set piece's item level never under its own tier off a find with no level.
+func _fix30b_bodies() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3030
+	var n_u := 0
+	var n_imp := 0
+	var n_set := 0
+	var bad := {"mounts": [], "sockets": [], "improvised": [], "ilvl": []}
+	for rep in range(8):
+		for u in Data.UNIQUES:
+			var tier: int = [-1, 1, 3, 5, 9][rep % 5]
+			var it: Dictionary = Items.roll_unique(u, rng, -1, tier, rep % 2 == 1)
+			n_u += 1
+			var b: Dictionary = Items.base_of(it)
+			var want: Array = Array(b.get("attachments", [])).duplicate()
+			want.sort()
+			if _fix30b_mounts(it) != want:
+				bad["mounts"].append("%s on %s: mounts %s, its base's %s" % [u["name"], it["base"], str(_fix30b_mounts(it)), str(want)])
+			if str(it["slot"]) in Data.SOCKET_SLOTS:
+				if Items.sockets(it) > Items.socket_cap(it):
+					bad["sockets"].append("%s on %s: %d sockets over its cap %d" % [u["name"], it["base"], Items.sockets(it), Items.socket_cap(it)])
+				if Items.bodge(it) > 0:
+					n_imp += 1
+					if Items.sockets(it) < Items.bodge(it):
+						bad["improvised"].append("%s (improvised, on %s): %d sockets, no extra one" % [u["name"], it["base"], Items.sockets(it)])
+		for s in Data.SETS:
+			for p in s["pieces"]:
+				var it: Dictionary = Items.roll_set_piece(str(s["name"]), p, rng, -1, [-1, 2, 4, 9][rep % 4])
+				n_set += 1
+				var own: Dictionary = Items.base_named(str(p["slot"]), str(p["base"]))
+				var want: Array = Array(own.get("attachments", [])).duplicate()
+				want.sort()
+				if str(it["base"]) != str(p["base"]) or _fix30b_mounts(it) != want:
+					bad["mounts"].append("%s on %s: mounts %s, its base's %s" % [p["name"], it["base"], str(_fix30b_mounts(it)), str(want)])
+				if str(it["slot"]) in Data.SOCKET_SLOTS and Items.sockets(it) > Items.socket_cap(it):
+					bad["sockets"].append("%s: %d sockets over its cap" % [p["name"], Items.sockets(it)])
+				if Items.ilvl(it) < int(own.get("tier", 1)):
+					bad["ilvl"].append("%s: item level %d under its own tier %d" % [p["name"], Items.ilvl(it), int(own.get("tier", 1))])
+	_check(n_u >= 300 and n_set >= 100 and n_imp >= 8, "the fixture: %d uniques, %d improvised, %d set pieces rolled" % [n_u, n_imp, n_set])
+	_check(bad["mounts"].is_empty(), "a unique or a set piece off its own base's mounts (%d): %s" % [bad["mounts"].size(), "; ".join(bad["mounts"].slice(0, 4))])
+	_check(bad["sockets"].is_empty(), "a unique or a set piece over its socket cap (%d): %s" % [bad["sockets"].size(), "; ".join(bad["sockets"].slice(0, 4))])
+	_check(bad["improvised"].is_empty(), "an improvised unique without its extra socket (%d): %s" % [bad["improvised"].size(), "; ".join(bad["improvised"].slice(0, 4))])
+	_check(bad["ilvl"].is_empty(), "a set piece under its own tier's item level (%d): %s" % [bad["ilvl"].size(), "; ".join(bad["ilvl"].slice(0, 4))])
+
+
+## I5: no line on a unique's, a set piece's or a base's card prints a stat's key.
+func _fix30b_words() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3031
+	var pieces: Array = []
+	for u in Data.UNIQUES:
+		pieces.append(Items.roll_unique(u, rng))
+	for s in Data.SETS:
+		for p in s["pieces"]:
+			pieces.append(Items.roll_set_piece(str(s["name"]), p, rng))
+	var n_first := 0
+	var keyed: Array = []
+	for it in pieces:
+		if it["affixes"].any(func(a): return str(a["stat"]) == "first_pct"):
+			n_first += 1
+		for line in Items.affix_lines(it) + Items.affix_lines(it, true):
+			if str(line).contains("_") and keyed.size() < 6:
+				keyed.append("%s: %s" % [Items.full_name(it), line])
+	for slot in Data.BASES:
+		for b in Data.BASES[slot]:
+			var w: String = Items.base_res_words({"slot": slot, "base": b["name"], "affixes": [], "attachments": {}, "tier": b["tier"]})
+			if w.contains("_") and keyed.size() < 6:
+				keyed.append("%s: %s" % [b["name"], w])
+	_check(n_first >= 4, "the fixture: %d pieces with damage to the first of each gang" % n_first)
+	_check(keyed.is_empty(), "a card prints a stat's key: %s" % "; ".join(keyed))
+
+
+## I4 (the designer's call: hide, don't apply): a Knife as a secondary shows no bleed chip; the Claw hammer as a primary
+## still says it bleeds.
+func _fix30b_secondary_conv(main) -> void:
+	var sim = main.sim
+	var IH = load("res://scripts/ui/item_head.gd")
+	var knife: Dictionary = _fix30b_plain(sim, "Secondary", "Knife")
+	_check(float(Items.base_of(knife).get("conv_bleed_pct", 0)) > 0.0, "the fixture: the Knife's base doesn't bleed")
+	_check(IH.conv_chips(knife).is_empty(), "a secondary's conversion shows a chip: %s" % str(IH.conv_chips(knife)))
+	_check(not IH.conv_chips(_fix30b_plain(sim, "Primary", "Claw hammer")).is_empty(), "the Claw hammer as a primary lost its bleed chip")
+	sim.stash = [knife]
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": knife["id"]}
+	main.refresh()
+	var chips = main._armoury._pick._heads[0]._affixes
+	var said: Array = []
+	for k in range(chips.shown()):
+		said.append(chips.words(k))
+	_check(said.size() > 0 and not said.any(func(w): return str(w).contains("bleed")), "the Kit's card for a Knife says it bleeds: %s" % str(said))
+
+
+## I6: Equip if better, the parts-and-all swap refused (no room): never the piece read with parts it won't get, never
+## past the stash's cells.
+func _fix30b_equip_best(main) -> void:
+	var sim = main.sim
+	_yard_set(sim, "bench", 1, "")
+	sim.rig = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Rifle rounds")]
+	sim.equipped["Secondary"] = null
+	sim.auto_equip = true
+	# a worse piece: the worn's big brake reads the find better; the swap's refused (the find's own choke has no room)
+	var weak: Dictionary = _fix30b_plain(sim, "Primary", "Pump shotgun")
+	var big: Dictionary = _fix30b_plain(sim, Data.ATTACHMENT, "Ported brake")
+	big["affixes"] = [{"stat": "damage_pct", "value": 60, "tier": 5}]
+	weak["attachments"]["muzzle"] = big
+	sim.equipped["Primary"] = weak
+	var good: Dictionary = _fix30b_plain(sim, "Primary", "Riot shotgun")
+	good["attachments"]["muzzle"] = _fix30b_plain(sim, Data.ATTACHMENT, "Choke")
+	sim.stash = [good]
+	while sim.stash_used() < sim.stash_cap():
+		sim.stash.append(_fix30b_plain(sim, Data.ATTACHMENT, "Tape"))
+	sim._dry_memo.clear()
+	var was: float = sim.damage_total()
+	_check(sim.compare(good, -1, true) == 1 and sim.compare(good) != 1 and sim.swap_moves(good) and not sim.can_swap_with_parts(int(good["id"])), "the fixture: the find doesn't read better with the parts only, or the swap isn't refused (%d, %d)" % [sim.compare(good, -1, true), sim.compare(good)])
+	sim.equip_best("Primary")
+	sim._dry_memo.clear()
+	_check(sim.damage_total() >= was - 0.01 and sim.equipped["Primary"] == weak, "Equip if better wore a worse piece when the swap was refused: %.1f against %.1f" % [sim.damage_total(), was])
+	# the stash: a smaller find better outright, the swap refused, the worn's bigger body no room as it stands
+	var worn := {}
+	var found := {}
+	for b in Data.BASES["Primary"]:
+		var c: Dictionary = _fix30b_plain(sim, "Primary", str(b["name"]))
+		if not c["attachments"].has("stock"):
+			continue
+		if worn.is_empty() and Items.size(c) == 5:
+			worn = c
+		elif found.is_empty() and Items.size(c) == 3 and str(Items.base_of(c).get("type", "")) == "smg":
+			found = c
+	_check(not worn.is_empty() and not found.is_empty(), "the fixture: no 5-cell and 3-cell guns with a stock")
+	if worn.is_empty() or found.is_empty():
+		return
+	var stock: Dictionary = {}
+	for a in Data.ATTACHMENTS:
+		var pa: Dictionary = {"slot": Data.ATTACHMENT, "base": str(a["name"]), "mount": str(a.get("mount", ""))}
+		if stock.is_empty() and str(a.get("mount", "")) == "stock" and Items.att_fits(pa, str(Items.base_of(found).get("type", ""))) and Items.att_fits(pa, str(Items.base_of(worn).get("type", ""))):
+			stock = _fix30b_plain(sim, Data.ATTACHMENT, str(a["name"]))
+	_check(not stock.is_empty(), "the fixture: no stock fits both guns")
+	if stock.is_empty():
+		return
+	worn["attachments"]["stock"] = stock
+	found["attachments"]["stock"] = stock.duplicate(true)
+	found["attachments"]["stock"]["id"] = -77
+	found["affixes"] = [{"stat": "damage_pct", "value": 400, "tier": 5}]
+	sim.equipped["Primary"] = worn
+	sim.stash = [found]
+	while sim.stash_used() < sim.stash_cap():
+		sim.stash.append(_fix30b_plain(sim, Data.ATTACHMENT, "Tape"))
+	sim._dry_memo.clear()
+	_check(sim.swap_moves(found) and sim.compare(found, -1, true) == 1 and not sim.can_swap_with_parts(int(found["id"])) and not sim.can_equip_item(int(found["id"])), "the fixture: the 3-cell find isn't better, or the swap or the plain Equip has room")
+	sim.equip_best("Primary")
+	_check(sim.stash_used() <= sim.stash_cap() and sim.equipped["Primary"] == worn, "Equip if better overfilled the stash: %d of %d" % [sim.stash_used(), sim.stash_cap()])
+
+
+## U4: "Swap, parts and all" off with the hint when the stash hasn't the room for what comes off; on with room.
+func _fix30b_swap_lit(main) -> void:
+	var sim = main.sim
+	var w3: Dictionary = _fix30b_plain(sim, "Primary", "Pump shotgun")
+	w3["attachments"]["stock"] = _fix30b_plain(sim, Data.ATTACHMENT, "Heavy stock")
+	sim.equipped["Primary"] = w3
+	var f3: Dictionary = _fix30b_plain(sim, "Primary", "Riot shotgun")
+	f3["attachments"]["stock"] = _fix30b_plain(sim, Data.ATTACHMENT, "Folding stock")
+	sim.stash = [f3]
+	while sim.stash_used() < sim.stash_cap():
+		sim.stash.append(_fix30b_plain(sim, Data.ATTACHMENT, "Tape"))
+	sim._dry_memo.clear()
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": f3["id"]}
+	main.refresh()
+	var pick = main._armoury._pick
+	var k: int = pick.button_texts().find("Swap, parts and all")
+	_check(k >= 0 and sim.can_equip_item(int(f3["id"])), "the fixture: no swap offered, or no room for a plain Equip: %s" % str(pick.button_texts()))
+	if k >= 0:
+		_check(pick._buttons[k].disabled and not sim.can_swap_with_parts(int(f3["id"])), "the swap is lit with no room in the stash for what comes off")
+		_check(pick.hint_text().begins_with("No room in the stash"), "a full stash's swap has no hint: '%s'" % pick.hint_text())
+	sim.stash = [f3]
+	main.refresh()
+	k = pick.button_texts().find("Swap, parts and all")
+	_check(k >= 0 and not pick._buttons[k].disabled and sim.can_swap_with_parts(int(f3["id"])), "the swap is off with room in the stash")
+
+
+## The loot weighting (30 Oct, the designer's call): a find's gear lands its own tier half the time, one under 30%, the
+## rest lower; a site's own base still drops only there.
+func _fix30b_loot_weights() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3032
+	var off: Array = []
+	var n := 0
+	for slot in Data.SLOTS:
+		for t in [4, 9]:
+			var c := [0, 0, 0]
+			for k in range(2000):
+				var it: Dictionary = Items.roll(slot, t, rng)
+				var bt: int = int(it["tier"])
+				c[0 if bt == t else (1 if bt == t - 1 else 2)] += 1
+			n += 1
+			var sh: Array = c.map(func(x): return 100.0 * x / 2000.0)
+			if absf(sh[0] - 100.0 * Data.LOOT_OWN_TIER) > 4.0 or absf(sh[1] - 100.0 * Data.LOOT_TIER_UNDER) > 4.0 or absf(sh[2] - 100.0 * Data.LOOT_LOWER) > 4.0:
+				off.append("%s T%d %.0f/%.0f/%.0f" % [slot, t, sh[0], sh[1], sh[2]])
+	_check(n == Data.SLOTS.size() * 2 and off.is_empty(), "the finds aren't weighted to their tier (50/30/20): %s" % ", ".join(off))
+	# a site's own: never off its site, a share of its site's finds
+	var leaks: Array = []
+	var homes := 0
+	for slot in Data.SLOTS:
+		for b in Data.BASES[slot]:
+			var home: String = Items.exclusive_to(str(b["name"]))
+			if home == "":
+				continue
+			var mine := 0
+			for k in range(300):
+				if str(Items.roll(slot, int(b["tier"]), rng, 0.0, false, false, home)["base"]) == str(b["name"]):
+					mine += 1
+				if str(Items.roll(slot, 9, rng)["base"]) == str(b["name"]):
+					leaks.append(str(b["name"]))
+			homes += 1 if mine > 0 else 0
+	_check(homes >= 5 and leaks.is_empty(), "a site's own base: %d dropped at home; off its site %s" % [homes, str(leaks.slice(0, 4))])

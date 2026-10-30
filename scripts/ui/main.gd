@@ -1202,8 +1202,9 @@ func refresh() -> void:
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
 	_top_labels["where"].text = ("Out: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
-	if sim.unwatched():
-		_top_labels["where"].text = "Away: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))     # a repeat's run (29 Oct)
+	if sim.away():
+		var rest_w: String = resting_words()     # between runs, hurt: the repeat's rest kept beside it
+		_top_labels["where"].text = "Away: " + away_site(sim) + ((" · " + rest_w.trim_prefix("Resting, ")) if rest_w != "" else "")     # a repeat, its runs and the rests between them (the fix round, 30 Oct)
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()
@@ -1331,6 +1332,13 @@ static func top_dps_forms(d: float) -> Array:
 static func top_hp_forms(h: float, top: float, guard_v: float) -> Array:
 	var g: String = (" +%s" % Fmt.short_num(guard_v)) if guard_v >= 0.5 else ""
 	return ["%s / %s%s" % [Fmt.group(int(h)), Fmt.group(int(top)), g], "%s / %s%s" % [Fmt.short_num(h), Fmt.short_num(top), g], "%s / %s" % [Fmt.short_num(h), Fmt.short_num(top)]]
+
+
+## The site a repeat's away at, for the top bar: the run's own while one's out, the repeat's between runs.
+static func away_site(s) -> String:
+	if s.unwatched():
+		return str(s.mission["t"].get("name", s.tier(s.mission["tier"])["name"]))
+	return str(s.tier(int(s.repeat["site"]))["name"])
 
 
 func _xp_words() -> String:

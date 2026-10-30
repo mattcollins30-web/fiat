@@ -59,7 +59,7 @@ func show_state(s) -> void:
 	if not bool(p["out"]):
 		UI.fit(left_l, [Words.REPEAT["away_resting_first"] if bool(p.get("first", false)) else Words.REPEAT["away_resting"], "Resting"])
 	elif float(p["left"]) >= 0.0:
-		UI.fit(left_l, [Words.REPEAT["away_left"] % Fmt.mss(float(p["left"])), Fmt.mss(float(p["left"]))])
+		UI.fit(left_l, [Words.REPEAT["away_left"] % Fmt.clock(float(p["left"])), Fmt.clock(float(p["left"]))])     # h:mm:ss past the hour (the fix round)
 	else:
 		UI.fit(left_l, [Words.REPEAT["away_left_full"], "Till full"])
 	var b: int = int(p["bails"])

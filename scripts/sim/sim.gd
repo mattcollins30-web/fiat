@@ -1266,7 +1266,27 @@ func rarity_bonus() -> float:
 
 func sell_price(it: Dictionary) -> int:
 	var inf: float = inflation() / circ_mult() if it.has("issue_k") and issued else inflation()     # held through the Issue: at the Issue's prices for good, as the cash (Matt, 26 Oct)
-	return int(round(Items.worth(it) * float(it.get("issue_k", 1.0)) * inf * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
+	var got := int(round(Items.worth(it) * float(it.get("issue_k", 1.0)) * inf * (fence_rate() if issued else 1.0) * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
+	var cap: int = shop_price(it)
+	return mini(got, maxi(0, cap - 1)) if cap > 0 else got     # never back for what it costs (S1, S2): the Fence's and the Clinic's stock sells under its price
+
+
+## What the Fence or the Clinic charges for a thing it stocks, at today's buy multipliers, or 0 when neither stocks it:
+## rounds (a box's price, by what the stack holds), meds (the Clinic's), a piece bought off the shelf (its price there).
+func shop_price(it: Dictionary) -> int:
+	if Items.is_ammo(it):
+		return _inf(Items.worth(it) * Data.AMMO_PRICE * _buy_k("fence_pct"))
+	if Items.is_medical(it):
+		return clinic_price(it)
+	if bool(it.get("shop_bought", false)):
+		return price(it)
+	return 0
+
+
+## The buy side's multipliers, as the shelf's price() has them: Buyer's market, the town's discount (`town`: the market
+## hall's fence_pct, the pumping station's clinic_pct), Shop local's buy_pct.
+func _buy_k(town: String) -> float:
+	return (Data.FX["node/buyers_market.buy"] if has_node("buyers_market") else 1.0) * (1.0 - town_stat(town) / 100.0) * (1.0 - tree_sum("buy_pct") / 100.0)
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -1480,6 +1500,7 @@ func set_class(name: String) -> bool:
 		_say_next()
 		return true
 	var from := cls
+	var join := join_level(name)                # the crew's floor (30 Oct): read before the swap, off the other classes as they stand
 	var pitch: Array = tree.filter(func(id): return is_camp(str(id)))     # the camp's (the Pitch's and the elements', slice 3): they stay out whoever runs
 	var own_tabs: Array = stash.filter(func(x): return tab_of(x) != "")     # the class's own stash tabs go with them
 	stash = stash.filter(func(x): return tab_of(x) == "")
@@ -1497,13 +1518,49 @@ func set_class(name: String) -> bool:
 	tree = tree.filter(func(id): return not is_camp(str(id))) + pitch
 	cls = name
 	_skills_known_only()
+	_caches_out()
+	var lv: int = maxi(level(), join)
+	chron("swap", {"from": from, "to": name, "level": lv})
+	log_event(Words.CREW["swap"] % [from, name, lv])
+	if join > level():
+		log_event(Words.CREW["floor"] % [name, join, Data.CREW_FLOOR_UNDER])     # said before its points' line
+	_crew_floor_lift(join)
 	if came_back.has("lv_from"):
 		came_back["lv_from"] = level()          # the card's climb is this runner's
-	_caches_out()
-	chron("swap", {"from": from, "to": name, "level": level()})
-	log_event(Words.CREW["swap"] % [from, name, level()])
 	_say_next()
 	return true
+
+
+## The crew's floor (30 Oct, Matt, shared XP option B): each class keeps its own level, tree and kit, but one swapped in
+## (a benched class, or a new one) joins at no less than the best of the crew's OTHER classes less CREW_FLOOR_UNDER, never
+## past MAX_LEVEL (the paragon's untouched). The XP is raised to that level's threshold and the levels gained go through
+## _earn_points, as if levelled. Only set_class lifts: a death (which never swaps) still puts its class back to level 1
+## and that class stays there for the rest of its spell out; it's lifted again only when it next comes in after another
+## class has been out (the floor is read off the other classes, never its own old level). crew_level stays the stored
+## level (what the bench, a lead and a save hold); join_level is what a swap would bring out.
+func join_level(name: String) -> int:
+	var own: int = maxi(1, crew_level(name))
+	if cls == "" or name == cls:
+		return own                             # the first pick, or the one out: nothing to join
+	var best := 0
+	for c in crew_played():
+		if str(c) != name:
+			best = maxi(best, crew_level(str(c)))
+	return maxi(own, mini(Data.MAX_LEVEL, best - Data.CREW_FLOOR_UNDER))
+
+
+## The runner just swapped in lifted to `join` if under it: the XP to its threshold, the points through _earn_points, a
+## runner rested at the old level rested at the new.
+func _crew_floor_lift(join: int) -> void:
+	var before := level()
+	if join <= before:
+		return
+	var rested: bool = hp >= max_hp() - 0.001
+	xp = maxf(xp, Data.xp_for_level(join))
+	_caches_out()
+	_earn_points(before)
+	if rested:
+		hp = max_hp()
 
 
 ## A slot holding a skill this runner doesn't know empties (a swap, a load, a death, a respec): the picker counts it free.
@@ -3705,16 +3762,47 @@ func respec() -> bool:
 ## Levels earn points for the camp, whatever happens to the operator - but only past the camp's best
 ## (9 Oct): dying and re-levelling a new runner earned the same points again, without end.
 func _earn_points(before: int) -> void:
-	var after := level()
-	if after > best_level:
-		var gained: int = after - maxi(before, best_level)
-		best_level = after
-		training_points += gained
-		log_event("Level %d: %d training point%s" % [after, gained, "" if gained == 1 else "s"])
-		chron("level", {"to": after, "gained": gained, "best": true})
-	elif after > before:
-		log_event("Level %d: no training point – the Pitch has had a runner at level %d" % [after, best_level])
-		chron("level", {"to": after, "gained": 0, "best": false})
+	var got: Array = _points_up(before, level(), best_level, "")
+	best_level = int(got[0])
+	training_points += int(got[1])
+
+
+## The one rule for a level's points, the runner out's or a benched class's (`who`, 30 Oct: a lead's expedition XP):
+## points only for the levels past that class's best. [the best now, the points gained]; said in the log and chronicled.
+func _points_up(before: int, after: int, best: int, who: String) -> Array:
+	if after > best:
+		var gained: int = after - maxi(before, best)
+		if who == "":
+			log_event("Level %d: %d training point%s" % [after, gained, "" if gained == 1 else "s"])
+			chron("level", {"to": after, "gained": gained, "best": true})
+		else:
+			log_event(Words.CREW["lead_level"] % [who, after, gained, "" if gained == 1 else "s"])
+			chron("lead_level", {"cls": who, "to": after, "gained": gained, "best": true})     # not "level": that's the runner out's
+		return [after, gained]
+	if after > before:
+		if who == "":
+			log_event("Level %d: no training point – the Pitch has had a runner at level %d" % [after, best])
+			chron("level", {"to": after, "gained": 0, "best": false})
+		else:
+			log_event(Words.CREW["lead_level_none"] % [who, after, best])
+			chron("lead_level", {"cls": who, "to": after, "gained": 0, "best": false})
+	return [best, 0]
+
+
+## XP to a benched class's runner (an expedition's lead, 30 Oct, the review's S4): the one roster-side path, as _gain_xp
+## and _earn_points are the runner out's - to MAX_LEVEL, the rest the crew's paragon, the points for the levels it rose.
+func _crew_gain_xp(name: String, g: float) -> void:
+	if not roster.has(name) or g <= 0.0:
+		return
+	var r: Dictionary = roster[name]
+	var x0: float = float(r.get("xp", 0.0))
+	var before: int = Data.level_for_xp(x0)
+	var room := maxf(0.0, Data.xp_for_level(Data.MAX_LEVEL) - x0)
+	r["xp"] = x0 + minf(g, room)
+	paragon_xp += g - minf(g, room)
+	var got: Array = _points_up(before, Data.level_for_xp(float(r["xp"])), int(r.get("best_level", 1)), name)
+	r["best_level"] = int(got[0])
+	r["training_points"] = int(r.get("training_points", 0)) + int(got[1])
 
 
 func contact(t: Dictionary) -> int:
@@ -4020,7 +4108,7 @@ func ammo_box(type: String) -> Dictionary:
 
 func ammo_price(type: String) -> int:
 	var b := ammo_box(type)
-	return _inf(b["value"] * Data.AMMO_PRICE) if not b.is_empty() else 0
+	return _inf(b["value"] * Data.AMMO_PRICE * _buy_k("fence_pct")) if not b.is_empty() else 0     # the shelf's buy multipliers (S1): Buyer's market doubles a box too
 
 
 func buy_ammo(type: String) -> bool:
@@ -5756,7 +5844,7 @@ func strip_all(slot: String) -> Array:
 ## Strip all can take one off now (28 Oct, the review: live with the stash full, then nothing): not on a run, and a part
 ## on the piece the stash has room for.
 func can_strip_any(slot: String) -> bool:
-	if mission != null or equipped.get(slot) == null:
+	if runner_busy() or equipped.get(slot) == null:     # as strip_all (T4): not lit between a repeat's runs
 		return false
 	return Dictionary(equipped[slot].get("attachments", {})).values().any(func(a): return a != null and (stash_fits(a) or _stack_room(a)))
 
@@ -7576,16 +7664,33 @@ func signal_odds_class(k: int, name: String, now := false) -> Array:
 	if not roster.has(name) or mission != null:
 		return [0.0, false]
 	var sg := signal_at(k)
-	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_camp(str(id))), ring])]     # the signal as crafted, and what the camp gives everyone
+	var rr: Dictionary = roster[name]
+	var kit: Array = []
+	for sl in Data.SLOTS:
+		var it = rr.get("equipped", {}).get(sl, null)
+		kit.append(int(it["id"]) if it != null else -1)
+	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_camp(str(id))), ring,
+		float(rr.get("xp", 0.0)), kit, rr.get("tree", []).size(), float(rr.get("hp", 0.0)), join_level(name)])]     # and the level a press brings them out at (the crew's floor moves with the best)     # the signal as crafted, and what the camp gives everyone; the benched class's own, as exp_odds keys it (T2: their XP or kit moved, the row stayed)
 	if now and _crew_now.has(ck):
 		return _crew_now[ck]                 # read once a frame by the shell's budget; the screens take it from here
+	var jl: int = join_level(name)            # the crew's floor (30 Oct): read at the level a press would bring them out at
 	var h := _read_as(name)
+	var x_bench: float = xp
+	var hp_bench: float = hp
+	var rested: bool = hp >= max_hp() - 0.001
+	xp = maxf(xp, Data.xp_for_level(jl))
+	if rested:
+		hp = max_hp()                          # rested at the lifted level, as the swap brings them out
 	var held: Dictionary = _sig_odds
 	_sig_odds = _crew_odds.get(name, {})
 	var out: Array = signal_odds_now(k) if now else signal_odds(k)
 	_crew_odds[name] = _sig_odds
 	_sig_odds = held
+	xp = x_bench                               # the bench keeps its own level: the floor's taken on the swap
+	hp = hp_bench
 	_read_back(h)
+	if _crew_now.size() > 96:
+		_crew_now.clear()                    # as _exp_cache: the keys move with the bench, the old ones never read again
 	_crew_now[ck] = out
 	return out
 
@@ -7601,7 +7706,10 @@ func _read_as(name: String) -> Dictionary:
 
 
 func _read_back(h: Dictionary) -> void:
+	var tabs = roster[cls].get("tab_items", null) if roster.has(cls) else null
 	roster[cls] = _runner_out()                # what the read put back where it was (a dry run restores the rig as a new array)
+	if tabs != null:
+		roster[cls]["tab_items"] = tabs        # the class's own stash tabs stay with it (the merge's review: a read dropped them)
 	_runner_in(h["out"])
 	tree = tree + h["pitch"]
 	cls = str(h["cls"])
@@ -7864,7 +7972,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level(), str(class_elements())]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct); the class's two (28 Oct, the review: a close moves no tree)
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level(), str(class_elements()), str(skill_slots), str(skill_auto)]     # the skills slotted and their rules (T1: a slotted skill left the site's old odds); the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct); the class's two (28 Oct, the review: a close moves no tree)
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -8153,7 +8261,7 @@ func deploy(i: int) -> void:
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
 	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
-	_top_up()                                 # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance
+	_top_up(i if _repeat_going else -1)       # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9)
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
@@ -8618,21 +8726,46 @@ func rest_rate_now() -> float:
 
 ## The site's odds at full HP (the designer: the 90% gate reads the runner whole, as the repeat rests first): [read, odds].
 func repeat_odds(i: int) -> Array:
-	var h := hp
-	hp = max_hp()
-	var out: Array = [odds_ready(i), odds_now(i)]
-	hp = h
-	return out
+	if hp >= max_hp() - 0.01:
+		return [odds_ready(i), odds_now(i)]   # whole: the site's own read is the gate's
+	return _whole(i, func(): return [odds_ready(i), odds_now(i)])
 
 
 ## The full-HP read the gate wants, a step at a time in the shell's odds budget (main._read_odds).
 func repeat_read(i: int) -> void:
 	if mission != null or hp >= max_hp() - 0.01:
 		return
+	_whole(i, func(): return survival(i))
+
+
+## The runner read whole for the repeat's gate (U1, U2): HP to the max, the key worked afresh - never the frame's or the
+## paint's memo, worked at the hurt HP - and the read in its own slot of _surv_cache ("whole:<site>"), so the site's
+## hurt read the Map shows is never overwritten by it. Everything put back after.
+func _whole(i: int, fn: Callable) -> Variant:
+	var slot := "whole:%d" % i
+	var home = _surv_cache.get(i, null)
+	if _surv_cache.has(slot):
+		_surv_cache[i] = _surv_cache[slot]
+	else:
+		_surv_cache.erase(i)
 	var h := hp
+	var memo := [_key_memo, _key_memo_t, _scope_memo]
+	_key_memo = []
+	_key_memo_t = -1
+	_scope_memo = []
 	hp = max_hp()
-	survival(i)
+	var out = fn.call()
 	hp = h
+	_key_memo = memo[0]
+	_key_memo_t = memo[1]
+	_scope_memo = memo[2]
+	if _surv_cache.has(i):
+		_surv_cache[slot] = _surv_cache[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	return out
 
 
 ## Why "Run it ×5" is shut on a site, or "" when it can go: the runner away or out, a trait to pick, not cleared, a head
@@ -8698,7 +8831,7 @@ func _repeat_go() -> void:
 		boss_armed[i] = false
 		_surv_cache.erase(i)
 	_fill_mags()
-	pack_rig("fill")
+	pack_rig("fill", i)                      # the site's cures, not the front's (S9)
 	var ins := insure_next
 	insure_next = false                       # the paper's for a watched run
 	_repeat_going = true
@@ -8706,7 +8839,11 @@ func _repeat_go() -> void:
 	_repeat_going = false
 	insure_next = ins
 	if mission == null:
-		_repeat_end("blocked", repeat_block(i) if repeat_block(i) != "" else Words.REPEAT["shut_out"])
+		var rep := repeat
+		repeat = {}                           # the real reason (U3): away, the gate only ever said "the runner is away"
+		var why: String = repeat_block(i)
+		repeat = rep
+		_repeat_end("blocked", Words.mid_base(why if why != "" else Words.REPEAT["shut_out"]))     # said mid-sentence, its first letter down and HP kept: "Ended: the stash is full"
 		return
 	mission["unwatched"] = true
 	mission["leave_full"] = true             # the auto-run's rule: a full pack, every crate open, or as the next gang comes
@@ -8720,8 +8857,11 @@ func _repeat_go() -> void:
 func _rest_off_wounds() -> void:
 	var before: Dictionary = repeat.get("wounds0", {}) if repeat.get("wounds0", {}) is Dictionary else {}
 	var changed := false
+	var same := func(a, b) -> bool:          # field by field, as the save's load reads them (S3: through JSON hp_pct came back 10.0, not 10)
+		return a is Dictionary and b is Dictionary and str(a.get("stat", "")) == str(b.get("stat", "")) and str(a.get("what", "")) == str(b.get("what", "")) \
+			and str(a.get("from", "")) == str(b.get("from", "")) and int(a.get("hp_pct", 0)) == int(b.get("hp_pct", 0))
 	for area in wounds.keys():
-		if not before.has(area) or str(before[area]) != str(wounds[area]):
+		if not before.has(area) or not same.call(before[area], wounds[area]):
 			wounds.erase(area)
 			changed = true
 	if changed:
@@ -9089,6 +9229,8 @@ func _wagers_on(m: Dictionary, key: String) -> void:
 				m["clock_max"] = float(m.get("clock_max", m["clock"])) * Data.WAGER_CLOCK
 			"hard":
 				t["dps"] = float(t["dps"]) * Data.WAGER_HARD
+				for b in ([m["boss"]] if m.get("boss", null) is Dictionary else []) + m.get("boss_queue", []):
+					b["dps"] = float(b["dps"]) * Data.WAGER_HARD     # the head and the convoy's next too (S7, the designer's call: it's the fight the wager is about)
 		match str(w["pay"]):
 			"notes":
 				m["wager_notes"] = float(m.get("wager_notes", 1.0)) * 1.5
@@ -11841,10 +11983,22 @@ func equip_best(slot: String) -> bool:
 				bs = v
 	if best.is_empty():
 		return false
-	if swap_moves(best):
-		if swap_with_parts(int(best["id"])):     # read with your parts moved over, worn so (29 Oct, the compare's A)
-			_feed(best)
-			return true
+	if swap_moves(best) and swap_with_parts(int(best["id"])):     # read with your parts moved over, worn so (29 Oct, the compare's A)
+		_feed(best)
+		return true
+	if swap_moves(best) or not can_equip_item(int(best["id"])):
+		# the parts-and-all swap refused, or no room for a plain one (30 Oct, the review's I6): read again as they stand,
+		# only what a plain swap can wear with the stash's room - never the piece picked with parts it won't get
+		best = {}
+		bs = -INF
+		for it in stash:
+			if it["slot"] == slot and can_equip_item(int(it["id"])) and compare(it, key, false) == 1:
+				var v := fit_value(it, slot, key, false)
+				if v > bs:
+					best = it
+					bs = v
+		if best.is_empty():
+			return false
 	_remove(best)
 	chron("equip", {"slot": slot, "how": "best", "on": _chron_item(best), "off": _chron_item(equipped[slot])})
 	if equipped[slot] != null:
@@ -11976,10 +12130,9 @@ func _moved_line(mv: Dictionary) -> Array:
 	return forms
 
 
-## Swap, parts and all (29 Oct): the stash piece on, the worn one's parts and socketables onto it where they fit, the
-## rest off into the stash; the new piece's own parts they push off go to the stash too. False when it can't be worn,
-## or the stash hasn't the room for what comes off.
-func swap_with_parts(id: int) -> bool:
+## Whether "Swap, parts and all" can happen now (30 Oct, the review's U4: the button was lit with no room, and pressing it
+## did nothing): it can be worn, and the stash has the room for the old piece and every part that comes off.
+func can_swap_with_parts(id: int) -> bool:
 	if mission != null or not can_equip_item(id):
 		return false
 	var it := {}
@@ -11988,10 +12141,9 @@ func swap_with_parts(id: int) -> bool:
 			it = x
 	if it.is_empty():
 		return false
-	var slot: String = str(it["slot"])
-	var on_kit = equipped[slot]
+	var on_kit = equipped[str(it["slot"])]
 	if on_kit == null or not has_parts(on_kit):
-		return equip_item(id)
+		return true                           # a plain Equip: can_equip_item's room
 	var mv: Dictionary = parts_moved(it, on_kit)
 	var need := 0
 	for b in mv["bumped"]:
@@ -12001,8 +12153,24 @@ func swap_with_parts(id: int) -> bool:
 		if a != null and int(a["id"]) in mv["left_ids"]:
 			need += Items.size(a)
 	var out_cells: int = 0 if stash_free(it) or tab_of(it) != "" else Items.size(it)
-	if stash_used() - out_cells + Items.size(on_kit) + need > stash_cap():
+	return stash_used() - out_cells + Items.size(on_kit) + need <= stash_cap()
+
+
+## Swap, parts and all (29 Oct): the stash piece on, the worn one's parts and socketables onto it where they fit, the
+## rest off into the stash; the new piece's own parts they push off go to the stash too. False when it can't be worn,
+## or the stash hasn't the room for what comes off.
+func swap_with_parts(id: int) -> bool:
+	if not can_swap_with_parts(id):
 		return false
+	var it := {}
+	for x in stash:
+		if int(x["id"]) == id:
+			it = x
+	var slot: String = str(it["slot"])
+	var on_kit = equipped[slot]
+	if on_kit == null or not has_parts(on_kit):
+		return equip_item(id)
+	var mv: Dictionary = parts_moved(it, on_kit)
 	if not equip_item(id):
 		return false
 	var new_piece: Dictionary = equipped[slot]
@@ -12050,7 +12218,7 @@ func set_top_up(mode: String) -> void:
 ## rig already stays. Logs what went in.
 ## Magazines (28 Oct): the rig's magazines are filled from the stash's boxes first, free, whatever the mode (filling
 ## them is home's job); then pack_rig packs the rest.
-func _top_up() -> void:
+func _top_up(at := -1) -> void:
 	if mission != null:
 		return
 	var moved: int = _fill_mags()
@@ -12059,7 +12227,7 @@ func _top_up() -> void:
 			_dry_memo.clear()
 			log_event(Words.FILLED_MAGS % moved)
 		return
-	var got: Array = pack_rig(top_up_mode)
+	var got: Array = pack_rig(top_up_mode, at)
 	moved += int(got[0])
 	var meds_in: int = int(got[1])
 	if moved > 0 or meds_in > 0:
@@ -12073,7 +12241,7 @@ func _top_up() -> void:
 ## RIG_MAG_SHARE of the rig (the primary's, one kept for a secondary firing another type), the heals the pouches left.
 ## "best" takes the top grade of each alone. What's in the rig already stays. The gate's top-up and the bot pack by
 ## it. [rounds moved, meds and cures in].
-func pack_rig(mode := "fill") -> Array:
+func pack_rig(mode := "fill", at := -1) -> Array:
 	if mission != null:
 		return [0, 0]
 	var lists: Array = []
@@ -12130,29 +12298,37 @@ func pack_rig(mode := "fill") -> Array:
 		for it in out_first:
 			if rig_room(need_room):
 				break
-			leave(int(it["id"]))
+			_rig_leave(int(it["id"]))
 	# one heal: the best that leaves a pouch for the magazines to come
 	if not rig.any(func(x): return Items.is_heal(x)):
 		var keep: int = 1 if mags_to_come else 0
 		for it in meds:
-			if rig_room(Items.size(it) + keep) and take(int(it["id"])):
+			if rig_room(Items.size(it) + keep) and _rig_take(int(it["id"])):
 				meds_in += 1
 				break
 		if meds_in == 0 and keep > 0:
 			for it in meds:
-				if rig_room(Items.size(it)) and take(int(it["id"])):
+				if rig_room(Items.size(it)) and _rig_take(int(it["id"])):
 					meds_in += 1                  # no room for both: the heal first, as Matt's order has it
 					break
 	# one pouch of magazines: the primary's best grade
 	if mags_to_come:
 		moved += _pack_mags(lists[0][1], 1)
-	# the cures: one for each element the front's gangs throw, the heaviest first, a pouch each
-	for ty in zone_elements(front_tier()).slice(0, Data.TOP_UP_CURES):
-		if not first_cure(ty).is_empty() or not rig_room(1):
+	# the cures: one for each element the front's gangs throw, the heaviest first, a pouch each; a repeat's, its own
+	# site's (S9: `at`, the site it's going to): a cure for another zone goes back to the stash for one of them
+	var cure_els: Array = zone_elements(front_tier() if at < 0 else at).slice(0, Data.TOP_UP_CURES)
+	for ty in cure_els:
+		if not first_cure(ty).is_empty():
+			continue
+		if at >= 0 and not rig_room(1) and stash.any(func(x): return Items.cure_of(x) == ty):
+			for c in rig.filter(func(x): return Items.is_cure(x) and not (Items.cure_of(x) in cure_els)):
+				if _rig_leave(int(c["id"])):
+					break
+		if not rig_room(1):
 			continue
 		for it in stash:
 			if Items.cure_of(it) == ty:
-				if take(int(it["id"])):
+				if _rig_take(int(it["id"])):
 					meds_in += 1
 				break
 	# the rest: the magazines' pouches to their share (the primary's but one, the secondary's of another type the last)
@@ -12168,7 +12344,7 @@ func pack_rig(mode := "fill") -> Array:
 	for it in meds:
 		if not stash.has(it) or not rig_room(Items.size(it)):
 			continue                              # a kit takes two pouches; a bandage after it may still fit
-		if take(int(it["id"])):
+		if _rig_take(int(it["id"])):
 			meds_in += 1
 	return [moved, meds_in]
 
@@ -12181,7 +12357,7 @@ func _pack_mags(stacks: Array, pouches: int) -> int:
 		while got < pouches and stash.has(it) and int(it.get("rounds", 0)) > 0 and rig_room(1):
 			var before: int = int(it["rounds"])
 			var n_pouches: int = rig.size()
-			if not take(int(it["id"])):
+			if not _rig_take(int(it["id"])):
 				break
 			moved += before - (int(it["rounds"]) if stash.has(it) else 0)
 			if rig.size() > n_pouches:
@@ -12243,10 +12419,10 @@ func _feed(gun: Dictionary) -> void:
 				fired.append(Items.ammo_type(equipped[s]))
 		for it in rig.duplicate():
 			if Items.is_ammo(it) and not (Items.base_of(it)["type"] in fired):
-				leave(it["id"])
+				_rig_leave(it["id"])
 				if rig_room(Items.size(box)):
 					break
-	take(box["id"])
+	_rig_take(box["id"])
 
 
 ## A particular stash item, by id, into its slot; what was fitted goes to the stash.
@@ -12284,8 +12460,15 @@ func can_equip_item(id: int) -> bool:
 	return false
 
 
-## A med from the stash into the rig, if there's a slot for it.
+## A med from the stash into the rig, if there's a slot for it. Not while the runner's busy (T4: between a repeat's
+## runs too); the gate's own packing goes by _rig_take.
 func take(id: int) -> bool:
+	if runner_busy():
+		return false
+	return _rig_take(id)
+
+
+func _rig_take(id: int) -> bool:
 	if mission != null:
 		return false
 	return _take_from(stash, id)
@@ -12460,8 +12643,14 @@ func _stack_room(it: Dictionary) -> bool:
 	return left <= 0
 
 
-## A med out of the rig, back to the stash.
+## A med out of the rig, back to the stash. Not while the runner's busy (T4); the gate's own packing goes by _rig_leave.
 func leave(id: int) -> bool:
+	if runner_busy():
+		return false
+	return _rig_leave(id)
+
+
+func _rig_leave(id: int) -> bool:
 	if mission != null:
 		return false
 	var leaving := {}
@@ -12655,6 +12844,7 @@ func buy(i: int) -> bool:
 	if i >= market.size() or not (stash_fits(market[i]) or _stack_room(market[i])) or cash < price(market[i]):
 		return false
 	cash -= price(market[i])
+	market[i]["shop_bought"] = true          # sells back under its shelf price (S2)
 	stash_put(market[i])
 	market.remove_at(i)
 	return true
@@ -12679,7 +12869,7 @@ func sell(it: Dictionary) -> bool:
 ## Half a stack off into a stack of its own, beside it (12 Oct, Matt's playtest: "need a way to split ammo stacks"):
 ## rounds or bottles, two or more, in the stash (a free cell wanted) or the rig (a free slot); the larger half stays.
 func can_split(id: int) -> bool:
-	if mission != null:
+	if runner_busy():                     # the rig's stacks too (T4): not between a repeat's runs
 		return false
 	for where in [stash, rig]:
 		for it in where:
@@ -13084,7 +13274,7 @@ func hand_in_supplies() -> int:
 
 
 func clinic_price(it: Dictionary) -> int:
-	return _inf(it["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0))     # the pumping station (18 Oct); at today's prices, as the list's (the third review: after the Issue it read opening-day tins as fiat)
+	return _inf(it["value"] * Data.MED_PRICE * _buy_k("clinic_pct"))     # the shelf's buy multipliers (S1); the pumping station (18 Oct); at today's prices, as the list's (the third review: after the Issue it read opening-day tins as fiat)
 
 
 func buy_clinic(id: int) -> bool:
@@ -13123,7 +13313,7 @@ func med_stock() -> Array:
 
 
 func med_price(base: Dictionary) -> int:
-	return _inf(base["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0))
+	return _inf(base["value"] * Data.MED_PRICE * _buy_k("clinic_pct"))     # the shelf's buy multipliers (S1)
 
 
 func buy_med(name: String) -> bool:
@@ -15219,6 +15409,8 @@ func exp_odds(p: int, lead: String, now := false) -> Array:
 	_read_back(h)
 	if _exp_cache.size() > 96:
 		_exp_cache.clear()
+	if _exp_now.size() > 96:
+		_exp_now.clear()                     # trimmed as _exp_cache (T2)
 	_exp_now[ck] = [o, done]
 	return [o, done]
 
@@ -15374,6 +15566,8 @@ func exp_send_block(p: int, lead: String, hand_ids: Array, cargo: Array) -> Stri
 		return E["shut_lead"]
 	if lead_out(lead):
 		return E["shut_lead_out"] % lead
+	if mission != null or not _sig.is_empty():
+		return E["shut_run_out"]                   # the lead's XP is read at camp (30 Oct, S5: sent with a run out, it was 0)
 	if hand_ids.size() > exp_hands_max():
 		return E["shut_hands"] % [exp_hands_max(), "" if exp_hands_max() == 1 else "s"]
 	for id in hand_ids:
@@ -15412,7 +15606,7 @@ func send_expedition(p: int, lead: String, hand_ids: Array, cargo: Array, slot :
 	for c in goods:
 		if quota and str(c["kind"]) == str(qd["kind"]):
 			quota_worth += cargo_slot_worth(str(c["kind"]), int(c["n"]))
-	var xp_run: float = _exp_xp_run(p)
+	var xp_run: float = _exp_xp_run(p, lead)
 	for c in goods:
 		_cargo_take(str(c["kind"]), int(c["n"]))
 		if str(c["kind"]) == "scrap":
@@ -15515,19 +15709,23 @@ func _exp_home(e: Dictionary, loss: float, unhurt := false) -> void:
 	var lead: String = str(e["lead"])
 	if roster.has(lead):
 		var got: float = float(e.get("xp_run", 0.0)) * repeat_xp_share()     # the lead's XP: a repeat run's share of a run there (the fix round, 29 Oct)
-		roster[lead]["xp"] = float(roster[lead].get("xp", 0.0)) + got
+		_crew_gain_xp(lead, got)                 # its points, the cap and the paragon (30 Oct, S4)
 		res["lead_xp"] = got
 
 
 ## A run's XP at the far place, as a watched run there would earn it (the place's fight laid on: its gang's XP a man,
 ## the pool) - the lead's share of it comes home with them.
-func _exp_xp_run(p: int) -> float:
-	if not _sig.is_empty() or mission != null and not _repeat_going:
+## Read as the lead (30 Oct, S6): the XP's cut for a site under you is the lead's level, not the runner out's, as exp_odds
+## reads; never with a run out (S5: exp_send_block shuts the send then, so no lead goes for 0).
+func _exp_xp_run(p: int, lead: String) -> float:
+	if not _sig.is_empty() or mission != null and not _repeat_going or not roster.has(lead):
 		return 0.0
+	var h := _read_as(lead)
 	var sg := _exp_sig(p)
 	_sig_on(sg)
 	var t := effective(int(sg["site"]))
 	_sig_off()
+	_read_back(h)
 	return float(t["xp"]) * float(t["pool"])
 
 

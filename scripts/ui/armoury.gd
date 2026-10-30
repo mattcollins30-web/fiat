@@ -313,7 +313,7 @@ func _show_panel() -> void:
 			var lock: int = sim.wear_lock(it)
 			var swap: bool = from_stash and fitted != null and sim.swap_moves(it)
 			if swap:
-				buttons.append({"text": "Swap, parts and all", "action": func(): sim.swap_with_parts(int(it["id"])), "enabled": sim.can_equip_item(it["id"]) and lock <= 0, "primary": true})     # what the verdict read (29 Oct)
+				buttons.append({"text": "Swap, parts and all", "action": func(): sim.swap_with_parts(int(it["id"])), "enabled": sim.can_swap_with_parts(int(it["id"])) and lock <= 0, "primary": true})     # what the verdict read (29 Oct); lit only when it can happen (30 Oct, the review's U4)
 			buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": not swap})
 			# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct),
 			# no room for what comes off, or both
@@ -322,8 +322,8 @@ func _show_panel() -> void:
 				hints.append("No rounds for it in the rig")
 			if sim.away():
 				hints.append(Words.REPEAT["shut_away"])     # the kit's with the runner (29 Oct)
-			elif not sim.can_equip_item(it["id"]) and not sim.on_mission():
-				hints.append("No room in the stash for what comes off")
+			elif (not sim.can_equip_item(it["id"]) or (swap and not sim.can_swap_with_parts(int(it["id"])))) and not sim.on_mission():
+				hints.append("No room in the stash for what comes off")     # the parts too, for the swap (30 Oct, the review's U4)
 			if lock > 0 and fitted == null:
 				_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level: said once (the review)
 			elif not hints.is_empty():

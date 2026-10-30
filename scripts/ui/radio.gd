@@ -1218,7 +1218,11 @@ func _show_crew() -> void:
 		var nm: String = str(played[k])
 		t["cls"] = nm
 		var lv: int = sim.crew_level(nm)
-		UI.fit(t["name"], ["%s · L%d" % [nm, lv], nm])
+		var jl: int = sim.join_level(nm)         # the crew's floor (30 Oct): a press would bring them out at this
+		if jl > lv:
+			UI.fit(t["name"], ["%s · L%d, joins at %d" % [nm, lv, jl], "%s · joins at %d" % [nm, jl], "%s · L%d" % [nm, jl]])
+		else:
+			UI.fit(t["name"], ["%s · L%d" % [nm, lv], nm])
 		var o: Array = reads[k]
 		var out_now: bool = nm == sim.cls
 		if sim.on_mission() and not out_now:

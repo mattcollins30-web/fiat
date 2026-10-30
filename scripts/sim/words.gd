@@ -1296,6 +1296,13 @@ const COMBOS := {
 
 const CREW := {
 	"swap": "The %s stands down; the %s goes out next, at level %d.",
+	"floor": "The %s joins at level %d, %d under your best",          # the crew's floor lifts a class swapped in (30 Oct)
+	"lead_level": "The %s, level %d: %d training point%s",           # a lead's XP from an expedition levels them on the bench
+	"lead_level_none": "The %s, level %d: no training point – they've been level %d",
+	"join_long": "Swap to the %s: joins at level %d (level %d now), their own tree and kit – press again",
+	"join_mid": "Swap to the %s: joins at level %d – press again",
+	"join_new": "Swap to the %s: a new runner, joins at level %d – press again",
+	"join_new_mid": "Swap to the %s, level %d – press again",
 }
 ## A class arrives (24 Oct, milestone 8: skills.md §6 and §11): who unlocks them, the log's line and the card's tag
 ## until then.
@@ -1537,7 +1544,7 @@ const REPEAT := {"button": "Run it ×%d", "button_short": "×%d", "button_full":
 	"levels_same": "%d, no change", "levels_up": "%d → %d", "sold_val": "%d for %s", "none": "None",
 	"each": "Each run ▾", "each_open": "Each run ▴", "run_line": "Run %d · %s · %d kill%s, %s", "run_cleared": "Cleared", "run_bail": "Bail", "run_out": "Out of time, a bail", "run_home": "Not cleared",
 	"kept_head": "KEPT AND WHY", "kept_none": "Nothing new kept",
-	"again": "Run it again", "done": "Done", "more": "%d more", "not_shown": "Runs 1–%d not shown",
+	"again": "Run it again", "done": "Done", "more": "%d more", "not_shown": "Runs 1–%d not shown", "not_shown_one": "Run 1 not shown",
 	"ended_done": "Ended: every run done", "ended_full": "Ended: the stash is full", "ended_back": "Ended: brought back", "ended_bails": "Ended: two bails in a row", "ended_blocked": "Ended: %s"}
 
 ## Kev's wagers (29 Oct, docs/design/endgame_activities.md row 1): drafts for the language pass.
@@ -1569,7 +1576,7 @@ const EXPEDITIONS := {"tab": "Expeditions", "tab_short": "Far places", "tab_back
 	"stakes": "A bad roll hurts the hands sent unless a nurse goes · walking away from a hold-up loses them for good",
 	"stakes_short": "Without a nurse a bad roll hurts them; a walk-away loses them",
 	"send": "Send them", "send_short": "Send",
-	"shut_open": "After the Quartermaster", "shut_lead": "Pick a lead", "shut_selected": "The runner you play stays: another leads", "shut_lead_out": "%s is out on an expedition", "shut_cargo": "Load some cargo",
+	"shut_open": "After the Quartermaster", "shut_lead": "Pick a lead", "shut_selected": "The runner you play stays: another leads", "shut_lead_out": "%s is out on an expedition", "shut_run_out": "Send them once the run's home", "shut_cargo": "Load some cargo",
 	"shut_reading": "Reading the odds", "shut_at_once": "%d out at once: the Bunkhouse for more", "shut_wage": "Short of %s for the wages",
 	"shut_hand": "%s can't go: hurt or out", "shut_hands": "%d hand%s at most", "shut_out": "The runner's on a run", "shut_held": "Short of %s",
 	"out_head": "OUT · %d OF %d", "out_none": "None out", "out_line": "%s · %s", "out_left": "%s left", "out_back": "Back", "out_held": "Held up",
@@ -1582,10 +1589,10 @@ const EXPEDITIONS := {"tab": "Expeditions", "tab_short": "Far places", "tab_back
 	"fetch": "Go after them", "fetch_note": "The runner goes to %s, against its head: win, and they're home with the return as rolled; lose, and they're still held",
 	"fetch_note_short": "The runner goes to %s, against its head", "fetch_out": "Going after them: the runner's at %s",
 	"pay": "Pay %s", "pay_note": "Half of what's coming back: they're home with the rest", "walk": "Walk away", "walk_again": "Walk away? Press again",
-	"walk_note": "The cargo's lost and %s leave for good", "walk_note_none": "The cargo's lost", "take": "Take it", "later": "Later",
+	"walk_note": "The cargo's lost and %s leave for good", "walk_note_one": "The cargo's lost and %s leaves for good", "walk_note_none": "The cargo's lost", "take": "Take it", "later": "Later",
 	"no_room": "No room in the stash: %d sold to the Fence for %s",
 	"tokens": "%d gamble token%s: a free gamble each at the Fence", "halves": "%d rebuild%s at half",
-	"sent": "%s out to %s with %s of cargo", "back_log": "Back from %s: %s", "held_log": "Held up: %s - the party's waiting on you",
+	"sent": "%s out to %s with %s of cargo", "back_log": "Back from %s: %s", "held_log": "Held up: %s – the party's waiting on you",
 	"paid": "Paid %s: the party's home from %s", "walked": "Walked away from %s: %s gone", "walked_none": "Walked away from %s",
 	"fetched": "Got the party back from %s", "fetch_failed": "The party's still held: %s",
 	"hands_head": "THE HANDS", "pool_head": "FOR HIRE", "roster_head": "ON THE ROSTER · %d OF %d", "hire": "Hire", "let_go": "Let go", "let_go_again": "Let go? Press again",

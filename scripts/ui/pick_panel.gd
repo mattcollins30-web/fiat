@@ -427,7 +427,7 @@ static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 	if str(it.get("slot", "")) == Data.GLOVES and str(fitted.get("slot", "")) == Data.GLOVES:
 		var fa: Dictionary = Items.glove_figs(it)
 		var fb: Dictionary = Items.glove_figs(fitted)
-		for k in [["reload_pct", "reload"], ["attack_pct", "RoF"], ["pace", "pace"]]:
+		for k in [["reload_pct", "reload"], ["attack_pct", "rate of fire"], ["pace", "pace"]]:
 			var dg: float = float(fa[k[0]]) - float(fb[k[0]])
 			if absf(dg) >= 0.5:
 				out.append([dg, "%d%% %s" % [int(round(absf(dg))), k[1]]])

@@ -206,8 +206,27 @@ static func hunt_table(stage: int) -> Array:
 
 
 
-## The itemisation's rows (29 Oct; the fix round, the review's B5: every slot, "none worn" where a read wore nothing
-## there, and the campaign's bases worn by no read): [name, what, words, null] each, shown, never judged.
+## P6 (25 Oct; the full half shown, not judged, 30 Oct): the signals the bot ran, faint and full at the reach.
+static func signals_row(full: Array) -> Array:
+	var fa := [0, 0]
+	var fu := [0, 0]
+	for bd in full:
+		for k in [0, 1]:
+			fa[k] += int(bd.get("faint", [0, 0])[k])
+			fu[k] += int(bd.get("full_at_reach", [0, 0])[k])
+	var fa_r: float = float(fa[1]) / float(fa[0]) if fa[0] > 0 else -1.0
+	var fu_r: float = float(fu[1]) / float(fu[0]) if fu[0] > 0 else -1.0
+	# a 0 of 0 is no read, not a red (25 Oct, the tools review): the part with none is shown and left out of the verdict
+	var fa_words: String = ("faint %d of %d (%.0f%%)" % [fa[1], fa[0], fa_r * 100.0]) if fa[0] > 0 else "no faint signals run"
+	var fu_words: String = ("full at the reach %d of %d (%.0f%%)" % [fu[1], fu[0], fu_r * 100.0]) if fu[0] > 0 else "no full signals at the reach run"
+	# the full half shown, not judged (the fix round's analyst, 30 Oct): the bot runs a full signal only at PUSH (or COIN with
+	# three held), so its won rate sits near 90% however strong a signal is - the designer's play judges how hard they are
+	var p6 = null
+	if fa[0] > 0:
+		p6 = fa_r >= FAINT_WON
+	return ["P6. The signals", "faint won %.0f%% or more (full at the reach shown: the bot runs one only at %.0f%%+, so its won rate can't say how hard they are)" % [FAINT_WON * 100.0, 88.0], "%s; %s" % [fa_words, fu_words], p6]
+
+
 ## The wall (30 Oct, shown, not a gate): each one-save read's campaign walls - where, the class that went out, when.
 static func walls_row(full: Array) -> Array:
 	var ws: Array = []
@@ -219,6 +238,8 @@ static func walls_row(full: Array) -> Array:
 	return ["Walls (shown)", "in the campaign, two hours with no step forward: the class that went out", "; ".join(ws) if not ws.is_empty() else "no one-save read", null]
 
 
+## The itemisation's rows (29 Oct; the fix round, the review's B5: every slot, "none worn" where a read wore nothing
+## there, and the campaign's bases worn by no read): [name, what, words, null] each, shown, never judged.
 static func itemisation_rows(full: Array) -> Array:
 	var worn_by := {}
 	var dealt_by := {}
@@ -708,19 +729,7 @@ func _pass_rows(rows: Array, full: Array) -> void:
 		if st < 0.0 or st > REACH_STAND:
 			off.append(all_t[-1])
 	rows.append(["P5. The endgame's stall", "the reach never stands more than %.1f h, the Radio's opening to the first move (or the read's end)" % REACH_STAND, ("off: " + ", ".join(off)) if not off.is_empty() else "every build: " + ", ".join(all_t), off.is_empty()])
-	var fa := [0, 0]
-	var fu := [0, 0]
-	for bd in full:
-		for k in [0, 1]:
-			fa[k] += int(bd.get("faint", [0, 0])[k])
-			fu[k] += int(bd.get("full_at_reach", [0, 0])[k])
-	var fa_r: float = float(fa[1]) / float(fa[0]) if fa[0] > 0 else -1.0
-	var fu_r: float = float(fu[1]) / float(fu[0]) if fu[0] > 0 else -1.0
-	# a 0 of 0 is no read, not a red (25 Oct, the tools review): the part with none is shown and left out of the verdict
-	var fa_words: String = ("faint %d of %d (%.0f%%)" % [fa[1], fa[0], fa_r * 100.0]) if fa[0] > 0 else "no faint signals run"
-	var fu_words: String = ("full at the reach %d of %d (%.0f%%)" % [fu[1], fu[0], fu_r * 100.0]) if fu[0] > 0 else "no full signals at the reach run"
-	var p6 = null if fa[0] == 0 and fu[0] == 0 else ((fa[0] == 0 or fa_r >= FAINT_WON) and (fu[0] == 0 or (fu_r >= FULL_WON[0] and fu_r <= FULL_WON[1])))
-	rows.append(["P6. The signals", "faint won %.0f%% or more; full at the reach won %.0f-%.0f%%" % [FAINT_WON * 100.0, FULL_WON[0] * 100.0, FULL_WON[1] * 100.0], "%s; %s" % [fa_words, fu_words], p6])
+	rows.append(signals_row(full))
 
 
 ## Gates 1-5: the Manager, the Quartermaster, the builds' band, the level at him, level 30 after him.
@@ -761,24 +770,7 @@ func _pace_rows(rows: Array, full: Array) -> void:
 			late.append("%s %s after him" % [bd["build"], ("%.1f h" % (l30 - q)) if q >= 0.0 and l30 >= 0.0 else "never"])
 	rows.append(["5. The capstone", "level 30 within %.0f h of the Quartermaster" % LV30_AFTER, ("late: " + ", ".join(late)) if not late.is_empty() else "every build", late.is_empty()])
 	# 14 and 15 (17 Oct, Matt's playtest: the Parade at level 1-2 dropping level 4 gear, the Outskirts pointless)
-	var off_sites: Array = []
-	var site_words: Array = []
-	for i in range(Data.OUTSKIRTS_SITES + 1, Data.TIERS.size()):     # the Parade on: the Outskirts' and the Streets' gear is level 1
-		var lvs: Array = []
-		for bd in full:
-			var fl: Dictionary = bd.get("first_clear_lv", {})
-			if fl.has(str(i)):
-				lvs.append(float(fl[str(i)]))
-		var wear: int = Sim.wear_of(Sim.lv_at(i, 1))
-		if lvs.is_empty():
-			off_sites.append("%s never" % Data.TIERS[i]["name"])
-			continue
-		var med: int = int(_median(lvs))
-		site_words.append("%s %d/%d" % [str(Data.TIERS[i]["name"]).replace("The ", ""), med, wear])
-		if med < wear - SITE_LEVEL_UNDER or med > wear + SITE_LEVEL_OVER:
-			off_sites.append("%s %d (gear %d)" % [Data.TIERS[i]["name"], med, wear])
-	rows.append(["16. Levels against the sites", "at each site's first clear from the Parade on, the median build within %d under and %d over the level to wear its gear" % [SITE_LEVEL_UNDER, SITE_LEVEL_OVER],
-		(("off: " + ", ".join(off_sites) + " · ") if not off_sites.is_empty() else "") + "level/gear: " + ", ".join(site_words), off_sites.is_empty()])
+	rows.append(site_levels_row(full))
 	var gks: Array = full.filter(func(bd): return float(bd.get("gk_at", -1.0)) >= 0.0).map(func(bd): return float(bd["gk_at"]))
 	var gk_lvs: Array = full.filter(func(bd): return int(bd.get("level_at_gk", -1)) >= 0).map(func(bd): return float(bd["level_at_gk"]))
 	var gk_med: float = _median(gks) if gks.size() == full.size() and not gks.is_empty() else -1.0
@@ -787,6 +779,36 @@ func _pace_rows(rows: Array, full: Array) -> void:
 	rows.append(["17. The Outskirts", "the Gamekeeper beaten at %.2f-%.2f h, the median build, at level %d or more (bot, %.2f of a hand)" % [GK[0], GK[1], GK_LEVEL, BOT_PACE],
 		"median %s at level %d (%s to %s)" % [_hours2(gk_med), gk_lv, _hours2(gks.min() if not gks.is_empty() else -1.0), _hours2(gks.max() if not gks.is_empty() else -1.0)],
 		gk_med >= GK[0] and gk_med <= GK[1] and gk_lv >= GK_LEVEL])
+
+
+## Gate 16: each site's first clear from the Parade on, the median build's level against the gear's; a build that never
+## cleared it counted later than any (as gates 1, 2 and P4 count a never; the fix round: they were left out, so one
+## read's level stood for the build list), and named.
+static func site_levels_row(full: Array) -> Array:
+	var off_sites: Array = []
+	var site_words: Array = []
+	for i in range(Data.OUTSKIRTS_SITES + 1, Data.TIERS.size()):     # the Parade on: the Outskirts' and the Streets' gear is level 1
+		var lvs: Array = []
+		var nv: Array = []
+		for bd in full:
+			var fl: Dictionary = bd.get("first_clear_lv", {})
+			if fl.has(str(i)):
+				lvs.append(float(fl[str(i)]))
+			else:
+				nv.append(str(bd["build"]))
+		var wear: int = Sim.wear_of(Sim.lv_at(i, 1))
+		var nm: String = str(Data.TIERS[i]["name"])
+		var never_w: String = (" (never: %s)" % ", ".join(nv)) if not nv.is_empty() else ""
+		var med_f: float = _median(lvs + nv.map(func(_b): return INF)) if not lvs.is_empty() else INF
+		if is_inf(med_f):
+			off_sites.append("%s never%s" % [nm, never_w if not lvs.is_empty() else ""])
+			continue
+		var med: int = int(med_f)
+		site_words.append("%s %d/%d%s" % [nm.replace("The ", ""), med, wear, never_w])
+		if med < wear - SITE_LEVEL_UNDER or med > wear + SITE_LEVEL_OVER:
+			off_sites.append("%s %d (gear %d)" % [nm, med, wear])
+	return ["16. Levels against the sites", "at each site's first clear from the Parade on, the median build (a never later than any) within %d under and %d over the level to wear its gear" % [SITE_LEVEL_UNDER, SITE_LEVEL_OVER],
+		(("off: " + ", ".join(off_sites) + " · ") if not off_sites.is_empty() else "") + "level/gear: " + ", ".join(site_words), off_sites.is_empty()]
 
 
 ## Gates 6-8: the Radio's ladder, Kev's story, retirement.
@@ -936,20 +958,7 @@ func _economy_rows(rows: Array, full: Array) -> void:
 			if held > CASH_HOURS:
 				over.append("%s holds %s %d, %.1f hours' income" % [bd["build"], "fiat" if bool(r[0]) else "tins", int(r[1]), held])
 	rows.append(["14. Cash sink", "cash in hand at the end no more than %.0f hours' income" % CASH_HOURS, "; ".join(over) if not over.is_empty() else "every build under (most %.1f)" % most, over.is_empty()])
-	var off: Array = []
-	var most_s := 0.0
-	for bd in full:
-		# the whole read's rate, as the cash's (the reviewer: the first sixteen hours' under-read a deep kit's scrap)
-		var per_hs: float = (float(bd.get("scrap_end", 0)) + float(bd.get("scrap_spent", 0))) / maxf(0.01, float(bd.get("elapsed_h", 0.0)))
-		if per_hs <= 0.0:
-			if int(bd.get("scrap_end", 0)) > 0:
-				off.append("%s holds %d scrap and earned none" % [bd["build"], int(bd.get("scrap_end", 0))])
-			continue
-		var held_s: float = float(bd.get("scrap_end", 0)) / per_hs
-		most_s = maxf(most_s, held_s)
-		if held_s > SCRAP_HOURS:
-			off.append("%s holds %d scrap, %.1f hours' scrap" % [bd["build"], int(bd.get("scrap_end", 0)), held_s])
-	rows.append(["15. Scrap", "scrap in hand at the end no more than %.0f hours' scrap income (the tempers spend it)" % SCRAP_HOURS, "; ".join(off) if not off.is_empty() else "every build under (most %.1f)" % most_s, off.is_empty()])
+	rows.append(scrap_row(full))
 	# the Issue and the County (25 Oct): the Issuer beaten and the town on fiat by the read's end on most builds; how far
 	# into the County each got, and the fiat's state, for the read
 	var issued_n := 0
@@ -960,6 +969,27 @@ func _economy_rows(rows: Array, full: Array) -> void:
 			issued_n += 1
 		bits.append("%s %s, County %d/12, %d issued" % [bd["build"], ("on fiat at %.1f h" % at) if at >= 0.0 else "no Issue", int(bd.get("county_taken", 0)), int(bd.get("issued_bought", 0))])
 	rows.append(["18. The Issue", "the Issuer beaten and the town on fiat by the read's end, most builds (the County's progress read alongside)", "; ".join(bits), issued_n * 2 > full.size()])
+
+
+## Gate 15: scrap in hand against the whole read's scrap income - held, spent at the Bench, and shipped on the
+## expeditions (the fix round: shipped scrap is earned scrap, as balance.gd's scrap_16 counts it; a merged build's
+## shipping summed over its reads, so read as a mean like the rest).
+static func scrap_row(full: Array) -> Array:
+	var off: Array = []
+	var most_s := 0.0
+	for bd in full:
+		# the whole read's rate, as the cash's (the reviewer: the first sixteen hours' under-read a deep kit's scrap)
+		var shipped: float = float(bd.get("exp", {}).get("scrap_out", 0)) / maxf(1.0, float(bd.get("reads", 1)))
+		var per_hs: float = (float(bd.get("scrap_end", 0)) + float(bd.get("scrap_spent", 0)) + shipped) / maxf(0.01, float(bd.get("elapsed_h", 0.0)))
+		if per_hs <= 0.0:
+			if int(bd.get("scrap_end", 0)) > 0:
+				off.append("%s holds %d scrap and earned none" % [bd["build"], int(bd.get("scrap_end", 0))])
+			continue
+		var held_s: float = float(bd.get("scrap_end", 0)) / per_hs
+		most_s = maxf(most_s, held_s)
+		if held_s > SCRAP_HOURS:
+			off.append("%s holds %d scrap, %.1f hours' scrap" % [bd["build"], int(bd.get("scrap_end", 0)), held_s])
+	return ["15. Scrap", "scrap in hand at the end no more than %.0f hours' scrap income: held, spent and shipped (the tempers spend it)" % SCRAP_HOURS, "; ".join(off) if not off.is_empty() else "every build under (most %.1f)" % most_s, off.is_empty()]
 
 
 ## The loot read's tables: {"Outskirts": {rolls, drops: [{rar: [C,U,R,E,L], wear, sets}], gamble: [...]}, ...} for the
@@ -1015,8 +1045,10 @@ func _thousands(n: int) -> String:
 
 
 ## One build's reads as one: the firsts by their median (a never counts as later than any), the odds by the median a
-## tier, cash, scrap and level by the mean, runs, deaths and wounded runs summed, the clears joined.
-func _merged(gs: Array) -> Dictionary:
+## tier, cash, scrap and level by the mean, runs, deaths and wounded runs summed, the clears joined; the walls joined,
+## the repeats and the expeditions' counts summed, the bases worn summed in hours, the damage by gun type as each read's
+## shares (each read weighing the same) - the fix round, H6: those rows read the first read alone.
+static func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
@@ -1110,12 +1142,47 @@ func _merged(gs: Array) -> Dictionary:
 	for k in fcl:
 		fcm[k] = int(_median(fcl[k]))
 	m["first_clear_lv"] = fcm
+	var walls: Array = []
+	for g in gs:
+		walls.append_array(g.get("walls", []))
+	m["walls"] = walls
+	for key in ["repeats", "repeat_runs", "repeat_bails"]:
+		if gs[0].has(key):
+			var rn := 0
+			for g in gs:
+				rn += int(g.get(key, 0))
+			m[key] = rn
+	m["norepeat"] = gs.all(func(g): return bool(g.get("norepeat", false)))
+	var ex: Dictionary = {}
+	for g in gs:
+		var x: Dictionary = g.get("exp", {})
+		for k in x:
+			ex[k] = int(ex.get(k, 0)) + int(x[k])
+	m["exp"] = ex
+	var worn: Dictionary = {}
+	for g in gs:
+		var wn: Dictionary = g.get("worn", {})
+		for sl in wn:
+			if not worn.has(sl):
+				worn[sl] = {}
+			for b in wn[sl]:
+				worn[sl][b] = snappedf(float(worn[sl].get(b, 0.0)) + float(wn[sl][b]), 0.001)
+	m["worn"] = worn
+	var dealt: Dictionary = {}
+	for g in gs:
+		var dl: Dictionary = g.get("dealt_by_type", {})
+		var dl_tot := 0.0
+		for ty in dl:
+			dl_tot += float(dl[ty])
+		for ty in dl:
+			dealt[ty] = float(dealt.get(ty, 0.0)) + float(dl[ty]) / maxf(1.0, dl_tot)
+	m["dealt_by_type"] = dealt
 	m["hours"] = float(gs[0]["hours"])
 	m["reads"] = gs.size()
 	return m
 
 
-func _median(vals: Array) -> float:
+static func _median(vals: Array) -> float:
 	var v := vals.duplicate()
 	v.sort()
 	var n := v.size()

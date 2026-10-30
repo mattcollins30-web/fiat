@@ -316,11 +316,11 @@ static func unique_rule(it: Dictionary) -> Array:
 
 
 ## A base's share of every hit as an element, as affix-row chips in the element's colour: "10% of hits as bleed",
-## short "10% bleed"; one a kind it has. A part's own figure says it already, so none for a part.
+## short "10% bleed"; one a kind it has. A part's own figure says it already, so none for a part; none for a secondary.
 static func conv_chips(it: Dictionary) -> Array:
 	var out := []
-	if it["slot"] == Data.ATTACHMENT:
-		return out
+	if it["slot"] == Data.ATTACHMENT or it["slot"] == "Secondary":
+		return out                        # a secondary's base conversion never reaches the hit (30 Oct, the review's I4): the Primary's alone
 	var b: Dictionary = Items.base_of(it)
 	for el in ["fire", "frost", "poison", "shock", "bleed"]:
 		var v: float = float(b.get("conv_%s_pct" % el, 0))

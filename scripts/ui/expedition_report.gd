@@ -13,6 +13,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const W := 1018
 const H := 640
@@ -79,6 +80,7 @@ func show_state(s) -> void:
 	visible = not e.is_empty()
 	if not visible:
 		id = -1
+		_arm.clear()
 		return
 	id = int(e["id"])
 	var E: Dictionary = Words.EXPEDITIONS
@@ -122,13 +124,13 @@ func show_state(s) -> void:
 		ways[1]["button"].disabled = sim.cash < price
 		UI.fit_button(ways[1]["button"], [E["pay"] % Fmt.money(price), E["pay"] % Fmt.money_k(price)])
 		UI.fit(ways[1]["note"], [E["shut_held"] % sim.money_word() if sim.cash < price else E["pay_note"]])
-		if _walk_armed != id:
-			_walk_armed = -1
-		UI.fit_button(ways[2]["button"], [E["walk_again"], E["walk"]] if _walk_armed == id else [E["walk"]])
+		UI.fit_button(ways[2]["button"], [E["walk_again"], E["walk"]] if _arm.holds(id) else [E["walk"]])
 		var names: Array = e["hands"].map(func(hid): return str(sim.hand_by_id(int(hid)).get("base", ""))).filter(func(x): return x != "")
-		UI.fit(ways[2]["note"], [E["walk_note"] % " and ".join(names), E["walk_note"] % ("%d hand%s" % [names.size(), "" if names.size() == 1 else "s"])] if not names.is_empty() else [E["walk_note_none"]])
+		var wn: String = E["walk_note_one"] if names.size() == 1 else E["walk_note"]     # "Loader leaves", "Loader and Nurse leave" (the fix round)
+		UI.fit(ways[2]["note"], [wn % " and ".join(names), wn % ("%d hand%s" % [names.size(), "" if names.size() == 1 else "s"])] if not names.is_empty() else [E["walk_note_none"]])
 	else:
 		var items: Array = []
+		var curs: Array = []                      # the currencies first: a full card never leaves off the tins or the tokens (the fix round)
 		var by: Dictionary = {}                   # finds of a name stacked: "Tourniquet ×4", in its best rarity's colour
 		var order: Array = []
 		for it in res.get("items", []):
@@ -153,10 +155,17 @@ func show_state(s) -> void:
 					words = E["tokens"] % [int(v), "" if int(v) == 1 else "s"]
 				_:
 					words = sim.cargo_words(str(k), int(v))     # grouped, singular at one (the UI review's A3)
-			items.append({"forms": [words], "colour": Pal.TEXT})
+			curs.append({"forms": [words], "colour": Pal.TEXT})
+		items = curs + items
 		if items.is_empty():
 			items.append({"forms": [E["rep_nothing"]], "colour": Pal.TEXT_3})
 		got.show_chips(items, GOT_ROWS, true)
+		var fit_n: int = got.shown()              # never cut silently: what doesn't fit is a count, the last chip (as the repeat's)
+		while fit_n < items.size() and fit_n > 0:
+			got.show_chips(items.slice(0, fit_n - 1) + [{"forms": [Words.REPEAT["more"] % (items.size() - (fit_n - 1))], "colour": Pal.TEXT_3}], GOT_ROWS, true)
+			if got.shown() == fit_n:
+				break
+			fit_n -= 1
 		var lines: Array = []
 		for u in res.get("ups", []):
 			var h: Dictionary = sim.hand_by_id(int(u[0]))
@@ -165,7 +174,7 @@ func show_state(s) -> void:
 			var hurt: bool = int(u[0]) in res.get("hurt", [])
 			var line: String = (E["rep_hand_up"] % [str(h["base"]), int(u[1]), int(u[2])]) if int(u[2]) > int(u[1]) else (E["rep_hand_lv"] % [str(h["base"]), int(u[2])])
 			if hurt:
-				line = E["rep_hurt"] % [line, _dur(float(e["dur"]))]
+				line = E["rep_hurt"] % [line, Fmt.dur(float(e["dur"]))]
 			lines.append(line)
 		if float(res.get("lead_xp", 0.0)) > 0.0:
 			lines.append(E["rep_lead_xp"] % [str(e["lead"]), Fmt.group(int(round(float(res["lead_xp"]))))])
@@ -176,16 +185,6 @@ func show_state(s) -> void:
 				UI.fit(hand_lines[k], [lines[k]])
 		UI.fit_button(take, [E["take"]])
 	UI.fit_button(later, [E["later"]])
-
-
-static func _dur(seconds: float) -> String:
-	var m: int = int(round(seconds / 60.0))
-	@warning_ignore("integer_division")
-	var h: int = m / 60
-	m = m % 60
-	if h == 0:
-		return "%d min" % m
-	return ("%d h" % h) if m == 0 else ("%d h %d min" % [h, m])
 
 
 func _quota_words(e: Dictionary) -> String:
@@ -202,12 +201,10 @@ func _quota_words(e: Dictionary) -> String:
 func _way(k: int) -> void:
 	if sim == null or id < 0:
 		return
-	if k == 2 and (_walk_armed != id or Time.get_ticks_msec() - _walk_at > ARM_MS):
-		_walk_armed = id                       # Walk away: a second press (the UI review's D2: the hands go for good)
-		_walk_at = Time.get_ticks_msec()
-		acted.emit()
+	if k == 2 and not _arm.press(id):
+		acted.emit()                           # Walk away: a second press (the UI review's D2: the hands go for good)
 		return
-	_walk_armed = -1
+	_arm.clear()
 	var ok := false
 	match k:
 		0:
@@ -222,9 +219,12 @@ func _way(k: int) -> void:
 		acted.emit()
 
 
-const ARM_MS := 3000
-var _walk_armed := -1
-var _walk_at := 0
+var _arm := Arm.new()                      # Walk away's ask-twice: arm.gd's 4 s (the fix round, 30 Oct), cleared on hide
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_arm.clear()
 
 
 func _take() -> void:

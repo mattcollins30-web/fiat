@@ -55,13 +55,19 @@ var repeats_gone := 0             # repeats set off
 var last_repeat := {}             # the last repeat's sums (Sim.repeat_totals), for the read to count its runs one by one
 var crew_swaps := 0
 ## The wall (30 Oct, Matt: "in real play you'd hit a wall with a class and switch - which is why I wanted this design"):
-## in the campaign, a pick that is no step forward (not a first clear, not a head) for WALL_S of the yard's time is a
-## wall - the open class that reads the wall best goes out (a played one at a person's odds; else a new one at its
-## crew build, to grow on the cleared sites); the one walled comes back when it reads the wall again. Swaps are free
-## at camp. Off but for the one-save campaign reads (balance.gd).
+## in the campaign, picks that are no step forward for WALL_S of the yard's time are a wall - a step forward is a first
+## clear or a head not yet beaten taken at FIRST or better (a fallback pick under FIRST is none). Walled, the open
+## class that reads the wall best goes out: a played one at FIRST; else a new one at its crew build, to grow on the
+## cleared sites; else, none new, a played one that reads it 0.05 better than the one out. The one walled is read
+## again when it levels or every WALL_S (wall_return) and comes back when it reads the wall at FIRST. The read's own
+## target isn't walled away while it's still levelling (a level in the last WALL_S). Swaps are free at camp. Off but
+## for the one-save campaign reads (balance.gd).
 const WALL_S := 7200.0
 var wall_on := false
-var walls: Array = []             # [hour, tier, a head?, from, to, the odds it read] a swap
+var walls: Array = []             # [hour, tier, a head?, from, to, the odds `to` read (-1 a new one), the odds `from` read] a swap
+var _walled := {}                 # class -> {lv, at}: walled away, read again when it levels or WALL_S after `at` (the fix round)
+var _tgt_lv := -1                 # the target's level when last seen out, and the hour it moved: still levelling, it stays out
+var _tgt_lv_at := -1e9
 var _wall_from := -1.0
 var _wall_cls := ""
 var _wall_grace_lv := 0           # a new class out grows to the walled one's level before its own clock runs (the review)
@@ -164,17 +170,39 @@ func wall_odds(sim, wall: Array) -> float:
 	return o
 
 
-## A pick noted (the step's): a first clear or a head is a step forward; anything else, the wall's clock runs.
+## A pick noted (the step's): a first clear or a head at FIRST or better is a step forward; anything else, the wall's
+## clock runs. The target's level is watched here too (its levelling keeps it out).
 func wall_note(sim, t: int) -> void:
 	if sim.cls != _wall_cls:
 		_wall_cls = sim.cls
 		_wall_from = -1.0                 # a new runner out: its own clock
+	if target_cls != "" and sim.cls == target_cls and sim.level() != _tgt_lv:
+		_tgt_lv = sim.level()
+		_tgt_lv_at = sim.elapsed
 	var head: Dictionary = sim.boss_of(t) if t >= 0 else {}
 	var head_new: bool = t >= 0 and bool(sim.boss_armed.get(t, false)) and not head.is_empty() and not sim.bosses_beaten[int(head["zone"])]     # a beaten head farmed is no step (the review)
-	if sim.level() < _wall_grace_lv or (t >= 0 and (int(sim.best_depth[t]) <= 0 or head_new)):
+	if sim.level() < _wall_grace_lv or (t >= 0 and (int(sim.best_depth[t]) <= 0 or head_new) and pick_odds(sim, t) >= FIRST):     # a fallback under FIRST is no step (the fix round: it stopped the clock for good)
 		_wall_from = -1.0
 	elif _wall_from < 0.0:
 		_wall_from = sim.elapsed
+
+
+## The odds a pick went in at: the site as pick_tier left it (a head armed or not), read from its memo.
+func pick_odds(sim, t: int) -> float:
+	return sim.survival(t)
+
+
+## The read's own target out and a level up in the last WALL_S: still growing, so not walled away (the fix round).
+## The read's own build still levelling isn't walled away - for one more wall's clock at most (the fix round's merge: a
+## farming target levels for hours, and a 10 h read sat at the Bank the whole read with no wall).
+var _tgt_exempt_from := -1.0
+func target_levelling(sim) -> bool:
+	if not (target_cls != "" and sim.cls == target_cls and sim.elapsed - _tgt_lv_at < WALL_S):
+		_tgt_exempt_from = -1.0
+		return false
+	if _tgt_exempt_from < 0.0:
+		_tgt_exempt_from = sim.elapsed
+	return sim.elapsed - _tgt_exempt_from < WALL_S
 
 
 ## Another played class's odds at the wall, read on a copy of the camp (the review: a trial swap on the real one sold
@@ -204,6 +232,8 @@ func wall_check(sim) -> bool:
 	if not wall_on or sim.campaign_done() or sim.on_mission() or _wall_from < 0.0 or sim.elapsed - _wall_from < WALL_S:
 		return false
 	_wall_from = sim.elapsed                  # the next look a clock from now, swap or not
+	if target_levelling(sim):
+		return false                          # the read's own build still levelling: it farms on (the fix round)
 	var wall: Array = wall_at(sim)
 	if int(wall[0]) < 0:
 		return false
@@ -236,22 +266,77 @@ func wall_check(sim) -> bool:
 	_wall_cls = to
 	_wall_from = -1.0
 	_wall_grace_lv = from_lv if new_one else 0
-	walls.append([snappedf(sim.elapsed / 3600.0, 0.01), int(wall[0]), bool(wall[1]), from, to, snappedf(best_odds, 0.01)])
+	_walled[from] = {"lv": from_lv, "at": sim.elapsed}     # read again when it levels or a clock from now (wall_return)
+	_walled.erase(to)
+	walls.append([snappedf(sim.elapsed / 3600.0, 0.01), int(wall[0]), bool(wall[1]), from, to, snappedf(best_odds, 0.01), snappedf(cur_odds, 0.01)])
 	bought.append([sim.elapsed, "crew: walled at %s %d - %s out (%s)" % ["head on" if wall[1] else "site", int(wall[0]), to, "%.0f%%" % (best_odds * 100.0) if best_odds >= 0.0 else "new"]])
 	return true
 
 
-func step(sim) -> int:
-	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
-	if not sim.on_mission() and target_cls != "" and not _target_taken and sim.cls != target_cls and sim.class_open(target_cls):
+## A class walled away read again (the fix round): when it has levelled, or WALL_S since its last read, its odds at the
+## wall as it stands now, on a copy of the camp; back out when they read FIRST or better (the one out set aside, not
+## walled). Not over the target while it's still levelling. True when the runner out changed.
+func wall_return(sim) -> bool:
+	if not wall_on or _walled.is_empty() or sim.campaign_done() or sim.on_mission() or target_levelling(sim):
+		return false
+	var wall: Array = wall_at(sim)
+	if int(wall[0]) < 0:
+		return false
+	for name in _walled.keys():
+		if name == sim.cls:
+			_walled.erase(name)               # back out some other way (the crew, the target): no longer walled
+			continue
+		var rec: Dictionary = _walled[name]
+		var lv: int = sim.crew_level(name)
+		if lv <= int(rec["lv"]) and sim.elapsed - float(rec["at"]) < WALL_S:
+			continue
+		rec["lv"] = lv
+		rec["at"] = sim.elapsed
+		var o: float = class_wall_odds(sim, name, wall)
+		if o < FIRST:
+			continue
+		var from: String = sim.cls
+		var cur_odds: float = class_wall_odds(sim, from, wall)
+		if not _crew_out(sim, name):
+			continue
+		_walled.erase(name)
+		_wall_cls = name
+		_wall_from = -1.0
+		_wall_grace_lv = 0
+		walls.append([snappedf(sim.elapsed / 3600.0, 0.01), int(wall[0]), bool(wall[1]), from, name, snappedf(o, 0.01), snappedf(cur_odds, 0.01)])
+		bought.append([sim.elapsed, "crew: %s back at %s %d (%.0f%%)" % [name, "head on" if wall[1] else "site", int(wall[0]), o * 100.0]])
+		return true
+	return false
+
+
+## The target build out the hour its class opens (the one-save read); a read that starts as its target has it taken
+## from the first step (the fix round, H4: the Poacher's reads took it back on the step after their first wall swap).
+func take_target(sim) -> void:
+	if target_cls == "" or _target_taken or sim.on_mission():
+		return
+	if sim.cls == target_cls:
+		_target_taken = true
+		return
+	if sim.class_open(target_cls):
 		builds[target_cls] = {"element": target_el, "keystones_first": false}
 		if _crew_out(sim, target_cls):
 			_target_taken = true              # the build the read is for, from the hour its class opens
 			bought.append([sim.elapsed, "the target: %s as %s, opened" % [target_cls, target_el]])
+
+
+## The campaign done: the read's own build back out for the endgame, once (the review).
+func wall_home(sim) -> void:
 	if wall_on and not _wall_home and _target_taken and sim.campaign_done() and not sim.on_mission():
 		_wall_home = true
+		_walled.clear()
 		if sim.cls != target_cls:
-			_crew_out(sim, target_cls)        # the campaign done: the read's own build back out for the endgame (the review)
+			_crew_out(sim, target_cls)
+
+
+func step(sim) -> int:
+	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
+	take_target(sim)
+	wall_home(sim)
 	if not sim.on_mission():
 		pick_skills(sim, sim.front_tier())     # its three, before the odds read the sites (milestone 8, step 3d)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
@@ -314,7 +399,7 @@ func step(sim) -> int:
 			else:
 				ran_signal = [sg_lv, sg_odds, sim.reach, sg_tags]
 	if t < 0 and not fetched:
-		if wall_on and wall_check(sim):
+		if wall_on and (wall_return(sim) or wall_check(sim)):
 			_tidy_kit(sim)                    # the class out wears its own kit before its pick
 		t = pick_tier(sim)
 		last_tier = t
@@ -631,19 +716,25 @@ func should_leave(sim) -> bool:
 	var m: Dictionary = sim.mission
 	if m.has("boss") and m["boss"]["alive"]:
 		return false                      # a head or the lorry still standing: the run is for him, picked over or not (the eighteenth read left the convoy at 12 of 16 with the pack "full")
+	# after the clear, home when the clock left is under twice the door's gang, or the next patrol's, at the kill rate
+	# (Matt, 26 Oct: "leave on a short clock" - a time-out loses the pack, two worn pieces and the win); every run, not
+	# only a stay (the fix round, H2: a normal run sat the clock out waiting on its second gang)
+	if _short_after_clear(sim, m):
+		return true
 	if stay_out > 0:
-		# a build's read: farm the patrols past a full pack, the stacks are the run's (26 Oct); home when the clock left after
-		# the clear is under twice the door's gang, or the next patrol's, at the kill rate (Matt, 26 Oct: "leave on a short clock" - a time-out
-		# loses the pack, two worn pieces and the win)
-		if m.has("clock") and int(m["remaining"]) <= 0 and not m.get("way_out", false):
-			var used: float = float(m.get("clock_used", 0.0))
-			var rate: float = float(m["kills"]) / used if used > 0.0 and int(m["kills"]) >= 4 else 0.0
-			var door: float = float(sim.door_gang(m["t"])) / rate if rate > 0.0 else STAY_CLOCK_MIN
-			var next_patrol: float = float(sim.PATROL_BASE + int(m["patrols"])) / rate if rate > 0.0 else STAY_CLOCK_MIN     # the next gang, a man bigger each time (the review)
-			if float(m["clock"]) < maxf(maxf(door * 2.0, next_patrol), STAY_CLOCK_MIN):
-				return true
-		return m["patrols"] >= stay_out
+		return m["patrols"] >= stay_out       # a build's read: farm the patrols past a full pack, the stacks are the run's (26 Oct)
 	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.crates_done(m)
+
+
+## The clock after the clear (should_leave's): under twice the door's gang, or the next patrol's, at the kill rate so far.
+func _short_after_clear(sim, m: Dictionary) -> bool:
+	if not m.has("clock") or int(m["remaining"]) > 0 or m.get("way_out", false):
+		return false
+	var used: float = float(m.get("clock_used", 0.0))
+	var rate: float = float(m["kills"]) / used if used > 0.0 and int(m["kills"]) >= 4 else 0.0
+	var door: float = float(sim.door_gang(m["t"])) / rate if rate > 0.0 else STAY_CLOCK_MIN
+	var next_patrol: float = float(sim.PATROL_BASE + int(m["patrols"])) / rate if rate > 0.0 else STAY_CLOCK_MIN     # the next gang, a man bigger each time (the review)
+	return float(m["clock"]) < maxf(maxf(door * 2.0, next_patrol), STAY_CLOCK_MIN)
 
 
 ## The clock against the kills (D17): at the rate they've gone down so far, the rest won't before it runs out, and
@@ -1995,6 +2086,7 @@ var exp_held := 0
 var exp_fetched := 0
 var exp_walked := 0
 var exp_paid := 0
+var _held_seen := {}              # expedition id -> true: each held one counted once (the fix round: a lost fetch counted again)
 ## The fix round (29 Oct, the review's B4: the bot never shipped): lower bars, so a camp past the Quartermaster ships its
 ## spare scrap, salvage, notes and materials regularly - what the Bench, the Pitch, the heads and the rebuild don't want.
 const EXP_RISK_AT := 0.45
@@ -2014,13 +2106,14 @@ func _expeditions(sim) -> bool:
 		if str(e["state"]) == "back":
 			sim.exp_take(id)
 		elif str(e["state"]) == "held":
+			if not _held_seen.has(id):
+				_held_seen[id] = true
+				exp_held += 1
 			var i: int = sim.exp_hold_site(id)
 			if sim.exp_fetch_block(id) == "" and i >= 0 and sim.odds_ready(i) and float(sim.odds_now(i)) >= PUSH and sim.exp_fetch(id):
-				exp_held += 1
 				exp_fetched += 1
 				bought.append([sim.elapsed, "expedition held up: fetched from %s" % str(Data.TIERS[i]["name"])])
 				return true
-			exp_held += 1
 			if sim.cash >= sim.exp_ransom(id) * EXP_RANSOM_SPARE and sim.exp_pay(id):
 				sim.exp_take(id)
 				exp_paid += 1
@@ -2094,8 +2187,7 @@ func _exp_send(sim) -> bool:
 			place = p
 			break
 	if place < 0:
-		place = 0
-		sim.exp_odds(place, lead)
+		return false                          # no place reads EXP_ODDS_AT: nothing sent (the fix round; it sent to the nearest anyway)
 	# the cargo cut to what the risk allows: the odds' part first, then the worth that fills the rest to EXP_RISK_AT
 	var odds: float = sim.exp_crew_odds(place, lead, hs)
 	var risk0: float = sim.exp_risk(place, lead, hs, 0.0, odds)

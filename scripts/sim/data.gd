@@ -1028,6 +1028,11 @@ const MELEE_WAIT := 1.0            # seconds: their first shot lands before your
 const SOCKET_SLOTS := ["Primary", "Secondary", "Helmet", "Armour"]
 const SOCKET_MAX := 2
 const SOCKET_ODDS := [0.45, 0.4, 0.15]     # 0, 1, 2 sockets
+## A find's base by tier (30 Oct, the designer's call on the review's loot rolls: at T9 an even draw made 1 find in 10 a
+## T9): the find's own tier, one under, and every tier lower shared evenly (Items._tier_pick).
+const LOOT_OWN_TIER := 0.5
+const LOOT_TIER_UNDER := 0.3
+const LOOT_LOWER := 0.2
 
 ## Damage types. A hit is split by type (`Sim.conversion`), each share
 ## multiplied by its own increased and more, cut by their resist to it, and
@@ -1792,6 +1797,11 @@ const AFFIXES := [
 	{"stat": "cash_pct", "label": "tins", "short": "tins", "min": 5, "max": 15, "slots": ["Charm"]},
 	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 12, "slots": ["Charm"]},
 ]
+## Stats a unique or a set piece carries that no piece rolls (30 Oct, the review's I5: a card read "+20% first_pct"):
+## their words for a card, as an affix's label and short.
+const AFFIX_SHOWN := {
+	"first_pct": {"label": "damage to the first of each gang", "short": "dmg to first"},
+}
 
 ## The one zone, in three tiers. `pool` is enemy count; each has `hp` and
 ## deals `dps` while alive. Drop chance a kill; drops roll from tiers up to
@@ -3627,6 +3637,9 @@ const SOCKET_STACK := 10
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50
+## The crew's floor (30 Oct, Matt, shared XP option B: "felt annoying to have a level 1 class when your other was 15"): a
+## class swapped in joins at least this many levels under the best of the crew's other classes.
+const CREW_FLOOR_UNDER := 3
 ## The papers (15 Oct, the Radio's endgame): rolled common to rare, no higher; a rare one (PAPER_DEEPER_AT) rolls its
 ## signal one deeper.
 const PAPER_RARITY_MAX := 2
