@@ -59,3 +59,26 @@ which is why Greenhorn runs as one file. Tick it in the editor's export dialog.
 the wordmark was missing on the Deck's builds (desktop and game mode) while the editor run had it.
 Read a file's bytes through `FileAccess.get_file_as_bytes` (which reads from a pack) and
 `Image.load_png_from_buffer`, then fall back to `load()` for the imported resource. `menu._load_art`.
+
+## Full gamepad support (backlog, 30 Oct)
+
+Matt, 30 Oct: "full gamepad support … the eventual home of this title [is the Deck] alongside PC". It's parked until
+after the 0.10.1 playtest. He plays on PC for now, because saves and screenshots are easier to hand over from there.
+
+Today the Deck is set to "mouse only" (above). Steam Input's trackpad-as-mouse is a stopgap, not support. To scope it
+when it comes up:
+- **Focus navigation:** every screen and panel reachable with a d-pad and stick. The rail, the room cards, the Kit
+  and stash grids, pick panels, the Radio, the Bunkhouse, the web and the Map. Each needs a sensible first focus and
+  a way back.
+- **Things that only work with a mouse today:**
+  - drag and drop in the stash and rig (needs a pick-up/put-down mode)
+  - hover tooltips and compare-on-hover (need a held button or the focused item)
+  - right-click actions
+  - the web and Map canvases (pan and zoom on the sticks, nodes reachable by focus)
+- **Prompts:** button glyphs where the mouse words are today ("Click", "Press again"), Steam Deck and Xbox sets, and
+  switching when the input changes.
+- **Ask-twice** (arm.gd) on a face button, with its 4 s window kept.
+- **Tests:** a smoke area that walks focus over every screen and fails on anything a pad can't reach, the same way
+  the fit checks fail on a clipped label.
+- **Size:** several features' worth, about a day of building plus review by the 29 Oct estimates. Most of the time
+  goes on the stash grid, the web and the Map.
