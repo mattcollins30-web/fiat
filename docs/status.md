@@ -6142,7 +6142,8 @@ difficulty and length, the endgame placeholders.
    corrected: the shells couldn't go into the rig during the fight, but at home, taking the box into the rig made a
    24-round pouch of shells. So the rounds were enough - the gap is the run: a found gun can be fitted from the pack
    (can_equip_from_pack) but nothing in the pack can go into the rig while a run's out (sim.gd _rig_take: no take
-   with a mission on). To design with Matt: rounds (and meds?) from the pack into a rig pouch mid-run, room
+   with a mission on). The 28 Oct design (docs/design/meds_ammo_clinic.md) had "one by hand mid-run, slowly" - never
+   built. To design with Matt: rounds (and meds?) from the pack into a rig pouch mid-run, room
    permitting, or the first gun's box loaded straight into the rig. Smoke: find a gun and its rounds mid-run, fit
    the gun, load a pouch from the pack, and the next fight fires the gun.
 5. UI: an ammo card's type chip reads lowercase ("Rounds" · "shotgun"; screenshot, Shells in the rig). The chip is
