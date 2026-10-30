@@ -90,4 +90,22 @@ a drum two.
   share, drafts by part). The old parts on a gun come off as magazine items.
 - **Mockups first** on the canvas: the rig with magazines, a magazine's card, the Kit's gun line, the sling's parts.
   New words through the language pass. The save's shape changes: SAVE_VERSION, a fresh save.
+- **Approved (30 Oct, Matt: "All approved")**: the canvas "Fiat – Magazines as items, and the playtest's labels" -
+  the size a kind times the gun's own magazine (a base's "mag", else MAG_SIZE), magazines under the stash's Rounds
+  tab, slings drafts. Magazine art reuses the parts' and pouches' pictures (art/items/mag_<type>.png,
+  extended_magazine, quick_magazine, drum_magazine, belt_box, hundred_round_drum); the four slings get a manifest.
+
+### The language pass (30 Oct: two reviewers, the editor's call)
+
+| What | The word |
+|---|---|
+| Magazines, by ammo type | Pistol / Rifle / Shotgun / SMG / Nail magazine; Extended <type> magazine; Quick <type> magazine; <Type> drum (not "Drum <type> magazine": the Drum shotgun is a gun). Belt-fed: Belt box, Hundred-round drum (kept). One pattern - no speedloader or shell tube; the card's "Feeds the ..." names the gun |
+| The mount, the slings | Sling; Rope sling (T1), Webbing sling (T2), Leather sling (T4), Two-point sling (T6) |
+| The Kit's gun line | "3 magazines · 36 rounds" (never "mags": one name a thing; too long, it drops to "36 rounds"); "No rounds needed" |
+| A magazine's card | figure "12 of 12 rounds" / "0 of 16 rounds"; chips "The gun's own 8", "×1.5 the gun's 8", "×2 the gun's 8", "Reloads 1 s quicker" / "slower", "2 pouches" (only past 1), "Feeds the pump shotgun" (a base lower case mid-sentence) |
+| A sling's card | figure "Secondary fires at 40%"; chip "While the primary reloads" |
+| Log lines | "Out of magazines: refilling one from a box in the pack"; "Smaller rig: <what> back in the stash"; "Found: a pump shotgun, a shotgun magazine and a box of shells"; "Filled: 3 magazines from the shells in the stash"; the meds top-up loses "1 meds" (a number takes its plural rightly) |
+| The run's Rounds tile | "5 · 1 spare"; "Refilling · 6 s" |
+| The Barracks card | "✓ selected" (Matt's word; the card's tags stay lower case) |
+| Glossary adds | magazine, pouch, sling, primary, secondary |
 
