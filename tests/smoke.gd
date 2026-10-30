@@ -772,6 +772,7 @@ func _init() -> void:
 	_clinic_supply_checks(main)
 	_magazine_checks(main)
 	_repeat_checks(main)
+	_wall_rule_checks()
 	_review28_checks(main)
 	_skills_checks(main.sim)
 	_skills_ui_checks(main)
@@ -9883,6 +9884,68 @@ func _med_over_time_checks(main) -> void:
 
 ## A fresh camp on a run for the meds' and the magazines' checks (28 Oct): nothing coming back unless a check says so,
 ## a gang that stands.
+## The bot's wall (30 Oct, Matt: walled with a class, you switch): in the campaign, WALL_S of picks that are no step
+## forward and another open class goes out - a new one when no played class reads the wall; a first clear or a head
+## stops the clock; off unless asked for (the one-save reads ask).
+func _wall_rule_checks() -> void:
+	var w = Sim.new()
+	w.start()
+	if w.cls != "Poacher":
+		w.set_class("Poacher")
+	for i in Data.ZONES[0]["tiers"]:
+		w.best_depth[i] = 1
+	w.bosses_beaten[0] = true                 # the Gamekeeper down: the Paramedic open
+	var bt = Bot.new()
+	bt.wall_on = true
+	var wall: Array = bt.wall_at(w)
+	_check(int(wall[0]) == int(Data.ZONES[1]["tiers"][0]) and not bool(wall[1]), "the wall isn't the Estate's first site: %s" % str(wall))
+	bt.wall_note(w, int(Data.ZONES[0]["tiers"][0]))     # a cleared site farmed: the clock runs
+	w.elapsed += bt.WALL_S - 60.0
+	_check(not bt.wall_check(w) and w.cls == "Poacher", "the wall swapped before its clock ran out")
+	w.elapsed += 60.0
+	_check(bt.wall_check(w) and w.cls == "Paramedic" and bt.walls.size() == 1 and int(bt.walls[0][1]) == int(wall[0]) and str(bt.walls[0][3]) == "Poacher",
+		"walled, the open class didn't go out: %s, %s" % [w.cls, str(bt.walls)])
+	# a new class grows to the walled one's level before its clock runs
+	bt._wall_grace_lv = w.level() + 5         # as if the walled one were five levels on
+	bt.wall_note(w, int(Data.ZONES[0]["tiers"][0]))
+	_check(bt._wall_from < 0.0, "a new class out: its wall's clock ran before it grew")
+	w.elapsed += bt.WALL_S * 2.0
+	_check(not bt.wall_check(w) and w.cls == "Paramedic", "a new class out was walled again before it grew")
+	# another played class read on a copy: the camp as it was - cash, stash, the bench's HP, the runner out
+	w.roster["Poacher"]["hp"] = 10.0         # hurt on the bench, a spare the Poacher wouldn't keep, the cash to shop: what a swap on the real camp would move
+	w.stash.append(w._plain(Data.AMMO, "Shells"))
+	w.stash.append(w._plain("Helmet", str(Data.BASES["Helmet"][0]["name"])))
+	w.cash = 50000.0
+	var cash0: float = w.cash
+	var stash0: int = w.stash.size()
+	var pc_hp: float = float(w.roster.get("Poacher", {}).get("hp", -1.0))
+	var o_p: float = bt.class_wall_odds(w, "Poacher", wall)
+	_check(w.cls == "Paramedic" and is_equal_approx(w.cash, cash0) and w.stash.size() == stash0 and is_equal_approx(float(w.roster.get("Poacher", {}).get("hp", -1.0)), pc_hp) and bt.cls == "Paramedic" and o_p >= 0.0,
+		"reading the Poacher at the wall moved the camp: %s out, cash %.0f -> %.0f, stash %d -> %d" % [w.cls, cash0, w.cash, stash0, w.stash.size()])
+	# a first clear tried stops the clock; and off, never
+	var w2 = Sim.new()
+	w2.start()
+	if w2.cls != "Poacher":
+		w2.set_class("Poacher")
+	for i in Data.ZONES[0]["tiers"]:
+		w2.best_depth[i] = 1
+	w2.bosses_beaten[0] = true
+	var bt2 = Bot.new()
+	bt2.wall_on = true
+	bt2.wall_note(w2, int(Data.ZONES[0]["tiers"][0]))
+	bt2.wall_note(w2, int(wall[0]))           # the next site tried: a step forward
+	w2.elapsed += bt2.WALL_S * 2.0
+	_check(not bt2.wall_check(w2) and w2.cls == "Poacher", "a first clear tried didn't stop the wall's clock")
+	var bt3 = Bot.new()
+	bt3.wall_note(w2, int(Data.ZONES[0]["tiers"][0]))
+	w2.elapsed += bt3.WALL_S * 2.0
+	_check(not bt3.wall_check(w2) and w2.cls == "Poacher", "the wall swapped with the rule off")
+	var Sum = load("res://tools/balance_summary.gd")
+	var wr: Array = Sum.walls_row([{"build": "Drifter as bleed", "one_save": true, "walls": [[3.7, 8, true, "Poacher", "Paramedic", -1.0]]}, {"build": "Doorman as bleed", "one_save": true, "walls": []}])
+	_check(str(wr[2]) == "Drifter as bleed: 3.7 h head on 8, Paramedic for Poacher; Doorman as bleed: none", "the summary's walls: '%s'" % str(wr[2]))
+	print("the wall ok: the clock, the swap to a new class, a step forward, off")
+
+
 func _fresh_run(i := 0):
 	var s = Sim.new()
 	s.start()

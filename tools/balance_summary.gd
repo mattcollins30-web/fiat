@@ -208,6 +208,17 @@ static func hunt_table(stage: int) -> Array:
 
 ## The itemisation's rows (29 Oct; the fix round, the review's B5: every slot, "none worn" where a read wore nothing
 ## there, and the campaign's bases worn by no read): [name, what, words, null] each, shown, never judged.
+## The wall (30 Oct, shown, not a gate): each one-save read's campaign walls - where, the class that went out, when.
+static func walls_row(full: Array) -> Array:
+	var ws: Array = []
+	for bd in full:
+		if not bool(bd.get("one_save", false)):
+			continue
+		var w: Array = bd.get("walls", [])
+		ws.append("%s: %s" % [bd["build"], "none" if w.is_empty() else ", ".join(w.map(func(x): return "%.1f h %s %d, %s for %s" % [float(x[0]), "head on" if bool(x[2]) else "site", int(x[1]), str(x[4]), str(x[3])]))])
+	return ["Walls (shown)", "in the campaign, two hours with no step forward: the class that went out", "; ".join(ws) if not ws.is_empty() else "no one-save read", null]
+
+
 static func itemisation_rows(full: Array) -> Array:
 	var worn_by := {}
 	var dealt_by := {}
@@ -432,6 +443,7 @@ func _init() -> void:
 		else:
 			reps.append("%s: %d runs in %d repeats of %d runs, %d bails" % [bd["build"], int(bd.get("repeat_runs", 0)), int(bd.get("repeats", 0)), int(bd["runs"]), int(bd.get("repeat_bails", 0))])
 	rows.append(["Repeat runs (shown)", "the runs the bot left unwatched after the campaign, and their bails", "; ".join(reps), null])
+	rows.append(walls_row(full))
 	# the expeditions (29 Oct, shown, not a gate): sent, home, held and how each ended, the cargo out against the returns in
 	var exps: Array = []
 	for bd in full:

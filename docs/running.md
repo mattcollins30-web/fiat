@@ -20,6 +20,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   the 19th's files while the smoke hung). A run that writes no done file within run.sh's wait has hung: find where
   `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
 - The watcher runs one job at a time: no smoke while a balance pass runs.
+- The one-save reads play the campaign as a crew (30 Oct, Matt: "walled with a class, you switch"): two hours of the yard's time with no first clear and no new head, and the bot sends out the open class that reads the wall best - a played one at a person's odds, else a new one, which grows to the walled class's level before its own clock runs (tests/bot.gd wall_check). The read's own build comes back out when the campaign's done. Each read's walls are in GATES `walls` and the summary's Walls row.
 - The gauntlet (26 Oct, in every full pass after the one-save reads): each build's end state
   (`pass/<Class>-<element>-<N>.save`) fights the Grid, the Archive, the Mint and the County's 12 in order, 3 tries each,
   the camp restored after every lost try; the six broken builds' pieces on too. The summary's `gauntlet_table`. Flags:

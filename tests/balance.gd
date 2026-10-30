@@ -304,6 +304,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		bot.keystones_first = false
 		bot.target_cls = cls
 		bot.target_el = element
+		bot.wall_on = true                    # the campaign as played (30 Oct): walled, another class goes out
 	var build: String = cls + ((" as " + element) if element != "" else "")
 	print("Fiat gate read: %.0f h, %s%s" % [hours, build, " (one save, from the %s)" % start_cls if one_save else ""])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
@@ -552,6 +553,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
 	g["tempers"] = bot.tempers           # the Bench's tempers the read made (25 Oct)
+	g["walls"] = bot.walls                    # the wall's swaps (30 Oct): [hour, tier, a head?, from, to, odds]
 	g["crew_swaps"] = bot.crew_swaps     # the crew (21 Oct, step 7): swaps, the classes played, the board's level
 	g["route"] = bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target")).map(func(x): return [snappedf(float(x[0]) / 3600.0, 0.01), str(x[1])])     # the one save's classes, when (25 Oct)
 	g["crew"] = sim.crew_played().map(func(c): return "%s %d" % [c, sim.crew_level(c)])

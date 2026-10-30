@@ -54,6 +54,18 @@ var repeat_timeouts := 0
 var repeats_gone := 0             # repeats set off
 var last_repeat := {}             # the last repeat's sums (Sim.repeat_totals), for the read to count its runs one by one
 var crew_swaps := 0
+## The wall (30 Oct, Matt: "in real play you'd hit a wall with a class and switch - which is why I wanted this design"):
+## in the campaign, a pick that is no step forward (not a first clear, not a head) for WALL_S of the yard's time is a
+## wall - the open class that reads the wall best goes out (a played one at a person's odds; else a new one at its
+## crew build, to grow on the cleared sites); the one walled comes back when it reads the wall again. Swaps are free
+## at camp. Off but for the one-save campaign reads (balance.gd).
+const WALL_S := 7200.0
+var wall_on := false
+var walls: Array = []             # [hour, tier, a head?, from, to, the odds it read] a swap
+var _wall_from := -1.0
+var _wall_cls := ""
+var _wall_grace_lv := 0           # a new class out grows to the walled one's level before its own clock runs (the review)
+var _wall_home := false           # the campaign done: the read's own class back out, once
 ## The one-save read (25 Oct, the endgame chase step 8: Matt, "effectively a different game" a class): the read starts
 ## as the Poacher, as a new game does, and takes its target build the moment that class opens; the crew's swaps after.
 var target_cls := ""
@@ -99,7 +111,7 @@ func _crew_turn(sim) -> int:
 	return -1
 
 
-func _crew_out(sim, name: String) -> bool:
+func _crew_out(sim, name: String, quiet := false) -> bool:
 	if not sim.class_open(name):
 		return false                      # shut till its head (or Kev's story): the game's own rule, which set_class leaves to Training
 	var from: String = sim.cls
@@ -113,8 +125,119 @@ func _crew_out(sim, name: String) -> bool:
 	lorry_ok = false                      # the lorry's read and the farm were the last runner's (the review)
 	lorry_read_at = -1e9
 	_farm_at = -1e9
-	crew_swaps += 1
-	bought.append([sim.elapsed, "crew: %s out for %s (level %d)" % [name, from, sim.level()]])
+	if not quiet:
+		crew_swaps += 1
+		bought.append([sim.elapsed, "crew: %s out for %s (level %d)" % [name, from, sim.level()]])
+	return true
+
+
+## The campaign's next step for the crew: the first open site not yet cleared, else the first head not yet beaten whose
+## sites are; [tier, a head?], or [-1, false] when nothing open stands (a site shut for the level is no wall: a level
+## comes from farming).
+func wall_at(sim) -> Array:
+	for i in range(Data.TIERS.size()):
+		if not sim.tier_open(i):
+			continue
+		if int(sim.best_depth[i]) <= 0:
+			return [i, false]
+		var b: Dictionary = sim.boss_of(i)
+		if not b.is_empty() and not sim.bosses_beaten[int(b["zone"])]:
+			return [i, true]
+	return [-1, false]
+
+
+## The odds the runner out reads at the wall: a head armed for the read (0 when the notes for him aren't there).
+func wall_odds(sim, wall: Array) -> float:
+	var i: int = int(wall[0])
+	if i < 0:
+		return 0.0
+	if not bool(wall[1]):
+		return sim.survival(i)
+	var was: bool = sim.boss_armed.get(i, false)
+	if not was:
+		if not sim.can_arm_boss(i):
+			return 0.0
+		sim.arm_boss(i, true)
+	var o: float = sim.survival(i)
+	if not was:
+		sim.arm_boss(i, false)
+	return o
+
+
+## A pick noted (the step's): a first clear or a head is a step forward; anything else, the wall's clock runs.
+func wall_note(sim, t: int) -> void:
+	if sim.cls != _wall_cls:
+		_wall_cls = sim.cls
+		_wall_from = -1.0                 # a new runner out: its own clock
+	var head: Dictionary = sim.boss_of(t) if t >= 0 else {}
+	var head_new: bool = t >= 0 and bool(sim.boss_armed.get(t, false)) and not head.is_empty() and not sim.bosses_beaten[int(head["zone"])]     # a beaten head farmed is no step (the review)
+	if sim.level() < _wall_grace_lv or (t >= 0 and (int(sim.best_depth[t]) <= 0 or head_new)):
+		_wall_from = -1.0
+	elif _wall_from < 0.0:
+		_wall_from = sim.elapsed
+
+
+## Another played class's odds at the wall, read on a copy of the camp (the review: a trial swap on the real one sold
+## spares, spent cash, healed the bench and reset the lorry's read): that class out, its kit looked over, at full HP.
+## The bot's own state is put back after.
+func class_wall_odds(sim, name: String, wall: Array) -> float:
+	var c = sim.get_script().new()
+	c.load_dict(sim.to_dict())
+	c.fast_memo = sim.fast_memo
+	c.odds_runs_max = sim.odds_runs_max
+	var keep := {"cls": cls, "element": element, "keystones_first": keystones_first, "builds": builds.duplicate(true), "lorry_ok": lorry_ok,
+		"lorry_read_at": lorry_read_at, "_farm_at": _farm_at, "_tidied_at": _tidied_at, "_tidied_runner": _tidied_runner, "crew_swaps": crew_swaps}
+	var n_bought: int = bought.size()
+	var o := 0.0
+	if name == c.cls or _crew_out(c, name, true):
+		_tidy_kit(c)
+		c.hp = c.max_hp()
+		o = wall_odds(c, wall)
+	for k in keep:
+		set(k, keep[k])
+	bought.resize(n_bought)
+	return o
+
+
+## The wall's clock run out: the class that reads it best goes out. True when the runner out changed.
+func wall_check(sim) -> bool:
+	if not wall_on or sim.campaign_done() or sim.on_mission() or _wall_from < 0.0 or sim.elapsed - _wall_from < WALL_S:
+		return false
+	_wall_from = sim.elapsed                  # the next look a clock from now, swap or not
+	var wall: Array = wall_at(sim)
+	if int(wall[0]) < 0:
+		return false
+	var from: String = sim.cls
+	var cur_odds: float = class_wall_odds(sim, from, wall)     # the one out read on the copy too (the review: a head armed on the real camp logs)
+	var best := ""
+	var best_odds := -1.0
+	for name in sim.crew_played():
+		if name == from:
+			continue
+		var o: float = class_wall_odds(sim, name, wall)
+		if o > best_odds:
+			best_odds = o
+			best = name
+	var to := ""
+	if best != "" and best_odds >= FIRST:
+		to = best                             # a played class that takes it
+	else:
+		for name in CREW_BUILDS:
+			if name != from and not (name in sim.crew_played()) and sim.class_open(name):
+				to = name                     # a new one, to grow on the cleared sites
+				best_odds = -1.0
+				break
+		if to == "" and best != "" and best_odds > cur_odds + 0.05:
+			to = best                         # none takes it and none new: the class nearest to it
+	var new_one: bool = not (to in sim.crew_played())
+	var from_lv: int = sim.level()
+	if to == "" or not _crew_out(sim, to):
+		return false
+	_wall_cls = to
+	_wall_from = -1.0
+	_wall_grace_lv = from_lv if new_one else 0
+	walls.append([snappedf(sim.elapsed / 3600.0, 0.01), int(wall[0]), bool(wall[1]), from, to, snappedf(best_odds, 0.01)])
+	bought.append([sim.elapsed, "crew: walled at %s %d - %s out (%s)" % ["head on" if wall[1] else "site", int(wall[0]), to, "%.0f%%" % (best_odds * 100.0) if best_odds >= 0.0 else "new"]])
 	return true
 
 
@@ -125,6 +248,10 @@ func step(sim) -> int:
 		if _crew_out(sim, target_cls):
 			_target_taken = true              # the build the read is for, from the hour its class opens
 			bought.append([sim.elapsed, "the target: %s as %s, opened" % [target_cls, target_el]])
+	if wall_on and not _wall_home and _target_taken and sim.campaign_done() and not sim.on_mission():
+		_wall_home = true
+		if sim.cls != target_cls:
+			_crew_out(sim, target_cls)        # the campaign done: the read's own build back out for the endgame (the review)
 	if not sim.on_mission():
 		pick_skills(sim, sim.front_tier())     # its three, before the odds read the sites (milestone 8, step 3d)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
@@ -187,8 +314,12 @@ func step(sim) -> int:
 			else:
 				ran_signal = [sg_lv, sg_odds, sim.reach, sg_tags]
 	if t < 0 and not fetched:
+		if wall_on and wall_check(sim):
+			_tidy_kit(sim)                    # the class out wears its own kit before its pick
 		t = pick_tier(sim)
 		last_tier = t
+		if wall_on and not sim.campaign_done():
+			wall_note(sim, t)
 		t0 = _lap("step/pick_tier", t0)
 		if repeat_ok(sim) and sim.can_repeat(t) and sim.start_repeat(t):
 			_repeat_out(sim)                  # farmed unwatched: the repeat's runs, then the report put away
