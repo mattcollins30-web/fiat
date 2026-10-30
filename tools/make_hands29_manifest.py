@@ -41,7 +41,13 @@ HOLD_29 = {
     "Wheel brace": "raised in the right hand by one arm of the cross, ready to swing, the other hand held out for balance",
     "Extendable baton": "raised in the right hand, fully extended, ready to swing, the other hand held out for balance",
     "Pen gun": "held out forward in the right hand like a pistol, the nib end pointing straight ahead into the scene",
+    # 30 Oct, Matt: came out side-on, not down the barrel - the long barrel foreshortened to a stub, its muzzle toward us
+    "Goose gun": "shouldered, its very long barrel pointing straight away from the viewer into the middle of the frame, foreshortened to a short stub with the round muzzle facing us, the stock low in the bottom right corner",
+    "Castle guard rifle": "shouldered, the barrel pointing straight away from the viewer into the middle of the frame, foreshortened to a short stub with the muzzle facing us, the stock low in the bottom right corner",
+    "Hunting revolver": "held out forward in both hands at eye level, the long barrel pointing straight away from the viewer, foreshortened so the muzzle sits just above the cylinder and faces us",
+    "Broomhandle pistol": "held out forward in both hands at eye level, the barrel pointing straight away from the viewer, foreshortened so the muzzle sits just above the box magazine and faces us, the wooden stock tucked low",
 }
+SEED_BUMP_29 = {"Goose gun": 2000, "Castle guard rifle": 2000, "Hunting revolver": 2000, "Broomhandle pistol": 2000}     # the 30 Oct rerolls: a fixed seed rerolls near the same
 # their stash pictures show them in a case or holster: the hands hold the weapon alone
 OUT_OF_CASE = {"Ambassador's revolver", "Consular PDW", "Police revolver", "Pocket pistol"}
 OUT_WORDS = " The weapon alone, out of its case or holster: no case, holster or box anywhere."
@@ -57,12 +63,11 @@ def main():
         if b is None:      # not a weapon (helmets, armour, rigs, packs, charms, gloves)
             continue
         slot, n, t, ammo, bleed = b
-        j = fk.hands_job(slot, n, t, ammo, bleed, seed)
-        assert j["seed"] == seed, "a fight-kit seed override caught %s" % name
+        j = fk.hands_job(slot, n, t, ammo, bleed, seed + SEED_BUMP_29.get(name, 0))
+        assert j["seed"] == seed + SEED_BUMP_29.get(name, 0), "a fight-kit seed override caught %s" % name
         if name in OUT_OF_CASE:
             j["description"] = j["description"].replace(" Only the hands and what they hold", OUT_WORDS + " Only the hands and what they hold", 1)
             assert OUT_WORDS in j["description"], name
-        assert not os.path.exists(os.path.join(ROOT, j["out"])), "already on disk: %s" % j["out"]
         jobs.append(j)
         seed += 1
     assert len(jobs) == 78, len(jobs)
