@@ -6137,6 +6137,13 @@ difficulty and length, the endgame placeholders.
    language pass ("✓ selected", or the style guide's word for the class you're playing). Smoke: the current class's
    card tag reads the new word and never "past".
 
+4. Bug: the first gun comes with its rounds but no magazine (screenshot, Top Farm cleared: a shotgun and a box of
+   450 in the pack, Rounds "melee"). Matt: "first gun find needs to include ammo AND the relevant mag". The cause:
+   sim.gd _first_gun (17 Oct) predates magazines in the rig - it adds the gun and a T1 box of its rounds only. Fix: a
+   plain T1 magazine for the gun's type alongside, marked first_gun like the box so a full pack keeps it, and the log
+   line names it. Smoke: a first clear's finds hold the gun, its rounds and a magazine that fits it; home, packed,
+   the next run fires the gun, not melee.
+
 ## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
 
 1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
