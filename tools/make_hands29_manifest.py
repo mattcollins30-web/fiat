@@ -44,10 +44,10 @@ HOLD_29 = {
     # 30 Oct, Matt: came out side-on, not down the barrel - the long barrel foreshortened to a stub, its muzzle toward us
     "Goose gun": "shouldered, its very long barrel pointing straight away from the viewer into the middle of the frame, foreshortened to a short stub with the round muzzle facing us, the stock low in the bottom right corner",
     "Castle guard rifle": "shouldered, the barrel pointing straight away from the viewer into the middle of the frame, foreshortened to a short stub with the muzzle facing us, the stock low in the bottom right corner",
-    "Hunting revolver": "held out forward in both hands at eye level, the long barrel pointing straight away from the viewer, foreshortened so the muzzle sits just above the cylinder and faces us",
+    "Hunting revolver": "held out forward in both hands at eye level, seen from directly behind the hammer, the long barrel pointing straight away from the viewer and hidden behind the cylinder, only the round muzzle showing above it, the scope a short block on top",     # third try (30 Oct): the side-on style image won twice
     "Broomhandle pistol": "held out forward in both hands at eye level, the barrel pointing straight away from the viewer, foreshortened so the muzzle sits just above the box magazine and faces us, the wooden stock tucked low",
 }
-SEED_BUMP_29 = {"Goose gun": 2000, "Castle guard rifle": 2000, "Hunting revolver": 2000, "Broomhandle pistol": 2000}     # the 30 Oct rerolls: a fixed seed rerolls near the same
+SEED_BUMP_29 = {"Goose gun": 2000, "Castle guard rifle": 2000, "Hunting revolver": 6000, "Broomhandle pistol": 2000}     # the 30 Oct rerolls: a fixed seed rerolls near the same
 # their stash pictures show them in a case or holster: the hands hold the weapon alone
 OUT_OF_CASE = {"Ambassador's revolver", "Consular PDW", "Police revolver", "Pocket pistol"}
 OUT_WORDS = " The weapon alone, out of its case or holster: no case, holster or box anywhere."
