@@ -6137,12 +6137,17 @@ difficulty and length, the endgame placeholders.
    language pass ("✓ selected", or the style guide's word for the class you're playing). Smoke: the current class's
    card tag reads the new word and never "past".
 
-4. Bug: the first gun comes with its rounds but no magazine (screenshot, Top Farm cleared: a shotgun and a box of
-   450 in the pack, Rounds "melee"). Matt: "first gun find needs to include ammo AND the relevant mag". The cause:
-   sim.gd _first_gun (17 Oct) predates magazines in the rig - it adds the gun and a T1 box of its rounds only. Fix: a
-   plain T1 magazine for the gun's type alongside, marked first_gun like the box so a full pack keeps it, and the log
-   line names it. Smoke: a first clear's finds hold the gun, its rounds and a magazine that fits it; home, packed,
-   the next run fires the gun, not melee.
+4. Bug: the first gun can't be fired on the run it's found (screenshot, Top Farm cleared: a shotgun and a box of
+   450 in the pack, Rounds "melee"). Matt first: "first gun find needs to include ammo AND the relevant mag"; then,
+   corrected: the shells couldn't go into the rig during the fight, but at home, taking the box into the rig made a
+   24-round pouch of shells. So the rounds were enough - the gap is the run: a found gun can be fitted from the pack
+   (can_equip_from_pack) but nothing in the pack can go into the rig while a run's out (sim.gd _rig_take: no take
+   with a mission on). To design with Matt: rounds (and meds?) from the pack into a rig pouch mid-run, room
+   permitting, or the first gun's box loaded straight into the rig. Smoke: find a gun and its rounds mid-run, fit
+   the gun, load a pouch from the pack, and the next fight fires the gun.
+5. UI: an ammo card's type chip reads lowercase ("Rounds" · "shotgun"; screenshot, Shells in the rig). The chip is
+   item_head.gd's ammo branch (Items.type_word / the base's type, uncapitalised). Fix: sentence case on the chip
+   (the SMG stays SMG). Smoke: every ammo base's card chips start with a capital.
 
 ## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
 
