@@ -62,7 +62,7 @@ Later, if they still look right:
   the frontier - or that contact is too strong a lever. A number for the balance phase: read the odds across every
   weather on the pass's saves, and the contact's share of the incoming.
 
-- **Magazines you find** (30 Oct, Matt, mid-playtest: "in practice the magazine thing doesnt hold - you need to be able
+- **Magazines you find** - pulled forward the same day: designed in docs/design/meds_ammo_clinic.md, "Magazines as items". (30 Oct, Matt, mid-playtest: "in practice the magazine thing doesnt hold - you need to be able
   to find magazines and then fill them up out of boxes - then put them into the rig. That then allows us to increase
   mag capacity via the attachements in the workshop"). Today (28 Oct design, docs/design/meds_ammo_clinic.md):
   magazines aren't items - a rig pouch of rounds is 3 of the gun's magazines, filled free from the stash's boxes. Not

@@ -63,3 +63,31 @@ it changes every gun's numbers, so it goes in before the balance pass, not after
 - For the balance pass: a 1 h bot read climbs 2-3x slower, almost all from the pouches (MAG_POUCH 12 restores the
   pace); the Paramedic's Tourniquet skill and Clean hands not yet reworked as the cures' big brothers; magazine
   attachments carry no size or reload yet.
+
+## Magazines as items (30 Oct, Matt, mid-playtest; the playtest paused for it)
+
+Why: "in practice the magazine thing doesnt hold - you need to be able to find magazines and then fill them up out
+of boxes - then put them into the rig"; with a 6-pouch rig "its beyond annoying trying to manage mags - the issue is
+compounded by different ammo types". Parts against items: "convert them into items instead of parts and then figure
+out what we can either replace or add to the magazine part in the workshop". Matt's calls on the four questions:
+pause and build now with the playtest's parked fixes, then a fresh save; the sling; the refill on its own; one a pouch,
+a drum two.
+
+- **A magazine is an item**, by ammo type (pistol, rifle, shotgun, SMG, nail). Its kinds are the old magazine parts:
+  Standard (the type's size), Extended (+50%), Quick (a faster reload), Drum (x2, a slower reload, two pouches), Belt
+  box and Hundred-round drum (the belt-fed). Found in crates; the Fence sells the standard ones. Tiered like the parts
+  were; numbers drafts for the balance pass.
+- **Every gun found comes with a standard magazine for it** - a gun is never dead for want of one. The first gun: the
+  gun, its magazine and a box.
+- **Rounds live in boxes only** - the stash and the pack. No rounds pouches; the rig holds magazines and meds, a
+  magazine a pouch (a drum two).
+- **Loading is the game's, not the player's.** At the gate every magazine in the rig is filled from the stash's boxes
+  of its type, the best grade first. The top-up packs the primary's magazines, then the secondary's, then meds. The
+  Kit reads a gun as "3 mags · 30 rounds".
+- **On a run**, the rig's magazines all spent and a box of the type in the pack: the runner refills one, a long reload
+  (draft 3x the gun's). This is the playtest's parked item 4 (the hand-load), with no button.
+- **The Workshop's magazine mount goes**, replaced by a **sling**: while the primary reloads, the secondary fires (a
+  share, drafts by part). The old parts on a gun come off as magazine items.
+- **Mockups first** on the canvas: the rig with magazines, a magazine's card, the Kit's gun line, the sling's parts.
+  New words through the language pass. The save's shape changes: SAVE_VERSION, a fresh save.
+
