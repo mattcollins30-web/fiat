@@ -120,7 +120,7 @@ CARGO = [
 # clash) and the icon serves both screens. CARGO above is the lesson-checked rewrite of the six (plain/unprinted, and
 # tr_art.md's looks: two panes, webbing and a canteen): to use it, set USE_ORDER_GLYPHS = False AND take the six jobs
 # out of make_outstanding_manifest.py / pixellab_order_glyphs_manifest.json in the same change (Matt's call).
-USE_ORDER_GLYPHS = True
+USE_ORDER_GLYPHS = False   # 29 Oct, Matt: "switch to the rewrite" - the six left the order glyphs manifest
 ORDER_GLYPHS = os.path.join(ROOT, "tools", "pixellab_order_glyphs_manifest.json")
 
 TEST = ["art/places/far_swansea.png", "art/hands/porter_0.png", "art/hands/cracker_2.png",

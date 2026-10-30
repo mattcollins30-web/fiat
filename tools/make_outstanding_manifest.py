@@ -134,14 +134,8 @@ KEYS = [
     ["ledger_seals", 64, 64, "a single small brass seal for pressing wax, its end engraved with a crest, a lump of red wax stuck to it"],
     ["a_true_fiat_note", 128, 64, "a single crisp new banknote of no country you know, laid flat, its ink still bright, illegible printing and a portrait"],
 ]
-MATERIALS = [
-    ["paving", "a stack of three grey paving slabs, one corner broken"],
-    ["glass", "a pane of salvaged window glass in its old frame, one corner cracked"],
-    ["ledgers", "a stack of three old bound ledgers tied with string"],
-    ["cable_drums", "a wooden cable drum wound with thick black cable"],
-    ["army_kit", "a folded olive army tarpaulin with a webbing strap round it"],
-    ["fuses", "a handful of ceramic cartridge fuses in a small tin"],
-]
+# The six rebuild materials moved to tools/make_expeditions_manifest.py's CARGO (29 Oct, Matt: "switch to the rewrite"),
+# lesson-checked there; the icon serves both the cargo and the Radio's town list.
 
 
 def ground(i, z):
@@ -217,16 +211,12 @@ for k, o in enumerate(ORDER):
 glyphs = [{"out": "art/items/%s.png" % s, "endpoint": "generate-image-v2", "width": w, "height": h, "no_background": True,
            "single": True, "seed": 96300 + k, "style_options": STYLE, "style_image": "res://art/reference/items/ref_03.png",
            "description": OBJECT % what, "_where": "the order's key, on the Radio's town list"} for k, (s, w, h, what) in enumerate(KEYS)]
-glyphs += [{"out": "art/items/%s.png" % s, "endpoint": "generate-image-v2", "width": 64, "height": 64, "no_background": True,
-            "single": True, "seed": 96310 + k, "style_options": STYLE, "style_image": "res://art/reference/items/ref_03.png",
-            "description": OBJECT % ("a single " + what), "_where": "a rebuild material, on the Radio's town list and its cards' chips"}
-           for k, (s, what) in enumerate(MATERIALS)]
 
 write("tools/pixellab_outstanding_manifest.json",
       ["FIAT OUTSTANDING ART (19 Oct, Matt): the Map's other three zones and nine sites; the order's three heads - a face, the fight's three poses, their place for the order card, their unique. After the test reads.",
        RUN % "tools/pixellab_outstanding_manifest.json"], rest)
 write("tools/pixellab_order_glyphs_manifest.json",
-      ["FIAT ORDER GLYPHS, OPTIONAL (19 Oct): the order's three keys and six of the rebuild materials (copper wire has its item's picture), for the Radio's town list and chips, if those want pictures.",
+      ["FIAT ORDER GLYPHS, OPTIONAL (19 Oct): the order's three keys, for the Radio's town list and chips, if those want pictures (the six rebuild materials are the expeditions' cargo icons, 29 Oct).",
        RUN % "tools/pixellab_order_glyphs_manifest.json"], glyphs)
 
 # The land past the zones (19 Oct, Matt: the fog alone "too sparse ... draw some art for this that matches the map"):
