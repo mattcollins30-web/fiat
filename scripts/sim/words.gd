@@ -1646,9 +1646,10 @@ const WOUNDS := {
 	"treated": "%s seen to: %s back",
 }
 
-## The Pitch circle (24 Oct): an element shut till a Pitch point opens its starter.
+## The Pitch circle (24 Oct): an element shut till its starter's opened - the class's own two free, any other a Pitch
+## point (31 Oct, the designer).
 const ELEMENT_SHUT := "shut"
-const ELEMENTS_NOTE := "Each opens with a Pitch point"
+const ELEMENTS_NOTE := "Own two free; others a Pitch point"     # 178 of its 178 px at 11 px (web_key.fit_fails holds it)
 
 ## The fight's breakdown (24 Oct, the endgame chase): the sources that aren't a gun or a skill.
 const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bleed", "dot:shock": "Shock", "dot:frost": "Frost",

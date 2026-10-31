@@ -123,7 +123,7 @@ buttons about 125, Break 290, Put 200, Retrain 260, the fight button 150 and the
 
 | Key | Current | Suggestion | Why |
 |---|---|---|---|
-| `ELEMENTS_NOTE` | A Pitch point opens one | Each opens with a Pitch point | "opens one" sounds like a point picks one element for you. Also drawn at 11 px: fine. |
+| `ELEMENTS_NOTE` | A Pitch point opens one | Each opens with a Pitch point | "opens one" sounds like a point picks one element for you. Also drawn at 11 px: fine. Since 31 Oct (a class's own two open free): "Own two free; others a Pitch point" (178 of its 178 px). |
 | `ELEMENT_SHUT` | shut | shut | Keep it. It reads well with the note. |
 
 ## 9. Uniques, notables, joints (data_new.txt)

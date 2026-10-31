@@ -294,6 +294,11 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	if seed_v != 0:
 		sim.rng.seed = seed_v
 	var start_cls: String = str(Data.CLASSES[0]["name"]) if one_save else cls     # a new game's the Poacher (24 Oct)
+	# `-- 16 one Recruit played 0 read1`: the class as played (31 Oct, BUILD34) - both its elements, both joints, its
+	# build's element (the crew's, Bot.CREW_BUILDS) first; the read's GATES line carries `played`
+	var played: bool = one_save and element == "played"
+	if played:
+		element = str(Bot.CREW_BUILDS.get(cls, ""))
 	sim.set_class(start_cls)
 	sim.fast_memo = true                  # the run reads its kit once in thirty seconds, as a dry run does (8 Oct)
 	sim.odds_runs_max = 24                # and the odds at twenty-four dry runs a read, glasses or not (the verdict at PUSH is the same; the number shown is the player's)
@@ -308,7 +313,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		bot.target_cls = cls
 		bot.target_el = element
 		bot.wall_on = true                    # the campaign as played (30 Oct): walled, another class goes out
+		bot.as_played = played
 	var build: String = cls + ((" as " + element) if element != "" else "")
+	if played:
+		build = cls + " as played"
 	print("Fiat gate read: %.0f h, %s%s" % [hours, build, " (one save, from the %s)" % start_cls if one_save else ""])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
@@ -327,6 +335,18 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		# P3 on the runs the bot takes at a person's odds (25 Oct, the tools review: farmed at PUSH, the median is 100% by
 		# construction): the odds at the gate of every first clear and every head not yet beaten; the farm's apart
 		"first_odds": []}
+	# when the build's element opened for its class (31 Oct, BUILD34 phase 1: the Recruit as physical played as the
+	# camp's frost and bleed, his own never opened): bot hours, -1 never
+	g["el_open_at"] = -1.0
+	if played:
+		g["as_played"] = true
+	var pl := {}                              # as played (BUILD34): class -> its elements' opening, its joints' halves, its Pitch
+	if played:
+		# the class going in noted as it leaves (the review: a swap inside the step left the outgoing class's last state
+		# unread); on the real camp only - a wall's odds swap a copy
+		bot.on_swap = func(s) -> void:
+			if s == sim:
+				played_note(sim, pl, g, sim.pitch_spent())
 	var farm_odds: Array = []
 	var boss_uniques: Dictionary = {}
 	for u in Data.UNIQUES:
@@ -373,6 +393,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		var dealt_ty: String = dealt_type(sim)
 		var rep0 = sim.last_report
 		var reps0: int = bot.repeats_gone
+		var pitch0: int = sim.pitch_spent()
 		var t: int = bot.step(sim)
 		var rep_t: Dictionary = bot.last_repeat if bot.repeats_gone > reps0 else {}     # a repeat's runs, each counted (29 Oct, the tools review)
 		var worn_h: float = (sim.elapsed - worn_e0) / 3600.0
@@ -448,6 +469,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		_gate_firsts(sim, g, loose_seen)
+		if float(g["el_open_at"]) < 0.0 and element != "" and sim.cls == cls and element in sim.class_elements():
+			g["el_open_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+		if played:
+			played_note(sim, pl, g, pitch0)
 		if checkpoint and sim.room_open("radio") and not sim.on_mission():
 			var cf := FileAccess.open(CHECKPOINT, FileAccess.WRITE)
 			cf.store_string(JSON.stringify({"sim": sim.to_dict(), "hour": snappedf(sim.elapsed / 3600.0, 0.01), "route": bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target"))}))
@@ -478,8 +503,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))
 	# the end's figures are the read's build's (the fix round, H3: a walled class out read its own odds, level and kit)
 	if one_save:
-		end_as_build(sim, bot, cls)
+		end_noted(sim, bot, cls, pl, g, played)
 	g["end_class"] = sim.cls                  # the runner the end's figures read: the build's class, or why not in `route`
+	if played:
+		g["played"] = played_gates(sim, pl, g)
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
@@ -643,6 +670,99 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		g["end_save"] = save_path
 	print("GATES " + JSON.stringify(g))
 	quit(0)
+
+
+## The read's build out for the end's figures, and as played its state there noted (the review: the end's tidy can
+## close a joint the loop never saw).
+static func end_noted(sim, bot, cls: String, pl: Dictionary, g: Dictionary, played: bool) -> void:
+	var p0: int = sim.pitch_spent()
+	end_as_build(sim, bot, cls)
+	if played:
+		played_note(sim, pl, g, p0)
+
+
+## The as-played read's step noted (BUILD34): for the runner out, when each of its own two elements opened for it, when
+## each joint's class half and element half went in and when the joint closed (and at what level), and the Pitch it
+## spent; the camp's element points at the Quartermaster. Bot hours.
+static func played_note(sim, pl: Dictionary, g: Dictionary, pitch0: int) -> void:
+	var c: String = sim.cls
+	if not pl.has(c):
+		pl[c] = {"opened": {}, "how": {}, "self_opened": {}, "class_half": {}, "element_half": {}, "closed": {}, "closed_lv": {}, "pitch": 0}
+	var rec: Dictionary = pl[c]
+	var h: float = snappedf(sim.elapsed / 3600.0, 0.01)
+	# the opens the classes made themselves since the last note (the chronicle's element_open, the runner's class on it;
+	# a free open of the camp's counts): an element first seen open without one was inherited (the camp's two derived)
+	var ci: int = int(g.get("_chron_i", 0))
+	for k in range(mini(ci, sim.chronicle.size()), sim.chronicle.size()):
+		var e: Dictionary = sim.chronicle[k]
+		var oel := ""
+		if str(e.get("k", "")) == "element_open":
+			oel = str(e.get("element", ""))       # a free open: the camp's element, opened for this class
+		elif str(e.get("k", "")) == "train" and sim.is_element_starter(str(e.get("id", ""))):
+			oel = sim.element_of(str(e["id"]))    # a paid open: the starter bought with a Pitch point
+		if oel != "":
+			var oc: String = str(e.get("cls", ""))
+			if not pl.has(oc):
+				pl[oc] = {"opened": {}, "how": {}, "self_opened": {}, "class_half": {}, "element_half": {}, "closed": {}, "closed_lv": {}, "pitch": 0}
+			pl[oc]["self_opened"][oel] = true
+	g["_chron_i"] = sim.chronicle.size()
+	rec["pitch"] = int(rec["pitch"]) + maxi(0, sim.pitch_spent() - pitch0)
+	var open_now: Array = sim.class_elements()
+	for el in Bot.own_elements(c):
+		if el in open_now and not rec["opened"].has(el):
+			rec["opened"][el] = h
+			rec["how"][el] = "itself" if rec["self_opened"].has(el) else "inherited"
+		var j: Dictionary = Data.joint_in(c, str(Data.element_tree_of(str(el)).get("name", "")))
+		var halves: Array = Bot.joint_halves(c, str(el))
+		if j.is_empty() or halves.is_empty():
+			continue
+		var key: String = str(j["key"])
+		if not rec["class_half"].has(key) and sim.tree.has(str(halves[0])):
+			rec["class_half"][key] = h
+		if not rec["element_half"].has(key) and sim.tree.has(str(halves[1])):
+			rec["element_half"][key] = h
+		if not rec["closed"].has(key) and sim.has_joint(key):
+			rec["closed"][key] = h
+			rec["closed_lv"][key] = sim.level()
+	if float(g.get("qm_at", -1.0)) >= 0.0 and not g.has("_points_at_qm"):
+		g["_points_at_qm"] = sim.element_points.duplicate()
+
+
+## The GATES line's `played` (BUILD34): per class played, its two elements (the build's first) - when each opened for it,
+## the camp's points in each at the Quartermaster and at the end - and its two joints: when the class half, the element
+## half and the joint went in (null never), the level it closed at; the Pitch it spent while out. The camp's Pitch.
+static func played_gates(sim, pl: Dictionary, g: Dictionary) -> Dictionary:
+	var at_qm: Dictionary = g.get("_points_at_qm", {})
+	g.erase("_points_at_qm")
+	g.erase("_chron_i")
+	var classes := {}
+	for c in pl:
+		var rec: Dictionary = pl[c]
+		var first: String = str(g["element"]) if c == str(g["class"]) else str(Bot.CREW_BUILDS.get(c, ""))
+		var els: Array = Bot.own_elements(c, first)
+		var joints := {}
+		for el in els:
+			var j: Dictionary = Data.joint_in(c, str(Data.element_tree_of(str(el)).get("name", "")))
+			if j.is_empty():
+				continue
+			var key: String = str(j["key"])
+			joints[key] = {"element": el, "class_half": rec["class_half"].get(key, null), "element_half": rec["element_half"].get(key, null),
+				"closed": rec["closed"].get(key, null), "closed_lv": rec["closed_lv"].get(key, null)}
+		var opened: Array = []
+		var how: Array = []
+		var points: Array = []
+		var points_qm: Array = []
+		var none_at_qm = null                 # no Quartermaster: null; beaten with none earned by then: 0
+		if float(g.get("qm_at", -1.0)) >= 0.0:
+			none_at_qm = 0
+		for el in els:
+			opened.append(rec["opened"].get(el, null))
+			how.append(rec["how"].get(el, null))
+			points.append(int(sim.element_points.get(el, 0)))
+			points_qm.append(at_qm.get(el, none_at_qm))
+		var lv: int = sim.level() if c == sim.cls else sim.crew_level(c)
+		classes[c] = {"elements": els, "opened": opened, "opened_how": how, "points": points, "points_at_qm": points_qm, "joints": joints, "pitch": int(rec["pitch"]), "level": lv}
+	return {"classes": classes, "pitch_spent": sim.pitch_spent(), "pitch_points": sim.pitch_points()}
 
 
 ## The read's build out for the end's figures (the fix round, H3): the odds, the gang clock, the level and the kit are

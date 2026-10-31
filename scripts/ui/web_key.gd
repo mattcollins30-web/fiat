@@ -50,7 +50,7 @@ func show_state(s) -> void:
 		var meter: float = clampf(float(sim.element_xp.get(el, 0.0)) / Data.ELEMENT_METER, 0.0, 1.0)
 		var free_s: String = (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else ""
 		if not sim.element_opened(el):
-			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): a Pitch point on its starter opens it
+			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): the class's own two open free, any other a Pitch point (free too where the camp already has it)
 		rows.append([WebView.plain_name(str(et["name"])), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
 	var sig := str(rows)
 	if sig == _sig:
@@ -63,6 +63,9 @@ func show_state(s) -> void:
 ## The words drawn that don't fit their room, for the smoke (the key is drawn, not Labels): [] when all fit.
 func fit_fails() -> Array:
 	var out: Array = []
+	var hw: float = _font_bold.get_string_size("THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	if _font.get_string_size(Words.ELEMENTS_NOTE, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > KEY_W - 2 * PAD - hw - 10.0:
+		out.append(Words.ELEMENTS_NOTE)       # the note beside the heading (31 Oct: it changed, and nothing held it to its room)
 	for r in _rows:
 		if r[4] < 0.0:
 			var free_w: float = _font_bold.get_string_size(str(r[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x

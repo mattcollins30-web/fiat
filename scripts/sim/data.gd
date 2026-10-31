@@ -388,11 +388,11 @@ const BASES := {
 			"attachments": ["grip"]},
 		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 34.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
 			"attachments": ["grip", "business end"]},
-		{"name": "Machete", "type": "melee", "ammo": "none", "tier": 2, "damage": 30.0, "rof": 0.9, "value": 70, "conv_bleed_pct": 30,
+		{"name": "Machete", "type": "melee", "ammo": "none", "tier": 2, "damage": 30.0, "rof": 0.9, "value": 70, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
 		{"name": "Pipe wrench", "type": "melee", "ammo": "none", "tier": 2, "damage": 55.0, "rof": 0.5, "value": 60, "conv_bleed_pct": 10,
 			"attachments": ["grip", "business end"]},
-		{"name": "Fire axe", "type": "melee", "ammo": "none", "tier": 3, "damage": 70.0, "rof": 0.6, "value": 150, "conv_bleed_pct": 25,
+		{"name": "Fire axe", "type": "melee", "ammo": "none", "tier": 3, "damage": 70.0, "rof": 0.6, "value": 150, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
 		{"name": "Bayonet on a stick", "type": "melee", "ammo": "none", "tier": 4, "damage": 60.0, "rof": 0.9, "value": 260, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
@@ -443,11 +443,11 @@ const BASES := {
 		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
 		{"name": "Lump hammer", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.42, "value": 25, "conv_bleed_pct": 5,
 			"attachments": ["grip", "business end"]},
-		{"name": "Billhook", "type": "melee", "ammo": "none", "tier": 1, "damage": 24.0, "rof": 0.72, "value": 30, "conv_bleed_pct": 35,
+		{"name": "Billhook", "type": "melee", "ammo": "none", "tier": 1, "damage": 24.0, "rof": 0.72, "value": 30, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
-		{"name": "Bike chain", "type": "melee", "ammo": "none", "tier": 2, "damage": 26.0, "rof": 1.05, "value": 65, "conv_bleed_pct": 40,
+		{"name": "Bike chain", "type": "melee", "ammo": "none", "tier": 2, "damage": 26.0, "rof": 1.05, "value": 65, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
-		{"name": "Meat cleaver", "type": "melee", "ammo": "none", "tier": 3, "damage": 46.0, "rof": 0.9, "value": 140, "conv_bleed_pct": 35,
+		{"name": "Meat cleaver", "type": "melee", "ammo": "none", "tier": 3, "damage": 46.0, "rof": 0.9, "value": 140, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
 		{"name": "Hot poker", "type": "melee", "ammo": "none", "tier": 3, "damage": 55.0, "rof": 0.78, "value": 150, "conv_fire_pct": 25,
 			"attachments": ["grip", "business end"]},
@@ -459,7 +459,7 @@ const BASES := {
 			"attachments": ["grip"]},
 		{"name": "Collier's pick", "type": "melee", "ammo": "none", "tier": 6, "damage": 180.0, "rof": 0.55, "value": 650, "conv_bleed_pct": 10,
 			"attachments": ["grip", "business end"]},
-		{"name": "Felling axe", "type": "melee", "ammo": "none", "tier": 7, "damage": 210.0, "rof": 0.55, "value": 920, "conv_bleed_pct": 25,
+		{"name": "Felling axe", "type": "melee", "ammo": "none", "tier": 7, "damage": 210.0, "rof": 0.55, "value": 920, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
 		{"name": "Civic mace", "type": "melee", "ammo": "none", "tier": 8, "damage": 255.0, "rof": 0.55, "value": 1280, "conv_bleed_pct": 5,
 			"attachments": ["grip", "business end"]},
@@ -542,7 +542,7 @@ const BASES := {
 			"attachments": ["muzzle"]},
 		{"name": "Flare pistol", "type": "improvised", "tier": 1, "damage": 30.0, "rof": 0.5, "value": 30,
 			"attachments": []},
-		{"name": "Knife", "type": "melee", "ammo": "none", "tier": 1, "damage": 9.0, "rof": 1.8, "value": 15, "conv_bleed_pct": 40,
+		{"name": "Knife", "type": "melee", "ammo": "none", "tier": 1, "damage": 9.0, "rof": 1.8, "value": 15, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
 		{"name": "Knuckle duster", "type": "melee", "ammo": "none", "tier": 2, "damage": 14.0, "rof": 1.5, "value": 40, "conv_bleed_pct": 10,
 			"attachments": []},
@@ -628,17 +628,17 @@ const BASES := {
 			"attachments": ["muzzle", "stock"]},
 		{"name": "Catapult", "type": "improvised", "tier": 2, "damage": 18.0, "rof": 1.15, "value": 40,
 			"attachments": []},
-		{"name": "Screwdriver", "type": "melee", "ammo": "none", "tier": 2, "damage": 11.0, "rof": 1.9, "value": 40, "conv_bleed_pct": 30,
+		{"name": "Screwdriver", "type": "melee", "ammo": "none", "tier": 2, "damage": 11.0, "rof": 1.9, "value": 40, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
 		{"name": "Bike lock", "type": "melee", "ammo": "none", "tier": 2, "damage": 26.0, "rof": 0.8, "value": 40, "conv_bleed_pct": 5,
 			"attachments": []},
-		{"name": "Hatchet", "type": "melee", "ammo": "none", "tier": 3, "damage": 26.0, "rof": 0.92, "value": 90, "conv_bleed_pct": 25,
+		{"name": "Hatchet", "type": "melee", "ammo": "none", "tier": 3, "damage": 26.0, "rof": 0.92, "value": 90, "conv_bleed_pct": 15,
 			"attachments": ["grip"]},
 		{"name": "Zip gun", "type": "improvised", "ammo": "pistol", "tier": 3, "damage": 30.0, "rof": 0.8, "value": 85,
 			"attachments": []},
 		{"name": "Extendable baton", "type": "melee", "ammo": "none", "tier": 3, "damage": 16.0, "rof": 1.5, "value": 90,
 			"attachments": ["grip"]},
-		{"name": "Commando dagger", "type": "melee", "ammo": "none", "tier": 4, "damage": 18.0, "rof": 1.65, "value": 150, "conv_bleed_pct": 40,
+		{"name": "Commando dagger", "type": "melee", "ammo": "none", "tier": 4, "damage": 18.0, "rof": 1.65, "value": 150, "conv_bleed_pct": 20,
 			"attachments": ["grip"]},
 		{"name": "Wheel brace", "type": "melee", "ammo": "none", "tier": 4, "damage": 40.0, "rof": 0.75, "value": 145,
 			"attachments": []},
@@ -1136,8 +1136,8 @@ const ATTACHMENTS := [
 	{"name": "Tape", "mount": "grip", "tier": 1, "value": 20, "speed_pct": 4},
 	{"name": "Cord wrap", "mount": "grip", "tier": 2, "value": 60, "first_pct": 10, "speed_pct": 2},
 	{"name": "Lanyard", "mount": "grip", "tier": 3, "value": 120, "damage_pct": 4, "speed_pct": 4},
-	{"name": "Nails through it", "mount": "business end", "tier": 1, "value": 30, "conv_bleed_pct": 15},
-	{"name": "A blade on it", "mount": "business end", "tier": 2, "value": 90, "damage_pct": 10, "conv_bleed_pct": 10},
+	{"name": "Nails through it", "mount": "business end", "tier": 1, "value": 30, "conv_bleed_pct": 8},     # bleed halved (31 Oct, the designer: the melee bleed cut, was 15)
+	{"name": "A blade on it", "mount": "business end", "tier": 2, "value": 90, "damage_pct": 10, "conv_bleed_pct": 5},     # bleed halved (31 Oct, the designer: the melee bleed cut, was 10)
 	{"name": "Lead in it", "mount": "business end", "tier": 3, "value": 160, "damage_pct": 18, "speed_pct": -6},
 	{"name": "Heavy stock", "mount": "stock", "tier": 2, "value": 80, "damage_pct": 9, "speed_pct": -4},
 	{"name": "Cheek riser", "mount": "stock", "tier": 2, "value": 90, "first_pct": 10},
@@ -2388,7 +2388,7 @@ const WHEEL_BRIDGE_DEG := 168.0
 ## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
 const ELEMENT_METER := 1.5
-const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter costs a Pitch point; its meter fills from then
+const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter off the runner's class's own two costs a Pitch point (31 Oct: its own two free; any the camp already has free too); its meter fills from then
 const ELEMENTS_A_CLASS := 2     # two elements open a class at most (28 Oct, Matt: "otherwise you could just keep speccing into elemental nodes"); Knuckles counts
 const BRIDGE_LEVEL := 30
 const BRIDGE_COST := 3

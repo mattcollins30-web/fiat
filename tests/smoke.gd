@@ -792,6 +792,11 @@ func _init() -> void:
 	_fix32c_checks(main)                      # the three-stage review of 0.10.2 (31 Oct): the first gun fires, two guns one pool, the bot's boxes, the words
 	_fix32d_checks(main)                      # the reviewer on m32c (31 Oct): the pool's order, the reload taken, the rig card's list, the full pack
 	_fix33_checks(main)                       # PROBE33's levers (31 Oct): the box kept at one, the slings' damage, the melee's bleed, the bot's compare
+	_b34_open_checks()                        # BUILD34 phase 1 (31 Oct): every one-save read's build opens its element the step its class is taken
+	_b34_own_pair_checks()                    # the designer's call (31 Oct): a class's own two elements open free
+	_b34_bleed_checks()                       # the designer's call (31 Oct): the melee bleed cut
+	_b34_played_checks()                      # BUILD34 phase 2: the bot as played - both elements, both joints' halves first, the kit's second element
+	_b34_reads_checks()                       # BUILD34 phase 3: the as-played reads' GATES fields, the summary's section and its gate
 	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
 	_exp_lead_xp_checks(main)                 # an expedition lead's XP: points, the cap, the run out, the lead's level (30 Oct, S4-S6)
 	_review28_checks(main)
@@ -2742,9 +2747,10 @@ func _web_pool_checks(main) -> void:
 	# the Pitch circle (24 Oct): an element's starter is bought from the Pitch's pool, one point; the class's buy nothing
 	# there, and the element's own points buy the rest of its region
 	sim.best_level = maxi(sim.best_level, 3)
-	_check(sim.is_element_starter("Live/0") and sim.free_for("Live/0") == sim.pitch_free() and sim.node_cost("Live/0") == Data.ELEMENT_OPEN_COST, "an element's starter isn't the Pitch's to buy: %d free, %d cost" % [sim.free_for("Live/0"), sim.node_cost("Live/0")])
+	# (31 Oct, the designer: the class's own two free - Live is the Scrapper's; The cold is off his pair, a Pitch point)
+	_check(sim.is_element_starter("Live/0") and sim.free_for("Live/0") == sim.pitch_free() and sim.node_cost("Live/0") == 0 and sim.node_cost("The cold/0") == Data.ELEMENT_OPEN_COST, "an element's starter isn't the Pitch's to buy, free in the class's pair: %d free, %d / %d cost" % [sim.free_for("Live/0"), sim.node_cost("Live/0"), sim.node_cost("The cold/0")])
 	var pitch0: int = sim.pitch_free()
-	_check(not sim.element_opened("shock") and sim.train_node("Live/0") and sim.element_opened("shock") and sim.pitch_free() == pitch0 - 1 and sim.points_free() == 20 and sim.element_free("shock") == 0, "a Pitch point did not open Live: %d Pitch free, %d class" % [sim.pitch_free(), sim.points_free()])
+	_check(not sim.element_opened("shock") and sim.train_node("Live/0") and sim.element_opened("shock") and sim.pitch_free() == pitch0 and sim.points_free() == 20 and sim.element_free("shock") == 0, "Live didn't open free for the Scrapper: %d Pitch free from %d, %d class" % [sim.pitch_free(), pitch0, sim.points_free()])
 	_check(sim.free_for("Live/1") == 0 and sim.train_block("Live/1").begins_with("wants"), "a class's or the Pitch's points bought an element's node: '%s'" % sim.train_block("Live/1"))
 	sim.element_points["shock"] = 2
 	_check(sim.free_for("Live/1") == 2 and sim.train_node("Live/1") and sim.element_free("shock") == 2 - sim.node_cost("Live/1") and sim.points_free() == 20, "an element's point did not buy its own node: %d free, %d class" % [sim.element_free("shock"), sim.points_free()])
@@ -3178,7 +3184,7 @@ func _element_checks(main) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")     # nothing worn converts: the trees are read alone
 	sim.equipped["Secondary"] = null
 	_check(sim.affinity("fire") and sim.affinity("bleed") and not sim.affinity("shock"), "the Drifter's affinities are not fire and bleed (joints B)")
-	_check(sim.node_cost("Petrol/0") == 1 and sim.node_cost("The Rat Man/0") == 1, "an element's node isn't one of its own points whatever the pair (slice 3): %d / %d" % [sim.node_cost("Petrol/0"), sim.node_cost("The Rat Man/0")])
+	_check(sim.node_cost("Petrol/0") == 0 and sim.node_cost("The Rat Man/0") == 1, "an element's starter isn't free in the class's pair and a Pitch point off it (31 Oct): %d / %d" % [sim.node_cost("Petrol/0"), sim.node_cost("The Rat Man/0")])
 	# Petrol to its fourth column: the Drifter's half trains, the Scrapper's doesn't
 	for i in [0, 1, 2, 4, 3, 7, 5]:
 		_check(_walk(sim, "Petrol/%d" % i), "Petrol/%d did not train: %s" % [i, sim.train_block("Petrol/%d" % i)])
@@ -3590,7 +3596,8 @@ func _melee_checks(main) -> void:
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2) or sim.conversion()["physical"] <= 0.001, "the bat's nails are not 20%% bleed on top of %.2f: %s" % [bleed0, str(sim.conversion())])
 	var head: Dictionary = sim._plain("Attachment", "Nails through it")
 	bat["attachments"]["business end"] = head
-	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.35) or sim.conversion()["physical"] <= 0.001, "nails through it did not add 15%% bleed: %s" % str(sim.conversion()))
+	var nails: float = float(Items.base_named(Data.ATTACHMENT, "Nails through it")["conv_bleed_pct"]) / 100.0     # 8 since the melee bleed cut (31 Oct)
+	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2 + nails) or sim.conversion()["physical"] <= 0.001, "nails through it did not add %.0f%% bleed: %s" % [nails * 100.0, str(sim.conversion())])
 	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1), 10.0 * (1.0 - sim.mitigation()) * Data.MELEE_INCOMING), "a melee runner is not hit %.2f× harder" % Data.MELEE_INCOMING)
 	# the first second of a gang: their shot before your swing
 	sim.words[3] = []
@@ -12386,6 +12393,269 @@ func _fix32d_checks(main) -> void:
 
 ## PROBE33's levers (31 Oct, the designer's call): the gate's refill box kept at one box (pinned), the slings' damage back, less built-in bleed on the late melee bases, the bot's element weight halved and the rounds' conversion
 ## counted.
+## The twelve one-save reads (tools/balance.bat's list), [class, element].
+const B34_BUILDS := [["Drifter", "fire"], ["Drifter", "bleed"], ["Poacher", "poison"], ["Poacher", "frost"], ["Doorman", "bleed"], ["Doorman", "physical"],
+	["Scrapper", "shock"], ["Scrapper", "fire"], ["Paramedic", "shock"], ["Paramedic", "frost"], ["Recruit", "physical"], ["Recruit", "poison"]]
+
+
+## A one-save read's camp at its class's opening (BUILD34 phase 1): from a new game as the Poacher, levelled to `lv` with
+## the bot spending its points as the read does (`as_played` for the as-played reads), then every class opened. The bot
+## is set up as tests/balance.gd's _gate sets it.
+func _b34_camp(cls: String, el: String, lv: int, played := false) -> Array:
+	var w = Sim.new()
+	w.start()
+	if w.cls != "Poacher":
+		w.set_class("Poacher")
+	var b = Bot.new()
+	b.cls = "Poacher"
+	b.element = el if cls == "Poacher" else str(Bot.CREW_BUILDS.get("Poacher", ""))
+	b.target_cls = cls
+	b.target_el = el
+	b.as_played = played
+	for l in range(2, lv + 1):
+		w.xp = Data.xp_for_level(l)
+		w.best_level = maxi(w.best_level, l)
+		w.training_points = maxi(int(w.training_points), l - 1)
+		b._train_tree(w)
+	for z in range(w.bosses_beaten.size()):
+		w.bosses_beaten[z] = true
+	w.story_beat = maxi(int(w.story_beat), 1)        # the Drifter's opening
+	return [w, b]
+
+
+## Every one of the twelve reads: its class taken, the bot's tidy opens its build's element at once (the Recruit as
+## physical joined at the crew's floor with every Pitch point spent, and played as the camp's frost and bleed till he
+## out-levelled the crew: 0.7-0.9 h after the Quartermaster on the m33 save). Since 31 Oct a class's own two open free,
+## and every build's element is one of its class's pair: no Pitch point is held for it - none is free at the take.
+func _b34_open_checks() -> void:
+	var missed: Array = []
+	for bd in B34_BUILDS:
+		var cb: Array = _b34_camp(str(bd[0]), str(bd[1]), 12)
+		var w = cb[0]
+		var b = cb[1]
+		var lv := 12
+		while w.pitch_free() > 0 and lv < 30:
+			lv += 1                                 # on to a level the Pitch's next node has left nothing free at
+			w.xp = Data.xp_for_level(lv)
+			w.best_level = lv
+			w.training_points = lv - 1
+			b._train_tree(w)
+		var free0: int = w.pitch_free()
+		b.take_target(w)
+		b._train_tree(w)
+		if free0 != 0 or w.cls != str(bd[0]) or not (str(bd[1]) in w.class_elements()):
+			missed.append("%s as %s: %d Pitch free before, out %s, open %s" % [bd[0], bd[1], free0, w.cls, str(w.class_elements())])
+	_check(missed.is_empty(), "a one-save read's build didn't open its element the step its class was taken, with no Pitch point free: %s" % "; ".join(missed))
+	print("b34 open ok: every one-save read's build opens its element free the step its class is taken, no Pitch point held")
+
+
+## The melee bleed cut (31 Oct, the designer, after PROBE33: the Doorman went melee on the axes' bleed and stayed): the
+## axes 25 to 15 (the Hatchet with them), every melee base at 30-40% to 20, the blade parts halved; no melee base at 30 or over, no part over 8.
+func _b34_bleed_checks() -> void:
+	var want := {"Primary": {"Fire axe": 15, "Felling axe": 15, "Machete": 20, "Billhook": 20, "Bike chain": 20, "Meat cleaver": 20, "Cavalry sabre": 20},
+		"Secondary": {"Knife": 20, "Screwdriver": 20, "Commando dagger": 20, "Hatchet": 15}, Data.ATTACHMENT: {"Nails through it": 8, "A blade on it": 5}}
+	var off: Array = []
+	for sl in want:
+		for nm in want[sl]:
+			var b: Dictionary = Items.base_named(str(sl), str(nm))
+			if b.is_empty() or int(b.get("conv_bleed_pct", -1)) != int(want[sl][nm]):
+				off.append("%s %s" % [nm, str(b.get("conv_bleed_pct", "missing"))])
+	for sl in ["Primary", "Secondary"]:
+		for b in Data.BASES[sl]:
+			if str(b.get("type", "")) == "melee" and int(b.get("conv_bleed_pct", 0)) >= 30:
+				off.append("%s %d, 30 or over" % [b["name"], int(b["conv_bleed_pct"])])
+	for a in Data.ATTACHMENTS:
+		if str(a.get("mount", "")) == "business end" and int(a.get("conv_bleed_pct", 0)) > 8:
+			off.append("%s %d over 8" % [a["name"], int(a["conv_bleed_pct"])])
+	_check(off.is_empty(), "the melee bleed isn't the designer's cut: %s" % ", ".join(off))
+	print("b34 bleed ok: the axes 15, no melee base at 30 or over, the blade parts 8 and 5")
+
+
+## The designer's call (31 Oct): a class's own two elements (Data.AFFINITY) open free; any other costs ELEMENT_OPEN_COST;
+## two a class still. The camp's Pitch pool counts what each starter cost when it was opened, whoever runs after.
+func _b34_own_pair_checks() -> void:
+	var w = Sim.new()
+	w.start()
+	if w.cls != "Poacher":
+		w.set_class("Poacher")
+	var starter := func(el: String) -> String: return Bot.element_starter(el)
+	_check(w.pitch_free() == 0 and w.node_cost(starter.call("poison")) == 0 and w.node_cost(starter.call("fire")) == Data.ELEMENT_OPEN_COST,
+		"a fresh Poacher's prices: poison %d, fire %d, %d Pitch free" % [w.node_cost(starter.call("poison")), w.node_cost(starter.call("fire")), w.pitch_free()])
+	_check(w.train_block(starter.call("fire")) == "wants 1 point" and not w.train_node(starter.call("fire")), "a fresh Poacher with no Pitch point opened fire, off its pair: '%s'" % w.train_block(starter.call("fire")))
+	_check(w.train_node(starter.call("poison")) and w.train_node(starter.call("frost")) and w.class_elements() == ["poison", "frost"] and w.pitch_spent() == 0,
+		"a fresh Poacher with no Pitch point didn't open its own two free: %s, %d spent" % [str(w.class_elements()), w.pitch_spent()])
+	_check(w.train_block(starter.call("fire")) == "two elements open: close one first", "the two-a-class limit went with the price: '%s'" % w.train_block(starter.call("fire")))
+	# the camp's pool holds what was paid: the Doorman (bleed, physical) buys fire with a point; the Drifter (fire his own)
+	# out after doesn't get it back, and the Poacher's free two cost nothing whoever runs
+	for z in range(w.bosses_beaten.size()):
+		w.bosses_beaten[z] = true
+	w.story_beat = 1
+	w.xp = Data.xp_for_level(3)
+	w.best_level = 3
+	_check(w.set_class("Doorman") and w.pitch_free() >= 1 and w.node_cost(starter.call("bleed")) == 0, "the fixture: the Doorman out with a Pitch point (%d free)" % w.pitch_free())
+	w.close_element(str(w.class_elements()[0]))
+	var spent0: int = w.pitch_spent()
+	_check(w.train_node(starter.call("fire")) and w.pitch_spent() == spent0 + 1 and int(w.element_paid.get("fire", -1)) == 1, "the Doorman's fire didn't cost a Pitch point: %d spent from %d" % [w.pitch_spent(), spent0])
+	_check(w.set_class("Drifter") and w.pitch_spent() == spent0 + 1 and w.node_cost(starter.call("fire")) == 1, "the Pitch spent moved with the runner: %d, fire reads %d for the Drifter" % [w.pitch_spent(), w.node_cost(starter.call("fire"))])
+	# and the save keeps it
+	var w2 = Sim.new()
+	w2.load_dict(JSON.parse_string(JSON.stringify(w.to_dict())))
+	_check(w2.pitch_spent() == w.pitch_spent() and w2.element_paid == w.element_paid, "a save and a load lost what the starters cost: %s against %s" % [str(w2.element_paid), str(w.element_paid)])
+	print("b34 own pair ok: a class's own two open free, any other a Pitch point, two a class; the Pitch pool counts what was paid")
+
+
+
+
+## The bot as played (BUILD34 phase 2, the designer's play: "I spent my first two pitch points opening both elements to
+## get the bars moving. Then focussed on the pitch itself").
+func _b34_played_checks() -> void:
+	# the Poacher opens both its elements (free, its own pair), the build's first; its Pitch points go on the Pitch
+	var cb: Array = _b34_camp("Poacher", "frost", 3, true)
+	var w = cb[0]
+	_check(w.class_elements() == ["frost", "poison"] and w.element_paid == {"frost": 0, "poison": 0}, "as played, the Poacher didn't open frost then poison (free, its own pair): %s, paid %s" % [str(w.class_elements()), str(w.element_paid)])
+	var cb_off: Array = _b34_camp("Poacher", "frost", 3)
+	_check(cb_off[0].class_elements() == ["frost"], "as played off, the Poacher opened more than its build's element: %s" % str(cb_off[0].class_elements()))
+	# a class swapped in opens its own two, closing the camp's it doesn't own: the Doorman (bleed, physical) into a camp of
+	# the Poacher's frost and poison, its two Pitch points held for it; the Recruit (physical, poison) keeps the poison
+	for bd in [["Doorman", "bleed"], ["Recruit", "physical"]]:
+		var cs: Array = _b34_camp(str(bd[0]), str(bd[1]), 14, true)
+		var ws = cs[0]
+		var bs = cs[1]
+		var held: int = ws.pitch_free()
+		bs.take_target(ws)
+		bs._train_tree(ws)
+		var own: Array = Bot.own_elements(str(bd[0]), str(bd[1]))
+		var have: Array = ws.class_elements()
+		have.sort()
+		own.sort()
+		_check(ws.cls == str(bd[0]) and have == own, "as played, the %s swapped in didn't open its own two (%s): %s, %d Pitch free before" % [bd[0], str(own), str(ws.class_elements()), held])
+		_check(ws.elements_open.get("Poacher", []) == ["frost", "poison"], "the %s's opens changed the Poacher's two: %s" % [bd[0], str(ws.elements_open.get("Poacher", []))])
+	# class points: both joints' class halves before anything else - the Poacher at level 23 (22 points; both halves cost
+	# 21 by the cheapest paths) holds both, played off it doesn't
+	for played in [true, false]:
+		var cj: Array = _b34_camp("Poacher", "frost", 23, played)
+		var wj = cj[0]
+		var both: bool = Bot.joint_halves("Poacher", "frost")[0] in wj.tree and Bot.joint_halves("Poacher", "poison")[0] in wj.tree
+		_check(both == played, "as played %s, the Poacher at level 23 %s both joints' class halves (%d points, %s)" % [str(played), "held" if both else "didn't hold", int(wj.training_points), str(wj.tree.filter(func(id): return not wj.is_camp(str(id))))])
+	# element points: an open element's to its joint half first - 11 frost points walk the Poacher's frost half
+	for played in [true, false]:
+		var ce: Array = _b34_camp("Poacher", "frost", 3, played)
+		var we = ce[0]
+		we.element_points["frost"] = 11
+		ce[1]._train_tree(we)
+		var half: String = Bot.joint_halves("Poacher", "frost")[1]
+		_check((half in we.tree) == played, "as played %s, 11 frost points %s the Poacher's frost half (%s): %s" % [str(played), "reached" if half in we.tree else "didn't reach", half, str(we.tree.filter(func(id): return we.element_of(str(id)) == "frost"))])
+	# the walk saves for a dear step rather than spend elsewhere: the Poacher at level 8 holds its points for the 3-point
+	# step on the way to its frost half (Snares), where played off they go on the next cheap node
+	var cw: Array = _b34_camp("Poacher", "frost", 8, true)
+	var ww = cw[0]
+	var step: String = cw[1].cheapest_step(ww, Bot.joint_halves("Poacher", "frost")[0])
+	_check(step != "" and ww.node_cost(step) > ww.points_free(), "the fixture: the frost half's next step (%s) isn't dearer than the %d points free" % [step, ww.points_free()])
+	_check(ww.points_free() >= 2, "as played, the Poacher spent its points off the frost half's path instead of saving for %s: %d free" % [step, ww.points_free()])
+	# the kit: the class's second element read at half beside the build's own
+	var kb = Bot.new()
+	kb.cls = "Poacher"
+	kb.element = "frost"
+	var gun: Dictionary = w._plain("Primary", "Old .303")
+	gun["affixes"] = [{"stat": "conv_poison_pct", "value": 20}]
+	var off_share: float = kb._elem_share(gun, null)
+	kb.as_played = true
+	var on_share: float = kb._elem_share(gun, null)
+	_check(is_equal_approx(on_share - off_share, Bot.AS_PLAYED_SECOND * 0.2), "as played, a poison gun's share for the Poacher as frost read %.3f against %.3f off (the second element at half)" % [on_share, off_share])
+	print("b34 played ok: both elements opened first, a class swapped in opens its own, both joints' halves first, the kit's second element at half")
+
+
+## The as-played reads (BUILD34 phase 3): the GATES line's `played` from a camp the bot played as played (the Poacher at
+## level 23, both elements' points in), the summary's section and its gate from fixtures, and the as-played reads kept
+## out of every other gate.
+func _b34_reads_checks() -> void:
+	var Bal = load("res://tests/balance.gd")
+	var Sum = load("res://tools/balance_summary.gd")
+	var cb: Array = _b34_camp("Poacher", "frost", 23, true)
+	var w = cb[0]
+	w.element_points["frost"] = 13
+	w.element_points["poison"] = 13
+	cb[1]._train_tree(w)
+	w.elapsed = 3.0 * 3600.0
+	var pl := {}
+	var g := {"class": "Poacher", "element": "frost", "qm_at": 2.5}
+	Bal.played_note(w, pl, g, w.pitch_spent() - 3)
+	var gp: Dictionary = Bal.played_gates(w, pl, g)
+	var pc: Dictionary = gp.get("classes", {}).get("Poacher", {})
+	_check(pc.get("elements", []) == ["frost", "poison"] and pc.get("opened", []) == [3.0, 3.0] and pc.get("points", []) == [13, 13] and pc.get("points_at_qm", []) == [13, 13] and int(pc.get("pitch", 0)) == 3,
+		"the GATES line's played class reads %s" % str(pc))
+	var jt: Dictionary = pc.get("joints", {})
+	var closed_both: bool = jt.size() == 2 and jt.values().all(func(x): return x["class_half"] == 3.0 and x["element_half"] == 3.0 and x["closed"] == 3.0 and int(x["closed_lv"]) == 23)
+	_check(closed_both and jt.has("poacher_frost") and jt.has("poacher_poison"), "the GATES line's joints read %s" % str(jt))
+	_check(int(gp.get("pitch_spent", -1)) == w.pitch_spent() and int(gp.get("pitch_points", -1)) == w.pitch_points() and not g.has("_points_at_qm"), "the GATES line's Pitch reads %s, or the QM's note was left in" % str(gp))
+	# a joint never closed reads null, and the read's points at the Quartermaster null with no Quartermaster
+	var w2 = _b34_camp("Poacher", "frost", 5, true)[0]
+	var pl2 := {}
+	var g2 := {"class": "Poacher", "element": "frost", "qm_at": -1.0}
+	Bal.played_note(w2, pl2, g2, w2.pitch_spent())
+	var pc2: Dictionary = Bal.played_gates(w2, pl2, g2)["classes"]["Poacher"]
+	_check(pc2["joints"]["poacher_poison"]["closed"] == null and pc2["joints"]["poacher_poison"]["closed_lv"] == null and pc2["points_at_qm"] == [null, null],
+		"a joint never closed or no Quartermaster doesn't read null: %s" % str(pc2))
+	# the summary: the section a row a read, the gate green on both joints by level 30, red past it or never
+	var r_ok := {"build": "Poacher as played", "class": "Poacher", "as_played": true, "manager_at": 1.2, "qm_at": 2.5, "played": gp}
+	var late: Dictionary = gp.duplicate(true)
+	late["classes"]["Poacher"]["joints"]["poacher_poison"]["closed_lv"] = 34
+	var r_late := {"build": "Poacher as played", "class": "Poacher", "as_played": true, "manager_at": 1.2, "qm_at": 2.5, "played": late}
+	var never: Dictionary = pc2.duplicate(true)
+	var r_never := {"build": "Recruit as played", "class": "Recruit", "as_played": true, "manager_at": -1.0, "qm_at": -1.0, "capped_at": 3.1, "played": {"classes": {"Poacher": never}, "pitch_spent": 4, "pitch_points": 4}}
+	_check(bool(Sum.both_joints_row([r_ok])[3]) and not bool(Sum.both_joints_row([r_ok, r_late])[3]) and not bool(Sum.both_joints_row([r_never])[3]) and Sum._kind(str(Sum.both_joints_row([r_ok])[0])) == "design",
+		"the Both joints gate reads %s / %s / %s" % [str(Sum.both_joints_row([r_ok])), str(Sum.both_joints_row([r_ok, r_late])), str(Sum.both_joints_row([r_never]))])
+	_check(str(Sum.both_joints_row([r_late])[2]).contains("poison at level 34") and str(Sum.both_joints_row([r_never])[2]).contains("never played"), "the Both joints gate doesn't say which joint or class: %s" % str(Sum.both_joints_row([r_late, r_never])[2]))
+	var tbl: Array = Sum.played_table([r_ok, r_never])
+	var body: Array = tbl.filter(func(l): return str(l).begins_with("| Poacher") or str(l).begins_with("| Recruit"))
+	_check(tbl.has("## As played: both elements") and body.size() == 2 and str(body[0]).contains("frost 3.0 h (level 23)") and str(body[0]).contains("poison 3.0 h (level 23)")
+		and str(body[0]).contains("poison: 13 / 13") and str(body[0]).contains("| 1.2 h | 2.5 h |") and str(body[1]).contains("not played") and str(body[1]).contains("capped at 3.1 h"),
+		"the summary's As played section reads %s" % "\n".join(tbl))
+	_check(Sum.played_table([]).is_empty(), "the As played section shows with no as-played reads")
+	var sp: Array = Sum.split_played([{"build": "Poacher as frost"}, r_ok])
+	_check(sp[0].size() == 1 and str(sp[0][0]["build"]) == "Poacher as frost" and sp[1].size() == 1, "the as-played reads weren't kept out of the other gates: %s" % str(sp))
+	# the review (31 Oct): the class going in noted as it leaves - the Poacher's two joints closed, then the Doorman out
+	var cs: Array = _b34_camp("Poacher", "frost", 23, true)
+	var ws = cs[0]
+	var bs = cs[1]
+	ws.element_points["frost"] = 13
+	ws.element_points["poison"] = 13
+	bs._train_tree(ws)
+	var pls := {}
+	var gs := {"class": "Poacher", "element": "frost", "qm_at": -1.0}
+	bs.on_swap = func(x) -> void:
+		if x == ws:
+			Bal.played_note(ws, pls, gs, ws.pitch_spent())
+	_check(bs._crew_out(ws, "Doorman") and ws.cls == "Doorman" and pls.get("Poacher", {}).get("closed", {}).size() == 2,
+		"the class going out wasn't noted at the swap: %s" % str(pls.get("Poacher", {})))
+	# and the read's build put back at the end is noted there (its last tidy can close a joint the loop never saw)
+	bs.on_swap = Callable()
+	var ple := {}
+	var ge := {"class": "Poacher", "element": "frost", "qm_at": -1.0}
+	Bal.end_noted(ws, bs, "Poacher", ple, ge, true)
+	_check(ws.cls == "Poacher" and ple.get("Poacher", {}).get("closed", {}).size() == 2, "the read's build put back at the end wasn't noted: %s" % str(ple))
+	# opened itself or inherited: the Recruit as played opens physical with the held point and keeps the camp's poison
+	var cr: Array = _b34_camp("Recruit", "physical", 14, true)
+	var wr = cr[0]
+	cr[1].take_target(wr)
+	cr[1]._train_tree(wr)
+	var plr := {}
+	var gr := {"class": "Recruit", "element": "physical", "qm_at": -1.0}
+	Bal.played_note(wr, plr, gr, wr.pitch_spent())
+	var pr: Dictionary = Bal.played_gates(wr, plr, gr)["classes"]
+	_check(pr.get("Recruit", {}).get("opened_how", []) == ["itself", "inherited"] and pr.get("Poacher", {}).is_empty() == false and not gr.has("_chron_i"),
+		"the Recruit's elements opened itself / inherited read %s" % str(pr.get("Recruit", {}).get("opened_how", [])))
+	_check(gp["classes"]["Poacher"]["opened_how"] == ["itself", "itself"], "the Poacher's own opens read %s" % str(gp["classes"]["Poacher"]["opened_how"]))
+	# a missing as-played read is judged, as off: a name the pass started with no GATES line
+	var pm: Array = Sum.played_with_missing([r_ok], ["Poacher-frost-1", "Poacher-played-1", "Recruit-played-1"])
+	_check(pm.size() == 2 and bool(pm[1].get("missing", false)) and str(pm[1]["build"]) == "Recruit as played" and not bool(Sum.both_joints_row(pm)[3])
+		and str(Sum.both_joints_row(pm)[2]).contains("Recruit as played: no GATES line") and Sum.played_table(pm).any(func(l): return str(l).begins_with("| Recruit as played | no GATES line")),
+		"a missing as-played read wasn't judged off: %s / %s" % [str(pm), str(Sum.both_joints_row(pm))])
+	var all_gone: Array = Sum.played_with_missing([], ["Poacher-played-1", "Doorman-played-1", "Scrapper-played-1", "Paramedic-played-1", "Recruit-played-1", "Drifter-played-1"])
+	_check(all_gone.size() == 6 and not bool(Sum.both_joints_row(all_gone)[3]), "six as-played reads gone left %d judged" % all_gone.size())
+	print("b34 reads ok: the GATES line's played, the summary's As played section and the Both joints gate")
+
+
 func _fix33_checks(main) -> void:
 	var sim = main.sim
 	sim.gate_box_always = false
@@ -12775,8 +13045,8 @@ func _review28_checks(main) -> void:
 	# the bot's element: never closes one it can't replace (A6, D3)
 	s = fresh.call()
 	s.set_class("Drifter")
-	s.xp = Data.xp_for_level(3)
-	s.best_level = 3
+	s.xp = Data.xp_for_level(2)
+	s.best_level = 2                           # one Pitch point: the Drifter's fire opens free (31 Oct), frost takes the point
 	var circle: Array = Data.ELEMENT_TREES.map(func(et): return str(et["element"]))
 	var starter := func(el: String) -> String:
 		var et: Dictionary = Data.element_tree_of(el)
@@ -12791,8 +13061,8 @@ func _review28_checks(main) -> void:
 	var two: Array = s.class_elements()
 	bt2._train_tree(s)
 	_check(s.class_elements() == two, "the bot closed %s with no Pitch point to open %s: %s" % [two[0], circle[2], str(s.class_elements())])
-	s.xp = Data.xp_for_level(4)
-	s.best_level = 4
+	s.xp = Data.xp_for_level(3)
+	s.best_level = 3
 	bt2._train_tree(s)
 	_check(s.element_opened(str(circle[2])) and s.class_elements().size() == Data.ELEMENTS_A_CLASS, "the bot with a Pitch point didn't swap to %s: %s" % [circle[2], str(s.class_elements())])
 	# supplies waiting: What's next says so, ahead of the sites (Matt: as a ready contract did)
@@ -14869,6 +15139,24 @@ func _two_elements_checks(main) -> void:
 	_check(bk._train.visible and bk._train.text == "Open for the Scrapper" and not bk._train.disabled, "a camp element's starter doesn't offer to open free: '%s'" % bk._train.text)
 	bk._on_train()
 	_check(sim.element_opened("shock"), "Open didn't open Live for the Scrapper")
+	# the button's price is the starter's (31 Oct, the class's own two free): one off the Scrapper's pair the camp hasn't
+	# opened reads its Pitch point, from node_cost; both words fit
+	var off_pair := ""
+	for et in Data.ELEMENT_TREES:
+		var oel: String = str(et["element"])
+		if not (oel in Data.AFFINITY["Scrapper"]) and not sim.element_trained(oel):
+			off_pair = Bot.element_starter(oel)
+			break
+	_check(off_pair != "", "the fixture: every element off the Scrapper's pair is open in the camp")
+	bk.selected = off_pair
+	bk._shown = ""
+	main.refresh()
+	_check(bk._train.visible and bk._train.text == "Open (%d Pitch point%s)" % [Data.ELEMENT_OPEN_COST, "" if Data.ELEMENT_OPEN_COST == 1 else "s"] and sim.node_cost(off_pair) == Data.ELEMENT_OPEN_COST,
+		"an off-pair starter's button doesn't read its price: '%s'" % bk._train.text)
+	_check_fit(main, "Training (an off-pair element's starter)")
+	bk.selected = "Live/0"
+	bk._shown = ""
+	main.refresh()
 	# the element's reset: its nodes back to its points, the starter kept, twice asked, priced
 	var spent: int = sim.element_spent("shock")
 	var price: int = sim.element_reset_cost("shock")

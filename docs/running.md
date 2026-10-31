@@ -21,6 +21,22 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
 - The watcher runs one job at a time: no smoke while a balance pass runs.
 - The one-save reads play the campaign as a crew (30 Oct, Matt: "walled with a class, you switch"): two hours of the yard's time with no step forward - a first clear or a new head taken at a person's odds (65%) or better - and the bot sends out the open class that reads the wall best: a played one at 65%, else a new one (which grows to the walled class's level before its own clock runs), else a played one reading it 5 points better (tests/bot.gd wall_check). The class walled is read again when it levels or every two hours and comes back when it reads 65% (wall_return); the read's own build isn't walled away while it's still levelling (a level in the last two hours), and comes back out when the campaign's done. A read that starts as its build (the Poacher's) holds it from the first step. Each read's walls are in GATES `walls` (`[hour, site, a head?, from, to, to's odds, from's odds]`) and the summary's Walls row. The end's figures (the odds, the gang clock, the level, the kit) are the read's build's: it's put back out before they're read (GATES `end_class` names the runner they read).
+- The as-played reads (31 Oct, BUILD34): after the twelve, one a class (`<Class>-played-1`, `-- <hours> one <Class> played
+  0 read1`), started and swapped as the crew read is, with the bot playing every class as the designer does
+  (tests/bot.gd `as_played`): a class opens its two elements first, free (its build's first; a class swapped in
+  closes the camp's it doesn't own), its class points go to both joints' class halves first and each open
+  element's points to its joint half first, by the cheapest way in points (never through a keystone); the kit reads
+  the second element at half. The quick pass caps them as the rest. Their GATES `played` (per class played: when each
+  element opened, its points at the Quartermaster and the end, each joint's halves and closing hour and level, the
+  Pitch it spent) feed the summary's own section, "As played: both elements", and its gate "Both joints" (design: both
+  of the class's joints closed by level 30); every other gate and table leaves them out. `opened_how` says, per
+  element, whether the class opened it itself (a Pitch point, or a free open of the camp's) or inherited it (the
+  camp's two a class takes before it opens or closes one); each class is noted after every step, as it's swapped out,
+  and once more when the read's build is put back at the end. An as-played read the pass started that left no GATES
+  line is judged off ("no GATES line"), and the gate's row shows whenever the pass started any.
+- A one-save read's build opens its element the step its class is taken (31 Oct, BUILD34: the Recruit as physical had
+  played as the camp's frost and bleed until he out-levelled the crew; since the designer's call the same day a class's
+  own two elements open free, so no Pitch point waits for it); GATES `el_open_at` is the hour it opened for its class.
 - The bot never packs its own rig (30 Oct, the clean-up): it buys standard magazines for its guns' types (31 Oct, 0.10.2), boxes enough to fill them plus the gate's box for the refills, meds and cures into the stash, and the game's packer (`Sim.pack_rig` on "fill", whatever the save's top-up setting) puts them in (and `gate_box_always` packs the refill box on any save), so a read measures the rig a player gets on the default. balance.gd reads real magazines: no bottomless rounds.
 - Two reads of a build are one row in the summary: the firsts by their median, the money by the mean, the counts summed - the walls joined, the repeats and the expeditions summed, the bases worn summed in hours, the damage by gun type each read's shares weighing the same. Gate 16 counts a build that never cleared a site as later than any (named); gate 15's scrap income includes the scrap shipped on expeditions.
 - The gauntlet (26 Oct, in every full pass after the one-save reads): each build's end state

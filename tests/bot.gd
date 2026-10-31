@@ -78,6 +78,12 @@ var target_cls := ""
 var target_el := ""
 var _target_taken := false
 var builds := {}                  # class -> {element, keystones_first} as the bot plays it
+## The as-played reads (31 Oct, BUILD34: the designer's play - "I spent my first two pitch points opening both elements
+## to get the bars moving. Then focussed on the pitch itself"): each class opens its own two elements with its first
+## Pitch points, its class points go to both joints' class halves first, each open element's points to its joint half
+## first. Off for every other read.
+var as_played := false
+var on_swap := Callable()        # called with the camp before a class goes in (the as-played read's note); unset, nothing
 ## A broken-build read (26 Oct, Matt: "test they are broken and can smash all content at least once"): the combo's key.
 ## Its set pieces and unique are held on the runner, found again at the reach as it climbs (as a player who chases the
 ## build keeps it); issued kit goes in the slots the build leaves free.
@@ -120,6 +126,8 @@ func _crew_turn(sim) -> int:
 func _crew_out(sim, name: String, quiet := false) -> bool:
 	if not sim.class_open(name):
 		return false                      # shut till its head (or Kev's story): the game's own rule, which set_class leaves to Training
+	if on_swap.is_valid():
+		on_swap.call(sim)                 # the as-played read's note of the class going in (BUILD34, the review)
 	var from: String = sim.cls
 	builds[from] = {"element": element, "keystones_first": keystones_first}     # the class going in keeps its build (the review: the runner's, not the bot's own cls)
 	if not sim.set_class(name):
@@ -1365,17 +1373,31 @@ func _craft_toward(sim) -> void:
 ## behind it - the base's share, its affixes, what's fitted - weighed with its
 ## score; a plain gun needs to be well ahead to displace one that carries the element.
 func _elem_share(it: Dictionary, sim = null) -> float:
+	var sh: float = _elem_share_of(it, element, sim)
+	if as_played:
+		var own: Array = own_elements(cls, element)
+		if own.size() > 1 and str(own[0]) == element:
+			sh += AS_PLAYED_SECOND * _elem_share_of(it, str(own[1]), sim)     # the class's other element (BUILD34): read too, at half
+	return sh
+
+
+## As played, the class's second element's share in the gun's compare: half the build's own (BUILD34) - the build's element
+## first, the other still worth carrying.
+const AS_PLAYED_SECOND := 0.5
+
+
+func _elem_share_of(it: Dictionary, el: String, sim = null) -> float:
 	if str(it.get("rule", "")) == "weed_burner":
-		return 1.0 if element == "fire" else -0.45     # all fire: an element build's own element switched off (25 Oct, the review: on 11 of 24 end kits)
-	if element == "physical":
+		return 1.0 if el == "fire" else -0.45     # all fire: an element build's own element switched off (25 Oct, the review: on 11 of 24 end kits)
+	if el == "physical":
 		# the physical build (Knuckles, 9 Oct): the share of the gun's hit that isn't converted
 		var conv := 0.0
-		for el in Data.ELEMENTS:
-			var st := "conv_%s_pct" % el
+		for ty in Data.ELEMENTS:
+			var st := "conv_%s_pct" % ty
 			conv += float(Items.base_of(it).get(st, 0)) + Items.affix_total(it, st) + Items.fitted_sum(it, st)
 		conv += _rounds_conv_total(it, sim)     # one grade fires at a time: the most converting magazine, not each element's best
 		return maxf(0.0, 1.0 - conv / 100.0)
-	var stat := "conv_%s_pct" % element
+	var stat := "conv_%s_pct" % el
 	var s := float(Items.base_of(it).get(stat, 0))
 	s += Items.affix_total(it, stat)
 	s += Items.fitted_sum(it, stat)
@@ -1682,10 +1704,12 @@ func _train_tree(sim) -> void:
 			break
 	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	if element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission() \
-		and (sim.pitch_free() > 0 or sim.element_trained(element)):
+	if as_played:
+		_open_own(sim)                         # the class's own two with its first Pitch points (BUILD34)
+	if not as_played and element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission() \
+		and can_open(sim, element):
 		sim.close_element(str(sim.class_elements()[0]))     # two a class (28 Oct): the oldest closed for the build's own - only when it can open its own next (the review)
-	if element != "" and not sim.element_opened(element) and (sim.pitch_free() > 0 or sim.element_trained(element)):
+	if not as_played and element != "" and not sim.element_opened(element) and can_open(sim, element):
 		var et0: Dictionary = Data.element_tree_of(element)
 		for i in range(et0["nodes"].size()):
 			var sid: String = "%s/%d" % [et0["name"], i]
@@ -1698,13 +1722,26 @@ func _train_tree(sim) -> void:
 			break
 		sim.train_node(pid)
 	# the elements' regions from their own pools (slice 3: points earned on the use meter), each as far as it goes
+	var saving := {}                          # as played: an element saving its points for the next step to its joint half
+	if as_played:
+		for el in sim.class_elements():
+			var halves: Array = joint_halves(sim.cls, str(el))
+			if not halves.is_empty() and _walk_toward(sim, str(halves[1])):
+				saving[str(el)] = true
 	for et in Data.ELEMENT_TREES:
+		if saving.has(str(et["element"])):
+			continue
 		while sim.element_free(et["element"]) > 0:
 			var eid := _next_in(sim, et)
 			if eid == "" or not sim.can_train(eid):
 				break
 			sim.train_node(eid)
 	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE and not t.has("element") and not t.get("ring", false))     # the class's lanes alone: the Pitch, the elements and the ring have their pools above
+	if as_played:
+		for el in own_elements(sim.cls, element):
+			var halves: Array = joint_halves(sim.cls, str(el))
+			if not halves.is_empty() and _walk_toward(sim, str(halves[0])):
+				return                            # saving for the next step to a joint's class half (BUILD34)
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:
@@ -1717,6 +1754,124 @@ func _train_tree(sim) -> void:
 				break
 			if keystones_first:
 				return                    # save up for it rather than spend elsewhere
+
+
+## The element can be opened for the runner's class now, the two-a-class limit aside: some class opened it (free), or
+## its starter's price is in the Pitch's pool - 0 for one of the class's own pair (31 Oct, the designer).
+static func can_open(sim, el: String) -> bool:
+	return sim.element_trained(el) or sim.pitch_free() >= sim.node_cost(element_starter(el))
+
+
+## A class's own two elements (Data.AFFINITY), the build's element first when it's one of them.
+static func own_elements(c: String, first := "") -> Array:
+	var two: Array = Array(Data.AFFINITY.get(c, [])).duplicate()
+	if first in two:
+		two.erase(first)
+		two.push_front(first)
+	return two
+
+
+## As played (BUILD34): the class's own two elements opened, the build's first - free since 31 Oct (the designer: a
+## class's own pair costs no Pitch point) - and a class swapped in with the camp's two closes the ones it doesn't own for
+## its own, as the game allows (closing is free).
+func _open_own(sim) -> void:
+	if sim.on_mission():
+		return
+	var own: Array = own_elements(sim.cls, element)
+	for el in own:
+		if sim.element_opened(str(el)) or not can_open(sim, str(el)):
+			continue
+		var sid := element_starter(str(el))
+		if sid == "":
+			continue
+		if sim.class_elements().size() >= Data.ELEMENTS_A_CLASS:
+			var drop := ""
+			for o in sim.class_elements():
+				if not (o in own):
+					drop = str(o)
+					break
+			if drop == "" or not sim.close_element(drop):
+				return
+		if sim.can_train(sid):
+			sim.train_node(sid)
+
+
+## An element's starter on the Pitch circle ("" none).
+static func element_starter(el: String) -> String:
+	var et: Dictionary = Data.element_tree_of(el)
+	for i in range(et.get("nodes", []).size()):
+		if Data.web_entry(et["nodes"][i]):
+			return "%s/%d" % [et["name"], i]
+	return ""
+
+
+## A class's joint with an element: [its class tree's half, its element tree's half] as node ids, or [] (BUILD34).
+static func joint_halves(c: String, el: String) -> Array:
+	for j in Data.JOINTS:
+		if str(j["class"]) == c and str(Data.tree_named(str(j["element_tree"])).get("element", "")) == el:
+			return [_joint_node(str(j["tree"]), str(j["key"])), _joint_node(str(j["element_tree"]), str(j["key"]))]
+	return []
+
+
+static func _joint_node(tree_name: String, key: String) -> String:
+	var t: Dictionary = Data.tree_named(tree_name)
+	for i in range(t.get("nodes", []).size()):
+		if str(t["nodes"][i].get("joint", "")) == key:
+			return "%s/%d" % [tree_name, i]
+	return ""
+
+
+## A node walked toward by the cheapest way in points (cheapest_step): every step its pool can pay now. True while it's
+## saving - the next step wants points it hasn't got; false once it's trained or the way's shut for another reason (a
+## level's gate), when the points go on as the bot spends them otherwise.
+func _walk_toward(sim, id: String) -> bool:
+	for _guard in range(64):
+		if id == "" or sim.tree.has(id):
+			return false
+		var nxt: String = cheapest_step(sim, id)
+		if nxt == "":
+			return false
+		if not sim.can_train(nxt):
+			return sim.train_block(nxt).begins_with("wants ")
+		sim.train_node(nxt)
+	return false
+
+
+## The next node to train on the cheapest way to `id`, in points, within its tree: the untrained node nearest the
+## trained ones (or an entry) on the path whose untrained nodes cost least, never through a keystone, a capstone, a
+## bridge or another class's half ("" none). Sim.path_next walks the fewest links, and on the Poacher's Stalking that's
+## through its keystone - a 5-point node at level 20, and the keystone choice taken by the way (BUILD34).
+func cheapest_step(sim, id: String) -> String:
+	if id == "" or sim.tree.has(id):
+		return ""
+	var links: Dictionary = Data.web_links_all()
+	var tree_name: String = id.get_slice("/", 0)
+	var dist := {id: sim.node_cost(id)}
+	var done := {}
+	var open: Array = [id]
+	while not open.is_empty():
+		var mi := 0
+		for k in range(1, open.size()):
+			if int(dist[open[k]]) < int(dist[open[mi]]):
+				mi = k
+		var cur: String = open.pop_at(mi)
+		if done.has(cur):
+			continue
+		done[cur] = true
+		if Data.web_entry(sim.node(cur)) or sim.touches_trained(cur):
+			return cur                         # the cheapest way's first step: reachable now
+		for other in links.get(cur, []):
+			var o := str(other)
+			if done.has(o) or sim.tree.has(o) or o.get_slice("/", 0) != tree_name:
+				continue
+			var nd: Dictionary = sim.node(o)
+			if nd.get("keystone", false) or nd.get("capstone", false) or nd.has("bridge") or not Data.for_classes(nd, sim.my_classes()):
+				continue
+			var d: int = int(dist[cur]) + sim.node_cost(o)
+			if not dist.has(o) or d < int(dist[o]):
+				dist[o] = d
+				open.append(o)
+	return ""
 
 
 ## The Yard's lanes (9 Oct; two lines a building, 28 Oct): each building's line in BOT_LINE, cheapest

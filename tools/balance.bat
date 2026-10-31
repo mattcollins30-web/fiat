@@ -21,6 +21,7 @@ rem First the checkpoint: one save from a new game (the Poacher) to the Radio's 
 rem docs\balance\radio_checkpoint.save. Then side by side:
 rem - the twelve element builds, each its own one save: from the Poacher, its class taken the hour it opens (its head
 rem   beaten, or Kev's first story for the Drifter), the crew's swaps after - twice each (READS); every gate judges them;
+rem - the six as-played reads, one a class (31 Oct): its two elements and both joints, their own section and gate;
 rem - the parity reads: every build four hours from the checkpoint, the same world, no repeat runs, each stopping
 rem   itself at 50 minutes of wall under its 60-minute kill (cut_short on its line) (docs\balance\parity-*.txt);
 rem - the loot probe and the loot read.
@@ -78,6 +79,13 @@ for /l %%S in (1,1,%READS%) do (
 			start "" /b cmd /c tools\balance_read.bat %%B-%%A-%%S 240 %HOURS% one %%B %%A 0 read%%S %CAPARG%
 		)
 	)
+)
+rem the as-played reads (31 Oct, BUILD34): one a class, after the twelve - the class as the designer plays it, both its
+rem elements and both joints (tests\bot.gd as_played); judged on their own (the summary's "As played: both elements")
+for %%C in (Poacher Doorman Scrapper Paramedic Recruit Drifter) do (
+	set /a N+=1
+	>>docs\balance\pass\expected.txt echo %%C-played-1
+	start "" /b cmd /c tools\balance_read.bat %%C-played-1 240 %HOURS% one %%C played 0 read1 %CAPARG%
 )
 rem the parity reads twice a build (25 Oct, the second review: one death decided a 4 h read); the summary takes their mean
 for /l %%S in (1,1,2) do (

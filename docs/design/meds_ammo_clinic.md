@@ -153,4 +153,25 @@ a drum two.
   their guns.
 - **Bleed builds may live on blades** (Matt): a Doorman as bleed on a Fire or Felling axe is the build, not a fault.
   The summary's shown row "Melee share, the non-bleed builds" judges guns on the gun builds.
+- The pass after (c223194, 31 Oct): guns beat the Court sword but the bleed axes took over (the Felling axe the most
+  worn primary; the non-bleed builds 33% melee: Paramedic as frost 94%, Drifter as fire 77%). Matt: **cut the axes
+  and blades**: Fire axe, Felling axe and Hatchet 25 to 15; every melee base at 30-40% bleed to 20 (Machete,
+  Billhook, Bike chain, Meat cleaver; the secondaries Knife, Screwdriver, Commando dagger); Nails through it 15 to 8,
+  A blade on it 10 to 5. Cloud re-reads: Paramedic as frost 0% melee (rifle 99%), Poacher as frost 0%.
+- The Poacher as frost's wall in that pass (never beat the Manager in 8.7 h): loot starvation, not the bot - tier-2
+  bolt guns (Crossbow, Speargun, dps ~108) to the end, no tier 3+ gun found before the sites were picked clean, the
+  Fence with no primaries. Parked for Matt: a weapon drop owed at sites 6-8, or the Fence stocking primaries.
+
+## Elements: a class's own two open free (31 Oct, Matt)
+
+- Matt: "I spent my first two pitch points opening both elements to get the bars moving. Then focussed on the pitch
+  itself ... with the other classes each opening their two ... each class would be able to open its two joins and
+  enjoy both elements." A class swapped in had no Pitch point to open its pair once the Pitch was spent. **A class's
+  own two (AFFINITY) open free**; an off-pair element costs a Pitch point (free where the camp already has it, the
+  28 Oct camp rule). `element_paid` keeps what the camp paid. SAVE_VERSION 15. The note: "Own two free; others a
+  Pitch point".
+- The math (31 Oct): both joints want 21-23 class points, 2 Pitch points (now 0) and 11-13 points in each element;
+  the main element's meter overshoots its whole tree (66 at the Quartermaster on poison, 193 at 50 on bleed); the
+  Pitch (61) can't be finished at 50 (49 points). The balance pass adds six "as played" reads, one a class, both
+  elements and both joints (docs/running.md).
 

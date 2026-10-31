@@ -238,6 +238,112 @@ static func walls_row(full: Array) -> Array:
 	return ["Walls (shown)", "in the campaign, two hours with no step forward: the class that went out", "; ".join(ws) if not ws.is_empty() else "no one-save read", null]
 
 
+## As played (31 Oct, BUILD34: the designer, "with the other classes each opening their two and every class adding
+## points to the trees it makes sense that each class would be able to open its two joins and enjoy both elements"):
+## every as-played read closes both its class's joints by this level. 30: the Pitch and both joints' class halves are
+## 21-23 class points (one a level, so level 22-24 at the earliest) and each element's half 11-13 points earned on its
+## own meter; 30 leaves six or so levels for the meters, and it's the capstones' and the bridge's level.
+const BOTH_JOINTS_BY := 30
+
+
+## The reads split: [every other read, the as-played reads] - the as-played kept out of every other gate and table.
+static func split_played(all: Array) -> Array:
+	return [all.filter(func(b): return not bool(b.get("as_played", false))), all.filter(func(b): return bool(b.get("as_played", false)))]
+
+
+## The as-played reads with one a class the pass started (a `<Class>-played-<N>` name, from pass/expected.txt or a file
+## with no GATES line) that gave none: {build, class, as_played, missing}.
+static func played_with_missing(played: Array, names: Array) -> Array:
+	var out: Array = played.duplicate()
+	var have := {}
+	for b in played:
+		have[str(b.get("build", ""))] = true
+	for nm in names:
+		if not str(nm).contains("-played-"):
+			continue
+		var c: String = str(nm).get_slice("-", 0)
+		var bn: String = c + " as played"
+		if not have.has(bn):
+			have[bn] = true
+			out.append({"build": bn, "class": c, "as_played": true, "missing": true})
+	return out
+
+
+## A read's class as played (its `played` entry for the read's own class), or {}.
+static func _played_class(b: Dictionary) -> Dictionary:
+	return b.get("played", {}).get("classes", {}).get(str(b.get("class", "")), {})
+
+
+## The gate "Both joints" (design): green when every as-played read closed both its class's joints by BOTH_JOINTS_BY.
+static func both_joints_row(played: Array) -> Array:
+	var off: Array = []
+	var ok_words: Array = []
+	for b in played:
+		if b.get("missing", false):
+			off.append("%s: no GATES line (the read crashed, was killed or never wrote)" % b.get("build", "?"))
+			continue
+		var pc: Dictionary = _played_class(b)
+		if pc.is_empty():
+			off.append("%s: its class never played" % b.get("build", "?"))
+			continue
+		var late: Array = []
+		var lvs: Array = []
+		for key in pc.get("joints", {}):
+			var jt: Dictionary = pc["joints"][key]
+			if jt.get("closed", null) == null:
+				late.append("%s never" % str(jt.get("element", key)))
+			elif int(jt.get("closed_lv", 99)) > BOTH_JOINTS_BY:
+				late.append("%s at level %d" % [str(jt.get("element", key)), int(jt["closed_lv"])])
+			else:
+				lvs.append(int(jt["closed_lv"]))
+		if pc.get("joints", {}).size() < 2:
+			late.append("%d joints" % pc.get("joints", {}).size())
+		if late.is_empty():
+			ok_words.append("%s by level %d" % [b.get("build", "?"), lvs.max()])
+		else:
+			off.append("%s: %s%s" % [b.get("build", "?"), ", ".join(late), " (capped at %.1f h)" % float(b["capped_at"]) if b.has("capped_at") else ""])
+	return ["Both joints", "every as-played read closes both its class's joints by level %d" % BOTH_JOINTS_BY,
+		("every read: " + "; ".join(ok_words)) if off.is_empty() else "off: " + "; ".join(off), off.is_empty()]
+
+
+## The section "As played: both elements" (shown): a row a read - its class's two joints' closing (hour, level), the
+## second element's points at the Quartermaster and at the end, the hours to the Manager and the Quartermaster.
+static func played_table(played: Array) -> Array:
+	if played.is_empty():
+		return []
+	var out: Array = ["", "## As played: both elements", "",
+		"Each class as the designer plays it (31 Oct): its first two Pitch points open its two elements, its class points go to both joints' class halves first, each element's points to its joint half first. The build's element first; the second is the class's other.", "",
+		"| Read | First joint closed | Second joint closed | Second element's points (Quartermaster / end) | Manager | Quartermaster | Pitch spent |",
+		"| --- | --- | --- | --- | --- | --- | --- |"]
+	for b in played:
+		if b.get("missing", false):
+			out.append("| %s | no GATES line | | | | | |" % b.get("build", "?"))
+			continue
+		var pc: Dictionary = _played_class(b)
+		var cells: Array = []
+		var els: Array = pc.get("elements", [])
+		for k in range(2):
+			var el: String = str(els[k]) if k < els.size() else ""
+			var words := "not played"
+			for key in pc.get("joints", {}):
+				var jt: Dictionary = pc["joints"][key]
+				if str(jt.get("element", "")) == el:
+					words = "%s never" % el if jt.get("closed", null) == null else "%s %.1f h (level %d)" % [el, float(jt["closed"]), int(jt.get("closed_lv", 0))]
+			cells.append(words)
+		var second := "-"
+		if els.size() > 1:
+			var at_qm = pc.get("points_at_qm", [])
+			var qm_pts: String = str(int(at_qm[1])) if at_qm is Array and at_qm.size() > 1 and at_qm[1] != null else "-"
+			second = "%s: %s / %d" % [str(els[1]), qm_pts, int(pc.get("points", [0, 0])[1])]
+		var mgr: float = float(b.get("manager_at", -1.0))
+		var qm: float = float(b.get("qm_at", -1.0))
+		out.append("| %s%s | %s | %s | %s | %s | %s | %d of %d |" % [b.get("build", "?"), " (capped at %.1f h)" % float(b["capped_at"]) if b.has("capped_at") else "", cells[0], cells[1], second,
+			"never" if mgr < 0.0 else "%.1f h" % mgr, "never" if qm < 0.0 else "%.1f h" % qm,
+			int(b.get("played", {}).get("pitch_spent", 0)), int(b.get("played", {}).get("pitch_points", 0))])
+	out.append("")
+	return out
+
+
 ## The itemisation's rows (29 Oct; the fix round, the review's B5: every slot, "none worn" where a read wore nothing
 ## there, and the campaign's bases worn by no read): [name, what, words, null] each, shown, never judged.
 static func itemisation_rows(full: Array) -> Array:
@@ -391,6 +497,12 @@ func _init() -> void:
 		else:
 			builds.append(g)
 	var reads: Array = builds.filter(func(b): return not b.get("missing", false))
+	# the as-played reads (31 Oct, BUILD34): their own section and gate, outside every other gate and table
+	var split: Array = split_played(reads)
+	reads = split[0]
+	# an as-played read the pass started that left no GATES line is judged too, as off (the review: a crashed one dropped
+	# out of the gate, and all six gone left no row)
+	var played: Array = played_with_missing(split[1], expected + builds.filter(func(b): return b.get("missing", false)).map(func(b): return str(b["build"])))
 	# the same build read more than once (the bat runs each twice): one line a build for the gates -
 	# the firsts and the odds by their median, the money by the mean, the counts summed - and every
 	# read on its own in the builds table
@@ -519,6 +631,8 @@ func _init() -> void:
 			push.append("%s %d deaths, %d wounded of %d tries%s" % [bb.get("build", "?"), int(bb.get("deaths", 0)), int(bb.get("wounds", 0)), tries_n, (" (from level %d)" % int(bb["lifted_from"])) if bb.has("lifted_from") else ""])
 		rows.append(["G2. The rest at a push", "every other build as played: every place of the endgame inside three tries", "every build" if off_g.is_empty() else "off: " + "; ".join(off_g), off_g.is_empty()])
 		rows.append(["G2. The push (shown)", "the deaths and wounds it took", "; ".join(push), null])
+	if not played.is_empty():
+		rows.append(both_joints_row(played))
 	var reds := 0
 	var reds_by := {"design": 0, "bot timing": 0, "bot play": 0}
 	for r in rows:
@@ -543,7 +657,8 @@ func _init() -> void:
 	out.append("# Balance summary")
 	out.append("")
 	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds (%d element, %d plain)%s, on commit %s. %s%s" % [
-		Time.get_datetime_string_from_system(false, true), reads.size(), full.size() + plains.size(), full.size(), plains.size(), " and the probe" if not probe.is_empty() else " (no probe)",
+		Time.get_datetime_string_from_system(false, true), reads.size(), full.size() + plains.size(), full.size(), plains.size(),
+		(" and the probe" if not probe.is_empty() else " (no probe)") + ((", %d as played" % played.size()) if not played.is_empty() else ""),
 		commit if commit != "" else "unknown (no pass/commit.log)",
 		("%d RED: %d design, %d bot timing, %d bot play." % [reds, reds_by["design"], reds_by["bot timing"], reds_by["bot play"]]) if reds > 0 else "No reds.",
 		(" %d not judged (%s)." % [unjudged.size(), "; ".join(unjudged)]) if not unjudged.is_empty() else ""])
@@ -560,7 +675,7 @@ func _init() -> void:
 	# the quick pass's cap (28 Oct): a read stopped on its wall cap is judged on the hours it got to - a "never" in it
 	# may be the cap, not the build
 	var capped: Array = []
-	for rd in reads:
+	for rd in reads + played:
 		if rd.has("capped_at"):
 			capped.append("%s at %.1f h of %d" % [rd.get("build", "?"), float(rd["capped_at"]), int(rd.get("hours", 0))])
 	if not capped.is_empty():
@@ -574,6 +689,7 @@ func _init() -> void:
 	out.append("| --- | --- | --- | --- | --- |")
 	for r in rows:
 		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
+	out.append_array(played_table(played))
 	var head := out.size()
 	out.append_array(gauntlet_table(read_gauntlet(), "The gauntlet: each build's end state as played", false))
 	out.append_array(gauntlet_table(broken, "The pinnacle builds: the gauntlet with their pieces on (gate G1)", true))

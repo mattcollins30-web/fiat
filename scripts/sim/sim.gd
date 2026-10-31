@@ -3295,12 +3295,23 @@ func node_cost(id: String) -> int:
 	var parts := id.split("/")
 	var n := node(id)
 	if is_element_starter(id):
-		return Data.ELEMENT_OPEN_COST                   # the Pitch circle (24 Oct): a Pitch point opens an element
+		return starter_cost(id)
 	return Data.base_cost(Data.tree_named(parts[0]), n)
 
 
-## An element's starter (24 Oct, Matt: the Pitch a circle with the elements' starters on it): open at any time, paid
-## from the Pitch's pool; only an opened element's meter fills, so no element is free by the way a build plays.
+## An element's starter's price in Pitch points (31 Oct, the designer: a class's own two open free): one of the runner's
+## class's pair (Data.AFFINITY) 0, any other ELEMENT_OPEN_COST (the Pitch circle, 24 Oct). One in the camp's tree reads
+## what was paid for it when it was opened (element_paid), whoever runs now: the Pitch's pool counts it once.
+func starter_cost(id: String) -> int:
+	var el := element_of(id)
+	if tree.has(id):
+		return int(element_paid.get(el, Data.ELEMENT_OPEN_COST))     # none written (a fixture's starter put straight in): the old price
+	return 0 if el in Data.AFFINITY.get(cls, []) else Data.ELEMENT_OPEN_COST
+
+
+## An element's starter (24 Oct, Matt: the Pitch a circle with the elements' starters on it): open at any time - the
+## class's own two free (31 Oct), any other a Pitch point from the Pitch's pool, free too where the camp already has it;
+## only an opened element's meter fills, so no element fills by the way a build plays without being opened.
 func is_element_starter(id: String) -> bool:
 	return element_of(id) != "" and Data.web_entry(node(id))
 
@@ -3309,11 +3320,13 @@ func is_element_starter(id: String) -> bool:
 ## its runner uses and fills only those. The camp keeps every element's nodes and points, whoever opened them: a class
 ## opens one another class trained for nothing, and closes one of its two for nothing, to open another.
 var elements_open := {}            # class -> [element, ...] in the order opened
+var element_paid := {}             # element -> the Pitch points its starter cost when the camp first opened it (31 Oct: own pair free)
 func element_opened(el: String) -> bool:
 	return el in class_elements()
 
 
-## The element's starter is in the camp's tree: some class paid its Pitch point.
+## The element's starter is in the camp's tree: some class opened it (its own two free, any other a Pitch point), so
+## any class opens it for nothing.
 func element_trained(el: String) -> bool:
 	for id in tree:
 		if element_of(str(id)) == el and Data.web_entry(node(str(id))):
@@ -3676,6 +3689,8 @@ func train_node(id: String) -> bool:
 			chron("element_open", {"element": element_of(id), "free": true})
 			return true
 	var paid: int = node_cost(id)
+	if is_element_starter(id):
+		element_paid[element_of(id)] = paid     # what the camp paid, kept: the next runner's price for it is another (31 Oct)
 	var held := keystone_held_against(id)
 	if held != "":
 		tree.erase(held)                  # the keystone choice: the one held goes, its points back (free_for reads the tree)
@@ -15131,7 +15146,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "supplies_in": supplies_in, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "element_paid": element_paid.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -15315,6 +15330,9 @@ func load_dict(d: Dictionary) -> void:
 		if pt is Dictionary and pt.has("rule"):
 			patterns.append({"unique": str(pt.get("unique", "")), "slot": str(pt.get("slot", "")), "rule": str(pt["rule"])})
 	element_points = {}
+	element_paid = {}
+	for k in d.get("element_paid", {}):
+		element_paid[str(k)] = int(d["element_paid"][k])
 	for k in d.get("element_points", {}):
 		element_points[str(k)] = int(d["element_points"][k])
 	elements_open = {}
