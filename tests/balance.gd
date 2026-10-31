@@ -329,7 +329,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
 		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save,
-		# P1 on the campaign alone (25 Oct, Matt: past level 50 a death starts again at level 1 by design; the death band is
+		# P1 on the campaign alone (to the Quartermaster: past him a death keeps the level, past 50 the paragon goes - 31 Oct; the death band is
 		# the campaign's): the runs, deaths and bails (left under a quarter HP) until the Quartermaster falls
 		"campaign_runs": 0, "campaign_deaths": 0, "campaign_bails": 0, "first_bail_at": -1.0, "repeats": 0, "repeat_runs": 0, "repeat_bails": 0, "norepeat": Bot.norepeat,
 		# P3 on the runs the bot takes at a person's odds (25 Oct, the tools review: farmed at PUSH, the median is 100% by
@@ -950,9 +950,9 @@ func _broken(_hours: float, key: String, _plain := false, read_n := "") -> void:
 ## its own level, GAUNTLET_TRIES tries. Before each County zone the issued kit it wants is bought and worn in the slots
 ## the build leaves free. A death puts the camp back as it was before the try (the kit is the question, not one life).
 ## A place not won is opened anyway (`forced`), so every later one still gets its fight. Broken: every one won.
-const STANDARD_REACH := 90        # the gauntlet's camp (Matt, 27 Oct): past the County's top, at the Grid's repeat
+const STANDARD_REACH := 55        # DRAFT (31 Oct): to be replaced from the pass's figures at hour 20. Set from the target band alone (level 50 at 12-24 h, the reach near the level), not from a read: no read of the merged build reaches hour 20 yet. Was 90 (Matt, 27 Oct: past the County's top)
 const STANDARD_ROLLS := 30        # finds a slot, the best kept
-const STANDARD_PARAGON := 30      # the camp's paragon points (Matt, 27 Oct)
+const STANDARD_PARAGON := 5       # DRAFT (31 Oct): to be replaced from the pass's figures at hour 20. Set from the band too (a few paragon levels past 50 at PARAGON_XP_GROW 0.25), not from a read. Was 30 (Matt, 27 Oct)
 const GAUNTLET_TRIES := 3
 const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
 const GAUNTLET_WALL_MIN := 50     # minutes of wall before the read stops and says so (the fix round, H1: balance.bat kills it at 60)

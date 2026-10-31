@@ -817,7 +817,7 @@ func _pass_rows(rows: Array, full: Array) -> void:
 			int(bd.get("campaign_deaths", bd.get("deaths", 0))), int(bd.get("campaign_bails", 0)), runs, _hours(fd), _hours(fb)])
 		if is_inf(every) or every < DEATH_EVERY[0] or every > DEATH_EVERY[1] or fd < 0.0 or fd > FIRST_DEATH_BY * BOT_PACE:
 			off.append(all_t[-1])
-	rows.append(["P1. Deaths", "in the campaign (to the Quartermaster: past level 50 a death starts again at level 1 by design), a death or a bail (left under a quarter HP) one run in %.0f-%.0f; the first death by %.1f h (bot)" % [DEATH_EVERY[0], DEATH_EVERY[1], FIRST_DEATH_BY * BOT_PACE],
+	rows.append(["P1. Deaths", "in the campaign (to the Quartermaster: past him a death keeps the level, past 50 the paragon goes), a death or a bail (left under a quarter HP) one run in %.0f-%.0f; the first death by %.1f h (bot)" % [DEATH_EVERY[0], DEATH_EVERY[1], FIRST_DEATH_BY * BOT_PACE],
 		(("off: " + "; ".join(off)) if not off.is_empty() else "every build: " + "; ".join(all_t)) + (" (reads from before 25 Oct: their whole read's deaths, no bails)" if old_reads else ""), off.is_empty()])
 	off = []
 	all_t = []

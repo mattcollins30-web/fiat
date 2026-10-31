@@ -165,7 +165,7 @@ const REBUILD := {
 	"built": "%s rebuilt: rank %d. The town's worth is %d.",
 	"opened": "%s is open on the map, under the order.",
 	"material": "Brought home: %s",
-	"note": "The first true FIAT note. Its value is as stated. The mint pays double from here.",
+	"note": "The first true FIAT note. Its value is as stated. Beat the Issuer again and he prints more.",     # 31 Oct: the note's doubling went with the Issue (25 Oct); each win after the first prints a haul
 	"order_lost": "%s is still standing.",
 	"order_won": "%s is down. The order is one short.",
 }
@@ -1527,6 +1527,11 @@ const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", 
 const STAMP := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "not_kit": "Only a piece of kit", "issued": "Issued already",
 	"done": "Stamped already", "no_issue": "Nothing issued for this slot", "short": "Short of fiat", "log": "Stamped for the County: %s, for %s.", "tag": "Stamped · counts as issued for the County",
 	"tag_short": "Stamped"}
+const NODE_DARK_PAST_TWO := "idle without the Quartermaster's Manual, the Last Orders or the Headmaster's Cap"     # an element past the class's first two, the item off (31 Oct, BUILD37 G): Training's panel
+const NODE_BLOCK_IDLE := "%s: idle without the Quartermaster's Manual, the Last Orders or the Headmaster's Cap"     # train_block on an idle element's untrained node (31 Oct, the review)
+const NODE_DARK_NOT_OPEN := "idle: %s isn't open for the %s"     # a camp-trained element this class hasn't opened (31 Oct, the UI review: not "two elements" while the cap's lifted)
+const NODE_DARK_AND_LEVEL := "%s, and idle until level %d"     # idle for an element's reason and a keystone's or capstone's level both (31 Oct, the UI review)
+const NODE_DARK_LEVEL := "idle until level %d"     # a keystone or capstone the camp keeps, under its level (31 Oct, BUILD37 C): Training's panel
 const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "hint": "Click or Space · the class waits in Training",
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {
@@ -1557,6 +1562,7 @@ const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The Pitch is set. One runner, a hammer, the estate outside.",
 	"paragon_lost": "The crew's %d paragon levels went with them; the next runner starts at level 50.",
+	"level_kept": "The XP towards the next level went with them; the next runner starts at level %d.",     # past the Quartermaster (31 Oct)
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
 	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Pitch by morning.",
@@ -1650,6 +1656,7 @@ const WOUNDS := {
 ## The Pitch circle (24 Oct): an element shut till its starter's opened - the class's own two free, any other a Pitch
 ## point (31 Oct, the designer).
 const ELEMENT_SHUT := "shut"
+const ELEMENT_IDLE := "idle"     # the web key: an element opened past the class's two, its lifting item off (31 Oct)
 const ELEMENTS_NOTE := "Own 2 free; others 1 Pitch point"     # the language pass (31 Oct); web_key.fit_fails holds it to its room
 const OPEN_FREE := "Open: free"     # Training's button on an element's starter that costs nothing: the class's own two, or one the camp has
 const OPEN_COST := "Open: %s"     # one that costs: "Open: 1 Pitch point"

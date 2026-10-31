@@ -10,7 +10,7 @@ const Sim := preload("res://scripts/sim/sim.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const OUT := "res://docs/test_saves/"
-const SAVE_VERSION := 3          # main.gd's
+const Main := preload("res://scripts/ui/main.gd")     # its SAVE_VERSION, read, not copied (31 Oct, the tools review: a copy at 3 wrote saves main.gd refuses)
 
 
 func _init() -> void:
@@ -54,7 +54,7 @@ func _init() -> void:
 					sim.stash_put(box)
 					break
 		var f := FileAccess.open(OUT + g + ".save", FileAccess.WRITE)
-		f.store_string(JSON.stringify({"version": SAVE_VERSION, "saved": Time.get_unix_time_from_system(), "sim": sim.to_dict()}))
+		f.store_string(JSON.stringify({"version": Main.SAVE_VERSION, "saved": Time.get_unix_time_from_system(), "sim": sim.to_dict()}))
 		f.close()
 		print("%s: %d guns, %d cells of %d%s" % [g, groups[g].size() - left.size(), sim.stash_used(), sim.stash_cap(), (" - no room for " + ", ".join(left)) if not left.is_empty() else ""])
 	quit()

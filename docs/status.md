@@ -6118,6 +6118,41 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 31 Oct, the night round: everything open, Matt's calls (0.10.2, SAVE_VERSION 16)
+
+Matt: "push everything thru ... put everything to me as a question and we'll do the whole lot"; then, asleep: "take
+your recommendations on anything that comes up and run balance passes as required". Three builders (E the endgame,
+G the loose ends, C the clean-up), merged 3-way, a three-stage review (docs-level copies: the scratchpad's
+review37_*.md), a fix round, a language pass, a per-diff review, the smoke green on Matt's machine.
+
+- **The endgame** (docs/design/endgame_runaway_31oct.md): after the Quartermaster a death costs the XP towards the
+  next level, never the level (before him, as before; past 50 the paragon); signals steeper (CURVE grow 0.12 to 0.16,
+  CURVE_LATE_GROW 0.07 to 0.12); percent lines stop growing past item level 20 (PCT_LINE_TOP); signal XP growth 0.05
+  to 0.02 and XP_TAPER_END 3.1 to 4.0; sale worth grows 2% an item level past 20 (WORTH_GROW); the words' pool and
+  drop cap at WORD_TIER_POW 1.75 (WORD_POOL_POW_TOP); the paragon adds instead of compounding and each level costs
+  25% more (PARAGON_XP_GROW 0.25). Drafts for the pass.
+- **The Quartermaster's Manual, the Last Orders and the Headmaster's Cap** lift the two-elements-a-class cap while
+  worn; taken off, those past two idle ("idle without ..."). Their words say so.
+- **Camp keystones and capstones idle below their level** (20 / 30) for any runner (C's rule, Matt: keep): "Idle until
+  level N". The level gates on training were already on.
+- **The Mint pays on clears only.** **The three T4 heavies** (Stab plates, Medic's harness, the Cargo frame) keep their
+  home site's draw and also drop across their zone. **Expeditions average about x1.2 the cargo** with the bot's hands
+  (EXP_RETURN 1.55, bad rolls and hold-ups in); shipping scrap still never beats the Fence; the exchange round trip
+  can pay on small low-risk trips (Matt: acceptable; per trip x0.74-1.31 by risk and the exchange's perks, before
+  wages).
+- **An open element's bar fills from all the class's damage at a quarter** (ELEMENT_METER_SHARE 0.25).
+- **The clean-up:** sell_commons, ditch_commons, auto_sell, buy_med, best_in_stash (moved to the bot), site_state,
+  med_price, affinity(), word_totals, lane_colour, ATLAS_GLYPH, YARD_OLD, CORE_GATES, CORE_CAPSTONE gone; paper_keep
+  wired (the Lock-up's Log line).
+- **Words** (the language pass): the death card "still level N" and its paragon chips; the Ratter "Poison and bleed
+  do 10% more damage"; the FIAT note "Beat the Issuer again and he prints more"; the Mint's chip "Pays tins by worth
+  on clears"; the paragon rows "+2% damage a point".
+- **The gauntlet's standard camp** is a draft (reach 55, paragon 5) until the full pass gives hour-20 figures.
+- **Docs still to bring in line** (the tools review): vision.md 24, 43 and trees.md 102 (a death to level 1);
+  rebuild.md 82, 95, 142 (the Mint pays every run, double with the note); trips.md 74, 178 (x0.85, "convert, don't
+  print"); resets_strip_exchange.md 45 (two elements, no lift); mythics.md 23; uniques.md 21, 61; web.md (the idle
+  rule); yard.md 62 (the Ratter).
+
 ## Parked from the playtest (30 Oct, 0.10.1 plus the clean-up; taken up after it)
 
 Taken up the same evening (Matt paused the playtest for magazines as items): all six built in 0.10.2 - item 1 the

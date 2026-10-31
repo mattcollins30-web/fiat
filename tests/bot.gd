@@ -33,8 +33,8 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 ## The crew (21 Oct, step 7): the reach stood CREW_STAND with nothing to run, another class goes out - a played one
-## reading PUSH on a held signal; else the played one CREW_AHEAD levels or more over the one out (a death's level 1
-## goes back to the best); else, the one out at the cap, the next not played, at the crew's build for it (CREW_BUILDS;
+## reading PUSH on a held signal; else the played one CREW_AHEAD levels or more over the one out (a death
+## before the Quartermaster sends a runner back to level 1; past him it keeps the level); else, the one out at the cap, the next not played, at the crew's build for it (CREW_BUILDS;
 ## the read's own class keeps the read's build). Swaps are free at camp; each class keeps its own tree and kit.
 ## (The first cut sent a new class out every two hours: five level-1 runners and nobody at the reach.)
 const CREW_STAND := 7200.0
@@ -1706,7 +1706,7 @@ func _train_tree(sim) -> void:
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
 	if as_played:
 		_open_own(sim)                         # the class's own two with its first Pitch points (BUILD34)
-	if not as_played and element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.on_mission() \
+	if not as_played and element != "" and not sim.element_opened(element) and sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.elements_lifted() and not sim.on_mission() \
 		and can_open(sim, element):
 		sim.close_element(str(sim.class_elements()[0]))     # two a class (28 Oct): the oldest closed for the build's own - only when it can open its own next (the review)
 	if not as_played and element != "" and not sim.element_opened(element) and can_open(sim, element):
@@ -1784,7 +1784,7 @@ func _open_own(sim) -> void:
 		var sid := element_starter(str(el))
 		if sid == "":
 			continue
-		if sim.class_elements().size() >= Data.ELEMENTS_A_CLASS:
+		if sim.class_elements().size() >= Data.ELEMENTS_A_CLASS and not sim.elements_lifted():     # the Manual, the Last Orders or the Cap: open another, close none (31 Oct)
 			var drop := ""
 			for o in sim.class_elements():
 				if not (o in own):
@@ -2129,6 +2129,21 @@ func _dispose(sim, it: Dictionary) -> bool:
 	return sim.sell(it) if sim.room_open("fence") else sim.bin(int(it["id"]))
 
 
+## The best of a slot in the stash, tried on, or {} (31 Oct, the clean-up: the bot's own, out of the sim, which never
+## asked it). The kit's key once a scan (22 Oct, the pass's wall): nothing moves while it looks.
+static func best_in_stash(sim, slot: String) -> Dictionary:
+	var best := {}
+	var bs := -INF
+	var key: int = sim._kit_key()
+	for it in sim.stash:
+		if it["slot"] == slot:
+			var v: float = sim.fit_value(it, slot, key)
+			if v > bs:
+				best = it
+				bs = v
+	return best
+
+
 func _sell_spares(sim) -> void:
 	var keep_type: String = TYPE_OF.get(sim.cls, "") if keystones_first else ""
 	# meds: a dozen cells' worth stay, the dearest; the rig can't carry more and they pile up otherwise
@@ -2165,7 +2180,7 @@ func _sell_spares(sim) -> void:
 	# each, with the kit's key hashed every ask): the best of each slot, of the class's type, of each mount
 	var best_id := {}
 	for slot in Data.SLOTS:
-		var b: Dictionary = sim.best_in_stash(slot)
+		var b: Dictionary = best_in_stash(sim, slot)
 		if not b.is_empty():
 			best_id[slot] = int(b["id"])
 	var type_best: Dictionary = _best_of_type(sim, keep_type) if keep_type != "" else {}

@@ -72,11 +72,6 @@ var auto_equip := false            # idle: the best of each slot goes on when a 
 const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Gloves", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
 var junk_upto := -1
 var junk_keep := ""
-var auto_sell: bool:                 # the old toggle: on is "sell the commons" (old saves, the tests)
-	get:
-		return junk_upto >= 0
-	set(v):
-		junk_upto = (maxi(junk_upto, 0) if v else -1)
 ## What came back (11 Oct, Matt's list): every run since the player last looked, added up for the Runs screen's card -
 ## runs, deaths, cash, XP, notes, scrap, items stashed, kit lost, the dearest find, the levels, and the firsts.
 var came_back := {}
@@ -311,8 +306,8 @@ func paragon_pct(key: String) -> float:
 	return float(Data.paragon_row(key).get("pct", 0.0)) * paragon_pts(key)
 
 
-## Compounding (25 Oct, the review: added, the board fell behind crews that compound): each point multiplies, so the
-## board grows at its stated rate for good - damage and HP 2% a point on the last, the tins 3%.
+## A row's multiplier: a row in PARAGON_COMPOUND multiplies each point on the last (25 Oct); since the designer's call
+## (31 Oct, PROBE36) that list is empty and every row adds - damage and HP 2% a point, the tins 3%.
 func paragon_mult(key: String) -> float:
 	var pct: float = float(Data.paragon_row(key).get("pct", 0.0)) / 100.0
 	if key in Data.PARAGON_COMPOUND:
@@ -1537,8 +1532,8 @@ func set_class(name: String) -> bool:
 ## The crew's floor (30 Oct, Matt, shared XP option B): each class keeps its own level, tree and kit, but one swapped in
 ## (a benched class, or a new one) joins at no less than the best of the crew's OTHER classes less CREW_FLOOR_UNDER, never
 ## past MAX_LEVEL (the paragon's untouched). The XP is raised to that level's threshold and the levels gained go through
-## _earn_points, as if levelled. Only set_class lifts: a death (which never swaps) still puts its class back to level 1
-## and that class stays there for the rest of its spell out; it's lifted again only when it next comes in after another
+## _earn_points, as if levelled. Only set_class lifts: a death (which never swaps) before the Quartermaster still puts its class
+## back to level 1 (past him it keeps the level, 31 Oct) and that class stays there for the rest of its spell out; it's lifted again only when it next comes in after another
 ## class has been out (the floor is read off the other classes, never its own old level). crew_level stays the stored
 ## level (what the bench, a lead and a save hold); join_level is what a swap would bring out.
 func join_level(name: String) -> int:
@@ -1666,13 +1661,6 @@ func trees() -> Array:
 	out.append_array(Data.ELEMENT_TREES)
 	out.append(Data.RING)
 	return out
-
-
-## Whether an element is one of the runner's two (or the second past's).
-func affinity(element: String) -> bool:
-	if element == "" or has_rule("qm_manual"):
-		return true
-	return element in Data.AFFINITY.get(cls, [])
 
 
 ## The runner's trait, as a multiplier on a figure (1.0 when it has none).
@@ -2294,10 +2282,6 @@ func paper_odds(i: int) -> float:
 	var shape: Dictionary = Data.TIERS[i]["shape"]
 	return Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0) \
 		* (1.0 + town_stat("paper_pct") / 100.0) * (2.0 if has_rule("registrars_satchel") else 1.0)     # the library, the Registrar's Satchel (18 Oct)
-
-
-func site_state(i: int) -> String:
-	return site_state_forms(i)[0]
 
 
 ## The site's crates for the Map's tile (27 Oct): fresh; what's left there, the best first; or picked clean and when a
@@ -3176,7 +3160,19 @@ func _active(n: Dictionary) -> bool:
 func node_active(id: String) -> bool:
 	var n := node(id)
 	var el := element_of(id)
-	return not n.is_empty() and _active(n) and (el == "" or element_opened(el))     # the web (22 Oct): an element's top works for anyone who paths to it; an element the class has open (28 Oct)
+	return not n.is_empty() and _active(n) and (el == "" or element_opened(el)) and level_open(n)     # the web (22 Oct): an element's top works for anyone who paths to it; an element the class has open (28 Oct); its level reached (31 Oct)
+
+
+## A keystone or capstone works only at its level (31 Oct, BUILD37 C: the designer's "keystones open at KEYSTONE_LEVEL
+## and capstones at CAPSTONE_LEVEL"). train_block refuses one below it; this holds for one the camp keeps trained - the
+## Pitch's and the elements' stay after a death or a class swap - so a runner under the level holds it dark, and it
+## lights again at the level. Every other node: true. core_gates off (the smoke's mechanics areas): true.
+func level_open(n: Dictionary) -> bool:
+	if not core_gates:
+		return true
+	if n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
+		return false
+	return not (n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL)
 
 
 func has_node(effect: String) -> bool:
@@ -3203,7 +3199,8 @@ var _eff_hash := 0
 var _closed := {}                  # joint key -> true, closed
 func _nodes_for(effect: String) -> Array:
 	var cap: bool = has_rule("headmasters_cap")
-	var h := hash([tree, cls, cap, elements_open.get(cls, null)])
+	var lv_now: int = level() if core_gates else 0     # read once (31 Oct, the review: has_node's key)
+	var h := hash([tree, cls, cap, elements_open.get(cls, null), _lifted_now(), core_gates and lv_now < Data.KEYSTONE_LEVEL, core_gates and lv_now < Data.CAPSTONE_LEVEL])     # the level gates' dark (31 Oct)
 	if h != _eff_hash or _eff_cache.is_empty():
 		_eff_cache = {"": []}
 		_closed = {}
@@ -3226,6 +3223,8 @@ func _nodes_for(effect: String) -> Array:
 			var el_n := element_of(str(id))
 			if el_n != "" and not element_opened(el_n):
 				continue                              # an element this class hasn't open: the camp's, not this runner's (28 Oct)
+			if not level_open(n):
+				continue                              # a keystone or capstone under its level: dark (31 Oct, BUILD37 C)
 			var e: String = n.get("effect", "")
 			if not _eff_cache.has(e):
 				_eff_cache[e] = []
@@ -3326,6 +3325,38 @@ func element_opened(el: String) -> bool:
 	return el in class_elements()
 
 
+## The Quartermaster's Manual, the Last Orders or the Headmaster's Cap worn (31 Oct, the designer): the class may open
+## more than ELEMENTS_A_CLASS elements; taken off, its first two (in the order opened) work and the rest idle until it's
+## back. One has_rule (its snapshot read fresh), then the snapshot (the review: three has_rule calls made has_node 2.5x
+## slower).
+const LIFT_RULES := ["qm_manual", "last_orders", "headmasters_cap"]
+func elements_lifted() -> bool:
+	if has_rule(LIFT_RULES[0]):
+		return true
+	return _lifted_now()
+
+
+## The lift from the rules as last read (has_rule just called): no new snapshot.
+func _lifted_now() -> bool:
+	var rules: Dictionary = _dry_rules if _dry_on else _rules
+	for r in LIFT_RULES:
+		if rules.has(r):
+			return true
+	return false
+
+
+## An element the class opened that idles: past its first two with neither the Manual nor the Last Orders worn.
+func element_idle(el: String) -> bool:
+	return el in class_elements_held() and not element_opened(el)
+
+
+## Every element the class has opened, in the order opened, the idle ones too.
+func class_elements_held() -> Array:
+	if elements_open.has(cls):
+		return Array(elements_open[cls]).duplicate()
+	return _derived_elements()
+
+
 ## The element's starter is in the camp's tree: some class opened it (its own two free, any other a Pitch point), so
 ## any class opens it for nothing.
 func element_trained(el: String) -> bool:
@@ -3338,9 +3369,8 @@ func element_trained(el: String) -> bool:
 ## The elements this runner's class has open. A class that's never opened or closed one takes the camp's first two
 ## trained, in the circle's order: a class swapped in keeps the camp's elements (and an old save its own).
 func class_elements() -> Array:
-	if elements_open.has(cls):
-		return Array(elements_open[cls]).duplicate()
-	return _derived_elements()
+	var held: Array = class_elements_held()
+	return held if elements_lifted() else held.slice(0, Data.ELEMENTS_A_CLASS)     # past two: idle without the Manual or the Last Orders (31 Oct)
 
 
 ## The camp's first two elements trained, in the circle's order: what a class that's never opened or closed one takes.
@@ -3375,7 +3405,7 @@ func _pin_class_elements() -> void:
 
 
 func _open_element(el: String) -> void:
-	var list: Array = class_elements()
+	var list: Array = class_elements_held()
 	if not (el in list):
 		list.append(el)
 	elements_open[cls] = list
@@ -3383,9 +3413,9 @@ func _open_element(el: String) -> void:
 
 ## One of the class's two closed (free): its nodes stay the camp's, its meter stops for this class.
 func close_element(el: String) -> bool:
-	if runner_busy() or not element_opened(el):
-		return false
-	var list: Array = class_elements()
+	if runner_busy() or not (el in class_elements_held()):
+		return false                          # an idle one too (31 Oct)
+	var list: Array = class_elements_held()
 	list.erase(el)
 	elements_open[cls] = list
 	_dry_memo.clear()
@@ -3440,16 +3470,20 @@ func element_free(el: String) -> int:
 
 
 ## A run's damage by type fills each element's meter: the site's pool of HP (its heads' times their number) is one
-## unit, ELEMENT_METER of them a point. Never a dry run's.
+## unit, ELEMENT_METER of them a point. Each element the class has open earns from its own damage at full and from the
+## run's damage of every other type at ELEMENT_METER_SHARE (31 Oct, the designer). Never a dry run's.
 func _fill_meters(m: Dictionary) -> void:
 	if m.get("dry", false):
 		return
 	var t: Dictionary = m["t"]
 	var pool_hp: float = maxf(1.0, float(t["hp"]) * maxf(1.0, float(t.get("pool", 1))))
-	for ty in m.get("dealt_by", {}):
-		var units: float = float(m["dealt_by"][ty]) / pool_hp
-		if not element_opened(str(ty)):
-			continue                          # the Pitch circle: an element not opened earns nothing
+	var dealt: Dictionary = m.get("dealt_by", {})
+	var all_dealt := 0.0
+	for ty in dealt:
+		all_dealt += float(dealt[ty])
+	for ty in class_elements():                   # the Pitch circle: an element not opened earns nothing
+		var own: float = float(dealt.get(ty, 0.0))
+		var units: float = (own + (all_dealt - own) * Data.ELEMENT_METER_SHARE) / pool_hp
 		if not is_finite(units) or units <= 0.0:
 			continue                          # a broken build's figure (the smoke's 1e30): no meter for it
 		var xp_v: float = float(element_xp.get(ty, 0.0)) + minf(units, Data.ELEMENT_METER * 2.0)     # a run earns two points at most (the review: a broken build's 1e30 filled a region)
@@ -3533,9 +3567,9 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "full: %d points on it" % int(n["stack"])
 	var el_of := element_of(id)
 	if el_of != "" and is_element_starter(id):
-		if element_opened(el_of):
-			return "trained"
-		if class_elements().size() >= Data.ELEMENTS_A_CLASS:
+		if el_of in class_elements_held():
+			return "trained"                  # open, or idle past two (31 Oct)
+		if class_elements_held().size() >= Data.ELEMENTS_A_CLASS and not elements_lifted():
 			return "two elements open: close one first"
 		if tree.has(id):
 			return ""                         # trained by another class: open for this one, for nothing
@@ -3546,6 +3580,8 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "not one of this runner's trees"
 	if not Data.for_classes(n, my_classes()):
 		return "%s only" % n["class"]
+	if el_of != "" and not is_element_starter(id) and element_idle(el_of):
+		return Words.NODE_BLOCK_IDLE % Words.mid(str(Data.element_tree_of(el_of).get("name", el_of)))     # opened, past the class's two, its lifting item off (31 Oct, the review)
 	if el_of != "" and not is_element_starter(id) and not element_opened(el_of):
 		return "open %s first" % str(Data.element_tree_of(el_of).get("name", el_of))     # two a class (28 Oct)
 	if n.has("bridge"):
@@ -4608,7 +4644,7 @@ func _feed_stack_raw(gun: Dictionary) -> Dictionary:
 var _els_key := -1
 var _els: Array = []
 func build_elements() -> Array:
-	var k: int = hash([tree, cls, elements_open.get(cls, null)])     # the nodes themselves: a respec retrained to the same count is another build (the review)
+	var k: int = hash([tree, cls, elements_open.get(cls, null), elements_lifted()])     # the nodes themselves: a respec retrained to the same count is another build (the review)
 	if k != _els_key:
 		_els_key = k
 		_els = []
@@ -5487,7 +5523,7 @@ func word_effect(name: String, t: int) -> Dictionary:
 		for k in part:
 			var v = part[k]
 			if k in WORD_MULT_KEYS:
-				var x: float = pow(float(v), pw)
+				var x: float = pow(float(v), minf(pw, Data.WORD_POOL_POW_TOP) if k in Data.WORD_POOL_KEYS else pw)     # the pool and drops stop at tier II's (31 Oct)
 				if side == "bite" and jam:
 					x = pow(x, 0.5)
 				elif side == "pay" and boost > 0.0:
@@ -5588,30 +5624,6 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 			var n: int = int(e["loot_tier"])
 			return "loot a tier up" if n == 1 else "loot %d tiers up" % n
 	return ""
-
-
-## A site's totals, the way a PoE map shows them: what you get and what they bring, multiplied through.
-func word_totals(i: int) -> Dictionary:
-	var gets := {"drop": 1.0, "rarity": 0.0, "cash": 1.0, "xp": 1.0, "loot_tier": 0}
-	var bring := {"hp": 1.0, "dps": 1.0, "pool": 1.0, "patrol": 1.0, "pace": 1.0, "search": 1.0, "armour": 1.0, "contact": 0, "flags": [], "res": {}, "types": {}}
-	for aw in active_words(i):
-		var e := word_effect(aw[0], aw[1])
-		for k in ["drop", "cash", "xp"]:
-			gets[k] *= float(e.get(k, 1.0))
-		gets["rarity"] += float(e.get("rarity", 0.0))
-		gets["loot_tier"] += int(e.get("loot_tier", 0))
-		for k in ["hp", "dps", "pool", "patrol", "pace", "search", "armour"]:
-			bring[k] *= float(e.get(k, 1.0))
-		if e.has("res"):
-			bring["res"][e["res"]] = float(bring["res"].get(e["res"], 0.0)) + float(e.get("res_add", 0.0))
-		if e.has("type"):
-			bring["types"][e["type"]] = float(bring["types"].get(e["type"], 0.0)) + float(e.get("share", 0.0))
-		bring["contact"] += int(e.get("contact", 0))
-		bring["soaked"] = float(bring.get("soaked", 0.0)) + float(e.get("soaked", 0.0))
-		for f in ["no_meds", "no_kill_cash", "clock_half", "boss_walks"]:
-			if e.has(f):
-				bring["flags"].append(f)
-	return {"get": gets, "bring": bring}
 
 
 ## What a set of words pays, roughly: cash × finds × (1 + quality) (the Yard's Two channels keeps the better).
@@ -7219,6 +7231,13 @@ func mint_tins() -> float:
 	if pay <= 0.0:
 		return 0.0
 	return town_worth() * pay * Data.MINT_TINS * inflation()     # the note's doubling went with the Issue (25 Oct): fiat after it
+
+
+## The Mint pays on clears only (31 Oct, the designer): a run home with its site cleared - its gangs down, its head too
+## if it has one - and neither bailed nor out of time. A bail or a time-out pays nothing from it.
+func mint_pays(m: Dictionary) -> bool:
+	return bool(m.get("cleared", false)) and not m.get("bailed", false) and not m.get("timed_out", false) and not m.get("ghost_pending", false) \
+		and not (m.has("boss") and bool(m["boss"].get("alive", false)))
 
 
 ## What a site's run can bring, as shares: the campaign site its own; a signal or the order's laid on it its crew's
@@ -11641,16 +11660,6 @@ func ditch(id: int) -> bool:
 	return false
 
 
-func ditch_commons() -> int:
-	if mission == null:
-		return 0
-	var n := 0
-	for it in mission["found"].duplicate():
-		if it["rarity"] == 0 and not Items.is_paper(it) and ditch(it["id"]):     # nor the papers, the endgame's keys (15 Oct)
-			n += 1
-	return n
-
-
 # ------------------------------------------------------------------ the floor (13 Oct, Matt)
 
 ## A search's finds by hand: on the floor, for the player to take - not on "Fill up, then go",
@@ -11827,7 +11836,8 @@ func _extract() -> void:
 	if has_rule("issuers_robes"):
 		m["cash"] *= 1.0 + town_worth() / 100.0                      # the Issuer's Robes: +1% a point of the town's worth
 	m["cash"] *= paragon_mult("tins")                                # the paragon board's tins
-	m["cash"] += mint_tins()                                         # the mint (18 Oct): the town's worth pays on every run home
+	if mint_pays(m):
+		m["cash"] += mint_tins()                                     # the mint (18 Oct): the town's worth pays on a run home - a clear's only (31 Oct)
 	_bank_materials(m)
 	_earn(float(m["cash"]))
 	var run_notes: int = int(m.get("notes", 0))
@@ -12026,7 +12036,8 @@ func _record_reset() -> void:
 
 
 ## KIA: the loadout and what was found are gone; the stash and cash stay. A
-## fresh operator takes over at level 1. Auto-run stops.
+## fresh runner takes over: at level 1 before the Quartermaster, at the dead one's level past him, at 50 past the cap
+## with the paragon gone (31 Oct). Auto-run stops.
 ## A mythic left on the floor at a run's end (17 Oct: a full pack by hand, or "No room: make some" never made) comes
 ## home as one in the pack does: into the pack first, over its size if need be, so each ending's own rule takes it.
 func _floor_mythics_in(m: Dictionary) -> void:
@@ -12132,10 +12143,17 @@ func _kia() -> void:
 		# past the cap the next runner starts at it, and the crew's paragon goes instead (Matt, 26 Oct: the third
 		# review's M2 - a death sent a level-50 runner to 1, and shut the County till 50 again)
 		xp = Data.xp_for_level(Data.MAX_LEVEL)
-		if paragon_xp > 0.0:
-			log_event(Words.YARD["paragon_lost"] % paragon())
+		last_report["paragon_lost"] = paragon() if paragon_xp > 0.0 else 0     # what the death took, for the card (31 Oct, the UI review)
+		last_report["paragon_lost_xp"] = paragon_xp
+		if paragon_xp > 0.0 and not hardcore:
+			log_event(Words.YARD["paragon_lost"] % paragon())     # hardcore: its own lines only (the review)
 		paragon_xp = 0.0
 		paragon_reset_free()                     # the ring's points and its nodes both (the review: the nodes stayed trained)
+	elif death_keeps_level():
+		var keep: int = level()
+		xp = Data.xp_for_level(keep)             # the designer's call (31 Oct): past the Quartermaster a death costs the XP into the level, never the level
+		if not hardcore:
+			log_event(Words.YARD["level_kept"] % keep)     # hardcore: no next runner, its own lines only (the review)
 	else:
 		xp = 0.0
 	wounds = {}                          # theirs, gone with them
@@ -12167,6 +12185,12 @@ func _kia() -> void:
 	# back as points for the next to spend from the start, with a past of their
 	# own to pick. The Yard's tree and the elements' are the Yard's and stay.
 	_refund_runner_trees()
+
+
+## A death below the cap keeps the level once the Quartermaster's down (the designer's call, 31 Oct, PROBE36: a death
+## sent a level-36 runner to 1 and any slower curve read as "never"); before him a death is back to level 1.
+func death_keeps_level() -> bool:
+	return expeditions_open() and level() < Data.MAX_LEVEL
 
 
 ## The runner's own trees - the class's and the elements' - back to points on a death; the class stays the class
@@ -12493,20 +12517,6 @@ func upgrade_gain(it: Dictionary, moved := false) -> float:
 	if slot in SURV_SLOTS and Data.SLOT_SCORE.get(slot, "") != "armour":
 		g = maxf(g, survival_gain(it, moved))       # a charm or rig bought for its regen or resists (the review: the bot never would)
 	return g
-
-
-## The best of a slot in the stash, tried on, or {}.
-func best_in_stash(slot: String) -> Dictionary:
-	var best := {}
-	var bs := -INF
-	var key := _kit_key()                # once a scan (22 Oct, the pass's wall): nothing moves while it looks
-	for it in stash:
-		if it["slot"] == slot:
-			var v := fit_value(it, slot, key)
-			if v > bs:
-				best = it
-				bs = v
-	return best
 
 
 func equip_best(slot: String) -> bool:
@@ -13814,11 +13824,6 @@ func rarity_spare(r: int) -> Array:
 	return [n, worth, kept]
 
 
-## The junk run.
-func sell_commons() -> int:
-	return sell_rarity(0)
-
-
 ## Whether the junk rules sell this: at or under the rarity, not an upgrade, not a kind kept, and never what the junk
 ## run leaves (rounds, meds, grenades, papers, socketed parts, uniques, set pieces, the deeds, a built gun).
 func is_junk(it: Dictionary) -> bool:
@@ -14000,7 +14005,7 @@ func loot_rule_words(r: Dictionary) -> String:
 
 ## Idle: what the toggles do when a run comes home.
 func _idle_tidy() -> void:
-	if auto_sell:
+	if junk_upto >= 0:
 		sell_junk()
 	if auto_equip:
 		var changed := []
@@ -14144,29 +14149,6 @@ func med_stock() -> Array:
 	if not out.any(func(b): return not b.has("cure")):
 		out = Data.BASES[Data.MEDICAL].filter(func(b): return int(b["tier"]) <= t)     # nothing left above the floor: all she has
 	return out
-
-
-func med_price(base: Dictionary) -> int:
-	return _inf(base["value"] * Data.MED_PRICE * _buy_k("clinic_pct"))     # the shelf's buy multipliers (S1)
-
-
-func buy_med(name: String) -> bool:
-	if not room_open("clinic"):
-		return false
-	for b in med_stock():
-		if b["name"] == name:
-			if cash < med_price(b) or not (stash_room(1) or yard_has("racks")):
-				return false
-			cash -= med_price(b)
-			var it := Items.roll(Data.MEDICAL, int(b["tier"]), rng)
-			it["base"] = name
-			it["rarity"] = 0
-			it["affixes"] = []
-			it["tier"] = b["tier"]
-			it["value"] = b["value"]
-			stash.append(it)
-			return true
-	return false
 
 
 # ------------------------------------------------------------------ the Yard's upgrades
@@ -16076,12 +16058,19 @@ func cargo_slot_worth(kind: String, n: int) -> float:
 ## A unit of cargo's worth, as a trade would value it (the fix round, 29 Oct: shipping is never a better exchange than
 ## the exchange): the exchange's give rate to tins, its spread and the day's drift against you in; scrap - bought, never
 ## sold - at what the find it came from would fetch at the Fence (its exchange worth over the Bench's scrap multipliers,
-## less the spread), so scrapping and shipping can't beat selling.
+## less the spread), so scrapping and shipping can't beat selling: scrap ships at that worth times cargo_cut, so even the
+## best return (EXP_RETURN x EXP_BONUS_CAP) brings a scrapped find home at no more than the Fence pays (28 Oct). Exchange
+## kinds and meds ship at their worth: their round trip at about x1.2 is the designer's ("acceptable", 31 Oct).
 func cargo_unit(kind: String) -> float:
 	if kind == "scrap":
 		var mult: float = (float(Data.FX["yard/strip_for_parts"]) if yard_has("strip_for_parts") else 1.0) * (float(Data.FX["node/salvage"]) if has_node("salvage") else 1.0)
-		return exchange_worth("scrap") * (1.0 - exchange_spread()) / maxf(1.0, mult)
+		return exchange_worth("scrap") * (1.0 - exchange_spread()) / maxf(1.0, mult) * cargo_cut()
 	return exchange_rate(kind, "tins")
+
+
+## Scrap's shipped worth's cut: 1 over the best return (EXP_RETURN x EXP_BONUS_CAP) when that's over 1 (31 Oct).
+func cargo_cut() -> float:
+	return 1.0 / maxf(1.0, Data.EXP_RETURN * Data.EXP_BONUS_CAP)
 
 
 func cargo_worth(cargo: Array) -> float:

@@ -28,6 +28,9 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 			continue                          # the starting kit: worn on day one, never found
 		var home := exclusive_to(b["name"])
 		if home != "" and home != site:
+			if not (b["name"] in Data.ZONE_KIT and site != "" and site_zone(site) == site_zone(home)):
+				continue
+			pool.append(b)                    # a zone's own kit at another site of its zone: the pool's plain weight, never its own-share (31 Oct)
 			continue
 		if home == site and site != "":
 			own.append(b)
@@ -184,6 +187,14 @@ static func exclusive_to(base: String) -> String:
 			for name in t["drops"].get("only", []):
 				_exclusive[name] = t["name"]
 	return _exclusive.get(base, "")
+
+
+## A site's zone by its name (-1 for none): a zone's own kit (Data.ZONE_KIT) reads it.
+static func site_zone(site: String) -> int:
+	for t in Data.TIERS:
+		if t["name"] == site:
+			return int(t.get("zone", -1))
+	return -1
 
 
 ## The base's table row.
@@ -535,12 +546,13 @@ static func grow(ilvl_v: int) -> float:
 	return pow(1.0 + Data.ILVL_GROW, maxi(0, ilvl_v - Data.ILVL_GROW_FROM))
 
 
-## An affix's figure at an item level: a percent line on the straight line, a flat combat line (FLAT_GROW) on it to the
-## deep tier and compounding past it, as the bases.
+## An affix's figure at an item level: a percent line on the straight line to PCT_LINE_TOP and no further (the designer's
+## call, 31 Oct: the % pools compounded behind the late dps), a flat combat line (FLAT_GROW) on it to the deep tier and
+## compounding past it, as the bases.
 static func affix_mult(stat: String, ilvl_v: int) -> float:
 	if stat in Data.FLAT_GROW:
 		return ilvl_mult(mini(ilvl_v, Data.ILVL_GROW_FROM)) * grow(ilvl_v)
-	return ilvl_mult(ilvl_v)
+	return ilvl_mult(mini(ilvl_v, Data.PCT_LINE_TOP))
 
 
 ## A fixed affix list (a unique's, a set piece's) at an item level: the values scaled as a drop's would be.
@@ -556,12 +568,18 @@ static func _scaled(affixes: Array, ilvl_v: int) -> Array:
 
 
 ## What a piece is worth (25 Oct, the review: value never grew with item level, so the Fence, scrap and insurance went
-## flat while income grew): its value grown as its base's damage and armour are, past ILVL_GROW_FROM. Gear only.
+## flat while income grew): its value grown past ILVL_GROW_FROM - at WORTH_GROW a level, slower than its base's damage
+## and armour (the designer's call, 31 Oct: the Fence's sales tracked the reach ×10 every 30 min). Gear only.
 static func worth(it: Dictionary) -> float:
 	var v: float = float(it.get("value", 0))
 	if str(it.get("slot", "")) in Data.SLOTS:
-		v *= grow(ilvl(it))
+		v *= worth_grow(ilvl(it))
 	return v
+
+
+## An item's worth's growth past ILVL_GROW_FROM (the designer's call, 31 Oct): WORTH_GROW a level, compounding.
+static func worth_grow(ilvl_v: int) -> float:
+	return pow(1.0 + Data.WORTH_GROW, maxi(0, ilvl_v - Data.ILVL_GROW_FROM))
 
 
 static func ilvl(it: Dictionary) -> int:

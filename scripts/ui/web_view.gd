@@ -273,7 +273,7 @@ func links_all() -> Dictionary:
 
 ## The signature of what the state reads: a change relays the state.
 func state_sig() -> String:
-	return "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points)]     # the Cap turns every class node active (the review)
+	return "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points) + str(sim.class_elements_held()) + str(sim.class_elements())]     # the Cap turns every class node active (the review); the elements open and working (31 Oct: the Manual off idles past two)
 
 
 ## A node's state as drawn: taken, active, reach (open to train now, the points aside), theirs (another class's), cost, block.

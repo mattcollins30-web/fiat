@@ -1186,7 +1186,7 @@ func tier_figures(it: Dictionary, k: int) -> Array:
 	var a: Dictionary = it["affixes"][k]
 	var d: Dictionary = Items.affix_def_for(str(a["stat"]), str(it.get("slot", "")))     # the slot's own range (the fix round, the game review's C6)
 	var r: Array = Items.tier_range(d, int(a.get("tier", 1)))
-	var m: float = Items.ilvl_mult(Items.ilvl(it))
+	var m: float = Items.affix_mult(str(a["stat"]), Items.ilvl(it))     # the roll's own (31 Oct): a % line's top, a flat line's growth
 	var div := float(d.get("div", 1))
 	if div > 1.0:
 		return [snappedf(float(r[0]) * m / div, 0.1), snappedf(float(r[1]) * m / div, 0.1)]     # tenths (20 Oct)

@@ -49,7 +49,9 @@ func show_state(s) -> void:
 		var free_v: int = maxi(0, sim.element_free(el))
 		var meter: float = clampf(float(sim.element_xp.get(el, 0.0)) / Data.ELEMENT_METER, 0.0, 1.0)
 		var free_s: String = (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else ""
-		if not sim.element_opened(el):
+		if sim.element_idle(el):
+			free_s = Words.ELEMENT_IDLE                # opened, past the class's two with the Manual, the Last Orders and the Cap off (31 Oct)
+		elif not sim.element_opened(el):
 			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): the class's own two open free, any other a Pitch point (free too where the camp already has it)
 		rows.append([WebView.plain_name(str(et["name"])), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
 	var sig := str(rows)

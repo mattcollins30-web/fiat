@@ -260,6 +260,9 @@ func _show_panel() -> void:
 		var read: bool = it["base"] in sim.book
 		if sim.story_of(it) >= 0:
 			tail = [["Kev's story: three together make its signal", "Kev's story: three make its signal", "Kev's story"]]     # not "no code" (16 Oct: true of the code, wrong of the paper)
+		elif str(it.get("rule", "")) != "" and Items.paper_keep(it, sim.book) != "":
+			var keep: String = Items.paper_keep(it, sim.book)     # a rule paper (the Lorry Driver's Log) works from the stash: keep it, not its base's code (10 Oct's line, wired 31 Oct)
+			tail = [[keep, keep.get_slice(":", 0)]]
 		elif not sim.room_open("radio") and not Items.is_deeds(it):
 			tail = "encrypted till the Radio's open"     # every paper alike, code or none (16 Oct, Matt: one said "from before")
 		else:

@@ -145,15 +145,6 @@ const PICK_GLYPH := {
 	"rr_ten": "runs", "trip_hand": "where", "rr_list": "pen", "trip_two_hands": "three", "rr_twenty": "runs", "trip_two": "spread",     # the Bunkhouse (29 Oct)
 	"rr_rest": "hp", "trip_roster": "up", "rr_full": "pack", "trip_three": "three",
 }
-## The map's nodes (10 Oct, Lanes-G): each its own.
-const ATLAS_GLYPH := {
-	"picked_over": "gem", "deeper_pockets": "search", "quiet_roads": "clock", "after_dark": "quiet", "second_look": "quantity", "worn_in": "forever",
-	"easy_pickings": "quantity", "local_knowledge": "depth", "short_cuts": "pace", "open_ground": "half", "every_penny": "cash", "lie_of_the_land": "where",
-	"paid_in_notes": "pen", "two_of_everything": "half", "heads_up": "first", "full_strength": "skull", "bounties": "cash", "wages": "up",
-	"heavy_crews": "three", "their_own_kit": "dmg", "marked_men": "first", "long_memory": "forever", "head_start": "runs", "lorrys_route": "depth",
-	"good_reception": "loud", "clear_air": "quiet", "booster": "loud", "held_frequency": "forever", "long_wave": "spread", "tip_offs": "quality",
-	"strong_signal": "shock", "early_word": "clock", "relay": "spread", "bent": "dice", "whole_band": "stand",
-}
 
 
 const BUILDING_GLYPH := {"bench": "wrench", "stash": "pack", "clinic": "med", "fence": "cash", "radio": "loud", "generator": "shock", "lookout": "search", "kennel": "dog"}

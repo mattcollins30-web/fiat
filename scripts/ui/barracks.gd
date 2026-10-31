@@ -426,15 +426,6 @@ static func _chip_words(nd: Dictionary) -> String:
 	return "Notable"
 
 
-## The colour of a tree's lane: its element's, the accent for a class's, the line for the Yard's.
-static func lane_colour(t: Dictionary) -> Color:
-	if t.has("element"):
-		return Pal.ELEMENT_COLOURS.get(t["element"], Pal.TEXT)
-	if t.get("class", "") != "":
-		return Pal.ACCENT
-	return Pal.CARD_LINE
-
-
 ## The drawer's and the shelf's cards: as the tiles were before the glyphs (a found one lit with the accent's bar).
 func _style_card(b: Button, look: String) -> void:
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
@@ -481,7 +472,7 @@ func show_state(s) -> void:
 	if _armed != "" and (sim.cls != _armed_cls or sim.runner_busy() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
 		_armed = ""                            # a swap's arm runs out like every ask-twice (Matt, 26 Oct)
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.runner_busy()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.elements_lifted(), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -971,7 +962,7 @@ func _show_panel() -> void:
 		var sel_el: String = sim.element_of(selected)
 		var starter: bool = sim.is_element_starter(selected)
 		if starter:
-			is_taken = sim.element_opened(sel_el)     # two a class (28 Oct): a starter is "taken" when this class has it open
+			is_taken = sim.element_opened(sel_el) or sim.element_idle(sel_el)     # two a class (28 Oct): a starter is "taken" when this class has it open
 		if nd.has("ring"):
 			# the ring (slice 4): the paragon's node, its points on it of its stack; "trained" is a full one
 			_title.text = "%s · the ring · %d of %d" % [nd["name"], int(sim.ring.get(selected, 0)), int(nd["stack"])]
@@ -1002,8 +993,16 @@ func _show_panel() -> void:
 			var jw: String = str(j["words"])
 			jw = jw.substr(0, 1).to_lower() + jw.substr(1)     # mid-line: only its first letter drops (18 Oct: "smgs")
 			tail = ("joined: %s" % jw) if sim.has_joint(j_key) else ("with %s in %s: %s" % [other, other_tree, jw])
-		if sel_el != "" and sim.tree.has(selected) and not sim.element_opened(sel_el):
-			tail = "idle: %s isn't one of the %s's two elements" % [str(selected).get_slice("/", 0), sim.cls]
+		var under_level: bool = is_taken and not sim.level_open(nd)
+		var gate_lv: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
+		if sel_el != "" and sim.tree.has(selected) and (sim.element_idle(sel_el) or not sim.element_opened(sel_el)):
+			# past the class's first two with no lifting item on, or not open for this class (31 Oct); the level's reason
+			# joined on when both hold (the UI review: one fix shown where two were needed)
+			tail = Words.NODE_DARK_PAST_TWO if sim.element_idle(sel_el) else Words.NODE_DARK_NOT_OPEN % [Words.mid(str(selected).get_slice("/", 0)), sim.cls]
+			if under_level and not starter:
+				tail = Words.NODE_DARK_AND_LEVEL % [tail, gate_lv]
+		elif under_level:
+			tail = Words.NODE_DARK_LEVEL % (Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL)     # trained, under its level (31 Oct)
 		elif is_taken and not sim.node_active(selected) and not sim._active(nd):
 			tail = "idle without %s in hand" % type_words(nd)
 		elif is_taken and not sim.node_active(selected):
@@ -1176,7 +1175,7 @@ func _on_train() -> void:
 		_pick_class(_armed)                    # the panel's Swap button: the second press (21 Oct, the crew)
 		return
 	_armed = ""
-	if selected != "" and sim.is_element_starter(selected) and sim.element_opened(sim.element_of(selected)):
+	if selected != "" and sim.is_element_starter(selected) and (sim.element_opened(sim.element_of(selected)) or sim.element_idle(sim.element_of(selected))):
 		if sim.close_element(sim.element_of(selected)):     # the class's element closed, for nothing (28 Oct)
 			acted.emit()
 	elif selected != "" and sim.train_node(selected):

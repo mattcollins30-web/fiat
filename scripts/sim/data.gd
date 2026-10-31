@@ -216,7 +216,7 @@ const YARD := [
 		[{"id": "second_dog", "name": "Second dog", "short": "Searches 15% quicker", "words": "Searches are 15% quicker"},
 		 {"id": "fetch", "name": "Fetch", "short": "Death: best find home", "words": "When the runner dies, the dog brings the most valuable thing in the pack home"}],
 		[{"id": "tracker", "name": "Tracker", "short": "Papers ×2", "words": "Papers and charms turn up twice as often"},
-		 {"id": "ratter", "name": "Ratter", "short": "Poison, bleed +10%", "words": "Poison and bleed do a tenth more"}],
+		 {"id": "ratter", "name": "Ratter", "short": "Poison, bleed +10%", "words": "Poison and bleed do 10% more damage"}],
 		[{"id": "pack", "name": "The litter", "short": "+2 finds a search", "words": "Every search finds 2 more"},
 		 {"id": "champion", "name": "Champion", "short": "+20% quality", "words": "Loot quality +20%"}]],
 	 "rank": {"short": "+2% loot quality", "words": "Loot quality +2% a rank"}},
@@ -260,8 +260,6 @@ const WAGER_SLOT_WORDS := {"Primary": "gun", "Armour": "armour", "Helmet": "helm
 const WAGER_GANG := 1.5
 const WAGER_HARD := 1.25
 const WAGER_CLOCK := 0.5
-## The Pitch before two lines a building (28 Oct): each column's two picks as they were, by id - an old save's picks moved by id.
-const YARD_OLD := {"bench": [["steady_hands", "cheap_parts"], ["third_socket", "two_locks"], ["gunsmith", "strip_for_parts"], ["overbump", "fine_tuning"], ["masterwork", "salvage_line"]], "stash": [["shelving", "racks"], ["another_unit", "bins"], ["strongroom", "wall_of_fame"], ["lock_up", "filing_cabinet"], ["dry_store", "annex"]], "clinic": [["beds", "shelf"], ["ward", "stockroom"], ["surgery", "physio"], ["drip", "field_kit"], ["theatre", "med_lab"]], "fence": [["stall", "haggling"], ["shopfront", "contacts"], ["back_room", "fixer"], ["gamblers_table", "insurance_desk"], ["arms_dealer", "dealers_cut"]], "radio": [["weather_set", "night_set"], ["forecast", "dead_air"], ["scanner", "two_channels"], ["lorry_watch", "long_range"], ["jammer", "military_band"]], "generator": [["jerry_can", "rig_wiring"], ["dynamo", "floodlights"], ["battery", "kickback"], ["flywheel", "arc_lamps"], ["pilot_light", "charger"]], "lookout": [["spotter", "glasses"], ["lookout_post", "range_cards"], ["hold_fire", "tripwires"], ["early_warning", "watch_rota"], ["crows_nest", "flares"]], "kennel": [["a_dog", "good_nose"], ["guard_dog", "pedigree"], ["fetch", "second_dog"], ["tracker", "ratter"], ["pack", "champion"]]}
 
 
 
@@ -1065,6 +1063,11 @@ const SOCKET_ODDS := [0.45, 0.4, 0.15]     # 0, 1, 2 sockets
 const LOOT_OWN_TIER := 0.5
 const LOOT_TIER_UNDER := 0.3
 const LOOT_LOWER := 0.2
+## A zone's own kit (31 Oct, the designer, on the review's "T4 heavies at one site each"; the fix round: keep the home
+## rate, add the zone): a site's own base (its "only" list) that also drops at every other site of its home's zone, in
+## the pool at a plain base's weight there; at its home it keeps its own-share draw as before; nowhere else (not the
+## shelf's, not another zone's).
+const ZONE_KIT := ["Stab plates", "Medic's harness", "Cargo frame"]     # the City's T4 heavy armour, heavy rig and heavy backpack
 
 ## Damage types. A hit is split by type (`Sim.conversion`), each share
 ## multiplied by its own increased and more, cut by their resist to it, and
@@ -1263,7 +1266,7 @@ const UNIQUES := [
 		 "rule": "sparkys_gloves", "band": "core", "range": [3, 7], "site": 5,
 		"words": "Their shock resist is ignored; Earthed no longer costs armour", "short": "Shock resist ignored", "affixes": [{"stat": "shock_pct", "value": 30}, {"stat": "shock_res", "value": 40}]},
 	{"name": "The Quartermaster's Manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "band": "chase", "range": [5, 9], "site": 11,
-		"words": "Every element tree costs normal points, and every element keystone is open", "short": "All element trees full price", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
+		"words": "The class can open more than 2 elements; taken off, those past 2 idle", "short": "More than 2 elements", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
 	{"name": "A Blue Plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "band": "chase", "range": [4, 9], "site": 8,
 		"words": "All resists +40%; no other affix on your kit counts", "short": "Resists +40%, nothing else", "affixes": [{"stat": "all_res", "value": 40}]},
 	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "band": "core", "range": [3, 9], "depth": 6,
@@ -1321,11 +1324,11 @@ const UNIQUES := [
 	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
 	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
 	{"name": "The Last Orders", "slot": "Primary", "base": "Old .303", "rule": "last_orders", "band": "mythic", "mythic": true, "range": [2, 9],
-		"words": "Every hit does full damage as physical and as each of the 5 elements, and every element's keystones are open", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+		"words": "Every hit does full damage as physical and each of the 5 elements. The class can open more than 2 elements; taken off, those past 2 idle", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
 		"words": "The secondary always does its full damage beside the primary, and never spends a round", "short": "Secondary: full damage, no rounds", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
-		"words": "You have every node in your class's trees except keystones, and every element's keystones are open", "short": "Every class node yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
+		"words": "Every perk in the class's trees is yours except keystones. The class can open more than 2 elements; taken off, those past 2 idle", "short": "Every class perk yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Bomb Disposal Suit", "slot": "Armour", "base": "Police body armour", "rule": "bomb_suit", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "You never lose more than 5% of max HP a second, and the clock never runs out", "short": "At most 5% max HP lost a second; no clock", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Crash Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
@@ -1654,7 +1657,7 @@ const FX := {
 	"yard/forecast": 1.2,     # The forecast: A run under rain or fog brings a fifth more tins home
 	"yard/glasses": 60,     # Glasses: The odds shown are read from sixty dry runs, not twenty-four
 	"yard/range_cards": 0.5,     # Range cards: The first shot on every gang does half again
-	"yard/ratter": 1.1,     # Ratter: Poison and bleed do a tenth more
+	"yard/ratter": 1.1,     # Ratter: Poison and bleed do 10% more damage
 	"yard/steady_hands": 2.0,     # Steady hands: re-rolling values, twice the chance an affix goes up a tier
 	"yard/weather_set": 0.5,     # Weather set: Rain and fog bite half as hard
 }
@@ -1891,13 +1894,13 @@ const TIERS := [
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
 	{"name": "The Services", "zone": 3, "pool": 16, "hp": 1950.0, "dps": 2.56, "drop": 0.5, "loot_tier": 4, "xp": 37, "cash": 40,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
-		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},
+		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},     # the Cargo frame a ZONE_KIT too (31 Oct)
 	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 2376.0, "dps": 3.08, "drop": 0.5, "loot_tier": 4, "xp": 45, "cash": 44,
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
-		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Gloves": 2, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
+		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Gloves": 2, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},     # Medic's harness a ZONE_KIT too (31 Oct)
 	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 2604.0, "dps": 3.58, "drop": 0.55, "loot_tier": 4, "xp": 57, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Gloves": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Gloves": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},     # Stab plates a ZONE_KIT too (31 Oct)
 ]
 
 const BANK := 8                    # the tier whose vault holds the deeds
@@ -1907,7 +1910,7 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## what they drop, not how hard they are. Depth 2 is the first rung.
 ## The reach is the runner's power against this slope (signals since D3): too steep a grow and a signal past the reach
 ## goes from won to lost in one level.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.12 holds the reach to a climb, not a run
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.16, "reward": 0.02, "rarity": 0.10}     # grow 0.12 to 0.16, reward 0.05 to 0.02 (the designer's call, 31 Oct, PROBE36: the reach ran 20-60 levels an hour past the Quartermaster)
 ## The gangs to the new tiers (29 Oct, docs/design/itemisation.md §1: tuned to T6 gear at the Barracks, down to T4's): the
 ## campaign sites' own hp and dps above carry it (every level of them, the depths past the first clear too: 7 Oct's
 ## curve is a floor under the site's own), each by the gear a runner brings to it now against before - the Retail Park
@@ -1928,7 +1931,7 @@ static func curve_k(lv: int) -> float:
 
 const CURVE_LATE_FROM := 35       # 50 to 35 (Matt, 27 Oct: the reach stood at 40-50 in the 12% band, kit at 5%; docs/design/pinnacle_and_exploits.md)
                                   # past this level the crews grow CURVE_LATE_GROW a level, not CURVE's grow (24 Oct, Matt: an endgame "at least 30ish" hours -
-const CURVE_LATE_GROW := 0.07     # at 12% a level the kit's ~10% and the paragon's flat points fell behind by level 45-68 and the reach stood 7-19 h; a slope, not a wall)
+const CURVE_LATE_GROW := 0.12     # 0.07 to 0.12 (the designer's call, 31 Oct, PROBE36: the runner grew ~10% a level past 35 against the content's 7%). Before: at 12% a level the kit's ~10% and the paragon's flat points fell behind by level 45-68 and the reach stood 7-19 h; a slope, not a wall)
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that
@@ -1969,10 +1972,10 @@ const CONVOY_HP := 0.55           # the convoy's heads at this much of their HP 
 const CONVOY_DPS := 0.85          # the convoy's heads' fire, with CONVOY_HP
 const LORRY_MULT := 1.12          # the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige; under a depth's step, so each leg stays harder than the last
 ## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
-const PARAGON_COMPOUND := ["damage", "hp"]     # the rows that compound, each point on the last (25 Oct); the rest add
+const PARAGON_COMPOUND := []     # the rows that compound, each point on the last: none (the designer's call, 31 Oct, PROBE36: ×3.28 damage from 60 points in 34 min) - every row adds
 const PARAGON_BOARD := [
-	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point, compounding"},
-	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point, compounding"},
+	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point"},
+	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point"},
 	{"key": "resists", "name": "Resists", "pct": 1.0, "words": "+1% to every resist a point, to the cap"},
 	{"key": "find", "name": "Find", "pct": 3.0, "words": "+3% loot quality a point"},
 	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point"},
@@ -2036,6 +2039,8 @@ const ILVL_GROW := 0.05            # an edge halves in about 10 levels: a few le
 ## tier past the site's loot (never under its own base's), and BOSS_UNIQUE_LIFT on its figure.
 const BOSS_UNIQUE_LIFT := 1.2
 const ILVL_GROW_FROM := 20         # DEEP_TIER_LEVELS' last: the campaign and the deep tiers as they were
+const PCT_LINE_TOP := ILVL_GROW_FROM     # a percent affix line stops growing with item level here (the designer's call, 31 Oct, PROBE36 lever 2): flat lines and bases grow on
+const WORTH_GROW := 0.02           # an item's worth (the Fence's sale, its shelf, a temper's tins, scrap) grows this an item level past ILVL_GROW_FROM, not ILVL_GROW (the designer's call, 31 Oct, PROBE36 lever 5b)
 const FLAT_GROW := ["hp", "armour", "regen", "life_per_kill", "armour_per_free", "armour_per_med"]
 const CONVOY_TIER := 9             # the Services
 const CONVOY_UNIQUE := "The Lorry's Load"
@@ -2388,6 +2393,7 @@ const WHEEL_BRIDGE_DEG := 168.0
 ## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
 const ELEMENT_METER := 1.5
+const ELEMENT_METER_SHARE := 0.25     # an open element's meter also fills from the run's damage of every other type at this (31 Oct, the designer)
 ## The physical floor (31 Oct, the designer: the Recruit's camp poison and his own Tear gas converted every hit, and
 ## Knuckles' meter - the unconverted share - never moved): a hit's element conversion caps at this in all, shared out as
 ## before past it, so a tenth of every hit stays physical. Bust them up, the Weed Burner and the Last Orders keep their own.
@@ -2812,11 +2818,8 @@ static func joint_in(cls: String, tree_name: String) -> Dictionary:
 			return j
 	return {}
 
-## Training's gating (15 Oct, Matt: "like Last Epoch"; endgame_radio.md §8, gating_training.png). The class tree is
-## the core: an element tree's columns from CORE_GATES' column want so many points in the class tree its joint is in
-## (the class's first tree off its pair), its capstone CORE_CAPSTONE; keystones open at KEYSTONE_LEVEL, capstones at CAPSTONE_LEVEL, every tree.
-const CORE_GATES := [[2, 6], [4, 12]]
-const CORE_CAPSTONE := 18
+## Training's gating (15 Oct, Matt: "like Last Epoch"; endgame_radio.md §8): keystones open at KEYSTONE_LEVEL, capstones at
+## CAPSTONE_LEVEL, every tree.
 const KEYSTONE_LEVEL := 20
 const CAPSTONE_LEVEL := 30
 
@@ -3369,6 +3372,8 @@ const MODIFIERS := [
 ## tier's power like a multiplier; a crate the site wouldn't have yet, it has).
 const WORD_TIER_DEPTH := [2, 8, 15]          # depth for tiers I, II, III
 const WORD_TIER_POW := [1.0, 1.75, 2.5, 3.5] # I, II, III, IV (Twist's)
+const WORD_POOL_POW_TOP := 1.75     # a word's pool and drop multipliers stop at tier II's power (the designer's call, 31 Oct, PROBE36 lever 5a: Full house took a signal from 13-36 kills to 105-249)
+const WORD_POOL_KEYS := ["pool", "drop"]
 const WORD_TIER_NAMES := ["I", "II", "III", "IV"]
 const WORD_MAX_DEPTH := [[2, 2], [5, 3], [9, 4]]   # [depth, words a site]
 const WORD_POOLS := {"zone": 0.4, "general": 0.5, "deep": 0.1}
@@ -3693,7 +3698,7 @@ const REBUILDS := [
 	{"key": "market_hall", "name": "The market hall", "costs": {"glass": 20, "copper_wire": 20}, "rank_key": "ledger_seal",
 		"fx": [{"stat": "shelf", "base": 1, "step": 0.5, "say": "Fence's shelf +%d"}, {"stat": "fence_pct", "base": 5, "step": 2, "cap": 40, "say": "Fence −%d%%"}]},
 	{"key": "mint", "name": "The mint", "costs": {"ledgers": 30, "army_kit": 20}, "first": {"fuses": 5, "grid_key": 1}, "rank_key": "ledger_seal", "opens": "mint",
-		"fx": [{"stat": "mint_pay", "base": 1.0, "step": 0.25, "say": "Pays tins by worth"}]},
+		"fx": [{"stat": "mint_pay", "base": 1.0, "step": 0.25, "say": "Pays tins by worth on clears"}]},     # on clears only (31 Oct, the designer)
 ]
 const REBUILD_GROWTH := 1.35
 const REBUILD_FUSES := 2                 # fuses a rank past the first
@@ -3868,7 +3873,7 @@ const CAMPAIGN_TIER := 4          # gear tiers (29 Oct, one tier a zone): the Ou
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
 const DEEP_TIER_LEVELS := [10, 13, 16, 20, 24]   # the signal level a tier past the campaign drops from (29 Oct): T5 from level 10, T6 13, T7 16, T8 20, T9 24
 static var _xp_table: Array = []
-const PARAGON_XP_GROW := 0.05     # a paragon level costs level 50's XP and this much more a level past it (24 Oct, Matt: an endgame "at least 30ish" hours)
+const PARAGON_XP_GROW := 0.25     # 0.05 to 0.25 (the designer's call, 31 Oct, PROBE36: paragon 53 to 590 in 15 min). A paragon level costs level 50's XP and this much more a level past it (24 Oct, Matt: an endgame "at least 30ish" hours)
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
 const XP_SCALE := 3.3     # keeps the sites cleared near their gear's level, not 5-8 over
@@ -3880,7 +3885,7 @@ const XP_RAMP_FROM := 1.0
 const XP_RAMP_TO := 12
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 3.1     # the scale from level 40 on: level 50 wanted at 12-24 h
+const XP_TAPER_END := 4.0     # 3.1 to 4.0 (the designer's call, 31 Oct, PROBE36: ×1.3 on levels 40-50). The scale from level 40 on: level 50 wanted at 12-24 h
 
 
 static func xp_scale(l: int) -> float:
@@ -3954,7 +3959,7 @@ const EXP_SIG_ID := 900000             # a far place's read apart from every sig
 ## The lead's class weights the return (trips.md 3): this share of it goes to the class's own kind.
 const EXP_CLASS_KIND := {"Scrapper": "parts", "Paramedic": "supplies", "Poacher": "charms", "Doorman": "tins", "Drifter": "papers", "Recruit": "army"}
 const EXP_CLASS_SHARE := 0.2
-const EXP_RETURN := 0.85               # the return's worth, the cargo's times this (the fix round, 29 Oct: the exchange's spread - they convert, they don't print)
+const EXP_RETURN := 1.55               # the return's worth, the cargo's times this (scrap at its cut worth: Sim.cargo_unit); the hands' bonus (EXP_BONUS_CAP) on top. An average expedition - at the bot's risk (0.45), the hands it sends, its bad rolls and hold-ups (ransomed) in - brings about x1.2 home before wages (31 Oct, the designer's x1.2; the exchange round trip "acceptable"): a draft for the pass
 const EXP_BONUS_CAP := 1.2             # the hands' bonuses all told (porters, "+% finds", crackers' crates) never past ×1.2 on that
 const EXP_SLOTS := 3                   # cargo slots, the quartermaster's and "+1 cargo slot" on top
 const EXP_SLOTS_MAX := 6
