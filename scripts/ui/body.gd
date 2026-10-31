@@ -356,6 +356,8 @@ func show_state(s) -> void:
 		# what's worn can change in place (a Workshop job, a part fitted, the Fence's prices): its figure, its rarity
 		# and its worth are in the signature, not just its id (the reviewer, 10 Oct)
 		sig += "|" + ("%d:%d:%d:%s:%d:%s" % [w["id"], int(w["rarity"]), w["affixes"].size(), figure_forms(w)[0], int(sim.sell_price(w)), str(w.get("attachments", {}).keys())] if w != null else "-")
+		if slot in ["Primary", "Secondary"] and w != null:
+			sig += ":" + str(sim.kit_mag_line(w))     # its magazines and rounds (30 Oct)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -387,6 +389,10 @@ func show_state(s) -> void:
 				l.text = ""
 			b["cell"].tooltip_text = "%s · %s" % [Items.full_name(it), figure_forms(it)[0]]
 			b["fig"].text = ""                         # the figure is the tooltip's, the strip's and the panel's
+			if slot in ["Primary", "Secondary"]:
+				# a gun's magazines (30 Oct, the approved canvas): "3 magazines · 36 rounds", "No rounds needed"
+				UI.fit(b["fig"], sim.kit_mag_line(it))
+				b["fig"].add_theme_color_override("font_color", Pal.BAD if (Items.mag_size(it) > 0 and sim.rounds_for(it) <= 0) else Pal.TEXT_2)
 
 
 # ------------------------------------------------------------------ dragging and dropping

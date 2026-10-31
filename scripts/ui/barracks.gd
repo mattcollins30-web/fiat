@@ -570,7 +570,7 @@ func _show_card(k: int) -> void:
 	c["face"].modulate = Color(1, 1, 1, 1.0 if lit else 0.75)
 	c["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_2)
 	var who: String = str(Words.CLASS_UNLOCK.get(nm, {}).get("who", ""))
-	UI.fit(c["tag"], ["✓ your past"] if mine else (["press again"] if armed else (_crew_tag(nm) if open else [who])))
+	UI.fit(c["tag"], [Words.CLASS_SELECTED] if mine else (["press again"] if armed else (_crew_tag(nm) if open else [who])))
 	c["lock"].visible = not open                # a locked class: the lock and the head that opens it (24 Oct, option B)
 	c["tag"].position.x = float(c["tag_x"]) + (16.0 if not open else 0.0)
 	c["tag"].size.x = CLASS_W - float(c["tag_x"]) - 6.0 - (16.0 if not open else 0.0)

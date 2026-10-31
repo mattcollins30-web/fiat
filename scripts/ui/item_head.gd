@@ -55,7 +55,11 @@ func _init(w := 440, small := false) -> void:
 	var gap := 4 if compact else 6
 	chips_y = TITLE_H + gap
 	headline_y = chips_y + CHIP_H + gap
-	tail_y = headline_y + head_h
+	# the figure's font is taller than its row (30 px SemiBold: 38 in 30): the tail starts under its descenders, not on
+	# them (30 Oct, parked item 6: the Clinic's "Stops" sat on its chip); over it, the gap takes the spill
+	var fsize: int = Pal.TITLE if compact else Pal.HEADLINE
+	var spill: int = maxi(0, ceili((UI.font("SemiBold", true).get_height(fsize) - head_h) / 2.0))
+	tail_y = headline_y + head_h + spill
 	rows_y = tail_y + TAIL_H + gap
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var affix_h := AFFIX_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP
@@ -66,7 +70,6 @@ func _init(w := 440, small := false) -> void:
 		p.visible = false
 		_chips.append(p)
 		_chip_labels.append(UI.label(p, Rect2(CHIP_PAD, 0, 10, CHIP_H), "", "Medium", Pal.CELL_TEXT if compact else Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	var fsize: int = Pal.TITLE if compact else Pal.HEADLINE
 	_figure = UI.label(self, Rect2(0, headline_y, width, head_h), "", "SemiBold", fsize, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_tail = UI.label(self, Rect2(0, tail_y, width, TAIL_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -114,7 +117,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		x += w + CHIP_GAP
 	# the headline: the figure big, its unit after, the tail after that. A
 	# part's figure is its own first stat, its affixes kept for their rows
-	var h := Items.headline(it)
+	var h := Items.headline(it, sim_in.mag_gun(it) if (sim_in != null and Items.is_mag(it)) else null)
+	if Items.is_cure(it):
+		h = [str(Words.CURE_CLEARS.get(Items.cure_of(it), str(h[0]) + " " + str(h[1]))), ""]     # the whole line big (30 Oct, parked item 6): "Stops a bleed"
 	if Items.is_paper(it) and sim_in != null:
 		h = paper_headline(it, sim_in)
 	if (tail is String and tail == "") and Items.base_res_words(it) != "":
@@ -125,6 +130,16 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		h = [first.get_slice(" ", 0), first.substr(first.find(" ") + 1)] if first.contains(" ") else [first, ""]
 		var rest: String = own.substr(first.length()).trim_prefix(", ")
 		tail = rest if tail == "" or tail == own else rest
+		if Items.att_stat(it, "sling_pct") > 0.0:
+			# a sling (30 Oct, the approved canvas): its figure the sentence, its chip when it counts
+			h = [Words.MAG_WORDS["sling_fig"] % int(round(Items.att_stat(it, "sling_pct"))), ""]
+			tail = [[Words.MAG_WORDS["sling_chip"]]] + ([rest] if rest != "" else [])
+	if Items.is_mag(it):
+		# a magazine (30 Oct, the approved canvas): its rounds of its size against the gun it feeds
+		h = Items.headline(it, sim_in.mag_gun(it) if sim_in != null else null)     # the same gun as the card's chips, never over its size
+		tail = ""                             # its chips go in the two rows under the figure (below)
+	if h[1] == "" and UI.text_width(_figure, str(h[0])) > width and Items.att_stat(it, "sling_pct") > 0.0:
+		h = ["%d%%" % int(round(Items.att_stat(it, "sling_pct"))), "secondary fire"]     # a narrow card: the figure and its unit
 	_figure.text = h[0]
 	var fw: float = ceilf(UI.text_width(_figure, h[0]))
 	_unit.position.x = fw + 10
@@ -178,8 +193,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	elif Items.is_gun(it) and sim_in != null and Items.ammo_type(it) not in ["", "none"]:
 		var stack: Dictionary = sim_in.feed_stack(it)
 		var bonus: float = sim_in.grade_bonus(it)
-		if not stack.is_empty() and bonus > 0.0:
-			tchips.append({"forms": ["%s: +%d%% damage" % [str(stack["base"]), int(bonus)], "+%d%% %s" % [int(bonus), str(stack["base"]).to_lower()]], "colour": Pal.ACCENT})
+		var grade: String = Items.grade_name(stack)     # the rounds' grade, not the magazine they're in (the fix round)
+		if grade != "" and bonus > 0.0:
+			tchips.append({"forms": ["%s: +%d%% damage" % [grade, int(bonus)], "+%d%% %s" % [int(bonus), Words.mid_base(grade)]], "colour": Pal.ACCENT})
 	_unit.text = h[1]
 	_tchips = tchips
 	warning = []
@@ -207,8 +223,8 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	for c in paper_chips(it, sim_in):
 		chips_a.append(c)
 	# after them, as muted chips: the open slots ("1 open at the Bench"), a set's words in the set's tone, or "No affixes"
-	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
-	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it) or Items.is_supplies(it)
+	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_mag(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
+	var plain: bool = Items.is_ammo(it) or Items.is_mag(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it) or Items.is_supplies(it)
 	var has_extra: bool = (not extra.is_empty()) if extra is Array else (str(extra) != "")
 	if has_extra:
 		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
@@ -219,6 +235,12 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
 	# always the short form (16 Oct, Matt: "res not resistance - looks odd when you see them side by side"): a card
 	# never goes long because it has room while the one beside it went short
+	if Items.is_mag(it):
+		# a magazine's own chips (30 Oct, the approved canvas): its size, its reload, its pouches, the gun it feeds
+		var mchips: Array = []
+		for f in mag_chips(it, sim_in.mag_gun(it) if sim_in != null else null, sim_in):
+			mchips.append({"forms": f, "colour": Pal.TEXT_2})
+		chips_a = mchips + chips_a.filter(func(c): return not (str(c["forms"][0]) == "No affixes"))
 	for c in chips_a:
 		if c.has("forms") and (c["forms"] as Array).size() > 1:
 			c["forms"] = [c["forms"].back()]
@@ -241,6 +263,30 @@ func _lay_tail() -> void:
 	if not warning.is_empty() and _tail_chips.shown() == 0:
 		_tail_chips.show_chips([chips[0]], 1, true)     # too long beside the tail (the review): the warning alone, the row's whole width
 	_tail_chips.visible = not chips.is_empty()
+
+
+## A magazine's tail chips (30 Oct, the approved canvas): its size against the gun's own ("The gun's own 8", "×1.5 the
+## gun's 8"), its reload against the gun's ("Reloads 1 s quicker"), its pouches past one, and the gun it feeds.
+static func mag_chips(it: Dictionary, gun, sim_in) -> Array:
+	var out: Array = []
+	var own: int = Items.mag_size(gun) if gun is Dictionary else int(Data.MAG_SIZE.get(Items.mag_type(it), 30))
+	var cap: int = Items.mag_cap(it, gun)
+	if Data.MAG_KINDS.get(Items.mag_kind(it), {}).has("flat"):
+		out.append([Words.MAG_WORDS["always"] % cap])     # the Hundred-round drum: its hundred whatever the gun (the fix round)
+	elif cap == own:
+		out.append([Words.MAG_WORDS["own"] % own])
+	else:
+		out.append([Words.MAG_WORDS["times"] % [Words.fig1(float(cap) / float(maxi(1, own))), own]])
+	var x: float = Items.mag_reload_x(it)
+	if absf(x - 1.0) > 0.001:
+		var base_s: float = sim_in.reload_s(gun) if (sim_in != null and gun is Dictionary) else float(Data.RELOAD_S.get(Items.mag_type(it), 2.0))
+		var ds: float = absf(base_s * (x - 1.0))
+		out.append([(Words.MAG_WORDS["quicker"] if x < 1.0 else Words.MAG_WORDS["slower"]) % Words.fig1(ds)])
+	if Items.size(it) > 1:
+		out.append([Words.MAG_WORDS["pouches"] % Items.size(it)])
+	if gun is Dictionary:
+		out.append([Words.MAG_WORDS["feeds"] % Words.mid_base(str(gun["base"]))])
+	return out
 
 
 ## A paper's headline (16 Oct, Matt: "remove tin price from all papers - adds nothing"): what it is - Kev's story and
@@ -339,7 +385,7 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 			out.append([Items.mount_name(it["mount"]), ""])
 	elif slot == Data.AMMO:
 		out.append(["Rounds", ""])
-		out.append([Items.type_word(it) if Items.type_word(it) != "" else str(Items.base_of(it).get("type", "")), ""])
+		out.append([Items.type_name(str(Items.base_of(it).get("type", ""))), ""])     # sentence case, SMG as it is (30 Oct, parked item 5: "shotgun"); Nails' "Nail" as the magazines (the fix round)
 	elif slot == Data.MEDICAL:
 		out.append(["Cure" if Items.is_cure(it) else "Med", ""])
 		if Items.is_cure(it):
@@ -349,6 +395,10 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 		out.append([str(Items.base_of(it)["type"]).capitalize(), str(Items.base_of(it)["type"])])
 	elif slot == Data.PAPER:
 		out.append(["Paper", ""])
+	elif slot == Data.MAGAZINE:
+		out.append([Words.MAG_WORDS["chip"], ""])     # a magazine (30 Oct): what it is, its type, its level
+		out.append([Items.type_name(Items.mag_type(it)), ""])
+		out.append(["Level %d" % int(it.get("tier", 1)), ""])
 	else:
 		out.append([slot, ""])
 		var tw := Items.type_word(it)
@@ -359,7 +409,7 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 	var rarity_tone: String = Pal.item_tone(it)
 	if slot == Data.ATTACHMENT and Items.base_of(it).has("type"):
 		out.append([Items.only_words(it), ""])
-	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE or slot == Data.SUPPLIES
+	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE or slot == Data.SUPPLIES or slot == Data.MAGAZINE
 	if not plain or int(it["rarity"]) > 0:
 		out.append([Items.rarity_name(it), rarity_tone])
 	if not plain:

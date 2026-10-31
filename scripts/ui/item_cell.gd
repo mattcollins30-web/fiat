@@ -12,7 +12,7 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Gloves": "GLV", "Rig": "RIG", "Backpack": "PCK",
-	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP"}
+	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP", "Magazine": "MAG"}
 const INSET := 3                   # the picture sits inside the border
 const NAME_MIN := 9                # the smallest type a name steps down to in a cell of two or more across (29 Oct)
 ## The tone made to read at a glance (17 Oct, Matt: the item-colours canvas): a wash of the tone up from the cell's
@@ -133,8 +133,8 @@ func _init() -> void:
 	set_process(false)
 
 
-## A rig pouch's magazines (28 Oct, magazines): `fills` one a magazine, 0 to 1 (empty to loaded), drawn as pips
-## along the cell's foot; [] takes them off. The rounds stay in the corner, lifted clear of the pips.
+## A magazine's fill (28 Oct; 30 Oct, magazines as items: one bar, a magazine a tile, a drum two wide): `fills` 0 to 1
+## (empty to full), drawn as a bar along the cell's foot; [] takes it off. The rounds stay in the corner, lifted clear.
 var _mags: Control
 var _mag_fill: Array = []
 const MAG_PIP_H := 6
@@ -393,12 +393,12 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		# does: 64 a cell, the cell 64 plus the gaps); only a bigger one is scaled
 		var fits: bool = tex.get_width() <= _art.size.x and tex.get_height() <= _art.size.y
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if Items.is_ammo(it) or ((Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1):
-			_corner.text = ("%d" % int(it["rounds"])) if Items.is_ammo(it) else ("×%d" % int(it["count"]))
+		if Items.is_ammo(it) or Items.is_mag(it) or ((Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1):
+			_corner.text = ("%d" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else ("×%d" % int(it["count"]))
 			var small: bool = size.y < 48.0               # a shrunk pouch (a full rig, 44 px and under): the count smaller, "1.2k" past 999
 			var tiny: bool = size.x < 34.0                # the smallest pouches: 9 px, whole thousands
 			_corner.add_theme_font_size_override("font_size", (9 if tiny else 11) if small else Pal.CELL_TEXT)
-			var n: int = int(it["rounds"]) if Items.is_ammo(it) else int(it["count"])
+			var n: int = int(it["rounds"]) if (Items.is_ammo(it) or Items.is_mag(it)) else int(it["count"])
 			if small and n >= 1000:
 				@warning_ignore("integer_division")
 				_corner.text = "%.1fk" % (n / 1000.0) if (n < 10000 and not tiny) else "%dk" % (n / 1000)
@@ -437,14 +437,14 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	var words: Array = []
 	var cure: String = Items.cure_of(it)     # a cure's one cell names its element, in its tone (28 Oct, the review: "MED Stops")
 	if f.x == 1 and f.y == 1:
-		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else (cure.capitalize() if cure != "" else h[0]))]
+		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else (cure.capitalize() if cure != "" else h[0]))]
 	else:
-		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
+		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else "%s %s" % [h[0], h[1]]]
 		if big:
 			words.append("T%d · %s" % [it["tier"], Items.rarity_name(it)])
 	if size.x < 48.0 or size.y < 48.0:     # a small pouch either way, 44 px included (12 Oct: a packed rig at 44 spilled a kit's lines) (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
 		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
-		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
+		words = [("%d" % int(it.get("rounds", 0))) if Items.is_mag(it) else (words[0] if f.x > 1 else SHORT[it["slot"]])]     # a magazine: its rounds, the one thing a small tile must say (30 Oct)
 		fs = 11 if size.x >= 34.0 else (9 if size.x >= 26.0 else 8)     # the smallest pouch (22 px): the short word at 8; a half cell (29 px, the run's rig of thirteen and more since 27 Oct) at 9
 		line_h = 14 if size.x >= 26.0 else 10
 	var y := (size.y - words.size() * line_h) / 2.0
@@ -460,7 +460,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		elif i == 1:
 			if str(it.get("slot", "")) == "Gloves":
 				options.append("%s %s" % [h[0], Items.glove_unit_short(it)])     # a pair's unit short before none (the fix round, 29 Oct)
-			options.append((cure.capitalize().left(4) if cure != "" and f.x == 1 and f.y == 1 else h[0]) if not Items.is_ammo(it) else "%d" % int(it["rounds"]))
+			options.append((cure.capitalize().left(4) if cure != "" and f.x == 1 and f.y == 1 else h[0]) if not (Items.is_ammo(it) or Items.is_mag(it)) else "%d" % int(it["rounds"]))
 		else:
 			options.append("T%d" % it["tier"])
 		var cure_word: bool = cure != "" and i == 1 and f.x == 1 and f.y == 1 and words.size() > 1

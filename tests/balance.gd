@@ -487,14 +487,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	var gang_clock := []
 	var hp0: float = sim.hp
 	sim.hp = sim.max_hp()                 # read whole: the last run may have left it hurt, and the reader keys on the HP
-	var boxes: Array = []                 # and armed: a gun with a few rounds left reads 0% (the dry run burns them in seconds)
-	for s in ["Primary", "Secondary"]:
-		var gun = sim.equipped[s]
-		if gun != null and Items.ammo_type(gun) != "none" and not sim.ammo_box(Items.ammo_type(gun)).is_empty():
-			var box: Dictionary = sim._plain(Data.AMMO, sim.ammo_box(Items.ammo_type(gun))["name"])
-			box["rounds"] = 100000
-			sim.rig.append(box)
-			boxes.append(box)
+	# (30 Oct, the designer's A: the reads see the rule - the real magazines, filled at the gate, and the gate's box in the pack)
+	sim._fill_mags()
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i) and i <= sim.best_tier:      # the tiers held: the one just opened reads what it reads until the kit catches up
 			var d0: int = sim.depth[i]
@@ -512,8 +506,6 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 				_odds_detail(sim, i, s)
 			sim.words[i] = intel0
 			sim.set_depth(i, d0)
-	for box in boxes:
-		sim.rig.erase(box)
 	sim.hp = hp0
 	g["odds"] = odds
 	g["gang_clock"] = gang_clock
@@ -691,14 +683,8 @@ func _ladder_read(sim, push: float) -> Dictionary:
 	var ladder := {}
 	var hp0: float = sim.hp
 	sim.hp = sim.max_hp()
-	var boxes: Array = []
-	for s in ["Primary", "Secondary"]:
-		var gun = sim.equipped[s]
-		if gun != null and Items.ammo_type(gun) != "none" and not sim.ammo_box(Items.ammo_type(gun)).is_empty():
-			var box: Dictionary = sim._plain(Data.AMMO, sim.ammo_box(Items.ammo_type(gun))["name"])
-			box["rounds"] = 100000
-			sim.rig.append(box)
-			boxes.append(box)
+	# (30 Oct, the designer's A: the reads see the rule - the real magazines, filled at the gate, and the gate's box in the pack)
+	sim._fill_mags()
 	for pair in [[Data.OUTSKIRTS_SITES, "0"], [Data.TIERS.size() - 1, "8"]]:     # the Streets and the Barracks, keyed as before the Outskirts (12 Oct)
 		var i: int = pair[0]
 		var d0: int = sim.depth[i]
@@ -721,8 +707,6 @@ func _ladder_read(sim, push: float) -> Dictionary:
 		sim.depth[i] = d0
 		sim.words[i] = intel0
 		sim._surv_cache.erase(i)
-	for box in boxes:
-		sim.rig.erase(box)
 	sim.hp = hp0
 	return ladder
 

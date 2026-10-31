@@ -177,7 +177,7 @@ func _sell(r: int) -> void:
 
 ## The pieces a row's Sell would sell, as a fingerprint for its arm (the reviewer: one sold and one found kept the count).
 func _spare_fp(r: int) -> String:
-	var ids: Array = sim.stash.filter(func(it): return sim._spare(it, r) and sim.tab_of(it) == "").map(func(it): return int(it["id"]))
+	var ids: Array = sim.rarity_sells(r).map(func(it): return int(it["id"]))     # what the button sells, the cascade in (the second review)
 	ids.sort()
 	return str(hash(ids))
 

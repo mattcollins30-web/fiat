@@ -131,9 +131,9 @@ func show_state(s) -> void:
 			c.visible = true
 			c.position = _rig_at(places[k][0])
 			c.show_item(it, it["id"] == selected, Vector2(w * _rc + (w - 1) * _rg, _rc))
-			if Items.is_ammo(it):
-				c.set_mags(Items.pouch_fills(it), it)     # a pouch of magazines, each pip one, filled as loaded (28 Oct)
-				c.tooltip_text = "%s · %s" % [it["base"], Items.pouch_words(it)]
+			if Items.is_mag(it):
+				c.set_mags([sim.mag_fill(it)], it)     # a magazine: its rounds in the corner, a bar how full (30 Oct; a drum two wide)
+				c.tooltip_text = "%s · %s" % [it["base"], sim.mag_words(it)]
 			else:
 				c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)] if Items.is_medical(it) else str(it["base"])     # the cells are pooled (28 Oct, the review: a med kept a pouch's words)
 		else:
@@ -154,8 +154,8 @@ func _can_drop(_at: Vector2, data: Variant) -> bool:
 		return false
 	for it in sim.stash:
 		if it["id"] == data["id"]:
-			# a pouch free, or rounds that top up a stack already in the rig
-			return Items.rig_item(it) and (sim.rig_room(Items.size(it)) or sim.rig_tops_up(it))
+			# a pouch free (a drum two)
+			return Items.rig_item(it) and sim.rig_room(Items.size(it))
 	return false
 
 

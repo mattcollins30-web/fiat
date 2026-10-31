@@ -278,7 +278,20 @@ func _show_panel() -> void:
 		extra = [("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line, line, "%d of %d worn%s" % [n, st["pieces"].size(), iss_words]]
 	var where: String = {"stash": "in the stash", "rig": "in the rig", "slot": "fitted"}.get(selected["kind"], "")
 	_pick.show_pick(it, sim, "The pick · " + where, tail, extra)
-	if Items.rig_item(it):
+	if Items.is_mag(it):
+		buttons = _show_magazine(it)
+	elif Items.is_ammo(it):
+		# a box (30 Oct): it stays in the stash and fills the rig's magazines at the gate
+		var feeds := []
+		for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:
+			if g != null and Items.ammo_type(g) == Items.base_of(it)["type"]:
+				feeds.append(g["base"])
+		var lines: Array = [("Feeds both guns" if feeds.size() == 2 else "Feeds the %s" % Words.mid_base(str(feeds[0]))) if not feeds.is_empty() else "Nothing fitted fires it",
+			["A box: it fills the rig's magazines at the gate", "Fills the rig's magazines"]]
+		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
+		if Items.stacks(it):
+			buttons.append(_split_button(it))
+	elif Items.rig_item(it):
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
 		var pl: Array = sim.paper_lines(it)
@@ -415,23 +428,32 @@ func _rounds_clause(gun: Dictionary) -> Array:
 	return ["%s, %d in the rig" % [takes, n], "%s, %d" % [takes, n], takes]
 
 
+## A magazine (30 Oct, the approved canvas): against the one of its type in the rig when there is one - the compare's
+## foot (rounds, pouches, reload) and Swap into the rig; else "THE RIG": each gun's magazines and rounds, the meds, the
+## rounds left in the stash. Take into the rig, or Leave in the stash. Returns the buttons.
+func _show_magazine(it: Dictionary) -> Array:
+	var buttons := []
+	var other: Dictionary = sim.mag_rig_match(it) if selected["kind"] != "rig" else {}
+	if not other.is_empty():
+		_pick.show_fitted(other, sim, "In the rig")
+		var cmp: Array = sim.mag_compare(it, other)
+		_pick.set_verdict(cmp[0][0], cmp[0][1], cmp[1])
+		buttons.append({"text": "Swap into the rig", "action": sim.mag_swap.bind(int(it["id"]), int(other["id"])), "enabled": sim.can_mag_swap(int(it["id"]), int(other["id"])), "primary": true})
+	else:
+		var lines: Array = sim.rig_card_lines()
+		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines.slice(0, PickPanel.LINES))
+	if selected["kind"] == "rig":
+		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and sim.stash_fits(it), "primary": true})
+	elif other.is_empty():
+		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and sim.rig_room(Items.size(it)), "primary": true})     # the compare's foot is the swap alone (the canvas): its deltas want the room
+	return buttons
+
+
 ## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
 func _show_medical(it: Dictionary) -> Array:
-	var lines: Array = [("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
+	var lines: Array = ["Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds"]     # a med or a grenade: a box or a magazine has its own panel
 	if Items.is_cure(it):
 		lines[0] = [sim.med_words(it), Words.CURE_CLEARS[Items.cure_of(it)] + ", at once"]     # a cure (28 Oct): what it stops
-	if Items.is_ammo(it):
-		var gun = sim.equipped["Primary"]
-		var sec = sim.equipped["Secondary"]
-		var feeds := []
-		for g in [gun, sec]:
-			if g != null and Items.ammo_type(g) == Items.base_of(it)["type"]:
-				feeds.append(g["base"])
-		lines[0] = ("Feeds both guns" if feeds.size() == 2 else "Feeds the %s" % str(feeds[0]).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"     # two names ran past the panel (10 Oct)
-		if selected["kind"] == "rig":
-			lines.append(["%s, %d rounds" % [Items.pouch_words(it), int(it["rounds"])], Items.pouch_words(it)])     # a pouch of magazines (28 Oct)
-		else:
-			lines.append(["A box: it fills the rig's magazines", "Fills the rig's magazines"])
 	var buttons := []
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})

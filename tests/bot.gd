@@ -1803,6 +1803,8 @@ func _pack(sim) -> void:
 		return
 	sim._fill_mags()
 	sim.pack_rig("fill")
+	sim._fill_mags()                          # the newly packed magazines filled, as the gate does (30 Oct)
+	sim.gate_box_always = true                # and its box for the refills at the gate, as "fill" packs it (the fix round, the designer's A)
 
 
 func _restock_meds(sim) -> void:
@@ -1871,11 +1873,16 @@ func _restock_rounds(sim) -> void:
 		# rounds for a run: the gun's rate over two minutes
 		var want: int = int(Items.base_of(gun)["rof"] * 120.0 * pair[1])
 		var guard := 0
-		# magazines (28 Oct): the stash stocked for the pouches the gate packs (Sim.pack_rig, at its share of the rig; the
-		# secondary of another type its one) - the rounds the run wants, as far as those pouches hold; a dry primary's
-		# bought with the rig full, the packer making its pouch room
-		var pouches: int = maxi(1, sim.mag_pouch_room()) if pair[0] == "Primary" else 1
-		var need: int = mini(want - sim.rounds_for(gun), pouches * Items.pouch_cap_of(type))
+		# magazines as items (30 Oct): standard magazines off the Fence's shelf for the pouches the gate packs (Sim.pack_rig,
+		# at its share of the rig; the secondary of another type its one), then boxes for what they hold - the rounds the
+		# run wants, as far as the magazines hold; a dry primary's bought with the rig full, the packer making its room
+		var share: int = maxi(1, ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)) if pair[0] == "Primary" else 1
+		_buy_mags(sim, gun, share)
+		var mag_room := 0
+		for mg in sim.rig + sim.stash:
+			if Items.mag_fits(mg, gun):
+				mag_room += Items.mag_cap(mg, gun)
+		var need: int = mini(want, mag_room) - sim.rounds_for(gun)
 		var dry: bool = pair[0] == "Primary" and sim.rounds_for(gun) == 0 and sim.med_capacity() > 0
 		while _stash_rounds(sim, type) < need and (sim.rig_room(1) or dry) and guard < 6:
 			guard += 1
@@ -1888,7 +1895,7 @@ func _restock_rounds(sim) -> void:
 					break
 				var worst := {}
 				for it in sim.stash:
-					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or Items.is_supplies(it) or it.get("mythic", false):
+					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_mag(it) or Items.is_paper(it) or Items.is_supplies(it) or it.get("mythic", false):
 						continue
 					if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
 						continue
@@ -1896,6 +1903,16 @@ func _restock_rounds(sim) -> void:
 						worst = it
 				if worst.is_empty() or not _dispose(sim, worst):
 					break
+
+
+## Standard magazines for a gun off the Fence's shelf (30 Oct), till the rig and the stash hold `want` that fit it.
+static func _buy_mags(sim, gun: Dictionary, want: int) -> void:
+	var have: int = (sim.rig + sim.stash).filter(func(x): return Items.mag_fits(x, gun)).size()
+	for it in sim.market.duplicate():
+		if have >= want:
+			return
+		if Items.mag_fits(it, gun) and sim.cash >= sim.price(it) and sim.stash_fits(it) and sim.buy_id(int(it["id"])):
+			have += 1
 
 
 ## The stash's rounds of a type.
@@ -1980,6 +1997,20 @@ func _sell_spares(sim) -> void:
 			if not fired:
 				_dispose(sim, it)
 			continue
+		if Items.is_mag(it):
+			# magazines (30 Oct): those the worn guns take stay, the biggest, as many as the rig's pouches; the rest go
+			var g_fit = null
+			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:
+				if g != null and Items.mag_fits(it, g):
+					g_fit = g
+			if g_fit == null:
+				_dispose(sim, it)
+			else:
+				var mine: Array = sim.stash.filter(func(x): return Items.mag_fits(x, g_fit))
+				mine.sort_custom(func(a, b_in): return Items.mag_cap(a, g_fit) > Items.mag_cap(b_in, g_fit))
+				if mine.find(it) >= maxi(2, sim.med_capacity()):
+					_dispose(sim, it)
+			continue
 		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and not type_best.is_empty() and int(type_best["id"]) == int(it["id"]):
 			continue                      # the best spare of the class's type stays; the rest of them go
 		if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
@@ -2017,7 +2048,7 @@ func _buy_upgrade(sim) -> void:
 				break
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
-		if Items.is_attachment(it) or Items.rig_item(it) or not sim.can_wear(it):
+		if Items.is_attachment(it) or (Items.rig_item(it) or Items.is_ammo(it)) or not sim.can_wear(it):
 			continue                       # gear over the runner's level waits (15 Oct): not bought to wear yet
 		var cur = sim.equipped[it["slot"]]
 		var g: float = sim.upgrade_gain(it, true) if sim.compare(it, -1, true) == 1 else 0.0     # tried on (11 Oct), as the Kit's arrow reads it once home (the swap)

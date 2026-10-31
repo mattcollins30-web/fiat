@@ -30,8 +30,8 @@ const GRENADE := "Grenade"        # thrown from a pouch (32): damage to everyone
 ## Medical supplies (28 Oct, docs/design/meds_ammo_clinic.md): a stack in the pack, found in medicine cabinets and on
 ## the sites that lean to meds (the Hospital most); handed to the medic, her shelf gets better for good.
 const SUPPLIES := "Supplies"
-## Ammo rides in the rig too, a stack a cell. A gun fires its type's rounds
-## and runs dry without them: then the secondary, then fists.
+## Ammo: boxes of rounds, in the stash and the pack (30 Oct: never the rig - the rig carries magazines, filled from
+## the boxes). A gun fires its type's rounds and runs dry without them: then the secondary, then fists.
 const AMMO := "Ammo"
 ## Papers: a line of the before, found lying about, a cell each, pennies at
 ## the Fence. Their words live in words.gd; the deeds are the one that matters.
@@ -46,7 +46,7 @@ const RADIO_EVERY := 3             # the radio comes on every this many runs hom
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
 const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Gloves": [2, 2], "Rig": [3, 2], "Backpack": [3, 3],
-	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1]}
+	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1], "Magazine": [1, 1]}
 const FOOTPRINTS := {
 	# melee
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
@@ -77,6 +77,8 @@ const FOOTPRINTS := {
 	"Slam-fire shotgun": [3, 1], "Lathe-bored rifle": [5, 1], "Punt gun": [5, 1], "Big-game rifle": [5, 1], "Heavy-barrel rifle": [5, 1], "Prototype rifle": [5, 1],
 	"Derringer": [1, 1], "Pocket pistol": [1, 1], "Catapult": [1, 1], "Screwdriver": [1, 1], "Commando dagger": [1, 1], "Pen gun": [1, 1],
 	"Arctic smock": [3, 4], "Chainmail shark suit": [3, 4], "Mule pack": [3, 4], "Alpine pack": [3, 4], "Freefall pack": [3, 4],
+	# magazines (30 Oct): a drum two pouches
+	"Pistol drum": [2, 1], "Rifle drum": [2, 1], "Shotgun drum": [2, 1], "SMG drum": [2, 1], "Nail drum": [2, 1], "Belt box": [2, 1], "Hundred-round drum": [2, 1],
 	# optics
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 }
@@ -287,7 +289,7 @@ const RIG_CAP := 24
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
 	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour", "Gloves": "grip",     # gloves: the fight's damage a second, pace in (29 Oct)
-	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value",
+	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value", "Magazine": "mag",
 	"Charm": "find",
 }
 
@@ -314,69 +316,69 @@ const BASES := {
 		{"name": "Crossbow", "type": "improvised", "tier": 2, "damage": 60.0, "rof": 0.45, "value": 75,
 			"attachments": ["optic", "stock"]},
 		{"name": "Garage-built rifle", "type": "improvised", "ammo": "rifle", "tier": 2, "damage": 19.0, "rof": 1.5, "value": 85, "mag": 18,     # the Retail Park's own: T3 to its site's T2 (29 Oct)
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		# shotguns - the Doorman's
 		{"name": "Farmer's shotgun", "type": "shotgun", "tier": 1, "damage": 45.0, "rof": 0.5, "value": 120,
 			"attachments": ["muzzle", "stock"]},
 		{"name": "Sawn-off", "type": "shotgun", "tier": 1, "damage": 55.0, "rof": 0.35, "value": 100,
 			"attachments": ["stock"]},
 		{"name": "Pump shotgun", "type": "shotgun", "tier": 2, "damage": 42.0, "rof": 0.8, "value": 90,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Riot shotgun", "type": "shotgun", "tier": 3, "damage": 50.0, "rof": 1.0, "value": 170, "mag": 11,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Semi-auto shotgun", "type": "shotgun", "tier": 3, "damage": 38.0, "rof": 1.4, "value": 180, "mag": 11,
-			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard"]},
 		# rifles - the Poacher's
 		{"name": "Semi-auto .22", "type": "rifle", "tier": 2, "damage": 18.0, "rof": 1.7, "value": 90, "mag": 19,
-			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard"]},
 		{"name": "Old .303", "type": "rifle", "tier": 2, "damage": 65.0, "rof": 0.5, "value": 85,
 			"attachments": ["optic", "stock"]},
 		{"name": "Stalking rifle", "type": "rifle", "tier": 3, "damage": 58.0, "rof": 0.8, "value": 160,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Army bullpup", "type": "rifle", "tier": 3, "damage": 20.0, "rof": 2.6, "value": 180, "mag": 11,
-			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard"]},
 		{"name": "AR-pattern rifle", "type": "rifle", "tier": 3, "damage": 16.0, "rof": 3.0, "value": 170, "mag": 17,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Battle rifle", "type": "rifle", "tier": 3, "damage": 36.0, "rof": 1.4, "value": 190,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		# SMGs - the Drifter's. The line (7 Oct): a gun a tier from T2 to T6, two at T6 like the shotguns, the top a shade
 		# over theirs and paid for in rounds; every SMG primary carries walking fire (`sustain`: the stream grows so much a
 		# second on one gang, to the cap), the long fight's gun
 		{"name": "Workshop SMG", "type": "smg", "tier": 2, "damage": 15.0, "rof": 2.3, "value": 100, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Police carbine", "type": "smg", "tier": 3, "damage": 17.0, "rof": 2.8, "value": 175, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Security guard's carbine", "type": "smg", "tier": 3, "damage": 18.0, "rof": 3.0, "value": 190, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Courier's SMG", "type": "smg", "tier": 4, "damage": 21.0, "rof": 3.6, "value": 310, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Armoured car gun", "type": "smg", "tier": 5, "damage": 25.0, "rof": 4.0, "value": 520, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Riot squad's SMG", "type": "smg", "tier": 6, "damage": 28.0, "rof": 4.4, "value": 760, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		# tiers 4 and 5: the town's, and past it
 		{"name": "Workshop carbine", "type": "improvised", "ammo": "smg", "tier": 4, "damage": 34.0, "rof": 1.9, "value": 260,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Drum shotgun", "type": "shotgun", "tier": 4, "damage": 44.0, "rof": 1.5, "value": 280, "mag": 12,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Scoped .308", "type": "rifle", "tier": 4, "damage": 80.0, "rof": 0.85, "value": 300,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Army SMG", "type": "smg", "tier": 4, "damage": 20.0, "rof": 3.4, "value": 290, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Tooled-up garage rifle", "type": "improvised", "ammo": "rifle", "tier": 5, "damage": 40.0, "rof": 2.3, "value": 420, "mag": 20,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Automatic shotgun", "type": "shotgun", "tier": 5, "damage": 46.0, "rof": 2.0, "value": 460, "mag": 15,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Sniper rifle", "type": "rifle", "tier": 5, "damage": 110.0, "rof": 0.85, "value": 480,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		# tier 6: the city's - the Services, the Hospital, the Barracks
 		{"name": "Armourer's carbine", "type": "improvised", "ammo": "smg", "tier": 6, "damage": 44.0, "rof": 2.6, "value": 650,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		## the top of the pool (6 Oct): the firearms squad's and the Barracks' own
 		{"name": "Police marksman's rifle", "type": "rifle", "tier": 6, "damage": 125.0, "rof": 0.9, "value": 820,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Riot squad's shotgun", "type": "shotgun", "tier": 6, "damage": 52.0, "rof": 2.2, "value": 760,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		# melee: no rounds ever, slow, hard, a fifth of it bleed; in among them, so they hit you harder
 		# and their first shot lands before your first swing. Grip and head mounts of their own.
 		# the start since 13 Oct (Matt: a bat found "trivialised ammo concerns"): a hand-me-down hammer, the nail gun's
@@ -399,39 +401,39 @@ const BASES := {
 		{"name": "Breaker bar", "type": "melee", "ammo": "none", "tier": 6, "damage": 82.0, "rof": 1.2, "value": 640, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
 		{"name": "Assault shotgun", "type": "shotgun", "tier": 6, "damage": 48.0, "rof": 2.4, "value": 680,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Marksman rifle", "type": "rifle", "tier": 6, "damage": 90.0, "rof": 1.1, "value": 720,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Section gun", "type": "smg", "tier": 4, "damage": 16.5, "rof": 4.4, "value": 290, "sustain": [4, 40],     # the Barracks' own: T6 to T4 (29 Oct)     # lifted (7 Oct): 26 × 4.2 read 109 against the shotguns' 115
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40], "mag": 100, "reload": 3.0,     # its belt (28 Oct, magazines): draft
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		## the deep bases (10 Oct, docs/design/deep_guns.md): tiers 7-9, found from level 12, 16 and 20 (the Barracks at depth
 		## 4, 8, 12); about +18% damage a second a tier on each type's own line, so the climb has a base to chase all the way down
 		{"name": "Security service SMG", "type": "smg", "tier": 7, "damage": 31.0, "rof": 4.6, "value": 1050, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Close protection SMG", "type": "smg", "tier": 8, "damage": 34.0, "rof": 4.9, "value": 1450, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Special forces SMG", "type": "smg", "tier": 9, "damage": 37.0, "rof": 5.2, "value": 2000, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Range rifle", "type": "rifle", "tier": 7, "damage": 96.0, "rof": 1.4, "value": 1100,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Service rifle", "type": "rifle", "tier": 8, "damage": 104.0, "rof": 1.5, "value": 1500, "mag": 11,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Anti-materiel rifle", "type": "rifle", "tier": 9, "damage": 150.0, "rof": 1.2, "value": 2100,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Breaching shotgun", "type": "shotgun", "tier": 7, "damage": 60.0, "rof": 2.25, "value": 1050, "mag": 16,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Entry shotgun", "type": "shotgun", "tier": 8, "damage": 66.0, "rof": 2.4, "value": 1450,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Combat shotgun", "type": "shotgun", "tier": 9, "damage": 74.0, "rof": 2.55, "value": 2000, "mag": 18,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Bolt-action garage rifle", "type": "improvised", "ammo": "rifle", "tier": 7, "damage": 112.0, "rof": 1.2, "value": 900,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Workshop gauss", "type": "improvised", "tier": 8, "damage": 52.0, "rof": 3.0, "value": 1250,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "The engineer's piece", "type": "improvised", "ammo": "smg", "tier": 9, "damage": 50.0, "rof": 3.6, "value": 1700,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Demolition bar", "type": "melee", "ammo": "none", "tier": 7, "damage": 90.0, "rof": 1.3, "value": 900, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
 		{"name": "Rescue axe", "type": "melee", "ammo": "none", "tier": 8, "damage": 108.0, "rof": 1.3, "value": 1250, "conv_bleed_pct": 25,
@@ -468,23 +470,23 @@ const BASES := {
 		{"name": "Compound bow", "type": "improvised", "tier": 3, "damage": 90.0, "rof": 0.5, "value": 160,
 			"attachments": ["optic", "stock"]},
 		{"name": "Converted air rifle", "type": "improvised", "ammo": "rifle", "tier": 3, "damage": 20.0, "rof": 2.25, "value": 170, "mag": 36,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Slam-fire shotgun", "type": "improvised", "ammo": "shotgun", "tier": 3, "damage": 60.0, "rof": 0.75, "value": 150, "mag": 14,
 			"attachments": ["muzzle", "stock"]},
 		{"name": "Punt gun", "type": "improvised", "ammo": "shotgun", "tier": 4, "damage": 200.0, "rof": 0.33, "value": 270,
 			"attachments": ["stock"]},
 		{"name": "Paintball gun", "type": "improvised", "tier": 4, "damage": 26.0, "rof": 2.5, "value": 280, "mag": 120,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Arc-welder gun", "type": "improvised", "tier": 5, "damage": 46.0, "rof": 2.0, "value": 450, "conv_shock_pct": 35,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Lathe-bored rifle", "type": "improvised", "ammo": "rifle", "tier": 6, "damage": 228.0, "rof": 0.5, "value": 660,
 			"attachments": ["optic", "muzzle", "stock"]},
 		{"name": "Chain-driven repeater", "type": "improvised", "ammo": "smg", "tier": 7, "damage": 34.0, "rof": 3.95, "value": 960, "mag": 60,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Bench-made autocannon", "type": "improvised", "ammo": "rifle", "tier": 8, "damage": 260.0, "rof": 0.6, "value": 1300,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Prototype rifle", "type": "improvised", "ammo": "rifle", "tier": 9, "damage": 300.0, "rof": 0.6, "value": 1750,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Four-ten", "type": "shotgun", "tier": 1, "damage": 26.0, "rof": 0.8, "value": 90, "mag": 9,
 			"attachments": ["muzzle", "stock"]},
 		{"name": "Goose gun", "type": "shotgun", "tier": 2, "damage": 70.0, "rof": 0.48, "value": 90,
@@ -494,45 +496,45 @@ const BASES := {
 		{"name": "Ten-bore", "type": "shotgun", "tier": 3, "damage": 105.0, "rof": 0.5, "value": 170,
 			"attachments": ["muzzle", "stock"]},
 		{"name": "Magnum pump", "type": "shotgun", "tier": 4, "damage": 120.0, "rof": 0.55, "value": 270,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Pigeon gun", "type": "shotgun", "tier": 4, "damage": 30.0, "rof": 2.2, "value": 290, "mag": 18,
-			"attachments": ["optic", "muzzle", "magazine", "handguard"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard"]},
 		{"name": "Rifled slug gun", "type": "shotgun", "tier": 5, "damage": 185.0, "rof": 0.5, "value": 470,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Marine shotgun", "type": "shotgun", "tier": 7, "damage": 245.0, "rof": 0.55, "value": 1060,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Dragon's-breath gun", "type": "shotgun", "tier": 8, "damage": 66.0, "rof": 2.4, "value": 1480, "conv_fire_pct": 30,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Siege shotgun", "type": "shotgun", "tier": 9, "damage": 345.0, "rof": 0.55, "value": 2050,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Lever-action rifle", "type": "rifle", "tier": 2, "damage": 40.0, "rof": 0.8, "value": 90, "mag": 14,
-			"attachments": ["optic", "magazine", "stock"]},
+			"attachments": ["optic", "sling", "stock"]},
 		{"name": "Self-loading rifle", "type": "rifle", "tier": 4, "damage": 30.0, "rof": 2.25, "value": 290, "mag": 14,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Vermin rifle", "type": "rifle", "tier": 4, "damage": 34.0, "rof": 2.0, "value": 300, "mag": 20,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Regimental rifle", "type": "rifle", "tier": 5, "damage": 38.0, "rof": 2.45, "value": 470, "mag": 14,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Big-game rifle", "type": "rifle", "tier": 7, "damage": 268.0, "rof": 0.5, "value": 1080,
 			"attachments": ["optic", "muzzle", "stock"]},
 		{"name": "Heavy-barrel rifle", "type": "rifle", "tier": 8, "damage": 285.0, "rof": 0.55, "value": 1480,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		{"name": "Castle guard rifle", "type": "rifle", "tier": 9, "damage": 66.0, "rof": 2.75, "value": 2080, "mag": 13,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Wartime SMG", "type": "smg", "tier": 2, "damage": 22.0, "rof": 1.55, "value": 95, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Unmarked SMG", "type": "smg", "tier": 2, "damage": 11.0, "rof": 3.1, "value": 100, "sustain": [4, 40], "mag": 40,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Customs SMG", "type": "smg", "tier": 3, "damage": 24.0, "rof": 2.1, "value": 175, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Navy SMG", "type": "smg", "tier": 6, "damage": 35.0, "rof": 3.5, "value": 740, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Briefcase SMG", "type": "smg", "tier": 7, "damage": 41.0, "rof": 3.5, "value": 1040, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Spiral-mag SMG", "type": "smg", "tier": 8, "damage": 34.0, "rof": 4.9, "value": 1460, "sustain": [4, 40], "mag": 50,
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Ministerial SMG", "type": "smg", "tier": 9, "damage": 52.0, "rof": 3.7, "value": 2010, "sustain": [4, 40],
-			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 	],
 	"Secondary": [
 		{"name": "Converted blank-firer", "type": "improvised", "ammo": "pistol", "tier": 1, "damage": 12.0, "rof": 1.5, "value": 40,
@@ -548,55 +550,55 @@ const BASES := {
 		{"name": "Air pistol", "type": "improvised", "tier": 1, "damage": 8.0, "rof": 2.0, "value": 25,
 			"attachments": ["optic"]},
 		{"name": "Service pistol", "type": "pistol", "tier": 2, "damage": 15.0, "rof": 1.6, "value": 40,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Old revolver", "type": "pistol", "tier": 2, "damage": 28.0, "rof": 0.8, "value": 40,
 			"attachments": ["optic"]},
 		{"name": "Compact pistol", "type": "pistol", "tier": 2, "damage": 13.0, "rof": 2.0, "value": 45,
 			"attachments": ["muzzle"]},
 		{"name": "Machine pistol", "type": "smg", "tier": 3, "damage": 9.0, "rof": 3.2, "value": 100,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Big revolver", "type": "pistol", "tier": 3, "damage": 40.0, "rof": 0.8, "value": 90,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Tactical pistol", "type": "pistol", "tier": 3, "damage": 15.0, "rof": 2.2, "value": 95,     # the Shopping Centre's own: T4 to T3 (29 Oct)
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Officer's revolver", "type": "pistol", "tier": 6, "damage": 48.0, "rof": 1.2, "value": 360,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Army machine pistol", "type": "smg", "tier": 6, "damage": 16.0, "rof": 4.6, "value": 380,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Duty pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300, "mag": 16,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Automatic pistol", "type": "smg", "tier": 5, "damage": 14.0, "rof": 4.2, "value": 240,
-			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
 		## the deep bases (10 Oct): tiers 7-9 on the pistol and the machine pistol lines
 		{"name": "Close quarters pistol", "type": "pistol", "tier": 7, "damage": 24.0, "rof": 2.8, "value": 500,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Bodyguard's pistol", "type": "pistol", "tier": 8, "damage": 27.0, "rof": 2.9, "value": 700,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Special issue pistol", "type": "pistol", "tier": 9, "damage": 30.0, "rof": 3.1, "value": 950, "mag": 16,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Legation machine pistol", "type": "smg", "tier": 7, "damage": 19.0, "rof": 4.6, "value": 530,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Embassy PDW", "type": "smg", "tier": 8, "damage": 21.0, "rof": 4.9, "value": 740,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Protection squad PDW", "type": "smg", "tier": 9, "damage": 24.0, "rof": 5.0, "value": 1000,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		## the itemisation's (29 Oct, docs/design/itemisation.md §2): three a tier in T1-4, two in T5-9 (worn: a heavy, a light and a specialist every tier)
 		{"name": "Derringer", "type": "pistol", "tier": 1, "damage": 22.0, "rof": 0.7, "value": 30,
 			"attachments": []},
 		{"name": "Pocket pistol", "type": "pistol", "tier": 1, "damage": 8.0, "rof": 2.0, "value": 30,
 			"attachments": ["muzzle"]},
 		{"name": "Target pistol", "type": "pistol", "tier": 3, "damage": 11.0, "rof": 2.9, "value": 95, "mag": 16,
-			"attachments": ["optic", "magazine"]},
+			"attachments": ["optic", "sling"]},
 		{"name": "Police revolver", "type": "pistol", "tier": 4, "damage": 55.0, "rof": 0.8, "value": 150,
 			"attachments": ["optic"]},
 		{"name": "Polymer pistol", "type": "pistol", "tier": 4, "damage": 18.0, "rof": 2.45, "value": 150,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Long-slide pistol", "type": "pistol", "tier": 4, "damage": 22.0, "rof": 2.0, "value": 160, "mag": 20,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Hunting revolver", "type": "pistol", "tier": 5, "damage": 62.0, "rof": 0.8, "value": 240,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Competition pistol", "type": "pistol", "tier": 5, "damage": 20.0, "rof": 2.5, "value": 250,
-			"attachments": ["optic", "muzzle", "magazine"]},
+			"attachments": ["optic", "muzzle", "sling"]},
 		{"name": "Cavalry revolver", "type": "pistol", "tier": 7, "damage": 84.0, "rof": 0.8, "value": 510,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Ambassador's revolver", "type": "pistol", "tier": 8, "damage": 98.0, "rof": 0.8, "value": 710,
@@ -604,25 +606,25 @@ const BASES := {
 		{"name": "Field marshal's revolver", "type": "pistol", "tier": 9, "damage": 116.0, "rof": 0.8, "value": 960,
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Broomhandle pistol", "type": "smg", "tier": 2, "damage": 7.0, "rof": 3.1, "value": 45,
-			"attachments": ["muzzle", "magazine"]},
+			"attachments": ["muzzle", "sling"]},
 		{"name": "Stockless SMG", "type": "smg", "tier": 2, "damage": 9.0, "rof": 2.4, "value": 45,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Three-round pistol", "type": "smg", "tier": 3, "damage": 12.0, "rof": 2.4, "value": 95,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Compact PDW", "type": "smg", "tier": 4, "damage": 10.0, "rof": 4.4, "value": 150,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Select-fire pistol", "type": "smg", "tier": 4, "damage": 15.0, "rof": 2.95, "value": 150, "mag": 30,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Folding PDW", "type": "smg", "tier": 5, "damage": 18.0, "rof": 3.3, "value": 245,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Escort PDW", "type": "smg", "tier": 6, "damage": 22.0, "rof": 3.35, "value": 375,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Consular PDW", "type": "smg", "tier": 7, "damage": 26.0, "rof": 3.35, "value": 525,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Overcoat machine pistol", "type": "smg", "tier": 8, "damage": 30.0, "rof": 3.43, "value": 735,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Crown PDW", "type": "smg", "tier": 9, "damage": 35.0, "rof": 3.43, "value": 990,
-			"attachments": ["muzzle", "magazine", "stock"]},
+			"attachments": ["muzzle", "sling", "stock"]},
 		{"name": "Catapult", "type": "improvised", "tier": 2, "damage": 18.0, "rof": 1.15, "value": 40,
 			"attachments": []},
 		{"name": "Screwdriver", "type": "melee", "ammo": "none", "tier": 2, "damage": 11.0, "rof": 1.9, "value": 40, "conv_bleed_pct": 30,
@@ -953,22 +955,64 @@ const BASES := {
 		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15, "conv_bleed_pct": 20, "from": "SMG rounds"},
 		{"name": "Pistol rounds", "type": "pistol", "tier": 1, "rounds": 300, "value": 25},
 		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15, "conv_bleed_pct": 20, "from": "Pistol rounds"},
-		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20, "from": "SMG hollow point", "mag": 100},     # a pouch of belts, the Belt-fed's 100 (28 Oct, the review: a pouch of 90 held less than one)
+		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20, "from": "SMG hollow point"},     # (30 Oct: its own "mag" went - a magazine's size is the gun's)
 		{"name": "Depot rounds", "type": "rifle", "tier": 3, "rounds": 300, "value": 170, "damage_pct": 25, "from": "Match rounds"},
 		{"name": "Incendiary shells", "type": "shotgun", "tier": 3, "rounds": 80, "value": 140, "damage_pct": 10, "conv_fire_pct": 30, "from": "Slugs"},
 		{"name": "Incendiary SMG rounds", "type": "smg", "tier": 3, "rounds": 320, "value": 150, "damage_pct": 10, "conv_fire_pct": 30, "from": "SMG hollow point"},
 		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30, "from": "Match rounds"},
 	],
+	## Magazines (30 Oct, Matt: "you need to be able to find magazines and then fill them up out of boxes - then put
+	## them into the rig"; docs/design/meds_ammo_clinic.md, "Magazines as items"): one a pouch (a drum two, its
+	## footprint), by the ammo type it takes - any gun of the type. Its size the gun's own magazine times its kind
+	## (MAG_KINDS); it holds rounds of one grade (`ammo`, the box's base) and `rounds` of them. Tiers and values: drafts
+	## on the old magazine parts'.
+	"Magazine": [
+		{"name": "Pistol magazine", "type": "pistol", "kind": "standard", "tier": 1, "value": 30},
+		{"name": "Extended pistol magazine", "type": "pistol", "kind": "extended", "tier": 1, "value": 70},
+		{"name": "Quick pistol magazine", "type": "pistol", "kind": "quick", "tier": 2, "value": 90},
+		{"name": "Pistol drum", "type": "pistol", "kind": "drum", "tier": 2, "value": 90},
+		{"name": "Rifle magazine", "type": "rifle", "kind": "standard", "tier": 1, "value": 30},
+		{"name": "Extended rifle magazine", "type": "rifle", "kind": "extended", "tier": 1, "value": 70},
+		{"name": "Quick rifle magazine", "type": "rifle", "kind": "quick", "tier": 2, "value": 90},
+		{"name": "Rifle drum", "type": "rifle", "kind": "drum", "tier": 2, "value": 90},
+		{"name": "Shotgun magazine", "type": "shotgun", "kind": "standard", "tier": 1, "value": 30},
+		{"name": "Extended shotgun magazine", "type": "shotgun", "kind": "extended", "tier": 1, "value": 70},
+		{"name": "Quick shotgun magazine", "type": "shotgun", "kind": "quick", "tier": 2, "value": 90},
+		{"name": "Shotgun drum", "type": "shotgun", "kind": "drum", "tier": 2, "value": 90},
+		{"name": "SMG magazine", "type": "smg", "kind": "standard", "tier": 1, "value": 30},
+		{"name": "Extended SMG magazine", "type": "smg", "kind": "extended", "tier": 1, "value": 70},
+		{"name": "Quick SMG magazine", "type": "smg", "kind": "quick", "tier": 2, "value": 90},
+		{"name": "SMG drum", "type": "smg", "kind": "drum", "tier": 2, "value": 90},
+		{"name": "Nail magazine", "type": "improvised", "kind": "standard", "tier": 1, "value": 30},
+		{"name": "Extended nail magazine", "type": "improvised", "kind": "extended", "tier": 1, "value": 70},
+		{"name": "Quick nail magazine", "type": "improvised", "kind": "quick", "tier": 2, "value": 90},
+		{"name": "Nail drum", "type": "improvised", "kind": "drum", "tier": 2, "value": 90},
+		{"name": "Belt box", "type": "smg", "kind": "belt", "tier": 3, "value": 240},
+		{"name": "Hundred-round drum", "type": "smg", "kind": "hundred", "tier": 5, "value": 460},
+	],
 }
 ## Magazines (28 Oct, Matt: "carrying 3000 smg rounds in a rig doesn't make much sense for the realistic tone we
 ## have"; docs/design/meds_ammo_clinic.md): a gun fires from its magazine, MAG_SIZE rounds by what it fires (a base's
 ## own "mag" over it), and empty it reloads - RELOAD_S of no fire from it (a base's "reload" over it), shortened by
-## reload_pct. The rig carries loaded magazines, MAG_POUCH to a pouch, of a grade (a pouch of hollow points); boxes
-## stay in the stash and fill them at home, free, at the gate.
+## reload_pct. Magazines are items (30 Oct): the rig carries them, a pouch each (a drum two), each loaded with one
+## grade; boxes stay in the stash and the pack, and fill them at home, free, at the gate.
 const MAG_SIZE := {"smg": 30, "rifle": 10, "pistol": 15, "shotgun": 8, "improvised": 50}     # draft
 const RELOAD_S := {"smg": 2.0, "rifle": 2.5, "pistol": 1.5, "shotgun": 3.0, "improvised": 2.0}     # draft
-const MAG_POUCH := 3                # draft: magazines a pouch
-const RIG_MAG_SHARE := 0.5          # draft: the gate's top-up fills magazines into up to this share of the rig's pouches, the meds the rest
+## A magazine's kind (30 Oct): `x` the gun's own magazine (or `flat` rounds whatever the gun), `reload` the gun's reload
+## into it. Drafts.
+const MAG_KINDS := {
+	"standard": {"x": 1.0, "reload": 1.0},
+	"extended": {"x": 1.5, "reload": 1.0},
+	"quick": {"x": 1.0, "reload": 0.6},
+	"drum": {"x": 2.0, "reload": 1.4},
+	"belt": {"x": 2.5, "reload": 1.5},
+	"hundred": {"flat": 100, "reload": 1.8},
+}
+const MAGAZINE := "Magazine"
+const REFILL_MULT := 2.0            # draft (3 to 2.5 to 2, the fix round: the estate read's Poacher at the Pleasure Park under a coin flip): a magazine refilled by hand mid-run from a box in the pack, the gun's reload times this
+const RIG_MAG_SHARE := 0.5          # draft: the gate's top-up packs magazines into up to this share of the rig's pouches, the meds the rest
+const SHELF_MAGS := 2               # draft: the Fence's standard magazines on the shelf, of each type a gun you hold takes, every restock
+const MAG_OF_PARTS := 0.2          # draft: of a find that would be a gun part, the share that's a magazine instead (the five magazine parts were a seventh of the parts)
 const AMMO_PRICE := 1.5             # the Fence's markup on a standard box
 const AMMO_DROP := 0.22             # the share of a kill's drops that are rounds; a look's is half that
 const MED_PRICE := 1.5            # the Clinic's markup on a common med
@@ -999,13 +1043,13 @@ const SOCKET_OWN := 0.5           # and this share of them one of the class's ow
 ## roll affixes like gear. The Workshop's level says which mounts can be
 ## fitted at all - the camp's cash sink.
 const ATTACHMENT := "Attachment"
-const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"]
+const MOUNTS := ["optic", "muzzle", "sling", "handguard", "stock", "grip", "business end"]
 ## Each gun type's edge (29 Oct, docs/design/itemisation.md §3; drafts for the pass): the primary's, in the fight and in the
 ## figures that read it (Sim.edge_read). A rifle ignores `pierce` of a man's armour (their physical resist) and lands
 ## `opener` more on its first round into each man; a shotgun's every round hits the next in line for `x` of it; a melee
 ## weapon does `x` more with `on_you` or more on you; something improvised takes `sockets` more than another gun.
-## Walking fire (an SMG's) is its base's own `sustain`; the pistol's quick draw is the magazines' (it fires at full
-## while the primary reloads).
+## Walking fire (an SMG's) is its base's own `sustain`; the pistol's quick draw is the sling's (30 Oct: while the primary
+## reloads the secondary keeps its backing share, lifted to the primary's sling's; at full while it's dry or refilling).
 const EDGE := {"rifle": {"pierce": 0.3, "opener": 0.5}, "shotgun": {"x": 0.4}, "melee": {"x": 0.2, "on_you": 2}, "improvised": {"sockets": 1}}
 const MELEE_INCOMING := 1.25       # in among them: their fire on you, with a melee primary
 const MELEE_WAIT := 1.0            # seconds: their first shot lands before your first swing, each gang
@@ -1071,11 +1115,13 @@ const ATTACHMENTS := [
 	{"name": "Compensator", "mount": "muzzle", "tier": 2, "value": 70, "damage_pct": 8, "speed_pct": -3},
 	{"name": "Oil-can silencer", "mount": "muzzle", "tier": 3, "value": 120, "damage_pct": -5, "patrol_pct": 25},
 	{"name": "Muzzle brake", "mount": "muzzle", "tier": 3, "value": 180, "damage_pct": 12, "speed_pct": -5},
-	# magazines
-	{"name": "Extended magazine", "mount": "magazine", "tier": 1, "value": 70, "damage_pct": 8},
-	{"name": "Quick magazine", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 4, "speed_pct": 4},
-	{"name": "Drum magazine", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 10, "speed_pct": -6},     # the Retail Park's own: T3 to T2 (29 Oct)
-	{"name": "Belt box", "mount": "magazine", "tier": 3, "value": 240, "damage_pct": 20, "speed_pct": -12, "type": "smg"},
+	# slings (30 Oct, magazines as items: the magazine mount became the sling): while the primary reloads between
+	# magazines, the secondary fires at sling_pct of its fire - the designer's B: a lift over its usual backing share,
+	# never under it; drafts
+	{"name": "Rope sling", "mount": "sling", "tier": 1, "value": 40, "sling_pct": 50},
+	{"name": "Webbing sling", "mount": "sling", "tier": 2, "value": 90, "sling_pct": 65},
+	{"name": "Leather sling", "mount": "sling", "tier": 4, "value": 300, "sling_pct": 80},
+	{"name": "Two-point sling", "mount": "sling", "tier": 6, "value": 520, "sling_pct": 100},
 	# handguards
 	{"name": "Foregrip", "mount": "handguard", "tier": 1, "value": 50, "damage_pct": 6},
 	{"name": "Rail handguard", "mount": "handguard", "tier": 2, "value": 80, "damage_pct": 4, "speed_pct": 4},
@@ -1098,7 +1144,6 @@ const ATTACHMENTS := [
 	{"name": "Night optic", "mount": "optic", "tier": 4, "value": 320, "first_pct": 40, "damage_pct": 5},
 	{"name": "Ported brake", "mount": "muzzle", "tier": 4, "value": 300, "damage_pct": 15},
 	{"name": "Angled grip", "mount": "handguard", "tier": 4, "value": 280, "damage_pct": 8, "speed_pct": 4},
-	{"name": "Hundred-round drum", "mount": "magazine", "tier": 5, "value": 460, "damage_pct": 25, "speed_pct": -15},
 	{"name": "Precision stock", "mount": "stock", "tier": 5, "value": 420, "first_pct": 15, "damage_pct": 8},
 	{"name": "Laser module", "mount": "optic", "tier": 6, "value": 520, "first_pct": 20, "damage_pct": 6},
 	# socketables: the six things that go in a socket, found and fitted at the Bench
@@ -1831,7 +1876,7 @@ const TIERS := [
 		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
 	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 315.0, "dps": 0.61, "drop": 0.45, "loot_tier": 2, "xp": 10, "cash": 14,     # E1-2: 6
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 1.0, "cash": 1.0, "att": 2.0},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Drum magazine", "Wire stock"]}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Wire stock"]}},
 	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 520.0,     # ×0.75 to ×0.47 of 1100, its fire ×0.875 to ×0.47 (the fix round, 29 Oct: the Town's door on the Estate's T2 kit, the gate reads)
 		 "dps": 0.65, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},

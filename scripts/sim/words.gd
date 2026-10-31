@@ -217,11 +217,58 @@ const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
 const SIGNAL_LOST := "The signal's gone with the run"
 const SIGNAL_PAPERS := "Off the signal, for the Radio: %s"
 const PILE_FULL := "The papers are at %d, the cap: the lowest one was burnt"     # the Radio's pile at its cap (23 Oct; the language pass: mechanics, one sentence, the panel's name)
-const TOPPED_UP := "Topped up: %d rounds and %d meds from the stash into the rig"     # the rig at the gate (23 Oct)
+const TOPPED_UP := "Topped up: %s from the stash into the rig"     # the rig at the gate (23 Oct; 30 Oct: magazines, meds, a number its plural)
 const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
-const TOPPED_UP_MEDS := "Topped up: %d meds from the stash into the rig"     # meds alone
-const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Rounds go in the rig as magazines", "Not loose in the rig"]]     # a box found on a run (28 Oct)
-const FILLED_MAGS :="The magazines filled: %d rounds from the stash"     # the rig's magazines at home, the mode Leave it (28 Oct)
+const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Or one by hand, slowly, when they're spent", "Or one by hand, slowly"]]     # a box found on a run (28 Oct; 30 Oct: the refill)
+const FILLED_MAGS := "Filled: %s from the %s in the stash"     # the rig's magazines at the gate (30 Oct, the language pass)
+const PACKED_BOX := "Packed: a box of %s for the refills"     # the gate's box in the pack (30 Oct, the designer's call A)
+const BOX_CARRIED := [["Packed at the gate for the refills: it comes home", "Packed at the gate for the refills"], ["Yours: never ditched or put down", "Yours: it comes home"]]     # the gate's box picked on a run (the second review)
+const RIG_OFF := "Rig off: %s back in the stash"     # the rig taken off (the second review)
+const SMALLER_RIG := "Smaller rig: %s back in the stash"     # a rig swapped for one with fewer pouches (30 Oct, the playtest's item 1)
+## Magazines as items (30 Oct, the language pass): the Kit's gun line, a magazine's card, a sling's card, the run's tile.
+const MAG_WORDS := {
+	"kit_line": "%s · %s", "no_rounds": "No rounds needed",
+	"figure": "%d of %d rounds", "own": "The gun's own %d", "always": "Always %d rounds", "times": "×%s the gun's %d",
+	"quicker": "Reloads %s s quicker", "slower": "Reloads %s s slower", "pouches": "%d pouches", "feeds": "Feeds the %s",
+	"chip": "Magazine",
+	"sling_fig": "Secondary fires at %d%%", "sling_chip": "While the primary reloads",
+	"tile": "%d · %d spare", "refilling": "Refilling · %d s",
+	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
+}
+
+
+## "1 magazine", "3 magazines": a number and its noun, the plural right (30 Oct, the language pass: never "1 meds").
+static func count_of(n: int, one: String, many := "") -> String:
+	return "%d %s" % [n, one if n == 1 else (many if many != "" else one + "s")]
+
+
+## A figure to a tenth, a whole one bare: "1.5", "2", "0.8" (30 Oct, a magazine's chips).
+static func fig1(x: float) -> String:
+	var r: float = snappedf(x, 0.1)
+	return ("%d" % int(round(r))) if absf(r - round(r)) < 0.001 else ("%.1f" % r)
+
+
+## "a, b and c": a list as a sentence says it.
+static func and_list(parts: Array) -> String:
+	if parts.size() <= 1:
+		return "".join(parts)
+	return ", ".join(parts.slice(0, parts.size() - 1)) + " and " + str(parts[-1])
+
+
+## The gate's top-up line: "Topped up: 2 magazines and 1 med from the stash into the rig".
+static func topped_up(mags: int, meds: int) -> String:
+	var parts: Array = []
+	if mags > 0:
+		parts.append(count_of(mags, "magazine"))
+	if meds > 0:
+		parts.append(count_of(meds, "med"))
+	return TOPPED_UP % and_list(parts)
+
+
+## The gate's fill line: "Filled: 3 magazines from the shells in the stash"; more than one grade, "the boxes".
+static func filled_mags(n: int, grades: Array) -> String:
+	var what: String = mid_base(str(grades[0])) if grades.size() == 1 else "boxes"
+	return FILLED_MAGS % [count_of(n, "magazine"), what]
 ## The cures (28 Oct): what each stops, as a log line and a card say it; the chips for frost and shock on you.
 const CURE_WORD := {"bleed": "the bleeding", "fire": "the burns", "poison": "the poison", "frost": "the chill", "shock": "the shock"}
 const CURE_CLEARS := {"bleed": "Stops a bleed", "fire": "Stops burns", "poison": "Stops poison", "frost": "Stops a chill", "shock": "Stops a shock"}
@@ -947,12 +994,34 @@ const ITEMS := {
 	"Dog tag": "A name, a number, a blood group. Whoever it was isn't using them. The number holds.",
 	"Casino chip": "Five hundred, from the place in town, the night they stopped paying out. Still feels like money in the hand.",
 	"Bank's own pen": "On a chain, from the counter. Everything that ever changed hands in the town was signed with one of these.",
-	# attachments - magazine
-	"Extended magazine": "More rounds before the pause. The pause is when they get you.",
-	"Quick magazine": "A magazine with a pull-tab and a taped spare. Out, in, on.",
-	"Drum magazine": "Fifty rounds in a drum that jams when it's cold. It's always cold.",
+	# magazines (30 Oct, magazines as items)
+	"Pistol magazine": "Pressed steel and a tired spring. It goes in the grip and it comes out empty.",
+	"Extended pistol magazine": "More rounds before the pause. The pause is when they get you.",
+	"Quick pistol magazine": "A pull-tab and a taped spare. Out, in, on.",
+	"Pistol drum": "Twice the rounds in a drum that jams when it's cold. It's always cold.",
+	"Rifle magazine": "A box of ten off a range, the follower worn smooth.",
+	"Extended rifle magazine": "More rounds before the pause. The pause is when they get you.",
+	"Quick rifle magazine": "A pull-tab and a taped spare. Out, in, on.",
+	"Rifle drum": "Twice the rounds in a drum that jams when it's cold. It's always cold.",
+	"Shotgun magazine": "Off a shop shotgun that was never meant for one. Filled from your boxes at the gate.",
+	"Extended shotgun magazine": "More rounds before the pause. The pause is when they get you.",
+	"Quick shotgun magazine": "A pull-tab and a taped spare. Out, in, on.",
+	"Shotgun drum": "Twice the rounds in a drum that jams when it's cold. It's always cold.",
+	"SMG magazine": "Thirty in a stick, the lips bent back by someone in a hurry.",
+	"Extended SMG magazine": "More rounds before the pause. The pause is when they get you.",
+	"Quick SMG magazine": "A pull-tab and a taped spare. Out, in, on.",
+	"SMG drum": "Twice the rounds in a drum that jams when it's cold. It's always cold.",
+	"Nail magazine": "A strip of nails in a plastic sleeve, meant for a fence panel.",
+	"Extended nail magazine": "More rounds before the pause. The pause is when they get you.",
+	"Quick nail magazine": "A pull-tab and a taped spare. Out, in, on.",
+	"Nail drum": "Twice the rounds in a drum that jams when it's cold. It's always cold.",
 	"Belt box": "A hundred rounds in a box on the side, and the weight of a hundred more.",
 	"Hundred-round drum": "The drum that doesn't jam. Someone paid for it with more than money.",
+	# attachments - sling (30 Oct)
+	"Rope sling": "Blue rope off a trailer, tied twice. The gun hangs while you do something else.",
+	"Webbing sling": "Webbing off a bergen, two clips. The gun hangs; the hands are free.",
+	"Leather sling": "A rifle strap from a gamekeeper's cupboard, oiled soft.",
+	"Two-point sling": "Army issue, quick to adjust. The gun's on you and out of the way.",
 	# attachments - handguard
 	"Foregrip": "A handle under the barrel. Steadier, and your hand's not on the hot bit.",
 	"Rail handguard": "Rails all round for things to bolt to. Lighter than it looks.",
@@ -1244,6 +1313,7 @@ const LOG := {
 	# a run: out, the fight, home
 	"out_to": "Out to %s, %s%s%s",
 	"out_of_rounds": "%s: out of rounds",
+	"refilling": "Out of magazines: refilling one from a box in the pack",
 	"cure_used": "%s used: %s stopped for %d s",
 	"med_used": "%s used: +%d HP (%d of %d)%s",
 	"thrown": "%s thrown: %.0f %s to %d of them",
@@ -1310,7 +1380,7 @@ const EVENTS := {
 
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
-const FIRST_GUN := "Behind the till, wrapped in a bin bag: %s, and a box of %s."     # the Garden Centre's first clear (17 Oct)
+const FIRST_GUN := "Found: %s, %s and a box of %s"     # the Garden Centre's first clear (17 Oct; 30 Oct, the language pass: its magazine too)
 const ODDS := [[0.9, "Safe"], [0.75, "Likely"], [0.6, "Risky"], [0.4, "A coin toss"], [0.2, "Long odds"], [0.0, "A bad idea"]]
 
 
@@ -1389,6 +1459,7 @@ const CREW := {
 ## A class arrives (24 Oct, milestone 8: skills.md §6 and §11): who unlocks them, the log's line and the card's tag
 ## until then.
 const OPENS_AFTER := "Opens after"     # a locked class's card, over the head that opens it (24 Oct)
+const CLASS_SELECTED := "✓ selected"     # the runner's own class's card (30 Oct, parked item 3, Matt: "shouldnt say past anymore - just selected")
 ## A class's card when it opens (25 Oct, Matt: "a story beat for every class unlock"): two lines in their own voice, back
 ## at camp after the head falls (the Drifter after Kev's first story). The takes are Matt's (art/intro/classes/<voice>.mp3,
 ## docs/design/class_cards.md); "cues" go in with them, the lines on the clock till then.

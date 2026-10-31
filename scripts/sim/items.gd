@@ -82,8 +82,8 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
 		r = mini(r, Data.PAPER_RARITY_MAX) if slot == Data.PAPER else 0     # a box is a box; a bottle a bottle; a grenade a grenade; a paper rare or plain (15 Oct: a rare one rolls its signal deeper)
 		affixes = []
-	if slot == Data.SUPPLIES:
-		r = 0
+	if slot == Data.SUPPLIES or slot == Data.MAGAZINE:
+		r = 0                                 # a magazine is a magazine (30 Oct): its kind is its figure
 		affixes = []
 	if slot == Data.MEDICAL and base.has("cure"):
 		r = 0                                 # a cure is a cure (28 Oct): its one job, nothing to roll
@@ -101,6 +101,9 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 			it["count"] = 1
 	if slot == Data.SUPPLIES:
 		it["count"] = 1
+	if slot == Data.MAGAZINE:
+		it["rounds"] = 0                      # empty: filled at the gate from the stash's boxes
+		it["ammo"] = ""                       # the grade it holds, a box's base; "" while empty
 	_next_id += 1
 	return it
 
@@ -108,9 +111,9 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 ## A find's base from its pool, weighted toward the find's own tier (30 Oct, the designer's call on the review's loot
 ## rolls): the find's tier LOOT_OWN_TIER, one under LOOT_TIER_UNDER, every tier lower LOOT_LOWER shared evenly; a tier
 ## with no base in the pool hands its share down to the next tier that has one (the lowest present takes what's left).
-## Gear and gun parts only: rounds, meds, papers, grenades and supplies draw evenly, their tiers kinds, not power.
+## Gear, gun parts and magazines only: rounds, meds, papers, grenades and supplies draw evenly, their tiers kinds, not power.
 static func _tier_pick(slot: String, pool: Array, max_tier: int, rng: RandomNumberGenerator) -> Dictionary:
-	if not (slot in Data.SLOTS or slot == Data.ATTACHMENT) or max_tier <= 1:
+	if not (slot in Data.SLOTS or slot == Data.ATTACHMENT or slot == Data.MAGAZINE) or max_tier <= 1:
 		return pool[rng.randi_range(0, pool.size() - 1)]
 	var by := {}
 	for b in pool:
@@ -259,25 +262,30 @@ static func art(it: Dictionary) -> Texture2D:
 		var own := _art_named(slug(it["piece"]))
 		if own != null:
 			return own
+	if is_mag(it):
+		return mag_art(it)                    # a magazine: the parts' and pouches' pictures (30 Oct)
 	var base := _art_named(slug(art_name(str(it["base"]))))
 	if base == null and is_paper(it) and not is_deeds(it):
 		return _art_named("paper")        # every paper is the same folded thing in the cell; the words tell them apart
 	return base
 
 
-## A rig pouch's picture (28 Oct, magazines): its magazines by the rounds' type - art/items/mag_<type>.png, "belt" for
-## belt links - or null, and the cell keeps the box's picture.
+## A magazine's picture (30 Oct, magazines as items: the approved canvas reuses the old parts' and pouches' pictures):
+## a standard one art/items/mag_<type>.png, the others their old part's - or null, and the cell shows its words.
 static func mag_art(it: Dictionary) -> Texture2D:
 	var name := mag_slug(it)
 	return _art_named(name) if name != "" else null
 
 
-## The pouch's picture's name: "mag_<the rounds' type>", "mag_belt" for belt links; "" for anything not rounds.
+const MAG_ART := {"extended": "extended_magazine", "quick": "quick_magazine", "drum": "drum_magazine", "belt": "belt_box", "hundred": "hundred_round_drum"}
+
+
+## The magazine's picture's name: "mag_<its type>" for a standard one, its old part's for the rest; "" for anything else.
 static func mag_slug(it: Dictionary) -> String:
-	if it.is_empty() or not is_ammo(it):
+	if it.is_empty() or not is_mag(it):
 		return ""
-	var kind: String = "belt" if str(it.get("base", "")) == "Belt links" else str(base_of(it).get("type", ""))
-	return ("mag_" + kind) if kind != "" else ""
+	var kind: String = mag_kind(it)
+	return str(MAG_ART[kind]) if MAG_ART.has(kind) else ("mag_" + str(base_of(it).get("type", "")))
 
 
 static func _art_named(s: String) -> Texture2D:
@@ -953,6 +961,11 @@ static func base_pace(it: Dictionary) -> float:
 	return float(base_of(it).get("pace", 0))
 
 
+## An ammo type as a chip says it (30 Oct, sentence case): "Shotgun", "SMG", "Nail".
+static func type_name(t: String) -> String:
+	return {"smg": "SMG", "improvised": "Nail"}.get(t, t.capitalize())
+
+
 ## A gun's type word for a line: "rifle", "SMG"; "" for anything that isn't a gun.
 static func type_word(it: Dictionary) -> String:
 	var t: String = base_of(it).get("type", "")
@@ -994,40 +1007,72 @@ static func reload_base(gun: Dictionary) -> float:
 	return float(base_of(gun).get("reload", Data.RELOAD_S.get(ammo_type(gun), 2.0)))
 
 
-## The rounds a rig pouch holds of a type: MAG_POUCH magazines of its MAG_SIZE.
-static func pouch_cap_of(type: String) -> int:
-	return Data.MAG_POUCH * int(Data.MAG_SIZE.get(type, 30))
+## Magazines as items (30 Oct, docs/design/meds_ammo_clinic.md "Magazines as items"): a magazine fits any gun of its
+## type; its size is the gun's own magazine (mag_size) times its kind, or the kind's flat count; it holds rounds of one
+## grade (`ammo`) and remembers which.
+static func is_mag(it: Dictionary) -> bool:
+	return str(it.get("slot", "")) == Data.MAGAZINE
 
 
-static func pouch_cap(it: Dictionary) -> int:
-	return Data.MAG_POUCH * box_mag(it)
+## Its kind: "standard", "extended", "quick", "drum", "belt", "hundred".
+static func mag_kind(it: Dictionary) -> String:
+	return str(base_of(it).get("kind", "standard"))
 
 
-## A box's magazine: its base's own "mag" (Belt links' belt, 28 Oct, the review), else its type's MAG_SIZE.
-static func box_mag(it: Dictionary) -> int:
-	var b: Dictionary = base_of(it)
-	return int(b.get("mag", Data.MAG_SIZE.get(str(b.get("type", "")), 30)))
+## The ammo type it takes: "pistol", "rifle", "shotgun", "smg", "improvised" (nails).
+static func mag_type(it: Dictionary) -> String:
+	return str(base_of(it).get("type", ""))
 
 
-## A rig pouch's magazines as the cell draws them (28 Oct): MAG_POUCH, each its share loaded, the full ones first.
-static func pouch_fills(it: Dictionary) -> Array:
-	var mag: float = float(box_mag(it))
-	var loaded: float = float(it.get("rounds", 0)) / mag
-	var out: Array = []
-	for k in range(Data.MAG_POUCH):
-		out.append(clampf(loaded - k, 0.0, 1.0))
-	return out
+## Whether a magazine feeds this gun: its type is what the gun fires.
+static func mag_fits(it: Dictionary, gun) -> bool:
+	return gun is Dictionary and is_mag(it) and mag_type(it) == ammo_type(gun) and mag_size(gun) > 0
 
 
-## A pouch's magazines in words: "3 mags", "2 mags + 12".
-static func pouch_words(it: Dictionary) -> String:
-	var mag: int = box_mag(it)
-	var r: int = int(it.get("rounds", 0))
-	@warning_ignore("integer_division")
-	var full: int = r / mag
-	var part: int = r - full * mag
-	var head: String = "%d mag%s" % [full, "" if full == 1 else "s"]
-	return head if part == 0 else ("%s + %d" % [head, part] if full > 0 else "%d rounds" % part)
+## A magazine's rounds against a gun: round(the gun's own × its kind), or its flat count; with no gun, its type's MAG_SIZE.
+static func mag_cap(it: Dictionary, gun = null) -> int:
+	var k: Dictionary = Data.MAG_KINDS.get(mag_kind(it), Data.MAG_KINDS["standard"])
+	if k.has("flat"):
+		return int(k["flat"])
+	var own: int = mag_size(gun) if gun is Dictionary and mag_size(gun) > 0 else int(Data.MAG_SIZE.get(mag_type(it), 30))
+	return maxi(1, int(round(float(own) * float(k.get("x", 1.0)))))
+
+
+## The gun's reload into this magazine: its kind's multiplier.
+static func mag_reload_x(it: Dictionary) -> float:
+	return float(Data.MAG_KINDS.get(mag_kind(it), Data.MAG_KINDS["standard"]).get("reload", 1.0))
+
+
+## The pouches it takes: its footprint (a drum two).
+static func mag_pouches(it: Dictionary) -> int:
+	return size(it)
+
+
+## Its grade as the guns read it: the box base it holds; {} while it's empty.
+static func mag_grade(it: Dictionary) -> Dictionary:
+	if int(it.get("rounds", 0)) <= 0 or str(it.get("ammo", "")) == "":
+		return {}
+	return base_named(Data.AMMO, str(it["ammo"]))
+
+
+## What a feed is graded by: a magazine's box base, a box's own base.
+static func grade_base(it: Dictionary) -> Dictionary:
+	if it.is_empty():
+		return {}
+	return mag_grade(it) if is_mag(it) else base_of(it)
+
+
+## The grade's name a feed holds: a magazine's rounds' ("Slugs"), a box's own; "" for an empty magazine or nothing.
+static func grade_name(it: Dictionary) -> String:
+	return str(grade_base(it).get("name", ""))
+
+
+## The standard magazine of an ammo type ("Shotgun magazine"), {} for none.
+static func standard_mag(type: String) -> Dictionary:
+	for b in Data.BASES[Data.MAGAZINE]:
+		if str(b["type"]) == type and str(b.get("kind", "")) == "standard":
+			return b
+	return {}
 
 
 static func is_medical(it: Dictionary) -> bool:
@@ -1083,9 +1128,9 @@ static func is_supplies(it: Dictionary) -> bool:
 	return it.get("slot", "") == Data.SUPPLIES
 
 
-## What goes in the rig's pouches: meds, rounds, grenades.
+## What goes in the rig's pouches: meds, magazines, grenades (30 Oct: rounds live in boxes, never the rig).
 static func rig_item(it: Dictionary) -> bool:
-	return is_medical(it) or is_ammo(it) or is_grenade(it)
+	return is_medical(it) or is_mag(it) or is_grenade(it)
 
 
 ## The ammo type a gun fires, "" for anything that isn't a gun.
@@ -1146,10 +1191,12 @@ static func score(it: Dictionary) -> float:
 			return float(base_of(it).get("damage", 0.0))
 		"rounds":
 			return float(it.get("rounds", 0)) * (1.0 + float(base_of(it).get("damage_pct", 0)) / 100.0)
+		"mag":
+			return float(mag_cap(it)) / float(Data.MAG_SIZE.get(mag_type(it), 30)) - (mag_reload_x(it) - 1.0) * 0.5     # its rounds against the type's, a slower reload less
 		"attach":
 			if is_socketable(it):
 				return att_stat(it, "conv_fire_pct") + att_stat(it, "conv_frost_pct") + att_stat(it, "conv_poison_pct") + att_stat(it, "conv_shock_pct") + att_stat(it, "salt") + att_stat(it, "wire_pct")
-			return att_stat(it, "damage_pct") + att_stat(it, "first_pct") / 3.0 + att_stat(it, "speed_pct") + att_stat(it, "patrol_pct") / 4.0
+			return att_stat(it, "damage_pct") + att_stat(it, "first_pct") / 3.0 + att_stat(it, "speed_pct") + att_stat(it, "patrol_pct") / 4.0 + att_stat(it, "sling_pct") / 4.0     # a sling (30 Oct): its share, a quarter weight
 		"find":
 			return find(it) + cash_pct(it) * 0.5
 		"grip":
@@ -1240,6 +1287,8 @@ static func kind_words(it: Dictionary) -> String:
 		return ("Melee part · %s" if is_melee_mount(mount) else "Gun part · %s") % mount
 	if slot == Data.AMMO:
 		return "Rounds · %s" % base_of(it).get("type", "")
+	if slot == Data.MAGAZINE:
+		return "Magazine · %s" % type_name(mag_type(it))
 	if slot == Data.MEDICAL:
 		return "Cure" if is_cure(it) else "Med"
 	if slot == Data.SUPPLIES:
@@ -1301,7 +1350,7 @@ static func base_res_words(it: Dictionary) -> String:
 
 
 ## The headline figure and its unit for a card.
-static func headline(it: Dictionary) -> Array:
+static func headline(it: Dictionary, gun = null) -> Array:
 	var b := base_of(it)
 	if it["slot"] == Data.GRENADE:
 		return ["%.0f" % b["damage"], "%s to everyone on you" % b["type"]]
@@ -1309,6 +1358,9 @@ static func headline(it: Dictionary) -> Array:
 		return ["Stops", str(b["cure"])]              # a cure (28 Oct): what it stops
 	if it["slot"] == Data.SUPPLIES:
 		return ["×%d" % int(it.get("count", 1)), "for the Clinic"]
+	if it["slot"] == Data.MAGAZINE:
+		var cap: int = mag_cap(it, gun)          # against the gun it feeds, as the card reads it (the fix round); never over it
+		return ["%d" % mini(int(it.get("rounds", 0)), cap), "of %d rounds" % cap]
 	if b.has("damage"):
 		return ["%.0f" % dps(it), "dmg/s"]     # the style guide's form (25 Oct, the review)
 	if b.has("armour"):
@@ -1342,6 +1394,8 @@ static func grade_words(b: Dictionary) -> String:
 
 ## An attachment's headline: its biggest effect.
 static func att_lead(it: Dictionary) -> Array:
+	if att_stat(it, "sling_pct") > 0.0:
+		return ["%.0f%%" % att_stat(it, "sling_pct"), "secondary fire"]     # a sling (30 Oct): its share while the primary reloads
 	var best := ["", ""]
 	var sz := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% damage to each gang's first"], ["speed_pct", "% pace"], ["patrol_pct", "% later gangs"],
@@ -1361,10 +1415,11 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "damage to the first of each gang", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "later gangs", "delay"],
+			["sling_pct", "secondary fire while the primary reloads", "secondary fire"],
 			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more damage", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
-			var sgn: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
+			var sgn: String = "" if (pair[0].begins_with("conv_") or pair[0] == "sling_pct") else ("+" if v > 0 else "−")
 			out.append("%s%.0f%s %s" % [sgn, absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
 	return ", ".join(out)
 
@@ -1419,6 +1474,8 @@ static func set_stack(it: Dictionary, n: int) -> void:
 	elif is_socketable(it) or is_supplies(it):
 		it["count"] = n
 		it["value"] = int(b["value"]) * n
+	elif is_mag(it):
+		it["rounds"] = n                  # a magazine's rounds (30 Oct): its worth is the magazine's
 
 
 ## A copy of one off a stack (a socketable going into a socket).

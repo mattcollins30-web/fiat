@@ -239,6 +239,9 @@ func _plain(slot: String, base: String) -> Dictionary:
 		it["attachments"][name] = null
 	if slot == Data.AMMO:
 		it["rounds"] = int(Items.base_of(it)["rounds"])
+	if slot == Data.MAGAZINE:
+		it["rounds"] = 0
+		it["ammo"] = ""
 	if slot == Data.ATTACHMENT:
 		it["mount"] = Items.base_of(it)["mount"]
 		if it["mount"] == "socket":
@@ -468,8 +471,10 @@ func dps() -> float:
 	# XP, the kit (not the rounds' count: that moves every tick; which stacks have any decides the feed)
 	var feed := []
 	for it in rig:
-		if it["slot"] == Data.AMMO and int(it["rounds"]) > 0:
-			feed.append(it["base"])
+		if Items.is_mag(it) and int(it["rounds"]) > 0:
+			feed.append(str(it.get("ammo", "")))
+	if mission != null:
+		feed.append(mission.get("mag_in", {}).values())     # the magazine in each gun: its grade (30 Oct)
 	var k := [feed, hp < max_hp() * 0.5, mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)), xp, wounds.keys(), _kit_ids(),
 		mission.get("fire_x", {}).values() if mission != null else []]     # the reloads (28 Oct)
 	var c = _dry_memo.get("dps")
@@ -517,7 +522,8 @@ func _dps(parts) -> float:
 
 ## The guns' damage a second before the runner's own multipliers, [the primary's, the secondary's] (29 Oct, split out of
 ## _dps so the type edge can read the primary's share): each gun by the share of now it fires, its reloads apart (the
-## magazines, 28 Oct); the secondary at full while the primary reloads, as it does with the primary dry.
+## magazines, 28 Oct); while the primary reloads, the secondary at the primary's sling's share (30 Oct: the sling; none
+## without one); with the primary dry or refilling a magazine, at full.
 func _gun_dps() -> Array:
 	var p := 0.0
 	var sd := 0.0
@@ -527,7 +533,7 @@ func _gun_dps() -> Array:
 	if primary_live:
 		p = Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (Data.FX["node/cap_jerry"] if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"]) * px   # Jerry-rigged: something improvised hits half again as hard
 	if secondary_live:
-		var sec_share: float = (secondary_share(true) * px + (1.0 - px)) if primary_live else 1.0
+		var sec_share: float = (secondary_share(true) * px + (1.0 - px) * reload_share()) if primary_live else 1.0     # through the primary's reloads its backing share, a sling's lift (30 Oct, the designer's B)
 		sd = Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) * sec_share * fire_x("Secondary")
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
 			sd *= Data.FX["rule/branch_pistol"]
@@ -1934,7 +1940,7 @@ func issued_block(slot: String) -> String:
 		return Words.ISSUED["wear_at"] % wl          # the third review: six item-level-60 pieces sold to a level-50 runner, none wearable
 	if cash < float(issued_price(slot)):
 		return Words.ISSUED["short"]
-	if not stash_room(Items.size(issued_piece(slot))):
+	if not fits_with_mag(issued_piece(slot)):
 		return Words.ISSUED["no_room"]
 	return ""
 
@@ -1948,6 +1954,7 @@ func buy_issued(slot: String) -> bool:
 	it["serial"] = issued_serial
 	cash -= paid
 	stash.append(it)
+	_mag_with(it)
 	_read(it)
 	chron("issued", {"slot": slot, "serial": issued_serial, "fiat": int(paid)})
 	log_event(Words.ISSUED["bought"] % [Items.full_name(it), fiat_words(paid)])
@@ -2037,7 +2044,7 @@ func can_buy_mate() -> bool:
 	if not room_open("fence") or mission != null or mate.is_empty() or notes < int(mate["notes"]):
 		return false
 	var it := _mate_item()
-	return not it.is_empty() and stash_fits(it)
+	return not it.is_empty() and fits_with_mag(it)
 
 
 func buy_mate() -> bool:
@@ -2046,6 +2053,7 @@ func buy_mate() -> bool:
 	notes -= int(mate["notes"])
 	var it := _mate_item()
 	stash.append(it)
+	_mag_with(it)
 	_read(it)
 	log_event(Words.LOG["mate"] % [int(mate["notes"]), it["unique"]])
 	mate = roll_mate()
@@ -2580,7 +2588,7 @@ func workbench_free() -> bool:
 func _craft_cost_raw(it: Dictionary, kind: String, _stat := "") -> int:
 	if kind == "temper":
 		return _temper_cash(it)
-	if it.is_empty() or it.has("unique") or it.has("set") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
+	if it.is_empty() or it.has("unique") or it.has("set") or Items.is_ammo(it) or Items.is_mag(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
 		return -1                             # a set piece's affixes are the set's: no bench job on one (the pass, 6 Oct)
 	var locked: Array = locks_of(it)
 	match kind:
@@ -2821,6 +2829,9 @@ func _build_entry(kind: String, name: String, cost: int, from: String, from_n: i
 	# 327 of 234 with every find dropped): a box or a grade needs a stack with room or a cell, a med or a grenade a cell
 	var made_slot: String = Data.AMMO if (kind == "box" or kind == "grade") else (Data.MEDICAL if kind == "med" else (Data.GRENADE if kind == "grenade" else "Primary"))
 	var room: bool = stash_room(1) or (made_slot == Data.AMMO and _stack_room(_plain(Data.AMMO, name))) or (yard_has("racks") and made_slot != "Primary")
+	if made_slot == "Primary":
+		var fp: Array = Data.FOOTPRINTS.get(name, Data.SIZE["Primary"])
+		room = stash_room(int(fp[0]) * int(fp[1]) + (0 if yard_has("racks") else 1))     # a gun and the magazine that comes with it (the fix round; no roll for a read)
 	var ok: bool = has_from and scrap >= cost and not runner_busy() and room     # away on a repeat too (30 Oct, refactor 5)
 	if why == "" and not ok:
 		why = busy_words() if runner_busy() else ("No room in the stash" if not room else "Short of scrap")
@@ -2865,6 +2876,7 @@ func build(kind: String, name: String) -> bool:
 	scrap -= int(o["scrap"])
 	if not stash_put(made):
 		stash.append(made)                   # whatever the room: it was paid for
+	_mag_with(made)
 	last_craft = {"id": made["id"], "kind": "build", "words": "Built %s for %d scrap" % [name.to_lower(), int(o["scrap"])]}
 	chron("build", {"name": name, "scrap": int(o["scrap"])})
 	log_event(Words.LOG["built"] % [int(o["scrap"]), name.to_lower()])
@@ -3819,13 +3831,20 @@ func _pace_raw() -> float:
 
 # ------------------------------------------------------------------ ammo
 
-## The rounds in the rig for a gun's type, every stack counted (feed_stack says which fires).
+## Magazines as items (30 Oct, docs/design/meds_ammo_clinic.md "Magazines as items"): the rig carries magazines, each
+## loaded with one grade; a gun fires from the loaded ones that fit it (its type), both guns of a type from one pool.
+## The magazines in the rig that feed a gun, loaded or not, in the rig's order.
+func mags_for(gun) -> Array:
+	if not (gun is Dictionary):
+		return []
+	return rig.filter(func(x): return Items.mag_fits(x, gun))
+
+
+## The rounds in the rig's magazines for a gun's type (feed_stack says which fires).
 func rounds_for(gun: Dictionary) -> int:
 	var n := 0
-	var t := Items.ammo_type(gun)
-	for it in rig:
-		if Items.is_ammo(it) and Items.base_of(it)["type"] == t:
-			n += int(it["rounds"])
+	for it in mags_for(gun):
+		n += int(it.get("rounds", 0))
 	return n
 
 
@@ -3833,7 +3852,7 @@ func has_rounds(gun: Dictionary) -> bool:
 	if _trying:
 		# a try-on weighs a gun fed when its rounds are a trip to the rig: in the stash or the rig, or at the Fence to buy
 		# (13 Oct, the ammo trap: with the Fence shut, Equip if better swapped the nail gun for a rifle nobody had rounds
-		# for, and the runner fought with their fists)
+		# for, and the runner fought with their fists); every gun comes with a magazine (30 Oct)
 		var type: String = Items.ammo_type(gun)
 		if type in ["", "none"] or Items.free_rounds(gun) or room_open("fence"):
 			return true
@@ -3865,17 +3884,53 @@ func rate_x() -> float:
 	return float(Data.FX["rule/safecrackers"]) if has_rule("safecrackers") else 1.0
 
 
-## The share of the time a slot's gun fires, its reloads apart, read off its magazine: the seconds a magazine lasts
-## over those and a reload's. What the figures out of a fight read (the odds' survival read, the sheet, a try-on).
+## The sling on the primary (30 Oct, the magazine mount became the sling): its share of the secondary's fire while the
+## primary reloads between magazines; 0 with none.
+func sling_share() -> float:
+	var g = equipped["Primary"]
+	if g == null:
+		return 0.0
+	return clampf(Items.fitted_sum(g, "sling_pct") / 100.0, 0.0, 1.0)
+
+
+## The secondary's share while the primary reloads (30 Oct, the designer's call B): its usual backing share, lifted to the
+## sling's when that's more - never lower.
+func reload_share() -> float:
+	return maxf(secondary_share(true), sling_share())
+
+
+## The magazines a slot's gun reads its pauses off (30 Oct): the loaded ones in the rig that fit it; none, one of the
+## gun's own (a try-on, a gun on the way to its first fill).
+func _mags_read(gun: Dictionary) -> Array:
+	var out: Array = mags_for(gun).filter(func(x): return int(x.get("rounds", 0)) > 0)
+	if out.is_empty():
+		out = mags_for(gun)
+	return out
+
+
+## The share of the time a slot's gun fires, its reloads apart, read off the magazines it carries (30 Oct): the seconds
+## they last over those and a reload into each (the gun's reload times the magazine's). What the figures out of a
+## fight read (the odds' survival read, the sheet, a try-on).
 func mag_share(slot: String) -> float:
 	if not uses_mag(slot):
 		return 1.0
 	var gun: Dictionary = equipped[slot]
-	var rate: float = maxf(0.01, float(Items.base_of(gun)["rof"]) * pace())
+	var rate: float = maxf(0.01, float(Items.base_of(gun)["rof"]))     # pace scales the fire and the reloads alike (the fix round): it cancels
 	if slot == "Secondary" and equipped["Primary"] != null and has_rounds(equipped["Primary"]):
-		rate *= secondary_share(true)             # behind the primary, a third of the rate: a magazine three times as long
-	var fire_s: float = float(Items.mag_size(gun)) / rate
-	return fire_s / (fire_s + reload_s(gun))
+		# behind the primary as the fight spends it (the second review): its backing share while the primary fires, the
+		# reload's share (a sling's lift) through the primary's reloads
+		var px: float = mag_share("Primary")
+		rate *= secondary_share(true) * px + (1.0 - px) * reload_share()
+	var fire_s := 0.0
+	var re_s := 0.0
+	var mags: Array = _mags_read(gun)
+	if mags.is_empty():
+		fire_s = float(Items.mag_size(gun)) / rate
+		re_s = reload_s(gun)
+	for mg in mags:
+		fire_s += float(Items.mag_cap(mg, gun)) / rate
+		re_s += reload_s(gun) * Items.mag_reload_x(mg)
+	return fire_s / maxf(0.0001, fire_s + re_s)
 
 
 ## The share of now a slot's gun fires: the fight's own tick (its reload running, 28 Oct), else its average.
@@ -3885,76 +3940,472 @@ func fire_x(slot: String) -> float:
 	return mag_share(slot)
 
 
+## The pace a fight's reloads and refills run at (the fix round, the coordinator's call: the fight paced the fire and not the
+## reloads, so a slower runner read as reloading less of the time): the runner's pace times the site's, as the fire's.
+func reload_pace(m) -> float:
+	var tp: float = float(m["t"].get("pace", 1.0)) if (m is Dictionary and m.get("t", null) is Dictionary) else 1.0
+	return maxf(0.01, pace() * tp)
+
+
+## The magazine in a slot's gun on a run, {} with none.
+func mag_in(slot: String) -> Dictionary:
+	if mission == null or not mission.has("mag_in"):
+		return {}
+	var id: int = int(mission["mag_in"].get(slot, -1))
+	for it in rig:
+		if int(it["id"]) == id:
+			return it
+	return {}
+
+
 ## A slot's magazine in the fight: [rounds left in it, its size, seconds of reload left]. [0, 0, 0] with none.
 func mag_now(slot: String) -> Array:
 	if mission == null or not uses_mag(slot):
 		return [0, 0, 0.0]
 	var gun: Dictionary = equipped[slot]
-	var left: float = float(mission.get("mag", {}).get(slot, mini(Items.mag_size(gun), rounds_for(gun))))
-	return [maxi(0, ceili(left - 0.001)), Items.mag_size(gun), float(mission.get("reload_t", {}).get(slot, 0.0))]
+	var cur: Dictionary = mag_in(slot)
+	if cur.is_empty():
+		cur = _next_mag(slot)
+	var left_s: float = float(mission.get("reload_t", {}).get(slot, 0.0)) / reload_pace(mission)     # in seconds, at the pace it runs
+	if cur.is_empty():
+		return [0, 0, left_s]
+	return [int(cur.get("rounds", 0)), Items.mag_cap(cur, gun), left_s]
 
 
-## The magazines before a tick's fire (28 Oct): a reload under way runs on, the tick's share of fire what's left of it
-## past the reload; done, the magazine is loaded from the rig's rounds. A gun fired for the first time loads at once.
+## The Kit's line under a gun (30 Oct, the approved canvas): its magazines in the rig and the rounds in them, long to
+## short - "3 magazines · 36 rounds", "36 rounds"; "No rounds needed" for a blade or a free-round gun.
+func kit_mag_line(gun: Dictionary) -> Array:
+	if Items.mag_size(gun) <= 0:
+		return [Words.MAG_WORDS["no_rounds"]]
+	var rounds: String = Words.count_of(rounds_for(gun), "round")
+	return [Words.MAG_WORDS["kit_line"] % [Words.count_of(mags_for(gun).size(), "magazine"), rounds], rounds]
+
+
+## The Kit's "THE RIG" card for a magazine (30 Oct, the approved canvas): each worn gun's magazines and rounds, the meds,
+## and the rounds left in the stash to refill - a line each, long to short.
+func rig_card_lines() -> Array:
+	var out: Array = []
+	var types: Array = []
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g == null:
+			continue
+		var line: Array = kit_mag_line(g)
+		var nm: String = str(g["base"])
+		out.append([Words.MAG_WORDS["rig_gun"] % [nm, Words.mid_base(str(line[0])) if Items.mag_size(g) <= 0 else str(line[0]).replace(" · ", ", ")],
+			Words.MAG_WORDS["rig_gun"] % [nm, str(line[-1])], str(line[-1])])
+		if Items.mag_size(g) > 0 and not (Items.ammo_type(g) in types):
+			types.append(Items.ammo_type(g))
+	var meds: Array = []
+	var grenades := 0
+	for it in rig:
+		if Items.is_cure(it):
+			meds.append("a cure for %s" % Items.cure_of(it))
+		elif Items.is_medical(it):
+			meds.append(Words.a_thing(str(it["base"])))
+		elif Items.is_grenade(it):
+			grenades += 1                     # their own line (the fix round)
+	var n_meds: int = meds.size()
+	out.append([Words.MAG_WORDS["rig_meds"] % (", ".join(meds) if n_meds > 0 else Words.MAG_WORDS["rig_none"]),
+		Words.MAG_WORDS["rig_meds"] % (str(n_meds) if n_meds > 0 else Words.MAG_WORDS["rig_none"])])
+	if grenades > 0:
+		out.append([Words.MAG_WORDS["rig_grenades"] % grenades])
+	var left: Array = []
+	for ty in types:
+		var n := 0
+		for it in stash:
+			if Items.is_ammo(it) and str(Items.base_of(it)["type"]) == ty:
+				n += int(it.get("rounds", 0))
+		var box: Dictionary = ammo_box(str(ty))
+		left.append("%s %s" % [_group_n(n), Words.mid_base(str(box.get("name", "rounds")))])
+	if not left.is_empty():
+		out.append([Words.MAG_WORDS["rig_stash"] % ", ".join(left), Words.MAG_WORDS["rig_stash"] % str(left[0]), Words.MAG_WORDS["rig_stash_short"] % str(left[0])])
+	return out
+
+
+## A thousands comma, as the screens write a count ("1,288").
+static func _group_n(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.right(3) + out
+		s = s.left(s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
+## The magazine in the rig a stash magazine is compared with (30 Oct): of its type, the smallest; {} for none.
+func mag_rig_match(it: Dictionary) -> Dictionary:
+	var best := {}
+	var gun = mag_gun(it)
+	for r in rig:
+		if Items.is_mag(r) and Items.mag_type(r) == Items.mag_type(it) and not is_same(r, it):
+			if best.is_empty() or Items.mag_cap(r, gun) < Items.mag_cap(best, gun):
+				best = r
+	return best
+
+
+## A magazine against another for the compare's foot (30 Oct, the approved canvas): [[delta, words], ...] - rounds,
+## pouches (more is a cost), reload seconds (slower is a cost) - and the verdict [words, tone].
+func mag_compare(it: Dictionary, other: Dictionary) -> Array:
+	var gun = mag_gun(it)
+	var out: Array = []
+	var dr: int = Items.mag_cap(it, gun) - Items.mag_cap(other, gun)
+	if dr != 0:
+		out.append([float(dr), Words.count_of(absi(dr), "round")])
+	var dp: int = Items.size(it) - Items.size(other)
+	if dp != 0:
+		out.append([-float(dp), Words.count_of(absi(dp), "pouch", "pouches")])
+	var base_s: float = reload_s(gun) if gun is Dictionary else float(Data.RELOAD_S.get(Items.mag_type(it), 2.0))
+	var ds: float = base_s * (Items.mag_reload_x(it) - Items.mag_reload_x(other))
+	if absf(ds) >= 0.05:
+		out.append([-ds, "%s s reload" % Words.fig1(absf(ds))])
+	var up: bool = out.any(func(d): return float(d[0]) > 0.0)
+	var down: bool = out.any(func(d): return float(d[0]) < 0.0)
+	var verdict: Array = ["▲ Upgrade", "good"] if up and not down else (["▼ Downgrade", "bad"] if down and not up else ["Sidegrade", "warn"])
+	return [verdict, out]
+
+
+## A stash magazine swapped for one in the rig (30 Oct, the compare's "Swap into the rig"): the rig's back to the stash,
+## this one in, filled from the boxes. False when the rig or the stash hasn't the room, or the runner's out.
+func can_mag_swap(stash_id: int, rig_id: int) -> bool:
+	if runner_busy():
+		return false
+	var a := {}
+	var b := {}
+	for it in stash:
+		if int(it["id"]) == stash_id and Items.is_mag(it):
+			a = it
+	for it in rig:
+		if int(it["id"]) == rig_id:
+			b = it
+	if a.is_empty() or b.is_empty():
+		return false
+	return rig_used() - Items.size(b) + Items.size(a) <= med_capacity() and (stash_free(b) or stash_used() - (0 if stash_free(a) or tab_of(a) != "" else Items.size(a)) + Items.size(b) <= stash_cap())
+
+
+func mag_swap(stash_id: int, rig_id: int) -> bool:
+	if not can_mag_swap(stash_id, rig_id):
+		return false
+	var a := {}
+	for it in stash:
+		if int(it["id"]) == stash_id:
+			a = it
+	var b := {}
+	for k in range(rig.size()):
+		if int(rig[k]["id"]) == rig_id:
+			b = rig[k]
+			rig.remove_at(k)
+			break
+	_remove(a)
+	rig.append(a)
+	if not stash_put(b):
+		stash.append(b)
+	_fill_mags()
+	_dry_memo.clear()
+	return true
+
+
+## A magazine's fill, 0 to 1, against the gun it feeds (the cell's bar).
+func mag_fill(it: Dictionary) -> float:
+	return clampf(float(it.get("rounds", 0)) / float(maxi(1, Items.mag_cap(it, mag_gun(it)))), 0.0, 1.0)
+
+
+## A magazine as a line: "12 of 16 rounds", against the gun it feeds; never over its size (the fix round).
+func mag_words(it: Dictionary) -> String:
+	var cap: int = Items.mag_cap(it, mag_gun(it))
+	return Words.MAG_WORDS["figure"] % [mini(int(it.get("rounds", 0)), cap), cap]
+
+
+## The loaded magazines for a slot's gun past the one in it: the spares the run's Rounds tile counts.
+func mags_spare(slot: String) -> int:
+	var gun = equipped[slot]
+	if gun == null:
+		return 0
+	var cur: Dictionary = mag_in(slot)
+	return mags_for(gun).filter(func(x): return int(x.get("rounds", 0)) > 0 and not is_same(x, cur)).size()
+
+
+## A magazine being refilled by hand for a slot's gun's type (30 Oct, the playtest's item 4): seconds left, 0 for none.
+func refill_now(slot: String) -> float:
+	var gun = equipped[slot]
+	if mission == null or gun == null or not mission.has("refill"):
+		return 0.0
+	return float(Dictionary(mission["refill"].get(Items.ammo_type(gun), {})).get("t", 0.0)) / reload_pace(mission)     # seconds, at the pace it runs
+
+
+## The next loaded magazine for a slot's gun: by the feed's order (the build's element, then the grade's worth, then the
+## fullest), never the one in the other gun.
+func _next_mag(slot: String) -> Dictionary:
+	var gun = equipped[slot]
+	if gun == null:
+		return {}
+	var other: Dictionary = mag_in("Secondary" if slot == "Primary" else "Primary")
+	var cur: Dictionary = mag_in(slot)
+	var els: Array = build_elements() if slot == "Primary" else []
+	var best := {}
+	var bv := -1.0
+	for it in mags_for(gun):
+		if int(it.get("rounds", 0)) <= 0 or is_same(it, other) or is_same(it, cur):
+			continue
+		var v: float = float(_grade_worth(Items.grade_base(it), els)) * 1000.0 + float(it["rounds"])
+		if v > bv:
+			best = it
+			bv = v
+	return best
+
+
+## A grade's worth for the feed's order: its value, and the build's own element before any worth.
+static func _grade_worth(b: Dictionary, els: Array) -> int:
+	var v: int = int(b.get("value", 0))
+	for e in els:
+		if float(b.get("conv_%s_pct" % e, 0)) > 0.0:
+			v += 100000
+	return v
+
+
+## A magazine into a slot's gun: the feed's grade may move (the conversion reads it).
+func _mag_load(m: Dictionary, slot: String, it: Dictionary) -> void:
+	if it.is_empty():
+		m["mag_in"].erase(slot)
+	else:
+		m["mag_in"][slot] = int(it["id"])
+	_dry_memo.erase("conversion")
+
+
+## The magazines before a tick's fire (28 Oct; 30 Oct, as items): a reload under way runs on, the tick's share of fire
+## what's left of it past the reload; done, the next magazine is in. A gun fired for the first time loads at once. With
+## every magazine of its type spent and a box of it in the pack, the runner refills one by hand: a long reload, the gun
+## quiet (the secondary carries the fight as when out of rounds).
 func _mags_tick(m: Dictionary, dt: float) -> void:
 	if not m.has("fire_x"):
 		m["fire_x"] = {}
-		m["mag"] = {}
+		m["mag_in"] = {}
 		m["reload_t"] = {}
+		m["reload_to"] = {}
+		m["refill"] = {}
+	var dtp: float = dt * reload_pace(m)          # reloads and refills at the runner's pace, as the fire is (the fix round)
+	_refills_tick(m, dtp)
 	for slot in ["Primary", "Secondary"]:
 		if not uses_mag(slot) or not has_rounds(equipped[slot]):
 			m["fire_x"][slot] = 1.0
+			if uses_mag(slot):
+				_refill_start(m, slot)
 			continue
-		var gun: Dictionary = equipped[slot]
-		if not m["mag"].has(slot):
-			m["mag"][slot] = float(mini(Items.mag_size(gun), rounds_for(gun)))     # the first magazine: loaded at the gate
 		var left: float = float(m["reload_t"].get(slot, 0.0))
 		if left > 0.0:
-			m["fire_x"][slot] = clampf((dt - left) / maxf(dt, 0.0001), 0.0, 1.0)
-			left -= dt
+			m["fire_x"][slot] = clampf((dtp - left) / maxf(dtp, 0.0001), 0.0, 1.0)
+			left -= dtp
 			if left <= 0.0:
 				m["reload_t"].erase(slot)
-				m["mag"][slot] = float(mini(Items.mag_size(gun), rounds_for(gun)))
+				_mag_load(m, slot, _reload_target(m, slot))
 			else:
 				m["reload_t"][slot] = left
-		else:
-			m["fire_x"][slot] = 1.0
+			continue
+		m["fire_x"][slot] = 1.0
+		var cur: Dictionary = mag_in(slot)
+		if cur.is_empty() or int(cur.get("rounds", 0)) <= 0:
+			_mag_load(m, slot, _next_mag(slot))     # the first magazine: in at the gate; one taken out of the rig, the next
 
 
-## Shots out of a slot's magazine (28 Oct): empty with rounds still in the rig, it reloads.
-func _mag_spend(m: Dictionary, slot: String, shots: float) -> void:
-	if not uses_mag(slot) or not m.has("mag"):
+## The magazine a reload is putting in: the one it started with while it's still loaded, else the next.
+func _reload_target(m: Dictionary, slot: String) -> Dictionary:
+	var id: int = int(m["reload_to"].get(slot, -1))
+	m["reload_to"].erase(slot)
+	for it in rig:
+		if int(it["id"]) == id and int(it.get("rounds", 0)) > 0 and not is_same(it, mag_in("Secondary" if slot == "Primary" else "Primary")):
+			return it
+	return _next_mag(slot)
+
+
+## A refill begun (30 Oct): a slot's gun has no loaded magazine, one of its type is in the rig, a box of the type in the pack.
+func _refill_start(m: Dictionary, slot: String) -> void:
+	var gun: Dictionary = equipped[slot]
+	var ty: String = Items.ammo_type(gun)
+	if m["refill"].has(ty) or rounds_for(gun) > 0:
+		return
+	var mags: Array = mags_for(gun)
+	if mags.is_empty() or _pack_box(m, ty).is_empty():
+		return
+	var pick: Dictionary = mags[0]
+	for it in mags:
+		if Items.mag_cap(it, gun) > Items.mag_cap(pick, gun):
+			pick = it                             # the biggest, for the long wait
+	var secs: float = reload_s(gun) * Data.REFILL_MULT
+	m["refill"][ty] = {"t": secs, "id": int(pick["id"]), "slot": slot}
+	m["refills"] = int(m.get("refills", 0)) + 1
+	log_event(Words.LOG["refilling"])
+
+
+## The best box of a type in the run's pack, {} for none.
+func _pack_box(m: Dictionary, ty: String) -> Dictionary:
+	var best := {}
+	var bv := -1
+	for it in m.get("found", []):
+		if Items.is_ammo(it) and str(Items.base_of(it)["type"]) == ty and int(it.get("rounds", 0)) > 0:
+			var v: int = _grade_worth(Items.base_of(it), build_elements())
+			if v > bv:
+				best = it
+				bv = v
+	return best
+
+
+## The boxes the gate packs for the refills (30 Oct, the designer's call A: "a box in the pack"): one of each worn gun's
+## rounds type - the grade its magazines hold, else the stash's best of the type - a box's worth at most, off the stash's
+## stacks of that grade. As copies: the odds' dry runs read them; deploy takes them from the stash (_pack_boxes).
+var gate_box_always := false     # the bot's (30 Oct): it packs on "fill" whatever the save says, its gate box too
+
+
+func _gate_boxes(read := false) -> Array:
+	var out: Array = []
+	var types: Array = []
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g == null or Items.mag_size(g) <= 0 or Items.ammo_type(g) in types:
+			continue
+		var ty: String = Items.ammo_type(g)
+		types.append(ty)
+		var grade := ""
+		var held: Dictionary = feed_stack(g)
+		if not held.is_empty() and Items.is_mag(held):
+			grade = str(held.get("ammo", ""))
+		if grade == "" or _rounds_in_stash(grade) <= 0:
+			grade = _best_grade_in_stash(ty, slot == "Primary")
+		if grade == "":
+			continue
+		var avail: int = _rounds_in_stash(grade) - (_fill_take(grade, ty) if read else 0)     # the read's box after the gate's fill (the second review)
+		if avail <= 0:
+			continue
+		var box: Dictionary = _plain(Data.AMMO, grade)
+		Items.set_stack(box, mini(int(Items.base_of(box)["rounds"]), avail))
+		box["carried"] = true                 # the runner's own: home to the stash, never loot
+		out.append(box)
+	return out
+
+
+## The rounds of a grade the gate's fill would take off the stash for the rig's magazines of its type (_fill_mags' rule):
+## a magazine holding that grade its shortfall, an empty one its size when that grade is the stash's best for it.
+func _fill_take(grade: String, ty: String) -> int:
+	var n := 0
+	for it in rig:
+		if not Items.is_mag(it) or Items.mag_type(it) != ty:
+			continue
+		var gun = mag_gun(it)
+		var cap: int = Items.mag_cap(it, gun)
+		var have: int = int(it.get("rounds", 0))
+		if have > 0 and str(it.get("ammo", "")) == grade:
+			n += maxi(0, cap - have)
+		elif have <= 0 and _best_grade_in_stash(ty, is_same(gun, equipped["Primary"])) == grade:
+			n += cap
+	return n
+
+
+## Whether the gate packs its box (the second review: one predicate for the run and the odds' read): not on "Leave it",
+## except a repeat run's packing or the bot's.
+func gate_box_on() -> bool:
+	return top_up_mode != "leave" or _repeat_going or gate_box_always
+
+
+## The gate's boxes into the run's pack, off the stash, where the pack has the room; logged a box a line.
+func _pack_boxes(m: Dictionary) -> void:
+	for box in _gate_boxes():
+		var spot: Array = pack_spot(m, box)
+		if spot.is_empty():
+			continue
+		_take_rounds(str(box["base"]), int(box["rounds"]))
+		_pack_put(m, box, spot)
+		log_event(Words.PACKED_BOX % Words.mid_base(str(box["base"])))
+
+
+## The refills under way run on; done, the magazine is filled from the pack's best box of its type and goes in the gun.
+func _refills_tick(m: Dictionary, dt: float, all_done := false) -> void:
+	for ty in m["refill"].keys():
+		var r: Dictionary = m["refill"][ty]
+		r["t"] = float(r["t"]) - dt
+		if float(r["t"]) > 0.0 and not all_done:
+			continue
+		m["refill"].erase(ty)
+		var mg := {}
+		for it in rig:
+			if int(it["id"]) == int(r["id"]):
+				mg = it
+		var box: Dictionary = _pack_box(m, str(ty))
+		var slot: String = str(r["slot"])
+		if mg.is_empty() or box.is_empty() or equipped[slot] == null:
+			continue
+		var n: int = mini(Items.mag_cap(mg, equipped[slot]), int(box["rounds"]))
+		mg["rounds"] = n
+		mg["ammo"] = str(box["base"])
+		m["last_refill"] = n                  # what the box gave, for the reads and the tests
+		Items.set_stack(box, int(box["rounds"]) - n)
+		if int(box["rounds"]) <= 0:
+			m["found"].erase(box)
+		_mag_load(m, slot, mg)
+		_dry_memo.clear()
+
+
+## Shots out of a slot's magazine (28 Oct; 30 Oct, as items): rounds come off the magazine in the gun; empty, the next
+## loaded one goes in after a reload (the gun's, times the next magazine's kind). None left: out of rounds.
+func _fire_rounds(m: Dictionary, slot: String, shots: float) -> void:
+	if not uses_mag(slot) or not m.has("mag_in"):
 		return
 	var gun: Dictionary = equipped[slot]
-	var left: float = float(m["mag"].get(slot, 0.0)) - shots
-	m["mag"][slot] = maxf(0.0, left)
-	if left <= 0.0 and float(m["reload_t"].get(slot, 0.0)) <= 0.0 and rounds_for(gun) > 0:
-		m["reloads"] = int(m.get("reloads", 0)) + 1
-		if reload_s(gun) <= 0.0:
-			m["mag"][slot] = float(mini(Items.mag_size(gun), rounds_for(gun)))     # no reload (the Safecracker's): the next one's in at once
+	m["fired"] = m.get("fired", {})
+	m["fired"][slot] = float(m["fired"].get(slot, 0.0)) + shots
+	while float(m["fired"][slot]) >= 1.0:
+		var cur: Dictionary = mag_in(slot)
+		if cur.is_empty() or int(cur.get("rounds", 0)) <= 0 or float(m["reload_t"].get(slot, 0.0)) > 0.0:
+			m["fired"][slot] = 0.0
 			return
-		m["reload_t"][slot] = reload_s(gun)
-
-
-## Between gangs the magazines are topped up (28 Oct): the quiet's reload, free, so each gang meets full ones.
-func _mags_topped(m: Dictionary) -> void:
-	if not m.has("mag"):
+		var n: int = mini(int(m["fired"][slot]), int(cur["rounds"]))
+		cur["rounds"] = int(cur["rounds"]) - n
+		m["fired"][slot] = float(m["fired"][slot]) - float(n)
+		if int(cur["rounds"]) > 0:
+			continue
+		m["fired"][slot] = 0.0
+		cur["ammo"] = ""                          # spent: it takes any grade next
+		var nxt: Dictionary = _next_mag(slot)
+		if nxt.is_empty():
+			_mag_load(m, slot, {})
+			if rounds_for(gun) <= 0:
+				log_event(Words.LOG["out_of_rounds"] % gun["base"])
+				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
+			return
+		m["reloads"] = int(m.get("reloads", 0)) + 1
+		var secs: float = reload_s(gun) * Items.mag_reload_x(nxt)
+		if secs <= 0.0:
+			_mag_load(m, slot, nxt)              # no reload (the Safecracker's): the next one's in at once
+			continue
+		m["reload_t"][slot] = secs
+		m["reload_to"][slot] = int(nxt["id"])
 		return
+
+
+## Between gangs the magazines are seen to (28 Oct; 30 Oct, as items): the quiet's reload, free - a reload or a refill
+## under way done, and a gun's magazine swapped for a fuller one of its type if the rig has one.
+func _mags_topped(m: Dictionary) -> void:
+	if not m.has("mag_in"):
+		return
+	_refills_tick(m, 0.0, true)
 	for slot in ["Primary", "Secondary"]:
-		m["reload_t"].erase(slot)             # a reload under way when the last one went down: done in the quiet
-		if uses_mag(slot) and has_rounds(equipped[slot]):
-			m["mag"][slot] = float(mini(Items.mag_size(equipped[slot]), rounds_for(equipped[slot])))
+		if m["reload_t"].has(slot):
+			m["reload_t"].erase(slot)             # a reload under way when the last one went down: done in the quiet
+			_mag_load(m, slot, _reload_target(m, slot))
 		m["fire_x"][slot] = 1.0
+		if not uses_mag(slot) or not has_rounds(equipped[slot]):
+			continue
+		var cur: Dictionary = mag_in(slot)
+		var nxt: Dictionary = _next_mag(slot)
+		if cur.is_empty() or (not nxt.is_empty() and int(nxt["rounds"]) > int(cur.get("rounds", 0)) and int(cur.get("rounds", 0)) < Items.mag_cap(cur, equipped[slot])):
+			if not nxt.is_empty():
+				_mag_load(m, slot, nxt)
 
 
-## The rounds a try-on counts as a trip to the rig: the stash's, and on a run the pack's too (21 Oct, Matt's playtest:
-## a gun found with its box in the same run read as a downgrade in the fight, an upgrade once home).
-## Magazines (28 Oct, the review): a box found out there can't go to the rig now, so on a run only the rig's own pouches
-## moved to the pack count - a found gun and its box read as a gun that goes dry.
+## The boxes a try-on counts as a trip to the rig's magazines: the stash's, and on a run the pack's (30 Oct: a box in the
+## pack refills a magazine by hand).
 func _rounds_held() -> Array:
 	var out: Array = stash.filter(func(x): return Items.is_ammo(x))
 	if mission != null:
-		out.append_array(mission.get("found", []).filter(func(x): return Items.is_ammo(x) and x.get("from_rig", false)))
+		out.append_array(mission.get("found", []).filter(func(x): return Items.is_ammo(x)))
 	return out
 
 
@@ -3963,27 +4414,26 @@ func melee() -> bool:
 	return equipped["Primary"] != null and Items.is_melee(equipped["Primary"])
 
 
-## The better grade's damage, from the stack that's feeding the gun now.
+## The better grade's damage, from the magazine that's feeding the gun now.
 func grade_bonus(gun: Dictionary) -> float:
 	return grade_stat(gun, "damage_pct")
 
 
-## What the grade in the gun's live stack carries for a stat: its damage, a share as an element (33), a first-shot weight.
+## What the grade feeding the gun carries for a stat: its damage, a share as an element (33), a first-shot weight.
 func grade_stat(gun, stat: String) -> float:
 	if gun == null:
 		return 0.0                       # no gun in hand: untyped on purpose, a typed parameter would refuse the null
 	var stack := feed_stack(gun)
-	return float(Items.base_of(stack).get(stat, 0)) if not stack.is_empty() else 0.0
+	return float(Items.grade_base(stack).get(stat, 0)) if not stack.is_empty() else 0.0
 
 
-## The stack a gun fires from (11 Oct, Matt: Depot rounds put in the rig did nothing, the first stack of the type
-## fed whatever was better): the best grade of its type with rounds left. A grade carrying an element the runner
-## has trained into (a node in that element's tree) comes first - a fire build fires its incendiaries before Depot
-## (Matt, the same day) - then by the grade's worth (Rifle 40, Match 100, Salted 150, Depot 170), the first in the
-## rig on a tie. {} when it's dry.
+## What a gun fires from (11 Oct, Matt: the best grade fires first; 30 Oct, as items): on a run, the magazine in it,
+## else the next; at home, the best loaded magazine that fits it - a grade carrying an element the runner has trained
+## into first (a fire build fires its incendiaries before Depot), then by the grade's worth. A try-on reads the best
+## grade on hand, the stash's boxes too. {} when it's dry.
 func feed_stack(gun: Dictionary) -> Dictionary:
 	if _trying:                           # a try-on's kit stands still: the feed read once a gun (22 Oct, the pass's wall:
-		var fk := "feed/%d" % int(gun.get("id", hash(gun)))     # a try read the stash's rounds six times); a run's feed is never memoised, its stacks run dry
+		var fk := "feed/%d" % int(gun.get("id", hash(gun)))     # a try read the stash's rounds six times); a run's feed is never memoised, its magazines run dry
 		if not _try_memo.has(fk):
 			_try_memo[fk] = _feed_stack_raw(gun)
 		return _try_memo[fk]
@@ -3991,23 +4441,25 @@ func feed_stack(gun: Dictionary) -> Dictionary:
 
 
 func _feed_stack_raw(gun: Dictionary) -> Dictionary:
+	if mission != null and not _trying:
+		for slot in ["Primary", "Secondary"]:
+			if is_same(gun, equipped[slot]):
+				var cur: Dictionary = mag_in(slot)
+				if not cur.is_empty() and int(cur.get("rounds", 0)) > 0:
+					return cur
 	var t := Items.ammo_type(gun)
 	# the element only counts for the primary: a secondary's grade is damage only (the conversion reads the primary's)
 	var els: Array = build_elements() if is_same(gun, equipped["Primary"]) else []
 	var best := {}
 	var bv := -1
-	# a try-on reads the best grade on hand, the stash's too (20 Oct, Matt: a gun's compare only read right with its
-	# rounds in the rig): has_rounds already weighs it fed from the stash, so its grade comes from there as well
-	for it in (rig + _rounds_held() if _trying else rig):
-		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
-			var b: Dictionary = Items.base_of(it)
-			var v: int = int(b.get("value", 0))
-			for e in els:
-				if float(b.get("conv_%s_pct" % e, 0)) > 0.0:
-					v += 100000                  # the build's own element before any worth
-			if v > bv:
-				best = it
-				bv = v
+	var pool: Array = mags_for(gun).filter(func(x): return int(x.get("rounds", 0)) > 0)
+	if _trying:
+		pool += _rounds_held().filter(func(x): return str(Items.base_of(x)["type"]) == t and int(x.get("rounds", 0)) > 0)
+	for it in pool:
+		var v: int = _grade_worth(Items.grade_base(it), els)
+		if v > bv:
+			best = it
+			bv = v
 	return best
 
 
@@ -4031,32 +4483,6 @@ func build_elements() -> Array:
 					break
 	return _els
 
-
-## Rounds fired this tick come off the first stack of the type; an empty
-## stack is dropped, and a gun that's just run dry says so.
-func _spend_rounds(gun: Dictionary, shots: float) -> void:
-	var t := Items.ammo_type(gun)
-	if t == "none" or Items.free_rounds(gun):
-		return
-	var m: Dictionary = mission
-	m["fired"] = m.get("fired", {})
-	m["fired"][t] = float(m["fired"].get(t, 0.0)) + shots
-	while m["fired"][t] >= 1.0:
-		var stack := feed_stack(gun)       # the best grade first, as the damage reads it
-		if stack.is_empty():
-			m["fired"][t] = 0.0
-			return
-		# the tick's rounds off the one stack at once (A4: a scan of the rig a round was a quarter of a dry run's tick);
-		# the feed only changes when a stack runs out
-		var n: int = mini(int(m["fired"][t]), int(stack["rounds"]))
-		stack["rounds"] = int(stack["rounds"]) - n
-		m["fired"][t] -= float(n)
-		if int(stack["rounds"]) <= 0:
-			rig.erase(stack)
-			_dry_memo.erase("conversion")   # the grade's share goes with the stack (33), in a dry run too
-			if rounds_for(gun) <= 0:
-				log_event(Words.LOG["out_of_rounds"] % gun["base"])
-				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
 
 
 ## The Fence sells standard boxes of every type without end: a box a type.
@@ -4343,7 +4769,7 @@ func stash_cap() -> int:
 ## Whether a stash item takes no cells: the Stash's Racks (rounds, meds, grenades), Wall of fame (uniques and set
 ## pieces). (The Paper rack's papers and charms went with it: papers live on the pile; it's the Filing cabinet, 19 Oct.)
 func stash_free(it: Dictionary) -> bool:
-	if yard_has("racks") and (Items.is_ammo(it) or Items.is_medical(it) or Items.is_grenade(it)):
+	if yard_has("racks") and (Items.is_ammo(it) or Items.is_mag(it) or Items.is_medical(it) or Items.is_grenade(it)):
 		return true
 	return yard_has("wall_of_fame") and (it.has("unique") or it.has("set"))
 
@@ -4598,8 +5024,8 @@ func put_down(id: int) -> bool:
 	for k in range(mission["found"].size()):
 		var f: Dictionary = mission["found"][k]
 		if int(f["id"]) == id:
-			if f.get("from_rig", false) or Items.is_deeds(f):
-				return false                     # the runner's own rounds, the deeds: not left behind by a drag
+			if f.get("from_rig", false) or f.get("carried", false) or Items.is_deeds(f):
+				return false                     # the runner's own rounds (the gate's box too), the deeds: not left behind by a drag
 			mission["found"].remove_at(k)
 			pack_off(f)
 			mission["floor"] = mission.get("floor", [])
@@ -7337,6 +7763,7 @@ func _remix_issued(d: int) -> void:
 	issued_serial += 1
 	it["serial"] = issued_serial
 	stash.append(it)
+	_mag_with(it)
 	_read(it)
 	log_event(Words.COUNTY["remix_issued"] % Items.full_name(it))
 
@@ -7773,12 +8200,17 @@ func rounds_short(i: int) -> Array:
 	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]) * mag_share("Primary") * rate_x())     # the reloads' pauses fire nothing (28 Oct)
 	var have: int = rounds_for(gun)
 	var ty: String = Items.ammo_type(gun)
-	# the gate tops up from the stash (the review): a box bought since home still goes out - as magazines (28 Oct), into
-	# the room the rig's pouches have and the pouches the top-up may still fill
-	var room_rounds: int = (mag_pouch_room() * Items.pouch_cap_of(ty)) if (top_up_mode != "leave" and rig_room(1)) else 0
-	for r in rig:
-		if Items.is_ammo(r) and Items.base_of(r)["type"] == ty:
-			room_rounds += maxi(0, Items.pouch_cap(r) - int(r["rounds"]))
+	# the gate fills from the stash (the review): a box bought since home still goes out - in the rig's magazines (30 Oct,
+	# as items), the room they have, and the stash's magazines the top-up may still pack into the pouches left
+	var room_rounds := 0
+	for r in mags_for(gun):
+		room_rounds += maxi(0, Items.mag_cap(r, gun) - int(r["rounds"]))
+	if top_up_mode != "leave":
+		var pouches: int = mini(mag_pouch_room(), med_capacity() - rig_used())
+		for r in stash:
+			if Items.mag_fits(r, gun) and Items.size(r) <= pouches:
+				pouches -= Items.size(r)
+				room_rounds += maxi(0, Items.mag_cap(r, gun) - int(r.get("rounds", 0)))
 	var in_stash := 0
 	for it in stash:
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == ty:
@@ -8084,7 +8516,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
 	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") or has_node("snare_and_wait") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	var m := {
-		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false, "clock": clock_budget(t),
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": _gate_boxes(true) if gate_box_on() else [], "insured": false, "clock": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
@@ -8183,6 +8615,8 @@ func deploy(i: int) -> void:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
+	if gate_box_on():
+		_pack_boxes(mission)                  # a box of each worn gun's rounds into the pack, for the refills (30 Oct, the designer's A)
 	var warm_key := _combo_warm(mission)
 	if warm_key != "":
 		log_event(Words.COMBOS[warm_key])       # the build's on: its one line, at the start now the loop starts warm
@@ -8717,6 +9151,7 @@ func _repeat_go() -> void:
 		_surv_cache.erase(i)
 	_fill_mags()
 	pack_rig("fill", i)                      # the site's cures, not the front's (S9)
+	_fill_mags()                              # the magazines it packed, filled (30 Oct)
 	var ins := insure_next
 	insure_next = false                       # the paper's for a watched run
 	_repeat_going = true
@@ -8782,7 +9217,7 @@ func _bail(m: Dictionary) -> void:
 	m["bailed"] = true
 	hp = maxf(hp, 1.0)
 	_floor_mythics_in(m)
-	var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it) or it.get("mythic", false) or it.get("issued", false) or it.has("unique") or it.get("from_rig", false))
+	var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it) or it.get("mythic", false) or it.get("issued", false) or it.has("unique") or it.get("from_rig", false) or it.get("carried", false))
 	m["left"] = int(m["left"]) + m["found"].size() - keep.size()
 	m["found"] = keep
 	log_event(Words.REPEAT["bail"] % Words.mid(str(tier(int(m["tier"]))["name"])))
@@ -8794,7 +9229,7 @@ func _bail(m: Dictionary) -> void:
 ## pieces, socketables, supplies) and your loot rules' keeps with Your own list. Upgrades are _repeat_sort's: the best a
 ## slot, while the stash has room.
 func repeat_keep_why(it: Dictionary, own_list := false) -> String:
-	if it.get("from_rig", false):
+	if it.get("from_rig", false) or it.get("carried", false):
 		return "own"
 	if it.get("first_gun", false):
 		return Words.REPEAT["why_first"]
@@ -8810,7 +9245,7 @@ func repeat_keep_why(it: Dictionary, own_list := false) -> String:
 		return Words.REPEAT["why_paper"]
 	if Items.opens(it) != "":
 		return Words.REPEAT["why_opens"]
-	if Items.is_ammo(it):
+	if Items.is_ammo(it) or Items.is_mag(it):
 		return Words.REPEAT["why_rounds"]
 	if Items.rig_item(it):
 		return Words.REPEAT["why_meds"]
@@ -9757,15 +10192,13 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var px_t: float = float(m["fire_x"].get("Primary", 1.0))
 	if primary_live and not has_rule("qm_rifle"):
 		var p_shots: float = Items.base_of(equipped["Primary"])["rof"] * pace() * jab * t["pace"] * dt * px_t * chill_x * rate_x()
-		_spend_rounds(equipped["Primary"], p_shots)
-		_mag_spend(m, "Primary", p_shots)
-	# the secondary spends what it fires: its full rate when it's the gun in
-	# hand (the primary dry, gone or reloading, or Double tap), a third while it backs the primary
+		_fire_rounds(m, "Primary", p_shots)
+	# the secondary spends what it fires: its full rate when it's the gun in hand (the primary dry, gone or refilling a
+	# magazine, or Double tap), a third while it backs the primary, the sling's share while the primary reloads (30 Oct)
 	if equipped["Secondary"] != null and has_rounds(equipped["Secondary"]):
-		var share: float = (secondary_share(true) * px_t + (1.0 - px_t)) if primary_live else 1.0
+		var share: float = (secondary_share(true) * px_t + (1.0 - px_t) * reload_share()) if primary_live else 1.0
 		var s_shots: float = Items.base_of(equipped["Secondary"])["rof"] * pace() * jab * t["pace"] * dt * share * float(m["fire_x"].get("Secondary", 1.0)) * chill_x * rate_x()
-		_spend_rounds(equipped["Secondary"], s_shots)
-		_mag_spend(m, "Secondary", s_shots)
+		_fire_rounds(m, "Secondary", s_shots)
 	if mech != "":
 		_order_absorb(m, t, hp_before, mech)  # the Lineman's shield, the Issuer's printed men: they take the hits first
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
@@ -10356,6 +10789,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		# the last of the convoy: the Lorry's Load comes home too, and the lorry's done for this Yard (7 Oct)
 		var ld := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		m["found"].append(ld)
+		_mag_in_pack(m, ld)
 		_read(ld)
 		log_event(Words.LOG["convoy_done"] % ld["unique"])
 		if not lorry_done:
@@ -10366,11 +10800,13 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	if not pool.is_empty():
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)     # at the depth he's fought at (12 Oct); his own, off him (21 Oct)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
+		_mag_in_pack(m, it)
 		_read(it)
 		log_event(Words.LOG["head_down_found"] % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
 			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)
 			m["found"].append(it2)
+			_mag_in_pack(m, it2)
 			_read(it2)
 			log_event(Words.LOG["second_unique"] % it2["unique"])
 	if pool.is_empty():
@@ -10400,6 +10836,64 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.YARD["campaign"])
 
 
+## A gun's standard magazine, empty (30 Oct: every gun the runner gets comes with one), {} for a gun that takes none.
+func gun_mag(gun: Dictionary) -> Dictionary:
+	if Items.mag_size(gun) <= 0:
+		return {}
+	var b: Dictionary = Items.standard_mag(Items.ammo_type(gun))
+	return _plain(Data.MAGAZINE, str(b["name"])) if not b.is_empty() else {}
+
+
+## A head's gun (30 Oct) brings its standard magazine on it (the fix round): kept as the gun is, home with it.
+func _mag_in_pack(_m: Dictionary, it: Dictionary) -> void:
+	if not Items.is_gun(it) or it.get("with_mag", false):
+		return
+	_mag_attach(it)
+
+
+## A gun's magazine carried with it (the fix round, the review's 3): on the gun itself till it's home (into the stash with
+## it) or fitted on the run (into the rig) - kept whenever the gun is kept, left when it's left.
+func _mag_attach(gun: Dictionary) -> void:
+	gun["with_mag"] = true
+	var mag: Dictionary = gun_mag(gun)
+	if not mag.is_empty():
+		gun["mag_item"] = mag
+
+
+## The magazines carried on guns, off them: a gun in the stash puts its own in the stash beside it (whatever the room: it
+## came with the gun), a worn gun's goes to the stash too. At home, before the gate.
+func _mags_home() -> void:
+	for g in stash.duplicate() + [equipped["Primary"], equipped["Secondary"]]:
+		if g is Dictionary and g.has("mag_item"):
+			var mag: Dictionary = g["mag_item"]
+			g.erase("mag_item")
+			if not stash_put(mag):
+				stash.append(mag)
+
+
+## Room in the stash for a piece and, a gun, the magazine that comes with it (the fix round, the review's 7).
+func fits_with_mag(it: Dictionary) -> bool:
+	var need: int = 0 if stash_free(it) else Items.size(it)
+	if Items.is_gun(it) and not it.get("with_mag", false) and Items.mag_size(it) > 0 and not yard_has("racks"):
+		need += 1                             # its standard magazine, a cell (no roll: a room check spends no dice)
+	return stash_used() + need <= stash_cap()
+
+
+## A gun got (bought, built, issued, off a head, an expedition's) brings its standard magazine to the stash, once
+## (30 Oct: a gun is never dead for want of one). A find's comes in the pack with it instead (_land).
+func _mag_with(it: Dictionary) -> void:
+	if not Items.is_gun(it) or it.get("with_mag", false):
+		return
+	it["with_mag"] = true
+	var mag: Dictionary = gun_mag(it)
+	if not mag.is_empty() and not stash_put(mag):
+		stash.append(mag)                     # whatever the room: it came with the gun
+	var k: int = stash.find(it)
+	if k >= 0 and k < stash.size() - 1:
+		stash.remove_at(k)
+		stash.append(it)                      # the gun the last in, its magazine before it
+
+
 ## The rounds the guns you have take (17 Oct): worn, in the stash, in the rig, in this run's pack - none for a blade or a
 ## gun that takes none.
 func owned_ammo_types(m = null) -> Array:
@@ -10415,13 +10909,18 @@ func owned_ammo_types(m = null) -> Array:
 	return out
 
 
-## The Garden Centre's first clear (17 Oct): one of Data.FIRST_GUNS, plain, and a box of its rounds, in the pack whatever
-## the room - the step every save gets.
+## The Garden Centre's first clear (17 Oct): one of Data.FIRST_GUNS, plain, its standard magazine (30 Oct) and a box of
+## its rounds, in the pack whatever the room - the step every save gets.
 func _first_gun(m: Dictionary) -> void:
 	var pick: Array = Data.FIRST_GUNS[rng.randi_range(0, Data.FIRST_GUNS.size() - 1)]
 	var gun: Dictionary = _plain(str(pick[0]), str(pick[1]))
 	gun["first_gun"] = true                   # kept by a full pack like the deeds (_pack_keeps); the mark comes off at home
 	m["found"].append(gun)
+	var mag: Dictionary = gun_mag(gun)
+	gun["with_mag"] = true
+	if not mag.is_empty():
+		mag["first_gun"] = true
+		m["found"].append(mag)
 	var box := {}
 	for b in Data.BASES[Data.AMMO]:
 		if str(b["type"]) == Items.ammo_type(gun) and int(b["tier"]) == 1:
@@ -10430,7 +10929,7 @@ func _first_gun(m: Dictionary) -> void:
 			break
 	if not box.is_empty():
 		m["found"].append(box)
-	log_event(Words.FIRST_GUN % [Words.a_thing(str(gun["base"])), str(box.get("base", "rounds")).to_lower()])
+	log_event(Words.FIRST_GUN % [Words.a_thing(str(gun["base"])), Words.a_thing(str(mag.get("base", "magazine"))), str(box.get("base", "rounds")).to_lower()])
 	chron("first_gun", {"base": str(gun["base"])})
 
 
@@ -10477,7 +10976,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	# the crate's lean (13 Oct): an ammo tin's finds mostly rounds, a military crate's guns and armour
 	if not crate.is_empty() and crate.has("slots") and rng.randf() < float(crate.get("lean", 0.0)):
 		slot = str(crate["slots"][rng.randi_range(0, crate["slots"].size() - 1)])
-	var owned: Array = owned_ammo_types(m) if slot == Data.AMMO else []
+	if slot == Data.ATTACHMENT and rng.randf() < Data.MAG_OF_PARTS:
+		slot = Data.MAGAZINE                  # a magazine (30 Oct, magazines as items): a share of what would be a gun part
+	var owned: Array = owned_ammo_types(m) if (slot == Data.AMMO or slot == Data.MAGAZINE) else []
 	if slot == Data.AMMO and owned.is_empty():
 		slot = gear_slot                      # rounds for no gun you have (17 Oct, Matt's playtest: three boxes, no gun): something else instead
 	var socket_find: bool = slot != Data.PAPER and rng.randf() < (0.5 if crate.get("socket", false) else Data.SOCKET_FIND)     # a socketable, its own kind of find, kills too (21 Oct); half of Breaker's yard's
@@ -10541,6 +11042,14 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 							fits.append(b)
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
+		elif slot == Data.MAGAZINE and not owned.is_empty() and not (Items.mag_type(it) in owned) and rng.randf() < 0.7:
+			# a magazine mostly for a gun you have (30 Oct), at the find's tier or under, its kind kept where the type has it
+			var mfits: Array = Data.BASES[Data.MAGAZINE].filter(func(b): return str(b["type"]) in owned and int(b["tier"]) <= maxi(1, find_tier))
+			var same_kind: Array = mfits.filter(func(b): return str(b["kind"]) == Items.mag_kind(it))
+			if not same_kind.is_empty():
+				mfits = same_kind
+			if not mfits.is_empty():
+				it = _plain(Data.MAGAZINE, str(mfits[rng.randi_range(0, mfits.size() - 1)]["name"]))
 	if from_kill and m.get("kill_bleeding", false) and has_joint("drifter_bleed") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
 		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
@@ -10587,8 +11096,8 @@ func socket_find_roll(at_tier: int) -> Dictionary:
 	return _plain(Data.ATTACHMENT, str(from[rng.randi_range(0, from.size() - 1)]["name"]))
 
 
-## A find rolled, into the pack - or onto the floor, a search's by hand (13 Oct) - its line in the log, and a gun's box
-## of rounds while the Fence is shut.
+## A find rolled, into the pack - or onto the floor, a search's by hand (13 Oct) - its line in the log, a gun's standard
+## magazine (30 Oct: a gun is never dead for want of one), and a gun's box of rounds while the Fence is shut.
 func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void:
 	if said != "":
 		log_event(said)
@@ -10597,6 +11106,8 @@ func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void
 		m["floor"].append(it)
 	else:
 		_place_find(m, it)
+	if Items.is_gun(it) and not it.get("with_mag", false):
+		_mag_attach(it)                       # its magazine on it: wherever the gun goes (the fix round)
 	# a gun found while the Fence is shut comes with a box of its own rounds (13 Oct, the ammo trap: rounds are sold
 	# at the Fence only, and a gun with none is a club)
 	if (it["slot"] == "Primary" or it["slot"] == "Secondary") and not room_open("fence") and not Items.free_rounds(it):
@@ -10641,7 +11152,7 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 	var order: Array = []
 	for k in range(m["found"].size()):
 		var f: Dictionary = m["found"][k]
-		if Items.opens(f) == "" and not f.get("from_rig", false):
+		if Items.opens(f) == "" and not f.get("from_rig", false) and not f.get("carried", false):
 			order.append(k)
 	# what's at least its size first (its place alone may hold it), then the smaller (beside a gap they may), each cheapest first
 	var need := Items.size(it)
@@ -10956,9 +11467,11 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 func cheapest_in_pack() -> Dictionary:
 	if mission == null or mission["found"].is_empty():
 		return {}
-	var pick: Dictionary = mission["found"][0]
+	var pick: Dictionary = {}
 	for it in mission["found"]:
-		if it["value"] < pick["value"]:
+		if it.get("carried", false):
+			continue                              # the gate's box isn't a find to drop
+		if pick.is_empty() or it["value"] < pick["value"]:
 			pick = it
 	return pick
 
@@ -10969,6 +11482,8 @@ func ditch(id: int) -> bool:
 	for k in range(mission["found"].size()):
 		if mission["found"][k]["id"] == id:
 			var it: Dictionary = mission["found"][k]
+			if it.get("carried", false):
+				return false                      # the gate's box: the stash's rounds, never ditched (the second review)
 			mission["found"].remove_at(k)
 			mission["ditched"] = int(mission.get("ditched", 0)) + 1
 			# down on the floor, no scrap (27 Oct, Matt: "scrapping should only be available in the workshop now - ditch
@@ -11199,19 +11714,30 @@ func _extract() -> void:
 	if m.get("unwatched", false):
 		m["found"] = _repeat_sort(m)          # a repeat run's pack sorted at the gate (29 Oct), after the rules and the Bins: its kept chips are what goes in
 	var stashed := 0
+	var own_home := 0                         # the runner's own kit home (the gate's box, the rig's own): neither loot nor left
 	for it in m["found"]:
-		var first: bool = it.get("first_gun", false) and Items.is_gun(it)
+		var first: bool = it.get("first_gun", false) and (Items.is_gun(it) or Items.is_mag(it))     # and its magazine (30 Oct)
 		it.erase("first_gun")
 		it.erase("spared")
 		if first:
 			stash.append(it)                  # the first gun comes home whatever the room, as a mythic does, and it's home: no more (17 Oct)
-			seen["first_gun_home"] = true
+			if Items.is_gun(it):
+				seen["first_gun_home"] = true
 			stashed += 1
 			continue
+		if it.get("carried", false):
+			it.erase("carried")
+			own_home += 1                     # the runner's own: neither loot nor left (the second review)
+			m["own_ids"] = m.get("own_ids", []) + [int(it["id"])]
+			if not stash_put(it):
+				log_event(Words.LOG["left_at_gate"] % str(it["base"]).to_lower())
+			continue                          # the gate's box for the refills (30 Oct): what's left comes home, never loot
 		if it.get("from_rig", false):
 			# the runner's own rounds, moved to the pack on the run: back to the rig when there's a pouch, else the
 			# stash, never loot (the review: a full stash dropped them without a word)
 			it.erase("from_rig")
+			own_home += 1
+			m["own_ids"] = m.get("own_ids", []) + [int(it["id"])]
 			if rig_room(Items.size(it)):
 				rig.append(it)
 			elif not stash_put(it):
@@ -11241,7 +11767,7 @@ func _extract() -> void:
 			stashed += 1
 		else:
 			continue
-		if not Items.rig_item(it) and not m.get("unwatched", false):
+		if not (Items.rig_item(it) or Items.is_ammo(it)) and not m.get("unwatched", false):
 			_came_back_find(it)              # the card's dearest find (rounds and meds aren't finds)
 	var outcome := "Back"
 	if m.get("timed_out", false):
@@ -11252,7 +11778,7 @@ func _extract() -> void:
 		outcome = "Back, chased"
 	last_report = {
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
-		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
+		"left": m["left"] + (m["found"].size() - stashed - own_home), "cash": m["cash"], "xp": m["xp"],
 		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(),
 		"clock_used": float(m.get("clock_used", 0.0)), "clock_left": float(m.get("clock", 0.0)), "timed_out": bool(m.get("timed_out", false)), "way_out": bool(m.get("way_out", false)),
 		"fight": fight_breakdown(m),
@@ -11287,6 +11813,8 @@ func _record_run(m: Dictionary) -> void:
 	record["dealt"] = maxf(float(record.get("dealt", 0.0)), float(m.get("dealt", 0.0)))
 	record["cash"] = maxf(float(record.get("cash", 0.0)), float(m["cash"]))
 	for it in m["found"]:
+		if int(it["id"]) in m.get("own_ids", []):
+			continue                              # the runner's own (the gate's box, the rig's): not a find
 		if int(it.get("value", 0)) > int(record.get("find_value", 0)):
 			record["find_value"] = int(it["value"])
 			record["find"] = Items.full_name(it)
@@ -11635,6 +12163,8 @@ func _rounds_on_hand() -> String:
 	for it in rig + _rounds_held():          # the pack's too (21 Oct)
 		if Items.is_ammo(it):
 			types[Items.base_of(it)["type"]] = true
+		elif Items.is_mag(it) and int(it.get("rounds", 0)) > 0:
+			types[Items.mag_type(it)] = true     # a loaded magazine (30 Oct)
 	var k: Array = types.keys()
 	k.sort()
 	return ",".join(k)
@@ -11748,12 +12278,12 @@ func runner_key() -> int:
 	return hash(runner_parts())
 
 
-## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
+## The rounds in the rig as the guns see them: each magazine with rounds left, by its grade, in the rig's order.
 func _rig_grades() -> Array:
 	var out: Array = []
 	for it in rig:
-		if Items.is_ammo(it) and int(it["rounds"]) > 0:
-			out.append(str(it["base"]))
+		if Items.is_mag(it) and int(it["rounds"]) > 0:
+			out.append(str(it.get("ammo", "")))
 	return out
 
 
@@ -11871,6 +12401,8 @@ func equip_best(slot: String) -> bool:
 	if equipped[slot] != null:
 		stash.append(equipped[slot])
 	equipped[slot] = best
+	if slot == "Rig":
+		_rig_shed()
 	_feed(best)
 	return true
 
@@ -12079,58 +12611,115 @@ func set_top_up(mode: String) -> void:
 		_dry_memo.clear()
 
 
-## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash): the rig's
-## magazines are filled from the stash's boxes first, free, whatever the mode (filling them is home's job, 28 Oct);
-## then, unless the mode is "leave", pack_rig packs the rest from the stash. What's in the rig already stays. Logs what
-## went in.
+## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash; 30 Oct,
+## magazines as items): every magazine in the rig is filled from the stash's boxes of its type, free, whatever the
+## mode (loading is the game's, not the player's); then, unless the mode is "leave", pack_rig packs the rest from the
+## stash and those are filled too. What's in the rig already stays. Logs what went in.
 func _top_up(at := -1) -> void:
 	if mission != null:
 		return
-	var moved: int = _fill_mags()
-	if top_up_mode == "leave":
-		if moved > 0:
-			_dry_memo.clear()
-			log_event(Words.FILLED_MAGS % moved)
-		return
-	var got: Array = pack_rig(top_up_mode, at)
-	moved += int(got[0])
-	var meds_in: int = int(got[1])
-	if moved > 0 or meds_in > 0:
+	_mags_home()                              # the magazines that came home on their guns (the fix round)
+	var f: Array = _fill_mags()
+	var got: Array = [0, 0]
+	if top_up_mode != "leave":
+		got = pack_rig(top_up_mode, at)
+		var f2: Array = _fill_mags()
+		f = [int(f[0]) + int(f2[0]), Array(f[1]) + Array(f2[1]).filter(func(g): return not (g in f[1]))]
+	if int(f[0]) > 0 or int(got[0]) > 0 or int(got[1]) > 0:
 		_dry_memo.clear()
-		log_event((Words.TOPPED_UP % [moved, meds_in]) if meds_in > 0 and moved > 0 else ((Words.TOPPED_UP_MEDS % meds_in) if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved))
+	if int(got[0]) > 0 or int(got[1]) > 0:
+		log_event(Words.topped_up(int(got[0]), int(got[1])))
+	if int(f[0]) > 0:
+		log_event(Words.filled_mags(int(f[0]), f[1]))
 
 
-## The rig packed from the stash (28 Oct, Matt, the review: magazines then cures left a Bum bag no heal): HEAL, MAGAZINE,
-## CURE - at least one heal and one pouch of magazines first, when the rig has the room and the stash has them; then a
-## cure for each of the front's elements (TOP_UP_CURES at most); then the rest, new pouches of magazines up to
-## RIG_MAG_SHARE of the rig (the primary's, one kept for a secondary firing another type), the heals the pouches left.
-## "best" takes the top grade of each alone. What's in the rig already stays. The gate's top-up and the bot pack by
-## it. [rounds moved, meds and cures in].
+## The worn gun a magazine feeds: the primary when it fits, else the secondary, else null (its type's own size then).
+func mag_gun(it: Dictionary):
+	for slot in ["Primary", "Secondary"]:
+		if Items.mag_fits(it, equipped[slot]):
+			return equipped[slot]
+	return null
+
+
+## The rig's magazines filled at home (28 Oct; 30 Oct, as items): each one short of its size, from the stash's boxes of
+## its type - one holding rounds tops up with its own grade, an empty one takes the best grade the stash has (the
+## build's element first, for the primary's). Free. [magazines filled, the grades' names].
+func _fill_mags() -> Array:
+	var filled := 0
+	var grades: Array = []
+	var order: Array = rig.filter(func(x): return Items.is_mag(x))
+	order.sort_custom(func(a, b): return _mag_rank(a) < _mag_rank(b))
+	for it in order:
+		var gun = mag_gun(it)
+		var cap: int = Items.mag_cap(it, gun)
+		var have: int = int(it.get("rounds", 0))
+		if have > cap:
+			# over its size (a gun swapped for one with a smaller magazine): the rest back to the stash as a box of its grade
+			var back: Dictionary = _plain(Data.AMMO, str(it["ammo"]))
+			Items.set_stack(back, have - cap)
+			if not stash_put(back):
+				stash.append(back)
+			it["rounds"] = cap
+			continue
+		if have >= cap:
+			continue
+		var grade: String = str(it.get("ammo", "")) if have > 0 else _best_grade_in_stash(Items.mag_type(it), is_same(gun, equipped["Primary"]))
+		if grade == "":
+			continue
+		var n: int = mini(cap - have, _rounds_in_stash(grade))
+		if n <= 0:
+			continue
+		_take_rounds(grade, n)
+		it["rounds"] = have + n
+		it["ammo"] = grade
+		filled += 1
+		if not (grade in grades):
+			grades.append(grade)
+	return [filled, grades]
+
+
+## The filling's order: the primary's magazines, then the secondary's, then any other.
+func _mag_rank(it: Dictionary) -> int:
+	if Items.mag_fits(it, equipped["Primary"]):
+		return 0
+	return 1 if Items.mag_fits(it, equipped["Secondary"]) else 2
+
+
+## The best grade of a type in the stash's boxes, by name; "" for none. The primary's: its build's element first.
+func _best_grade_in_stash(ty: String, primary: bool) -> String:
+	var els: Array = build_elements() if primary else []
+	var best := ""
+	var bv := -1
+	for it in stash:
+		if Items.is_ammo(it) and str(Items.base_of(it)["type"]) == ty and int(it.get("rounds", 0)) > 0:
+			var v: int = _grade_worth(Items.base_of(it), els)
+			if v > bv:
+				best = str(it["base"])
+				bv = v
+	return best
+
+
+## The rig packed from the stash (28 Oct, Matt, the review: magazines then cures left a Bum bag no heal; 30 Oct,
+## magazines as items): HEAL, MAGAZINE, CURE - at least one heal and one of the primary's magazines first, when the rig
+## has the room and the stash has them; then a cure for each of the front's elements (TOP_UP_CURES at most); then the
+## rest, the primary's magazines and then the secondary's up to RIG_MAG_SHARE of the rig's pouches (one kept for a
+## secondary firing another type), the heals the pouches left. A magazine is packed only with rounds to fill it (in it,
+## or a box of its type in the stash). "best" takes the best heal alone. What's in the rig already stays. The gate's
+## top-up and the bot pack by it. [magazines moved, meds and cures in].
 func pack_rig(mode := "fill", at := -1) -> Array:
 	if mission != null:
 		return [0, 0]
 	var lists: Array = []
 	for slot in ["Primary", "Secondary"]:
 		var gun = equipped[slot]
-		if gun == null:
+		if gun == null or Items.mag_size(gun) <= 0:
 			continue
 		var t := Items.ammo_type(gun)
-		if t in ["", "none"] or Items.free_rounds(gun):
-			continue
-		var els: Array = build_elements() if slot == "Primary" else []
-		var stacks: Array = stash.filter(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == t and int(x.get("rounds", 0)) > 0)
-		var worth := func(x: Dictionary) -> int:
-			var b: Dictionary = Items.base_of(x)
-			var v: int = int(b.get("value", 0))
-			for e in els:
-				if float(b.get("conv_%s_pct" % e, 0)) > 0.0:
-					v += 100000
-			return v
-		stacks.sort_custom(func(a, b): return worth.call(a) > worth.call(b))
-		if mode == "best" and not stacks.is_empty():
-			var top: String = str(stacks[0]["base"])
-			stacks = stacks.filter(func(x): return str(x["base"]) == top)     # the top grade alone
-		lists.append([t, stacks])
+		var boxes: bool = stash.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == t and int(x.get("rounds", 0)) > 0)
+		var mags: Array = stash.filter(func(x): return Items.mag_fits(x, gun) and (boxes or int(x.get("rounds", 0)) > 0))
+		# the most rounds first: loaded, then the biggest; a drum's two pouches weighed against two of the gun's own
+		mags.sort_custom(func(a, b): return float(a.get("rounds", 0)) * 1000.0 + float(Items.mag_cap(a, gun)) / float(Items.size(a)) > float(b.get("rounds", 0)) * 1000.0 + float(Items.mag_cap(b, gun)) / float(Items.size(b)))
+		lists.append([t, mags])
 	var meds: Array = stash.filter(func(x): return Items.is_heal(x))
 	meds.sort_custom(func(a, b): return med_heal(a) > med_heal(b))
 	if mode == "best" and not meds.is_empty():
@@ -12138,24 +12727,24 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 		meds = meds.filter(func(x): return str(x["base"]) == top_med)
 	var moved := 0
 	var meds_in := 0
-	# the primary's own rounds (29 Oct, the stall: a pouch of nails left from an old gun read as "magazines in", and the
-	# new gun's first pouch never came)
-	var has_mags: bool = not lists.is_empty() and rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[0][0]))
+	# the primary's own magazines (29 Oct, the stall: a pouch of nails left from an old gun read as "magazines in", and
+	# the new gun's first never came)
+	var has_mags: bool = not lists.is_empty() and rig.any(func(x): return Items.is_mag(x) and Items.mag_type(x) == str(lists[0][0]))
 	var mags_to_come: bool = not has_mags and not lists.is_empty() and not lists[0][1].is_empty()
 	# HEAL, MAGAZINE, CURE (29 Oct, the stall: what stayed in the rig from before - two cures and a two-pouch kit in a
 	# four-pouch rig - sent the runner out with 1,500 shells in the stash and none in the gun, the bot for hours): the
-	# first pouch of the primary's magazines comes before rounds neither gun fires, a cure, or any heal but the best,
-	# so those go back to the stash, in that order, until there's room for it (and a heal, when none is in)
+	# primary's first magazine comes before magazines neither gun fires, a cure, or any heal but the best, so those go
+	# back to the stash, in that order, until there's room for it (and a heal, when none is in)
 	if mags_to_come and med_capacity() > 0:
 		var fired: Array = lists.map(func(l): return str(l[0]))
-		var need_room: int = 1                 # the pouch; and with no heal in, the smallest heal the stash has beside it (the review: a kit is two to four pouches)
+		var need_room: int = Items.size(lists[0][1][0])     # the magazine (a drum two); and with no heal in, the smallest heal the stash has beside it
 		if not meds.is_empty() and not rig.any(func(x): return Items.is_heal(x)):
 			need_room += meds.map(func(x): return Items.size(x)).min()
 		var best_heal = null
 		for it in rig:
 			if Items.is_heal(it) and (best_heal == null or med_heal(it) > med_heal(best_heal)):
 				best_heal = it
-		var out_first: Array = rig.filter(func(x): return Items.is_ammo(x) and not (str(Items.base_of(x)["type"]) in fired))
+		var out_first: Array = rig.filter(func(x): return Items.is_mag(x) and not (Items.mag_type(x) in fired))
 		var cures: Array = rig.filter(func(x): return Items.is_cure(x))
 		cures.reverse()
 		out_first += cures
@@ -12164,9 +12753,9 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 			if rig_room(need_room):
 				break
 			_rig_leave(int(it["id"]))
-	# one heal: the best that leaves a pouch for the magazines to come
+	# one heal: the best that leaves room for the magazine to come
 	if not rig.any(func(x): return Items.is_heal(x)):
-		var keep: int = 1 if mags_to_come else 0
+		var keep: int = Items.size(lists[0][1][0]) if mags_to_come else 0
 		for it in meds:
 			if rig_room(Items.size(it) + keep) and _rig_take(int(it["id"])):
 				meds_in += 1
@@ -12176,9 +12765,9 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 				if rig_room(Items.size(it)) and _rig_take(int(it["id"])):
 					meds_in += 1                  # no room for both: the heal first, as Matt's order has it
 					break
-	# one pouch of magazines: the primary's best grade
+	# one of the primary's magazines
 	if mags_to_come:
-		moved += _pack_mags(lists[0][1], 1)
+		moved += _pack_mags(lists[0][1], Items.size(lists[0][1][0]))
 	# the cures: one for each element the front's gangs throw, the heaviest first, a pouch each; a repeat's, its own
 	# site's (S9: `at`, the site it's going to): a cure for another zone goes back to the stash for one of them
 	var cure_els: Array = zone_elements(front_tier() if at < 0 else at).slice(0, Data.TOP_UP_CURES)
@@ -12198,8 +12787,8 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 				break
 	# the magazines' share before spare heals (30 Oct, the clean-up's R2: a rig filled with heals while a bat was worn kept
 	# them over the next gun's magazines - one pouch of rounds, run after run): heals past the best go back to the stash
-	# while the primary's pouches are under their share and its rounds are in the stash
-	if not lists.is_empty() and not lists[0][1].is_empty():
+	# while the primary's magazines are under their share and more of them are in the stash
+	if not lists.is_empty() and not lists[0][1].filter(func(x): return stash.has(x)).is_empty():
 		var best_h = null
 		for it in rig:
 			if Items.is_heal(it) and (best_h == null or med_heal(it) > med_heal(best_h)):
@@ -12210,12 +12799,14 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 			if med_capacity() - rig_used() >= mag_pouch_room():
 				break
 			_rig_leave(int(it["id"]))
-	# the rest: the magazines' pouches to their share (the primary's but one, the secondary's of another type the last)
+	# the rest: the magazines to their share - the primary's, then the secondary's (one kept for it when it fires another
+	# type; the same type shares the primary's)
 	var room: int = mini(mag_pouch_room(), med_capacity() - rig_used())
 	var two_types: bool = lists.size() > 1 and str(lists[1][0]) != str(lists[0][0]) and not lists[1][1].is_empty() \
-		and not rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[1][0]))     # the same rounds: the primary's pouches feed both; none in the stash, or a pouch in the rig already, the primary's
-	var prim_in: bool = not lists.is_empty() and rig.any(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == str(lists[0][0]))
-	var sec_quota: int = 1 if two_types and (room >= 2 or (room >= 1 and prim_in)) else 0     # the primary's pouch already in: the secondary's the next
+		and not rig.any(func(x): return Items.is_mag(x) and Items.mag_type(x) == str(lists[1][0]))
+	var prim_in: bool = not lists.is_empty() and rig.any(func(x): return Items.is_mag(x) and Items.mag_type(x) == str(lists[0][0]))
+	var sec_need: int = Items.size(lists[1][1][0]) if two_types else 0
+	var sec_quota: int = sec_need if two_types and (room >= sec_need + 1 or (room >= sec_need and prim_in)) else 0     # the primary's in already: the secondary's the next
 	var quotas: Array = [room - sec_quota, sec_quota]
 	for li in range(lists.size()):
 		moved += _pack_mags(lists[li][1], int(quotas[li]))
@@ -12228,45 +12819,27 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 	return [moved, meds_in]
 
 
-## Up to `pouches` new pouches of magazines into the rig from these stacks, in their order. The rounds moved.
-func _pack_mags(stacks: Array, pouches: int) -> int:
+## Magazines into the rig from this list, in its order, up to `pouches` pouches' worth (a drum two). The magazines moved.
+func _pack_mags(mags: Array, pouches: int) -> int:
 	var moved := 0
-	var got := 0
-	for it in stacks:
-		while got < pouches and stash.has(it) and int(it.get("rounds", 0)) > 0 and rig_room(1):
-			var before: int = int(it["rounds"])
-			var n_pouches: int = rig.size()
-			if not _rig_take(int(it["id"])):
-				break
-			moved += before - (int(it["rounds"]) if stash.has(it) else 0)
-			if rig.size() > n_pouches:
-				got += 1
+	var used := 0
+	for it in mags:
+		if not stash.has(it) or used + Items.size(it) > pouches or not rig_room(Items.size(it)):
+			continue
+		if _rig_take(int(it["id"])):
+			used += Items.size(it)
+			moved += 1
 	return moved
 
 
-## The rig's magazines filled at home (28 Oct): every pouch of rounds topped to its MAG_POUCH magazines from the
-## stash's boxes of its own grade, free. The rounds moved.
-func _fill_mags() -> int:
-	var moved := 0
-	for r in rig:
-		if not Items.is_ammo(r):
-			continue
-		var want: int = Items.pouch_cap(r) - int(r["rounds"])
-		if want <= 0:
-			continue
-		var before: int = _rounds_in_stash(str(r["base"]))
-		var n: int = mini(want, before)
-		if n > 0:
-			_take_rounds(str(r["base"]), n)
-			Items.set_stack(r, int(r["rounds"]) + n)
-			moved += n
-	return moved
-
-
-## The pouches the gate's top-up may still give magazines (28 Oct): RIG_MAG_SHARE of the rig, less those holding some.
+## The pouches the gate's top-up may still give magazines (28 Oct): RIG_MAG_SHARE of the rig, less those holding one.
 func mag_pouch_room() -> int:
-	var held: int = rig.filter(func(x): return Items.is_ammo(x)).size()
+	var held := 0
+	for x in rig:
+		if Items.is_mag(x):
+			held += Items.size(x)
 	return maxi(0, ceili(med_capacity() * Data.RIG_MAG_SHARE) - held)
+
 
 
 ## The elements a site's gangs throw, the heaviest first (28 Oct): what a cure is packed for. Its zone's own mix.
@@ -12277,31 +12850,27 @@ func zone_elements(i: int) -> Array:
 	return out
 
 
-## A gun put on with its rounds in the stash and none in the rig: a box of them to the rig, a stack of rounds no gun
-## fires going back to the stash for the room (13 Oct, the review: Equip if better put the rifle on and the runner went
-## out with its box still in the stash).
+## A gun put on with no magazine for it in the rig (13 Oct, the review: Equip if better put the rifle on and the runner
+## went out with its box still in the stash; 30 Oct, as items): one of the stash's magazines that fits it to the rig,
+## a magazine no worn gun fires going back to the stash for the room, and filled from the boxes.
 func _feed(gun: Dictionary) -> void:
-	var type: String = Items.ammo_type(gun)
-	if mission != null or type in ["", "none"] or rounds_for(gun) > 0:
+	if mission != null or Items.mag_size(gun) <= 0 or not mags_for(gun).is_empty():
 		return
-	var box := {}
+	var mag := {}
 	for it in stash:
-		if Items.is_ammo(it) and Items.base_of(it)["type"] == type:
-			box = it
-			break
-	if box.is_empty():
+		if Items.mag_fits(it, gun) and (mag.is_empty() or int(it.get("rounds", 0)) > int(mag.get("rounds", 0))):
+			mag = it
+	if mag.is_empty():
 		return
-	if not rig_room(Items.size(box)):
-		var fired: Array = []
-		for s in ["Primary", "Secondary"]:
-			if equipped[s] != null:
-				fired.append(Items.ammo_type(equipped[s]))
+	if not rig_room(Items.size(mag)):
 		for it in rig.duplicate():
-			if Items.is_ammo(it) and not (Items.base_of(it)["type"] in fired):
+			if Items.is_mag(it) and not Items.mag_fits(it, equipped["Primary"]) and not Items.mag_fits(it, equipped["Secondary"]):
 				_rig_leave(it["id"])
-				if rig_room(Items.size(box)):
+				if rig_room(Items.size(mag)):
 					break
-	_rig_take(box["id"])
+	if _rig_take(mag["id"]):
+		_fill_mags()
+
 
 
 ## A particular stash item, by id, into its slot; what was fitted goes to the stash.
@@ -12316,8 +12885,42 @@ func equip_item(id: int) -> bool:
 			if equipped[slot] != null:
 				stash.append(equipped[slot])
 			equipped[slot] = it
+			if slot == "Rig":
+				_rig_shed()
 			return true
 	return false
+
+
+## What a rig would leave over (30 Oct, the playtest's item 1: a Body warmer kept the Bum bag's three bandages): the
+## rig's pieces past its pouches with `rig_it` worn, the last packed first.
+func rig_overflow(rig_it) -> Array:
+	var was = equipped["Rig"]
+	equipped["Rig"] = rig_it
+	_dry_memo.clear()
+	var cap: int = med_capacity()
+	equipped["Rig"] = was
+	_dry_memo.clear()
+	var used: int = rig_used()
+	var out: Array = []
+	var k: int = rig.size() - 1
+	while used > cap and k >= 0:
+		out.append(rig[k])
+		used -= Items.size(rig[k])
+		k -= 1
+	return out
+
+
+## A smaller rig on: what's over its pouches back to the stash, the last packed first, and the log says what.
+func _rig_shed(line := Words.SMALLER_RIG) -> void:
+	var back: Array = []
+	while rig_used() > med_capacity() and not rig.is_empty():
+		var it: Dictionary = rig.pop_back()
+		if not stash_put(it):
+			stash.append(it)                  # can_equip_item checked the room: never lost
+		back.append(Words.a_thing(str(it["base"])))
+	if not back.is_empty():
+		_dry_memo.clear()
+		log_event(line % Words.and_list(back))
 
 
 ## Whether a stash item can go into its slot now: not on a run, and what it
@@ -12331,11 +12934,15 @@ func can_equip_item(id: int) -> bool:
 			var slot: String = it["slot"]
 			if not equipped.has(slot) or not can_wear(it):
 				return false
-			if equipped[slot] == null:
+			var over := 0
+			if slot == "Rig":
+				for o in rig_overflow(it):
+					over += 0 if stash_free(o) else Items.size(o)     # a smaller rig's overflow goes to the stash (30 Oct): it needs the room
+			if equipped[slot] == null and over == 0:
 				return true
 			var out_cells: int = 0 if stash_free(it) or tab_of(it) != "" else Items.size(it)     # a piece off a class's tab frees none of the shared tab's
-			var in_cells: int = 0 if stash_free(equipped[slot]) else Items.size(equipped[slot])
-			return stash_used() - out_cells + in_cells <= stash_cap()
+			var in_cells: int = 0 if equipped[slot] == null or stash_free(equipped[slot]) else Items.size(equipped[slot])
+			return stash_used() - out_cells + in_cells + over <= stash_cap()
 	return false
 
 
@@ -12404,9 +13011,11 @@ func equip_from_pack(id: int) -> bool:
 				log_event(Words.LOG["equipped"] % it["base"])
 			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(equipped[slot])})
 			equipped[slot] = it
-			if m.has("mag"):
-				m["mag"].erase(slot)              # a gun picked up loads its own magazine (28 Oct)
+			if m.has("mag_in"):
+				m["mag_in"].erase(slot)           # a gun picked up loads its own magazine (28 Oct)
 				m["reload_t"].erase(slot)
+				m["reload_to"].erase(slot)
+			_mag_from_pack(m, it)
 			_read(it)
 			_dry_memo.clear()
 			if slot == "Backpack":
@@ -12417,6 +13026,26 @@ func equip_from_pack(id: int) -> bool:
 	return false
 
 
+## A gun fitted from the pack (30 Oct, the playtest's item 4): with no magazine for it in the rig, the pack's one that
+## fits goes in, room permitting - found with the gun, it's the gun's own.
+func _mag_from_pack(m: Dictionary, gun: Dictionary) -> void:
+	if gun.has("mag_item"):
+		var own: Dictionary = gun["mag_item"]
+		if mags_for(gun).is_empty() and rig_room(Items.size(own)):
+			gun.erase("mag_item")
+			rig.append(own)                   # the gun's own, into the rig (the fix round: it travels on the gun)
+			return
+	if Items.mag_size(gun) <= 0 or not mags_for(gun).is_empty():
+		return
+	for f in m["found"].duplicate():
+		if Items.mag_fits(f, gun) and rig_room(Items.size(f)):
+			m["found"].erase(f)
+			pack_off(f)
+			f.erase("first_gun")
+			rig.append(f)
+			return
+
+
 ## A med or rounds found out there, into the rig while the run's on.
 ## Rounds out of the rig and into the pack on a run (11 Oct, Matt: a better rifle and its rounds found, and the rig
 ## full of the shotgun's shells with no way to make room). Needs the cells in the pack; never what's being used.
@@ -12425,7 +13054,7 @@ func can_rig_to_pack(id: int) -> bool:
 		return false
 	for it in rig:
 		if int(it["id"]) == id:
-			return Items.is_ammo(it) and not pack_spot(mission, it).is_empty()     # rounds only: a med is used, never stowed
+			return Items.is_mag(it) and not pack_spot(mission, it).is_empty()     # a magazine only (30 Oct): a med is used, never stowed
 	return false
 
 
@@ -12460,14 +13089,9 @@ func take_from_pack(id: int) -> bool:
 	return _take_from(mission["found"], id)
 
 
-## Whether any of the rig's stacks of the same rounds has room: a drop that
-## tops up, even with no pouch free and even if some stays behind.
-func rig_tops_up(it: Dictionary) -> bool:
-	if not Items.is_ammo(it):
-		return false
-	for r in rig:
-		if Items.same_stack(r, it) and Items.stack_size(r) < Items.pouch_cap(r):     # a pouch's magazines (28 Oct)
-			return true
+## Whether a drop tops up something in the rig with no pouch free: nothing does now (30 Oct: rounds never go in the
+## rig; a magazine takes its own pouch).
+func rig_tops_up(_it: Dictionary) -> bool:
 	return false
 
 
@@ -12476,34 +13100,6 @@ func _take_from(src: Array, id: int) -> bool:
 		if it["id"] == id and Items.rig_item(it):
 			if Items.is_medical(it) and has_rule("the_float"):
 				return false                    # the Float carries no meds (18 Oct)
-			if Items.is_ammo(it):
-				# magazines (28 Oct): the rig carries loaded magazines, MAG_POUCH to a pouch; a box found out there stays
-				# in the pack as a box, to fill them at home (a pouch moved to the pack on the run goes back)
-				if mission != null and is_same(src, mission["found"]) and not it.get("from_rig", false):
-					return false
-				# top up the rig's pouch of the same rounds first; what's left fills a pouch of its own, or stays
-				var topped := false
-				var cap: int = Items.pouch_cap(it)
-				for r in rig:
-					if Items.same_stack(r, it) and Items.stack_size(r) < cap:
-						var moved: int = mini(cap - Items.stack_size(r), Items.stack_size(it))
-						if moved > 0:
-							Items.set_stack(r, Items.stack_size(r) + moved)
-							Items.set_stack(it, Items.stack_size(it) - moved)
-							topped = true
-						if Items.stack_size(it) <= 0:
-							src.erase(it)
-							return true
-				if not rig_room(1):
-					return topped
-				if Items.stack_size(it) > cap:
-					var pouch: Dictionary = Items.one_of(it)     # a pouch of magazines off the box; the rest stays where it was
-					for k in ["tab", "pos", "rot", "from_rig"]:
-						pouch.erase(k)
-					Items.set_stack(pouch, cap)
-					Items.set_stack(it, Items.stack_size(it) - cap)
-					rig.append(pouch)
-					return true
 			if not rig_room(Items.size(it)):
 				return false
 			src.erase(it)
@@ -12550,8 +13146,17 @@ func _rig_leave(id: int) -> bool:
 func unequip(slot: String) -> bool:
 	if runner_busy() or equipped[slot] == null or not stash_fits(equipped[slot]):
 		return false
+	if slot == "Rig":
+		# the rig off: what's in it to the stash, as a smaller rig's overflow (the fix round, D); refused with no room
+		var need: int = 0 if stash_free(equipped[slot]) else Items.size(equipped[slot])
+		for it in rig:
+			need += 0 if stash_free(it) else Items.size(it)
+		if stash_used() + need > stash_cap():
+			return false
 	stash.append(equipped[slot])
 	equipped[slot] = null
+	if slot == "Rig":
+		_rig_shed(Words.RIG_OFF)
 	return true
 
 
@@ -12596,6 +13201,11 @@ func _restock_market() -> void:
 		if yard_has("arms_dealer") and not Items.is_ammo(it) and not Items.is_grenade(it):
 			it = Items.roll(it["slot"], best_tier_open(), rng, 0.0, false, false, "", "", Data.FX["yard/arms_dealer"], 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
+	# the standard magazines (30 Oct, magazines as items): SHELF_MAGS of each type a gun you hold takes, every restock
+	for ty in owned_ammo_types():
+		var mb: Dictionary = Items.standard_mag(ty)
+		for k in range(Data.SHELF_MAGS if not mb.is_empty() else 0):
+			market.append(_plain(Data.MAGAZINE, str(mb["name"])))
 	if yard_has("back_room"):
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
 		if not bu.is_empty():
@@ -12662,7 +13272,7 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 		return {}
 	var k := gamble_kind(kind)
 	var it := roll_gamble(k, unique_roll)
-	if not (stash_fits(it) or _stack_room(it)):
+	if not (fits_with_mag(it) or _stack_room(it)):
 		return {}
 	chron("gamble", {"kind": kind, "price": 0 if gamble_tokens > 0 else gamble_price(kind), "token": gamble_tokens > 0, "item": _chron_item(it)})
 	if gamble_tokens > 0:
@@ -12671,6 +13281,7 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 		cash -= gamble_price(kind)
 	gamble.erase(kind)
 	stash_put(it)
+	_mag_with(it)
 	last_craft = {"id": it["id"], "kind": "gamble", "words": "The Fence's word: %s" % Items.full_name(it)}     # names as named (18 Oct)
 	log_event(Words.LOG["gamble_word"] % Items.full_name(it))
 	return it
@@ -12720,11 +13331,12 @@ func price(it: Dictionary) -> int:
 func buy(i: int) -> bool:
 	if not room_open("fence"):
 		return false
-	if i >= market.size() or not (stash_fits(market[i]) or _stack_room(market[i])) or cash < price(market[i]):
+	if i >= market.size() or not (fits_with_mag(market[i]) or _stack_room(market[i])) or cash < price(market[i]):
 		return false
 	cash -= price(market[i])
 	market[i]["shop_bought"] = true          # sells back under its shelf price (S2)
 	stash_put(market[i])
+	_mag_with(market[i])
 	market.remove_at(i)
 	return true
 
@@ -12801,6 +13413,22 @@ func stash_put(it: Dictionary) -> bool:
 	return true
 
 
+## A magazine the sweeps may take, as a common (the fix round, the review's 4: spare magazines piled up): out of the rig
+## and empty, and either for no gun you hold or past what the rig's share would pack of its type - the best kept, those
+## in the rig first. `extra`: a run's finds, read with the stash.
+func spare_mag(it: Dictionary, extra: Array = []) -> bool:
+	if not Items.is_mag(it) or rig.has(it) or int(it.get("rounds", 0)) > 0:
+		return false
+	var ty: String = Items.mag_type(it)
+	if not (ty in owned_ammo_types(mission)):
+		return true
+	var keep_n: int = maxi(1, ceili(med_capacity() * Data.RIG_MAG_SHARE))
+	var pool: Array = (rig + stash + extra).filter(func(x): return Items.is_mag(x) and Items.mag_type(x) == ty)
+	var key := func(x: Dictionary) -> float: return (1.0e6 if rig.has(x) else 0.0) + float(x.get("rounds", 0)) * 1000.0 + float(Items.mag_cap(x)) / float(Items.size(x)) * 10.0 - float(x.get("id", 0)) * 1e-6
+	pool.sort_custom(func(a, b): return key.call(a) > key.call(b))
+	return pool.find(it) >= keep_n
+
+
 ## Items are matched by id, never by contents: two commons can read the same.
 func _remove(it: Dictionary) -> bool:
 	for k in range(stash.size()):
@@ -12815,18 +13443,35 @@ func _remove(it: Dictionary) -> bool:
 ## Every item of a rarity in the stash, sold.
 func sell_rarity(r: int) -> int:
 	var n := 0
-	for it in stash.duplicate():
-		if _spare(it, r) and tab_of(it) == "":     # the shared tab's (21 Oct): a class's own is kept
-			sell(it)
+	for it in rarity_sells(r):
+		if sell(it):
 			n += 1
 	return n
+
+
+## What a rarity row's Sell takes (the second review: the row's count and the button agree): the spares of that rarity on
+## the shared tab, and those the sale leaves spare in turn - a gun sold leaves its magazines spare (the fix round) - read
+## pass by pass with the sold ones out of the stash, then put back.
+func rarity_sells(r: int) -> Array:
+	var out: Array = []
+	var was: Array = stash.duplicate()
+	var again := true
+	while again:
+		again = false
+		for it in stash.duplicate():
+			if _spare(it, r) and tab_of(it) == "":     # the shared tab's (21 Oct): a class's own is kept
+				out.append(it)
+				stash.erase(it)
+				again = true
+	stash = was                               # as it stood, its order too
+	return out
 
 
 ## A piece the Fence's rarity row sells (19 Oct, Matt's Fence A: "sell what you don't wear"): that rarity, not a paper,
 ## not a mythic, not the deeds, not rounds, meds or grenades (19 Oct, Matt: they stay out - rounds have their boxes), and
 ## not an upgrade on what's worn - that's kept.
 func _spare(it: Dictionary, r: int) -> bool:
-	return int(it["rarity"]) == r and not Items.rig_item(it) and not Items.is_paper(it) and not it.get("mythic", false) and not Items.is_deeds(it) and not (str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1) and not sell_kept(it)
+	return int(it["rarity"]) == r and not ((Items.rig_item(it) and not spare_mag(it)) or Items.is_ammo(it)) and not Items.is_paper(it) and not it.get("mythic", false) and not Items.is_deeds(it) and not (str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1) and not sell_kept(it)
 
 
 ## A piece the rarity row passes by as Sell when home does (25 Oct, the review: "Sell Legendary" sold uniques): a
@@ -12850,10 +13495,13 @@ func rarity_spare(r: int) -> Array:
 	var n := 0
 	var worth := 0
 	var kept := 0
+	var sells: Array = rarity_sells(r)          # what the button sells, the cascade in (the second review)
+	for it in sells:
+		n += 1
+		worth += sell_price(it)
 	for it in stash:
-		if _spare(it, r):
-			n += 1
-			worth += sell_price(it)
+		if _spare(it, r) or sells.has(it):
+			continue
 		elif int(it["rarity"]) == r and str(it.get("slot", "")) in Data.SLOTS and (compare(it, -1, true) == 1 or sell_kept(it)):
 			kept += 1
 	return [n, worth, kept]
@@ -12869,7 +13517,7 @@ func sell_commons() -> int:
 func is_junk(it: Dictionary) -> bool:
 	if junk_upto < 0 or int(it.get("rarity", 0)) > junk_upto:
 		return false
-	if Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or Items.is_supplies(it) or it.has("unique") or it.has("set") or it.has("pattern") or Items.is_deeds(it) or it.get("built", false) or loot_rule_act(it) in ["keep", "highlight"]:     # a rule's keep: asked now, so a rule deleted lets it go again (the review)
+	if ((Items.rig_item(it) and not spare_mag(it)) or Items.is_ammo(it)) or Items.is_paper(it) or Items.is_socketable(it) or Items.is_supplies(it) or it.has("unique") or it.has("set") or it.has("pattern") or Items.is_deeds(it) or it.get("built", false) or loot_rule_act(it) in ["keep", "highlight"]:     # a rule's keep: asked now, so a rule deleted lets it go again (the review)
 		return false
 	if str(it.get("slot", "")) in JUNK_KEEPS.get(junk_keep, []):
 		return false
@@ -12915,7 +13563,7 @@ func _bin_commons(found: Array) -> Array:
 	var n := 0
 	var got := 0
 	for it in found:
-		if int(it.get("rarity", 0)) == 0 and not (loot_rule_act(it) in ["keep", "highlight"]) and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or Items.is_supplies(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false) or Items.is_ammo(it) or it.get("first_gun", false)):
+		if int(it.get("rarity", 0)) == 0 and not (loot_rule_act(it) in ["keep", "highlight"]) and not ((Items.rig_item(it) and not spare_mag(it, found)) or Items.is_ammo(it) or Items.is_paper(it) or Items.is_socketable(it) or Items.is_supplies(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false) or it.get("first_gun", false)):
 			got += scrap_of(it)
 			n += 1
 		else:
@@ -13751,17 +14399,17 @@ func _skills_on_kill(m: Dictionary) -> void:
 		var gun = equipped["Primary"]
 		var ty: String = Items.ammo_type(gun) if gun != null else ""
 		if ty != "" and ty != "none":
-			var stack: Array = rig.filter(func(it): return Items.is_ammo(it) and Items.base_of(it)["type"] == ty)
-			if not stack.is_empty():
-				stack[0]["rounds"] = mini(Items.pouch_cap(stack[0]), int(stack[0]["rounds"]) + rk)     # a pouch's magazines at most (28 Oct)
-			else:
-				for b in Data.BASES[Data.AMMO]:
-					if str(b["type"]) == ty:
-						var it: Dictionary = _plain(Data.AMMO, str(b["name"]))
-						it["rounds"] = rk
-						if rig_room(Items.size(it)):
-							rig.append(it)
-						break
+			# into the magazine in the gun, to its size (30 Oct, magazines as items), else the first of its type in the rig
+			# a magazine holding rounds tops up with its own grade (the fix round); an empty one takes the feed's, else the box's
+			var mg: Dictionary = mag_in("Primary")
+			if mg.is_empty() or int(mg.get("rounds", 0)) <= 0:
+				var loaded: Array = mags_for(gun).filter(func(x): return int(x.get("rounds", 0)) > 0 and int(x["rounds"]) < Items.mag_cap(x, gun))
+				mg = loaded[0] if not loaded.is_empty() else (mg if not mg.is_empty() else (mags_for(gun)[0] if not mags_for(gun).is_empty() else {}))
+			if not mg.is_empty():
+				if str(mg.get("ammo", "")) == "" or int(mg.get("rounds", 0)) <= 0:
+					var fed: String = Items.grade_name(feed_stack(gun))
+					mg["ammo"] = fed if fed != "" else str(ammo_box(ty).get("name", ""))
+				mg["rounds"] = mini(Items.mag_cap(mg, gun), int(mg.get("rounds", 0)) + rk)
 
 
 ## The hit that would kill you, with Code blue slotted and its energy kept: back on 30%, every ailment cleared. True if it
@@ -14538,6 +15186,8 @@ func _all_items() -> Array:
 		for mount in it.get("attachments", {}):
 			if it["attachments"][mount] != null:
 				nested.append(it["attachments"][mount])
+		if it.get("mag_item", null) is Dictionary:
+			nested.append(it["mag_item"])         # a gun's own magazine, carried on it (the second review)
 	out.append_array(nested)
 	return out
 
@@ -14686,6 +15336,7 @@ func loadout_wear(i: int) -> bool:
 				break
 		if have < int(want[b]):
 			missed.append(str(b))                 # the rig short of it: none in the stash, or no room (the review)
+	_fill_mags()                              # the magazines taken in, filled from the boxes (30 Oct)
 	for k in range(mini(e["skills"].size(), Data.SKILL_SLOTS)):
 		set_skill_slot(k, str(e["skills"][k]) if skill_known(str(e["skills"][k])) else "")
 	chron("loadout", {"what": "wear", "i": i, "missed": missed.size()})
@@ -15698,7 +16349,9 @@ func exp_take(id: int) -> bool:
 	for it in res.get("items", []):
 		if is_pile_paper(it):
 			papers.append(it)
-		elif not stash_put(it):
+		elif stash_put(it):
+			_mag_with(it)
+		else:
 			if it.get("mythic", false) or int(it["id"]) == int(res.get("quota_id", -1)):
 				stash.append(it)                       # a mythic or the quota's item comes home whatever the room, as a mythic does
 			else:

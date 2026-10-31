@@ -506,20 +506,20 @@ func _init() -> void:
 	_check(sim.take(kit["id"]) and sim.rig_used() == used_before + 2, "a two-cell kit did not take two pouches: %d -> %d" % [used_before, sim.rig_used()])
 	main.refresh()
 	_check_fit(main, "Armoury (kit in the rig)")
-	# rounds dropped on a full rig top up its own stack of the same type (it only stacked the other way)
-	var rig_box: Dictionary = sim._plain(Data.AMMO, "Nails")
-	Items.set_stack(rig_box, 50)
+	# a full rig takes nothing more (30 Oct, magazines as items: the rounds' top-up went with the pouches): a magazine or a
+	# box dropped on it is refused
 	var rig_held: Array = sim.rig.duplicate()
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
-	sim.rig.append(rig_box)                       # over the top: the test's own full rig
 	var stash_box: Dictionary = sim._plain(Data.AMMO, "Nails")
 	Items.set_stack(stash_box, 30)
 	sim.stash.append(stash_box)
-	_check(not sim.rig_room(1) and main._armoury._containers._can_drop(Vector2.ZERO, {"id": stash_box["id"], "src": "stash"}), "a full rig refuses rounds that would top up its stack")
-	var nails_before: int = sim.rounds_for(sim._plain("Primary", "Nail gun"))
-	var rig_n_before: int = sim.rig.size()
-	_check(sim.take(stash_box["id"]) and sim.rounds_for(sim._plain("Primary", "Nail gun")) == nails_before + 30 and sim.rig.size() == rig_n_before and not sim.stash.has(stash_box), "the drop did not top up the rig's nails: %d -> %d" % [nails_before, sim.rounds_for(sim._plain("Primary", "Nail gun"))])
+	var stash_mag: Dictionary = sim._plain(Data.MAGAZINE, "Nail magazine")
+	sim.stash.append(stash_mag)
+	_check(not sim.rig_room(1) and not main._armoury._containers._can_drop(Vector2.ZERO, {"id": stash_box["id"], "src": "stash"}) and not main._armoury._containers._can_drop(Vector2.ZERO, {"id": stash_mag["id"], "src": "stash"}), "a full rig takes a box or a magazine dropped on it")
+	_check(not sim.take(stash_box["id"]) and not sim.take(stash_mag["id"]) and sim.stash.has(stash_box) and sim.stash.has(stash_mag), "a full rig took a box or a magazine")
+	sim.stash.erase(stash_box)
+	sim.stash.erase(stash_mag)
 	sim.rig = rig_held                            # the test's bandages and box go; the rig as it was
 	sim.leave(kit["id"])
 	sim.sell(kit)
@@ -559,7 +559,7 @@ func _init() -> void:
 	var inv = main._armoury._inv
 	# every kind filters on real slot keys, not their screen names (18 Oct: the words pass renamed Medical/Ammo in the
 	# filter and emptied the Meds tab)
-	var real_slots: Array = Data.SLOTS + [Data.MEDICAL, Data.AMMO, Data.GRENADE, Data.PAPER, Data.ATTACHMENT, Data.SUPPLIES]     # the Clinic's supplies (28 Oct)
+	var real_slots: Array = Data.SLOTS + [Data.MEDICAL, Data.AMMO, Data.GRENADE, Data.PAPER, Data.ATTACHMENT, Data.SUPPLIES, Data.MAGAZINE]     # the Clinic's supplies (28 Oct); magazines (30 Oct)
 	for kd in inv.KINDS:
 		if kd[1] is String:
 			_check(kd[1] in ["unique", "set"], "the %s tab reads '%s', not a slot or what a piece is" % [kd[0], kd[1]])
@@ -773,11 +773,22 @@ func _init() -> void:
 	_r4_kit_away_checks(main)                 # refactor 5 (30 Oct, R4): runner_busy() on every kit move
 	_r4_art_names_checks()                    # refactor 5: the one art-name rule
 	_cleanup31_checks()                       # the clean-up's merge (30 Oct): the magazines' share before spare heals; the bot packs on "fill"
+	_l32_rail_badge_checks(main)              # parked item 2 (30 Oct): the rail's badge clear of the name
+	_l32_class_selected_checks(main)          # parked item 3: "✓ selected"
+	_l32_ammo_chip_checks(main)               # parked item 5: a box's chips in sentence case
+	_l32_clinic_cure_checks(main)             # parked item 6: the cure card's figure line, no heal tail
 	_fixa_gate_paint_checks(main)             # U1, U2
 	_fixa_repeat_refused_checks(main)         # U3
 	_wall_rule_checks()
 	_harness_fix_checks()                     # the fix round's harness (30 Oct): H1-H8 and the summary's merge
 	_merge30_checks()                         # the fix round's merge (30 Oct): the target's one extra clock, the gauntlet's own guns, P6
+	_mags32_rules_checks(main)                # magazines as items (30 Oct, BUILD32 M): names, size, sling, a gun's magazine, finds, the gate's lines
+	_mags32_fight_checks(main)                # the refill by hand (the playtest's item 4), the sling in the fight and the reads
+	_mags32_rig_checks(main)                  # the smaller rig's overflow (the playtest's item 1)
+	_mags32_ui_checks(main)                   # the Kit's gun line, a magazine's card and compare, THE RIG, a sling's card
+	_mags32_bot_checks()                      # the bot buys magazines to its rig's share
+	_fix32_checks(main)                       # the fix round (30 Oct): the gate's box, the grade named, a gun's own magazine, spares swept, room, size, words, Breakdown, the rig off
+	_fix32b_checks(main)                      # the second review (31 Oct): the gate's box kept, the runner's own home, the blend, the read's box, the cascade, the rig off
 	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
 	_exp_lead_xp_checks(main)                 # an expedition lead's XP: points, the cap, the run out, the lead's level (30 Oct, S4-S6)
 	_review28_checks(main)
@@ -1344,12 +1355,12 @@ func _fence_screen(main) -> void:
 		while not sim.stash_room(12) and not sim.stash.is_empty():
 			sim.sell(sim.stash[0])        # room for whatever he gets: a full stash refuses the word
 		var kind0: String = sim.gamble[0]
-		var n0: int = sim.stash.size()
+		var n0: int = sim.stash.filter(func(x): return not Items.is_mag(x)).size()     # a gun's magazine comes with it (30 Oct)
 		var cash0: float = sim.cash
 		main.refresh()
 		main._fence._gamble(0)
 		main.refresh()
-		_check(sim.stash.size() == n0 + 1 and sim.cash < cash0 and not (kind0 in sim.gamble), "Pay through the screen did not gamble: stash %d from %d, cash %.0f from %.0f" % [sim.stash.size(), n0, sim.cash, cash0])
+		_check(sim.stash.filter(func(x): return not Items.is_mag(x)).size() == n0 + 1 and sim.cash < cash0 and not (kind0 in sim.gamble), "Pay through the screen did not gamble: stash %d from %d, cash %.0f from %.0f" % [sim.stash.size(), n0, sim.cash, cash0])
 		_check(main._fence._last.visible and main._fence._last._title.text != "" and not main._fence._last_none.visible, "the last word is not shown after a gamble: '%s'" % main._fence._last._title.text)
 		_check(main._fence._offers[main._fence._offers.size() - 1]["kind"].text == "Taken" or sim.gamble.size() == Data.GAMBLE_SHOWN, "the bought kind did not read as taken")
 		_check_fit(main, "Fence (the word, after)")
@@ -1763,7 +1774,8 @@ func _run_screen(main) -> void:
 	var m: Dictionary = sim.mission
 	# the pack is the bag's own shape (27 Oct): its cells as outlines, every piece where the sim says it lies
 	_check_pack_grid(main._run._inv, sim, "the pack")
-	var first: Dictionary = m["found"][0]
+	var mine: Array = m["found"].filter(func(x): return not x.get("carried", false))     # the gate's box is never ditched (the second review)
+	var first: Dictionary = mine[0] if not mine.is_empty() else m["found"][0]
 	var n_before: int = m["found"].size()
 	main._run._inv._pick(main._run._inv.cell_of(first["id"]))
 	main.refresh()
@@ -1774,10 +1786,11 @@ func _run_screen(main) -> void:
 	_pick_boxes_check(main._run._pick, "the run's pick")
 	main._run._ditch_pick()
 	_check(sim.mission["found"].size() == n_before - 1, "Ditch did not drop the find")
-	if sim.mission["found"].size() > 0:
+	var mine2: Array = sim.mission["found"].filter(func(x): return not x.get("carried", false))     # the gate's box is never ditched (the second review)
+	if not mine2.is_empty():
 		main._run._inv._toggle_many()
 		main.refresh()
-		main._run._inv._pick(main._run._inv.cell_of(sim.mission["found"][0]["id"]))
+		main._run._inv._pick(main._run._inv.cell_of(mine2[0]["id"]))
 		main.refresh()
 		_check_fit(main, "Run (many)")
 		main._run._inv._sell_chosen()
@@ -3839,12 +3852,12 @@ func _unique_rules_checks(main) -> void:
 	sim.equipped["Rig"] = sim._plain("Rig", "Bum bag")
 	sim.equipped["Backpack"] = Items.roll_unique(sim._unique_named("The Float"), sim.rng)
 	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
-	var float_box: Dictionary = sim._plain(Data.AMMO, "Shells")
+	var float_box: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")     # a magazine (30 Oct: rounds go in as magazines)
 	sim.stash.append(float_box)
 	_check(sim.med_capacity() > 0 and sim.first_med().is_empty() and sim.meds_carried() == 0 and sim.pace() > pace0 * 1.35 and sim.capacity() > cap0, "the Float did not do its three things (no meds, the rig kept, pace, pack): rig %d meds %d pace %.2f cap %d" % [sim.med_capacity(), sim.meds_carried(), sim.pace() / pace0, sim.capacity()])
 	var float_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 	sim.stash.append(float_med)
-	_check(not sim.take(int(float_med["id"])) and sim.take(int(float_box["id"])), "under the Float a med went in the rig, or rounds didn't (18 Oct: it stops the meds only)")
+	_check(not sim.take(int(float_med["id"])) and sim.take(int(float_box["id"])), "under the Float a med went in the rig, or a magazine didn't (18 Oct: it stops the meds only)")
 	sim.stash.erase(float_med)
 	# the Field kit's bandage doesn't go in the Float's rig either (the review: dead bandages filled the pouches)
 	sim.rig = []
@@ -4216,7 +4229,7 @@ func _unique_tier_checks(main) -> void:
 	_check(is_equal_approx(sim.dot_seconds("fire"), fire0) and is_equal_approx(sim.dot_depth(), depth0 * 2.0) and is_equal_approx(sim.dot_depth(false), 1.0) and is_equal_approx(sim.status_s(1.0), 2.0), "the Plumber's Belt did not double a dot's depth and a chill's length, or slowed the dot: %.1f s, ×%.1f" % [sim.dot_seconds("fire"), sim.dot_depth()])
 	sim.equipped["Rig"] = null
 	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("The Starting Pistol"), sim.rng)
-	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]
+	sim.rig = [_rmag(sim, "Pistol rounds")]
 	sim.deploy(3)
 	m = sim.mission
 	m["target_hp"] = 100000.0
@@ -4357,7 +4370,8 @@ func _atlas_checks(main) -> void:
 	m["boss"] = {"name": sim.boss_of(5)["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
 	var found_before: int = m["found"].size()
 	sim._boss_down(m, sim.effective(5))
-	_check(m["found"].size() == found_before + 2, "Two of everything did not drop a second: %d" % (m["found"].size() - found_before))
+	var drops_n: int = m["found"].filter(func(x): return not Items.is_mag(x)).size()     # a head's gun brings its magazine too (30 Oct): the drops counted without them
+	_check(drops_n == found_before + 2, "Two of everything did not drop a second: %d" % (drops_n - found_before))
 	sim.extract_now()
 	_open_map(main)
 	_check_fit(main, "Radio (the map, ranked)")
@@ -4742,9 +4756,9 @@ func _events_checks(main) -> void:
 	m["event"] = "cache"
 	m["event_at"] = 0.0
 	m["remaining"] = 999                   # keep the search from finding on its own
-	var found0: int = m["found"].size()
+	var found0: int = int(m.get("finds", 0))     # finds counted (the fix round: a box joins the gate's box in the pack, no new cell)
 	sim.advance(0.1)
-	_check(m["found"].size() == found0 + 1, "the cache did not open")
+	_check(int(m.get("finds", 0)) == found0 + 1, "the cache did not open")
 	# its words never name a room that may be shut (13 Oct, Matt's save: "the Bench's tools" with the Workshop shut)
 	var cache_line: String = str(sim.events.back()[1])
 	for room_word in ["Bench", "Workshop", "Clinic", "Fence", "Radio", "Yard", "Pitch"]:
@@ -5576,25 +5590,15 @@ func _stack_checks(main) -> void:
 	var cells: int = sim.stash_used()
 	var before: int = int(nails[1]["rounds"])
 	_check(sim.buy_ammo("improvised") and int(nails[1]["rounds"]) == before + 200 and sim.stash_used() == cells, "a bought box did not join the stack: %d -> %d, cells %d -> %d" % [before, int(nails[1]["rounds"]), cells, sim.stash_used()])
-	# the rig: a take tops up the rig's stack and splits the rest
-	# magazines (28 Oct): a take fills a pouch of MAG_POUCH magazines off the stack, the rest staying in the stash (was:
-	# the whole stack to the rig)
+	# the rig (30 Oct, magazines as items): a box never goes into the rig - the take is refused, the stack stays whole in
+	# the stash; a magazine goes in whole, a pouch, and leaving puts it back
 	var full: Dictionary = nails[0]
-	var pouch_n: int = Items.pouch_cap(full)
-	_check(sim.take(full["id"]) and sim.rig.size() == 1 and int(sim.rig[0]["rounds"]) == pouch_n and int(full["rounds"]) == cap_nails - pouch_n and sim.stash.has(full), "the full stack did not fill a pouch of magazines and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]) if not sim.rig.is_empty() else -1, int(full["rounds"])])
-	var part: Dictionary = nails[1]
-	var part_before: int = int(part["rounds"])
-	Items.set_stack(sim.rig[0], pouch_n - 15)
-	while sim.rig_room(1):
-		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))       # no pouch free: only the top-up can happen
-	_check(sim.take(part["id"]) and int(sim.rig[0]["rounds"]) == pouch_n and int(part["rounds"]) == part_before - 15 and sim.stash.has(part), "the take did not top up the rig's pouch and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]), int(part["rounds"])])
-	sim.rig = sim.rig.filter(func(it): return Items.is_ammo(it))
-	_check(sim.take(part["id"]) and sim.rig.size() == 2 and int(sim.rig[1]["rounds"]) == pouch_n, "the rest did not fill a pouch of its own once one was free")
-	# leaving merges back
-	var rig_part: Dictionary = sim.rig[1]
-	var stacks_n: int = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size()
-	var rounds_n: int = sim._rounds_in_stash("Nails")
-	_check(sim.leave(rig_part["id"]) and sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size() == stacks_n and sim._rounds_in_stash("Nails") == rounds_n + pouch_n, "the pouch left did not merge back")
+	_check(not sim.take(full["id"]) and sim.rig.is_empty() and int(full["rounds"]) == cap_nails and sim.stash.has(full), "a box went into the rig: rig %s, stash %d" % [str(sim.rig.map(func(x): return x["base"])), int(full["rounds"])])
+	var nmag: Dictionary = sim._plain(Data.MAGAZINE, "Nail magazine")
+	sim.stash.append(nmag)
+	_check(sim.take(nmag["id"]) and sim.rig.size() == 1 and sim.rig[0] == nmag and not sim.stash.has(nmag), "a magazine didn't go into the rig whole")
+	_check(sim.leave(nmag["id"]) and sim.rig.is_empty() and sim.stash.has(nmag), "a magazine left didn't go back to the stash")
+	sim.stash.erase(nmag)
 	# the pack: found rounds join the found stack
 	sim.words[3] = []
 	sim.set_depth(3, 1)
@@ -5648,7 +5652,7 @@ func _stack_checks(main) -> void:
 	sim.load_dict(d)
 	_check(sim.stash.any(func(it): return Items.is_socketable(it) and int(it.get("count", 1)) == Data.SOCKET_STACK), "the stack did not save")
 	sim.load_dict(saved)
-	print("stacks ok: rounds merge to five boxes, bottles to ten, the buy, the take and the split, the leave, the pack, one off for a socket and back, the save")
+	print("stacks ok: rounds merge to five boxes, bottles to ten, the buy, a box never in the rig, a magazine in and out, the pack, one off for a socket and back, the save")
 
 
 ## The first ten minutes: what's next, in the voice, on the Runner card and
@@ -5730,7 +5734,7 @@ func _idle_checks(main) -> void:
 	sim.deploy(3)
 	sim.mission["found"] = []
 	sim.extract_now()
-	_check(not sim.stash.has(junk) and (sim.stash + sim.rig).any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and (sim.stash.has(keep_med) or sim.rig.has(keep_med)) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med) or sim.rig.has(keep_med), sim.stash.has(keep_bottle)])     # the gate carries the med now (23 Oct)
+	_check(not sim.stash.has(junk) and (sim.stash.any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") or sim.rig.any(func(x): return str(x.get("ammo", "")) == "Nails")) and (sim.stash.has(keep_med) or sim.rig.has(keep_med)) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med) or sim.rig.has(keep_med), sim.stash.has(keep_bottle)])     # the gate carries the med now (23 Oct)
 	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
 	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The Fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
 	main._armoury._toggle(0)
@@ -5950,7 +5954,7 @@ func _juice_checks(main) -> void:
 	var torch: Dictionary = sim._plain("Primary", "Nail gun")
 	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 50, "tier": 3}]
 	sim.equipped["Primary"] = torch
-	sim.rig.append(sim._plain(Data.AMMO, "Nails"))
+	sim.rig.append(_rmag(sim, "Nails"))
 	sim.mission["t"]["types"] = {"physical": 0.2, "poison": 0.8}
 	sim.mission["elapsed"] += 1.0
 	var colours := {}
@@ -6487,10 +6491,10 @@ func _sound_checks(main) -> void:
 	var hold_gun = sim.equipped["Primary"]
 	var hold_rig: Array = sim.rig.duplicate()
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
-	sim.rig = sim.rig.filter(func(it): return not Items.is_ammo(it))
+	sim.rig = sim.rig.filter(func(it): return not Items.is_ammo(it) and not Items.is_mag(it))     # its magazines out too (the fix round)
 	main.refresh()                             # dry
 	snd.clear_cued()
-	sim.rig.append(sim._plain(Data.AMMO, "Nails"))
+	sim.rig.append(_rmag(sim, "Nails"))
 	main.refresh()
 	_check("reload" in snd.cued(), "a dry gun given rounds made no reload: %s" % str(snd.cued()))
 	snd.clear_cued()
@@ -6948,13 +6952,13 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	# a gun with rounds for the read (16 Oct): the bot's run can leave the runner dry, and fists against the City's
 	# sites make every dry run long enough to starve the read - the frames are what's under test, not a dry gun
-	var fed_box: Dictionary = {}
+	var fed_box: Array = []
 	var gun_now = sim.equipped["Primary"]
-	if gun_now != null and Items.ammo_type(gun_now) not in ["", "none"] and sim.rounds_for(gun_now) == 0:
+	if gun_now != null and Items.ammo_type(gun_now) not in ["", "none"] and sim.rounds_for(gun_now) < 6 * Items.mag_size(gun_now):
 		var feed_bx: Dictionary = sim.ammo_box(Items.ammo_type(gun_now))
 		if not feed_bx.is_empty():
-			fed_box = sim._plain(Data.AMMO, str(feed_bx["name"]))
-			sim.rig.append(fed_box)
+			fed_box = _rmags(sim, str(feed_bx["name"]), 6)     # several magazines: a pile that reloads (the fix round)
+			sim.rig.append_array(fed_box)
 			sim._surv_cache = {}
 	var frames := 0
 	var key_moves := {}                         # for the failure's words: a key that moves restarts the read (14 Oct)
@@ -6995,8 +6999,8 @@ func _playtest_checks(main) -> void:
 	_check(sim.survival(3) >= 0.999 and sim._surv_cache[3][2] == sim.odds_runs(), "a level-90 runner on the first site did not read as settled 100%%: %.2f" % sim.survival(3))
 	sim.xp = hold_x
 	sim.hp = hold_hp
-	if not fed_box.is_empty():
-		sim.rig.erase(fed_box)                   # after the level-90 read (23 Oct): a gun the bot's run left dry reads 0% there too
+	for fb in fed_box:
+		sim.rig.erase(fb)                   # after the level-90 read (23 Oct): a gun the bot's run left dry reads 0% there too
 	sim._surv_cache = {}
 	# the balance gate's brakes stay off in the shell (8 Oct): the player's read is the lookout's full count, read fresh
 	_check(not sim.fast_memo and sim.odds_runs_max == 0, "the shell's sim has the gate's brakes on: fast_memo %s, odds_runs_max %d" % [sim.fast_memo, sim.odds_runs_max])
@@ -7240,7 +7244,7 @@ func _damage_model_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	for s in ["Helmet", "Armour", "Charm"]:
 		sim.equipped[s] = null
-	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x))     # an incendiary box left in the rig feeds the gun (the review, 19 Oct)
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))     # an incendiary box left in the rig feeds the gun (the review, 19 Oct); a magazine of them too (the fix round)
 	var conv: Dictionary = sim.conversion()
 	_check(is_equal_approx(conv["physical"], 1.0), "a plain gun is not all physical: %s (rig %s)" % [str(conv), str(sim.rig.map(func(x): return x["base"]))])
 	var gun: Dictionary = sim.equipped["Primary"]
@@ -7311,12 +7315,17 @@ func _damage_model_checks(main) -> void:
 			break
 	_check((m.has("my_dots") and float(m["my_dots"].get("bleed", 0.0)) > 0.0) or m["remaining"] <= 0, "a cutters' gang left no bleed on you: %s" % str(m.get("my_dots", {})))
 	if m["remaining"] > 0 and not sim.first_med().is_empty():
-		sim.use_med(sim.first_med()["id"])
+		var dressing: String = str(sim.first_med()["base"])
+		sim.hp = sim.max_hp() * 0.6           # hurt, so the med goes in (a full runner keeps it: the fix round's flake, the regen had him full)
+		var used: bool = sim.use_med(sim.first_med()["id"])
+		m["t"]["dps"] = 0.0                   # the gang's hits off while it works (the fix round: a dry gun's longer fight re-opened the bleed before the read)
+		var steps := 0
 		for k in range(40):
 			sim.advance(0.5)
+			steps += 1
 			if m["using"] == null:
 				break
-		_check(not m.get("my_dots", {}).has("bleed"), "the dressing did not stop the bleeding")
+		_check(not m.get("my_dots", {}).has("bleed"), "the dressing did not stop the bleeding: %s used %s, %d steps, using %s, on you %s, remaining %d, on a run %s" % [dressing, str(used), steps, str(m.get("using", null) != null), str(m.get("my_dots", {})), int(m["remaining"]), str(sim.on_mission())])
 	sim.extract_now()
 	sim.words[3] = []
 	sim.load_dict(saved)
@@ -7386,7 +7395,7 @@ func _ammo_checks(sim) -> void:
 	var gun = sim.equipped["Primary"]
 	var kept_rig: Array = sim.rig.duplicate()
 	sim.rig = []
-	sim.rig.append(sim._plain(Data.AMMO, Data.BASES[Data.AMMO][0]["name"]))     # nails
+	sim.rig.append(_rmag(sim, Data.BASES[Data.AMMO][0]["name"]))     # nails
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
 	var sec = sim.equipped["Secondary"]
 	sim.equipped["Secondary"] = null
@@ -7402,7 +7411,7 @@ func _ammo_checks(sim) -> void:
 	# the secondary backing a live primary spends a third of its rate; alone, all of it
 	sim.extract_now()
 	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
-	sim.rig = [sim._plain(Data.AMMO, "Nails"), sim._plain(Data.AMMO, "Pistol rounds")]
+	sim.rig = _rmags(sim, "Nails", 4) + _rmags(sim, "Pistol rounds", 6)     # piles that outlast the thirty seconds, reloads and all
 	var pistol0: int = sim.rounds_for(sim.equipped["Secondary"])
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -7417,7 +7426,7 @@ func _ammo_checks(sim) -> void:
 	for it in sim.stash.filter(func(x): return Items.is_ammo(x)):
 		sim.stash.erase(it)                     # what the runs brought home aside too: the gate would top the nail gun up
 		kept_ammo.append(it)
-	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]        # the nail gun dry: the pistol is the gun in hand
+	sim.rig = _rmags(sim, "Pistol rounds", 6)        # the nail gun dry: the pistol is the gun in hand
 	pistol0 = sim.rounds_for(sim.equipped["Secondary"])
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -7432,7 +7441,7 @@ func _ammo_checks(sim) -> void:
 	sim.extract_now()
 	sim.rig = []
 	_check(sim.dps() < with_rounds * 0.5, "a gun with no rounds still fires: %.1f against %.1f" % [sim.dps(), with_rounds])
-	sim.rig.append(sim._plain(Data.AMMO, "Hardened bolts"))
+	sim.rig.append(_rmag(sim, "Hardened bolts"))
 	_check(sim.dps() > with_rounds, "the better grade did not add damage")
 	sim.cash += 1000.0
 	while not sim.stash_room(1) and not sim.stash.is_empty():
@@ -7451,12 +7460,13 @@ func _ammo_checks(sim) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
 	var rig_kept = sim.equipped["Rig"]
 	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")     # a rig with room (29 Oct: the camp's could be a two-pouch one)
-	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.AMMO, "Shells")]
-	Items.set_stack(sim.rig[1], 10)
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), _rmag(sim, "Shells", 3)]
 	var spare: Dictionary = sim._plain(Data.AMMO, "Shells")
 	var slugs: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	var spare_mag: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")
 	sim.stash.append(spare)
 	sim.stash.append(slugs)
+	sim.stash.append(spare_mag)
 	var rig_before: int = sim.rounds_for(sim.equipped["Primary"])
 	var in_stash: int = int(spare["rounds"]) + int(slugs["rounds"])
 	sim.hp = sim.max_hp()
@@ -7464,8 +7474,9 @@ func _ammo_checks(sim) -> void:
 	var rig_after: int = sim.rounds_for(sim.equipped["Primary"])
 	_check(sim.on_mission() and rig_after > rig_before, "the gate didn't top the rig up: %d rounds before, %d after, %d in the stash" % [rig_before, rig_after, in_stash])
 	_check(sim.rig.any(func(x): return str(x["base"]) == "Bandage"), "the top-up pushed the meds out of the rig")
-	_check(sim.rig.any(func(x): return str(x["base"]) == "Slugs"), "the top-up left the better grade in the stash")
-	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:")), "the top-up wasn't logged")
+	_check(sim.rig.any(func(x): return str(x.get("ammo", "")) == "Slugs"), "the top-up left the better grade in the stash")
+	_check(sim.rig.any(func(x): return str(x.get("ammo", "")) == "Shells" and int(x["rounds"]) == 8), "the gate didn't fill the magazine of shells with its own grade: %s" % str(sim.rig.map(func(x): return [x.get("ammo", ""), x.get("rounds", 0)])))
+	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:")) and sim.events.any(func(e): return str(e[1]).begins_with("Filled:")), "the top-up wasn't logged")
 	sim.extract_now()
 	for it in [spare, slugs]:
 		sim.stash.erase(it)
@@ -7474,30 +7485,32 @@ func _ammo_checks(sim) -> void:
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
 	var stash0: Array = sim.stash.duplicate()
 	sim.stash.append(sim._plain(Data.AMMO, "Slugs"))
+	for k in range(sim.med_capacity()):
+		sim.stash.append(sim._plain(Data.MAGAZINE, "Shotgun magazine"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure; 30 Oct, the magazines' share before spare heals): the
 	# primary's magazines go in to their share, the bandages the rest - the gate no longer sends the gun out short to keep them
-	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return Items.is_ammo(x)).size() == ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
+	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return Items.is_mag(x)).size() == ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
 		and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - ceili(sim.med_capacity() * Data.RIG_MAG_SHARE),
-		"a full rig of bandages went out without the primary's pouch: %s" % str(sim.rig.map(func(x): return str(x["base"]))))
+		"a full rig of bandages went out without the primary's magazines: %s" % str(sim.rig.map(func(x): return str(x["base"]))))
 	sim.extract_now()
 	sim.stash = stash0
 	# the card's rounds-short read (16 Oct): ten shells against a site's fight is short; a rig of them isn't
-	sim.rig = [sim._plain(Data.AMMO, "Shells")]
+	sim.rig = [_rmag(sim, "Shells")]
 	Items.set_stack(sim.rig[0], 10)
 	var rs0: Array = sim.rounds_short(3)
 	_check(rs0.size() == 2 and int(rs0[0]) == 10 and int(rs0[1]) > 10, "ten shells read as enough for the Parade: %s" % str(rs0))
 	sim.rig = []
 	for k in range(6):
-		sim.rig.append(sim._plain(Data.AMMO, "Shells"))
+		sim.rig.append(_rmag(sim, "Shells"))
 	_check(sim.rounds_short(3).is_empty() or int(sim.rounds_short(3)[0]) > 10, "a rig of shells still reads short and unchanged: %s" % str(sim.rounds_short(3)))
-	# two pouches free, three boxes for the shotgun and one for the pistol: the pistol gets its box (the review)
+	# two pouches free, magazines and boxes for the shotgun and one of each for the pistol: the pistol gets its magazine
 	sim.rig = []
 	while sim.rig_room(3):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
-	var extra: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Pistol rounds")]
-	extra[2]["rounds"] = int(extra[2]["rounds"]) - 1      # two shells stacks that don't merge whole into one pouch
+	var extra: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.AMMO, "Pistol rounds"),
+		sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain(Data.MAGAZINE, "Pistol magazine")]
 	sim.stash.append_array(extra)
 	var cures_kept: Array = sim.stash.filter(func(x): return Items.is_cure(x))
 	for it in cures_kept:
@@ -7505,13 +7518,15 @@ func _ammo_checks(sim) -> void:
 	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
 	sim._top_up()
 	sim.stash.append_array(cures_kept)
-	_check(sim.rounds_for(sim.equipped["Secondary"]) > 0, "the shotgun's boxes took every pouch and the pistol went without")
+	_check(sim.rounds_for(sim.equipped["Secondary"]) > 0, "the shotgun's magazines took every pouch and the pistol went without")
 	for it in extra:
 		sim.stash.erase(it)
-	# the rig at the gate's three settings (23 Oct, parked item 4): Leave it moves nothing; Best grades only takes the top
-	# grade of the rounds and the best med alone; Fill up takes every grade, then the meds, the best first
+	# the rig at the gate's three settings (23 Oct, parked item 4; 30 Oct, magazines as items): Leave it moves nothing in
+	# (the magazines in it filled); Best grades only takes the best med alone, the magazines filled best grade first;
+	# Fill up the magazines to their share, then the meds, the best first
 	sim.rig = []
-	var tu: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.MEDICAL, "First aid kit")]
+	var tu: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.MEDICAL, "First aid kit"),
+		sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain(Data.MAGAZINE, "Shotgun magazine")]
 	sim.stash.append_array(tu)
 	var stash_n: int = sim.stash.size()
 	sim.set_top_up("leave")
@@ -7519,7 +7534,7 @@ func _ammo_checks(sim) -> void:
 	_check(sim.rig.is_empty() and sim.stash.size() == stash_n, "Leave it moved something into the rig: %d" % sim.rig.size())
 	sim.set_top_up("best")
 	sim._top_up()
-	_check(sim.rig.any(func(x): return str(x["base"]) == "Slugs") and not sim.rig.any(func(x): return str(x["base"]) == "Shells"), "Best grades only didn't take the top grade alone: %s" % str(sim.rig.map(func(x): return x["base"])))
+	_check(sim.rig.any(func(x): return str(x.get("ammo", "")) == "Slugs"), "Best grades only didn't fill with the top grade first: %s" % str(sim.rig.map(func(x): return [x["base"], x.get("ammo", "")])))
 	_check(sim.rig.any(func(x): return str(x["base"]) == "First aid kit") and not sim.rig.any(func(x): return str(x["base"]) == "Bandage"), "Best grades only didn't take the best med alone: %s" % str(sim.rig.map(func(x): return x["base"])))
 	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:") and str(e[1]).contains("med")), "the meds' top-up wasn't logged")
 	for it in sim.rig.duplicate():
@@ -7527,13 +7542,14 @@ func _ammo_checks(sim) -> void:
 	sim.rig = []
 	sim.set_top_up("fill")
 	sim._top_up()
-	# the rounds first, the best grade first, as magazines into up to RIG_MAG_SHARE of the pouches (28 Oct: was every
-	# grade, a pouch a box), then the meds best first into what's left (a kit takes two pouches, a bandage one):
-	# nothing left in the stash that would still fit
-	var fill_bases: Array = sim.rig.map(func(x): return str(x["base"]))
+	# the magazines first, filled best grade first, into up to RIG_MAG_SHARE of the pouches, then the meds best first into
+	# what's left (a kit takes two pouches, a bandage one): nothing left in the stash that would still fit
+	var fill_bases: Array = sim.rig.map(func(x): return str(x.get("ammo", x["base"])))
 	var left_fits: bool = sim.stash.any(func(x): return Items.is_medical(x) and sim.rig_room(Items.size(x)))
-	var mag_pouches: int = sim.rig.filter(func(x): return Items.is_ammo(x)).size()
+	var mag_pouches: int = sim.rig.filter(func(x): return Items.is_mag(x)).size()
 	_check(fill_bases.has("Slugs") and mag_pouches >= 1 and mag_pouches <= ceili(sim.med_capacity() * Data.RIG_MAG_SHARE) and not left_fits and sim.rig.any(func(x): return Items.is_medical(x)), "Fill up took the wrong things for %d pouches: %s" % [sim.med_capacity(), str(fill_bases)])
+	for it in tu:
+		sim.stash.erase(it)
 	sim.set_top_up("best")
 	var td: Dictionary = sim.to_dict()
 	var s_tu = Sim.new()
@@ -7646,7 +7662,7 @@ func _restock_meds(sim) -> void:
 ## tidy-up, and what keeps the stash from filling.
 func _sell_spares(sim) -> void:
 	for it in sim.stash.duplicate():
-		if Items.is_attachment(it) or Items.rig_item(it):
+		if Items.is_attachment(it) or Items.rig_item(it) or Items.is_ammo(it):     # a box is no rig item now (30 Oct)
 			continue
 		var best: Dictionary = sim.best_in_stash(it["slot"])
 		if best.is_empty() or best["id"] != it["id"]:
@@ -7659,7 +7675,7 @@ func _buy_upgrade(sim) -> void:
 	var gain := 0.0
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
-		if Items.is_attachment(it) or Items.rig_item(it):
+		if Items.is_attachment(it) or Items.rig_item(it) or Items.is_ammo(it):     # a box is no rig item now (30 Oct)
 			continue
 		var cur = sim.equipped[it["slot"]]
 		var g: float = Items.score(it) - (Items.score(cur) if cur != null else 0.0)
@@ -8179,9 +8195,10 @@ func _body_drops(main) -> void:
 			_check(ok == (other == slot), "a %s dropped on the %s box was %s" % [slot.to_lower(), other.to_lower(), "taken" if ok else "refused"])
 		var was = sim.equipped[slot]
 		var stash_n: int = sim.stash.size()
+		var over: int = sim.rig_overflow(it).size() if slot == "Rig" else 0     # a smaller rig's overflow back to the stash (30 Oct)
 		body._drop(Vector2.ZERO, data, slot)
 		_check(sim.equipped[slot] != null and sim.equipped[slot]["id"] == it["id"], "a drop on the %s box did not equip" % slot.to_lower())
-		_check(sim.stash.size() == stash_n - (1 if was == null else 0), "the swap out of the %s box did not return the old item to the stash" % slot.to_lower())
+		_check(sim.stash.size() == stash_n - (1 if was == null else 0) + over, "the swap out of the %s box did not return the old item to the stash" % slot.to_lower())
 		_check(main._armoury.selected.get("slot", "") == slot, "the selection did not follow the drop into the %s box" % slot.to_lower())
 		main.refresh()
 		_check_fit(main, "Armoury (body drop %s)" % slot.to_lower())
@@ -8784,7 +8801,7 @@ func _last_add_checks(main) -> void:
 	var keys_u: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The Gritter's Keys")[0], sim.rng)
 	sim.equipped["Charm"] = keys_u
 	sim.equipped["Primary"] = sim._plain("Primary", "Workshop SMG")
-	sim.rig = [sim._plain(Data.AMMO, "SMG rounds")]
+	sim.rig = [_rmag(sim, "SMG rounds")]
 	sim._dry_memo.clear()
 	sim.deploy(3)
 	m = sim.mission
@@ -8997,27 +9014,27 @@ func _grade_checks(main) -> void:
 	sim.rig = []
 	sim._dry_memo.clear()
 	var bleed0: float = sim.conversion()["bleed"]
-	var hollow: Dictionary = sim._plain(Data.AMMO, "SMG hollow point")
+	var hollow: Dictionary = _rmag(sim, "SMG hollow point")
 	sim.rig = [hollow]
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2), "hollow point did not add its bleed share: %.2f from %.2f" % [sim.conversion()["bleed"], bleed0])
 	_check(is_equal_approx(sim.grade_stat(smg, "conv_bleed_pct"), 20.0), "grade_stat reads %.0f" % sim.grade_stat(smg, "conv_bleed_pct"))
 	hollow["rounds"] = 0
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0), "an empty stack still converted")
-	var fire_shells: Dictionary = sim._plain(Data.AMMO, "Incendiary shells")
+	var fire_shells: Dictionary = _rmag(sim, "Incendiary shells")
 	sim.rig = [fire_shells]
 	_check(is_equal_approx(sim.grade_stat(smg, "conv_fire_pct"), 0.0), "shotgun shells fed the SMG's conversion")
 	# match rounds weight the first shot
 	var rifle: Dictionary = sim._plain("Primary", "Stalking rifle")
 	sim.equipped["Primary"] = rifle
-	sim.rig = [sim._plain(Data.AMMO, "Match rounds")]
+	sim.rig = [_rmag(sim, "Match rounds")]
 	_check(is_equal_approx(sim.grade_stat(rifle, "first_pct"), 25.0) and is_equal_approx(sim.grade_bonus(rifle), 15.0), "match rounds' first shot and damage read %.0f / %.0f" % [sim.grade_stat(rifle, "first_pct"), sim.grade_bonus(rifle)])
 	# the first shot through the fight: a tick fresh with match rounds lands more than one with plain rounds
-	var plain_r: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	var plain_r: Dictionary = _rmag(sim, "Rifle rounds")
 	sim.auto_equip = false                # "Equip if better" would swap the rifle out on deploy
 	sim.candidates = []                   # a runner waiting to be picked would take over the kit on deploy
 	var drops := []
 	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))     # deploy tops the rig up from the stash: only the stack on test (19 Oct: the rarity rows keep rounds now)
-	for stack in [plain_r, sim._plain(Data.AMMO, "Match rounds")]:
+	for stack in [plain_r, _rmag(sim, "Match rounds")]:
 		sim.rig = [stack]
 		sim.rng.seed = 11
 		sim.deploy(3)
@@ -10724,7 +10741,7 @@ func _magazine_checks(main) -> void:
 	sim._dry_memo.clear()
 	_check(gl_s < bare_s and is_equal_approx(bare_s, float(Data.RELOAD_S["smg"])) and is_equal_approx(gl_s, bare_s / (1.0 + (50.0 + Items.base_stat(quick_gl, "reload_pct")) / 100.0)), "Quicker reloads: %.2f s with the gloves against %.2f" % [gl_s, bare_s])
 	_check(not Items.allowed_affixes("Primary").any(func(a): return a["stat"] == "reload_pct") and not Items.allowed_affixes("Secondary").any(func(a): return a["stat"] == "reload_pct") and Items.allowed_affixes("Gloves").any(func(a): return a["stat"] == "reload_pct"), "a gun can still roll quicker reloads, or the gloves can't")
-	# the fight: the SMG empties its magazine, then a pause with no fire from it, then fires again
+	# the fight: the SMG empties its magazine, then a pause with no fire from it, then fires again from the next
 	var s = _fresh_run(0)
 	if s == null:
 		_check(false, "the magazines' fixture: no run")
@@ -10732,9 +10749,7 @@ func _magazine_checks(main) -> void:
 	var mm: Dictionary = s.mission
 	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
 	s.equipped["Secondary"] = null
-	var pouch: Dictionary = s._plain(Data.AMMO, "SMG rounds")
-	Items.set_stack(pouch, Items.pouch_cap(pouch))
-	s.rig = [pouch]
+	s.rig = [_mag_full(s, "SMG magazine", "SMG rounds"), _mag_full(s, "SMG magazine", "SMG rounds"), _mag_full(s, "SMG magazine", "SMG rounds")]
 	s._dry_memo.clear()
 	var paused_n := 0
 	var fired_after := false
@@ -10751,28 +10766,30 @@ func _magazine_checks(main) -> void:
 			fired_after = fired_after or hp0 - float(mm["target_hp"]) > 0.0
 	_check(int(mm.get("reloads", 0)) >= 1 and paused_n >= 2 and fired_after, "the SMG's magazine: %d reloads, %d half-seconds paused, fired after %s" % [int(mm.get("reloads", 0)), paused_n, str(fired_after)])
 	_check(s.rounds_for(s.equipped["Primary"]) < r0, "the SMG spent nothing")
+	_check(s.rig.filter(func(x): return int(x["rounds"]) == 0).size() >= 1 and s.rig.size() == 3, "a spent magazine left the rig, or none was spent: %s" % str(s.rig.map(func(x): return int(x["rounds"]))))
 	# the reload in the figures out of the fight: the guns' part at the share it fires
 	s.extract_now()
+	s.rig = [_mag_full(s, "SMG magazine", "SMG rounds"), _mag_full(s, "SMG magazine", "SMG rounds"), _mag_full(s, "SMG magazine", "SMG rounds")]
+	s._dry_memo.clear()
 	var share: float = s.mag_share("Primary")
 	var parts: Dictionary = s.damage_parts()
 	_check(share > 0.5 and share < 1.0 and absf(float(parts["guns"]) - Items.dps(s.equipped["Primary"]) * share) < 0.01, "the sheet's guns %.2f against %.2f at the share %.2f" % [float(parts["guns"]), Items.dps(s.equipped["Primary"]) * share, share])
 	var est0: float = s.estimate(0)
-	var slow: Dictionary = s.equipped["Primary"]
-	slow["affixes"] = [{"stat": "reload_pct", "value": -90, "tier": 1}]
+	var slow_gl: Dictionary = s._plain("Gloves", "Gardening gloves")
+	slow_gl["affixes"] = [{"stat": "reload_pct", "value": -90, "tier": 1}]
+	var gl_keep = s.equipped["Gloves"]
+	s.equipped["Gloves"] = slow_gl
 	s._dry_memo.clear()
 	_check(s.estimate(0) > est0 * 1.2, "a slow reload didn't make the fight longer: %.1f s against %.1f" % [s.estimate(0), est0])
 	# and in the odds' dry runs: a slow reload takes longer on the same dice
 	var d_rng := RandomNumberGenerator.new()
 	d_rng.seed = 7
-	Items.set_stack(pouch, Items.pouch_cap(pouch))
-	s.rig = [pouch]
 	s.hp = s.max_hp()
 	s._dry_run(0, d_rng)
 	var slow_t: float = float(s._dry_last["elapsed"])
-	slow["affixes"] = []
+	s.equipped["Gloves"] = gl_keep
 	s._dry_memo.clear()
 	d_rng.seed = 7
-	s.rig = [pouch]
 	s.hp = s.max_hp()
 	s._dry_run(0, d_rng)
 	var fast_t: float = float(s._dry_last["elapsed"])
@@ -10780,45 +10797,52 @@ func _magazine_checks(main) -> void:
 	# a bat and a free-round gun: no magazine, no pause
 	s.equipped["Primary"] = s._plain("Primary", "Spiked bat")
 	_check(not s.uses_mag("Primary") and is_equal_approx(s.mag_share("Primary"), 1.0), "a bat reloads")
-	# the gate fills the rig's magazines free from the stash, whatever the setting; new pouches up to the share
+	# the gate fills the rig's magazines free from the stash, whatever the setting; new magazines up to the share
 	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
-	var half: Dictionary = s._plain(Data.AMMO, "SMG rounds")
-	Items.set_stack(half, 20)
+	var half: Dictionary = _mag_full(s, "SMG magazine", "SMG rounds")
+	half["rounds"] = 20
 	s.rig = [half]
 	s.stash = [s._plain(Data.AMMO, "SMG rounds")]
+	for k in range(6):
+		s.stash.append(s._plain(Data.MAGAZINE, "SMG magazine"))
 	var box_n: int = int(s.stash[0]["rounds"])
 	s.set_top_up("leave")
 	s._top_up()
-	_check(int(half["rounds"]) == Items.pouch_cap(half) and s._rounds_in_stash("SMG rounds") == box_n - (Items.pouch_cap(half) - 20) and s.rig.size() == 1, "Leave it didn't fill the magazines free: %d in the pouch, %d in the stash" % [int(half["rounds"]), s._rounds_in_stash("SMG rounds")])
+	_check(int(half["rounds"]) == 30 and s._rounds_in_stash("SMG rounds") == box_n - 10 and s.rig.size() == 1, "Leave it didn't fill the magazines free: %d in it, %d in the stash" % [int(half["rounds"]), s._rounds_in_stash("SMG rounds")])
+	_check(str(s.events.back()[1]) == Words.filled_mags(1, ["SMG rounds"]) and str(s.events.back()[1]) == "Filled: 1 magazine from the SMG rounds in the stash", "the fill's log line: '%s'" % str(s.events.back()[1]))
 	s.set_top_up("fill")
 	s._top_up()
-	var pouches: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
-	_check(pouches == ceili(s.med_capacity() * Data.RIG_MAG_SHARE) or s._rounds_in_stash("SMG rounds") == 0, "the gate's magazines: %d pouches of %d" % [pouches, s.med_capacity()])
-	_check(s.rig.all(func(x): return not Items.is_ammo(x) or int(x["rounds"]) <= Items.pouch_cap(x)), "a pouch holds more than its magazines")
-	# the stall (29 Oct): the rig full from before - cures and a heal, or a pouch for a gun not carried - still gets the
-	# primary's first pouch of magazines, the best heal kept; the shells in the stash were never in the gun
+	var mag_cells: int = 0
+	for x in s.rig:
+		if Items.is_mag(x):
+			mag_cells += Items.size(x)
+	_check(mag_cells == ceili(s.med_capacity() * Data.RIG_MAG_SHARE), "the gate's magazines: %d pouches of %d" % [mag_cells, s.med_capacity()])
+	_check(s.rig.all(func(x): return not Items.is_mag(x) or (int(x["rounds"]) == 30 and str(x["ammo"]) == "SMG rounds")), "a packed magazine isn't full of the stash's rounds: %s" % str(s.rig.map(func(x): return x.get("rounds", -1))))
+	_check(not s.rig.any(func(x): return Items.is_ammo(x)), "a box went in the rig")
+	# the stall (29 Oct): the rig full from before - cures and a heal, or a magazine for a gun not carried - still gets
+	# the primary's first magazine, the best heal kept; the shells in the stash were never in the gun
 	s.equipped["Primary"] = s._plain("Primary", _base_of_type("shotgun"))
 	var cap_r: int = s.med_capacity()
 	for case in ["cures", "old rounds", "no heal"]:
 		var keep_heal: Dictionary = s._plain(Data.MEDICAL, "Bandage")
 		s.rig = [] if case == "no heal" else [keep_heal]
 		if case == "old rounds":
-			s.rig.append(s._plain(Data.AMMO, "Nails"))
+			s.rig.append(_mag_full(s, "Nail magazine", "Nails"))
 		while s.rig_used() < cap_r:
 			s.rig.append(s._plain(Data.MEDICAL, "Burn gel" if s.rig.size() % 2 == 0 else "Activated charcoal"))
 		# with no heal in, only a two-pouch kit in the stash (the review: room for a one-pouch heal let the kit take it all)
-		s.stash = [s._plain(Data.AMMO, "Shells"), s._plain(Data.MEDICAL, "First aid kit" if case == "no heal" else "Hospital kit")]
+		s.stash = [s._plain(Data.AMMO, "Shells"), s._plain(Data.MAGAZINE, "Shotgun magazine"), s._plain(Data.MEDICAL, "First aid kit" if case == "no heal" else "Hospital kit")]
 		s._top_up()
 		var shells_in: int = s.rounds_for(s.equipped["Primary"])
 		_check(cap_r >= 3 and shells_in > 0 and (s.rig.has(keep_heal) if case != "no heal" else s.rig.any(func(x): return Items.is_heal(x))) and s.rig_used() <= cap_r
-			and (case != "old rounds" or not s.rig.any(func(x): return str(x["base"]) == "Nails")),
+			and (case != "old rounds" or not s.rig.any(func(x): return str(x["base"]) == "Nail magazine")),
 			"a full rig (%s) went out with %d shells in the gun: %s" % [case, shells_in, str(s.rig.map(func(x): return str(x["base"])))])
-	# on screen: the run's rig draws a pouch's magazines and the Rounds tile the one in the gun; the Kit's rig too
+	# on screen: the run's rig draws a magazine with its fill and the Rounds tile the one in the gun; the Kit's rig too
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
 	sim.equipped["Secondary"] = null
-	var sp: Dictionary = sim._plain(Data.AMMO, "SMG rounds")
-	Items.set_stack(sp, Items.pouch_cap(sp) - 10)
-	sim.rig = [sp, sim._plain(Data.MEDICAL, "Bandage")]
+	var sp: Dictionary = _mag_full(sim, "SMG magazine", "SMG rounds")
+	sp["rounds"] = 20
+	sim.rig = [sp, _mag_full(sim, "SMG magazine", "SMG rounds"), sim._plain(Data.MEDICAL, "Bandage")]
 	sim.set_top_up("leave")
 	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
 	sim.hp = sim.max_hp()
@@ -10838,16 +10862,19 @@ func _magazine_checks(main) -> void:
 		for c in rn._rig_cells:
 			if c.visible and int(c.id) == int(sp["id"]):
 				cell = c
-		_check(cell != null and cell.mag_pips().size() == Data.MAG_POUCH, "the run's rig doesn't draw the pouch's magazines")
+		_check(cell != null and cell.mag_pips().size() == 1, "the run's rig doesn't draw the magazine's fill")
+		_check(cell != null and cell.text_nodes().any(func(l): return l.visible and str(l.text) == "20"), "the run's magazine tile doesn't show its rounds: %s" % (str(cell.text_nodes().map(func(l): return l.text)) if cell != null else "no cell"))
 		if cell != null:
 			var whole := Rect2(Vector2.ZERO, cell.size)
 			for pr in cell.mag_pips():
-				_check(whole.encloses(pr), "a magazine's pip leaves its pouch: %s in %s" % [str(pr), str(whole)])
+				_check(whole.encloses(pr), "a magazine's bar leaves its tile: %s in %s" % [str(pr), str(whole)])
 			for l in cell.text_nodes():
 				for pr in cell.mag_pips():
-					_check(not Rect2(l.position, l.size).intersects(pr), "the pouch's '%s' sits on its magazines: %s on %s in %s" % [l.text, str(Rect2(l.position, l.size)), str(pr), str(cell.size)])
+					_check(not Rect2(l.position, l.size).intersects(pr), "the magazine's '%s' sits on its bar: %s on %s in %s" % [l.text, str(Rect2(l.position, l.size)), str(pr), str(cell.size)])
 		var tile: String = rn._runner["tiles"][3]["value"].text
-		_check(tile.contains("/") and tile.contains("30"), "the Rounds tile doesn't show the magazine: '%s'" % tile)
+		var mg: Array = sim.mag_now("Primary")
+		_check(tile == Words.MAG_WORDS["tile"] % [int(mg[0]), sim.mags_spare("Primary")] or tile == "%d" % int(mg[0]), "the Rounds tile doesn't show the magazine: '%s'" % tile)
+		_check(sim.mags_spare("Primary") == 1, "the spare magazines: %d" % sim.mags_spare("Primary"))
 		_check_fit(main, "Run (magazines)")
 		m["reload_t"]["Primary"] = 1.5
 		main.refresh()
@@ -10859,19 +10886,934 @@ func _magazine_checks(main) -> void:
 	var ct = main._armoury._containers
 	var kit_cell = null
 	for c in ct._rig_cells:
-		if c.visible and Items.is_ammo(ct._item(int(c.id))):
+		if c.visible and Items.is_mag(ct._item(int(c.id))):
 			kit_cell = c
-	_check(kit_cell != null and kit_cell.mag_pips().size() == Data.MAG_POUCH, "the Kit's rig doesn't draw a pouch's magazines")
+	_check(kit_cell != null and kit_cell.mag_pips().size() == 1, "the Kit's rig doesn't draw a magazine's fill")
 	_check_fit(main, "Kit (magazines in the rig)")
 	sim.set_top_up("fill")
 	sim.load_dict(saved)
 	main.refresh()
-	# the pouch's own picture by its rounds' type (28 Oct, the art manifest): the names the manifest writes
-	for ab in Data.BASES[Data.AMMO]:
-		var want: String = "mag_belt" if str(ab["name"]) == "Belt links" else "mag_" + str(ab["type"])
-		_check(Items.mag_slug(sim._plain(Data.AMMO, str(ab["name"]))) == want, "%s's pouch picture isn't %s" % [ab["name"], want])
-	_check(Items.mag_slug(sim._plain(Data.MEDICAL, "Bandage")) == "", "a med reads as a magazine")
+	# a magazine's picture (30 Oct, the approved canvas: the parts' and pouches' own): a standard one mag_<type>
+	for mb in Data.BASES[Data.MAGAZINE]:
+		var kind: String = str(mb["kind"])
+		var want: String = str(Items.MAG_ART[kind]) if Items.MAG_ART.has(kind) else "mag_" + str(mb["type"])
+		_check(Items.mag_slug(sim._plain(Data.MAGAZINE, str(mb["name"]))) == want, "%s's picture isn't %s" % [mb["name"], want])
+	_check(Items.mag_slug(sim._plain(Data.MEDICAL, "Bandage")) == "" and Items.mag_slug(sim._plain(Data.AMMO, "Shells")) == "", "a med or a box reads as a magazine")
 	print("magazines ok: sizes, reloads, the pause in the fight, the figures and the odds, bats, the gate's fill, the screens")
+
+
+## Magazines as items (30 Oct, BUILD32 builder M; docs/design/meds_ammo_clinic.md "Magazines as items"): the data and
+## names the language pass decided, the size rule, the sling in place of the magazine mount, a gun never without its
+## magazine, magazines as finds and on the Fence's shelf, the gate's fill and its log lines. `-- only mags32_rules`.
+func _mags32_rules_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	# the names, exactly the language pass's: a standard, extended and quick of each type, its drum, the belt-fed's two
+	var want := {"Pistol magazine": ["pistol", "standard", 1], "Extended pistol magazine": ["pistol", "extended", 1], "Quick pistol magazine": ["pistol", "quick", 2], "Pistol drum": ["pistol", "drum", 2],
+		"Rifle magazine": ["rifle", "standard", 1], "Extended rifle magazine": ["rifle", "extended", 1], "Quick rifle magazine": ["rifle", "quick", 2], "Rifle drum": ["rifle", "drum", 2],
+		"Shotgun magazine": ["shotgun", "standard", 1], "Extended shotgun magazine": ["shotgun", "extended", 1], "Quick shotgun magazine": ["shotgun", "quick", 2], "Shotgun drum": ["shotgun", "drum", 2],
+		"SMG magazine": ["smg", "standard", 1], "Extended SMG magazine": ["smg", "extended", 1], "Quick SMG magazine": ["smg", "quick", 2], "SMG drum": ["smg", "drum", 2],
+		"Nail magazine": ["improvised", "standard", 1], "Extended nail magazine": ["improvised", "extended", 1], "Quick nail magazine": ["improvised", "quick", 2], "Nail drum": ["improvised", "drum", 2],
+		"Belt box": ["smg", "belt", 3], "Hundred-round drum": ["smg", "hundred", 5]}
+	var have := {}
+	for b in Data.BASES[Data.MAGAZINE]:
+		have[str(b["name"])] = [str(b["type"]), str(b["kind"]), int(b["tier"])]
+	_check(have == want, "the magazines' bases aren't the language pass's: %s" % str(have))
+	for nm in want:
+		var mg: Dictionary = sim._plain(Data.MAGAZINE, nm)
+		var two: bool = str(want[nm][1]) in ["drum", "belt", "hundred"]
+		_check(Items.size(mg) == (2 if two else 1) and Items.mag_pouches(mg) == Items.size(mg), "%s takes %d pouches" % [nm, Items.size(mg)])
+		_check(Words.item_words(nm) != "", "%s has no words" % nm)
+	# a magazine's size: the gun's own times its kind (the Hundred-round drum its hundred whatever the gun)
+	var pump: Dictionary = sim._plain("Primary", "Pump shotgun")
+	var cases := {"Shotgun magazine": 8, "Extended shotgun magazine": 12, "Quick shotgun magazine": 8, "Shotgun drum": 16}
+	for nm in cases:
+		_check(Items.mag_cap(sim._plain(Data.MAGAZINE, nm), pump) == int(cases[nm]), "%s holds %d for a pump shotgun's 8" % [nm, Items.mag_cap(sim._plain(Data.MAGAZINE, nm), pump)])
+	var belt_gun: Dictionary = sim._plain("Primary", "Belt-fed SMG")
+	_check(Items.mag_cap(sim._plain(Data.MAGAZINE, "Hundred-round drum"), belt_gun) == 100 and Items.mag_cap(sim._plain(Data.MAGAZINE, "Hundred-round drum"), sim._plain("Primary", _base_of_type("smg"))) == 100, "the Hundred-round drum isn't a hundred whatever the gun")
+	_check(Items.mag_fits(sim._plain(Data.MAGAZINE, "Nail magazine"), sim._plain("Primary", "Nail gun")) and Items.mag_fits(sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain("Primary", "Pipe shotgun"))
+		and not Items.mag_fits(sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain("Primary", "Spiked bat")) and not Items.mag_fits(sim._plain(Data.MAGAZINE, "Rifle magazine"), pump), "a magazine fits by the ammo type the gun fires")
+	# the sling, the magazine mount gone: every gun's mounts, the parts' table, the mounts' list
+	_check(not ("magazine" in Data.MOUNTS) and "sling" in Data.MOUNTS, "the mounts: %s" % str(Data.MOUNTS))
+	var mag_mounts: Array = []
+	for sl in ["Primary", "Secondary"]:
+		for b in Data.BASES[sl]:
+			if "magazine" in b.get("attachments", []):
+				mag_mounts.append(str(b["name"]))
+	for u in Data.UNIQUES + Data.ISSUED:
+		if "magazine" in u.get("attachments", []):
+			mag_mounts.append(str(u["name"]))
+	_check(mag_mounts.is_empty(), "guns still with a magazine mount: %s" % str(mag_mounts))
+	var slings := {}
+	for a in Data.ATTACHMENTS:
+		_check(str(a["mount"]) != "magazine" and not (str(a["name"]) in ["Extended magazine", "Quick magazine", "Drum magazine", "Belt box", "Hundred-round drum"]), "a magazine part is still a part: %s" % a["name"])
+		if str(a["mount"]) == "sling":
+			slings[str(a["name"])] = [int(a["tier"]), int(a["sling_pct"])]
+	_check(slings == {"Rope sling": [1, 50], "Webbing sling": [2, 65], "Leather sling": [4, 80], "Two-point sling": [6, 100]}, "the slings: %s" % str(slings))
+	_check(sim.attachments_for("sling").all(func(x): return str(x["mount"]) == "sling"), "the Workshop's sling list holds something else")
+	# every gun the runner gets comes with its standard magazine: a find, a buy off the shelf, a build, the first gun
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if not sim.on_mission():
+		_check(false, "the fixture: no run for the guns' magazines")
+	else:
+		var m: Dictionary = sim.mission
+		var shells_n0: int = m["found"].size()
+		var found_gun: Dictionary = sim._plain("Primary", "Pump shotgun")
+		sim._land(m, found_gun)
+		var own_mag: Dictionary = found_gun.get("mag_item", {})
+		_check(str(own_mag.get("base", "")) == "Shotgun magazine" and int(own_mag.get("rounds", -1)) == 0 and found_gun.get("with_mag", false) and m["found"].slice(shells_n0).filter(func(x): return Items.is_mag(x)).is_empty(), "a gun found came without its magazine on it: %s / %s" % [str(own_mag), str(m["found"].slice(shells_n0).map(func(x): return x["base"]))])
+		var bat: Dictionary = sim._plain("Primary", "Spiked bat")
+		sim._land(m, bat)
+		_check(not bat.has("mag_item"), "a bat came with a magazine")
+		# the first gun: the gun, its magazine and a box, the log as the language pass has it
+		m["found"] = []
+		sim._first_gun(m)
+		var fg: Array = m["found"]
+		var fgun: Dictionary = fg.filter(func(x): return Items.is_gun(x))[0]
+		var fmag: Array = fg.filter(func(x): return Items.is_mag(x))
+		var fbox: Array = fg.filter(func(x): return Items.is_ammo(x))
+		_check(fmag.size() == 1 and fbox.size() == 1 and Items.mag_fits(fmag[0], fgun) and fmag[0].get("first_gun", false) and fgun.get("first_gun", false), "the first gun came without its magazine or box: %s" % str(fg.map(func(x): return x["base"])))
+		var fline: String = "Found: %s, %s and a box of %s" % [Words.a_thing(str(fgun["base"])), Words.a_thing(str(fmag[0]["base"]) if not fmag.is_empty() else ""), str(fbox[0]["base"]).to_lower() if not fbox.is_empty() else ""]
+		_check(str(sim.events.back()[1]) == fline and fline.begins_with("Found: a") and not fline.contains("a box of rounds"), "the first gun's line: '%s' (want '%s')" % [str(sim.events.back()[1]), fline])
+		_check(Words.FIRST_GUN % ["a pump shotgun", "a shotgun magazine", "shells"] == "Found: a pump shotgun, a shotgun magazine and a box of shells", "the first gun's words aren't the language pass's")
+		# a full stash: the first gun and its magazine come home whatever the room (the first_gun mark)
+		var keep_stash: Array = sim.stash.duplicate()
+		while sim.stash_room(1):
+			sim.stash.append(sim._plain("Helmet", "Hard hat"))
+		sim.extract_now()
+		_check(sim.stash.has(fgun) and not fmag.is_empty() and sim.stash.has(fmag[0]) and not fmag[0].has("first_gun"), "the first gun's magazine didn't come home with it to a full stash")
+		sim.stash = keep_stash
+	# a buy off the shelf, a build at the Bench: the gun's magazine into the stash with it
+	sim.cash = 1.0e6
+	var shelf_gun: Dictionary = sim._plain("Primary", "Pump shotgun")
+	sim.market.append(shelf_gun)
+	var mags0: int = sim.stash.filter(func(x): return str(x["base"]) == "Shotgun magazine").size()
+	while not sim.stash_room(4) and not sim.stash.is_empty():
+		sim.stash.pop_front()
+	_check(sim.buy(sim.market.size() - 1) and sim.stash.filter(func(x): return str(x["base"]) == "Shotgun magazine").size() == mags0 + 1 and sim.stash.back() == shelf_gun, "a gun bought came without its magazine")
+	sim.scrap = 100000
+	while not sim.stash_room(6) and not sim.stash.is_empty():
+		sim.stash.pop_front()                 # room for the gun and its magazine (the fix round: the build counts it)
+	var nails0: int = sim.stash.filter(func(x): return str(x["base"]) == "Nail magazine").size()
+	_check(sim.build("gun", "Pipe shotgun") and sim.stash.filter(func(x): return str(x["base"]) == "Nail magazine").size() == nails0 + 1, "a gun built came without its magazine (it fires nails)")
+	# magazines as finds (a share of what would be a part), mostly for a gun held; the Fence's shelf sells the standard ones
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		var mf: Dictionary = sim.mission
+		var mags_found := 0
+		var for_held := 0
+		for k in range(600):
+			mf["found"] = []
+			var f: Dictionary = sim._find(mf, mf["t"], false, {}, true)
+			if not f.is_empty() and Items.is_mag(f["it"]):
+				mags_found += 1
+				if Items.mag_type(f["it"]) in sim.owned_ammo_types(mf):
+					for_held += 1
+		_check(mags_found >= 5 and for_held * 2 > mags_found, "magazines as finds: %d in 600 looks, %d for a gun held" % [mags_found, for_held])
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the finds")
+	sim._restock_market()
+	var shelf_mags: Array = sim.market.filter(func(x): return Items.is_mag(x))
+	_check(shelf_mags.size() >= Data.SHELF_MAGS and shelf_mags.all(func(x): return Items.mag_kind(x) == "standard" and Items.mag_type(x) in sim.owned_ammo_types()) and shelf_mags.any(func(x): return str(x["base"]) == "Shotgun magazine"), "the Fence's shelf: %s" % str(shelf_mags.map(func(x): return x["base"])))
+	# the gate's lines: the fill as the language pass has it, the top-up's numbers their plurals (never "1 meds")
+	_check(Words.topped_up(1, 1) == "Topped up: 1 magazine and 1 med from the stash into the rig" and Words.topped_up(2, 3) == "Topped up: 2 magazines and 3 meds from the stash into the rig" and Words.topped_up(0, 1) == "Topped up: 1 med from the stash into the rig", "the top-up's line: '%s'" % Words.topped_up(1, 1))
+	_check(Words.filled_mags(3, ["Shells"]) == "Filled: 3 magazines from the shells in the stash" and Words.filled_mags(1, ["SMG rounds"]) == "Filled: 1 magazine from the SMG rounds in the stash", "the fill's line: '%s'" % Words.filled_mags(3, ["Shells"]))
+	sim.equipped["Secondary"] = null
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
+	sim.stash = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.MAGAZINE, "Shotgun magazine"), sim._plain(Data.MEDICAL, "Bandage")]
+	sim.set_top_up("fill")
+	var ev0: int = sim.events.size()
+	sim._top_up()
+	var lines: Array = sim.events.slice(maxi(0, mini(ev0, sim.events.size() - 3))).map(func(e): return str(e[1]))     # the log keeps 20: the last few
+	_check(lines.has("Topped up: 1 magazine and 1 med from the stash into the rig") and lines.has("Filled: 1 magazine from the shells in the stash") and not lines.any(func(l): return l.contains("1 meds") or l.contains("1 magazines")), "the gate's lines: %s" % str(lines))
+	sim.load_dict(saved)
+	main.refresh()
+	print("mags32 rules ok: the names, the size rule, the sling, a gun's magazine, finds and the shelf, the gate's lines")
+
+
+## The fight with magazines as items (30 Oct): the refill by hand from a box in the pack (the playtest's item 4: the
+## first gun fires on the run it's found), the sling (the secondary at its share while the primary reloads, none without
+## one, full through a refill) in the fight and the figures; the run's Rounds tile. `-- only mags32_fight`.
+func _mags32_fight_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	var smag: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")     # empty
+	var pmag: Dictionary = _mag_full(sim, "Pistol magazine", "Pistol rounds")
+	pmag["rounds"] = 200                                                       # a pistol that lasts the test
+	sim.rig = [smag, pmag]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	sim.set_top_up("leave")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if not sim.on_mission():
+		_check(false, "the fixture: no run for the refill")
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	m["remaining"] = 5
+	m["target_hp"] = 1e9
+	m["t"]["hp"] = 1e9
+	m["t"]["dps"] = 0.0
+	m["clock"] = 1e6
+	var box: Dictionary = sim._plain(Data.AMMO, "Shells")
+	m["found"].append(box)
+	var pump: Dictionary = sim.equipped["Primary"]
+	_check(sim.rounds_for(pump) == 0 and not sim.has_rounds(pump), "the fixture: the shotgun's magazine isn't empty")
+	sim._tick(0.5)
+	var rf: float = sim.refill_now("Primary")
+	_check(sim.events.slice(-4).any(func(e): return str(e[1]) == "Out of magazines: refilling one from a box in the pack"), "the refill wasn't logged: %s" % str(sim.events.slice(-4).map(func(e): return e[1])))
+	var rp: float = sim.reload_pace(m)                  # the refill runs at the runner's pace, as the fire does (the fix round)
+	_check(rf > 0.0 and absf(rf * rp - sim.reload_s(pump) * Data.REFILL_MULT) <= 0.5 * rp + 0.001, "the refill isn't the gun's reload times %.1f: %.2f s left of %.2f at pace %.2f" % [Data.REFILL_MULT, rf, sim.reload_s(pump) * Data.REFILL_MULT / rp, rp])
+	# meanwhile the secondary at full, as with the primary dry
+	var sec_live: Array = sim._gun_dps()
+	_check(is_equal_approx(float(sec_live[1]), Items.dps(sim.equipped["Secondary"]) * (1.0 + sim.grade_bonus(sim.equipped["Secondary"]) / 100.0) * sim.fire_x("Secondary")) and float(sec_live[0]) == 0.0, "through the refill the secondary isn't at full: %s" % str(sec_live))
+	# the run's Rounds tile says so
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var tile: String = main._run._runner["tiles"][3]["value"].text
+	_check(tile == "Refilling · %d s" % ceili(rf) or tile == "%d s" % ceili(rf), "the Rounds tile through a refill: '%s'" % tile)
+	_check_fit(main, "Run (refilling)")
+	var g := 0
+	var box_before := 0
+	while sim.refill_now("Primary") > 0.0 and g < 60:
+		sim.hp = sim.max_hp()
+		box_before = int(box["rounds"])
+		sim._tick(0.5)
+		g += 1
+	# conservation on the tick it completes (the fix round, the review's 14): what left the box is what went in, the
+	# magazine's size; what's in it now no more than that (the tick's shots after)
+	var gave: int = int(m.get("last_refill", -1))
+	_check(gave == Items.mag_cap(smag, pump) and box_before - int(box["rounds"]) == gave and int(smag["rounds"]) <= gave and int(smag["rounds"]) > 0 and str(smag["ammo"]) == "Shells" and sim.mag_in("Primary") == smag,
+		"the refill didn't move a magazine's worth from the box: gave %d (size %d), the box %d to %d, %d in it" % [gave, Items.mag_cap(smag, pump), box_before, int(box["rounds"]), int(smag["rounds"])])
+	# the next shots are the gun's, not the secondary's
+	var r0: int = int(smag["rounds"])
+	var p0: int = int(pmag["rounds"])
+	for k in range(6):
+		sim.hp = sim.max_hp()
+		sim._tick(0.5)
+	_check(int(smag["rounds"]) < r0, "the refilled gun didn't fire: %d of %d" % [int(smag["rounds"]), r0])
+	_check(p0 - int(pmag["rounds"]) < int(ceil(Items.base_of(sim.equipped["Secondary"])["rof"] * sim.pace() * 3.0 * 0.6)), "the secondary still fired at full behind the refilled gun: %d rounds in 3 s" % (p0 - int(pmag["rounds"])))
+	tile = main._run._runner["tiles"][3]["value"].text
+	main.refresh()
+	tile = main._run._runner["tiles"][3]["value"].text
+	_check(tile == Words.MAG_WORDS["tile"] % [int(smag["rounds"]), 0] or tile.begins_with("Reload") or tile == "%d" % int(smag["rounds"]), "the Rounds tile after the refill: '%s'" % tile)
+	# no box in the pack: the spent gun stays dry (the secondary, then fists, as before)
+	m["found"].erase(box)
+	smag["rounds"] = 0
+	m["refill"] = {}
+	sim._tick(0.5)
+	_check(sim.refill_now("Primary") == 0.0 and not sim.has_rounds(pump), "a refill with no box in the pack")
+	sim.extract_now()
+	# the sling: while the primary reloads between magazines the secondary fires at the sling's share; none without one
+	var smg: Dictionary = sim._plain("Primary", _base_of_type("smg"))
+	sim.equipped["Primary"] = smg
+	sim.rig = [_mag_full(sim, "SMG magazine", "SMG rounds"), _mag_full(sim, "SMG magazine", "SMG rounds"), pmag]
+	pmag["rounds"] = 200
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if not sim.on_mission():
+		_check(false, "the fixture: no run for the sling")
+		sim.load_dict(saved)
+		return
+	m = sim.mission
+	m["remaining"] = 5
+	m["target_hp"] = 1e9
+	m["t"]["dps"] = 0.0
+	sim._tick(0.1)                              # the magazines in
+	var spent := {}
+	for case in ["none", "Webbing sling"]:
+		smg["attachments"]["sling"] = null if case == "none" else sim._plain(Data.ATTACHMENT, case)
+		sim._dry_memo.clear()
+		m["reload_t"]["Primary"] = 5.0          # a reload under way
+		m["reload_to"]["Primary"] = int(sim.mags_for(smg)[1]["id"])
+		var fa: float = float(m.get("fired", {}).get("Secondary", 0.0))
+		var ra: int = int(pmag["rounds"])
+		sim._tick(0.5)
+		spent[case] = (float(m.get("fired", {}).get("Secondary", 0.0)) - fa) + float(ra - int(pmag["rounds"]))     # the shots: what's owed plus what came off
+		var gd: Array = sim._gun_dps()
+		var base_sec: float = Items.dps(sim.equipped["Secondary"]) * (1.0 + sim.grade_bonus(sim.equipped["Secondary"]) / 100.0) * sim.fire_x("Secondary")
+		var want_share: float = sim.secondary_share(true) if case == "none" else maxf(sim.secondary_share(true), 0.65)     # its backing share, a sling's lift (the designer's B)
+		_check(is_equal_approx(float(gd[1]), base_sec * want_share), "%s: the secondary's dps while the primary reloads is %.2f, not %.2f" % [case, float(gd[1]), base_sec * want_share])
+	_check(float(spent["none"]) > 0.0 and float(spent["Webbing sling"]) > float(spent["none"]) * 1.5, "the secondary's shots through a reload: %s (its backing share without a sling, more with)" % str(spent))
+	sim.extract_now()
+	# and the figures out of the fight: the sling lifts the guns' damage a second by the secondary's share in the pauses
+	smg["attachments"]["sling"] = null
+	sim._dry_memo.clear()
+	var d_none: float = float(sim._gun_dps()[1])
+	var share: float = sim.mag_share("Primary")
+	var sec_dps: float = Items.dps(sim.equipped["Secondary"]) * (1.0 + sim.grade_bonus(sim.equipped["Secondary"]) / 100.0)
+	var sec_none: float = sec_dps * sim.mag_share("Secondary")
+	smg["attachments"]["sling"] = sim._plain(Data.ATTACHMENT, "Two-point sling")
+	sim._dry_memo.clear()
+	var d_sling: float = float(sim._gun_dps()[1])
+	var sec_full: float = sec_dps * sim.mag_share("Secondary")     # the secondary's magazines last less with the sling's lift (the second review: the fight's blend)
+	var ss: float = sim.secondary_share(true)
+	var want_lift: float = sec_full * (ss * share + (1.0 - share)) - sec_none * ss     # the Two-point's 100% in the reloads, its backing share else
+	_check(share < 1.0 and sec_full < sec_none and is_equal_approx(d_sling - d_none, want_lift), "the sling's read: %.2f with, %.2f without (want +%.2f)" % [d_sling, d_none, want_lift])
+	# the reads use the magazines carried: a drum's slower reload and bigger size move the share
+	var std_share: float = share
+	sim.rig = [_mag_full(sim, "SMG drum", "SMG rounds")]
+	sim._dry_memo.clear()
+	var drum_share: float = sim.mag_share("Primary")
+	var rate: float = float(Items.base_of(smg)["rof"])     # pace scales the fire and the reload alike: it cancels (the fix round)
+	var want_drum: float = (60.0 / rate) / (60.0 / rate + sim.reload_s(smg) * 1.4)
+	_check(absf(drum_share - want_drum) < 0.001 and drum_share != std_share, "the share off a drum: %.3f (want %.3f, the standard's %.3f)" % [drum_share, want_drum, std_share])
+	sim.load_dict(saved)
+	main.refresh()
+	print("mags32 fight ok: the refill by hand and its tile, the next shots the gun's, the sling in the fight and the reads")
+
+
+## The smaller rig (30 Oct, the playtest's item 1: a Body warmer kept the Bum bag's three bandages): swapping a full rig
+## for one with fewer pouches sends the overflow to the stash, the last packed first, and says so; refused with no stash
+## room; the run's meds then the Kit's. `-- only mags32_rig`.
+func _mags32_rig_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = []
+	var packed: Array = []
+	while sim.rig_room(1):
+		var it: Dictionary = sim._plain(Data.MEDICAL, "Bandage") if sim.rig.size() % 2 == 0 else sim._plain(Data.MAGAZINE, "SMG magazine")
+		sim.rig.append(it)
+		packed.append(it)
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var warmer: Dictionary = sim._plain("Rig", "Body warmer")
+	sim.stash.append(warmer)
+	var stash0: int = sim.stash.size()
+	_check(sim.can_equip_item(int(warmer["id"])) and sim.equip_item(int(warmer["id"])), "the Body warmer wouldn't go on")
+	_check(sim.rig_used() <= sim.med_capacity() and sim.med_capacity() == 2, "the smaller rig kept the bigger one's load: %d in %d pouches" % [sim.rig_used(), sim.med_capacity()])
+	var back: Array = packed.slice(sim.rig.size())
+	_check(sim.rig == packed.slice(0, sim.rig.size()) and back.all(func(x): return sim.stash.has(x)) and sim.stash.size() == stash0 - 1 + 1 + back.size(), "the overflow didn't go to the stash, the last packed first: rig %s" % str(sim.rig.map(func(x): return x["base"])))
+	var want_line: String = Words.SMALLER_RIG % Words.and_list(back.map(func(x): return Words.a_thing(str(x["base"]))).slice(0))
+	var lines: Array = sim.events.slice(-3).map(func(e): return str(e[1]))     # the log keeps 20: the last few
+	_check(lines.any(func(l): return l.begins_with("Smaller rig: ") and l.ends_with(" back in the stash")) and lines.has(Words.SMALLER_RIG % Words.and_list(Array(back).map(func(x): return Words.a_thing(str(x["base"]))))), "the smaller rig's line: %s (want '%s')" % [str(lines), want_line])
+	# the Kit and the run read the same meds
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var kit_label: String = main._armoury._containers._rig_label.text
+	_check(kit_label == "Rig %d / %d pouches" % [sim.rig_used(), sim.med_capacity()] and sim.rig_used() <= sim.med_capacity(), "the Kit reads '%s'" % kit_label)
+	var kit_meds: int = sim.meds_carried()
+	sim.hp = sim.max_hp()
+	sim.set_top_up("leave")
+	sim.deploy(3)
+	if sim.on_mission():
+		sim.mission["t"]["dps"] = 0.0
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var shown := 0
+		for c in main._run._rig_cells:
+			if c.visible and Items.is_heal(main._run.sim.rig[main._run._rig_cells.find(c)]):
+				shown += 1
+		_check(sim.meds_carried() == kit_meds and shown == kit_meds and main._run._runner["tiles"][2]["value"].text == ("%d" % kit_meds if kit_meds > 0 else "none"), "the run's meds %d (shown %d, tile '%s') against the Kit's %d" % [sim.meds_carried(), shown, main._run._runner["tiles"][2]["value"].text, kit_meds])
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the meds' count")
+	# no room in the stash for the overflow: the swap is refused, the reason on the Kit's foot
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = packed.duplicate()
+	for it in packed:
+		sim.stash.erase(it)
+	var warmer2: Dictionary = sim._plain("Rig", "Body warmer")
+	sim.stash.append(warmer2)
+	while sim.stash_room(1):
+		sim.stash.append(sim._plain("Helmet", "Hard hat"))
+	_check(not sim.can_equip_item(int(warmer2["id"])) and not sim.equip_item(int(warmer2["id"])) and sim.rig.size() == packed.size(), "a smaller rig went on with no room in the stash for its overflow")
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": warmer2["id"]}
+	main.refresh()
+	var foot: String = main._armoury._pick.hint_text()
+	_check(main._armoury._pick.button_texts().has("Equip") and main._armoury._pick._buttons[main._armoury._pick.button_texts().find("Equip")].disabled and foot.begins_with("No room in the stash"), "the Kit's Equip is lit for a rig that can't take the overflow, or the foot doesn't say why: '%s'" % foot)
+	sim.load_dict(saved)
+	main.refresh()
+	print("mags32 rig ok: the overflow to the stash, its line, the Kit and the run agree, refused with no room (foot '%s')" % foot)
+
+
+## The magazines on screen (30 Oct, the approved canvas): the Kit's gun line, a magazine's card and its compare against
+## the one in the rig (rounds, pouches, reload; Swap into the rig), "THE RIG" card, a sling's card; every label fits.
+## `-- only mags32_ui`.
+func _mags32_ui_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Knife") if not Items.base_named("Secondary", "Knife").is_empty() else null
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells"), sim._plain(Data.MEDICAL, "Bandage")]
+	while not sim.stash_room(10) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
+	sim.stash.append(sim._plain(Data.AMMO, "Shells"))
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var body = main._armoury._body
+	_check(body._boxes["Primary"]["fig"].text in ["3 magazines · 24 rounds", "24 rounds"] and body._boxes["Primary"]["fig"].text == "3 magazines · 24 rounds", "the Kit's gun line: '%s'" % body._boxes["Primary"]["fig"].text)
+	if sim.equipped["Secondary"] != null:
+		_check(body._boxes["Secondary"]["fig"].text == "No rounds needed", "a blade's line: '%s'" % body._boxes["Secondary"]["fig"].text)
+	_check(UI.text_width(body._boxes["Primary"]["fig"], body._boxes["Primary"]["fig"].text) <= body._boxes["Primary"]["fig"].size.x, "the gun line overflows its card")
+	_check(sim.kit_mag_line(sim._plain("Primary", "Spiked bat")) == ["No rounds needed"] and sim.kit_mag_line(sim.equipped["Primary"])[-1] == "24 rounds", "the gun line's forms: %s" % str(sim.kit_mag_line(sim.equipped["Primary"])))
+	_check_fit(main, "Kit (the gun's magazines)")
+	# a magazine's card, against the one in the rig: a drum from the stash
+	var drum: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun drum")
+	sim.stash.append(drum)
+	main._armoury.selected = {"kind": "stash", "id": drum["id"]}
+	main.refresh()
+	var pk = main._armoury._pick
+	var hd = pk._heads[0]
+	var chips: Array = []
+	for k in range(hd.CHIPS):
+		if hd._chips[k].visible:
+			chips.append(hd._chip_labels[k].text)
+	var rows: Array = hd._affixes.text_nodes().map(func(l): return str(l.text))
+	_check(chips.slice(0, 3) == ["Magazine", "Shotgun", "Level 2"], "the magazine's chips: %s" % str(chips))
+	_check(hd._figure.text == "0" and hd._unit.text == "of 16 rounds", "the magazine's figure: '%s' '%s'" % [hd._figure.text, hd._unit.text])
+	var slower: String = "Reloads %s s slower" % Words.fig1(sim.reload_s(sim.equipped["Primary"]) * 0.4)
+	_check(rows.has("×2 the gun's 8") and rows.has(slower) and rows.has("2 pouches") and rows.has("Feeds the pump shotgun"), "the drum's chips: %s (want ×2 the gun's 8, %s, 2 pouches, Feeds the pump shotgun)" % [str(rows), slower])
+	_check(pk._kickers[1].text.begins_with("IN THE RIG") and pk._verdict.text == "Sidegrade", "the compare against the rig's: '%s' / '%s'" % [pk._kickers[1].text, pk._verdict.text])
+	var dw: Array = pk._deltas.filter(func(l): return l.visible).map(func(l): return str(l.text))
+	_check(dw.has("▲ 8 rounds") and dw.has("▼ 1 pouch") and dw.has("▼ %s s reload" % Words.fig1(sim.reload_s(sim.equipped["Primary"]) * 0.4)), "the compare's foot: %s" % str(dw))
+	_check(pk.button_texts().has("Swap into the rig"), "no Swap into the rig: %s" % str(pk.button_texts()))
+	_check_fit(main, "Kit (a magazine against the rig's)")
+	var swap_i: int = pk.button_texts().find("Swap into the rig")
+	if swap_i >= 0 and not pk._buttons[swap_i].disabled:
+		pk._press(swap_i)
+		_check(sim.rig.has(drum) and not sim.stash.has(drum) and int(drum["rounds"]) == 16 and sim.stash.filter(func(x): return str(x["base"]) == "Shotgun magazine").size() >= 1, "the swap didn't put the drum in, filled, and the old one back: rig %s" % str(sim.rig.map(func(x): return [x["base"], x.get("rounds", 0)])))
+	else:
+		_check(false, "Swap into the rig isn't lit: %s" % str(pk.button_texts()))
+	# the chips' other forms: the gun's own, half again, quicker
+	for case in [["Shotgun magazine", "The gun's own 8"], ["Extended shotgun magazine", "×1.5 the gun's 8"], ["Quick shotgun magazine", "Reloads %s s quicker" % Words.fig1(sim.reload_s(sim.equipped["Primary"]) * 0.4)]]:
+		var one: Dictionary = sim._plain(Data.MAGAZINE, str(case[0]))
+		sim.stash.append(one)
+		main._armoury.selected = {"kind": "stash", "id": one["id"]}
+		main.refresh()
+		var r2: Array = main._armoury._pick._heads[0]._affixes.text_nodes().map(func(l): return str(l.text))
+		_check(r2.has(str(case[1])) and not r2.has("1 pouches") and not r2.any(func(t): return str(t).ends_with(" pouch")), "%s's chips: %s (want '%s')" % [case[0], str(r2), case[1]])
+		_check_fit(main, "Kit (%s)" % case[0])
+	# "THE RIG": a magazine with none of its type in the rig - each gun's magazines and rounds, the meds, the stash's rounds
+	var rmag: Dictionary = sim._plain(Data.MAGAZINE, "Rifle magazine")
+	sim.stash.append(rmag)
+	main._armoury.selected = {"kind": "stash", "id": rmag["id"]}
+	main.refresh()
+	var lines: Array = pk._right_lines.filter(func(l): return l.text != "").map(func(l): return str(l.text))
+	_check(pk._right_title.text == "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()] and lines.size() >= 3 and str(lines[0]).begins_with("Pump shotgun: ") and lines.any(func(l): return str(l).begins_with("Meds: ")) and lines.any(func(l): return str(l).begins_with("In the stash: ") and str(l).ends_with("shells to refill")), "THE RIG card: '%s' %s" % [pk._right_title.text, str(lines)])
+	_check_fit(main, "Kit (THE RIG card)")
+	# a sling's card
+	var sl: Dictionary = sim._plain(Data.ATTACHMENT, "Webbing sling")
+	sim.stash.append(sl)
+	main._armoury.selected = {"kind": "stash", "id": sl["id"]}
+	main.refresh()
+	var sh = pk._heads[0]
+	var tails: Array = sh._tail_chips.text_nodes().map(func(l): return str(l.text))
+	_check((sh._figure.text == "Secondary fires at 65%" and sh._unit.text == "") or (sh._figure.text == "65%" and sh._unit.text == "secondary fire"), "the sling's figure: '%s' '%s'" % [sh._figure.text, sh._unit.text])
+	_check(sh._figure.text == "Secondary fires at 65%", "the sling's figure isn't the sentence on the Kit's card: '%s'" % sh._figure.text)
+	_check(tails.has("While the primary reloads"), "the sling's chip: %s" % str(tails))
+	_check_fit(main, "Kit (a sling)")
+	# a drum two tiles wide in the Kit's rig, its rounds on it
+	var kdrum: Dictionary = _mag_full(sim, "Shotgun drum", "Shells")
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), kdrum]
+	main.refresh()
+	var ct = main._armoury._containers
+	var dcell = null
+	for c in ct._rig_cells:
+		if c.visible and int(c.id) == int(kdrum["id"]):
+			dcell = c
+	_check(dcell != null and dcell.size.x > ct.rig_cell() * 1.5 and dcell.mag_pips().size() == 1 and dcell.text_nodes().any(func(l): return l.visible and str(l.text) == "16"), "the drum's tile: %s wide of a %s pouch, its words %s" % [str(dcell.size) if dcell != null else "none", ct.rig_cell(), str(dcell.text_nodes().map(func(l): return l.text)) if dcell != null else "-"])
+	_check_fit(main, "Kit (a drum in the rig)")
+	# a magazine at the Fence: its rounds against the gun, the panel fits
+	if sim.room_open("fence"):
+		var fm: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")
+		sim.market.append(fm)
+		main.show_room(main.MARKET)
+		main._fence._show("shelf")
+		main._fence._on_pick(int(fm["id"]), "shelf")
+		main.refresh()
+		_check(main._fence._right_title.text.begins_with("The rig") and main._fence._right_lines[1].text == "0 of 8 rounds", "a magazine at the Fence: '%s' / '%s'" % [main._fence._right_title.text, main._fence._right_lines[1].text])
+		_check_fit(main, "Fence (a magazine on the shelf)")
+		main.show_room(main.ARMOURY)
+	else:
+		_check(false, "the fixture: the Fence shut for the magazine's panel")
+	# the stash's Rounds tab: the boxes and the magazines
+	var inv = main._armoury._inv
+	var rounds_kind: Array = inv.KINDS.filter(func(kd): return str(kd[0]) == "Rounds")
+	_check(not rounds_kind.is_empty() and Data.AMMO in rounds_kind[0][1] and Data.MAGAZINE in rounds_kind[0][1], "the Rounds tab: %s" % str(rounds_kind))
+	sim.load_dict(saved)
+	main.refresh()
+	print("mags32 ui ok: the Kit's gun line, a magazine's card and compare, the swap, THE RIG, a sling's card, the Rounds tab")
+
+
+## The bot with magazines as items (30 Oct): it buys standard magazines off the shelf for its gun up to its rig's share,
+## and boxes for them, and the gate's packer sends it out fed. `-- only mags32_bot`.
+func _mags32_bot_checks() -> void:
+	var s = Sim.new()
+	s.start()
+	s.unlock_all()
+	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
+	s.equipped["Secondary"] = null
+	s.equipped["Rig"] = s._plain("Rig", "Chest rig")
+	s.rig = []
+	s.stash = []
+	s.cash = 1.0e5
+	s._restock_market()
+	var on_shelf: int = s.market.filter(func(x): return Items.mag_fits(x, s.equipped["Primary"])).size()
+	var bot = Bot.new()
+	bot._restock_meds(s)
+	var gun: Dictionary = s.equipped["Primary"]
+	var held: int = (s.rig + s.stash).filter(func(x): return Items.mag_fits(x, gun)).size()
+	var share: int = ceili(s.med_capacity() * Data.RIG_MAG_SHARE)
+	_check(on_shelf >= 1 and held == mini(share, on_shelf) and s.rounds_for(gun) > 0 and s.rig.filter(func(x): return Items.is_mag(x)).all(func(x): return int(x["rounds"]) == Items.mag_cap(x, gun)), "the bot's magazines: %d held of a share %d (%d on the shelf), %d rounds in the rig" % [held, share, on_shelf, s.rounds_for(gun)])
+	# its gate box (the fix round, the designer's A), on a save set to "Leave it" too
+	s.stash.append(s._plain(Data.AMMO, "SMG rounds"))
+	s.set_top_up("leave")
+	bot._pack(s)
+	s.hp = s.max_hp()
+	s.deploy(0)
+	_check(s.on_mission() and s.mission["found"].any(func(x): return Items.is_ammo(x) and x.get("carried", false) and Items.base_of(x)["type"] == "smg"), "the bot went out without its box for the refills: on a run %s, the pack %s, the stash's SMG rounds %d" % [str(s.on_mission()), str(s.mission["found"].map(func(x): return x["base"])) if s.on_mission() else "-", s._rounds_in_stash("SMG rounds")])
+	if s.on_mission():
+		s.extract_now()
+	print("mags32 bot ok: the shelf's magazines bought to the share, filled, out fed, its box packed")
+
+
+## The fix round on magazines as items (30 Oct, the designer's calls A and D and the review's 1-4, 7-11, 15): the gate's box
+## in the pack for the refills, the grade named not the magazine, a gun's magazine travelling on it, spare magazines in the
+## sweeps, the room for a gun's magazine, a magazine never over its size, the words, Breakdown's grade, the rig taken off.
+## `-- only fix32`.
+func _fix32_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var pump_of := func(): return sim._plain("Primary", "Pump shotgun")
+	# A: the gate packs a box of the gun's rounds (the grade its magazines hold) into the pack; leave doesn't; it refills
+	sim.equipped["Primary"] = pump_of.call()
+	sim.equipped["Secondary"] = null
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Slugs")]
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	var shells: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(shells, 600)
+	var slugs: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	sim.stash.append_array([shells, slugs])
+	sim.set_top_up("fill")
+	sim.hp = sim.max_hp()
+	var slugs0: int = sim._rounds_in_stash("Slugs")
+	sim.deploy(3)
+	if not sim.on_mission():
+		_check(false, "the fixture: no run for the gate's box")
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	var carried: Array = m["found"].filter(func(x): return Items.is_ammo(x) and x.get("carried", false))
+	_check(carried.size() == 1 and str(carried[0]["base"]) == "Slugs" and int(carried[0]["rounds"]) == mini(90, slugs0) and sim._rounds_in_stash("Slugs") == slugs0 - int(carried[0]["rounds"]), "the gate's box: %s (the stash's slugs %d of %d)" % [str(carried.map(func(x): return [x["base"], x["rounds"]])), sim._rounds_in_stash("Slugs"), slugs0])
+	_check(sim.events.slice(-4).any(func(e): return str(e[1]) == "Packed: a box of slugs for the refills"), "the gate's box isn't logged: %s" % str(sim.events.slice(-4).map(func(e): return e[1])))
+	# its rounds refill the gun's magazine once it's spent
+	m["remaining"] = 5
+	m["target_hp"] = 1e9
+	m["t"]["dps"] = 0.0
+	m["clock"] = 1e6
+	for mg in sim.rig:
+		if Items.is_mag(mg):
+			mg["rounds"] = 0
+	var g := 0
+	while int(m.get("refills", 0)) == 0 and g < 10:
+		sim._tick(0.5)
+		g += 1
+	while sim.refill_now("Primary") > 0.0 and g < 60:
+		sim.hp = sim.max_hp()
+		sim._tick(0.5)
+		g += 1
+	_check(not carried.is_empty() and sim.rounds_for(sim.equipped["Primary"]) > 0 and int(carried[0]["rounds"]) < mini(90, slugs0), "the gate's box didn't refill the spent gun: %d rounds, the box %d" % [sim.rounds_for(sim.equipped["Primary"]), int(carried[0]["rounds"]) if not carried.is_empty() else -1])
+	var left_n: int = int(carried[0]["rounds"]) if not carried.is_empty() else 0
+	var stash_slugs: int = sim._rounds_in_stash("Slugs")
+	sim.extract_now()
+	_check(sim._rounds_in_stash("Slugs") == stash_slugs + left_n and not sim.stash.any(func(x): return x.get("carried", false)), "what's left of the gate's box didn't come home: %d of %d" % [sim._rounds_in_stash("Slugs"), stash_slugs + left_n])
+	# Leave it: no box
+	sim.set_top_up("leave")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	_check(sim.on_mission() and not sim.mission["found"].any(func(x): return x.get("carried", false)), "Leave it packed a box")
+	sim.extract_now()
+	sim.set_top_up("fill")
+	# 1: a gun's grade chip names the grade, never the magazine
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Slugs")]
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "slot", "slot": "Primary"}
+	main.refresh()
+	var tw: Array = []
+	for c in main._armoury._pick._heads[0]._tchips:     # the chips the head was given, each form (a narrow row may leave one off)
+		tw.append_array(c["forms"])
+	_check(tw.has("Slugs: +20% damage") and tw.has("+20% slugs") and not tw.any(func(t): return str(t).contains("magazine")), "the gun's grade chip: %s" % str(tw))
+	# 2: the run's rig pick reads the next magazine's grade, not its name
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Slugs"), _mag_full(sim, "Shotgun magazine", "Slugs"), _mag_full(sim, "Shotgun magazine", "Shells")]
+	sim.set_top_up("leave")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		sim.mission["t"]["dps"] = 0.0
+		sim._tick(0.1)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var firing: Dictionary = sim.mag_in("Primary")
+		var same: Dictionary = sim.rig.filter(func(x): return str(x["ammo"]) == "Slugs" and x != firing)[0]
+		var other: Dictionary = sim.rig.filter(func(x): return str(x["ammo"]) == "Shells")[0]
+		main._run._show_rig_pick(sim.mission, same)
+		var l_same: String = main._run._pick._right_lines[0].text
+		main._run._show_rig_pick(sim.mission, other)
+		var l_other: String = main._run._pick._right_lines[0].text
+		_check(str(firing.get("ammo", "")) == "Slugs" and l_same.begins_with("Next: the same rounds") and l_other.begins_with("Waiting"), "the rig pick's lines: '%s' / '%s'" % [l_same, l_other])
+		# 3: a gun found carries its magazine: fitted from the pack, the magazine into the rig; home, into the stash
+		var fg: Dictionary = sim._plain("Secondary", "Service pistol")
+		sim._land(sim.mission, fg)
+		_check(fg.has("mag_item") and not sim.mission["found"].any(func(x): return Items.is_mag(x)) and not sim.mission.get("floor", []).any(func(x): return Items.is_mag(x)), "the found gun's magazine isn't on it: %s" % str(fg.keys()))
+		var fg2: Dictionary = sim._plain("Primary", "Riot shotgun")
+		sim._land(sim.mission, fg2)
+		var own_ids: Array = [int(fg["mag_item"]["id"]), int(fg2.get("mag_item", {}).get("id", -1))]     # the two guns' own (the second review: not any of the type)
+		sim.extract_now()
+		var home_gun: bool = sim.stash.has(fg) or sim.stash.has(fg2)
+		sim._top_up()
+		var want_home: Array = []
+		if sim.stash.has(fg):
+			want_home.append(own_ids[0])
+		if sim.stash.has(fg2):
+			want_home.append(own_ids[1])
+		var stash_ids: Array = sim.stash.map(func(x): return int(x["id"]))
+		_check(home_gun and not fg.has("mag_item") and not fg2.has("mag_item") and want_home.all(func(id): return id in stash_ids), "a gun home didn't bring its own magazine to the stash: %s of %s" % [str(want_home.filter(func(id): return id in stash_ids)), str(want_home)])
+	else:
+		_check(false, "the fixture: no run for the rig pick")
+	sim.set_top_up("fill")
+	# 3: fitted from the pack, its own magazine into the rig
+	sim.rig = []
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		var pk_gun: Dictionary = sim._plain("Secondary", "Service pistol")
+		sim._land(sim.mission, pk_gun)
+		if sim.mission["found"].has(pk_gun):
+			var own: Dictionary = pk_gun["mag_item"]
+			sim.equip_from_pack(int(pk_gun["id"]))
+			_check(sim.rig.has(own) and not pk_gun.has("mag_item"), "a gun fitted from the pack didn't put its own magazine in the rig")
+		else:
+			_check(false, "the fixture: the pistol didn't land in the pack")
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the fit from the pack")
+	# 4: spare magazines go with the commons; loaded or in the rig never, nor the best the rig's share would pack
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim.rig = [sim._plain(Data.MAGAZINE, "Pistol magazine")]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_mag(x))
+	var keep_n: int = maxi(1, ceili(sim.med_capacity() * Data.RIG_MAG_SHARE))
+	var extra: Array = []
+	for k in range(keep_n + 2):
+		extra.append(sim._plain(Data.MAGAZINE, "Pistol magazine"))
+	var loaded: Dictionary = _mag_full(sim, "Pistol magazine", "Pistol rounds")
+	sim.stash = sim.stash.filter(func(x): return not (Items.is_gun(x) and Items.ammo_type(x) == "rifle"))     # no rifle held anywhere
+	sim.rig = sim.rig.filter(func(x): return not (Items.is_mag(x) and Items.mag_type(x) == "rifle"))
+	var stray: Dictionary = sim._plain(Data.MAGAZINE, "Rifle magazine")     # no rifle held
+	sim.stash.append_array(extra + [loaded, stray])
+	var spares: Array = sim.stash.filter(func(x): return sim.spare_mag(x))
+	_check(spares.has(stray) and not spares.has(loaded) and not sim.rig.any(func(x): return sim.spare_mag(x)) and spares.filter(func(x): return str(x["base"]) == "Pistol magazine").size() == extra.size() + 2 - keep_n, "the spare magazines: %d pistol of %d over a share of %d, the stray %s" % [spares.filter(func(x): return str(x["base"]) == "Pistol magazine").size(), extra.size(), keep_n, str(spares.has(stray))])
+	var ju: int = sim.junk_upto
+	sim.junk_upto = 0
+	_check(sim.is_junk(stray) and not sim.is_junk(loaded) and not sim.is_junk(sim.rig[0]), "the junk run's magazines: the stray %s, the loaded %s" % [str(sim.is_junk(stray)), str(sim.is_junk(loaded))])
+	sim.junk_upto = ju
+	_check(int(sim.rarity_spare(0)[0]) >= spares.size(), "the Fence's common row doesn't count the spare magazines")
+	# 7: a gun's room counts its magazine (no Yard picks for the fixture: the Racks would hold the magazine free)
+	var picks_hold: Dictionary = sim.yard_picks.duplicate(true)
+	sim.yard_picks = {}
+	sim._yard_dirty = true
+	sim.stash = sim.stash.filter(func(x): return not Items.is_mag(x))
+	var shelf_gun: Dictionary = sim._plain("Secondary", "Service pistol")
+	sim.market = [shelf_gun]
+	sim.cash = 1.0e6
+	while sim.stash_room(1):
+		sim.stash.append(sim._plain(Data.MEDICAL, "Bandage"))
+	var freed: Array = []
+	while not sim.stash_room(Items.size(shelf_gun)):
+		freed.append(sim.stash.pop_back())
+	_check(not sim.yard_has("racks") and not sim.buy(0), "a gun was bought with no room for its magazine")
+	sim.stash.pop_back()
+	_check(sim.buy(0) and sim.stash_used() <= sim.stash_cap(), "the gun with room for its magazine wasn't sold, or the stash ran over: %d of %d" % [sim.stash_used(), sim.stash_cap()])
+	sim.stash = sim.stash.filter(func(x): return str(x["base"]) != "Bandage")
+	sim.yard_picks = picks_hold
+	sim._yard_dirty = true
+	# 8: a magazine never reads over its size; the gate puts the rest back as a box
+	sim.equipped["Primary"] = sim._plain("Primary", "Riot shotgun")
+	var big: Dictionary = _mag_full(sim, "Shotgun magazine", "Slugs")
+	_check(int(big["rounds"]) == 11, "the fixture: the Riot's magazine holds %d" % int(big["rounds"]))
+	sim.rig = [big]
+	sim.equipped["Primary"] = pump_of.call()
+	_check(sim.mag_words(big) == "8 of 8 rounds" and Items.headline(big, sim.mag_gun(big)) == ["8", "of 8 rounds"], "over its size: '%s' %s" % [sim.mag_words(big), str(Items.headline(big, sim.mag_gun(big)))])
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "rig", "id": big["id"]}
+	main.refresh()
+	var bh = main._armoury._pick._heads[0]
+	_check(bh._figure.text == "8" and bh._unit.text == "of 8 rounds", "the card over its size: '%s' '%s'" % [bh._figure.text, bh._unit.text])
+	var sl0: int = sim._rounds_in_stash("Slugs")
+	sim._top_up()
+	_check(int(big["rounds"]) == 8 and sim._rounds_in_stash("Slugs") == sl0 + 3, "the gate didn't put the extra back: %d in it, %d slugs in the stash from %d" % [int(big["rounds"]), sim._rounds_in_stash("Slugs"), sl0])
+	# 9, 10: the Hundred-round drum's chip; a box of nails' type chip
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	var hund: Dictionary = sim._plain(Data.MAGAZINE, "Hundred-round drum")
+	sim.stash.append(hund)
+	main._armoury.selected = {"kind": "stash", "id": hund["id"]}
+	main.refresh()
+	var hr: Array = main._armoury._pick._heads[0]._affixes.text_nodes().map(func(l): return str(l.text))
+	_check(hr.has("Always 100 rounds") and not hr.any(func(t): return str(t).begins_with("×")), "the Hundred-round drum's chips: %s" % str(hr))
+	_check_fit(main, "Kit (the Hundred-round drum)")
+	var nails: Dictionary = sim._plain(Data.AMMO, "Nails")
+	sim.stash.append(nails)
+	main._armoury.selected = {"kind": "stash", "id": nails["id"]}
+	main.refresh()
+	var nh = main._armoury._pick._heads[0]
+	var nchips: Array = []
+	for k in range(nh.CHIPS):
+		if nh._chips[k].visible:
+			nchips.append(nh._chip_labels[k].text)
+	_check(nchips.slice(0, 2) == ["Rounds", "Nail"], "a box of nails' chips: %s" % str(nchips))
+	# 11: grenades their own line on THE RIG card
+	sim.equipped["Primary"] = pump_of.call()
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.GRENADE, "Nail bomb")]
+	var rm: Dictionary = sim._plain(Data.MAGAZINE, "Rifle magazine")
+	sim.stash.append(rm)
+	main._armoury.selected = {"kind": "stash", "id": rm["id"]}
+	main.refresh()
+	var rl: Array = main._armoury._pick._right_lines.map(func(l): return str(l.text))
+	_check(rl.has("Grenades: 1") and rl.any(func(t): return str(t).begins_with("Meds: ") and not str(t).contains("bomb")), "THE RIG card's grenades: %s" % str(rl))
+	_check_fit(main, "Kit (THE RIG with a grenade)")
+	# 15: Breakdown tops a magazine up with its own grade
+	sim.equipped["Primary"] = pump_of.call()
+	var half: Dictionary = _mag_full(sim, "Shotgun magazine", "Slugs")
+	half["rounds"] = 3
+	var spent_in: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")     # the one in the gun, spent (reloading)
+	sim.rig = [spent_in, half]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))     # the gate fills nothing: only Breakdown's rounds move
+	sim.set_top_up("leave")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		sim.mission["t"]["dps"] = 0.0
+		sim._tick(0.1)
+		sim.mission["mag_in"]["Primary"] = int(spent_in["id"])
+		sim.mission["sk"] = {"energy": 0.0, "fx": {"rounds_on_kill": 20}, "cd": [0.0, 0.0, 0.0]}
+		sim._skills_on_kill(sim.mission)
+		_check(str(half["ammo"]) == "Slugs" and int(half["rounds"]) == 8 and int(spent_in["rounds"]) == 0, "Breakdown's rounds: the slugs' %d of %s, the spent one %d of %s" % [int(half["rounds"]), str(half["ammo"]), int(spent_in["rounds"]), str(spent_in["ammo"])])
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for Breakdown")
+	sim.set_top_up("fill")
+	# the pace quirk (the fix round, the coordinator's call 3): a helmet that only changes pace never reads as a damage trade
+	# on a gun with magazines - the reloads run at the runner's pace as the fire does, so the share doesn't move
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	sim.equipped["Helmet"] = sim._plain("Helmet", "Hard hat")
+	sim.rig = [_mag_full(sim, "SMG magazine", "SMG rounds"), _mag_full(sim, "SMG magazine", "SMG rounds")]
+	sim._dry_memo.clear()
+	sim._cmp_cache.clear()
+	var slow_hat: Dictionary = sim._plain("Helmet", "Composite helmet")     # its pace −4 and armour: nothing on the damage but the pace
+	var d_base: float = float(sim._try({}, sim.damage_total))
+	var d_slow: float = float(sim._try(slow_hat, sim.damage_total))
+	var p_slow: float = float(sim._try(slow_hat, sim.pace))
+	_check(p_slow < sim.pace() * 0.99 and absf(d_slow / d_base - 1.0) <= sim.TRY_EPS * 0.5, "a helmet that only slows the runner reads as a damage change on a gun with magazines: %.3f against %.3f (pace %.3f to %.3f, share %.3f)" % [d_slow, d_base, sim.pace(), p_slow, sim.mag_share("Primary")])
+	# and the fight paces its reloads as the read does: a reload's seconds run at the runner's pace times the site's
+	sim.set_top_up("leave")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		var pm: Dictionary = sim.mission
+		pm["t"]["dps"] = 0.0
+		pm["target_hp"] = 1e9
+		pm["t"]["pace"] = 0.5
+		sim._tick(0.1)
+		pm["reload_t"]["Primary"] = 2.0
+		pm["reload_to"]["Primary"] = int(sim.rig[1]["id"])
+		sim._tick(1.0)
+		var rp: float = sim.reload_pace(pm)
+		_check(rp < 0.6 and absf(float(pm["reload_t"].get("Primary", 0.0)) - (2.0 - rp)) < 0.001 and absf(float(sim.mag_now("Primary")[2]) - (2.0 - rp) / rp) < 0.001, "the fight's reload didn't run at the runner's pace: %.3f left after a second at pace %.2f" % [float(pm["reload_t"].get("Primary", 0.0)), rp])
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the paced reload")
+	sim.set_top_up("fill")
+	# D: the rig off: what's in it to the stash; refused with no room
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.MAGAZINE, "Shotgun magazine")]
+	var held: Array = sim.rig.duplicate()
+	while not sim.stash_room(8) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var rig_it: Dictionary = sim.equipped["Rig"]
+	_check(sim.unequip("Rig") and sim.rig.is_empty() and held.all(func(x): return sim.stash.has(x)) and sim.stash.has(rig_it), "the rig taken off kept its load: %s" % str(sim.rig.map(func(x): return x["base"])))
+	sim.stash.erase(rig_it)
+	sim.equipped["Rig"] = rig_it
+	for x in held:
+		sim.stash.erase(x)
+	sim.rig = held.duplicate()
+	while sim.stash_room(1):
+		sim.stash.append(sim._plain("Helmet", "Hard hat"))
+	_check(not sim.unequip("Rig") and sim.equipped["Rig"] == rig_it and sim.rig.size() == held.size(), "the rig came off with no room for its load")
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix32 ok: the gate's box, the grade named, a gun's own magazine, the spares swept, the room, never over its size, the words, Breakdown, the rig off")
+
+
+## The second review's fixes (31 Oct): each with the check that would have caught it - the gate's box never put down,
+## ditched or the cheapest to drop; the runner's own home neither loot nor left nor the best find; the secondary's
+## magazine read at the fight's blend; the read's box after the gate's fill, one predicate for both; the rarity row's
+## count with the cascade; a gun's own magazine among all the items; the rig off logged.
+func _fix32b_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var pump: Dictionary = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Primary"] = pump
+	sim.equipped["Secondary"] = null
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	# 4: the read's box is the run's: an empty magazine filled at the gate first, then the box off what's left
+	sim.rig = [sim._plain(Data.MAGAZINE, "Shotgun magazine")]
+	var shells: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(shells, 100)
+	sim.stash.append(shells)
+	sim.set_top_up("fill")
+	var cap: int = Items.mag_cap(sim.rig[0], pump)
+	var read_box: Array = sim._gate_boxes(true)
+	var read_n: int = int(read_box[0]["rounds"]) if read_box.size() == 1 else -1
+	sim.hp = sim.max_hp()
+	sim.record["find_value"] = 0
+	sim.record["find"] = ""
+	sim.deploy(3)
+	if not sim.on_mission():
+		_check(false, "the fixture: no run for the gate's box")
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	var box: Array = m["found"].filter(func(x): return x.get("carried", false))
+	var run_n: int = int(box[0]["rounds"]) if box.size() == 1 else -2
+	_check(read_n == run_n and run_n == mini(int(Items.base_of(shells)["rounds"]), 100 - cap), "the read's box isn't the run's: the read %d, the run %d (100 shells less a magazine of %d)" % [read_n, run_n, cap])
+	# 1: the gate's box is never put down, ditched, nor the cheapest to drop
+	if box.size() == 1:
+		var bid: int = int(box[0]["id"])
+		var junk: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		junk["value"] = int(box[0]["value"]) + 1
+		m["found"].append(junk)
+		var cheap: Dictionary = sim.cheapest_in_pack()
+		_check(not sim.put_down(bid) and not sim.ditch(bid) and m["found"].has(box[0]) and int(cheap.get("id", -1)) == int(junk["id"]), "the gate's box: put down, ditched or the cheapest to drop (the cheapest: %s)" % str(cheap.get("base", "")))
+		m["found"].erase(junk)
+		sim._pack_settle(m)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		main._run._inv._pick(main._run._inv.cell_of(bid))
+		main.refresh()
+		var dk: int = main._run._pick.button_texts().find("Ditch")
+		_check(main._run._inv.selected == bid and dk >= 0 and main._run._pick._buttons[dk].disabled, "the gate's box picked offers Ditch: %s" % str(main._run._pick.button_texts()))
+		_check_fit(main, "Run (the gate's box picked)")
+		main._run._inv.selected = -1
+		main.refresh()
+	# 2, 8: the runner's own home: neither loot nor left, nor the run's best find
+	sim.extract_now()
+	var rep: Dictionary = sim.last_report
+	_check(int(rep.get("loot", -1)) == 0 and int(rep.get("left", -1)) == 0, "the gate's box home counted: %d loot, %d left" % [int(rep.get("loot", -1)), int(rep.get("left", -1))])
+	_check(int(sim.record.get("find_value", 0)) == 0 and str(sim.record.get("find", "")) == "", "the gate's box the best find: %s" % str(sim.record.get("find", "")))
+	# 4: one predicate for the run and the read: Leave it packs none, a repeat run's does
+	sim.set_top_up("leave")
+	var rg: bool = sim._repeat_going
+	sim._repeat_going = false
+	var off: bool = sim.gate_box_on()
+	sim._repeat_going = true
+	var on: bool = sim.gate_box_on()
+	sim._repeat_going = rg
+	_check(not off and on, "the gate's box on Leave it: %s, on a repeat run %s" % [str(off), str(on)])
+	sim.set_top_up("fill")
+	# 3: the secondary's magazine read at the fight's blend - its backing share while the primary fires, the sling's
+	# through the primary's reloads
+	var smg: Dictionary = sim._plain("Primary", _base_of_type("smg"))
+	smg["attachments"]["sling"] = sim._plain(Data.ATTACHMENT, "Webbing sling")
+	var pistol: Dictionary = sim._plain("Secondary", "Service pistol")
+	sim.equipped["Primary"] = null
+	sim.equipped["Secondary"] = pistol
+	sim.rig = [_mag_full(sim, "SMG magazine", "SMG rounds"), _mag_full(sim, "Pistol magazine", "Pistol rounds")]
+	sim.equipped["Primary"] = smg
+	var px: float = sim.mag_share("Primary")
+	var f: float = sim.secondary_share(true) * px + (1.0 - px) * sim.reload_share()
+	var s_with: float = sim.mag_share("Secondary")
+	sim.equipped["Primary"] = null
+	var s_alone: float = sim.mag_share("Secondary")
+	sim.equipped["Primary"] = smg
+	var odds := func(s: float) -> float: return s / maxf(0.0001, 1.0 - s)
+	var got_f: float = odds.call(s_alone) / maxf(0.0001, odds.call(s_with))
+	_check(px < 0.99 and sim.reload_share() > sim.secondary_share(true) and absf(got_f - f) < 0.001, "the secondary's magazine read: its rate x%.3f, the fight's blend x%.3f (the primary fires %.3f)" % [got_f, f, px])
+	# 6: a gun's own magazine among all the items
+	var fg: Dictionary = sim._plain("Secondary", "Service pistol")
+	fg["mag_item"] = sim._plain(Data.MAGAZINE, "Pistol magazine")
+	sim.stash.append(fg)
+	_check(sim._all_items().has(fg["mag_item"]), "a gun's own magazine isn't among all the items")
+	sim.stash.erase(fg)
+	# 5: the rarity row counts what its Sell sells: a rifle sold leaves its magazines spare, and they go too
+	sim.stash = sim.stash.filter(func(x): return not (Items.is_gun(x) and Items.ammo_type(x) == "rifle") and not Items.is_mag(x))
+	sim.rig = sim.rig.filter(func(x): return not (Items.is_mag(x) and Items.mag_type(x) == "rifle"))
+	var rifle: Dictionary = sim._plain("Primary", _base_of_type("rifle"))
+	rifle["rarity"] = 0
+	var keep_n: int = maxi(1, ceili(sim.med_capacity() * Data.RIG_MAG_SHARE))
+	var rmags: Array = []
+	for k in range(keep_n + 1):
+		var rm: Dictionary = sim._plain(Data.MAGAZINE, "Rifle magazine")
+		rm["rarity"] = 0
+		rmags.append(rm)
+	sim.stash.append_array([rifle] + rmags)
+	var row: Array = sim.rarity_spare(0)
+	var sold: int = sim.sell_rarity(0)
+	_check(sim._spare(rifle, 0) or not sim.stash.has(rifle), "the fixture: the common rifle isn't spare")
+	_check(int(row[0]) == sold and not rmags.any(func(x): return sim.stash.has(x)), "the common row's count: %d, its Sell sold %d (the rifle's magazines left: %d)" % [int(row[0]), sold, rmags.filter(func(x): return sim.stash.has(x)).size()])
+	# 7: the rig off logs what went back
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
+	while not sim.stash_room(8) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	_check(sim.unequip("Rig") and sim.events.slice(-3).any(func(e): return str(e[1]).begins_with("Rig off: ") and str(e[1]).ends_with("back in the stash")), "the rig off isn't logged: %s" % str(sim.events.slice(-3).map(func(e): return e[1])))
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix32b ok: the gate's box kept, the runner's own home, the secondary's blend, the read's box, the cascade counted, all the items, the rig off")
+
+
+## A gun's rounds in the rig for the older checks (30 Oct, magazines as items: rounds never go in the rig as a box): a
+## standard magazine of the grade's type loaded with `n` of it - by default full, its real size against the gun it feeds
+## in `s` (the fix round, the review's 13). A check that wants a pile spends several (_rmags) or a box in the pack.
+func _rmag(s, grade: String, n := -1) -> Dictionary:
+	var ty: String = str(Items.base_named(Data.AMMO, grade)["type"])
+	var mg: Dictionary = s._plain(Data.MAGAZINE, str(Items.standard_mag(ty)["name"]))
+	mg["ammo"] = grade
+	mg["rounds"] = n if n >= 0 else Items.mag_cap(mg, s.mag_gun(mg))
+	return mg
+
+
+## `k` full magazines of a grade (the fix round): a pile that reloads as the fight does.
+func _rmags(s, grade: String, k: int) -> Array:
+	var out: Array = []
+	for i in range(k):
+		out.append(_rmag(s, grade))
+	return out
+
+
+## A magazine of this base loaded full with a grade (30 Oct, magazines as items): full against the gun it feeds in `s`.
+func _mag_full(s, base: String, grade: String) -> Dictionary:
+	var mg: Dictionary = s._plain(Data.MAGAZINE, base)
+	mg["ammo"] = grade
+	mg["rounds"] = Items.mag_cap(mg, s.mag_gun(mg))
+	return mg
 
 
 ## The third review's fixes (28 Oct): each with the check that would have caught it - the Issue counting what's held on
@@ -10899,24 +11841,25 @@ func _review28_checks(main) -> void:
 	_check(absf(float(p1["held"]) - float(p0["held"]) - w) < 1.0 and float(p1["fiat"]) < float(p0["fiat"]), "the Issue's preview doesn't count the scrap and salvage held: held %.0f from %.0f, fiat %.0f from %.0f" % [p1["held"], p0["held"], p1["fiat"], p0["fiat"]])
 	s.issue()
 	_check(s.issued and absi(int(s.issue_moment["stash"]) - int(round(float(p1["held"])))) <= 1 and absf(s.cash - float(p1["fiat"])) < 1.0, "the Issue didn't convert what its preview said: %s against %s" % [str(s.issue_moment), str(p1)])
-	# a kit's rig of three pouches worn from one box (A3)
+	# a kit's rig of three magazines worn, filled from one box (A3; 30 Oct, magazines as items)
 	s = fresh.call()
 	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
 	s.equipped["Secondary"] = null
 	s.equipped["Rig"] = s._plain("Rig", "Chest rig")
 	s.rig = []
 	for k in range(3):
-		var pouch: Dictionary = s._plain(Data.AMMO, "SMG rounds")
-		Items.set_stack(pouch, Items.pouch_cap(pouch))
-		s.rig.append(pouch)
+		s.rig.append(_mag_full(s, "SMG magazine", "SMG rounds"))
 	s.loadout_save(0)
 	s.rig = []
 	var box: Dictionary = s._plain(Data.AMMO, "SMG rounds")
 	Items.set_stack(box, 600)
 	s.stash = [box]
+	for k in range(3):
+		s.stash.append(s._plain(Data.MAGAZINE, "SMG magazine"))
 	_check(s.loadout_wear(0), "the fixture: the kit wouldn't wear")
-	var smg_pouches: Array = s.rig.filter(func(x): return str(x["base"]) == "SMG rounds")
-	_check(smg_pouches.size() == 3 and int(box["rounds"]) == 600 - 3 * Items.pouch_cap(box) and str(s.events.back()[1]) == Words.LOADOUTS["worn"] % 1, "a kit of three pouches worn from one box: %d pouches, %d left in the box, '%s'" % [smg_pouches.size(), int(box["rounds"]), str(s.events.back()[1])])
+	var smg_mags: Array = s.rig.filter(func(x): return str(x["base"]) == "SMG magazine")
+	var log_worn: bool = s.events.any(func(ev): return str(ev[1]) == Words.LOADOUTS["worn"] % 1)
+	_check(smg_mags.size() == 3 and smg_mags.all(func(x): return int(x["rounds"]) == 30) and int(box["rounds"]) == 600 - 90 and log_worn, "a kit of three magazines worn from one box: %d magazines, %d left in the box, worn said %s" % [smg_mags.size(), int(box["rounds"]), str(log_worn)])
 	# her Magic and Rare meds at their bases' tier (A4)
 	s = fresh.call()
 	s.supplies_in = int(Data.CLINIC_STEPS[Data.CLINIC_STEPS.size() - 1]["need"])
@@ -10965,18 +11908,16 @@ func _review28_checks(main) -> void:
 			if f["it"].get("mythic", false):
 				myths += 1
 		_check(tries > 0 and myths == tries, "a mythic rolled was lost to supplies: %d of %d finds" % [myths, tries])
-		# a box found out there isn't the try-on's feed: it can't reach the rig (B4)
+		# a box found out there is the try-on's feed (B4; 30 Oct: it refills a magazine by hand, the playtest's item 4)
 		var found_box: Dictionary = sr._plain(Data.AMMO, "Rifle rounds")
 		sr.mission["found"].append(found_box)
-		_check(not sr._rounds_held().has(found_box), "a box found on the run counts as the try-on's feed")
-		found_box["from_rig"] = true
-		_check(sr._rounds_held().has(found_box), "a pouch moved from the rig to the pack doesn't count as the feed")
+		_check(sr._rounds_held().has(found_box), "a box found on the run doesn't count as the try-on's feed")
 		sr.extract_now()
-	# the belt's pouch holds its belts (B6)
-	var belt: Dictionary = s._plain(Data.AMMO, "Belt links")
+	# the belt (B6; 30 Oct, magazines as items): a magazine's size is the gun's - the belt-fed's own 100 in a standard SMG
+	# magazine, Belt links no size of their own
 	var belt_gun: Dictionary = s._plain("Primary", "Belt-fed SMG")
-	Items.set_stack(belt, Items.pouch_cap(belt))
-	_check(Items.pouch_cap(belt) >= Items.mag_size(belt_gun) * Data.MAG_POUCH and Items.pouch_words(belt) == "%d mags" % Data.MAG_POUCH and Items.pouch_fills(belt).all(func(x): return x >= 1.0), "a pouch of Belt links holds %d for a belt of %d: '%s'" % [Items.pouch_cap(belt), Items.mag_size(belt_gun), Items.pouch_words(belt)])
+	var sm: Dictionary = s._plain(Data.MAGAZINE, "SMG magazine")
+	_check(Items.mag_cap(sm, belt_gun) == 100 and Items.mag_cap(s._plain(Data.MAGAZINE, "Belt box"), belt_gun) == 250 and not Items.base_named(Data.AMMO, "Belt links").has("mag"), "the belt-fed's magazines: %d standard, %d belt box" % [Items.mag_cap(sm, belt_gun), Items.mag_cap(s._plain(Data.MAGAZINE, "Belt box"), belt_gun)])
 	# the rig packs HEAL, MAGAZINE, CURE (Matt): a Bum bag out of a stash of heals, rounds and cures, by the gate and
 	# by the bot alike
 	var bt = Bot.new()
@@ -10988,7 +11929,8 @@ func _review28_checks(main) -> void:
 		s.equipped["Rig"] = s._plain("Rig", "Bum bag")
 		s.rig = []
 		var els: Array = s.zone_elements(s.front_tier())
-		var st: Array = [s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.AMMO, "SMG rounds")]
+		var st: Array = [s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.MEDICAL, "Bandage"), s._plain(Data.AMMO, "SMG rounds"),
+			s._plain(Data.MAGAZINE, "SMG magazine"), s._plain(Data.MAGAZINE, "SMG magazine"), s._plain(Data.MAGAZINE, "SMG magazine")]
 		for b in Data.BASES[Data.MEDICAL]:
 			if els.has(str(b.get("cure", ""))):
 				st.append(s._plain(Data.MEDICAL, str(b["name"])))
@@ -11000,9 +11942,9 @@ func _review28_checks(main) -> void:
 		else:
 			bt._restock_meds(s)
 		var heals: int = s.rig.filter(func(x): return Items.is_heal(x)).size()
-		var mags: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
+		var mags: int = s.rig.filter(func(x): return Items.is_mag(x)).size()
 		var cures: int = s.rig.filter(func(x): return Items.is_cure(x)).size()
-		_check(heals == 1 and mags == 1 and cures == 1, "the %s packed a Bum bag with %d heals, %d magazine pouches, %d cures (a heal, a magazine, a cure)" % [who, heals, mags, cures])
+		_check(heals == 1 and mags == 1 and cures == 1, "the %s packed a Bum bag with %d heals, %d magazines, %d cures (a heal, a magazine, a cure)" % [who, heals, mags, cures])
 		# a Fishing vest and a Chest rig: a heal always; the magazines to their share, the secondary's of another type its pouch
 		for rig_name in ["Fishing vest", "Chest rig"]:
 			s.equipped["Rig"] = s._plain("Rig", rig_name)
@@ -11015,15 +11957,18 @@ func _review28_checks(main) -> void:
 			var smg_box: Dictionary = s._plain(Data.AMMO, "SMG rounds")
 			st2.append(smg_box)
 			st2.append(s._plain(Data.AMMO, "Pistol rounds"))
+			for k in range(6):
+				st2.append(s._plain(Data.MAGAZINE, "SMG magazine"))
+			st2.append(s._plain(Data.MAGAZINE, "Pistol magazine"))
 			s.stash = st2
 			if who == "gate":
 				s._top_up()
 			else:
 				bt._restock_meds(s)
 			var share: int = ceili(s.med_capacity() * Data.RIG_MAG_SHARE)
-			var ammo_n: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
-			var pistol_n: int = s.rig.filter(func(x): return Items.is_ammo(x) and str(Items.base_of(x)["type"]) == "pistol").size()
-			_check(s.rig.any(func(x): return Items.is_heal(x)) and ammo_n <= share and ammo_n >= 1 and pistol_n == (1 if share >= 2 else 0) and s.rig_used() == s.med_capacity(), "the %s packed a %s: %d heals, %d pouches of rounds (share %d, %d the pistol's), %d of %d used" % [who, rig_name, s.rig.filter(func(x): return Items.is_heal(x)).size(), ammo_n, share, pistol_n, s.rig_used(), s.med_capacity()])
+			var ammo_n: int = s.rig.filter(func(x): return Items.is_mag(x)).size()
+			var pistol_n: int = s.rig.filter(func(x): return Items.is_mag(x) and Items.mag_type(x) == "pistol").size()
+			_check(s.rig.any(func(x): return Items.is_heal(x)) and ammo_n <= share and ammo_n >= 1 and pistol_n == (1 if share >= 2 else 0) and s.rig_used() == s.med_capacity(), "the %s packed a %s: %d heals, %d magazines (share %d, %d the pistol's), %d of %d used" % [who, rig_name, s.rig.filter(func(x): return Items.is_heal(x)).size(), ammo_n, share, pistol_n, s.rig_used(), s.med_capacity()])
 		s.equipped["Secondary"] = null
 		# a rig full of last run's heals and cures, the primary's rounds only in the stash (30 Oct, review30 refactor 3:
 		# the gate's packer the only one): the gate and the bot alike pack the primary's first pouch, the same rig, and
@@ -11045,7 +11990,7 @@ func _review28_checks(main) -> void:
 				s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
 			var full_n: int = s.rig.size()
 			var had_cures: bool = s.rig.any(func(x): return Items.is_cure(x))
-			s.stash = [s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds")]
+			s.stash = [s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.AMMO, "SMG rounds"), s._plain(Data.MAGAZINE, "SMG magazine"), s._plain(Data.MAGAZINE, "SMG magazine")]
 			var gun: Dictionary = s.equipped["Primary"]
 			_check(full_n >= 4 and had_cures and not s.rig_room(1) and s.rounds_for(gun) == 0, "the fixture: a rig of %d, cures %s, full %s, %d rounds in it" % [full_n, str(had_cures), str(not s.rig_room(1)), s.rounds_for(gun)])
 			if packer == "gate":
@@ -11061,12 +12006,14 @@ func _review28_checks(main) -> void:
 				_check(s.on_mission() and s.rounds_for(gun) > 0, "the bot's run went out with %d rounds for the primary (on a run %s)" % [s.rounds_for(gun), str(s.on_mission())])
 				if s.on_mission():
 					s.extract_now()
-				# the stash without them too: the bot buys the dry primary's box with the rig full, the packer makes room
-				s.rig = s.rig.filter(func(x): return not Items.is_ammo(x))
+				# the stash without them too: the bot buys the dry primary's magazines off the Fence's shelf and their box with the
+				# rig full, the packer makes room
+				s.rig = s.rig.filter(func(x): return not Items.is_mag(x))
 				while s.rig_room(1):
 					s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
 				s.stash = []
 				s.cash = 1.0e5
+				s._restock_market()
 				bt._restock_meds(s)
 				_check(s.rounds_for(gun) > 0, "the bot bought no rounds for a dry primary with the rig full: %s" % str(s.rig.map(func(x): return x["base"])))
 	# the bot buys off her shelf as the player does (B3): the cheapest heal that fits, a cure for the front, nothing off it
@@ -11199,7 +12146,7 @@ func _review28_ui_checks(main) -> void:
 	if sim.med_capacity() < 3:
 		sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
-	var pouch: Dictionary = sim._plain(Data.AMMO, "SMG rounds")
+	var pouch: Dictionary = _rmag(sim, "SMG rounds")
 	Items.set_stack(pouch, 60)
 	var band: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 	var tq: Dictionary = sim._plain(Data.MEDICAL, "Tourniquet")
@@ -11243,11 +12190,14 @@ func _review28_ui_checks(main) -> void:
 	sim.stash.append(box)
 	main.refresh()
 	var data := {"id": box["id"], "src": "stash"}
-	_check(ct._can_drop(Vector2.ZERO, data), "the rig refuses a box dropped on a free pouch")
-	ct._drop(Vector2.ZERO, data)
+	_check(not ct._can_drop(Vector2.ZERO, data), "the rig takes a box dropped on a free pouch (30 Oct: rounds live in boxes, never the rig)")
+	var dmag: Dictionary = sim._plain(Data.MAGAZINE, "SMG magazine")
+	sim.stash.append(dmag)
+	var mdata := {"id": dmag["id"], "src": "stash"}
+	_check(ct._can_drop(Vector2.ZERO, mdata), "the rig refuses a magazine dropped on a free pouch")
+	ct._drop(Vector2.ZERO, mdata)
 	main.refresh()
-	var filled: Array = sim.rig.filter(func(x): return str(x["base"]) == "SMG rounds")
-	_check(filled.size() == 1 and int(filled[0]["rounds"]) == Items.pouch_cap(box) and sim.stash.has(box) and int(box["rounds"]) == 600 - Items.pouch_cap(box), "a box dropped on the rig didn't fill one pouch of magazines and stay: %s, %d left" % [str(filled.map(func(x): return x["rounds"])), int(box["rounds"])])
+	_check(sim.rig.has(dmag) and not sim.stash.has(dmag) and sim.stash.has(box) and int(box["rounds"]) == 600, "a magazine dropped on the rig didn't go in whole, the box left alone: rig %s, %d in the box" % [str(sim.rig.map(func(x): return x["base"])), int(box["rounds"])])
 	sim.load_dict(saved)
 	# supplies on the rail (Matt: as a ready contract's Ready), gone once handed in
 	sim.hp = sim.max_hp()
@@ -12839,11 +13789,12 @@ func _crates_checks(main) -> void:
 	var found_n: int = m["found"].size()
 	run._take_floor(int(fl0["id"]))
 	main.refresh()
-	_check(fits0 == (not sim.floor_items().has(fl0) or Items.stacks(fl0)) and (not fits0 or m["found"].size() >= found_n), "Take did not move the thing off the floor when it fit, or did when it didn't")
+	var moved_ok: bool = (fits0 and (not sim.floor_items().has(fl0) or Items.stacks(fl0))) or (not fits0 and sim.floor_items().has(fl0))     # a stack that won't fit stays down too (the fix round: the gate's box can fill the pack)
+	_check(moved_ok and (not fits0 or m["found"].size() >= found_n), "Take did not move the thing off the floor when it fit, or did when it didn't: %s fits %s, still down %s, the pack %d from %d" % [str(fl0["base"]), str(fits0), str(sim.floor_items().has(fl0)), m["found"].size(), found_n])
 	# a thing in the pack to ditch, always (29 Oct, the review: the checks below sat behind ifs that could skip them all)
 	var back: Dictionary = {}
 	for x in m["found"]:
-		if not Items.is_deeds(x):
+		if not Items.is_deeds(x) and not x.get("carried", false):     # nor the gate's box (the second review: never ditched)
 			back = x
 	if back.is_empty():
 		back = sim._plain(Data.MEDICAL, "Painkillers")     # one cell: the fixture's bagless runner has room for it
@@ -12860,9 +13811,17 @@ func _crates_checks(main) -> void:
 	# room made (the take-all may have filled the pack): the pack's other finds put down till the ditched one fits
 	var guard_room := 0
 	while not sim.floor_fits(back) and guard_room < 60:
-		var movable: Array = m["found"].filter(func(x): return not Items.is_deeds(x) and not x.get("from_rig", false))
+		var movable: Array = m["found"].filter(func(x): return not Items.is_deeds(x) and not x.get("from_rig", false) and not x.get("carried", false))     # nor the gate's box (the second review)
 		if movable.is_empty():
-			break
+			# the gate's boxes alone (the second review: never put down): out of the pack by hand, back to the stash
+			var boxes: Array = m["found"].filter(func(x): return x.get("carried", false))
+			if boxes.is_empty():
+				break
+			m["found"].erase(boxes.back())
+			sim.pack_off(boxes.back())
+			sim.stash.append(boxes.back())
+			guard_room += 1
+			continue
 		sim.put_down(int(movable.back()["id"]))
 		guard_room += 1
 	_check(sim.floor_fits(back), "the fixture: no room made for the ditched thing: %s %s in a %s %d wide, the pack %s" % [back["base"], str(Items.footprint(back)), str(sim.equipped["Backpack"]["base"]) if sim.equipped["Backpack"] != null else "-", sim.pack_w(), str(m["found"].map(func(x): return [x["base"], str(Items.footprint(x)), x.get("from_rig", false)]))])
@@ -13382,7 +14341,7 @@ func _select_many_checks(main) -> void:
 		var inv = r[1]
 		inv.many = true
 		main.refresh()
-		var shown: Array = inv.items.filter(func(x): return not Items.is_deeds(x) and not x.has("unique") and not x.has("set") and sim.stash.has(x))
+		var shown: Array = inv.items.filter(func(x): return not Items.is_deeds(x) and not x.has("unique") and not x.has("set") and not Items.is_mag(x) and sim.stash.has(x))     # a magazine scraps for nothing (the fix round)
 		_check(not shown.is_empty(), "%s's grid showed none of the fixture's pieces" % r[0])
 		if shown.is_empty():
 			inv.many = false                      # left as found (28 Oct, the tools review)
@@ -13390,11 +14349,16 @@ func _select_many_checks(main) -> void:
 		var it: Dictionary = shown[0]
 		# a mixed pick (the review): a unique beside the plain piece is passed over, and the figure is the plain one's
 		var prize: Dictionary = {}
-		var lone: Array = shown.filter(func(x): return not Items.stacks(x))
+		var lone: Array = shown.filter(func(x): return not Items.stacks(x) and not Items.is_mag(x))     # a magazine is never a unique (30 Oct)
 		if r[0] in [main.ARMOURY, main.WORKSHOP] and not lone.is_empty():
 			it = lone[0]
 			prize = sim._plain(str(it["slot"]), str(it["base"]))
 			prize["unique"] = "A test unique"
+			while not sim.stash_fits(prize):     # room for it (30 Oct: the bot's run leaves the stash fuller - a gun's magazine with it)
+				var spare_out: Array = sim.stash.filter(func(x): return x != it and not shown.has(x))
+				if spare_out.is_empty():
+					break
+				sim.stash.erase(spare_out[0])
 			sim.stash_put(prize)
 		inv.chosen = [it["id"]] + ([prize["id"]] if not prize.is_empty() else [])
 		main.refresh()
@@ -13410,7 +14374,7 @@ func _select_many_checks(main) -> void:
 		inv._sell_chosen()
 		_check(not sim.stash.has(it), "%s's Select-many left the %s" % [r[0], it["base"]])
 		if not prize.is_empty():
-			_check(sim.stash.has(prize), "%s's Select-many took a unique in a mixed pick" % r[0])
+			_check(sim.stash.has(prize), "%s's Select-many took a unique in a mixed pick: %s %s" % [r[0], str(prize["slot"]), str(prize["base"])])
 		if r[2] == "Scrap 1":
 			_check(int(sim.scrap) == scrap0 + sim.scrap_yield(it) and is_equal_approx(sim.cash, cash0), "the Workshop's Select-many did not scrap the plain piece alone: scrap %d from %d" % [int(sim.scrap), scrap0])
 			# on a run the Workshop's Scrap is shut (the review: it pressed to nothing)
@@ -13597,7 +14561,7 @@ func _kit_hands_checks(main) -> void:
 	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
 	sim.rig = []
 	var dry = RunView.gun_in_hand(sim)
-	sim.rig = [sim._plain(Data.AMMO, "Shells")]
+	sim.rig = [_rmag(sim, "Shells")]
 	var fed = RunView.gun_in_hand(sim)
 	sim.equipped["Primary"] = sim._plain("Primary", "Spiked bat")
 	var bat = RunView.gun_in_hand(sim)
@@ -15513,7 +16477,7 @@ func _combo_checks(main) -> void:
 			if sim.equipped[sl] != null:
 				var box: Dictionary = sim.ammo_box(Items.ammo_type(sim.equipped[sl]))
 				if not box.is_empty():
-					var fed: Dictionary = sim._plain(Data.AMMO, box["name"])
+					var fed: Dictionary = _rmag(sim, box["name"])
 					Items.set_stack(fed, 2000)
 					sim.rig.push_front(fed)
 		if key == "drilled":                   # the Recruit's: a kill while a skill of his runs - three of his slotted, auto
@@ -16393,7 +17357,7 @@ func _dig_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	sim.wounds = {}
 	sim.cash = 100000.0
-	sim.rig = [sim._plain(Data.AMMO, sim.ammo_box("smg")["name"])]
+	sim.rig = [_rmag(sim, sim.ammo_box("smg")["name"])]
 	var bot = Bot.new()
 	sim.hp = sim.max_hp()
 	var budget0: int = sim.odds_budget
@@ -17130,7 +18094,8 @@ func _backdrop_checks(main) -> void:
 			var shown_h: float = minf(cz.y, cz.x * float(fp.y) / float(fp.x))
 			_check(shown_h >= 36.0, "the %s card's picture is a sliver: %.0f px tall in %s" % [slot, shown_h, str(cz)])
 			# the art fills the card (Runner-R B's way, Matt 10 Oct): the name is the art's and the tooltip's, the figure over it
-			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and b["fig"].text == "" and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - body.TOP_STRIP - body.FOOT_STRIP - 2 and not Rect2(b["cell"].position, b["cell"].size).intersects(Rect2(b["name"].position, Vector2(b["name"].size.x, 18))), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
+			var fig_ok: bool = (b["fig"].text in sim.kit_mag_line(sim.equipped[slot])) if slot in ["Primary", "Secondary"] else b["fig"].text == ""     # a gun's magazines and rounds (30 Oct)
+			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and fig_ok and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - body.TOP_STRIP - body.FOOT_STRIP - 2 and not Rect2(b["cell"].position, b["cell"].size).intersects(Rect2(b["name"].position, Vector2(b["name"].size.x, 18))), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
 		var cr: Rect2 = body.box_rect(slot)
 		_check((cr.position.x < body.FIGURE_X) == (slot in ["Backpack", "Primary", "Secondary"]), "the %s card is on the wrong side" % slot)
 		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)
@@ -17902,7 +18867,7 @@ func _try_on_checks(main) -> void:
 	var comp: Dictionary = sim._plain("Helmet", "Composite helmet")
 	var sg: float = sim.survival_gain(comp)
 	var want: int = 1 if sg > sim.TRY_EPS else (-1 if sg < -sim.TRY_EPS else 0)
-	_check(sim.compare(comp) == want, "a composite helmet over the regen hat reads %d with the survival at %+.3f" % [sim.compare(comp), sg])
+	_check(sim.compare(comp) == want, "a composite helmet over the regen hat reads %d with the survival at %+.3f (damage %.2f against %.2f, on a run %s, rig %s)" % [sim.compare(comp), sg, float(sim._try(comp, sim.damage_total)), float(sim._try({}, sim.damage_total)), str(sim.on_mission()), str(sim.rig.map(func(x): return x["base"]))])
 	var tag: Dictionary = sim._plain("Charm", "Dog tag")
 	tag["affixes"] = [{"stat": "regen", "value": rg, "tier": 4}]
 	sim.equipped["Charm"] = tag
@@ -17921,7 +18886,7 @@ func _try_on_checks(main) -> void:
 		sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")     # a gun that spends rounds (the Allotments lean to melee: 12 Oct)
 	var box: Dictionary = sim.ammo_box(Items.ammo_type(sim.equipped["Primary"]))
 	if not box.is_empty():
-		var fed: Dictionary = sim._plain(Data.AMMO, box["name"])
+		var fed: Dictionary = _rmag(sim, box["name"])
 		Items.set_stack(fed, 500)            # a stack that can't run dry in the window: an emptied stack is a change of kit
 		var ty_fed: String = Items.ammo_type(sim.equipped["Primary"])
 		sim.rig = sim.rig.filter(func(x): return not (Items.is_ammo(x) and str(Items.base_of(x)["type"]) == ty_fed))     # the gun's other rounds out: it fires its best first, and a small stack of them runs dry in the window (a flake, 25 Oct)
@@ -18078,8 +19043,8 @@ func _rig_checks(main) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.equipped["Secondary"] = null
 	sim.rig.clear()
-	var plain: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
-	var depot: Dictionary = sim._plain(Data.AMMO, "Depot rounds")
+	var plain: Dictionary = _rmag(sim, "Rifle rounds")
+	var depot: Dictionary = _rmag(sim, "Depot rounds")
 	depot["rounds"] = 5
 	sim.rig.append(plain)
 	sim.rig.append(depot)
@@ -18092,13 +19057,13 @@ func _rig_checks(main) -> void:
 	sim.mission["target_hp"] = 1e9
 	var p0: int = int(plain["rounds"])
 	var g := 0
-	while sim.rig.has(depot) and g < 120:
+	while int(depot["rounds"]) > 0 and g < 120:
 		sim.hp = sim.max_hp()
 		sim.advance(1.0)
 		g += 1
-	_check(not sim.rig.has(depot) and int(plain["rounds"]) <= p0, "the Depot rounds did not run out first (plain %d of %d)" % [int(plain["rounds"]), p0])
+	_check(int(depot["rounds"]) == 0 and sim.rig.has(depot) and int(plain["rounds"]) <= p0, "the Depot rounds did not run out first (plain %d of %d)" % [int(plain["rounds"]), p0])     # a spent magazine stays in the rig (30 Oct)
 	sim.hp = sim.max_hp()
-	sim.advance(2.0)
+	sim.advance(5.0)                          # past the reload into the next magazine (30 Oct)
 	_check(int(plain["rounds"]) < p0 and sim.feed_stack(sim.equipped["Primary"]) == plain, "the plain rounds did not take over when the Depot rounds ran out")
 	# into the pack, from the run screen
 	main.show_room(main.MISSIONS)
@@ -18114,7 +19079,7 @@ func _rig_checks(main) -> void:
 	_check(not sim.rig.has(plain) and sim.mission["found"].has(plain) and run_ui._rig_pick == -1, "Into the pack did not move the rounds")
 	_check(not sim.can_rig_to_pack(band["id"]), "a med can be stowed in the pack")
 	# no room: the button says so
-	var stack2: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	var stack2: Dictionary = _rmag(sim, "Rifle rounds")
 	sim.rig.push_front(stack2)
 	while sim.pack_used(sim.mission) < sim.capacity():
 		sim.mission["found"].append(sim._plain(Data.MEDICAL, "Bandage"))
@@ -18160,7 +19125,7 @@ func _rig_checks(main) -> void:
 	# rounds moved to the pack come home to the rig (or the stash), not as loot, even with the stash full
 	sim.hp = sim.max_hp()
 	sim.rig.clear()
-	var mine: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	var mine: Dictionary = _rmag(sim, "Rifle rounds")
 	sim.rig.append(mine)
 	while sim.stash_room(1):
 		sim.stash.append(sim._plain("Helmet", "Cycle helmet"))
@@ -18184,8 +19149,8 @@ func _build_rounds_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.rig.clear()
-	var depot: Dictionary = sim._plain(Data.AMMO, "Depot rounds")
-	var salted: Dictionary = sim._plain(Data.AMMO, "Salted rounds")
+	var depot: Dictionary = _rmag(sim, "Depot rounds")
+	var salted: Dictionary = _rmag(sim, "Salted rounds")
 	sim.rig.append(depot)
 	sim.rig.append(salted)
 	sim.tree = []
@@ -18204,8 +19169,8 @@ func _build_rounds_checks(main) -> void:
 	sim.tree = ["Petrol/0"]
 	sim.equipped["Primary"] = sim._plain("Primary", "Workshop SMG")
 	sim.equipped["Secondary"] = sim._plain("Secondary", "Machine pistol")
-	var belt: Dictionary = sim._plain(Data.AMMO, "Belt links")
-	var fire: Dictionary = sim._plain(Data.AMMO, "Incendiary SMG rounds")
+	var belt: Dictionary = _rmag(sim, "Belt links")
+	var fire: Dictionary = _rmag(sim, "Incendiary SMG rounds")
 	sim.rig.append(belt)
 	sim.rig.append(fire)
 	_check(sim.feed_stack(sim.equipped["Primary"]) == fire and sim.feed_stack(sim.equipped["Secondary"]) == belt, "the primary and secondary don't each fire their own best: %s / %s" % [sim.feed_stack(sim.equipped["Primary"]).get("base", ""), sim.feed_stack(sim.equipped["Secondary"]).get("base", "")])
@@ -18248,7 +19213,7 @@ func _build_rounds_checks(main) -> void:
 	_check_fit(main, "Lock-up (a gun with no rounds, nothing fitted)")
 	# both hints at once, on the run screen where the pick has Equip and Ditch beside it
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
-	sim.rig = [sim._plain(Data.AMMO, "Rifle rounds")]       # rounds for the rifle, none for the SMG
+	sim.rig = [_rmag(sim, "Rifle rounds")]       # rounds for the rifle, none for the SMG
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	sim.mission["target_hp"] = 1e9
@@ -18617,7 +19582,7 @@ func _class_card_checks(bk) -> void:
 		_check(UI.text_width(c["tag"], c["tag"].text) <= c["tag"].size.x + 0.5 and UI.text_width(c["name"], c["name"].text) <= c["name"].size.x + 0.5, "%s's card's words run past it: '%s' '%s'" % [cd["name"], c["name"].text, c["tag"].text])
 		_check(is_equal_approx(c["face"].modulate.a, 1.0 if lit else 0.75), "%s's face is not %s beside the picked past" % [cd["name"], "lit" if lit else "dimmed"])
 		_check(cb.tooltip_text.contains(str(cd["words"])), "%s's card does not carry its sentence" % cd["name"])
-		var tag_forms: Array = ["✓ your past"] if sim.cls == cd["name"] else (["press again"] if bk._armed == cd["name"] else (bk._crew_tag(cd["name"]) if open else [who]))
+		var tag_forms: Array = [Words.CLASS_SELECTED] if sim.cls == cd["name"] else (["press again"] if bk._armed == cd["name"] else (bk._crew_tag(cd["name"]) if open else [who]))
 		_check(tag_forms.map(func(x): return UI.dots(str(x))).has(c["tag"].text) and not c["tag"].text.begins_with("L1") and not RegEx.create_from_string("^L\\d").search(c["tag"].text), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
 		if k > 0:
 			_check(not Rect2(cb.position, cb.size).intersects(Rect2(bk._class_buttons[k - 1].position, bk._class_buttons[k - 1].size)), "the pasts' cards overlap")
@@ -19063,6 +20028,7 @@ func _gates_checks(main) -> void:
 	_check(dry.compare(rifle) != 1, "a rifle with no rounds anywhere reads better than the fed nail gun")
 	var box: Dictionary = dry.ammo_box(Items.ammo_type(rifle))
 	dry.stash_put(dry._plain(Data.AMMO, str(box["name"])))
+	dry.stash_put(dry.gun_mag(rifle))                # and its magazine (30 Oct: every gun comes with one)
 	_check(dry.compare(rifle) == 1, "a rifle with its rounds in the stash doesn't read better than the nail gun: %d" % dry.compare(rifle))
 	_check(dry.equip_best("Primary") and dry.equipped["Primary"]["id"] == rifle["id"] and dry.has_rounds(rifle), "Equip if better put the rifle on without its rounds in the rig")
 	dry.hp = dry.max_hp()
@@ -20532,25 +21498,26 @@ func _rig_layout_checks() -> void:
 ## accurate when you have the required ammo in the rig"): the grade's damage counted from either.
 func _try_on_rounds_checks(sim) -> void:
 	var saved: Dictionary = sim.to_dict()
-	var shot := func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == "shotgun"
+	var shot := func(x): return (Items.is_ammo(x) and Items.base_of(x)["type"] == "shotgun") or (Items.is_mag(x) and Items.mag_type(x) == "shotgun")
 	sim.rig = sim.rig.filter(func(x): return not shot.call(x))
 	sim.stash = sim.stash.filter(func(x): return not shot.call(x))
 	var cand: Dictionary = sim._plain("Primary", "Farmer's shotgun")
 	var box: Dictionary = sim._plain(Data.AMMO, "Incendiary shells")
+	var loaded: Dictionary = _rmag(sim, "Incendiary shells")     # the same grade in a magazine in the rig (30 Oct)
 	sim._cmp_cache.clear()
 	var none: float = sim._try(cand, sim.damage_total)
 	sim.stash.append(box)
 	sim._cmp_key = 0
 	var in_stash: float = sim._try(cand, sim.damage_total)
 	sim.stash.erase(box)
-	sim.rig.append(box)
+	sim.rig.append(loaded)
 	sim._cmp_key = 0
 	var in_rig: float = sim._try(cand, sim.damage_total)
 	_check(absf(in_stash - in_rig) <= maxf(0.01, in_rig * 0.001) and in_rig > none, "a shotgun's try-on: %.1f with its incendiaries in the stash, %.1f in the rig, %.1f with none" % [in_stash, in_rig, none])
 	# and in the fight, with the rounds found in the same run - in the pack (21 Oct, Matt: "you still need ammo in the
-	# stash there for it to show as an upgrade"): since the magazines (28 Oct, the review's B4) a box found can't reach
-	# the rig, so it doesn't count - the gun goes dry - while a pouch of the rig's moved to the pack does
-	sim.rig.erase(box)
+	# stash there for it to show as an upgrade"): a box found refills a magazine by hand (30 Oct, the playtest's item 4),
+	# so it counts
+	sim.rig.erase(loaded)
 	var fence_was: bool = "fence" in sim.unlocked
 	sim.unlocked.erase("fence")
 	if sim.on_mission():
@@ -20573,13 +21540,8 @@ func _try_on_rounds_checks(sim) -> void:
 	sim._cmp_key = 0
 	sim._dry_memo.clear()
 	var in_pack: float = sim._try(cand, sim.damage_total)
-	_check(is_equal_approx(in_pack, none_run) and not sim._try(cand, func(): return sim.has_rounds(cand)), "a gun's try-on in the fight counts a box found in the pack, which can't reach the rig: %.1f with the box, %.1f without (compare without: %d)" % [in_pack, none_run, on_run_none])
-	box["from_rig"] = true                    # the rig's own pouch, moved to the pack: home to the rig, so it's the feed
-	sim._cmp_key = 0
-	sim._dry_memo.clear()
-	var from_rig: float = sim._try(cand, sim.damage_total)
-	_check(from_rig > none_run and sim._try(cand, func(): return sim.has_rounds(cand)), "a gun's try-on in the fight doesn't count the rig's pouch in the pack: %.1f with it, %.1f without" % [from_rig, none_run])
-	box.erase("from_rig")
+	_check(in_pack > none_run and sim._try(cand, func(): return sim.has_rounds(cand)), "a gun's try-on in the fight doesn't count a box found in the pack: %.1f with the box, %.1f without (compare without: %d)" % [in_pack, none_run, on_run_none])
+	sim.mission["found"].erase(box)
 	sim.extract_now()
 	if fence_was:
 		sim.unlocked.append("fence")
@@ -21245,12 +22207,13 @@ func _class_skills_checks(sim) -> void:
 	var gun_keep = sim.equipped["Primary"]
 	var rig_keep: Array = sim.rig.duplicate()
 	sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")     # a gun that takes rounds, and room for them
-	sim.rig = []
+	sim.rig = [sim._plain(Data.MAGAZINE, "Shotgun magazine")]     # an empty magazine for them (30 Oct: rounds go into a magazine, to its size)
 	var gun_bd = sim.equipped["Primary"]
 	var r_bd: int = sim.rounds_for(gun_bd)
 	fire.call("breakdown")
 	sim._skills_on_kill(m)
-	_check(sim.rounds_for(gun_bd) == r_bd + 20, "Breakdown: %d rounds → %d" % [r_bd, sim.rounds_for(gun_bd)])
+	var bd_want: int = mini(r_bd + 20, Items.mag_cap(sim.rig[0], gun_bd))
+	_check(r_bd == 0 and sim.rounds_for(gun_bd) == bd_want and str(sim.rig[0]["ammo"]) == "Shells", "Breakdown: %d rounds → %d (the magazine holds %d)" % [r_bd, sim.rounds_for(gun_bd), Items.mag_cap(sim.rig[0], gun_bd)])
 	sim.equipped["Primary"] = gun_keep
 	sim.rig = rig_keep
 	# the timed ones end on time, nothing slotted (the review: §8's "effects end" untested; Ringing ears held a gang)
@@ -22526,9 +23489,9 @@ func _issue_checks(main) -> void:
 	var bought: Array = []
 	for u in Data.ISSUED:
 		var sl: String = str(u["slot"])
-		var before: int = sim.stash.size()
+		var before: int = sim.stash.filter(func(x): return not Items.is_mag(x)).size()     # a gun's magazine comes with it (30 Oct)
 		var shown: Dictionary = sim.issued_piece(sl)
-		_check(sim.buy_issued(sl) and sim.stash.size() == before + 1, "the Issuer didn't sell the %s: '%s'" % [sl, sim.issued_block(sl)])
+		_check(sim.buy_issued(sl) and sim.stash.filter(func(x): return not Items.is_mag(x)).size() == before + 1, "the Issuer didn't sell the %s: '%s'" % [sl, sim.issued_block(sl)])
 		var it: Dictionary = sim.stash.back()
 		bought.append(it)
 		_check(it.get("issued", false) and Items.full_name(it).contains("No.") and str(it["rule"]) == str(u["rule"]) and Items.ilvl(it) == Items.ilvl(shown), "the %s came without its stamp, rule or level: %s" % [sl, Items.full_name(it)])
@@ -23287,13 +24250,9 @@ func _edge_fight(cls: String, gun_base: String, pool: int, man: float, res: floa
 			s.rig = []
 			var ty: String = Items.ammo_type(s.equipped["Primary"])
 			if sec != "":
-				var b2: Dictionary = s._plain(Data.AMMO, s.ammo_box(Items.ammo_type(s.equipped["Secondary"]))["name"])
-				b2["rounds"] = 100000
-				s.rig.append(b2)
+				s.rig.append_array(_rmags(s, s.ammo_box(Items.ammo_type(s.equipped["Secondary"]))["name"], 8))     # real magazines (the fix round: the gate clamps an over-full one)
 			if ty != "none":
-				var box: Dictionary = s._plain(Data.AMMO, s.ammo_box(ty)["name"])
-				box["rounds"] = 100000
-				s.rig.append(box)
+				s.rig.append_array(_rmags(s, s.ammo_box(ty)["name"], 8))
 			s.hp = s.max_hp()
 			s.rng.seed = seed_v
 			s.deploy(0)
@@ -23359,9 +24318,7 @@ func _edge_checks() -> void:
 		se.start()
 		se.equipped["Primary"] = se._plain("Primary", "Pump shotgun")
 		se.equipped["Secondary"] = null
-		var shells: Dictionary = se._plain(Data.AMMO, "Shells")
-		shells["rounds"] = 100000
-		se.rig = [shells]
+		se.rig = [_rmag(se, "Shells")]     # a real magazine: the reads take its size, never its count (the fix round)
 		var te: Dictionary = se.effective(4)
 		ests.append(se.estimate(4))
 		rates.append(se.damage_rate(te))
@@ -23375,7 +24332,7 @@ func _edge_checks() -> void:
 	s.start()
 	s.equipped["Primary"] = s._plain("Primary", "Pump shotgun")
 	s.equipped["Secondary"] = null
-	s.rig = [s._plain(Data.AMMO, "Shells")]
+	s.rig = [_rmag(s, "Shells")]
 	var with_edge: float = float(s.damage_split()["hits"])
 	_check(s.edge_read() > 1.0 and with_edge > s._skill_base() * 1.01 and is_equal_approx(s._skill_base(), float(s.damage_split({}, false)["hits"])) and is_equal_approx(s.damage_total_raw(), float(s.damage_split({}, false)["total"])), "a skill took the gun type's edge: %.1f against %.1f" % [s._skill_base(), with_edge])
 	# the edge's line, number first, on every gun type that has one; an SMG or a blade carried second has none but its own
@@ -23797,9 +24754,7 @@ func _fix_round_checks(main) -> void:
 	var hold_rig: Array = sim.rig.duplicate(true)
 	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
 	sim.equipped["Secondary"] = null
-	var shells: Dictionary = sim._plain(Data.AMMO, "Shells")
-	shells["rounds"] = 100000
-	sim.rig = [shells]
+	sim.rig = [_rmag(sim, "Shells")]     # a real magazine: the reads take its size, never its count (the fix round)
 	sim.equipped["Gloves"] = null
 	sim._dry_memo.clear()
 	var f0: float = float(sim._try({}, sim.fight_damage))
@@ -23969,6 +24924,7 @@ func _estate_odds_checks() -> void:
 		var cm: float = sums[0]
 		var pp: float = sums[1]
 		var s = {"dps": fig[2], "hp": fig[3], "arm": fig[4]}
+		print("estate read %s: the Carpet Man %.2f, the Pleasure Park %.2f, %.1f dmg/s" % [cls, cm, pp, float(fig[2])])
 		_check(cm >= Bot.COIN and pp >= Bot.COIN, "the %s on the Estate's kit at level %d (%.0f dmg/s, %.0f HP, %.0f armour) reads the Carpet Man at %.2f and the Pleasure Park at %.2f, under a coin flip's %.2f" % [cls, ESTATE_LV, s["dps"], s["hp"], s["arm"], cm, pp, Bot.COIN])
 
 	Items._next_id = maxi(ids_was, Items._next_id)
@@ -23998,6 +24954,8 @@ func _estate_read(cls: String) -> Array:
 		var box: Dictionary = s._plain(Data.AMMO, s.ammo_box(ty)["name"])
 		box["rounds"] = 100000
 		s.stash.append(box)
+		for k in range(4):
+			s.stash.append(s._plain(Data.MAGAZINE, str(Items.standard_mag(ty)["name"])))     # the Fence's standard magazines (30 Oct)
 	s.rig = []
 	for k in range(3):
 		s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
@@ -24036,7 +24994,7 @@ func _compare_readings_checks(main) -> void:
 	var hold: Dictionary = sim.to_dict()
 	_yard_set(sim, "bench", 1, "")               # no Third socket: the fixture's sockets as built
 	sim.stash = []
-	sim.rig = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Rifle rounds")]
+	sim.rig = [_rmag(sim, "Shells"), _rmag(sim, "Rifle rounds")]
 	sim.equipped["Secondary"] = null
 	# the worn: a pump shotgun with a choke (a shotgun's part), a stock and a socketable; the find: a rifle that takes the
 	# stock and has a socket, never the choke
@@ -25574,17 +26532,17 @@ func _cleanup31_checks() -> void:
 	s.equipped["Primary"] = s._plain("Primary", _base_of_type("smg"))
 	s.equipped["Secondary"] = null
 	var cap: int = s.med_capacity()
-	var pouch: Dictionary = s._plain(Data.AMMO, "SMG rounds")
-	Items.set_stack(pouch, Items.pouch_cap(pouch))
-	s.rig = [pouch]
+	s.rig = [_mag_full(s, "SMG magazine", "SMG rounds")]
 	while s.rig_used() < cap:
 		s.rig.append(s._plain(Data.MEDICAL, "Bandage"))
 	s.stash = [s._plain(Data.AMMO, "SMG rounds")]
 	Items.set_stack(s.stash[0], 3000)
+	for k in range(cap):
+		s.stash.append(s._plain(Data.MAGAZINE, "SMG magazine"))
 	s.set_top_up("fill")
 	s._top_up()
 	var share: int = ceili(cap * Data.RIG_MAG_SHARE)
-	var pouches: int = s.rig.filter(func(x): return Items.is_ammo(x)).size()
+	var pouches: int = s.rig.filter(func(x): return Items.is_mag(x)).size()
 	_check(cap >= 4 and pouches == share and s.rig.any(func(x): return Items.is_heal(x)) and s.rig_used() <= cap,
 		"a rig full of heals kept the gun at %d pouches of its %d: %s" % [pouches, share, str(s.rig.map(func(x): return str(x["base"])))])
 	# the bot on a save set to "Leave it"
@@ -25594,7 +26552,7 @@ func _cleanup31_checks() -> void:
 	b.equipped["Primary"] = b._plain("Primary", _base_of_type("smg"))
 	b.equipped["Secondary"] = null
 	b.rig = []
-	b.stash = [b._plain(Data.AMMO, "SMG rounds"), b._plain(Data.MEDICAL, "Bandage"), b._plain(Data.MEDICAL, "Bandage")]
+	b.stash = [b._plain(Data.AMMO, "SMG rounds"), b._plain(Data.MEDICAL, "Bandage"), b._plain(Data.MEDICAL, "Bandage"), b._plain(Data.MAGAZINE, "SMG magazine")]
 	Items.set_stack(b.stash[0], 3000)
 	b.cash = 5000
 	b.set_top_up("leave")
@@ -25606,6 +26564,128 @@ func _cleanup31_checks() -> void:
 	_check(b.rounds_for(b.equipped["Primary"]) > 0 and b.rig.any(func(x): return Items.is_heal(x)) and heals[2] <= heals[0],
 		"the bot on 'Leave it': %d rounds packed, heals in the stash %s, rig %s" % [b.rounds_for(b.equipped["Primary"]), str(heals), str(b.rig.map(func(x): return str(x["base"])))])
 	print("the clean-up's merge ok: magazines to their share past spare heals, the bot packs on fill")
+
+
+## The rail's badge clear of the room's name (30 Oct, parked item 2: "The Map" under "Away" in a squeezed rail): every
+## room with every badge forced, at the least row the layout allows and at the default window's rows (with the away card
+## and without): the name's text and the badge don't overlap, the name fits, the badge stays in its row.
+func _l32_rail_badge_checks(main) -> void:
+	_check(Words.REPEAT["badge_away"] == "Away", "the away badge's word moved: '%s'" % Words.REPEAT["badge_away"])
+	var badges: Array = [[Words.REPEAT["badge_away"], "warn"], [Words.REPEAT["badge_back"], "good"], ["Live", "good"], ["1 free", "good"],
+		["Hurt", "warn"], ["Can build", "good"], ["Supplies", "good"]]
+	if main.room == main.MISSIONS:
+		main.show_room(main.OVERVIEW)        # the run folds the rail to its glyphs: the names show on any other room
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	var rail_h: float = main._rail_panel.size.y
+	var n: int = main.ROOMS.size()
+	var heights: Array = [main.RAIL_ROW_MIN, maxf(main.RAIL_ROW_MIN, floorf((rail_h - Pal.RAIL_HEAD_H - main._away.size.y - 8.0) / n)), floorf((rail_h - Pal.RAIL_HEAD_H) / n)]
+	_check(heights[0] <= heights[1] and heights[1] <= heights[2] and heights[1] < 80.0, "the rail's rows at 1920 x 1080: %s" % str(heights))
+	var tried := 0
+	for nm in main.ROOMS:
+		var b = main._rail_buttons[nm]
+		_check(not b.folded, "rail %s is folded on the Pitch" % nm)
+		for h in heights:
+			b.set_row_height(h)
+			for bd in badges:
+				b.show_status({"badge": bd[0], "badge_tone": bd[1]})
+				tried += 1
+				var name_r: Rect2 = _text_rect_local(b._name, UI)
+				var badge_r := Rect2(b._badge.position, b._badge.size)
+				var word_r: Rect2 = _text_rect_local(b._badge_label, UI)
+				word_r.position += b._badge.position
+				_check(b._badge.visible and not name_r.intersects(badge_r) and not name_r.intersects(word_r),
+					"rail %s at a %.0f px row: the name %s and the '%s' badge %s overlap" % [nm, h, str(name_r), bd[0], str(badge_r)])
+				_check(UI.text_width(b._name, b._name.text) <= b._name.size.x + 0.5 and UI.text_width(b._badge_label, b._badge_label.text) <= b._badge_label.size.x + 0.5,
+					"rail %s at a %.0f px row: '%s' or '%s' runs past its box" % [nm, h, b._name.text, bd[0]])
+				_check(name_r.position.y >= 0.0 and badge_r.position.y >= 0.0 and badge_r.end.y <= h - 1.0 and badge_r.end.x <= Pal.RAIL_W - 18,
+					"rail %s at a %.0f px row: the name %s or the '%s' badge %s leaves the row" % [nm, h, str(name_r), bd[0], str(badge_r)])
+	_check(tried == main.ROOMS.size() * 3 * badges.size(), "the rail's badges tried %d" % tried)
+	main._lay_rail_rows()
+	main.refresh()
+	print("the rail's badges ok: %d rooms x 7 badges at rows of %s, the name clear of the badge" % [main.ROOMS.size(), str(heights)])
+
+
+## The Barracks' own class (30 Oct, parked item 3, Matt: "shouldnt say past anymore - just selected").
+func _l32_class_selected_checks(main) -> void:
+	_check(Words.CLASS_SELECTED == "✓ selected", "the selected class's word: '%s'" % Words.CLASS_SELECTED)
+	_check(main.sim.cls != "", "no class to be selected")
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	var bk = main._barracks
+	var mine: Array = []
+	for k in range(bk._class_cards.size()):
+		var tag: String = bk._class_cards[k]["tag"].text
+		_check(not tag.to_lower().contains("past"), "%s's card reads '%s'" % [Data.CLASSES[k]["name"], tag])
+		if Data.CLASSES[k]["name"] == main.sim.cls:
+			mine.append(tag)
+	_check(mine == ["✓ selected"], "the %s's card reads %s" % [main.sim.cls, str(mine)])
+	print("the Barracks' card ok: the runner's class reads '%s'" % str(mine))
+
+
+## A box's chips in sentence case (30 Oct, parked item 5: "Rounds" · "shotgun"): every ammo base's card, SMG as it is.
+func _l32_ammo_chip_checks(main) -> void:
+	var head = load("res://scripts/ui/item_head.gd").new(440, true)
+	main.add_child(head)
+	var seen := 0
+	for b in Data.BASES[Data.AMMO]:
+		var it: Dictionary = main.sim._plain(Data.AMMO, str(b["name"]))
+		head.show_item(it, main.sim)
+		var words: Array = []
+		for k in range(head.CHIPS):
+			if head._chips[k].visible:
+				words.append(str(head._chip_labels[k].text))
+		var tw: String = str(b.get("type", ""))
+		_check(words.size() >= 2 and words[1] == Items.type_name(tw), "%s's type chip: %s" % [b["name"], str(words)])     # Nails' "Nail", as the magazines (the fix round, the designer's call 10)
+		for w in words:
+			_check(w != "" and w.left(1) == w.left(1).to_upper() and w.left(1) != w.left(1).to_lower(), "%s's chip '%s' doesn't start with a capital" % [b["name"], w])
+		seen += 1
+	_check(seen >= 5, "ammo bases tried: %d" % seen)
+	head.queue_free()
+	print("the boxes' chips ok: %d bases, every chip a capital" % seen)
+
+
+## The Clinic's cure card (30 Oct, parked item 6, the Tourniquet: "Stops bleed" on its chip, "heals 0 for you, over
+## 0 s"): every heal and cure as the shelf's pick; a cure's figure line is what it stops with no tail; a heal's tail
+## says what it heals; the figure line and the tail never overlap.
+func _l32_clinic_cure_checks(main) -> void:
+	var sim = main.sim
+	var hold: Array = sim.clinic.duplicate()
+	main.show_room(main.MEDIC)
+	var cl = main._clinic
+	if cl.showing != "shelf":
+		cl._show("shelf")
+	var cures := 0
+	var heals := 0
+	for b in Data.BASES[Data.MEDICAL]:
+		var it: Dictionary = sim._plain(Data.MEDICAL, str(b["name"]))
+		sim.clinic = [it]
+		main.refresh()
+		cl._shelf._pick(cl._shelf.cell_of(it["id"]))
+		main.refresh()
+		var head = cl._head
+		_check(head.visible and head._title.text.begins_with(str(b["name"])), "the Clinic didn't show %s: '%s'" % [b["name"], head._title.text])
+		var all_words: Array = head.text_nodes().filter(func(x): return x is Label and _showing(x)).map(func(x): return str(x.text))
+		var fig_r: Rect2 = _text_rect_local(head._figure, UI)
+		var fig_w: float = UI.text_width(head._figure, head._figure.text) + ((10.0 + UI.text_width(head._unit, head._unit.text)) if head._unit.text != "" else 0.0)
+		_check(fig_w <= head.width + 0.5, "%s's figure line runs past the card: '%s %s'" % [b["name"], head._figure.text, head._unit.text])
+		if head._tail_chips.visible and head._tail_chips.shown() > 0:
+			var tail_r: Rect2 = head._tail_chips.used_rect()
+			tail_r.position += head._tail_chips.position
+			var unit_r: Rect2 = _text_rect_local(head._unit, UI)
+			_check(not fig_r.intersects(tail_r) and (head._unit.text == "" or not unit_r.intersects(tail_r)), "%s: the figure line %s sits on its tail %s" % [b["name"], str(fig_r), str(tail_r)])
+		if b.has("cure"):
+			cures += 1
+			_check(head._figure.text == Words.CURE_CLEARS[str(b["cure"])] and head._unit.text == "", "%s's figure line reads '%s' '%s'" % [b["name"], head._figure.text, head._unit.text])
+			_check(not all_words.any(func(w): return w.contains("heals")), "%s's card reads %s" % [b["name"], str(all_words)])
+		elif b.has("heal"):
+			heals += 1
+			_check(head._tail_chips.visible and head._tail_chips.words(0).begins_with("heals ") and not head._tail_chips.words(0).begins_with("heals 0"), "%s's tail: %s" % [b["name"], str(all_words)])
+	_check(cures >= 5 and heals >= 3, "the Clinic's meds tried: %d cures, %d heals" % [cures, heals])
+	sim.clinic = hold
+	cl.selected = {}
+	main.refresh()
+	print("the Clinic's cards ok: %d cures read what they stop, %d heals their tail, none on its tail" % [cures, heals])
 
 
 func _r4_art_names_checks() -> void:
@@ -27155,7 +28235,7 @@ func _fix30b_secondary_conv(main) -> void:
 func _fix30b_equip_best(main) -> void:
 	var sim = main.sim
 	_yard_set(sim, "bench", 1, "")
-	sim.rig = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Rifle rounds")]
+	sim.rig = [_rmag(sim, "Shells"), _rmag(sim, "Rifle rounds")]
 	sim.equipped["Secondary"] = null
 	sim.auto_equip = true
 	# a worse piece: the worn's big brake reads the find better; the swap's refused (the find's own choke has no room)

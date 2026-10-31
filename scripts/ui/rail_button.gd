@@ -3,7 +3,7 @@ extends Button
 ## design canvas; the last pass: names only). A stamped square at the left with
 ## the room's glyph and the name beside it, centred in the row - and, when the
 ## room wants a decision, the badge under the name (the row is 312 wide and
-## the stamp takes 72: a badge beside the name overran it). The lit row takes the cards' colour and its
+## the stamp takes 72: a badge beside the name overran it), clear of the name's descenders (30 Oct). The lit row takes the cards' colour and its
 ## stamp goes gold (the reach across the margin to the card went, 8 Oct, Matt:
 ## "just keep the button as the button").
 ## The rows share the rail's height: `set_row_height` from the layout. The
@@ -17,6 +17,14 @@ const BADGE_PAD := 10           # each side of the badge's word
 const STAMP := 56               # the stamped square
 const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
+## The name over the badge (30 Oct, parked item 2: "The Map" ran into "Away" in a squeezed rail): the name's box is the
+## font's whole height (30 px SemiBold: 38, its descenders inside), the badge a gap under it; 70 in all, inside the
+## least row (main.gd RAIL_ROW_MIN, 72). The name and the badge's word can't share a line: "The Pitch" and
+## "Can build" need 274 px, the row has 206.
+const NAME_H := 38
+const BADGE_H := 30
+const BADGE_GAP := 2
+const STACK_H := NAME_H + BADGE_GAP + BADGE_H
 ## The rail's glyphs (13 Oct, the campaign manifest): art/rail/, drawn for the rooms as they're named now; the five a
 ## boss opens are the things that open them (the deeds, the fitter's kit, the vet's bag, the ledger, the military radio).
 const GLYPH_OF := {"The Pitch": "rail/yard", "Stats": "rail/stats", "The Kit": "rail/runner", "The Map": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
@@ -49,9 +57,9 @@ func _init(room_name: String) -> void:
 	text = ""
 	_stamp = UI.panel(self, Rect2(STAMP_X, 0, STAMP, STAMP), UI.box(Pal.STAMP, 8, 1, Pal.CARD_LINE))
 	_glyph = UI.glyph(_stamp, Rect2(9, 9, STAMP - 18, STAMP - 18), GLYPH_OF.get(room_name, "yard"), Pal.TEXT_2)
-	_name = UI.label(self, Rect2(TEXT_X, 0, Pal.RAIL_W - TEXT_X - 18, 36), room_name, "SemiBold", Pal.NAME, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_badge = UI.panel(self, Rect2(TEXT_X, 36, 96, 30), UI.box(Pal.WARN, 15))
-	_badge_label = UI.label(_badge, Rect2(0, 0, 96, 30), "", "SemiBold", Pal.FLOOR, Pal.ACCENT_TEXT,
+	_name = UI.label(self, Rect2(TEXT_X, 0, Pal.RAIL_W - TEXT_X - 18, NAME_H), room_name, "SemiBold", Pal.NAME, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_badge = UI.panel(self, Rect2(TEXT_X, NAME_H + BADGE_GAP, 96, BADGE_H), UI.box(Pal.WARN, 15))
+	_badge_label = UI.label(_badge, Rect2(0, 0, 96, BADGE_H), "", "SemiBold", Pal.FLOOR, Pal.ACCENT_TEXT,
 			HORIZONTAL_ALIGNMENT_CENTER, false)
 	_badge.visible = false
 	_dot = UI.panel(self, Rect2(STAMP_X + STAMP - 12, 0, 18, 18), UI.box(Pal.WARN, 9, 2, Pal.PANEL))
@@ -101,11 +109,11 @@ func _tip() -> void:
 func _place() -> void:
 	var h: float = size.y
 	if _badge.visible:
-		var top := floorf((h - 66) / 2.0)
+		var top := floorf((h - STACK_H) / 2.0)
 		_name.position.y = top
-		_badge.position.y = top + 36
+		_badge.position.y = top + NAME_H + BADGE_GAP
 	else:
-		_name.position.y = floorf((h - 36) / 2.0)
+		_name.position.y = floorf((h - NAME_H) / 2.0)
 
 
 ## A room a head hasn't opened yet (13 Oct): not pressable, its glyph dimmed, its name scrambled (20 Oct, Matt: no "Shut").

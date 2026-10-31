@@ -109,3 +109,17 @@ a drum two.
 | The Barracks card | "✓ selected" (Matt's word; the card's tags stay lower case) |
 | Glossary adds | magazine, pouch, sling, primary, secondary |
 
+### Built (30-31 Oct, 0.10.2)
+
+- As above, with Matt's two calls on the build's questions: **a box in the pack** (the gate packs one box of each
+  worn gun's rounds, the grade its magazines hold, for the refills; it comes home, can't be ditched, is lost on a death
+  like the pack) and **the sling lifts the secondary's normal share** while the primary reloads (Rope 50%, Webbing 65%,
+  Leather 80%, Two-point 100%; through a refill the secondary fires at full).
+- Every gun comes with a standard magazine of its type (it rides on the gun until home); spare magazines (empty, out
+  of the rig, past the rig's share for a held type or of a type no gun fires) follow the junk, scrap and rarity sells.
+- Reloads and refills are paced like the fire, in the fight and the reads.
+- Drafts for the balance pass: kinds x1 / x1.5 / quick x1 reload x0.6 / drum x2 reload x1.4 (2 pouches); Belt box
+  x2.5, Hundred-round drum a flat 100; REFILL_MULT 2 (3 left the Poacher under a coin flip at the Pleasure Park on the
+  Estate's kit); a fifth of part finds are magazines; the Fence shelves 2 standard a held type; RIG_MAG_SHARE 0.5.
+- Known: the bot's balance reads now carry real magazines and the gate's box (no bottomless magazines).
+

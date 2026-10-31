@@ -620,7 +620,7 @@ func _show_panel() -> void:
 	_hint.text = ""
 	# the left column is the head; the tail says what the runner would get out of it
 	var tail = ""
-	if Items.is_medical(it):
+	if Items.is_medical(it) and not Items.is_cure(it):     # a cure's card says what it stops, no heal tail (30 Oct, parked item 6: "heals 0")
 		tail = "heals %.0f for you, over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]
 	elif Items.is_gun(it):
 		tail = [Items.fitted_words(it), Items.ammo_words(it).to_lower().replace("smg", "SMG")]
@@ -649,6 +649,8 @@ func _show_panel() -> void:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):
 		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
+		if Items.is_mag(it):
+			UI.fit(_right_lines[1], [sim.mag_words(it)])     # a magazine (30 Oct): its rounds against the gun it feeds
 	elif Items.is_socketable(it):
 		UI.fit(_right_title, ["Fitted in the Workshop, Sockets view", "Fitted in the Workshop"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
@@ -689,7 +691,7 @@ func _show_panel() -> void:
 		var action: Callable = sim.buy_clinic.bind(it["id"]) if kind == "clinic" else sim.buy_id.bind(it["id"])
 		_button(0, "Buy for %s" % Fmt.money(_price(it)), action, sim.cash >= _price(it) and room)
 	else:
-		if (kind == "clinic" and Items.is_medical(it)) or Items.is_ammo(it) or Items.is_grenade(it):
+		if (kind == "clinic" and Items.is_medical(it)) or Items.is_mag(it) or Items.is_grenade(it):     # a box stays in the stash (30 Oct): a magazine goes in the rig
 			var room: bool = sim.rig_room(Items.size(it))
 			_right_lines[0].text = "" if room else ("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
 			_button(0, "Take", sim.take.bind(it["id"]), not sim.runner_busy() and room)     # as take (T4): not between a repeat's runs

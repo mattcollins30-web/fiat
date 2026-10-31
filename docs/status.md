@@ -6120,6 +6120,10 @@ difficulty and length, the endgame placeholders.
 
 ## Parked from the playtest (30 Oct, 0.10.1 plus the clean-up; taken up after it)
 
+Taken up the same evening (Matt paused the playtest for magazines as items): all six built in 0.10.2 - item 1 the
+smaller rig's overflow (and taking the rig off) to the stash; item 4 by the refill from a box in the pack; items 2, 3,
+5, 6 the labels, each with its smoke check (docs/design/meds_ammo_clinic.md, "Magazines as items").
+
 1. Bug: a smaller rig keeps the bigger one's load. Three bandages in a Bum bag, swapped to a Body warmer (2 pouches):
    the Kit reads "Rig 3 / 2 pouches", the run shows two, and using one counts down from the three (Matt: "fight showed
    two but i used one and it counted it from the three"). Likely: equipping a rig doesn't send what's over its

@@ -856,8 +856,8 @@ static func odds_reasons(s, i: int) -> Array:
 	var gun = s.equipped["Primary"]
 	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and not Items.free_rounds(gun):
 		var have: int = s.rounds_for(gun)
-		if s.rig_room(1):
-			for it in s.stash:                   # the gate tops up from the stash (rounds_short's count)
+		if not s.mags_for(gun).is_empty() or s.stash.any(func(x): return Items.mag_fits(x, gun)):
+			for it in s.stash:                   # the gate fills the magazines from the stash (rounds_short's count; 30 Oct, a magazine to fill)
 				if Items.is_ammo(it) and Items.base_of(it)["type"] == Items.ammo_type(gun):
 					have += int(it.get("rounds", 0))
 		if have <= 0:

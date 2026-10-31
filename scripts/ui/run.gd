@@ -448,7 +448,7 @@ func show_state(s) -> void:
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%s (%s)" % [Fmt.group(int(round(sim.armour()))), Fmt.pct(sim.mitigation())], Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())]], ["Damage", fire_forms(fire_now)],
-		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", mag_forms(rounds) if rounds > 0 and sim.uses_mag("Primary") else [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
+		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", mag_forms(rounds) if (rounds > 0 or sim.refill_now("Primary") > 0.0) and sim.uses_mag("Primary") else [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT)
 	if _view != null:
 		# the six under the frame: theirs, then yours
@@ -832,8 +832,8 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		r = ["Rounds", ["melee"], Pal.TEXT_3]
 	elif Items.free_rounds(gun):
 		r = ["Rounds", ["∞"], Pal.TEXT_3]          # a gun that never spends a round (Items.free_rounds)
-	elif rounds > 0 and sim.uses_mag("Primary"):
-		r = ["Rounds", mag_forms(rounds), Pal.WARN if float(sim.mag_now("Primary")[2]) > 0.0 else Pal.TEXT]     # the magazine in the gun (28 Oct)
+	elif (rounds > 0 or sim.refill_now("Primary") > 0.0) and sim.uses_mag("Primary"):
+		r = ["Rounds", mag_forms(rounds), Pal.WARN if (float(sim.mag_now("Primary")[2]) > 0.0 or sim.refill_now("Primary") > 0.0) else Pal.TEXT]     # the magazine in the gun (28 Oct)
 	elif rounds > 0:
 		r = ["Rounds", [Fmt.group(rounds), Fmt.short_num(float(rounds))], Pal.TEXT]
 	else:
@@ -843,14 +843,17 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		["Armour", [Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())], Pal.TEXT], ["Meds", ["%d" % meds] if meds > 0 else ["none"], Pal.TEXT if meds > 0 else Pal.BAD], r]
 
 
-## The primary's magazine as a tile says it (28 Oct, magazines): "18 / 30 · 240 in the rig" down to "18/30", or
-## "Reloading 2 s" while it reloads.
-func mag_forms(rounds: int) -> Array:
+## The primary's magazine as a tile says it (28 Oct; 30 Oct, magazines as items, the approved canvas): "5 · 1 spare"
+## (the rounds in the gun's magazine, the loaded ones left), "Reloading 2 s" while it reloads, "Refilling · 6 s" while
+## the runner fills one by hand from a box in the pack.
+func mag_forms(_rounds: int) -> Array:
+	var rf: float = sim.refill_now("Primary")
+	if rf > 0.0:
+		return [Words.MAG_WORDS["refilling"] % ceili(rf), "%d s" % ceili(rf)]     # the six's narrow tile: the seconds, in the warning's tone
 	var mg: Array = sim.mag_now("Primary")
 	if float(mg[2]) > 0.0:
 		return ["Reloading %.1f s" % float(mg[2]), "Reloading", "Reload"]
-	var in_rig: int = maxi(0, rounds - int(mg[0]))
-	return ["%d / %d · %s more" % [int(mg[0]), int(mg[1]), Fmt.group(in_rig)], "%d/%d · %s" % [int(mg[0]), int(mg[1]), Fmt.short_num(float(in_rig))], "%d/%d" % [int(mg[0]), int(mg[1])], "%d" % int(mg[0])]
+	return [Words.MAG_WORDS["tile"] % [int(mg[0]), sim.mags_spare("Primary")], "%d" % int(mg[0])]
 
 
 func _tiles(tiles: Array, rows: Array) -> void:
@@ -906,13 +909,14 @@ func _show_pick(m: Dictionary) -> void:
 		return
 	if Items.is_ammo(it) and not it.get("from_rig", false):
 		# a box found (28 Oct, magazines): it stays a box in the pack, and fills the rig's magazines at home
+		var bw: Array = Words.BOX_CARRIED if it.get("carried", false) else Words.BOX_FOUND     # the gate's box: the runner's own (the second review)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
-			[Words.BOX_FOUND[0], Words.BOX_FOUND[1]])
+			[bw[0], bw[1]])
 	elif Items.rig_item(it):
 		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
-			[("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "%s, under fire" % sim.med_words(it)),
+			[sim.mag_words(it) if Items.is_mag(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "%s, under fire" % sim.med_words(it)),
 			"" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")])
 		buttons.append({"text": "Take into the rig", "action": _take_pick, "enabled": room, "primary": true})
 	elif it["slot"] in Data.SLOTS:
@@ -942,7 +946,7 @@ func _show_pick(m: Dictionary) -> void:
 		buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": _equip_pick, "enabled": can, "primary": true})
 	else:
 		_pick.show_right_words("", "", [])
-	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": true, "primary": buttons.is_empty()})
+	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": not it.get("carried", false), "primary": buttons.is_empty()})     # the gate's box never (the second review)
 	_pick.set_buttons(buttons)
 
 
@@ -955,7 +959,7 @@ func _show_rig_pick(m: Dictionary, r: Dictionary) -> void:
 		var g = sim.equipped[slot]
 		if g != null and sim.feed_stack(g) == r:
 			firing = true
-		elif g != null and not sim.feed_stack(g).is_empty() and sim.feed_stack(g)["base"] == r["base"]:
+		elif g != null and Items.grade_name(sim.feed_stack(g)) != "" and Items.grade_name(sim.feed_stack(g)) == Items.grade_name(r):     # the same grade (the fix round): never the magazine's name
 			same = true
 	var room: bool = sim.can_rig_to_pack(r["id"])
 	_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()],
@@ -967,7 +971,7 @@ func _show_rig_pick(m: Dictionary, r: Dictionary) -> void:
 func _fires_for_worn(r: Dictionary) -> bool:
 	for slot in ["Primary", "Secondary"]:
 		var g = sim.equipped[slot]
-		if g != null and Items.ammo_type(g) == Items.base_of(r)["type"]:
+		if g != null and Items.mag_fits(r, g):
 			return true
 	return false
 
@@ -1313,9 +1317,9 @@ func _show_rig() -> void:
 		# the hover (11 Oct): what a med heals, what a stack is and whether it's firing
 		if Items.is_medical(it):
 			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
-		elif Items.is_ammo(it):
-			c.set_mags(Items.pouch_fills(it), it)      # its magazines along its foot (28 Oct)
-			c.tooltip_text = "%s · %s, %d rounds · click for the pack" % [it["base"], Items.pouch_words(it), int(it["rounds"])]
+		elif Items.is_mag(it):
+			c.set_mags([sim.mag_fill(it)], it)         # a magazine: its rounds and a bar how full (30 Oct)
+			c.tooltip_text = "%s · %s · click for the pack" % [it["base"], sim.mag_words(it)]
 		else:
 			c.tooltip_text = str(it["base"])
 		c.visible = true
@@ -1333,8 +1337,8 @@ func _show_rig() -> void:
 
 func _rig_pressed(k: int) -> void:
 	if k < sim.rig.size() and sim.on_mission():
-		if Items.is_ammo(sim.rig[k]):
-			# rounds: picked for the pick panel (Into the pack), or let go on a second tap
+		if Items.is_mag(sim.rig[k]):
+			# a magazine: picked for the pick panel (Into the pack), or let go on a second tap
 			var id: int = int(sim.rig[k]["id"])
 			_rig_pick = -1 if _rig_pick == id else id
 			_inv.selected = -1
