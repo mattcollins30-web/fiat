@@ -280,6 +280,23 @@ static func itemisation_rows(full: Array) -> Array:
 	var dts: Array = dealt_by.keys()
 	dts.sort_custom(func(a, b): return float(dealt_by[a]) > float(dealt_by[b]))
 	rows.append(["Damage by gun type (shown)", "damage dealt each run, under the type of primary it set off with: each read's shares, the reads weighing the same", ", ".join(dts.map(func(ty): return "%s %.0f%%" % [ty, 100.0 * float(dealt_by[ty]) / maxf(1.0, dealt_tot)])) if not dts.is_empty() else "no read carried it", null])
+	# the melee share on the builds that aren't bleed (31 Oct, the designer's call after PROBE33: a bleed build may live on
+	# blades, they're the point; the guns are judged on the gun builds): each read's own share, the reads weighing the same
+	var nb_sum := 0.0
+	var nb_n := 0
+	for bd in full:
+		if str(bd.get("element", "")) == "bleed":
+			continue
+		var dl: Dictionary = bd.get("dealt_by_type", {})
+		var t := 0.0
+		for ty in dl:
+			t += float(dl[ty])
+		if t <= 0.0:
+			continue
+		nb_sum += float(dl.get("melee", 0.0)) / t
+		nb_n += 1
+	rows.append(["Melee share, the non-bleed builds (shown)", "of the damage dealt on the builds that aren't bleed (a bleed build may live on blades): the guns judged on the gun builds; each read's share, the reads weighing the same",
+		("melee %.0f%% over %d read%s" % [100.0 * nb_sum / float(nb_n), nb_n, "" if nb_n == 1 else "s"]) if nb_n > 0 else "no non-bleed read carried it", null])
 	return rows
 
 func _init() -> void:

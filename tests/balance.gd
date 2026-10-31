@@ -1075,7 +1075,7 @@ func _standard_camp(sim, bot) -> void:
 				if it.is_empty() or not sim.can_wear(it) or (want_type != "" and (str(Items.base_of(it).get("type", "")) != want_type or Items.ammo_type(it) != want_ammo)):
 					continue
 				# as a player keeps: tried on, the slot's own read (HP and damage both, Matt 27 Oct); the build's own gun by its score
-				var sc: float = bot._elem_score(it) if bot.element != "" and sl == "Primary" else sim.fit_value(it, sl)
+				var sc: float = bot._elem_score(it, sim) if bot.element != "" and sl == "Primary" else sim.fit_value(it, sl)
 				if best.is_empty() or sc > best_sc:
 					best = it
 					best_sc = sc

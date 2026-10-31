@@ -4350,8 +4350,9 @@ func _pack_box(m: Dictionary, ty: String) -> Dictionary:
 
 
 ## The boxes the gate packs for the refills (30 Oct, the designer's call A: "a box in the pack"): one of each worn gun's
-## rounds type - the grade its magazines hold, else the stash's best of the type - a box's worth at most, off the stash's
-## stacks of that grade. As copies: the odds' dry runs read them; deploy takes them from the stash (_pack_boxes).
+## rounds type - the grade its magazines hold, else the stash's best of the type, on "Best grades only" the top-up's grade
+## or none - one box of that grade at most (its base's rounds), up to what the stash holds after the fill. `read`: the
+## odds' and the card's read, after a dry run of the same fill (_fill_plan); the gate packs what _box_plan gives either way.
 var gate_box_always := false     # the bot's (30 Oct): it packs on "fill" whatever the save says, its gate box too
 
 
@@ -4371,7 +4372,8 @@ func _gate_boxes(read := false, bg_in = null) -> Array:
 
 ## The gate's boxes off `counts` (the stash's rounds by grade, after the fill): for each worn gun's type the grade its
 ## magazines hold (`plan`: the read's filled copies; null, the rig as it is), else the counts' best; on "Best grades only"
-## that grade or nothing (the reviewer on m32c, 1). Each a box's worth at most, taken off `counts`.
+## that grade or nothing (the reviewer on m32c, 1). Each one box of its grade at most (the base's rounds), taken off
+## `counts`.
 func _box_plan(counts: Dictionary, plan, bg) -> Array:
 	var out: Array = []
 	var types: Array = []
@@ -4393,7 +4395,7 @@ func _box_plan(counts: Dictionary, plan, bg) -> Array:
 		if grade == "" or int(counts.get(grade, 0)) <= 0:
 			continue
 		var box: Dictionary = _plain(Data.AMMO, grade)
-		Items.set_stack(box, mini(int(Items.base_of(box)["rounds"]), int(counts[grade])))
+		Items.set_stack(box, mini(int(Items.base_of(box)["rounds"]), int(counts[grade])))     # one box of the grade's own at most (0.10.2's size: the designer's call after PROBE33)
 		counts[grade] = int(counts[grade]) - int(box["rounds"])
 		box["carried"] = true                 # the runner's own: home to the stash, never loot
 		out.append(box)

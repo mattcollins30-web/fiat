@@ -138,3 +138,19 @@ a drum two.
   is at its backing share through reloads (was full): 3-10% off most kits; rounds carried in the rig a third of
   0.10.1's; the old magazine parts' +8-25% damage gone.
 
+### Guns against melee (31 Oct, Matt: "the game sped up because the bots ignoring guns entirely"; PROBE33)
+
+- Same-seed reads, 0.10.1 against 0.10.2: the campaign wasn't twice as fast (QM median about 2.3 h against 2.0; the
+  0.10.1 pass's 3.4 / 4.3 h didn't reproduce). Where 0.10.2 was faster it was the refill box ending 0.10.1's run-dry
+  stall (hours of short runs on picked-clean sites, then a wall at 0%). Melee took over late in both versions: late
+  melee bases' built-in bleed (the Court sword read 44% ahead of an SMG); magazines added about 9-10% against guns
+  (the old parts' damage, the secondary's share through reloads).
+- Matt's calls (all four levers): the slings carry damage again (Rope +8%, Webbing +10%, Leather +12%, Two-point
+  +15%); the late melee bases' bleed down (Court sword and Cavalry sabre 35 to 20, Bayonet on a stick 30 to 15, Collier's
+  pick 20 to 10, Rescue axe 25 to 15); the bot's element weight halved and a gun's rounds' conversion counted; the
+  refill box stays one box of the grade (5 magazines' worth brought the stall back: a Recruit walled at 0%, a frost
+  Poacher 3.9 h between sites). Re-read: guns beat the Court sword (+14% against +44%), the non-bleed builds keep
+  their guns.
+- **Bleed builds may live on blades** (Matt): a Doorman as bleed on a Fire or Felling axe is the build, not a fault.
+  The summary's shown row "Melee share, the non-bleed builds" judges guns on the gun builds.
+

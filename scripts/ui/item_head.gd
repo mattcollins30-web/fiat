@@ -133,7 +133,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		if Items.att_stat(it, "sling_pct") > 0.0:
 			# a sling (30 Oct, the approved canvas): its figure the sentence, its chip when it counts
 			h = [Words.MAG_WORDS["sling_fig"] % int(round(Items.att_stat(it, "sling_pct"))), ""]
-			tail = [[Words.MAG_WORDS["sling_chip"]]] + ([rest] if rest != "" else [])
+			# its damage as the other parts' (31 Oct, PROBE33: the slings' damage back): "+10% dmg" beside the chip
+			var others: Array = Array(own.split(", ")).filter(func(w): return not str(w).ends_with("secondary fire"))
+			tail = [[Words.MAG_WORDS["sling_chip"]]] + ([", ".join(others)] if not others.is_empty() else [])
 	if Items.is_mag(it):
 		# a magazine (30 Oct, the approved canvas): its rounds of its size against the gun it feeds
 		h = Items.headline(it, sim_in.mag_gun(it) if sim_in != null else null)     # the same gun as the card's chips, never over its size

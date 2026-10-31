@@ -791,6 +791,7 @@ func _init() -> void:
 	_fix32b_checks(main)                      # the second review (31 Oct): the gate's box kept, the runner's own home, the blend, the read's box, the cascade, the rig off
 	_fix32c_checks(main)                      # the three-stage review of 0.10.2 (31 Oct): the first gun fires, two guns one pool, the bot's boxes, the words
 	_fix32d_checks(main)                      # the reviewer on m32c (31 Oct): the pool's order, the reload taken, the rig card's list, the full pack
+	_fix33_checks(main)                       # PROBE33's levers (31 Oct): the box kept at one, the slings' damage, the melee's bleed, the bot's compare
 	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
 	_exp_lead_xp_checks(main)                 # an expedition lead's XP: points, the cap, the run out, the lead's level (30 Oct, S4-S6)
 	_review28_checks(main)
@@ -3093,7 +3094,7 @@ func _element_bot_checks(main) -> void:
 		var plain: Dictionary = carries.duplicate(true)   # the same gun, a better plain affix
 		plain["id"] = Items._next_id
 		Items._next_id += 1
-		plain["affixes"] = [{"stat": "damage_pct", "value": 30.0, "tier": 4}]
+		plain["affixes"] = [{"stat": "damage_pct", "value": 20.0, "tier": 4}]     # under the element's weight (31 Oct, PROBE33: the bot's weight 2 to 1, 25% now worth 1.25: +30% plain beat it)
 		sim.equipped["Primary"] = null
 		sim.stash = sim.stash.filter(func(it): return it["slot"] != "Primary")   # only these two to choose from
 		while not sim.stash_room(20) and not sim.stash.is_empty():
@@ -3101,7 +3102,7 @@ func _element_bot_checks(main) -> void:
 		sim.stash.append(plain)
 		sim.stash.append(carries)
 		bot._hold_the_element(sim)
-		_check(sim.equipped["Primary"] != null and bot._elem_share(sim.equipped["Primary"]) >= 0.249, "the %s bot did not hold a gun carrying the element: %s" % [el, sim.equipped["Primary"]["base"] if sim.equipped["Primary"] != null else "nothing"])
+		_check(sim.equipped["Primary"] != null and bot._elem_share(sim.equipped["Primary"], sim) >= 0.249, "the %s bot did not hold a gun carrying the element: %s" % [el, sim.equipped["Primary"]["base"] if sim.equipped["Primary"] != null else "nothing"])
 		# the socketable: added at the Bench when none, and the element's own seated
 		if el != "bleed":
 			var sock: Dictionary = Items.roll(Data.ATTACHMENT, 2, sim.rng)
@@ -11862,11 +11863,14 @@ func _fix32c_checks(main) -> void:
 		m["t"]["dps"] = 0.0
 		m["clock"] = 1e6
 		var fired := false
+		var last := -1
 		for k in range(120):
 			sim.hp = sim.max_hp()
 			sim._tick(0.5)
-			if sim.rounds_for(gun) > 0 and float(sim.fire_x("Primary")) > 0.0 and not sim.mag_in("Primary").is_empty():
-				fired = true
+			var now_r: int = sim.rounds_for(gun)
+			if last > 0 and now_r < last:
+				fired = true                       # its rounds went down: it fired (a two-round gun's magazine is seldom caught full)
+			last = now_r
 			if fired and int(box.get("rounds", 0)) < box0:
 				break
 		_check(fired and int(box.get("rounds", 0)) < box0, "the first gun never fired its own rounds on the run: fired %s, the box %d of %d" % [str(fired), int(box.get("rounds", 0)), box0])
@@ -12378,6 +12382,112 @@ func _fix32d_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("fix32d ok: the pool's order, the reload taken, the rig card's list and plurals, the grenades, the grouping, the full pack")
+
+
+## PROBE33's levers (31 Oct, the designer's call): the gate's refill box kept at one box (pinned), the slings' damage back, less built-in bleed on the late melee bases, the bot's element weight halved and the rounds' conversion
+## counted.
+func _fix33_checks(main) -> void:
+	var sim = main.sim
+	sim.gate_box_always = false
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	# 1: 1000 rifle rounds in the stash: the gate packs one box of them, 400; 1000 shells, 150; the read the same (the
+	# designer's call after PROBE33: 0.10.2's size kept)
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.equipped["Secondary"] = null
+	sim.set_top_up("fill")
+	for case in [["Stalking rifle", "Rifle magazine", "Rifle rounds", 400], ["Pump shotgun", "Shotgun magazine", "Shells", 150]]:
+		var gun: Dictionary = sim._plain("Primary", str(case[0]))
+		sim.equipped["Primary"] = gun
+		sim.rig = [_mag_full(sim, str(case[1]), str(case[2]))]
+		sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+		while not sim.stash_room(10) and not sim.stash.is_empty():
+			sim.stash.pop_front()
+		var left := 1000
+		while left > 0:
+			var b: Dictionary = sim._plain(Data.AMMO, str(case[2]))
+			Items.set_stack(b, mini(left, int(Items.base_of(b)["rounds"])))
+			left -= int(b["rounds"])
+			sim.stash.append(b)
+		var want: int = int(case[3])                 # one box of the grade (0.10.2's size, the designer's call): pinned literal
+		_check(int(Items.base_named(Data.AMMO, str(case[2]))["rounds"]) == want, "the fixture: a box of %s isn't %d" % [case[2], want])
+		var rd: Array = sim._gate_boxes(true).map(func(x): return int(x["rounds"]))
+		sim.hp = sim.max_hp()
+		sim.deploy(3)
+		if sim.on_mission():
+			var out: Array = sim.mission["found"].filter(func(x): return x.get("carried", false)).map(func(x): return int(x["rounds"]))
+			_check(out == [want] and rd == [want] and sim._rounds_in_stash(str(case[2])) == 1000 - want, "the %s's gate box: %s packed, the read %s, want %d (one box)" % [case[0], str(out), str(rd), want])
+			sim.extract_now()
+		else:
+			_check(false, "the fixture: no run for the %s's box" % case[0])
+	# 2: each sling's damage: the dps read (the fight's own) and the card
+	var gun2: Dictionary = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Primary"] = gun2
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells")]
+	gun2["attachments"]["sling"] = null
+	sim._dry_memo.clear()
+	var d0: float = float(sim._gun_dps()[0])
+	var f0: float = Items.fitted_sum(gun2, "damage_pct")
+	main.show_room(main.ARMOURY)
+	for case in [["Rope sling", 8], ["Webbing sling", 10], ["Leather sling", 12], ["Two-point sling", 15]]:
+		gun2["attachments"]["sling"] = sim._plain(Data.ATTACHMENT, str(case[0]))
+		sim._dry_memo.clear()
+		var d1: float = float(sim._gun_dps()[0])
+		var want_x: float = (1.0 + (f0 + float(case[1])) / 100.0) / (1.0 + f0 / 100.0)
+		_check(d0 > 0.0 and absf(d1 / d0 - want_x) < 0.001, "the %s's damage in the read: x%.3f, want x%.3f" % [case[0], d1 / maxf(d0, 0.001), want_x])
+		var sl: Dictionary = sim._plain(Data.ATTACHMENT, str(case[0]))
+		sim.stash.append(sl)
+		main._armoury.selected = {"kind": "stash", "id": sl["id"]}
+		main.refresh()
+		var tails: Array = main._armoury._pick._heads[0]._tail_chips.text_nodes().map(func(l): return str(l.text))
+		_check(tails.has("+%d%% dmg" % int(case[1])) and tails.has("While the primary reloads"), "the %s's card: %s" % [case[0], str(tails)])
+		_check_fit(main, "Kit (%s)" % case[0])
+		sim.stash.erase(sl)
+	gun2["attachments"]["sling"] = null
+	# 3: the late melee bases' built-in bleed
+	var bleeds := {}
+	for nm in ["Court sword", "Cavalry sabre", "Bayonet on a stick", "Collier's pick", "Rescue axe"]:
+		bleeds[nm] = int(Items.base_named("Primary", nm).get("conv_bleed_pct", -1))
+	_check(bleeds == {"Court sword": 20, "Cavalry sabre": 20, "Bayonet on a stick": 15, "Collier's pick": 10, "Rescue axe": 15}, "the late melee bases' bleed: %s" % str(bleeds))
+	# 4: the bot's compare: a hollow-point SMG against the Bayonet - the rounds' bleed counted, the element weighed once
+	var bot = Bot.new()
+	bot.element = "bleed"
+	var smg: Dictionary = sim._plain("Primary", _base_of_type("smg"))
+	sim.equipped["Primary"] = smg
+	sim.rig = [_mag_full(sim, "SMG magazine", "SMG hollow point")]
+	var bay: Dictionary = sim._plain("Primary", "Bayonet on a stick")
+	var hp_bleed: float = float(Items.base_named(Data.AMMO, "SMG hollow point").get("conv_bleed_pct", 0)) / 100.0
+	var s_smg: float = bot._elem_share(smg, sim)
+	var s_bay: float = bot._elem_share(bay, sim)
+	_check(hp_bleed > 0.0 and is_equal_approx(s_smg, hp_bleed) and is_equal_approx(s_bay, 0.15), "the bot's bleed shares: the SMG %.2f (its rounds' %.2f), the Bayonet %.2f" % [s_smg, hp_bleed, s_bay])
+	_check(is_equal_approx(bot._elem_score(smg, sim), Items.score(smg) * (1.0 + s_smg)) and is_equal_approx(bot._elem_score(bay, sim), Items.score(bay) * 1.15), "the bot's element weight: the SMG %.1f (score %.1f), the Bayonet %.1f (score %.1f)" % [bot._elem_score(smg, sim), Items.score(smg), bot._elem_score(bay, sim), Items.score(bay)])
+	# the worn gun and a spare of it read the same share off the rig's rounds (the reviewer: the spare read the plainer grade)
+	bot.element = "frost"
+	var ar_w: Dictionary = sim._plain("Primary", "AR-pattern rifle")
+	var ar_s: Dictionary = sim._plain("Primary", "AR-pattern rifle")
+	sim.equipped["Primary"] = ar_w
+	sim.stash.append(ar_s)
+	sim.rig = [_mag_full(sim, "Rifle magazine", "Salted rounds"), _mag_full(sim, "Rifle magazine", "Depot rounds")]
+	sim._els_key = hash([sim.tree, sim.cls, sim.elements_open.get(sim.cls, null)])
+	sim._els = ["frost"]
+	var sw: float = bot._elem_share(ar_w, sim)
+	var ss: float = bot._elem_share(ar_s, sim)
+	_check(is_equal_approx(sw, 0.30) and is_equal_approx(ss, sw) and is_equal_approx(bot._elem_score(ar_w, sim), bot._elem_score(ar_s, sim)), "the worn gun and its spare: shares %.2f / %.2f, scores %.1f / %.1f" % [sw, ss, bot._elem_score(ar_w, sim), bot._elem_score(ar_s, sim)])
+	# the physical build's share: one grade fires at a time, so mixed magazines count the most converting one, not each
+	# element's best summed (the reviewer: hollow point's bleed 20 and incendiary's fire 30 read as 50)
+	bot.element = "physical"
+	sim.equipped["Primary"] = smg
+	sim.rig = [_mag_full(sim, "SMG magazine", "SMG hollow point"), _mag_full(sim, "SMG magazine", "Incendiary SMG rounds")]
+	var own_conv := 0.0
+	for el in Data.ELEMENTS:
+		own_conv += float(Items.base_of(smg).get("conv_%s_pct" % el, 0))
+	var sp: float = bot._elem_share(smg, sim)
+	_check(is_equal_approx(sp, maxf(0.0, 1.0 - (own_conv + 30.0) / 100.0)), "the physical share with mixed magazines: %.2f, want %.2f (the most converting magazine, not the sum)" % [sp, maxf(0.0, 1.0 - (own_conv + 30.0) / 100.0)])
+	sim._els_key = -1
+	sim.load_dict(saved)
+	main.refresh()
+	print("fix33 ok: the box kept at one, the slings' damage, the melee's bleed, the bot's compare")
 
 
 ## A gun's rounds in the rig for the older checks (30 Oct, magazines as items: rounds never go in the rig as a box): a
@@ -25486,6 +25596,10 @@ func _fix_round_checks(main) -> void:
 	# a broken build's billions don't speak for the pass (29 Oct): each read's shares, the reads weighing the same
 	var srows2: Array = Sum.itemisation_rows([{"worn": {}, "dealt_by_type": {"melee": 15000000000.0}}, {"worn": {}, "dealt_by_type": {"rifle": 700.0, "shotgun": 300.0}}])
 	_check(str(srows2[2][2]) == "melee 50%, rifle 35%, shotgun 15%", "the summary's damage by type, two reads: '%s'" % str(srows2[2][2]))
+	# the melee share on the non-bleed builds (31 Oct, the designer's call after PROBE33): a bleed read's blades left out
+	var srows3: Array = Sum.itemisation_rows([{"element": "bleed", "worn": {}, "dealt_by_type": {"melee": 900.0, "rifle": 100.0}}, {"element": "fire", "worn": {}, "dealt_by_type": {"melee": 300.0, "smg": 700.0}}, {"element": "frost", "worn": {}, "dealt_by_type": {"melee": 100.0, "rifle": 900.0}}])
+	var mrow: Array = srows3.filter(func(r): return str(r[0]).begins_with("Melee share"))
+	_check(mrow.size() == 1 and str(mrow[0][2]) == "melee 20% over 2 reads", "the summary's melee share on the non-bleed builds: %s" % str(mrow.map(func(r): return r[2])))
 
 
 ## The Estate's door to the Town (the fix round, 29 Oct, the game review's B1: a wall on four builds' gate reads): a bot's

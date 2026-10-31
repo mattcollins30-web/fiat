@@ -1364,7 +1364,7 @@ func _craft_toward(sim) -> void:
 ## The build's gun: the primary in the stash with the most of the element
 ## behind it - the base's share, its affixes, what's fitted - weighed with its
 ## score; a plain gun needs to be well ahead to displace one that carries the element.
-func _elem_share(it: Dictionary) -> float:
+func _elem_share(it: Dictionary, sim = null) -> float:
 	if str(it.get("rule", "")) == "weed_burner":
 		return 1.0 if element == "fire" else -0.45     # all fire: an element build's own element switched off (25 Oct, the review: on 11 of 24 end kits)
 	if element == "physical":
@@ -1373,16 +1373,47 @@ func _elem_share(it: Dictionary) -> float:
 		for el in Data.ELEMENTS:
 			var st := "conv_%s_pct" % el
 			conv += float(Items.base_of(it).get(st, 0)) + Items.affix_total(it, st) + Items.fitted_sum(it, st)
+		conv += _rounds_conv_total(it, sim)     # one grade fires at a time: the most converting magazine, not each element's best
 		return maxf(0.0, 1.0 - conv / 100.0)
 	var stat := "conv_%s_pct" % element
 	var s := float(Items.base_of(it).get(stat, 0))
 	s += Items.affix_total(it, stat)
 	s += Items.fitted_sum(it, stat)
+	s += _rounds_conv(it, stat, sim)
 	return s / 100.0
 
 
-func _elem_score(it: Dictionary) -> float:
-	return Items.score(it) * (1.0 + 2.0 * _elem_share(it))
+## The conversion a gun gets from the rounds its magazines hold (31 Oct, PROBE33: hollow point's bleed, incendiary's fire
+## went uncounted, a melee base's own counted): the most of the stat among the rig's loaded magazines that fit it - the
+## same for the worn gun and a spare (the reviewer: feed_stack puts the element first for the worn primary only, so a
+## spare of the same gun read a lower share). 0 for a blade.
+func _rounds_conv(it: Dictionary, stat: String, sim) -> float:
+	if not Items.is_gun(it) or Items.mag_size(it) <= 0 or sim == null:
+		return 0.0
+	var best := 0.0
+	for mg in sim.mags_for(it):
+		if int(mg.get("rounds", 0)) > 0:
+			best = maxf(best, float(Items.grade_base(mg).get(stat, 0)))
+	return best
+
+
+## The most total conversion any one loaded magazine that fits the gun carries (the physical build's read: a gun fires
+## one grade at a time, so a Salted and an Incendiary magazine aren't 60% between them).
+func _rounds_conv_total(it: Dictionary, sim) -> float:
+	if not Items.is_gun(it) or Items.mag_size(it) <= 0 or sim == null:
+		return 0.0
+	var best := 0.0
+	for mg in sim.mags_for(it):
+		if int(mg.get("rounds", 0)) > 0:
+			var t := 0.0
+			for el in Data.ELEMENTS:
+				t += float(Items.grade_base(mg).get("conv_%s_pct" % el, 0))
+			best = maxf(best, t)
+	return best
+
+
+func _elem_score(it: Dictionary, sim = null) -> float:
+	return Items.score(it) * (1.0 + ELEM_WEIGHT * _elem_share(it, sim))
 
 
 ## A piece on as the Kit would put it on (the fix round, 29 Oct, the game review's C7): "Swap, parts and all" when the worn
@@ -1397,11 +1428,11 @@ func _hold_the_element(sim) -> void:
 	var cur = sim.equipped["Primary"]
 	var best := {}
 	for it in sim.stash:
-		if it["slot"] == "Primary" and sim.can_wear(it) and (best.is_empty() or _elem_score(it) > _elem_score(best)):
+		if it["slot"] == "Primary" and sim.can_wear(it) and (best.is_empty() or _elem_score(it, sim) > _elem_score(best, sim)):
 			best = it
 	if best.is_empty():
 		return
-	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary", -1, sim.swap_moves(best)) >= sim.damage_total() * ELEM_DPS_FLOOR):
+	if cur == null or (_elem_score(best, sim) > _elem_score(cur, sim) and sim.fit_value(best, "Primary", -1, sim.swap_moves(best)) >= sim.damage_total() * ELEM_DPS_FLOOR):
 		_wear(sim, best)        # D23: the element's gun, but not at a fifth less damage, read on a try-on - a shock Scrapper took one at half at an hour and held the Estate's wall for twenty
 
 
@@ -1930,6 +1961,7 @@ const AMMO_STACKS_KEPT := 6
 
 const HELD_READ_S := 1200.0
 const ELEM_DPS_FLOOR := 0.8
+const ELEM_WEIGHT := 1.0          # the element's weight in the build's gun compare (31 Oct, PROBE33: 2 carried a melee with half the paper dps)
 const STUCK_BINS := 6                # Full signals binned in a row, the reach standing, before the bot makes Clear ones (27 Oct)
 var _bin_streak := 0
 var _reach_seen := 0
@@ -2018,7 +2050,7 @@ func _sell_spares(sim) -> void:
 			continue
 		if element != "" and it["slot"] == "Primary":
 			var cur = sim.equipped["Primary"]
-			if cur == null or _elem_score(it) >= _elem_score(cur) * 0.8:
+			if cur == null or _elem_score(it, sim) >= _elem_score(cur, sim) * 0.8:
 				continue
 		if Items.is_attachment(it):
 			# the best three of a mount stay; attachments_for() is sorted best first
@@ -2054,7 +2086,7 @@ func _buy_upgrade(sim) -> void:
 		var cur = sim.equipped[it["slot"]]
 		var g: float = sim.upgrade_gain(it, true) if sim.compare(it, -1, true) == 1 else 0.0     # tried on (11 Oct), as the Kit's arrow reads it once home (the swap)
 		if element != "" and it["slot"] == "Primary":
-			g = ((_elem_score(it) - _elem_score(cur)) / maxf(_elem_score(cur), 0.01)) if cur != null else sim.EMPTY_GAIN   # a build weighs its gun its own way, as a share like the rest
+			g = ((_elem_score(it, sim) - _elem_score(cur, sim)) / maxf(_elem_score(cur, sim), 0.01)) if cur != null else sim.EMPTY_GAIN   # a build weighs its gun its own way, as a share like the rest
 		if g > gain and sim.cash >= sim.price(it) + sim.tins_now(100.0):
 			gain = g
 			pick = i
