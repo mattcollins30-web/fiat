@@ -4,7 +4,7 @@ Matt's standing conventions for any session on this repo (house rule, 21 Oct: th
 chat or a compacted one). Read this first. Design is in docs/design/ (the statement: docs/design/vision.md); what's
 been done and why is docs/status.md.
 
-## Stop checks (28 Oct, Matt: "plug the gap" - three CLAUDE.md rules missed in one day)
+## Stop checks (28 Oct, Matt: "plug the gap" - three CLAUDE.md rules missed in one day; the sixth 31 Oct)
 
 This file isn't loaded by itself in a cloud session (it reaches the repo over the device bridge), so these are the
 moments to come back to it. Each was missed at least once.
@@ -21,6 +21,11 @@ moments to come back to it. Each was missed at least once.
 5. **Any word on a mockup, a screen, or to Matt**: the glossary in docs/language/style_guide.md - talk to Matt in the
    game's words, not the code's (28 Oct: "Depth 3" on the trips boards, then "depth 5-15" in a chat answer; depth is
    internal only, the player reads a site's level).
+6. **Before any build in the cloud, and before delivering one**: the cloud base must be the repo's HEAD, file by file -
+   md5 every file the build will touch, cloud base against Matt's machine, and re-sync any that differ before work
+   starts; at delivery, check again (Matt's side may have moved: a doc Claude edited on the device, his own change)
+   and 3-way merge what differs, never overwrite (31 Oct: a stale menu.gd in the cloud base failed the version check
+   through two builds; docs/running.md edited on the device conflicted with a builder's copy at delivery).
 
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
