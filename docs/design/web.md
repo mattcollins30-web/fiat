@@ -175,3 +175,5 @@ then one pass): the hostile curve, XP_SCALE and ILVL_GROW read against it. The g
 3. The use meters, the camp-wide allocation (a class brought out reads the camp's elements and Pitch), the bridge.
 4. Paragon folded into the ring; the Map's and the Pitch's canvases.
 Mockups on the canvas before slice 1; the art manifest alongside slice 2.
+
+(31 Oct, the night round: a camp keystone or capstone idles below its level - 20 and 30 - for any runner ("Idle until level N" on Training); a class's own two elements open free (any other a Pitch point, free where the camp has it); the Quartermaster's Manual, the Last Orders and the Headmaster's Cap lift the two-elements-a-class cap while worn; an open element's meter fills from all the class's damage at a quarter.)

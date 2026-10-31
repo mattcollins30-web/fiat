@@ -72,6 +72,7 @@ after a stretch of played time with that place's rewards, scaled by the cargo, r
   (Scrapper parts, Paramedic supplies, Poacher hides, Doorman tins, Drifter papers, Recruit army surplus).
 - **Cargo**: salvage, rebuild materials, meds, scrap, notes - what the camp has farmed. Each kind has a worth; the
   return's size and quality follow the cargo's worth (Settlers: "shipment value"). Trips convert, they don't print:
+  (31 Oct, Matt: an average expedition, bad rolls and hold-ups in, brings home about x1.2 the cargo; shipped scrap still never beats the Fence; the exchange round trip may pay on small low-risk trips - accepted.)
   the contracts' problem (24 Oct) answered by an input, not a cap. The Outskirts and the Estate stay worth farming late,
   as the cargo's source.
 - **The risk**: the cargo's worth over the crew's strength fills a risk meter; the hands' trades bring it down. A bad
@@ -176,6 +177,7 @@ The calls (every number a placeholder for the balance pass):
   day's drift against you), scrap at what the find it came from fetches at the Fence (its exchange worth over the
   Bench's scrap multipliers, less the spread: scrapping and shipping can't beat selling), meds at the Fence's price less
   the spread. The return is ×0.85 of that; the hands' bonuses all told (porters, "+% finds", the crackers' crates at 5%
+  (31 Oct: EXP_RETURN 1.55, the hands' cap x1.2 on top: x1.86 at best, about x1.2 on average with the bot's hands.)
   of the cargo a crate, a better find of the place's first kind) are capped at ×1.2. At the best hands every place comes
   back at about ×1.0 of the cargo's worth (the smoke rolls it 100 times a place). Returns are income (`_earn`).
 - A far place's fight: the hardest site (the Barracks) read as a signal at the place's level - its own floor (9 to 15)

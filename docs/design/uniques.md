@@ -19,6 +19,7 @@ Forty uniques. The bases go to tier 9 in every gear slot; the uniques sit on tie
 | 7-9 | **0** |
 
 A unique's affixes grow with the depth it's found at (`_scaled` by item level); its base never does, and in the
+(31 Oct: percent lines stop growing past item level 20, PCT_LINE_TOP; flat lines and bases keep growing.)
 endgame the base is most of the figure. Against a plain tier-9 base with no affixes at all, by the figure the
 game's try-on reads (damage a second for a gun; armour and half the max HP for a body piece):
 
@@ -59,6 +60,7 @@ as now (`UNIQUE_DROP` a find, times the depth past the first); the bands decide 
 - **Scaling**: the rule is the point, so it's kept for good. The unique drops **at the find's tier, inside its
   range**, on that tier's body: its stats are the best base of its slot (and gun type) at that tier; its name, its
   art (art follows the unique's name already) and its rule stay its own; its affixes scale with the item level as
+  (31 Oct: percent lines to item level 20 only.)
   now. A Weed Burner found at a tier-7 find is a tier-7 flamethrower; a better copy later replaces the first, the
   same rule on a stronger body. That's Matt's "drop in various tiers within themselves".
 - Where a gun type has no base at some tier (a melee secondary stops at the Cosh, tier 3), the unique takes the

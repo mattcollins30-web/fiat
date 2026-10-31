@@ -28,6 +28,8 @@ the point is that it does break game balance by its nature."
 | Backpack | The Removal Van | The pack never fills, every find is a tier up, and every search finds two more |
 | Charm | The Freedom of the Borough | Gangs never come after the clear; every search's crates open; tins, notes and XP doubled |
 
+(31 Oct: the Last Orders and the Headmaster's Cap: the Cap reads "Every perk in the class's trees is yours except keystones. The class can open more than 2 elements; taken off, those past 2 idle."; the Last Orders now reads "Every hit does full damage as physical and each of the 5 elements. The class can open more than 2 elements; taken off, those past 2 idle.")
+
 Each is a rule (as the uniques are), so most of the work is the rule's line in the fight, the search or the loot, plus
 the drop roll, the card's band and the art: seven item pictures in art/items at the uniques' size, and the band's colour.
 

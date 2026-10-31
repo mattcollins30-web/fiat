@@ -80,6 +80,7 @@ later ranks add Fuses and a pinnacle's drop to the cost, so the pinnacles stay w
 
 **The town's worth** is the sum of every rank built. It shows on the Pitch's town card and on the title screen. It
 never goes down, a move keeps it, and from the mint on it pays a little on every run. It is the number a player
+(31 Oct, Matt: the mint pays on clears only.)
 compares, the "Pitch no. 4, worth 61" line.
 
 ## 5. The true pinnacles
@@ -93,6 +94,7 @@ key item the next rebuild or rank needs.
 | The Grid | The substation | The Lineman: kept the lights on for the order's people only | The Grid's key (the mint wants it), his unique |
 | The Archive | The library | The Registrar: decides who was born, who owns, who's owed | Ledger seals (later ranks), her unique |
 | The Mint | The mint | The Issuer: prints the money nobody believes in. "Its value is as stated." | The first true FIAT note: a keepsake for the drawer, the town's worth doubles in pay |
+(31 Oct: the doubling with the FIAT note went with the Issue on 25 Oct; the note now reads "Beat the Issuer again and he prints more.")
 
 They scale with the town's worth, so they're never farmed out: each kill makes the next one a little harder and pay
 a little more. The Issuer is the closest the game comes to an ending, without being one: beating him is a line in the
@@ -140,6 +142,7 @@ A mockup of the Radio's town view and the fifth Map tab goes on the canvas befor
   (as the Floodlights do), the pumping station rests and cuts the Clinic's prices, the bus depot rests the auto-run
   quicker between runs, the library raises papers, the market hall grows the Fence's shelf and cuts his prices, the
   mint pays tins on every run home by the worth (twice that with the FIAT note).
+  (31 Oct: on clears only, and no doubling.)
 - Materials roll on their own dice (`material_rng`), so the balance reads' other draws are untouched.
 - The bot builds the cheapest place it can; it doesn't run the order yet (its reads won't reach the mint until it does).
 - Not built: Kev's lines as readable pages (the library's second half in section 4); a move's material share is the

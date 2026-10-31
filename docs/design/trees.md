@@ -100,6 +100,7 @@ the points free below nothing. A change to the second past's class is refused.)
 ## 6. Points: the camp's high-water mark
 
 Today a new runner starts at level 1 and every level gained adds a point to the camp again, so dying and
+(31 Oct: past the Quartermaster a death keeps the level; and a camp keystone or capstone idles under its level, 20 / 30, for any runner.)
 re-levelling grows the pool without end. From this pass a level earns a point only when it is above the camp's
 **best level** (`best_level`, saved): a new runner re-levels for nothing until they pass the old best. The
 moves' points (`MOVE_POINTS × yard_moves`) are unchanged. This replaces level-locking gear (Matt, 9 Oct).

@@ -43,6 +43,7 @@ goes in before the balance pass).
   starters on its circle stay), an element (its nodes but the starter), else the class's trees. Each RESPEC_CASH a
   point, asked twice.
 - Two elements a class (Matt, 28 Oct; Knuckles counts): `sim.elements_open`; a class opens two, another class's
+  (31 Oct, Matt: the Quartermaster's Manual, the Last Orders and the Headmaster's Cap lift the cap while worn; taken off, those past two idle. A class's own two open free, 31 Oct.)
   element opens for nothing, closing one is free and leaves its nodes the camp's; only the open two work and fill.
 - The exchange: the Fence's third tab. New rates every run home (there's no short play-day), ±12% drift that only
   ever goes against the trader (the review: a free drift beat the spread - a money pump), 15% spread; the Fence's

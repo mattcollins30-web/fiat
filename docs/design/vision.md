@@ -22,6 +22,7 @@ in a setting that's contemporary and British and never fantasy.
 3. **The chase never ends.** Past the campaign the Radio's signals climb forever; their drops' item level follows the
    signal's, and gear scales with item level, so your reach sets your loot and your loot your reach.
 4. **Risk is real.** A runner who dies goes back to level 1 with a trait, as today; their worn kit goes unless insured.
+   (31 Oct, Matt: after the Quartermaster a death costs only the XP towards the next level, never the level; before him, as here; past 50 the paragon goes.)
    The others are untouched.
 
 ## The loop
@@ -41,6 +42,7 @@ in a setting that's contemporary and British and never fantasy.
   kit; a swap is instant, at camp, never on a run. A class you haven't played starts at level 1, and levels at the
   normal rate (no catch-up).
 - **Death** puts that class back to level 1 with a trait, as today; the trait stays with the class.
+  (31 Oct: after the Quartermaster, only the XP towards the next level - see the risk line above.)
 - **Gone**: retirement and the wall's traits, the Pitch move and everything it gave or kept (find and tins a move,
   training points, notes and scrap carried, the stall's wait, the class reset). What a move gave goes to paragon; the
   Map's points stay yours for good.
