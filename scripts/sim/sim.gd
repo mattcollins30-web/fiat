@@ -794,10 +794,11 @@ func _conversion_raw() -> Dictionary:
 			out[ty] = 1.0                    # the Last Orders (a mythic): every hit all of it every element, and physical too
 		out["physical"] = 1.0
 		return out
-	if total > 1.0:
+	var cap: float = 1.0 if has_rule("weed_burner") else Data.CONV_CAP     # the physical floor (31 Oct); the Weed Burner's "all damage is fire" its own
+	if total > cap:
 		for ty in Data.ELEMENTS:
-			out[ty] /= total
-		total = 1.0
+			out[ty] *= cap / total
+		total = cap
 	out["physical"] = 1.0 - total
 	return out
 
@@ -13483,6 +13484,7 @@ func _restock_market() -> void:
 		if yard_has("arms_dealer") and not Items.is_ammo(it) and not Items.is_grenade(it):
 			it = Items.roll(it["slot"], best_tier_open(), rng, 0.0, false, false, "", "", Data.FX["yard/arms_dealer"], 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
+	_shelf_primary(t)
 	# the standard magazines (30 Oct, magazines as items): SHELF_MAGS of each type a gun you hold takes, every restock
 	for ty in owned_ammo_types():
 		var mb: Dictionary = Items.standard_mag(ty)
@@ -13492,6 +13494,26 @@ func _restock_market() -> void:
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
 		if not bu.is_empty():
 			market.append(Items.roll_unique(bu, rng, gamble_level(), shop_unique_tier()))    # the Fence's Back room: a loose one (the ungated), held in its range
+
+
+## A primary at the zone's gear tier always on the shelf (31 Oct, the designer: a Poacher read never found a gun past
+## tier 2 and never beat the Manager): a shelf that rolled none gets one plain one of that tier, a base drawn as the loot
+## rolls draw one (the found-anywhere bases, the start's and the deep papers' left out). It sells with its standard
+## magazine, as every gun bought does (buy, _mag_with).
+func _shelf_primary(t: int) -> void:
+	for it in market:
+		if str(it.get("slot", "")) == "Primary" and int(it.get("tier", 0)) == t:
+			return
+	var pool: Array = []
+	for b in Data.BASES["Primary"]:
+		if int(b["tier"]) == t and not b.get("start", false) and int(b.get("depth", 0)) <= 0 and Items.exclusive_to(str(b["name"])) == "":
+			pool.append(b)
+	if pool.is_empty():
+		return
+	var base: Dictionary = Items._tier_pick("Primary", pool, t, rng)
+	var it: Dictionary = _plain("Primary", str(base["name"]))
+	it["ilvl"] = t                             # the level a Fence roll of the tier gives
+	market.append(it)
 
 
 ## The Fence's gamble: GAMBLE_SHOWN kinds of the twelve, rotated with every restock.

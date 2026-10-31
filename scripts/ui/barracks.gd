@@ -811,7 +811,8 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	var converted := 0.0
 	for el in Data.ELEMENTS:
 		converted += sim.tree_sum("conv_%s_pct" % el)
-	var sc: float = 100.0 / converted if converted > 100.0 else 1.0     # past the whole hit the shares are cut back together, as the fight does
+	var top: float = 100.0 * Data.CONV_CAP
+	var sc: float = top / converted if converted > top else 1.0     # past the cap (CONV_CAP, 31 Oct: a tenth stays physical) the shares are cut back together, as the fight does
 	for el in Data.ELEMENTS:
 		var conv: float = sim.tree_sum("conv_%s_pct" % el) * sc
 		var inc: float = sim.tree_sum("%s_pct" % el)

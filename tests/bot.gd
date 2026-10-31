@@ -1396,13 +1396,13 @@ func _elem_share_of(it: Dictionary, el: String, sim = null) -> float:
 			var st := "conv_%s_pct" % ty
 			conv += float(Items.base_of(it).get(st, 0)) + Items.affix_total(it, st) + Items.fitted_sum(it, st)
 		conv += _rounds_conv_total(it, sim)     # one grade fires at a time: the most converting magazine, not each element's best
-		return maxf(0.0, 1.0 - conv / 100.0)
+		return maxf(1.0 - Data.CONV_CAP, 1.0 - conv / 100.0)     # the physical floor (31 Oct): a tenth stays physical, as the game's conversion
 	var stat := "conv_%s_pct" % el
 	var s := float(Items.base_of(it).get(stat, 0))
 	s += Items.affix_total(it, stat)
 	s += Items.fitted_sum(it, stat)
 	s += _rounds_conv(it, stat, sim)
-	return s / 100.0
+	return minf(Data.CONV_CAP, s / 100.0)     # no more of a hit than the game converts (the physical floor, 31 Oct)
 
 
 ## The conversion a gun gets from the rounds its magazines hold (31 Oct, PROBE33: hollow point's bleed, incendiary's fire

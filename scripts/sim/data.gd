@@ -2388,6 +2388,10 @@ const WHEEL_BRIDGE_DEG := 168.0
 ## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
 const ELEMENT_METER := 1.5
+## The physical floor (31 Oct, the designer: the Recruit's camp poison and his own Tear gas converted every hit, and
+## Knuckles' meter - the unconverted share - never moved): a hit's element conversion caps at this in all, shared out as
+## before past it, so a tenth of every hit stays physical. Bust them up, the Weed Burner and the Last Orders keep their own.
+const CONV_CAP := 0.9
 const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter off the runner's class's own two costs a Pitch point (31 Oct: its own two free; any the camp already has free too); its meter fills from then
 const ELEMENTS_A_CLASS := 2     # two elements open a class at most (28 Oct, Matt: "otherwise you could just keep speccing into elemental nodes"); Knuckles counts
 const BRIDGE_LEVEL := 30

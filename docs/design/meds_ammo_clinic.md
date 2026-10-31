@@ -174,4 +174,14 @@ a drum two.
   the main element's meter overshoots its whole tree (66 at the Quartermaster on poison, 193 at 50 on bleed); the
   Pitch (61) can't be finished at 50 (49 points). The balance pass adds six "as played" reads, one a class, both
   elements and both joints (docs/running.md).
+- The pass on cf39c11 (31 Oct): guns back (melee 0% on the ten non-bleed builds; rifle 72% of all damage), no walls,
+  four of six as-played classes close both joints by level 23. Two findings, Matt's calls:
+  - **A physical floor:** the Recruit's physical meter never moved: the camp's Rat Man (the Poacher's) converts 75%
+    of every hit, Tear gas and a socket the rest, so nothing stayed physical and Knuckles' way out (Bust them up)
+    wanted the points it couldn't earn. Element conversion now caps at 90% of a hit (CONV_CAP 0.9): a tenth always
+    stays physical. Bust them up and the Weed Burner keep their own rules.
+  - **The Fence always shelves a primary** at the zone's tier (a plain one added at restock if none rolled): the
+    Poacher as poison starved again (kit frozen at ~120 dps from 2 h, never the Quartermaster in 16 h).
+  - Still open: the Drifter's second joint (bleed) closed at level 34 - with melee bleed cut, a gun Drifter earns
+    bleed slowly (0 points at the Quartermaster).
 

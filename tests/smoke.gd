@@ -795,6 +795,8 @@ func _init() -> void:
 	_b34_open_checks()                        # BUILD34 phase 1 (31 Oct): every one-save read's build opens its element the step its class is taken
 	_b34_own_pair_checks()                    # the designer's call (31 Oct): a class's own two elements open free
 	_b34_bleed_checks()                       # the designer's call (31 Oct): the melee bleed cut
+	_p35_floor_checks()                       # the designer's call (31 Oct): the physical floor, conversion capped at CONV_CAP
+	_p35_shelf_checks()                       # the designer's call (31 Oct): the Fence always stocks a primary at the zone's tier
 	_b34_played_checks()                      # BUILD34 phase 2: the bot as played - both elements, both joints' halves first, the kit's second element
 	_b34_reads_checks()                       # BUILD34 phase 3: the as-played reads' GATES fields, the summary's section and its gate
 	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
@@ -2553,6 +2555,26 @@ func _joint_payoff_checks(main) -> void:
 	sim.tree = ["Knuckles/5"]
 	var phys: Array = main._barracks.sum_items([]).filter(func(it): return str(it.get("tag", "")) == "Physical")
 	_check(phys.size() == 1 and phys[0]["forms"].all(func(f): return str(f) != "" and not str(f).contains("+0%")) and phys[0]["forms"].slice(1).all(func(f): return str(f).contains("+") or str(f).contains("ignores")), "the pen-only Physical chip reads a nothing: %s" % str(phys))
+	# the sum strip past the cap (31 Oct, the physical floor): the Poacher's poison and frost trees at 75% each read 45% and
+	# 45% - nine tenths between them, a tenth of every hit left physical, as the fight's conversion (the Physical chip
+	# itself shows only with a physical figure, and the Poacher's two open elements leave Knuckles shut)
+	sim.cls = "Poacher"
+	sim.tree = []
+	for t_name in ["The Rat Man", "The cold"]:
+		var et: Dictionary = Data.tree_named(t_name)
+		for i in range(et["nodes"].size()):
+			if str(et["nodes"][i].get("effect", "")).begins_with("conv_") and not et["nodes"][i].has("class"):
+				sim.tree.append("%s/%d" % [t_name, i])
+	var raw_p: float = sim.tree_sum("conv_poison_pct")
+	var raw_f: float = sim.tree_sum("conv_frost_pct")
+	var strip: Array = main._barracks.sum_items_raw()
+	var tag_of := func(tag: String) -> String:
+		var hit: Array = strip.filter(func(it): return str(it.get("tag", "")) == tag)
+		return str(hit[0]["forms"][0]) if not hit.is_empty() else "none"
+	var want_p: float = 100.0 * Data.CONV_CAP * raw_p / (raw_p + raw_f)
+	var want_f: float = 100.0 * Data.CONV_CAP * raw_f / (raw_p + raw_f)
+	_check(raw_p + raw_f > 100.0 and tag_of.call("Poison").begins_with("%.0f%% of hits" % want_p) and tag_of.call("Frost").begins_with("%.0f%% of hits" % want_f),
+		"the sum strip past the cap (%.0f%% converted) reads poison '%s', frost '%s', not %.0f%% and %.0f%% (a tenth physical)" % [raw_p + raw_f, tag_of.call("Poison"), tag_of.call("Frost"), want_p, want_f])
 	# the plain figures count the notables as the fight does: Spray's quarter with an SMG in hand, none without
 	sim.cls = "Drifter"
 	sim.tree = ["Moving on/3"]
@@ -4300,7 +4322,7 @@ func _set_checks(main) -> void:
 	var carpet: Dictionary = Items.set_named("The Carpet Man's")
 	for p in carpet["pieces"]:
 		sim.equipped[p["slot"]] = Items.roll_set_piece("The Carpet Man's", p, sim.rng)
-	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x))     # a graded box's conversion reads in through the gun
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))     # a graded box's conversion reads in through the gun; a loaded magazine's too (31 Oct: hollow point in the rig on another seed's camp)
 	sim._dry_memo.clear()
 	_check(is_equal_approx(sim.conversion()["bleed"], 0.3) and is_equal_approx(sim.dot_seconds("bleed"), 12.0), "the Carpet Man's: bleed %.2f seconds %.0f" % [sim.conversion()["bleed"], sim.dot_seconds("bleed")])
 	# drops by depth: nothing at depth 1, pieces by depth 12, no army's before 15
@@ -7277,8 +7299,9 @@ func _damage_model_checks(main) -> void:
 	_check(is_equal_approx(sim.damage_rate(t0, true), (td["physical"] + td["fire"] * 0.5) * (1.0 + Data.SHOCK)), "shocked did not take more")
 	gun["affixes"] = [{"stat": "conv_fire_pct", "value": 60, "tier": 5}, {"stat": "conv_frost_pct", "value": 60, "tier": 5}]
 	conv = sim.conversion()
-	# 60 fire on the gun and 15 in the socket against 60 frost: shared out to one, no physical left
-	_check(is_equal_approx(conv["fire"], 75.0 / 135.0) and is_equal_approx(conv["frost"], 60.0 / 135.0) and is_equal_approx(conv["physical"], 0.0), "over-conversion did not share out: %s" % str(conv))
+	# 60 fire on the gun and 15 in the socket against 60 frost: shared out to the cap (31 Oct, the physical floor: was to
+	# one, no physical left), a tenth physical
+	_check(is_equal_approx(conv["fire"], Data.CONV_CAP * 75.0 / 135.0) and is_equal_approx(conv["frost"], Data.CONV_CAP * 60.0 / 135.0) and is_equal_approx(conv["physical"], 1.0 - Data.CONV_CAP), "over-conversion did not share out to the cap: %s" % str(conv))
 	gun["affixes"] = []
 	var armour: Dictionary = sim._plain("Armour", "Stab vest")
 	armour["affixes"] = [{"stat": "fire_res", "value": 40, "tier": 5}, {"stat": "all_res", "value": 10, "tier": 3}]
@@ -7503,6 +7526,9 @@ func _ammo_checks(sim) -> void:
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
 	var stash0: Array = sim.stash.duplicate()
+	# room for what the fixture adds (31 Oct: the bot's run left the stash over full on another seed's camp - a bandage
+	# swapped out for a magazine has nowhere to go); stash0 puts it back as it was
+	sim.stash = sim.stash.filter(func(x): return not (Items.is_mag(x) or Items.is_ammo(x)) and str(x["slot"]) != "Primary")
 	sim.stash.append(sim._plain(Data.AMMO, "Slugs"))
 	for k in range(sim.med_capacity()):
 		sim.stash.append(sim._plain(Data.MAGAZINE, "Shotgun magazine"))
@@ -12449,6 +12475,97 @@ func _b34_open_checks() -> void:
 	print("b34 open ok: every one-save read's build opens its element free the step its class is taken, no Pitch point held")
 
 
+## The Fence's primary (31 Oct, the designer): every restock leaves a primary of the zone's gear tier on the shelf - one
+## plain one added when the roll left none; a shelf that rolled one is left as rolled. Fresh camps at three zones, the
+## restock repeated till a shelf without one turns up (and one with one).
+func _p35_shelf_checks() -> void:
+	var added := 0
+	var kept := 0
+	var off: Array = []
+	for z in [1, 3, 5]:
+		var w = Sim.new()
+		w.start()
+		for i in range(Data.TIERS.size()):
+			if i <= z * 2:
+				w.best_depth[i] = 1
+		for k in range(mini(z, w.bosses_beaten.size())):
+			w.bosses_beaten[k] = true
+		w.xp = Data.xp_for_level(5 + z * 4)
+		var t: int = w.best_tier_open()
+		var n_was: int = w.market_stock()
+		for rep in range(40):
+			w._restock_market()                  # the rolled shelf is market[0, n_was); the guarantee's after it
+			if not w.market.any(func(it): return str(it["slot"]) == "Primary" and int(it["tier"]) == t):
+				off.append("zone %d T%d: no primary of the tier after a restock" % [z, t])
+			var rolled_one: bool = w.market.slice(0, n_was).any(func(it): return str(it["slot"]) == "Primary" and int(it["tier"]) == t)
+			if rolled_one:
+				kept += 1
+				if w.market.filter(func(it): return str(it["slot"]) == "Primary" and int(it["tier"]) == t).size() != w.market.slice(0, n_was).filter(func(it): return str(it["slot"]) == "Primary" and int(it["tier"]) == t).size():
+					off.append("zone %d: a shelf that rolled a T%d primary got another" % [z, t])
+			else:
+				added += 1
+				var extra: Array = w.market.slice(n_was).filter(func(it): return str(it["slot"]) == "Primary")
+				if extra.size() != 1 or int(extra[0]["tier"]) != t or int(extra[0]["rarity"]) != 0 or not extra[0]["affixes"].is_empty() or Items.base_of(extra[0]).get("start", false):
+					off.append("zone %d: the added primary isn't one plain T%d: %s" % [z, t, str(extra.map(func(x): return [x["base"], x["tier"], x["rarity"]]))])
+	# a deep tier (past the campaign's): an empty shelf gets one plain primary of it, its level the tier's
+	var wd = Sim.new()
+	wd.start()
+	wd.market = []
+	wd._shelf_primary(7)
+	var deep: Array = wd.market.filter(func(it): return str(it["slot"]) == "Primary")
+	_check(deep.size() == 1 and int(deep[0]["tier"]) == 7 and int(deep[0]["ilvl"]) == 7 and int(deep[0]["rarity"]) == 0 and deep[0]["affixes"].is_empty(),
+		"the deep shelf's primary: %s" % str(deep.map(func(x): return [x["base"], x["tier"], x.get("ilvl", -1), x["rarity"]])))
+	_check(off.is_empty() and added > 0 and kept > 0, "the Fence's primary at the zone's tier: %s (%d shelves topped up, %d rolled their own)" % ["; ".join(off), added, kept])
+	print("p35 shelf ok: %d shelves got a plain primary of the zone's tier, %d that rolled one were left as rolled" % [added, kept])
+
+
+## The physical floor (31 Oct, the designer: the Recruit as played opened physical at 2.47 h and earned no physical point
+## in 16 h - the camp's Rat Man conversion, 75%, his own Tear gas, 15%, and a socket or affix past it converted every hit):
+## the Poacher as played to level 21, the Recruit taken with Tear gas in, a converting socket on top - a tenth of every hit
+## stays physical, and a run moves Knuckles' meter.
+func _p35_floor_checks() -> void:
+	var cb: Array = _b34_camp("Recruit", "physical", 21, true)
+	var w = cb[0]
+	var b = cb[1]
+	for el in ["poison", "frost"]:
+		w.element_points[el] = 60
+	b._train_tree(w)                                 # the Poacher's camp: both its elements' trees walked
+	b.take_target(w)
+	b._train_tree(w)
+	var tear: String = Bot.joint_halves("Recruit", "poison")[0]
+	w.training_points += 30
+	b._walk_toward(w, tear)
+	var gun: Dictionary = w._plain("Primary", "Stalking rifle")
+	gun["affixes"] = [{"stat": "conv_poison_pct", "value": 20, "tier": 3}]
+	w.equipped["Primary"] = gun
+	w._dry_memo.clear()
+	var conv: Dictionary = w.conversion()
+	var raw: float = w.tree_sum("conv_poison_pct") + 20.0
+	_check(w.cls == "Recruit" and w.element_opened("physical") and w.element_opened("poison") and w.tree.has(tear) and raw >= 100.0,
+		"the fixture: the Recruit with physical and poison open, Tear gas in, %.0f%% poison before the cap (%s, %s)" % [raw, w.cls, str(w.class_elements())])
+	_check(float(conv["physical"]) >= 0.1 - 0.0001 and float(conv["poison"]) <= Data.CONV_CAP + 0.0001, "the Recruit's hits kept no physical floor: %s" % str(conv))
+	var xp0: float = float(w.element_xp.get("physical", 0.0)) + float(w.element_points.get("physical", 0)) * Data.ELEMENT_METER
+	w.hp = w.max_hp()
+	w.deploy(0)
+	var guard := 0
+	while w.on_mission() and guard < 3000:
+		w.advance(1.0)
+		guard += 1
+	if w.on_mission():
+		w.extract_now()
+	var xp1: float = float(w.element_xp.get("physical", 0.0)) + float(w.element_points.get("physical", 0)) * Data.ELEMENT_METER
+	_check(xp1 > xp0, "a run didn't move the Recruit's physical meter: %.3f to %.3f (dealt %s)" % [xp0, xp1, str(w.last_report.get("dealt_by", {}))])
+	# the bot's gun compare reads the floor as the game does: a physical build's share of a fully converted gun is a tenth
+	var kb = Bot.new()
+	kb.element = "physical"
+	var conv_gun: Dictionary = w._plain("Primary", "Stalking rifle")
+	conv_gun["affixes"] = [{"stat": "conv_poison_pct", "value": 120, "tier": 5}]
+	_check(is_equal_approx(kb._elem_share(conv_gun, null), 1.0 - Data.CONV_CAP), "the bot's physical share of a fully converted gun reads %.2f, not the floor's %.2f" % [kb._elem_share(conv_gun, null), 1.0 - Data.CONV_CAP])
+	kb.element = "poison"
+	_check(is_equal_approx(kb._elem_share(conv_gun, null), Data.CONV_CAP), "the bot's poison share of a 120%% poison gun reads %.2f, past the cap %.2f" % [kb._elem_share(conv_gun, null), Data.CONV_CAP])
+	print("p35 floor ok: the Recruit keeps %.0f%% physical with %.0f%% poison behind it, and a run moves Knuckles' meter" % [float(conv["physical"]) * 100.0, raw])
+
+
 ## The melee bleed cut (31 Oct, the designer, after PROBE33: the Doorman went melee on the axes' bleed and stayed): the
 ## axes 25 to 15 (the Hatchet with them), every melee base at 30-40% to 20, the blade parts halved; no melee base at 30 or over, no part over 8.
 func _b34_bleed_checks() -> void:
@@ -15368,6 +15485,8 @@ func _select_many_checks(main) -> void:
 			_check(int(sim.scrap) == scrap0 + sim.scrap_yield(it) and is_equal_approx(sim.cash, cash0), "the Workshop's Select-many did not scrap the plain piece alone: scrap %d from %d" % [int(sim.scrap), scrap0])
 			# on a run the Workshop's Scrap is shut (the review: it pressed to nothing)
 			var again: Dictionary = sim._plain("Attachment", "Red dot")
+			while sim.stash_used() > sim.stash_cap() - 4 and not sim.stash.is_empty():
+				sim.stash.pop_back()               # room for it (31 Oct: the bot's run left the stash full on another seed's camp); saved puts it back
 			sim.stash_put(again)
 			inv.many = true
 			inv.chosen = [again["id"]]
@@ -20029,6 +20148,7 @@ func _rig_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.equipped["Secondary"] = null
+	sim.equipped["Rig"] = sim._plain("Rig", "Webbing")     # room for the two magazines and the med (31 Oct: the bot's run left a smaller rig on another seed's camp, the med off the grid); saved puts it back
 	sim.rig.clear()
 	var plain: Dictionary = _rmag(sim, "Rifle rounds")
 	var depot: Dictionary = _rmag(sim, "Depot rounds")
