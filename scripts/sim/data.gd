@@ -924,7 +924,7 @@ const BASES := {
 		# stops on you, at once, and CURE_IMMUNE_S before it can land again; no heal; a pouch each
 		{"name": "Tourniquet", "tier": 1, "cure": "bleed", "use": 0.0, "value": 18},     # draft
 		{"name": "Burn gel", "one": "a tube of burn gel", "plural": "tubes of burn gel", "tier": 1, "cure": "fire", "use": 0.0, "value": 18},     # draft
-		{"name": "Activated charcoal", "one": "a pack of activated charcoal", "plural": "packs of activated charcoal", "tier": 1, "cure": "poison", "use": 0.0, "value": 18},     # draft
+		{"name": "Activated charcoal", "one": "a packet of activated charcoal", "plural": "packets of activated charcoal", "tier": 1, "cure": "poison", "use": 0.0, "value": 18},     # draft
 		{"name": "Hot flask", "tier": 2, "cure": "frost", "use": 0.0, "value": 30},     # draft
 		{"name": "Smelling salts", "tier": 2, "cure": "shock", "use": 0.0, "value": 30},     # draft
 	],

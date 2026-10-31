@@ -11920,7 +11920,7 @@ func _fix32c_checks(main) -> void:
 	_check(sim.shared_mags() and sim.mag_share("Secondary") == 0.0 and sim.mag_share("Primary") > 0.0, "one magazine for two guns: the read gives the secondary %.2f" % sim.mag_share("Secondary"))
 	var b_mag: Dictionary = _mag_full(sim, "SMG magazine", "SMG rounds")
 	sim.rig.append(b_mag)
-	_check(sim.kit_mag_line(sim.equipped["Secondary"])[0] == "Shares the %s's magazines" % Words.mid_base(smg_name) and sim.kit_mag_line(sim.equipped["Primary"])[0] == "2 magazines · 60 rounds", "the Kit's two guns of one type: %s / %s" % [str(sim.kit_mag_line(sim.equipped["Primary"])), str(sim.kit_mag_line(sim.equipped["Secondary"]))])
+	_check(sim.kit_mag_line(sim.equipped["Secondary"])[0] == "Shares the %s's magazines" % Words.mid_base(smg_name) and sim.kit_mag_line(sim.equipped["Secondary"])[1] == "Shares magazines" and sim.kit_mag_line(sim.equipped["Primary"])[0] == "2 magazines · 60 rounds", "the Kit's two guns of one type: %s / %s" % [str(sim.kit_mag_line(sim.equipped["Primary"])), str(sim.kit_mag_line(sim.equipped["Secondary"]))])
 	sim.set_top_up("leave")
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -12310,9 +12310,9 @@ func _fix32d_checks(main) -> void:
 			cure = sim._plain(Data.MEDICAL, str(b["name"]))
 	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.MEDICAL, "Painkillers"), sim._plain(Data.MEDICAL, "Painkillers"), sim._plain(Data.MEDICAL, "Burn gel"), sim._plain(Data.MEDICAL, "Burn gel"), cure]
 	var lines: Array = sim.rig_card_lines().map(func(l): return str(l[0]))
-	_check(lines.has("Meds: a bandage, 2 painkillers, 2 cures for fire and a cure for bleed"), "the rig card's meds: %s" % str(lines))
+	_check(lines.has("Meds: a bandage, 2 painkillers, 2 cures for burns and a cure for bleed"), "the rig card's meds: %s" % str(lines))
 	var th: Array = sim._things([sim._plain(Data.MEDICAL, "Burn gel"), sim._plain(Data.MEDICAL, "Burn gel"), sim._plain(Data.MEDICAL, "Activated charcoal"), sim._plain(Data.MEDICAL, "Activated charcoal")])
-	_check(Words.things_list(th[0], th[1]) == "2 tubes of burn gel and 2 packs of activated charcoal", "a list's mass nouns: '%s'" % Words.things_list(th[0], th[1]))
+	_check(Words.things_list(th[0], th[1]) == "2 tubes of burn gel and 2 packets of activated charcoal", "a list's mass nouns: '%s'" % Words.things_list(th[0], th[1]))
 	sim.rig = [sim._plain(Data.GRENADE, "Nail bomb")]
 	lines = sim.rig_card_lines().map(func(l): return str(l[0]))
 	_check(lines.has("Grenades: 1") and not lines.any(func(l): return str(l).begins_with("Meds: ")), "no meds and a grenade: %s" % str(lines))
@@ -12411,7 +12411,7 @@ func _fix32d_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	# 3: one of a mass noun
 	var th1: Array = sim._things([sim._plain(Data.MEDICAL, "Burn gel"), sim._plain(Data.MEDICAL, "Activated charcoal")])
-	_check(Words.things_list(th1[0], th1[1]) == "a tube of burn gel and a pack of activated charcoal", "one of a mass noun: '%s'" % Words.things_list(th1[0], th1[1]))
+	_check(Words.things_list(th1[0], th1[1]) == "a tube of burn gel and a packet of activated charcoal", "one of a mass noun: '%s'" % Words.things_list(th1[0], th1[1]))
 	sim.load_dict(saved)
 	main.refresh()
 	print("fix32d ok: the pool's order, the reload taken, the rig card's list and plurals, the grenades, the grouping, the full pack")
@@ -15253,7 +15253,7 @@ func _two_elements_checks(main) -> void:
 	_check(not sim.element_opened("shock"), "Close didn't close Live")
 	bk._shown = ""
 	main.refresh()
-	_check(bk._train.visible and bk._train.text == "Open for the Scrapper" and not bk._train.disabled, "a camp element's starter doesn't offer to open free: '%s'" % bk._train.text)
+	_check(bk._train.visible and bk._train.text == Words.OPEN_FREE and Words.OPEN_FREE == "Open: free" and not bk._train.disabled, "a camp element's starter doesn't offer to open free: '%s'" % bk._train.text)
 	bk._on_train()
 	_check(sim.element_opened("shock"), "Open didn't open Live for the Scrapper")
 	# the button's price is the starter's (31 Oct, the class's own two free): one off the Scrapper's pair the camp hasn't
@@ -15268,7 +15268,7 @@ func _two_elements_checks(main) -> void:
 	bk.selected = off_pair
 	bk._shown = ""
 	main.refresh()
-	_check(bk._train.visible and bk._train.text == "Open (%d Pitch point%s)" % [Data.ELEMENT_OPEN_COST, "" if Data.ELEMENT_OPEN_COST == 1 else "s"] and sim.node_cost(off_pair) == Data.ELEMENT_OPEN_COST,
+	_check(bk._train.visible and bk._train.text == "Open: %d Pitch point%s" % [Data.ELEMENT_OPEN_COST, "" if Data.ELEMENT_OPEN_COST == 1 else "s"] and sim.node_cost(off_pair) == Data.ELEMENT_OPEN_COST,
 		"an off-pair starter's button doesn't read its price: '%s'" % bk._train.text)
 	_check_fit(main, "Training (an off-pair element's starter)")
 	bk.selected = "Live/0"

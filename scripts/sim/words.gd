@@ -219,10 +219,10 @@ const SIGNAL_PAPERS := "Off the signal, for the Radio: %s"
 const PILE_FULL := "The papers are at %d, the cap: the lowest one was burnt"     # the Radio's pile at its cap (23 Oct; the language pass: mechanics, one sentence, the panel's name)
 const TOPPED_UP := "Topped up: %s from the stash into the rig"     # the rig at the gate (23 Oct; 30 Oct: magazines, meds, a number its plural)
 const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
-const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Or one by hand, slowly, when they're spent", "Or one by hand, slowly"]]     # a box found on a run (28 Oct; 30 Oct: the refill)
+const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Or refill one by hand, slowly, when they're spent", "Or refill one by hand, slowly"]]     # a box found on a run (28 Oct; 30 Oct: the refill)
 const FILLED_MAGS := "Filled: %s from the %s in the stash"     # the rig's magazines at the gate (30 Oct, the language pass)
 const PACKED_BOX := "Packed: a box of %s for the refills"     # the gate's box in the pack (30 Oct, the designer's call A)
-const BOX_CARRIED := [["Packed at the gate for the refills: it comes home", "Packed at the gate for the refills"], ["Yours: never ditched or put down", "Yours: it comes home"]]     # the gate's box picked on a run (the second review)
+const BOX_CARRIED := [["Packed at the gate for the refills: it comes home", "Packed at the gate for the refills"], ["Yours: it can't be ditched or put down", "Yours: it comes home"]]     # the gate's box picked on a run (the second review)
 const RIG_OFF := "Rig off: %s back in the stash"     # the rig taken off (the second review)
 const SMALLER_RIG := "Smaller rig: %s back in the stash"     # a rig swapped for one with fewer pouches (30 Oct, the playtest's item 1)
 const EMPTY_MAG := {"gate": ["Empty: refilled at the gate", "Empty"], "box": ["Empty: refilled from the box when the rest are spent", "Empty: refilled from the box"]}     # an empty magazine picked in the run's rig (the three-stage review, UI 3)
@@ -230,6 +230,7 @@ const NO_MAG_HINT := "No magazine for it in the rig"     # a gun's hint, its sho
 const CURE_USED := "Used at once, under fire"     # a cure's Kit card, its figure the head's (the three-stage review, UI 17)
 const MADE_ROOM := "Into the pack: %s, to make room for the %s's magazine"     # a gun fitted on a run with the rig full (the three-stage review, game 1)
 ## Magazines as items (30 Oct, the language pass): the Kit's gun line, a magazine's card, a sling's card, the run's tile.
+## cure_for (31 Oct, the language pass): a cure on the rig card by its ailment's word, as CURE_CLEARS - "2 cures for burns".
 const MAG_WORDS := {
 	"kit_line": "%s · %s", "no_rounds": "No rounds needed",
 	"figure": "%d of %d rounds", "own": "The gun's own %d", "holds": "Holds %d", "always": "Always %d rounds", "times": "×%s the gun's %d",
@@ -237,8 +238,8 @@ const MAG_WORDS := {
 	"chip": "Magazine",
 	"sling_fig": "Secondary fires at %d%%", "sling_chip": "While the primary reloads",
 	"tile": "%d · %d spare", "refilling": "Refilling · %d s",
-	"shares": "Shares the %s's magazines", "shares_short": "Shares the %s's", "shared": "Shared",
-	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_cure": "a cure for %s", "rig_cures": "%d cures for %s", "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
+	"shares": "Shares the %s's magazines", "shares_short": "Shares magazines", "shared": "Shared",
+	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_cure": "a cure for %s", "rig_cures": "%d cures for %s", "cure_for": {"fire": "burns", "frost": "a chill", "shock": "a shock", "poison": "poison", "bleed": "bleed"}, "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
 }
 
 
@@ -1649,7 +1650,9 @@ const WOUNDS := {
 ## The Pitch circle (24 Oct): an element shut till its starter's opened - the class's own two free, any other a Pitch
 ## point (31 Oct, the designer).
 const ELEMENT_SHUT := "shut"
-const ELEMENTS_NOTE := "Own two free; others a Pitch point"     # 178 of its 178 px at 11 px (web_key.fit_fails holds it)
+const ELEMENTS_NOTE := "Own 2 free; others 1 Pitch point"     # the language pass (31 Oct); web_key.fit_fails holds it to its room
+const OPEN_FREE := "Open: free"     # Training's button on an element's starter that costs nothing: the class's own two, or one the camp has
+const OPEN_COST := "Open: %s"     # one that costs: "Open: 1 Pitch point"
 
 ## The fight's breakdown (24 Oct, the endgame chase): the sources that aren't a gun or a skill.
 const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bleed", "dot:shock": "Shock", "dot:frost": "Frost",

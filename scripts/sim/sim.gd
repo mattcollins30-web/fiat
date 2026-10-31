@@ -4031,7 +4031,7 @@ func kit_mag_line(gun: Dictionary) -> Array:
 	if shared_mags() and is_same(gun, equipped["Secondary"]):
 		# the pool counted once, on the primary (the three-stage review, UI 5)
 		var pn: String = Words.mid_base(str(equipped["Primary"]["base"]))
-		return [Words.MAG_WORDS["shares"] % pn, Words.MAG_WORDS["shares_short"] % pn, Words.MAG_WORDS["shared"]]
+		return [Words.MAG_WORDS["shares"] % pn, Words.MAG_WORDS["shares_short"], Words.MAG_WORDS["shared"]]
 	var rounds: String = Words.count_of(rounds_for(gun), "round")
 	return [Words.MAG_WORDS["kit_line"] % [Words.count_of(mags_for(gun).size(), "magazine"), rounds], rounds]
 
@@ -4068,7 +4068,8 @@ func rig_card_lines() -> Array:
 	var meds: Array = Words.things_parts(th[0], th[1])
 	var n_cures := 0
 	for e in cure_n:
-		meds.append((Words.MAG_WORDS["rig_cure"] % e) if int(cure_n[e]) == 1 else (Words.MAG_WORDS["rig_cures"] % [int(cure_n[e]), e]))     # "2 cures for fire"
+		var ail: String = str(Words.MAG_WORDS["cure_for"].get(e, e))     # the ailment's word (the language pass): "2 cures for burns"
+		meds.append((Words.MAG_WORDS["rig_cure"] % ail) if int(cure_n[e]) == 1 else (Words.MAG_WORDS["rig_cures"] % [int(cure_n[e]), ail]))
 		n_cures += int(cure_n[e])
 	var n_meds: int = heals.size() + n_cures
 	if n_meds == 0 and grenades > 0:

@@ -184,4 +184,15 @@ a drum two.
     Poacher as poison starved again (kit frozen at ~120 dps from 2 h, never the Quartermaster in 16 h).
   - Still open: the Drifter's second joint (bleed) closed at level 34 - with melee bleed cut, a gun Drifter earns
     bleed slowly (0 points at the Quartermaster).
+- The pass on 9f22bcf (31 Oct, 17:39): every read reached the Quartermaster (median 2.3 h); melee 2% on the non-bleed
+  builds; the Recruit's physical joint closes now (level 41, the floor working but slow) and the Scrapper's fire at
+  35 - Both joints red on those two, left to Matt's play.
+- **The language pass on the fix rounds' words** (31 Oct, two reviewers, the editor's call): cures on the rig card by
+  their ailment ("2 cures for burns", "a cure for a chill"); "a packet of activated charcoal" (the pack is the bag);
+  "Shares magazines" (the short Kit line); "Yours: it can't be ditched or put down"; the Training note "Own 2 free;
+  others 1 Pitch point" and its button "Open: free" / "Open: 1 Pitch point"; "Or refill one by hand, slowly, when
+  they're spent". Kept as built: "Packed: a box of <grade> for the refills", "Rig off: ...", "Into the pack: ...",
+  "Always 100 rounds", "Holds N", the empty-magazine and no-magazine lines, "Used at once, under fire" (it matches the
+  meds' "used under fire"), "Grenades: N", the sling's "+N% dmg" (every part card says dmg). Flagged, untouched:
+  data.gd's "do a tenth more" (a style-guide breach older than this round).
 

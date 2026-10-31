@@ -1024,7 +1024,7 @@ func _show_panel() -> void:
 			var cost: int = sim.node_cost(selected)
 			_train.text = ("Train (%d paragon point%s)" if nd.has("ring") else "Train (%d point%s)") % [cost, "" if cost == 1 else "s"]
 			if starter:
-				_train.text = ("Open for the %s" % sim.cls) if sim.tree.has(selected) or cost == 0 else "Open (%d Pitch point%s)" % [cost, "" if cost == 1 else "s"]     # the class's own two free (31 Oct); the price from node_cost
+				_train.text = Words.OPEN_FREE if sim.tree.has(selected) or cost == 0 else Words.OPEN_COST % Words.count_of(cost, "Pitch point")     # the class's own two free (31 Oct); the price from node_cost (the language pass)
 			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
 		elif starter:
