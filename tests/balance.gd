@@ -1067,11 +1067,12 @@ func _standard_camp(sim, bot) -> void:
 					fresh = Items.roll_set_piece(str(worn["set"]), pc, sim.rng, lv, tier)
 		else:
 			var want_type: String = str(Items.base_of(worn).get("type", "")) if worn != null and sl in ["Primary", "Secondary"] else ""
+			var want_ammo: String = Items.ammo_type(worn) if want_type != "" else ""     # and the rounds it fires (the three-stage review, game 9)
 			var best: Dictionary = {}
 			var best_sc := -INF
 			for k in range(STANDARD_ROLLS * (4 if want_type != "" else 1)):
 				var it: Dictionary = Items.roll(sl, tier, sim.rng, sim.rarity_bonus(), true, false, "", want_type, 0.33, 0, lv)
-				if it.is_empty() or not sim.can_wear(it) or (want_type != "" and str(Items.base_of(it).get("type", "")) != want_type):
+				if it.is_empty() or not sim.can_wear(it) or (want_type != "" and (str(Items.base_of(it).get("type", "")) != want_type or Items.ammo_type(it) != want_ammo)):
 					continue
 				# as a player keeps: tried on, the slot's own read (HP and damage both, Matt 27 Oct); the build's own gun by its score
 				var sc: float = bot._elem_score(it) if bot.element != "" and sl == "Primary" else sim.fit_value(it, sl)
@@ -1090,6 +1091,7 @@ func _standard_camp(sim, bot) -> void:
 					if (fresh["attachments"].has(mount) or str(mount).begins_with("socket")) and part != null and (Items.is_socketable(part) or Items.ilvl(part) <= lv):
 						fresh["attachments"][mount] = worn["attachments"][mount]
 			sim.equipped[sl] = fresh
+			sim._mag_with(fresh)                   # its standard magazine to the stash, as a gun got brings (the three-stage review, game 9)
 	while sim.rig_used() > sim.med_capacity() and not sim.rig.is_empty():
 		sim.rig.pop_back()                      # a new rig with fewer pouches: the last of its contents go
 	sim._dry_memo.clear()

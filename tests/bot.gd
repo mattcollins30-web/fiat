@@ -1882,9 +1882,10 @@ func _restock_rounds(sim) -> void:
 		for mg in sim.rig + sim.stash:
 			if Items.mag_fits(mg, gun):
 				mag_room += Items.mag_cap(mg, gun)
-		var need: int = mini(want, mag_room) - sim.rounds_for(gun)
-		var dry: bool = pair[0] == "Primary" and sim.rounds_for(gun) == 0 and sim.med_capacity() > 0
-		while _stash_rounds(sim, type) < need and (sim.rig_room(1) or dry) and guard < 6:
+		# the magazines' fill and the gate's box for the refills, whatever the rig's free pouches (the three-stage review,
+		# game 3: a box never goes in the rig now, so a full rig bought nothing and the gate packed what little was left)
+		var need: int = mini(want, mag_room) - sim.rounds_for(gun) + int(sim.ammo_box(type).get("rounds", 0))
+		while _stash_rounds(sim, type) < need and guard < 6:
 			guard += 1
 			if not sim.buy_ammo(type):
 				if sim.stash_room(1):

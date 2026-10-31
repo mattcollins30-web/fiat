@@ -273,6 +273,8 @@ static func mag_chips(it: Dictionary, gun, sim_in) -> Array:
 	var cap: int = Items.mag_cap(it, gun)
 	if Data.MAG_KINDS.get(Items.mag_kind(it), {}).has("flat"):
 		out.append([Words.MAG_WORDS["always"] % cap])     # the Hundred-round drum: its hundred whatever the gun (the fix round)
+	elif not (gun is Dictionary):
+		out.append([Words.MAG_WORDS["holds"] % cap])     # no worn gun takes it: its type's size (the three-stage review, UI 9)
 	elif cap == own:
 		out.append([Words.MAG_WORDS["own"] % own])
 	else:

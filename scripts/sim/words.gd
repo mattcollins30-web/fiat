@@ -225,27 +225,74 @@ const PACKED_BOX := "Packed: a box of %s for the refills"     # the gate's box i
 const BOX_CARRIED := [["Packed at the gate for the refills: it comes home", "Packed at the gate for the refills"], ["Yours: never ditched or put down", "Yours: it comes home"]]     # the gate's box picked on a run (the second review)
 const RIG_OFF := "Rig off: %s back in the stash"     # the rig taken off (the second review)
 const SMALLER_RIG := "Smaller rig: %s back in the stash"     # a rig swapped for one with fewer pouches (30 Oct, the playtest's item 1)
+const EMPTY_MAG := {"gate": ["Empty: refilled at the gate", "Empty"], "box": ["Empty: refilled from the box when the rest are spent", "Empty: refilled from the box"]}     # an empty magazine picked in the run's rig (the three-stage review, UI 3)
+const NO_MAG_HINT := "No magazine for it in the rig"     # a gun's hint, its short form "No magazine" (the three-stage review, UI 11)
+const CURE_USED := "Used at once, under fire"     # a cure's Kit card, its figure the head's (the three-stage review, UI 17)
+const MADE_ROOM := "Into the pack: %s, to make room for the %s's magazine"     # a gun fitted on a run with the rig full (the three-stage review, game 1)
 ## Magazines as items (30 Oct, the language pass): the Kit's gun line, a magazine's card, a sling's card, the run's tile.
 const MAG_WORDS := {
 	"kit_line": "%s · %s", "no_rounds": "No rounds needed",
-	"figure": "%d of %d rounds", "own": "The gun's own %d", "always": "Always %d rounds", "times": "×%s the gun's %d",
+	"figure": "%d of %d rounds", "own": "The gun's own %d", "holds": "Holds %d", "always": "Always %d rounds", "times": "×%s the gun's %d",
 	"quicker": "Reloads %s s quicker", "slower": "Reloads %s s slower", "pouches": "%d pouches", "feeds": "Feeds the %s",
 	"chip": "Magazine",
 	"sling_fig": "Secondary fires at %d%%", "sling_chip": "While the primary reloads",
 	"tile": "%d · %d spare", "refilling": "Refilling · %d s",
-	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
+	"shares": "Shares the %s's magazines", "shares_short": "Shares the %s's", "shared": "Shared",
+	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_cure": "a cure for %s", "rig_cures": "%d cures for %s", "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
 }
 
 
 ## "1 magazine", "3 magazines": a number and its noun, the plural right (30 Oct, the language pass: never "1 meds").
 static func count_of(n: int, one: String, many := "") -> String:
-	return "%d %s" % [n, one if n == 1 else (many if many != "" else one + "s")]
+	return "%s %s" % [group(n), one if n == 1 else (many if many != "" else one + "s")]     # the thousands comma (the three-stage review, UI 7)
+
+
+## A number with the thousands comma, as the screens write a count ("1,288"): the one grouping, Fmt.group's and the
+## sim's too (the reviewer on m32c, 9). `minus` the sign a negative takes.
+static func group(n: int, minus := "-") -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.right(3) + out
+		s = s.left(s.length() - 3)
+	return (minus if n < 0 else "") + s + out
 
 
 ## A figure to a tenth, a whole one bare: "1.5", "2", "0.8" (30 Oct, a magazine's chips).
 static func fig1(x: float) -> String:
 	var r: float = snappedf(x, 0.1)
 	return ("%d" % int(round(r))) if absf(r - round(r)) < 0.001 else ("%.1f" % r)
+
+
+## Things by their bases as a list says them, repeats counted (the three-stage review, UI 13): "3 bandages",
+## "a bandage and 2 shotgun magazines" - never "a bandage, a bandage".
+static func things_list(bases: Array, forms := {}) -> String:
+	return and_list(things_parts(bases, forms))
+
+
+## The parts of things_list, for a list that goes on with other parts (the rig card's cures). `forms`: a base's own
+## {"plural", "one"} where its name won't take an s or an article (the reviewer on m32c: "2 tubes of burn gel", "a tube
+## of burn gel", never "2 burn gels" or "a burn gel").
+static func things_parts(bases: Array, forms := {}) -> Array:
+	var order: Array = []
+	var n := {}
+	for b in bases:
+		if not n.has(b):
+			order.append(b)
+		n[b] = int(n.get(b, 0)) + 1
+	var parts: Array = []
+	for b in order:
+		var mb: String = mid_base(str(b))
+		var f: Dictionary = forms.get(b, {})
+		if int(n[b]) == 1 and str(f.get("one", "")) != "":
+			parts.append(str(f["one"]))
+		elif int(n[b]) == 1:
+			parts.append(mb if mb.ends_with("s") else a_thing(str(b)))     # "painkillers", never "a painkillers"
+		elif str(f.get("plural", "")) != "":
+			parts.append(count_of(int(n[b]), mb, str(f["plural"])))
+		else:
+			parts.append(count_of(int(n[b]), mb, mb if mb.ends_with("s") else (mb + "es" if mb.ends_with("x") else "")))     # "2 belt boxes"
+	return parts
 
 
 ## "a, b and c": a list as a sentence says it.

@@ -860,7 +860,9 @@ static func odds_reasons(s, i: int) -> Array:
 			for it in s.stash:                   # the gate fills the magazines from the stash (rounds_short's count; 30 Oct, a magazine to fill)
 				if Items.is_ammo(it) and Items.base_of(it)["type"] == Items.ammo_type(gun):
 					have += int(it.get("rounds", 0))
-		if have <= 0:
+		if s.mags_for(gun).is_empty() and not s.stash.any(func(x): return Items.mag_fits(x, gun)):
+			out.append({"forms": ["No magazine"], "colour": "bad"})     # boxes but nothing to load them in (the three-stage review, UI 15)
+		elif have <= 0:
 			out.append({"forms": ["No rounds"], "colour": "bad"})
 	if not s.wounds.is_empty():
 		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn"})

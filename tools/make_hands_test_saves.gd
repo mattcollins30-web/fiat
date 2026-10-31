@@ -42,6 +42,7 @@ func _init() -> void:
 			if not sim.stash_put(it):
 				left.append(pair[1])
 				continue
+			sim._mag_with(it)                 # its standard magazine, as a gun got brings (the three-stage review, tools 9)
 			var at: String = Items.ammo_type(it)
 			if not (at in ["", "none"]):
 				types[at] = true

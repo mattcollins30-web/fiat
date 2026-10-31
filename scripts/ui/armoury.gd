@@ -332,7 +332,7 @@ func _show_panel() -> void:
 			# no room for what comes off, or both
 			var hints: Array = []
 			if Items.is_gun(it) and not sim.has_rounds(it):
-				hints.append("No rounds for it in the rig")
+				hints.append(Words.NO_MAG_HINT if sim.mags_for(it).is_empty() and Items.mag_size(it) > 0 else "No rounds for it in the rig")     # a magazine is what's missing (the three-stage review, UI 11)
 			if sim.away():
 				hints.append(Words.REPEAT["shut_away"])     # the kit's with the runner (29 Oct)
 			elif (not sim.can_equip_item(it["id"]) or (swap and not sim.can_swap_with_parts(int(it["id"])))) and not sim.on_mission():
@@ -434,18 +434,24 @@ func _rounds_clause(gun: Dictionary) -> Array:
 func _show_magazine(it: Dictionary) -> Array:
 	var buttons := []
 	var other: Dictionary = sim.mag_rig_match(it) if selected["kind"] != "rig" else {}
-	if not other.is_empty():
+	var room: bool = sim.rig_room(Items.size(it))
+	if not other.is_empty() and str(other["base"]) != str(it["base"]):
 		_pick.show_fitted(other, sim, "In the rig")
 		var cmp: Array = sim.mag_compare(it, other)
 		_pick.set_verdict(cmp[0][0], cmp[0][1], cmp[1])
-		buttons.append({"text": "Swap into the rig", "action": sim.mag_swap.bind(int(it["id"]), int(other["id"])), "enabled": sim.can_mag_swap(int(it["id"]), int(other["id"])), "primary": true})
 	else:
+		# THE RIG card (the three-stage review, UI 1: one the same as the rig's isn't a compare; UI 14: no rig, said so)
 		var lines: Array = sim.rig_card_lines()
-		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines.slice(0, PickPanel.LINES))
+		_pick.show_right_words("The rig", "No rig fitted" if sim.med_capacity() == 0 else "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines.slice(0, PickPanel.LINES))
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and sim.stash_fits(it), "primary": true})
-	elif other.is_empty():
-		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and sim.rig_room(Items.size(it)), "primary": true})     # the compare's foot is the swap alone (the canvas): its deltas want the room
+		return buttons
+	# Take whenever the rig has a pouch for it (the three-stage review, UI 1: a second magazine was Swap alone); Swap alone
+	# when the rig's full
+	if other.is_empty() or room:
+		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and room, "primary": true})
+	if not other.is_empty():
+		buttons.append({"text": "Swap into the rig" if buttons.is_empty() else "Swap", "action": sim.mag_swap.bind(int(it["id"]), int(other["id"])), "enabled": sim.can_mag_swap(int(it["id"]), int(other["id"])), "primary": buttons.is_empty()})
 	return buttons
 
 
@@ -453,18 +459,19 @@ func _show_magazine(it: Dictionary) -> Array:
 func _show_medical(it: Dictionary) -> Array:
 	var lines: Array = ["Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds"]     # a med or a grenade: a box or a magazine has its own panel
 	if Items.is_cure(it):
-		lines[0] = [sim.med_words(it), Words.CURE_CLEARS[Items.cure_of(it)] + ", at once"]     # a cure (28 Oct): what it stops
+		lines[0] = [Words.CURE_USED]     # a cure (28 Oct): what it stops is the head's figure, said once (the three-stage review, UI 17)
 	var buttons := []
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
 	else:
 		var room: bool = sim.rig_room(Items.size(it))
 		if not room:
-			lines.append("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
+			if sim.med_capacity() > 0:            # no rig: the title says it (the three-stage review, UI 14)
+				lines.append("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it))
 		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and room, "primary": true})
 	if Items.stacks(it):
 		buttons.append(_split_button(it))
-	_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
+	_pick.show_right_words("The rig", "No rig fitted" if sim.med_capacity() == 0 else "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
 	return buttons
 
 
@@ -730,6 +737,8 @@ static func _hint_forms(hints: Array) -> Array:
 	var out: Array = []
 	if hints.size() == 1 and str(hints[0]).begins_with("No rounds"):
 		out.append(str(hints[0]) + ": it won't fire until it has some")
+	elif hints.size() == 1 and str(hints[0]) == Words.NO_MAG_HINT:
+		out.append(str(hints[0]) + ": it won't fire until it has one")
 	out.append(" · ".join(hints))
 	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
 	return out

@@ -449,7 +449,8 @@ func show_state(s) -> void:
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%s (%s)" % [Fmt.group(int(round(sim.armour()))), Fmt.pct(sim.mitigation())], Fmt.group(int(round(sim.armour()))), Fmt.short_num(sim.armour())]], ["Damage", fire_forms(fire_now)],
 		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", mag_forms(rounds) if (rounds > 0 or sim.refill_now("Primary") > 0.0) and sim.uses_mag("Primary") else [Fmt.group(rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
-	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT)
+	var refilling: bool = gun != null and sim.refill_now("Primary") > 0.0     # refilling: the warning colour, as the six's (the three-stage review, UI 12)
+	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.WARN if refilling else (Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT))
 	if _view != null:
 		# the six under the frame: theirs, then yours
 		var fighting: bool = m["remaining"] > 0
@@ -936,7 +937,7 @@ func _show_pick(m: Dictionary) -> void:
 		# room for what comes off, or both
 		var hints: Array = []
 		if Items.is_gun(it) and not sim.has_rounds(it):
-			hints.append("No rounds for it in the rig")
+			hints.append(Words.NO_MAG_HINT if sim.mags_for(it).is_empty() and Items.mag_size(it) > 0 else "No rounds for it in the rig")     # a magazine is what's missing (the three-stage review, UI 11)
 		if not can and fitted != null and lock == 0:
 			hints.append("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
 		if lock > 0 and fitted == null:
@@ -962,10 +963,20 @@ func _show_rig_pick(m: Dictionary, r: Dictionary) -> void:
 		elif g != null and Items.grade_name(sim.feed_stack(g)) != "" and Items.grade_name(sim.feed_stack(g)) == Items.grade_name(r):     # the same grade (the fix round): never the magazine's name
 			same = true
 	var room: bool = sim.can_rig_to_pack(r["id"])
+	var first: Variant = "Firing now: the best in the rig" if firing else ("Next: the same rounds, after these" if same else ("Waiting: a better grade fires first" if _fires_for_worn(r) else "No gun worn fires it"))
+	if Items.is_mag(r) and int(r.get("rounds", 0)) <= 0 and _fires_for_worn(r):
+		first = _empty_mag_line(m, r)              # spent, not waiting (the three-stage review, UI 3)
 	_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()],
-		["Firing now: the best in the rig" if firing else ("Next: the same rounds, after these" if same else ("Waiting: a better grade fires first" if _fires_for_worn(r) else "No gun worn fires it")),
-		"" if room else "No room: ditch something first"])
+		[first, "" if room else "No room: ditch something first"])
 	_pick.set_buttons([{"text": "Into the pack", "action": _rig_to_pack, "enabled": room, "primary": true}])
+
+
+## An empty magazine picked in the rig (the three-stage review, UI 3: it read "Waiting: a better grade fires first"):
+## spent, and when it fills - from the box in the pack, or at the gate.
+func _empty_mag_line(m: Dictionary, r: Dictionary) -> Array:
+	var ty: String = Items.mag_type(r)
+	var boxed: bool = m.get("found", []).any(func(x): return Items.is_ammo(x) and int(x.get("rounds", 0)) > 0 and str(Items.base_of(x)["type"]) == ty)
+	return Words.EMPTY_MAG["box"] if boxed else Words.EMPTY_MAG["gate"]
 
 
 func _fires_for_worn(r: Dictionary) -> bool:
@@ -1506,6 +1517,8 @@ static func _hint_forms(hints: Array) -> Array:
 	var out: Array = []
 	if hints.size() == 1 and str(hints[0]).begins_with("No rounds"):
 		out.append(str(hints[0]) + ": it won't fire until it has some")
+	elif hints.size() == 1 and str(hints[0]) == Words.NO_MAG_HINT:
+		out.append(str(hints[0]) + ": it won't fire until it has one")
 	out.append(" · ".join(hints))
 	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
 	return out

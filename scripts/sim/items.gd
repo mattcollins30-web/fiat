@@ -1026,7 +1026,12 @@ static func mag_type(it: Dictionary) -> String:
 
 ## Whether a magazine feeds this gun: its type is what the gun fires.
 static func mag_fits(it: Dictionary, gun) -> bool:
-	return gun is Dictionary and is_mag(it) and mag_type(it) == ammo_type(gun) and mag_size(gun) > 0
+	if not (gun is Dictionary and is_mag(it) and mag_type(it) == ammo_type(gun) and mag_size(gun) > 0):
+		return false
+	# a flat magazine (the Hundred-round drum) fits only a gun whose own holds fewer (the three-stage review, game 10: on the
+	# Belt-fed SMG it held its own 100 with a slower reload and two pouches)
+	var k: Dictionary = Data.MAG_KINDS.get(mag_kind(it), {})
+	return not k.has("flat") or mag_size(gun) < int(k["flat"])
 
 
 ## A magazine's rounds against a gun: round(the gun's own × its kind), or its flat count; with no gun, its type's MAG_SIZE.
@@ -1177,7 +1182,7 @@ static func affix_total(it: Dictionary, stat: String) -> float:
 
 
 ## What the Armoury compares two items of a slot by.
-static func score(it: Dictionary) -> float:
+static func score(it: Dictionary, gun = null) -> float:
 	match Data.SLOT_SCORE[it["slot"]]:
 		"dps":
 			return dps(it) * (1.0 + affix_total(it, "damage_pct") / 100.0)
@@ -1192,7 +1197,10 @@ static func score(it: Dictionary) -> float:
 		"rounds":
 			return float(it.get("rounds", 0)) * (1.0 + float(base_of(it).get("damage_pct", 0)) / 100.0)
 		"mag":
-			return float(mag_cap(it)) / float(Data.MAG_SIZE.get(mag_type(it), 30)) - (mag_reload_x(it) - 1.0) * 0.5     # its rounds against the type's, a slower reload less
+			# its rounds against the gun it feeds (the three-stage review, game 10: against the type's size a Hundred-round drum
+			# scored 3 on a gun whose own holds 100), with none the type's; a slower reload less
+			var own: int = mag_size(gun) if gun is Dictionary and mag_size(gun) > 0 else int(Data.MAG_SIZE.get(mag_type(it), 30))
+			return float(mag_cap(it, gun)) / float(own) - (mag_reload_x(it) - 1.0) * 0.5
 		"attach":
 			if is_socketable(it):
 				return att_stat(it, "conv_fire_pct") + att_stat(it, "conv_frost_pct") + att_stat(it, "conv_poison_pct") + att_stat(it, "conv_shock_pct") + att_stat(it, "salt") + att_stat(it, "wire_pct")

@@ -648,9 +648,8 @@ func _show_panel() -> void:
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):
-		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
-		if Items.is_mag(it):
-			UI.fit(_right_lines[1], [sim.mag_words(it)])     # a magazine (30 Oct): its rounds against the gun it feeds
+		# the rig's state (the three-stage review, UI 10: the magazine's figure is the card's, said once; UI 14: no rig, said so)
+		_right_title.text = "No rig fitted" if sim.med_capacity() == 0 else "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 	elif Items.is_socketable(it):
 		UI.fit(_right_title, ["Fitted in the Workshop, Sockets view", "Fitted in the Workshop"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))

@@ -48,12 +48,7 @@ static func rate(x: float) -> String:
 
 
 static func group(n: int) -> String:
-	var s := str(absi(n))
-	var out := ""
-	while s.length() > 3:
-		out = "," + s.substr(s.length() - 3) + out
-		s = s.substr(0, s.length() - 3)
-	return (MINUS if n < 0 else "") + s + out
+	return preload("res://scripts/sim/words.gd").group(n, MINUS)     # the one grouping (the reviewer on m32c, 9)
 
 
 ## 4,816 tins · −360 tins · 1 tin · 12.4M tins from ten million up.

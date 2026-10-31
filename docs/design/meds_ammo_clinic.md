@@ -122,4 +122,19 @@ a drum two.
   x2.5, Hundred-round drum a flat 100; REFILL_MULT 2 (3 left the Poacher under a coin flip at the Pleasure Park on the
   Estate's kit); a fifth of part finds are magazines; the Fence shelves 2 standard a held type; RIG_MAG_SHARE 0.5.
 - Known: the bot's balance reads now carry real magazines and the gate's box (no bottomless magazines).
+- The three-stage review's round (31 Oct, the project manager's calls while Matt slept): "Best grades only" is the
+  stash's best grade at the gate or nothing (a magazine keeps the grade it holds); no sling on a secondary (the
+  mount's gone from them); the Hundred-round drum fits ordinary SMGs, not the Belt-fed; the first gun found with a
+  full rig moves a heal to the pack to make room for its magazine; two guns of one type share one pool (a gun with no
+  magazine in it doesn't fire; the primary takes the secondary's last).
+- Words the builds added past the table (for the next language pass): "Packed: a box of <grade> for the refills"; "Rig
+  off: <what> back in the stash"; "Into the pack: <heal>, to make room for the <gun>'s magazine"; "Always 100 rounds";
+  "Holds N"; "Shares the <gun>'s magazines"; "Empty: refilled at the gate" / "Empty: refilled from the box when the
+  rest are spent"; "No magazine for it in the rig" / "No magazine"; "Used at once, under fire" (a cure's Kit line);
+  "Grenades: N"; the gate box's pick "Packed at the gate for the refills: it comes home" / "Yours: never ditched or put
+  down"; the Nail chip on Nails; counted lists ("3 bandages", "2 tubes of burn gel", "a pack of activated charcoal").
+- For the balance pass: the reads (sheet dps, estimate, the bot's compares) assume magazines reloaded forever and read
+  10-20% high once the rig's magazines run dry (the odds' dry runs fight the real rule); without a sling the secondary
+  is at its backing share through reloads (was full): 3-10% off most kits; rounds carried in the rig a third of
+  0.10.1's; the old magazine parts' +8-25% damage gone.
 
