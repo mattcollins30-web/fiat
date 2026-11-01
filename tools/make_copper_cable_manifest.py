@@ -11,7 +11,7 @@ TAIL = ("One object centred and filling the frame, soft directional overcast day
         "out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no gun, "
         "no hands, no person, no text, no logos, no floor, wall, ground or sky around it, a plain dark neutral background.")
 CABLE = [
-    ("Copper cable", "a coil of thick grey-sheathed copper cable, its cut end showing bright copper strands, on a scrap of broken pallet", 123390, 5),
+    ("Copper cable", "a coil of thick grey-sheathed copper cable, its cut end showing bright copper strands, on a scrap of broken pallet", 123390, 3),
 ]
 
 
