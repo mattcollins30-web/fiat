@@ -82,3 +82,10 @@ Later, if they still look right:
   copper_wire.png ...). To design with Matt, then build; it moves the balance (pack room against gear, the bot's
   keep/ditch, scrap and rebuild income).
 
+- **Run events with art, a pause and choices; recurring traders** (1 Nov, Matt: "we also need to add art to these
+  events and a pause in the gunplay because at the moment a log line just doesn't make it compelling enough. Yes a
+  choice is good ... with materials being in inventory we could introduce recurring characters like a scrap trader or
+  a vagabond that trades in tins or scrap or certain materials for buffs during the run as well as gear on offer").
+  Today: three events (convoy, trapped, cache) at EVENT_ODDS 0.3, a log line each, no choice, two of three pure
+  upside. To design with Matt (canvas mockups, test art before any manifest); builds on "Materials in the pack".
+
