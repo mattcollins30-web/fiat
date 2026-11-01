@@ -14,6 +14,10 @@ const FIRST := 0.65            # a site not yet cleared, or a head not yet beate
 const CLINIC_SPARE := 2.0      # the Clinic paid whenever its price is in hand this many times over (13 Oct: Matt paid 26-380 a visit and never waited out his HP)
 const RUSH := true             # the campaign as a person plays it (12 Oct, Matt's fire Drifter: one run a site, depth 1, straight to the next when it reads PUSH): no climbing until the campaign's done; the endgame climbs as before
 const COIN := 0.5             # the pass (20 Oct, the agreed gate: a full signal at the reach about a coin flip): three held and none at PUSH, a full one at the reach is run at this, insured, before one's binned
+const SAFE_PAST_CAP := 0.8     # past level 50 the coin flip's bar (1 Nov, BUILD41, PROBE40 4: 75-100 deaths after the Quartermaster on three builds): with paragon XP and kit at stake, a signal under this is skipped, not run at COIN
+const STAKE_SHARE := 0.5       # a run whose kit lost on a death would take this share of the DPS or more is insured when it can be afforded (BUILD41)
+const INSURE_SPARE_STAKE := 1.5     # the price in hand this many times over insures a County run or a run with that much at stake (the rest: three times)
+const SETTLE_TRIES := 200      # reads of a pending odds figure before the bot gives up on it this step (each read runs more of its dry runs)
 const LORRY_ODDS := 0.6        # the lorry is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
 var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
@@ -344,6 +348,7 @@ func wall_home(sim) -> void:
 
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
+	after_death(sim)                          # a death since the last step: every odds figure read again before it goes (BUILD41)
 	take_target(sim)
 	wall_home(sim)
 	if not sim.on_mission():
@@ -375,7 +380,12 @@ func step(sim) -> int:
 	var okey: String = _pick_order(sim) if sim.campaign_done() and not fetched else ""
 	if okey != "":
 		var o_lv: int = sim.order_level(okey)
-		if sim.deploy_order(okey):
+		var o_ins: int = order_insure_cost(sim, okey)
+		if insure_for(sim, sim.is_county(okey), o_ins):
+			sim.set_insure(true)                 # the County's runs insured when it can be afforded (BUILD41)
+		if not sim.deploy_order(okey):
+			sim.set_insure(false)                # the paper's not left armed for the next run (the review)
+		else:
 			t = int(Data.pinnacle(okey)["site"])
 			last_tier = -1
 			bought.append([sim.elapsed, "ran %s at level %d" % [str(Data.pinnacle(okey)["place"]), o_lv]])
@@ -397,8 +407,8 @@ func step(sim) -> int:
 			t = int(sim.signal_at(k)["site"])
 			last_tier = -1                    # a signal's site is random: the endgame's tidy reads the farm it'll run next (the review)
 			var ins: int = sim.signal_insure_cost(k)
-			if ins >= 0 and sim.cash >= ins * 3:
-				sim.set_insure(true)
+			if insure_for(sim, false, ins):
+				sim.set_insure(true)             # three times the price in hand; half again with the kit a big share of the DPS (BUILD41)
 			var sg_lv: int = sim.signal_level(sim.signal_at(k))
 			var sg_tags: String = _sig_tags(sim.signal_at(k))
 			var sg_odds: float = float(sim.signal_odds(k)[0])
@@ -478,7 +488,8 @@ func _pick_order(sim) -> String:
 		var rank: int = (2000 if county and first else (1000 if (k == "mint" or (k == "grid" and first)) and not sim.issued else 0)) + sim.order_level(k)
 		if rank <= best_rank:
 			continue
-		if float(sim.order_odds(k)[0]) >= need:
+		var od: Array = settled_odds(func(): return sim.order_odds(k))     # a finished read only (BUILD41)
+		if bool(od[1]) and float(od[0]) >= need:
 			best = k
 			best_rank = rank
 	return best
@@ -1082,22 +1093,141 @@ func _papers_now() -> int:
 ## sites farmed meanwhile, for the kit and the papers. Three held and none to run: _make_signals bins the worst (D2).
 func _pick_signal(sim) -> int:
 	var best := -1
+	var odds: Array = []                      # each held signal's read, finished (BUILD41: a pending read is waited out, never run on)
+	for k in range(sim.signals.size()):
+		var kk: int = k
+		var od: Array = settled_odds(func(): return sim.signal_odds(kk))
+		odds.append(float(od[0]) if bool(od[1]) else -1.0)
 	for k in range(sim.signals.size()):
 		var sg: Dictionary = sim.signal_at(k)
-		var o: float = float(sim.signal_odds(k)[0])
+		var o: float = odds[k]
 		var need: float = FIRST if int(sg.get("story", -1)) >= 0 else PUSH
 		if o >= need and (best < 0 or sim.signal_level(sg) > sim.signal_level(sim.signal_at(best))):
 			best = k
 	if best < 0 and sim.signals.size() >= Data.SIGNALS_HELD:
-		# the reach as a player meets it (the pass, 20 Oct): nothing to win sure, so the full one at the reach at a coin flip
-		var best_o := COIN
+		# the reach as a player meets it (the pass, 20 Oct): nothing to win sure, so the full one at the reach at a coin flip;
+		# past level 50, with the paragon's XP and the kit at stake, at SAFE_PAST_CAP (BUILD41)
+		var best_o := coin_bar(sim)
 		for k in range(sim.signals.size()):
 			var sg: Dictionary = sim.signal_at(k)
-			var o: float = float(sim.signal_odds(k)[0])
+			var o: float = odds[k]
 			if int(sg.get("grade", 0)) == 3 and int(sg.get("story", -1)) < 0 and sim.signal_level(sg) >= sim.reach and o >= best_o:
 				best = k
 				best_o = o
 	return best
+
+
+## The coin flip's bar: COIN, or SAFE_PAST_CAP past level 50 (BUILD41: the paragon's XP and the kit at stake).
+func coin_bar(sim) -> float:
+	return maxf(COIN, SAFE_PAST_CAP) if sim.level() >= Data.MAX_LEVEL else COIN
+
+
+## An odds read finished before the bot acts on it (BUILD41, PROBE40 4: runs set off on a read not settled): `read`
+## returns [odds, settled]; it's read again till settled, SETTLE_TRIES at most. [odds, settled].
+func settled_odds(read: Callable) -> Array:
+	var r: Array = read.call()
+	var n := 0
+	while not bool(r[1]) and n < SETTLE_TRIES:
+		r = read.call()
+		n += 1
+	return r
+
+
+## The share of the DPS a death would take with the kit (BUILD41): the worn pieces a death loses (not issued, not a
+## mythic) swapped for the best the stash holds for the slot - what the next runner would wear (the review: against a
+## bare runner even the starter kit read 0.75, and every signal was insured); a slot with nothing spare reads the
+## starter piece the next runner brings (Sim._starter_loadout; the re-review) - for the read, then put back.
+var _starter := {}
+func _starter_kit(sim) -> Dictionary:
+	if _starter.is_empty():
+		# the starter's pieces made once on dice of their own, the camp's dice and item ids left as they were
+		var rng_was = sim.rng
+		var id_was: int = Items._next_id
+		sim.rng = RandomNumberGenerator.new()
+		var eq_was: Dictionary = sim.equipped.duplicate()
+		var rig_was: Array = sim.rig.duplicate()
+		sim._starter_loadout()
+		for sl in Data.SLOTS:
+			if sim.equipped.get(sl) != null and sim.equipped[sl] != eq_was.get(sl):
+				_starter[sl] = sim.equipped[sl]
+		sim.equipped = eq_was
+		sim.rig = rig_was
+		sim.rng = rng_was
+		Items._next_id = id_was
+	return _starter
+
+
+func stake_share(sim) -> float:
+	var full: float = sim.dps()
+	if full <= 0.0:
+		return 0.0
+	var off := {}
+	for sl in Data.SLOTS:
+		var w = sim.equipped.get(sl)
+		if w != null and not w.get("issued", false) and not w.get("mythic", false):
+			off[sl] = w
+	if off.is_empty():
+		return 0.0
+	var spare := {}
+	for sl in off:
+		var best = null
+		var best_v := -INF
+		for it in sim.stash:
+			if it is Dictionary and str(it.get("slot", "")) == sl and sim.can_wear(it):
+				var v: float = sim.fit_value(it, sl)
+				if best == null or v > best_v:
+					best = it
+					best_v = v
+		spare[sl] = best if best != null else _starter_kit(sim).get(sl, null)
+	for sl in off:
+		sim.equipped[sl] = spare[sl]
+	sim._dry_memo.clear()
+	var bare: float = sim.dps()
+	for sl in off:
+		sim.equipped[sl] = off[sl]
+	sim._dry_memo.clear()
+	return clampf(1.0 - bare / full, 0.0, 1.0)
+
+
+## Whether a run is insured (BUILD41): a County run, or one with STAKE_SHARE of the DPS at stake, when INSURE_SPARE_STAKE
+## times the price is in hand; any other at three times, as before. `cost` -1: it can't be.
+func insure_for(sim, county: bool, cost: int) -> bool:
+	if cost < 0:
+		return false
+	if sim.cash >= cost * 3:
+		return true
+	return (county or stake_share(sim) >= STAKE_SHARE) and sim.cash >= cost * INSURE_SPARE_STAKE
+
+
+## An order's insurance at its own depth, as deploy_order charges it, or -1 when it can't be insured.
+func order_insure_cost(sim, k: String) -> int:
+	if sim.order_block(k) != "":
+		return -1
+	var sg: Dictionary = sim.order_sig(k)
+	sim._sig_on(sg)
+	var i: int = int(sg["site"])
+	var c: int = sim.insure_cost(i) if sim.can_insure(i) else -1
+	sim._sig_off()
+	return c
+
+
+## After a death (BUILD41, PROBE40 4: 32 of the Doorman's 91 came on the first or second run after one): every odds
+## figure the bot holds is the dead runner's - the signals' and the sites' reads cleared, the lorry's and the orders'
+## read again - so the next run goes on a read of the kit the new runner has.
+var _lost_seen := -1
+func after_death(sim) -> bool:
+	if _lost_seen < 0:
+		_lost_seen = int(sim.operators_lost)
+		return false
+	if int(sim.operators_lost) == _lost_seen:
+		return false
+	_lost_seen = int(sim.operators_lost)
+	sim._sig_odds.clear()
+	sim._surv_cache.clear()
+	lorry_ok = false
+	lorry_read_at = -1e9
+	_order_read_at = -1e9
+	return true
 
 
 ## The fence's gamble as a flush player takes it: one a run at most, the kind of the primary's type

@@ -229,13 +229,13 @@ const YARD := [
 	# the Bunkhouse (29 Oct, docs/design/trips.md 4): line A the repeat runs', line B the expeditions' (shut till the
 	# Quartermaster falls: Sim.yard_stub)
 	{"key": "bunkhouse", "name": "The Bunkhouse", "salvage": "army", "costs": [2000, 7000, 18000, 40000, 80000], "lines": ["Repeat", "Expeditions"], "picks": [
-		[{"id": "rr_ten", "name": "Ten in a row", "short": "×10 runs · 35% XP", "words": "Run it ×10 on a cleared site. Repeat runs earn 35% of a watched run's XP"},
+		[{"id": "rr_ten", "name": "Ten in a row", "short": "×10 runs · 17% XP", "words": "Run it ×10 on a cleared site. Repeat runs earn 17% of a watched run's XP"},
 		 {"id": "trip_hand", "name": "A hand along", "short": "1 hand · a pool of 6", "words": "1 hired hand on each expedition; a pool of 6 to hire from"}],
-		[{"id": "rr_list", "name": "Your own list", "short": "Loot rules decide · 45% XP", "words": "Your loot rules decide what a repeat keeps. Repeat runs earn 45% of a watched run's XP"},
+		[{"id": "rr_list", "name": "Your own list", "short": "Loot rules decide · 22% XP", "words": "Your loot rules decide what a repeat keeps. Repeat runs earn 22% of a watched run's XP"},
 		 {"id": "trip_two_hands", "name": "Two along", "short": "2 hands · Better faces", "words": "Two hired hands on an expedition; Better faces, the dearer reroll"}],
 		[{"id": "rr_twenty", "name": "Twenty in a row", "short": "×20 runs", "words": "Run it ×20 on a cleared site"},
 		 {"id": "trip_two", "name": "Two at once", "short": "2 expeditions at once", "words": "2 expeditions out at once"}],
-		[{"id": "rr_rest", "name": "Bunk beds", "short": "Rest twice as fast · 60% XP", "words": "Rest between repeat runs twice as fast. Repeat runs earn 60% of a watched run's XP"},
+		[{"id": "rr_rest", "name": "Bunk beds", "short": "Rest twice as fast · 30% XP", "words": "Rest between repeat runs twice as fast. Repeat runs earn 30% of a watched run's XP"},
 		 {"id": "trip_roster", "name": "More bunks", "short": "+4 on the roster · weekly quotas", "words": "4 more hands on the roster; the far places' weekly quotas"}],
 		[{"id": "rr_full", "name": "Till it's full", "short": "Till the stash is full", "words": "Repeat runs go on till the stash is full"},
 		 {"id": "trip_three", "name": "Three at once", "short": "3 expeditions at once", "words": "3 expeditions out at once"}]],
@@ -245,7 +245,7 @@ const YARD := [
 ## unwatched, a bail at Sim.BAIL never a death; XP a share of a watched run's (the Bunkhouse raises it).
 const REPEAT_RUNS := 5
 const REPEAT_ODDS := 0.9
-const REPEAT_XP := [0.25, 0.35, 0.45, 0.60]        # from the start; Ten in a row; Your own list; Bunk beds
+const REPEAT_XP := [0.12, 0.17, 0.22, 0.30]        # from the start; Ten in a row; Your own list; Bunk beds. x0.5 on every step (the designer's call, 1 Nov, PROBE40: the long pass had level 50 at 7-9 h on four of six, repeats 59-86% of the XP; was 0.25, 0.35, 0.45, 0.60)
 const REPEAT_RANK_REST := 0.05                     # the Bunkhouse's rank: rest between repeat runs 5% quicker a rank
 const REPEAT_MAX := 200                            # Till it's full: runs at most, a guard
 const REPEAT_MED_UNDER := 0.4                      # an unwatched run's med, under 40% HP, as the bot's
@@ -4016,7 +4016,7 @@ const XP_RAMP_FROM := 1.0
 const XP_RAMP_TO := 12
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 4.0     # 3.1 to 4.0 (the designer's call, 31 Oct, PROBE36: ×1.3 on levels 40-50). The scale from level 40 on: level 50 wanted at 12-24 h
+const XP_TAPER_END := 8.0     # 4.0 to 8.0 (the designer's call, 1 Nov, PROBE40, with REPEAT_XP x0.5: the long pass had level 50 at 7-9 h on four of six; the analyst's estimate 11.3-21.2 h, median 14.7); 3.1 to 4.0 (31 Oct, PROBE36). The scale from level 40 on: level 50 wanted at 12-24 h
 
 
 static func xp_scale(l: int) -> float:

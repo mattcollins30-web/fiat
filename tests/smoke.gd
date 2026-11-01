@@ -801,6 +801,9 @@ func _init() -> void:
 	_fix37g_checks(main)                      # FIX37 (31 Oct): the web and its key after the lift goes, the panel's reasons, the Cap's lift, the bot's third, a hardcore death, the death card's paragon
 	_fix33_checks(main)                       # PROBE33's levers (31 Oct): the box kept at one, the slings' damage, the melee's bleed, the bot's compare
 	_endgame37_checks(main)                   # BUILD37 E (31 Oct): the death past the Quartermaster, the percent lines' top, worth, the words' pool, the paragon adding
+	_b41_paragon_death_checks(main)           # BUILD41 (1 Nov): a death past 50 keeps the paragon levels, loses the XP into the current one; the card, the log, the came-back card, the save
+	_b41_camp_checks()                        # BUILD41: the gauntlet's camp keeps the build's tempers (G1), its kit as it stood (G2), the guns stamped before the armour
+	_b41_bot_checks()                         # BUILD41: the bot past 50 - finished odds only, the coin flip at SAFE_PAST_CAP, the County insured, a re-read after a death
 	_b34_open_checks()                        # BUILD34 phase 1 (31 Oct): every one-save read's build opens its element the step its class is taken
 	_b34_own_pair_checks()                    # the designer's call (31 Oct): a class's own two elements open free
 	_b34_bleed_checks()                       # the designer's call (31 Oct): the melee bleed cut
@@ -13444,14 +13447,14 @@ func _fix37g_checks(main) -> void:
 		sim.bosses_beaten[qm_zone] = true
 		sim.hardcore = true
 		sim.camp_lost = false
-		sim.xp = Data.xp_for_level(lv)
-		sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 3) - Data.xp_for_level(Data.MAX_LEVEL) if lv > Data.MAX_LEVEL else 0.0
+		sim.xp = Data.xp_for_level(lv) + (100.0 if lv < Data.MAX_LEVEL else 0.0)     # some XP towards the next, so a line would be due (BUILD41: none when nothing's lost)
+		sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 3) - Data.xp_for_level(Data.MAX_LEVEL) + 100.0 if lv > Data.MAX_LEVEL else 0.0
 		var ev0: int = sim.events_total
 		sim.deploy(3)
 		sim.mission["hp_start"] = sim.hp
 		sim._kia()
 		var said_new: Array = _said(sim).slice(-(sim.events_total - ev0)) if sim.events_total > ev0 else []
-		var next_line: bool = said_new.any(func(x): return str(x) == Words.YARD["level_kept"] % mini(lv, Data.MAX_LEVEL) or str(x).begins_with(str(Words.YARD["paragon_lost"]).get_slice("%", 0)))
+		var next_line: bool = said_new.any(func(x): return str(x).begins_with("The XP towards"))
 		_check(sim.camp_lost and not next_line, "a hardcore death at level %d past the Quartermaster still logs a next runner or the paragon: %s" % [lv, str(said_new)])
 		sim.load_dict(saved)
 	# the death card past 50 with no paragon: no paragon chip; below 50 with the crew's paragon: "Paragon" kept
@@ -13492,7 +13495,7 @@ func _fix37g_checks(main) -> void:
 	var held_els: Array = sim.class_elements_held()
 	_check(held_els.has("poison") and held_els.has("frost") and sim.element_opened("fire"), "the bot as played, lifted, closed the camp's two for its own or didn't open it: %s" % str(held_els))
 	sim.load_dict(saved)
-	# the death card at 50 with part of a paragon level: "Paragon XP", fitted
+	# the death card at 50 with part of a paragon level: "XP towards paragon 1" (BUILD41), fitted
 	sim.hardcore = false
 	sim.bosses_beaten[qm_zone] = true
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
@@ -13505,7 +13508,7 @@ func _fix37g_checks(main) -> void:
 	chips = []
 	for k in range(ms._pick_lost.shown()):
 		chips.append(ms._pick_lost.words(k))
-	_check(chips.has("Paragon XP") and not chips.has("Paragon levels"), "a death at 50 with part of a paragon level: %s" % str(chips))
+	_check((chips.has("XP towards paragon 1") or chips.has("Paragon XP")) and not chips.has("Paragon levels"), "a death at 50 with part of a paragon level: %s" % str(chips))
 	_check_fit(main, "The Map (a death at 50, part of a paragon level)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -14169,7 +14172,7 @@ func _endgame37_checks(main) -> void:
 	_check(sim.level() == 30 and is_equal_approx(sim.xp, Data.xp_for_level(30)), "a death past the Quartermaster at level 30: level %d, %.0f XP (want 30, %.0f)" % [sim.level(), sim.xp, Data.xp_for_level(30)])
 	var logged := false
 	for e in sim.events:
-		logged = logged or str(e[1]) == Words.YARD["level_kept"] % 30
+		logged = logged or str(e[1]) == Words.YARD["level_kept"] % [31, 30]
 	_check(logged, "the log doesn't say the next runner starts at level 30")
 	main.show_room(main.MISSIONS)
 	main.refresh()
@@ -14178,11 +14181,11 @@ func _endgame37_checks(main) -> void:
 	for k in range(ms._pick_lost.shown()):
 		chips.append(ms._pick_lost.words(k))
 	_check(ms._pick.visible and ms._pick_kicker.text.to_lower().contains("still level 30") and not ms._pick_kicker.text.contains("level 1 ") and not ms._pick_kicker.text.ends_with("level 1"), "the pick past the Quartermaster: '%s'" % ms._pick_kicker.text)
-	_check(chips.has("The XP into level 30") or chips.has("The level's XP"), "the pick's lost chips past the Quartermaster: %s" % str(chips))
+	_check(chips.has("XP towards level 31") or chips.has("The level's XP"), "the pick's lost chips past the Quartermaster: %s" % str(chips))
 	_check(not chips.has("The levels") and not chips.has("The %s's levels" % sim.cls), "the pick still says the levels went: %s" % str(chips))
 	_check_fit(main, "The Map (a death past the Quartermaster)")
 	sim.choose_runner(0)
-	# past 50: the paragon goes, the level stays at 50 (as before); the card says the paragon went, not the levels
+	# past 50: the level stays at 50 and the paragon levels too (1 Nov); the card says the paragon's kept, not the levels gone
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL + 3)
 	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 3) - Data.xp_for_level(Data.MAX_LEVEL)     # 3 paragon levels (31 Oct: the card's chip is what was really lost)
 	sim.deploy(3)
@@ -14193,7 +14196,7 @@ func _endgame37_checks(main) -> void:
 	chips = []
 	for k in range(ms._pick_lost.shown()):
 		chips.append(ms._pick_lost.words(k))
-	_check(ms._pick_kicker.text.to_lower().contains("still level %d" % Data.MAX_LEVEL) and (chips.has("Paragon levels") or chips.has("Paragon")) and not chips.has("The levels"), "the pick past 50: '%s', %s" % [ms._pick_kicker.text, str(chips)])
+	_check(ms._pick_kicker.text.to_lower().contains("still level %d" % Data.MAX_LEVEL) and not ms._pick_kicker.text.to_lower().contains("paragon") and (chips.has("Paragon 3") or chips.has("Paragon")) and not chips.has("Paragon levels") and not chips.has("The levels"), "the pick past 50: '%s', %s" % [ms._pick_kicker.text, str(chips)])
 	_check_fit(main, "The Map (a death past 50)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -26433,7 +26436,7 @@ func _issue_checks(main) -> void:
 		_check(not load("res://scripts/ui/item_head.gd").unique_rule(it).is_empty(), "the %s's rule has no words" % sl)
 	sim.stash.assign(stash_hold + bought)     # the bought pieces kept: the webbing check below wants one
 	# the third review's A9, C5, C6, M2: loot once a search; the counter's piece one roll; issued kit off the shelf; a
-	# death past 50 keeps 50 and takes the paragon
+	# death past 50 keeps 50 and (BUILD41, 1 Nov) the paragon levels
 	_check(sim.thin_after({"depth": 3}) == int(roundf(Data.THIN_AFTER + Data.THIN_PER_DEPTH * 3)), "a site's searches still grow with loot quantity: %d" % sim.thin_after({"depth": 3}))
 	var ip_a: Dictionary = sim.issued_piece("Helmet")
 	var ip_b: Dictionary = sim.issued_piece("Helmet")
@@ -26447,7 +26450,7 @@ func _issue_checks(main) -> void:
 	sim.deploy(0)
 	if sim.mission != null:
 		sim._kia()
-		_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 0 and sim.ring.is_empty() and not sim.tree.any(func(id): return sim.is_ring(str(id))), "a death past 50: level %d, paragon %d, ring nodes in the tree %s" % [sim.level(), sim.paragon(), str(sim.tree.filter(func(id): return sim.is_ring(str(id))))])
+		_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 3, "a death past 50: level %d, paragon %d (want 50, 3: BUILD41, the paragon levels kept)" % [sim.level(), sim.paragon()])
 	sim.load_dict(hold_d)
 	# stamping (Matt, 26 Oct): a piece of your own, stamped at the slot's issued price, counts towards the County's want
 	var own_gun = sim.equipped.get("Primary")
@@ -28378,7 +28381,7 @@ func _repeat_checks(main) -> void:
 	show_site.call(site)
 	var rc = main._missions._report
 	var tf: Array = Fmt.money_forms(float(tot["tins"]))
-	_check(rc.visible and rc.title.text == "Back from the Allotments" and rc.tiles[0]["value"].text == Fmt.group(int(tot["kills"])) and rc.tiles[2]["value"].text in tf and rc.tiles[6]["key"].text == "25% XP" and rc.tiles[6]["value"].text in [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))] and rc.ended.text == Words.REPEAT["ended_back"], "the report card: shown %s, '%s', kills '%s', tins '%s', '%s', ended '%s'" % [str(rc.visible), rc.title.text, rc.tiles[0]["value"].text, rc.tiles[2]["value"].text, rc.tiles[6]["key"].text, rc.ended.text])
+	_check(rc.visible and rc.title.text == "Back from the Allotments" and rc.tiles[0]["value"].text == Fmt.group(int(tot["kills"])) and rc.tiles[2]["value"].text in tf and rc.tiles[6]["key"].text == "12% XP" and rc.tiles[6]["value"].text in [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))] and rc.ended.text == Words.REPEAT["ended_back"], "the report card: shown %s, '%s', kills '%s', tins '%s', '%s', ended '%s'" % [str(rc.visible), rc.title.text, rc.tiles[0]["value"].text, rc.tiles[2]["value"].text, rc.tiles[6]["key"].text, rc.ended.text])
 	_check(not main._missions._came_btn.visible, "Came back beside the repeat's report: the same runs twice")
 	_check(main._rail_status(main.MISSIONS).get("badge", "") == "Back", "the Map's badge with the report waiting: '%s'" % str(main._rail_status(main.MISSIONS)))
 	var shown_lines: int = rc.lines.filter(func(l): return l.visible and l.text.begins_with("Run ")).size()
@@ -28574,7 +28577,7 @@ func _repeat_checks(main) -> void:
 		counts.append(sim.repeat_count())
 		shares.append(share_of.call())
 	_check(counts == [5, 10, 10, 20, 20, 0], "the Bunkhouse's runs: %s" % str(counts))
-	_check(is_equal_approx(shares[0], 25.0) and is_equal_approx(shares[1], 35.0) and is_equal_approx(shares[2], 45.0) and is_equal_approx(shares[4], 60.0), "the repeat XP's share: %s" % str(shares))
+	_check(is_equal_approx(shares[0], 12.0) and is_equal_approx(shares[1], 17.0) and is_equal_approx(shares[2], 22.0) and is_equal_approx(shares[4], 30.0), "the repeat XP's share: %s (BUILD41: halved)" % str(shares))
 	sim.hp = sim.max_hp()
 	sim.deploy(0)
 	sim.mission["unwatched"] = true
@@ -31417,3 +31420,288 @@ func _fix30b_loot_weights() -> void:
 					leaks.append(str(b["name"]))
 			homes += 1 if mine > 0 else 0
 	_check(homes >= 5 and leaks.is_empty(), "a site's own base: %d dropped at home; off its site %s" % [homes, str(leaks.slice(0, 4))])
+
+
+## BUILD41 (1 Nov, the designer's call 2): a death past 50 keeps the paragon levels and loses only the XP into the
+## current one; the ring stays trained. The log, the death card's kicker and chips (fitted), the came-back card's line
+## (fitted), and the save's round trip say so.
+func _b41_paragon_death_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var UI_v = load("res://scripts/ui/ui.gd")
+	var qm_zone := -1
+	for b in Data.BOSSES:
+		if str(b["name"]) == "The Quartermaster":
+			qm_zone = int(b["zone"])
+	sim.bosses_beaten[qm_zone] = true
+	sim.hardcore = false
+	var cap: float = Data.xp_for_level(Data.MAX_LEVEL)
+	var floor7: float = Data.xp_for_level(Data.MAX_LEVEL + 7) - cap
+	var into: float = floorf(0.4 * (Data.xp_for_level(Data.MAX_LEVEL + 8) - Data.xp_for_level(Data.MAX_LEVEL + 7)))
+	sim.xp = cap
+	sim.paragon_xp = floor7 + into
+	sim.paragon_reset_free()
+	var spent := 0
+	while spent < 3 and sim.paragon_add("damage"):
+		spent += 1
+	var ring0: Dictionary = sim.ring.duplicate()
+	_check(sim.paragon() == 7 and spent == 3 and into > 0.0, "the paragon death's fixture: paragon %d, %d points spent, %.0f XP into it" % [sim.paragon(), spent, into])
+	sim.came_back_seen()
+	var ev0: int = sim.events_total
+	sim.deploy(3)
+	sim.mission["hp_start"] = sim.hp
+	sim._kia()
+	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 7 and is_equal_approx(sim.paragon_xp, floor7), "a death at paragon 7: paragon %d, %.0f paragon XP (want 7, %.0f), level %d" % [sim.paragon(), sim.paragon_xp, floor7, sim.level()])
+	_check(sim.ring == ring0, "a death at paragon 7 cleared the ring: %s (was %s)" % [str(sim.ring), str(ring0)])
+	_check(is_equal_approx(float(sim.last_report.get("paragon_lost_xp", -1.0)), into) and int(sim.last_report.get("paragon_kept", -1)) == 7, "the death's report: %.0f XP lost (want %.0f), kept %d" % [float(sim.last_report.get("paragon_lost_xp", -1.0)), into, int(sim.last_report.get("paragon_kept", -1))])
+	var said_new: Array = _said(sim).slice(-(sim.events_total - ev0)) if sim.events_total > ev0 else []
+	_check(said_new.has(Words.YARD["paragon_lost"] % [8, 7]), "the log doesn't say paragon 7's kept: %s" % str(said_new))
+	# the death card: the kicker says paragon 7, the chips the XP into it gone and the paragon kept, all fitted
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var ms = main._missions
+	var chips: Array = []
+	for k in range(ms._pick_lost.shown()):
+		chips.append(ms._pick_lost.words(k))
+	_check(ms._pick.visible and ms._pick_kicker.text.to_lower().contains("still level %d" % Data.MAX_LEVEL) and not ms._pick_kicker.text.to_lower().contains("paragon") and UI_v.text_width(ms._pick_kicker, ms._pick_kicker.text) <= ms._pick_kicker.size.x,
+		"the death card's kicker at paragon 7 (the kept chip says the paragon, not the kicker too): '%s'" % ms._pick_kicker.text)
+	_check((chips.has("XP towards paragon 8") or chips.has("Paragon XP")) and (chips.has("Paragon 7") or chips.has("Paragon")) and not chips.has("Paragon levels") and not chips.has("The levels"),
+		"the death card's chips at paragon 7: %s" % str(chips))
+	_check_fit(main, "The Map (a death at paragon 7)")
+	# the came-back card: the line says the paragon's kept and its XP went
+	_check(str(sim.came_back.get("kept", "")) == "paragon 7" and is_equal_approx(float(sim.came_back.get("xp_lost", 0.0)), into), "the came-back tally: %s, %.0f XP" % [str(sim.came_back.get("kept", "")), float(sim.came_back.get("xp_lost", 0.0))])
+	var cbc = ms._came
+	cbc._shown = ""
+	cbc.show_state(sim)
+	var line_ok := false
+	var fits := true
+	for l in cbc._firsts:
+		line_ok = line_ok or l.text in ["Kept paragon 7: the XP towards paragon 8 went with them", "Kept paragon 7"]
+		fits = fits and UI_v.text_width(l, l.text) <= l.size.x
+	_check(cbc.visible and line_ok and fits, "the came-back card after a death at paragon 7: %s" % str(cbc._firsts.map(func(x): return x.text)))
+	# the save's round trip: the paragon, its XP and the ring as they were
+	var d = JSON.parse_string(JSON.stringify({"sim": sim.to_dict()}))
+	var s2 = Sim.new()
+	s2.load_dict(d["sim"])
+	_check(s2.paragon() == 7 and is_equal_approx(s2.paragon_xp, floor7) and s2.ring.size() == ring0.size() and str(s2.came_back.get("kept", "")) == "paragon 7",
+		"the save after a death at paragon 7: paragon %d, %.0f XP, ring %s" % [s2.paragon(), s2.paragon_xp, str(s2.ring)])
+	# a second death with nothing towards paragon 8: no line says XP went (the review)
+	sim.choose_runner(0)
+	var ev1: int = sim.events_total
+	sim.deploy(3)
+	sim.mission["hp_start"] = sim.hp
+	sim._kia()
+	var said2: Array = _said(sim).slice(-(sim.events_total - ev1)) if sim.events_total > ev1 else []
+	_check(sim.paragon() == 7 and is_zero_approx(float(sim.last_report.get("paragon_lost_xp", -1.0))) and not said2.any(func(x): return str(x).begins_with("The XP towards")),
+		"a death with no XP towards paragon 8 still says XP went: %s" % str(said2))
+	# the gate's record: a signal set off on a settled read records its odds, not -1 (the review: the site's cache was read)
+	sim.choose_runner(0)
+	sim.signal_seq += 1
+	sim.signals = [{"id": sim.signal_seq, "site": 0, "zone": 0, "depth": sim.depth_for_level(0, sim.reach), "codes": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 1}]
+	var ob_was: int = sim.odds_budget
+	sim.odds_budget = 0
+	var so: Array = sim.signal_odds(0)
+	sim.odds_budget = ob_was
+	var gate_ok: bool = sim.deploy_signal(0)
+	var seen_o: float = float(sim.mission.get("odds_seen", -2.0)) if sim.mission != null else -2.0
+	_check(bool(so[1]) and gate_ok and is_equal_approx(seen_o, float(so[0])), "a signal on a settled read of %s recorded %.2f at the gate" % [str(so), seen_o])
+	if sim.on_mission():
+		sim.extract_now()
+	# and an order's: the Grid set off on a settled read records it (the re-review)
+	sim.choose_runner(0)
+	sim.rebuilt[str(Data.pinnacle("grid")["opened_by"])] = maxi(1, sim.rebuild_rank(str(Data.pinnacle("grid")["opened_by"])))
+	sim.odds_budget = 0
+	var oo: Array = sim.order_odds("grid")
+	sim.odds_budget = ob_was
+	var o_ok: bool = sim.deploy_order("grid")
+	var o_seen: float = float(sim.mission.get("odds_seen", -2.0)) if sim.mission != null else -2.0
+	_check(bool(oo[1]) and o_ok and is_equal_approx(o_seen, float(oo[0])), "the Grid on a settled read of %s recorded %.2f at the gate (%s)" % [str(oo), o_seen, sim.order_block("grid")])
+	if sim.on_mission():
+		sim.extract_now()
+	# a runner at level 1 past the Quartermaster keeps level 1: the kicker says "still", not "back at" (the re-review)
+	sim.choose_runner(0)
+	sim.xp = 50.0
+	sim.deploy(3)
+	sim.mission["hp_start"] = sim.hp
+	sim._kia()
+	main.refresh()
+	_check(sim.level() == 1 and ms._pick.visible and ms._pick_kicker.text.to_lower().contains("still level 1") and not ms._pick_kicker.text.to_lower().contains("back at"), "a level-1 death past the Quartermaster: '%s'" % ms._pick_kicker.text)
+	_check_fit(main, "The Map (a level-1 death past the Quartermaster)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("b41 paragon ok: a death at paragon 7 keeps 7, loses the XP into it; the card, the log, the came-back card, the save")
+
+
+## BUILD41 (mine, 3): the gauntlet's camp. G2 (the hour-20 camp, keep_level) leaves the build's kit as it stood, its HP
+## and DPS within a few percent; G1 rolls every slot again but carries each piece's tempers onto the new one; the issued
+## step stamps the guns before it buys the armour (PROBE40 1: HP 5,813 to 1,508; 6,053 to 2,570 at the Golf Club).
+func _b41_camp_checks() -> void:
+	var dice0: Array = [Sim._seed_n, Items._next_id]
+	var Bal = load("res://tests/balance.gd")
+	var s = Sim.new()
+	s.start()
+	_set_cls(s, "Doorman")
+	for i in range(Data.TIERS.size()):
+		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+	for z in range(s.bosses_beaten.size()):
+		s.bosses_beaten[z] = true
+	for room in Data.ROOMS_SHUT:
+		if not (room in s.unlocked):
+			s.unlocked.append(room)
+	s.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	var coat: Dictionary = Items.roll_unique(s._unique_named("The Manager's Coat"), s.rng, 40)
+	s.equipped["Armour"] = coat
+	s.cash = 1e12
+	s.scrap = 1000000000
+	var n := 0
+	for k in range(30):
+		if s.craft(int(coat["id"]), "temper"):
+			n += 1
+	var bot = Bot.new()
+	bot.cls = "Doorman"
+	bot.element = "bleed"
+	bot.crew_on = false
+	s.cash = 0.0
+	s.scrap = 0                               # nothing for the camp's tidy to spend at the Bench
+	s.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 12) - Data.xp_for_level(Data.MAX_LEVEL)
+	var coat_now = s.equipped["Armour"]
+	_check(n == 30 and coat_now != null and int(coat_now.get("tempered", 0)) == 30 and s.level() == Data.MAX_LEVEL, "the camp's fixture: %d tempers, the coat %s" % [n, str(coat_now.get("tempered", -1)) if coat_now != null else "off"])
+	var ids0: Array = Data.SLOTS.map(func(sl): return int(s.equipped[sl]["id"]) if s.equipped[sl] != null else -1)
+	var hp0: float = s.max_hp()
+	var dps0: float = s.dps()
+	var d0: Dictionary = s.to_dict()
+	# G2: the kit as it stood
+	Bal._standard_camp(s, bot, 56, 12, true)
+	var ids2: Array = Data.SLOTS.map(func(sl): return int(s.equipped[sl]["id"]) if s.equipped[sl] != null else -1)
+	var hp2: float = s.max_hp()
+	var dps2: float = s.dps()
+	_check(ids2 == ids0 and absf(hp2 / maxf(1.0, hp0) - 1.0) <= 0.05 and absf(dps2 / maxf(1.0, dps0) - 1.0) <= 0.05 and s.reach == 56 and s.paragon() == 12,
+		"the hour-20 camp moved the build: HP %.0f to %.0f, DPS %.0f to %.0f, kit %s to %s, reach %d, paragon %d" % [hp0, hp2, dps0, dps2, str(ids0), str(ids2), s.reach, s.paragon()])
+	# G1: rolled again at the camp's level, the coat's tempers carried onto the new one
+	s.load_dict(d0)
+	Bal._standard_camp(s, bot, 56, 12, false)
+	var c1 = s.equipped["Armour"]
+	_check(c1 != null and str(c1.get("unique", "")) == "The Manager's Coat" and int(c1.get("tempered", 0)) == 30 and Items.ilvl(c1) == 56 + 30 and int(c1["id"]) != int(coat["id"]),
+		"the standard camp's coat: %s, %d tempers at item level %d (want 30 at %d)" % [str(c1.get("unique", "")) if c1 != null else "off", int(c1.get("tempered", 0)) if c1 != null else -1, Items.ilvl(c1) if c1 != null else -1, 56 + 30])
+	# the issued step: the guns stamped before the armour's swapped (four wanted: helmet, rig, charm and a gun)
+	var g = Sim.new()
+	g.start()
+	_set_cls(g, "Poacher")
+	g.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	g.issued = true
+	g.equipped["Primary"] = g._plain("Primary", "Old .303")
+	g.equipped["Secondary"] = g._plain("Secondary", "Service pistol")
+	g.equipped["Armour"] = g._plain("Armour", "Lineman's rubber coat")
+	Bal._gauntlet_issued(g, Bot.new(), 4)
+	var arm = g.equipped["Armour"]
+	_check(arm != null and str(arm["base"]) == "Lineman's rubber coat" and not arm.get("issued", false) and g.issued_worn() >= 4,
+		"the gauntlet's issued step swapped the build's armour: %s, %d worn" % [str(arm["base"]) if arm != null else "none", g.issued_worn()])
+	# the last zone, six wanted: every own piece in a slot he issues stamped, the coat still on (the review)
+	for sl in Data.SLOTS:
+		var w6 = g.equipped.get(sl)
+		if w6 == null and not g.issued_def(sl).is_empty():
+			g.equipped[sl] = g._plain(sl, str(Data.BASES[sl][0]["name"]))
+	Bal._gauntlet_issued(g, Bot.new(), 6)
+	arm = g.equipped["Armour"]
+	_check(arm != null and str(arm["base"]) == "Lineman's rubber coat" and bool(arm.get("stamped", false)) and g.issued_worn() >= 6,
+		"the gauntlet's last zone swapped the build's armour: %s, %d worn" % [str(arm["base"]) if arm != null else "none", g.issued_worn()])
+	Sim._seed_n = int(dice0[0])
+	Items._next_id = int(dice0[1])
+	print("b41 camp ok: G2 keeps the kit, G1 carries the tempers, the guns stamped before the armour")
+
+
+## BUILD41 (mine, 4): the bot past 50. It acts on a finished odds read only; the coin flip's bar is SAFE_PAST_CAP past
+## level 50; a County run, or one with the kit a big share of the DPS, is insured at half again its price in hand; after
+## a death every read is made again before it goes.
+func _b41_bot_checks() -> void:
+	var dice0: Array = [Sim._seed_n, Items._next_id]
+	var mk := func(w, site: int, lv: int, grade: int) -> Dictionary:
+		w.signal_seq += 1
+		return {"id": w.signal_seq, "site": site, "zone": int(Data.TIERS[site]["zone"]), "depth": w.depth_for_level(site, lv), "codes": [], "papers": [],
+			"head": false, "convoy": false, "line": 0, "grade": grade}
+	var plant := func(w, k: int, odds: float) -> void:
+		var sg: Dictionary = w.signal_at(k)
+		w._sig_on(sg)
+		var key: Array = w._odds_key(int(sg["site"]))
+		w._sig_off()
+		w._sig_odds[int(sg["id"])] = [key, odds, 100000, int(odds * 100000.0), RandomNumberGenerator.new(), 1.0]
+	# the coin flip: three full signals at the reach read 60%; at level 49 one's run (COIN), at 50 none (SAFE_PAST_CAP)
+	var s = Sim.new()
+	s.start()
+	_set_cls(s, "Poacher")
+	for z in range(s.bosses_beaten.size()):
+		s.bosses_beaten[z] = true
+	var b = Bot.new()
+	var picks: Array = []
+	for lv in [Data.MAX_LEVEL - 1, Data.MAX_LEVEL]:
+		s.xp = Data.xp_for_level(lv)
+		s.signals = []
+		for k in range(Data.SIGNALS_HELD):
+			s.signals.append(mk.call(s, 0, s.reach + 1, 3))
+		for k in range(Data.SIGNALS_HELD):
+			plant.call(s, k, 0.6)
+		picks.append(b._pick_signal(s))
+	_check(s.signal_level(s.signal_at(0)) >= s.reach and picks[0] >= 0 and picks[1] < 0, "the coin flip past 50: picked %s at levels 49 and 50 (want one, then none)" % str(picks))
+	# a finished read only: one dry run a call, the bot reads on till it's settled before it chooses
+	var s2 = Sim.new()
+	s2.start()
+	s2.signals = [mk.call(s2, 0, s2.reach, 1)]
+	s2.odds_budget = 1
+	b._pick_signal(s2)
+	_check(bool(s2.signal_odds_now(0)[1]), "the bot chose on an odds read not finished: %s" % str(s2.signal_odds_now(0)))
+	# the insurance: a County run at 1.6 times its price in hand, a run with the kit at stake at twice; a plain one not
+	var s3 = Sim.new()
+	s3.start()
+	s3.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	# the starter kit, nothing in the stash: the next runner brings the same, so nothing's at stake and the 1.5x rule
+	# insures nothing (the re-review: a bare slot read 0.75 and every signal was insured)
+	s3.stash = []
+	var share0: float = b.stake_share(s3)
+	s3.cash = 2000.0
+	_check(share0 < Bot.STAKE_SHARE and not b.insure_for(s3, false, 1000), "the starter kit with an empty stash still insured at 2x: stake %.2f" % share0)
+	var mach: Dictionary = s3._plain("Primary", "Machete")
+	mach["affixes"] = [{"stat": "damage_pct", "value": 100, "tier": 1}]
+	s3.equipped["Primary"] = mach
+	s3._dry_memo.clear()
+	var kit0: Array = Data.SLOTS.map(func(sl): return int(s3.equipped[sl]["id"]) if s3.equipped[sl] != null else -1)
+	var share: float = b.stake_share(s3)
+	var kit1: Array = Data.SLOTS.map(func(sl): return int(s3.equipped[sl]["id"]) if s3.equipped[sl] != null else -1)
+	s3.cash = 1600.0
+	var county_ins: bool = b.insure_for(s3, true, 1000)
+	s3.cash = 2000.0
+	var stake_ins: bool = b.insure_for(s3, false, 1000)
+	s3.cash = 1200.0
+	var short_ins: bool = b.insure_for(s3, true, 1000)
+	_check(share >= Bot.STAKE_SHARE and kit0 == kit1 and county_ins and stake_ins and not short_ins and not b.insure_for(s3, false, -1),
+		"the bot's insurance: stake %.2f, kit put back %s, County at 1.6x %s, the kit at stake at 2x %s, the County at 1.2x %s" % [share, str(kit0 == kit1), str(county_ins), str(stake_ins), str(short_ins)])
+	# a spare kit in the stash as good as what's worn: little at stake, no insurance at 2x (the review: against a bare
+	# runner the starter kit read 0.75, so every signal was insured)
+	for sl in Data.SLOTS:
+		var wn = s3.equipped.get(sl)
+		if wn != null:
+			var cp: Dictionary = wn.duplicate(true)
+			cp["id"] = Items._next_id
+			Items._next_id += 1
+			s3.stash.append(cp)
+	var share_sp: float = b.stake_share(s3)
+	s3.cash = 2000.0
+	_check(share_sp < Bot.STAKE_SHARE and not b.insure_for(s3, false, 1000) and Data.SLOTS.map(func(sl): return int(s3.equipped[sl]["id"]) if s3.equipped[sl] != null else -1) == kit0,
+		"a runner with a spare kit as good still insured at 2x: stake %.2f" % share_sp)
+	# after a death: a read the dead runner's kit made isn't run on - a level-60 signal read 100% before, read again
+	var s4 = Sim.new()
+	s4.start()
+	s4.signals = [mk.call(s4, 0, 60, 1)]
+	plant.call(s4, 0, 1.0)
+	var b4 = Bot.new()
+	b4.after_death(s4)
+	var before: int = b4._pick_signal(s4)
+	s4.operators_lost += 1
+	b4.lorry_ok = true
+	var seen: bool = b4.after_death(s4)
+	var after: int = b4._pick_signal(s4)
+	_check(before == 0 and seen and after < 0 and not b4.lorry_ok, "after a death the bot ran on the dead runner's read: before %d, seen %s, after %d, the lorry's %s" % [before, str(seen), after, str(b4.lorry_ok)])
+	Sim._seed_n = int(dice0[0])
+	Items._next_id = int(dice0[1])
+	print("b41 bot ok: finished reads, the coin flip at %.2f past 50, the County insured, a re-read after a death" % Bot.SAFE_PAST_CAP)

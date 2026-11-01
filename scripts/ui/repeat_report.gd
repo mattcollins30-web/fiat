@@ -109,7 +109,7 @@ func show_state(s) -> void:
 		[Words.REPEAT["sold_row"], [Words.REPEAT["sold_val"] % [sold, Fmt.money(float(tot["sold_tins"]))], Words.REPEAT["sold_val"] % [sold, Fmt.money_k(float(tot["sold_tins"]))], "%d" % sold] if sold > 0 else [Words.REPEAT["none"]]],
 		[Words.REPEAT["scrap"], [Fmt.group(int(tot["scrap"]))]],
 		[Words.REPEAT["mats"], [Fmt.group(int(tot["mats"]))]],
-		[Words.REPEAT["xp"] % int(round(float(rep.get("share", 0.25)) * 100.0)), [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))]],
+		[Words.REPEAT["xp"] % int(round(float(rep.get("share", Data.REPEAT_XP[0])) * 100.0)), [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))]],
 		[Words.REPEAT["levels"], [Words.REPEAT["levels_same"] % lv1] if lv1 == lv0 else [Words.REPEAT["levels_up"] % [lv0, lv1]]],
 	]
 	for k in range(tiles.size()):

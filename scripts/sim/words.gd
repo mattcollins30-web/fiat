@@ -1663,8 +1663,11 @@ const CLASS_UNLOCK := {
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The Pitch is set. One runner, a hammer, the estate outside.",
-	"paragon_lost": "The crew's %d paragon levels went with them; the next runner starts at level 50.",
-	"level_kept": "The XP towards the next level went with them; the next runner starts at level %d.",     # past the Quartermaster (31 Oct)
+	"paragon_lost": "The XP towards paragon %d went with them; the crew keeps paragon %d.",     # 1 Nov: the paragon levels stay
+	"paragon_first_lost": "The XP towards paragon 1 went with them; the next runner starts at level 50.",
+	"kept_paragon": "paragon %d", "kept_level": "level %d",     # the came-back card's "Kept paragon 7: the XP towards paragon 8 went with them" (1 Nov)
+	"kept_line": "Kept %s: the XP towards %s went with them",
+	"level_kept": "The XP towards level %d went with them; the next runner starts at level %d.",     # past the Quartermaster (31 Oct; one phrase for the loss, 1 Nov)
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
 	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Pitch by morning.",

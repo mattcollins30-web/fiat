@@ -296,7 +296,8 @@ static func trait_chips(words: String) -> Array:
 func _show_pick() -> void:
 	var who: String = sim.cls if sim.cls != "" else "runner"
 	var lv: int = sim.level()     # 1 before the Quartermaster; past him the level kept, 50 past the cap (31 Oct)
-	if lv > 1:
+	var pk: int = sim.paragon() if lv >= Data.MAX_LEVEL else 0     # past 50 the paragon levels are kept too (1 Nov): the kept chip says it
+	if lv > 1 or sim.death_keeps_level():     # past the Quartermaster a level-1 runner keeps level 1 too (the re-review)
 		UI.fit(_pick_kicker, ["The %s · still level %d" % [who, lv], "Still level %d" % lv])     # a level kept reads as kept, not a reset (31 Oct, the UI review)
 	else:
 		UI.fit(_pick_kicker, ["The %s · back at level 1" % who, "Back at level 1"])
@@ -314,12 +315,14 @@ func _show_pick() -> void:
 		c["chips"].show_chips(trait_chips(str(row.get("words", ""))), 1, true)
 	var gone: Dictionary = {"forms": ["The %s's levels" % who, "The levels"], "colour": Pal.BAD}
 	if lv >= Data.MAX_LEVEL:
-		# past 50 the paragon goes: what this death really took, recorded by the sim before the reset (31 Oct, the UI review)
-		var p_lv: int = int(sim.last_report.get("paragon_lost", 0))
+		# past 50 the XP into the paragon level goes, the paragon levels stay (1 Nov; what this death really took, recorded
+		# by the sim before the reset, 31 Oct)
 		var p_xp: float = float(sim.last_report.get("paragon_lost_xp", 0.0))
-		gone = {"forms": ["Paragon levels", "Paragon"], "colour": Pal.BAD} if p_lv > 0 else ({"forms": ["Paragon XP"], "colour": Pal.BAD} if p_xp > 0.0 else {})     # the language pass (31 Oct)
+		gone = {}
+		if p_xp > 0.0:
+			gone = {"forms": ["XP towards paragon %d" % (pk + 1), "Paragon XP"], "colour": Pal.BAD}     # one phrase for the loss (1 Nov, the review)
 	elif lv > 1:
-		gone = {"forms": ["The XP into level %d" % lv, "The level's XP"], "colour": Pal.BAD}
+		gone = {"forms": ["XP towards level %d" % (lv + 1), "The level's XP"], "colour": Pal.BAD}
 	var lost: Array = [{"forms": ["The kit worn"], "colour": Pal.BAD}]
 	if not gone.is_empty():
 		lost.append(gone)
@@ -328,6 +331,8 @@ func _show_pick() -> void:
 		lost.append({"forms": ["The rest of the crew", "The crew"], "colour": Pal.TEXT_2})
 	if lv < Data.MAX_LEVEL and (sim.paragon_xp > 0.0 or not sim.ring.is_empty()):
 		lost.append({"forms": ["Paragon"], "colour": Pal.TEXT_2})     # kept: the crew's, earned by another class past 50 (a death below 50 leaves it)
+	elif pk > 0:
+		lost.append({"forms": ["Paragon %d" % pk, "Paragon"], "colour": Pal.TEXT_2})     # kept past 50 too (1 Nov)
 	_pick_lost.show_chips(lost, 3, true)
 	UI.fit_button(_pick_go, ["Set off · pick a trait first", "Pick a trait first"])
 

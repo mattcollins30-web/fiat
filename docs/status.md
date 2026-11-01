@@ -6119,6 +6119,28 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 1 Nov: the long pass's fixes (BUILD41; PROBE40; SAVE_VERSION 19)
+
+The designer's calls on the long pass (level 50 at 7-9 h on four of six reads; 75-100 deaths after the Quartermaster on
+three builds; the gauntlets 0 of 15, the harness's doing):
+- Level pace: REPEAT_XP halved on every step (25/35/45/60% of a watched run's to 12/17/22/30%; the Bunkhouse's lines
+  say so) and XP_TAPER_END 4.0 to 8.0. The analyst's estimate: level 50 at 11.3-21.2 h, median 14.7. The fingerprint
+  moves (XP). SAVE_VERSION 19: on the new curve an old save's level 50 reads as 44.
+- A death past 50 keeps the paragon levels: only the XP into the current paragon level goes, as the XP into the level
+  does below 50 since 31 Oct; the ring stays trained. One phrase for the loss: the death card ("XP towards paragon
+  8" gone, "Paragon 7" kept; the kicker "still level 50"), the log ("The XP towards paragon 8 went with them; the crew
+  keeps paragon 7.", only when XP went), and a new came-back line ("Kept paragon 7: the XP towards paragon 8 went with
+  them"; "Kept level 36: the XP towards level 37 ..." below 50). Below 50 the chip and log say "level 37" the same way.
+- The gauntlet's harness: G2 (the hour-20 camp) leaves the kit as it stood; G1's re-roll carries each piece's tempers;
+  the issued step stamps the build's own piece in any slot before it buys (the coat stays on at six wanted);
+  STANDARD_REACH 56, STANDARD_PARAGON 7 (12 levels' XP on the old curve buys 7 at taper 8). The h20
+  Doorman's G2 in the cloud: 4 of 15 (HP 5,737 held through every place), as the analyst's probe.
+- The bot past 50: acts on finished odds reads only, insures County runs and runs with half its DPS in the kit at 1.5x
+  the price in hand (the stake read against the best spare in the stash), skips the coin flip under 0.8 past level
+  50, and reads every figure again after a death. A run's record now keeps a signal's or order's own odds at the gate
+  (they all logged -1 before); that record also feeds the run events' "Fight at the site's odds" standing order, so on
+  signal and order runs it now reads their real odds where it read -1.
+
 ## 1 Nov: materials in the pack, run events (0.10.3, SAVE_VERSION 18)
 
 Matt: "move all materials into the inventory during fights ... finding clinical supplies and having to make a decision

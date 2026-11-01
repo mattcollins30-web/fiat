@@ -345,7 +345,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
 		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save,
-		# P1 on the campaign alone (to the Quartermaster: past him a death keeps the level, past 50 the paragon goes - 31 Oct; the death band is
+		# P1 on the campaign alone (to the Quartermaster: past him a death keeps the level, past 50 the paragon levels too and only the XP towards the next goes - 31 Oct, 1 Nov; the death band is
 		# the campaign's): the runs, deaths and bails (left under a quarter HP) until the Quartermaster falls
 		"campaign_runs": 0, "campaign_deaths": 0, "campaign_bails": 0, "first_bail_at": -1.0, "repeats": 0, "repeat_runs": 0, "repeat_bails": 0, "norepeat": Bot.norepeat,
 		# P3 on the runs the bot takes at a person's odds (25 Oct, the tools review: farmed at PUSH, the median is 100% by
@@ -989,11 +989,11 @@ func _broken(_hours: float, key: String, _plain := false, read_n := "") -> void:
 ## its own level, GAUNTLET_TRIES tries. Before each County zone the issued kit it wants is bought and worn in the slots
 ## the build leaves free. A death puts the camp back as it was before the try (the kit is the question, not one life).
 ## A place not won is opened anyway (`forced`), so every later one still gets its fight. Broken: every one won.
-const STANDARD_REACH := 55        # DRAFT (31 Oct): to be replaced from the pass's figures at hour 20. Set from the target band alone (level 50 at 12-24 h, the reach near the level), not from a read: no read of the merged build reaches hour 20 yet. Was 90 (Matt, 27 Oct: past the County's top)
+const STANDARD_REACH := 56        # 1 Nov (BUILD41, from the long pass: the six reads' median reach at hour 20, PROBE40 5). Was 55 (31 Oct, a draft from the band alone), 90 (Matt, 27 Oct: past the County's top)
 const STANDARD_ROLLS := 30        # finds a slot, the best kept
-const STANDARD_PARAGON := 5       # DRAFT (31 Oct): to be replaced from the pass's figures at hour 20. Set from the band too (a few paragon levels past 50 at PARAGON_XP_GROW 0.25), not from a read. Was 30 (Matt, 27 Oct)
+const STANDARD_PARAGON := 7       # 1 Nov (BUILD41's review): 12 was the long pass's XP past 50 by hour 20 on the old curve (PROBE40 5: the median, 8-18 levels; the read's own 1 the death wipe); a paragon level costs level 49's step x XP_TAPER_END, doubled at taper 8, so the same XP buys 7. Was 5 (31 Oct, a draft), 30 (Matt, 27 Oct)
 const GAUNTLET_TRIES := 3
-const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
+const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Secondary", "Primary", "Armour"]     # the slots a build gives up first; the guns before the armour (1 Nov, BUILD41: they're stamped, not swapped, so they count without the Issued plate taking the build's coat - HP 6,053 to 2,570 at the Golf Club, PROBE40 1)
 const GAUNTLET_WALL_MIN := 50     # minutes of wall before the read stops and says so (the fix round, H1: balance.bat kills it at 60)
 func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "", save_path := "", camp := {}) -> Dictionary:
 	var out := spec.duplicate(true)
@@ -1059,7 +1059,7 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "", sav
 		out["points_gained"] = sim.training_points - pts0
 		bot.tidy(sim)
 	out["reach_played"] = sim.reach
-	_standard_camp(sim, bot, int(camp.get("reach", STANDARD_REACH)), int(camp.get("paragon", STANDARD_PARAGON)))                   # every build from the same camp (Matt, 27 Oct: the reads' reach was the bot's luck)
+	_standard_camp(sim, bot, int(camp.get("reach", STANDARD_REACH)), int(camp.get("paragon", STANDARD_PARAGON)), bool(camp.get("keep_level", false)))                   # every build from the same camp (Matt, 27 Oct: the reads' reach was the bot's luck); the hour-20 camp keeps its kit (BUILD41)
 	if bot.holding():
 		bot._hold_broken(sim)
 	out["level0"] = sim.level()
@@ -1190,11 +1190,17 @@ static func gauntlet_ready(sim, bot, k: String) -> void:
 ## of the slot (a gun of the type worn), no commons; issued kit as the counter sells it at the camp's reach, a stamped
 ## piece stamped still. The rig as it is; the build's held pieces after, by _hold_broken.
 ## `reach` and `par` the long pass's camp from its reads' hour 20 (1 Nov, BUILD38); the constants otherwise.
-func _standard_camp(sim, bot, reach := STANDARD_REACH, par := STANDARD_PARAGON) -> void:
+## A piece rolled again carries the worn piece's tempers (1 Nov, BUILD41, PROBE40 1: the re-roll at the camp's level
+## threw them away - the h20 Doorman's HP 5,813 to 1,508). `keep_kit` (the hour-20 camp, G2): no re-roll and no stash
+## cull, the build as it stood; only the reach and the paragon set.
+static func _standard_camp(sim, bot, reach := STANDARD_REACH, par := STANDARD_PARAGON, keep_kit := false) -> void:
 	sim.reach = reach
 	# the paragon at STANDARD_PARAGON, spent again by the bot (Matt, 27 Oct: the two that cleared everything had 673 and 213)
 	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + par) - Data.xp_for_level(Data.MAX_LEVEL)
 	sim.paragon_reset_free()
+	if keep_kit:
+		sim._dry_memo.clear()                 # the kit as it stood: the paragon's points spent again at the first try's tidy
+		return
 	var lv: int = mini(Items.max_ilvl_for(sim.level()), reach)
 	var tier: int = sim.tier_for_level(lv)
 	# the stash's kit past the camp's level goes: the bot's tidy wore it again (a read's ilvl-155 plate, 164k HP)
@@ -1243,6 +1249,8 @@ func _standard_camp(sim, bot, reach := STANDARD_REACH, par := STANDARD_PARAGON) 
 			fresh = best
 		if not fresh.is_empty() and worn != null and worn.get("stamped", false):
 			fresh["stamped"] = true                # stamped at the Bench: it still counts for the County
+		if not fresh.is_empty() and worn != null and fresh != worn:
+			carry_tempers(worn, fresh)             # the build's tempers onto the new piece (BUILD41)
 		if not fresh.is_empty():
 			# the old gun's parts on the new where a mount matches: the element's socketable with them (the review)
 			if worn != null and worn.has("attachments") and fresh.has("attachments") and fresh != worn:
@@ -1258,6 +1266,19 @@ func _standard_camp(sim, bot, reach := STANDARD_REACH, par := STANDARD_PARAGON) 
 	sim._dry_memo.clear()
 	bot._tidied_at = -1e9                     # a tidy now, whatever the lift's just did (the review: inside its minute it was a no-op)
 	bot.tidy(sim)
+
+
+## A worn piece's tempers put on the piece that replaces it (1 Nov, BUILD41): as the Bench tempers, one at a time - the
+## flat lines grown a level, the item level up one, the count kept - so the new piece stands where the old one's tempers
+## had it (item level = the camp's + tempers).
+static func carry_tempers(worn: Dictionary, fresh: Dictionary) -> void:
+	var n: int = int(worn.get("tempered", 0))
+	if n <= 0 or not Items.grows(fresh):
+		return
+	for i in range(n):
+		Items.temper_lines(fresh)
+		fresh["ilvl"] = Items.ilvl(fresh) + 1
+		fresh["tempered"] = int(fresh.get("tempered", 0)) + 1
 
 
 ## Room in the stash for an issued piece (27 Oct: a full stash kept a Recruit out of the County): the cheapest pieces
@@ -1286,14 +1307,18 @@ static func _gauntlet_issued(sim, bot, want: int) -> String:
 		var w = sim.equipped.get(sl)
 		if w != null and w.get("issued", false):
 			continue
-		if sl in ["Primary", "Secondary"] and w != null:
-			# the build's own gun stamped, never swapped for the Issuer's (as Bot._issued; the fix round's analyst: the
-			# gauntlet bought issued guns over the build's, and the poison builds' 'losses' were the issued guns')
-			if not w.get("stamped", false):
-				sim.cash = maxf(sim.cash, float(sim.stamp_price(w)) * 2.0)
-				if not sim.stamp(int(w["id"])):
-					why = sim.stamp_block(w)
+		if w != null and w.get("stamped", false):
 			continue
+		if w != null:
+			# the build's own piece stamped, never swapped for the Issuer's, in any slot he issues (as Bot._issued for the
+			# guns; the fix round's analyst: the poison builds' 'losses' were the issued guns'; BUILD41's review: the last
+			# zone, six wanted, swapped the build's coat for the Issued plate). Bought only where it can't be stamped.
+			sim.cash = maxf(sim.cash, float(sim.stamp_price(w)) * 2.0)
+			if sim.stamp(int(w["id"])):
+				continue
+			why = sim.stamp_block(w)
+			if sl in ["Primary", "Secondary"]:
+				continue                          # a gun is never swapped
 		sim.cash = maxf(sim.cash, float(sim.issued_price(sl)) * 2.0)
 		_gauntlet_room(sim)
 		if sim.buy_issued(sl):

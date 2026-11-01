@@ -8819,7 +8819,7 @@ func deploy(i: int) -> void:
 	var wager_gate: bool = (not _sig.is_empty() and int(_sig["site"]) == i) or int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false))     # Kev's wagers go only on a run whose gate is open as it sets off
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
-	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
+	var odds_seen: float = _gate_odds(i)     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
 	_top_up(i if _repeat_going else -1)       # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9)
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
@@ -9273,7 +9273,7 @@ func repeat_count() -> int:
 	return Data.REPEAT_RUNS
 
 
-## A repeat run's XP, a share of a watched run's: 25%, the Bunkhouse's 35, 45 and 60 (a watched run always pays more).
+## A repeat run's XP, a share of a watched run's: 12%, the Bunkhouse's 17, 22 and 30 (1 Nov: halved; a watched run always pays more).
 func repeat_xp_share() -> float:
 	if yard_has("rr_rest"):
 		return Data.REPEAT_XP[3]
@@ -12910,7 +12910,7 @@ func _record_reset() -> void:
 
 ## KIA: the loadout and what was found are gone; the stash and cash stay. A
 ## fresh runner takes over: at level 1 before the Quartermaster, at the dead one's level past him, at 50 past the cap
-## with the paragon gone (31 Oct). Auto-run stops.
+## with the paragon levels kept (31 Oct; 1 Nov): only the XP towards the next level or paragon level goes. Auto-run stops.
 ## A mythic left on the floor at a run's end (17 Oct: a full pack by hand, or "No room: make some" never made) comes
 ## home as one in the pack does: into the pack first, over its size if need be, so each ending's own rule takes it.
 func _floor_mythics_in(m: Dictionary) -> void:
@@ -13013,20 +13013,29 @@ func _kia() -> void:
 	rig = []
 	operators_lost += 1
 	if level() >= Data.MAX_LEVEL:
-		# past the cap the next runner starts at it, and the crew's paragon goes instead (Matt, 26 Oct: the third
-		# review's M2 - a death sent a level-50 runner to 1, and shut the County till 50 again)
+		# past the cap the next runner starts at it (Matt, 26 Oct: the third review's M2 - a death sent a level-50 runner
+		# to 1, and shut the County till 50 again); the designer's call (1 Nov, PROBE40: the long pass's 75-100 deaths
+		# past 50 kept the paragons at 0-2): the paragon levels stay too, only the XP towards the next one goes; the ring
+		# stays trained
 		xp = Data.xp_for_level(Data.MAX_LEVEL)
-		last_report["paragon_lost"] = paragon() if paragon_xp > 0.0 else 0     # what the death took, for the card (31 Oct, the UI review)
-		last_report["paragon_lost_xp"] = paragon_xp
-		if paragon_xp > 0.0 and not hardcore:
-			log_event(Words.YARD["paragon_lost"] % paragon())     # hardcore: its own lines only (the review)
-		paragon_xp = 0.0
-		paragon_reset_free()                     # the ring's points and its nodes both (the review: the nodes stayed trained)
+		var p_kept: int = paragon()
+		var p_floor: float = Data.xp_for_level(Data.MAX_LEVEL + p_kept) - Data.xp_for_level(Data.MAX_LEVEL)
+		var p_lost: float = maxf(0.0, paragon_xp - p_floor)
+		last_report["paragon_kept"] = p_kept
+		last_report["paragon_lost_xp"] = p_lost      # what the death took, for the card
+		var kept_w: String = Words.YARD["kept_paragon"] % p_kept if p_kept > 0 else Words.YARD["kept_level"] % Data.MAX_LEVEL
+		_came_back_death_xp(p_lost, kept_w, Words.YARD["kept_paragon"] % (p_kept + 1))
+		if p_lost > 0.0 and not hardcore:
+			# hardcore: its own lines only (the review); only when XP went (the review: a second death said so with none)
+			log_event(Words.YARD["paragon_lost"] % [p_kept + 1, p_kept] if p_kept > 0 else Words.YARD["paragon_first_lost"])
+		paragon_xp = p_floor
 	elif death_keeps_level():
 		var keep: int = level()
-		xp = Data.xp_for_level(keep)             # the designer's call (31 Oct): past the Quartermaster a death costs the XP into the level, never the level
-		if not hardcore:
-			log_event(Words.YARD["level_kept"] % keep)     # hardcore: no next runner, its own lines only (the review)
+		var lv_lost: float = maxf(0.0, xp - Data.xp_for_level(keep))
+		_came_back_death_xp(lv_lost, Words.YARD["kept_level"] % keep, Words.YARD["kept_level"] % (keep + 1))
+		xp = Data.xp_for_level(keep)             # the designer's call (31 Oct): past the Quartermaster a death costs the XP towards the next level, never the level
+		if lv_lost > 0.0 and not hardcore:
+			log_event(Words.YARD["level_kept"] % [keep + 1, keep])     # hardcore: no next runner, its own lines only (the review)
 	else:
 		xp = 0.0
 	wounds = {}                          # theirs, gone with them
@@ -13058,6 +13067,33 @@ func _kia() -> void:
 	# back as points for the next to spend from the start, with a past of their
 	# own to pick. The Yard's tree and the elements' are the Yard's and stay.
 	_refund_runner_trees()
+
+
+## A death's XP for the came-back card (1 Nov): the XP towards the next level or paragon level it took, summed over the
+## deaths since Seen; what was kept ("level 36", "paragon 7") and what the XP was towards ("level 37", "paragon 8") as of
+## the last.
+func _came_back_death_xp(lost_xp: float, kept: String, towards: String) -> void:
+	if hardcore or _dry_on:
+		return
+	if came_back.is_empty():
+		came_back_seen()
+	came_back["xp_lost"] = float(came_back.get("xp_lost", 0.0)) + maxf(0.0, lost_xp)
+	came_back["kept"] = kept
+	came_back["towards"] = towards
+
+
+## The odds read at the gate, settled, or -1 (the record): a signal's or an order's own read when one's laid on the site
+## (BUILD41's review: they live in _sig_odds under the signal's id or the order's key, so the site's cache logged -1
+## for every one), else the site's.
+func _gate_odds(i: int) -> float:
+	if _sig.is_empty() or int(_sig["site"]) != i:
+		return odds_now(i) if odds_settled(i) else -1.0
+	var key: Variant = int(_sig["id"])
+	if _sig.has("order"):
+		key = "order/%s/%d" % [str(_sig["order"]), int(_sig["depth"])]
+	var c = _sig_odds.get(key, null)
+	var runs: int = odds_runs() if odds_runs_max <= 0 else mini(odds_runs(), odds_runs_max)
+	return float(c[1]) if c is Array and c[0] == _odds_key(i) and int(c[2]) >= runs else -1.0
 
 
 ## A death below the cap keeps the level once the Quartermaster's down (the designer's call, 31 Oct, PROBE36: a death

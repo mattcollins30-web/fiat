@@ -125,6 +125,8 @@ func show_state(s) -> void:
 		return
 	# the firsts, then a death's cost
 	var lines: Array = cb.get("firsts", []).duplicate()
+	if deaths > 0 and float(cb.get("xp_lost", 0.0)) > 0.0 and str(cb.get("kept", "")) != "" and str(cb.get("towards", "")) != "":
+		lines.push_front(Words.YARD["kept_line"] % [str(cb["kept"]), str(cb["towards"])])     # past the Quartermaster a death keeps the level and the paragon (1 Nov); in the past, so it can't go stale
 	if deaths > 0:
 		lines.push_front("%s lost with the kit: %s" % ["A runner" if deaths == 1 else "%d runners" % deaths, Fmt.money(float(cb.get("lost", 0)))])
 	var extra: int = int(cb.get("more", 0))
@@ -139,7 +141,7 @@ func show_state(s) -> void:
 		var l: Label = _firsts[k]
 		var text: String = str(lines[k]) if k < lines.size() else ""
 		UI.fit(l, [text, text.get_slice(":", 0)])
-		l.add_theme_color_override("font_color", Pal.BAD if text.contains("lost with the kit") else (Pal.TEXT_2 if text.begins_with("and ") or text.begins_with("Nothing new") else Pal.TEXT))
+		l.add_theme_color_override("font_color", Pal.BAD if text.contains("lost with the kit") or text.contains("went with them") else (Pal.TEXT_2 if text.begins_with("and ") or text.begins_with("Nothing new") else Pal.TEXT))
 
 
 ## A big figure in a quarter-width tile: 1.2k, 47k, 3.4M.

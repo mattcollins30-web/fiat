@@ -45,7 +45,7 @@ trip's clock is played time.
 - The bail: a run under its HP line (25%, the bail the bot already uses) leaves at once; its pack is lost, the next run
   goes only at full HP; two bails in a row end the repeat.
 - XP (Matt, 28 Oct): starts low, 25% of a watched run's, raised on the Bunkhouse to 60% at most, so a watched run
-  always pays more.
+  always pays more. Halved on every step 1 Nov (the designer's call, the long pass's level pace): 12%, 17, 22, 30.
 - Upgrades (a Pitch line, section 4): ×5 from the start, then ×10, ×20, then "until the stash is full".
 
 ## 2. Safe to leave
@@ -127,14 +127,14 @@ A ninth building, two lines (as the Pitch's buildings since 86da52a); the hands'
 
 | Step | A: Repeat (from the start) | B: Trips (after the Quartermaster) |
 |---|---|---|
-| 1 | Run it ×10 · XP 35% | A hand on a trip · the pool of six |
-| 2 | The sorting rule's own list · XP 45% | Two hands on a trip · the better reroll |
+| 1 | Run it ×10 · XP 17% (35% before 1 Nov) | A hand on a trip · the pool of six |
+| 2 | The sorting rule's own list · XP 22% (45% before 1 Nov) | Two hands on a trip · the better reroll |
 | 3 | Run it ×20 | Two trips at once |
-| 4 | Rest between runs twice as fast · XP 60% | The roster's cap +4 · the far places' quotas |
+| 4 | Rest between runs twice as fast · XP 30% (60% before 1 Nov) | The roster's cap +4 · the far places' quotas |
 | 5 | Until the stash is full | Three trips at once |
 | Rank | runs a day back to full sooner | the risk −2% a rank |
 
-×5 at 25% XP is from the start (Matt: "could start at run 5 times and have upgrades available"); line B opens with
+×5 at 12% XP (25% before 1 Nov) is from the start (Matt: "could start at run 5 times and have upgrades available"); line B opens with
 the Quartermaster, a trip with the lead alone from then. Canvas boards RepeatRuns, Trips and Bunkhouse (28 Oct,
 the second round: cargo, the far places, the hands as gear).
 
