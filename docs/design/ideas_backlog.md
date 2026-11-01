@@ -72,3 +72,13 @@ Later, if they still look right:
   home or by hand mid-run, carried in the rig; its size from the magazine, an Extended or Drum one bigger. Open: is a
   bigger magazine an item of its own or a part on the gun; is a gun with rounds but no magazine dead, or does it load
   one round at a time; the first gun's reward then carries a magazine too.
+
+- **Materials in the pack** (1 Nov, Matt: "move all materials into the inventory during fights instead of finding
+  them invisible and returning from runs with them. So scrap, end game materials etc - reason for the ask is that
+  finding clinical supplies and having to make a decision over bringing them or gear is a real choice"). Today
+  medical supplies are already a stack in the pack; scrap (a handful a search, SCRAP_SEARCH 0.35) and the rebuild's
+  materials (copper wire, paving, glass, ledgers, cable drums, army kit, fuses: MATERIAL_RUN / MATERIAL_SIGNAL)
+  are counters on the run that land at home, as are tins and notes. Art exists for all of them (art/items/scrap.png,
+  copper_wire.png ...). To design with Matt, then build; it moves the balance (pack room against gear, the bot's
+  keep/ditch, scrap and rebuild income).
+
