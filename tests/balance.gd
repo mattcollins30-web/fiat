@@ -18,6 +18,8 @@ const Sim := preload("res://scripts/sim/sim.gd")
 const Bot := preload("res://tests/bot.gd")
 const Feel := preload("res://tools/feel_gates.gd")
 const CHECKPOINT := "res://docs/balance/pass/radio_checkpoint.save"     # the parity reads' start (25 Oct): the one save as the Radio opens
+const LONG_WALL_MIN := 440         # the long read stops itself here (1 Nov, BUILD38): balance.bat kills it at 480; the stop is read between the bot's steps, and one step ran nearly five minutes past it in the cloud's test read, so forty minutes' room for that and the end's reads and saves
+static var long_snap_h := 20.0     # the long read's state kept at this game hour (`snap=N` on the line)
 
 
 func _init() -> void:
@@ -38,6 +40,11 @@ func _init() -> void:
 	var args: Array = Array(OS.get_cmdline_user_args())
 	Bot.norepeat = args.has("norepeat")          # a read without the repeat runs (29 Oct): `-- 16 one Drifter fire 0 read1 norepeat`
 	args = args.filter(func(a): return str(a) != "norepeat")
+	# the long pass's hour-20 snapshot at another hour (1 Nov, BUILD38: `snap=2` proves it in a short read); 20 unless given
+	for a in args:
+		if str(a).begins_with("snap=") and str(a).substr(5).is_valid_float():
+			long_snap_h = float(str(a).substr(5))
+	args = args.filter(func(a): return not str(a).begins_with("snap="))
 	if args.size() > 0:
 		hours = float(args[0])
 	if args.size() > 1:
@@ -63,10 +70,12 @@ func _init() -> void:
 		# `-- 32 one Drifter fire 0 read2`: the pass's second read of the build, its end state saved as its own (the review)
 		# `-- 16 one Drifter fire 0 read1 cap20`: the quick pass's read (28 Oct, Matt: "buy time on balance passes"), stopped
 		# after 20 minutes of wall wherever it's got to, its GATES line saying so (capped_at)
+		# `-- 24 one Poacher poison 0 long`: the long pass's read (1 Nov, BUILD38): no two-hour stop, an HOUR line every game
+		# hour, the state at hour 20 kept (pass/long-<Class>-<element>-h20.save), its end state pass/long-<Class>-<element>.save
 		var tag: String = args[5] if args.size() > 5 else ""
 		var cap: String = args[6] if args.size() > 6 else ""
 		_gate(hours, args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", int(args[4]) if args.size() > 4 else 0, true, tag == "checkpoint", tag.trim_prefix("read") if tag.begins_with("read") else "",
-				int(cap.trim_prefix("cap")) if cap.begins_with("cap") else 0)
+				int(cap.trim_prefix("cap")) if cap.begins_with("cap") else 0, tag == "long")
 		return
 	if cls == "parity":
 		# `-- 4 parity Drifter fire [cap20]`: a cap is the quick pass's wall limit in minutes (the fix round); else PARITY_WALL_MIN
@@ -84,7 +93,14 @@ func _init() -> void:
 	if cls == "gauntlet":
 		# `-- 0 gauntlet Drifter fire`: the build's one-save end state as played, through the gauntlet (26 Oct, Matt);
 		# `-- 0 gauntlet Drifter fire 2`: from the pass's second read's end state (the fix round: both tries read the first's)
-		var gb: Dictionary = _gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", {}, str(args[4]) if args.size() > 4 else "")
+		# `-- 0 gauntlet Drifter fire long` / `... h20`: the long pass's two (1 Nov, BUILD38) - from the long read's end state
+		# with the standard camp, as the full pass's; from its hour-20 state at the camp the six reads' hour 20 made
+		var gtag: String = str(args[4]) if args.size() > 4 else ""
+		var gb: Dictionary = {}
+		if gtag == "long" or gtag == "h20":
+			gb = _long_gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", gtag == "h20")
+		else:
+			gb = _gauntlet(args[2] if args.size() > 2 else "Drifter", args[3] if args.size() > 3 else "fire", {}, gtag)
 		gb["build"] = "%s-%s" % [gb["class"], gb["element"]]
 		print("GAUNTLET " + JSON.stringify(gb))
 		quit(0)
@@ -287,7 +303,7 @@ static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false, read_n := "", cap_min := 0) -> void:
+func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := false, checkpoint := false, read_n := "", cap_min := 0, long_read := false) -> void:
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
@@ -366,7 +382,11 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	var tidy_us := 0
 	var ladder_us := 0
 	var t0 := Time.get_ticks_msec()
-	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 7200000:     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
+	# the long read (1 Nov, BUILD38): the hourly book, the hour-20 state, no two-hour stop - its own stop just under the kill
+	var lg := {"next_h": 1, "xp": {}, "cash_from": 0.0, "deaths_from": 0, "county_n": 0, "h20": false, "issue_at": -1.0, "lost": 0.0, "deaths_after_qm": 0}
+	if long_read and cap_min == 0:
+		cap_min = LONG_WALL_MIN                # a `capN` after `long` stops it sooner (a test's)
+	while sim.elapsed < hours * 3600.0 and (long_read or Time.get_ticks_msec() - t0 < 7200000):     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
 		if cap_min > 0 and Time.get_ticks_msec() - t0 >= cap_min * 60000:
 			g["capped_at"] = snappedf(sim.elapsed / 3600.0, 0.01)     # the quick pass's cap (28 Oct): the summary names it
 			print("CAPPED at %s of %d h: %d minutes of wall" % [_hm(sim.elapsed), int(hours), cap_min])
@@ -394,8 +414,16 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		var rep0 = sim.last_report
 		var reps0: int = bot.repeats_gone
 		var pitch0: int = sim.pitch_spent()
+		var xb0: Dictionary = xp_book(sim) if long_read else {}
 		var t: int = bot.step(sim)
 		var rep_t: Dictionary = bot.last_repeat if bot.repeats_gone > reps0 else {}     # a repeat's runs, each counted (29 Oct, the tools review)
+		if long_read:
+			var xs: Dictionary = xp_split(xb0, xp_book(sim), sim.chronicle.slice(c0), not rep_t.is_empty())
+			for k in xs:
+				if k == "lost":
+					lg["lost"] = float(lg["lost"]) + float(xs[k])
+				else:
+					lg["xp"][k] = float(lg["xp"].get(k, 0.0)) + float(xs[k])
 		var worn_h: float = (sim.elapsed - worn_e0) / 3600.0
 		for sl in worn0:
 			if not g["worn"].has(sl):
@@ -428,6 +456,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 				g["timeouts"] += 1                # out of time (9 Oct): the clock's gate
 			if sim.operators_lost > lost_before:
 				g["deaths"] += 1
+				if not in_campaign:
+					lg["deaths_after_qm"] = int(lg["deaths_after_qm"]) + 1     # past the Quartermaster (the long pass's table)
 				if float(g.get("first_death_at", -1.0)) < 0.0:
 					g["first_death_at"] = snappedf(sim.elapsed / 3600.0, 0.01)     # the pass's gate (20 Oct), bot hours as every _at here (the review: played_s never moves in a read)
 			elif bool(r.get("wounded", false)):
@@ -490,6 +520,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))     # shipped scrap is spent scrap (the expeditions)
 		if sim.issued and not g.has("cash_in_at_issue"):
 			g["cash_in_at_issue"] = sim.cash_in       # the money in from here is fiat (the third review: gate 14 added tins to fiat)
+		if long_read:
+			long_book(sim, cls, element, g, lg, c0)
 		if sim.elapsed >= next_mark:
 			var tt: int = maxi(t, 0)
 			mark_cash = sim.cash_in - mark_cash_from     # every pound in since the last mark: the runs' cash and the fence's money (read here, after the tidy's sales)
@@ -501,6 +533,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			mark_items = 0
 	if scrap_16 < 0.0:
 		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)) + int(sim.exp_scrap_out))
+	if long_read:
+		long_end(sim, cls, element, g, lg)
 	# the end's figures are the read's build's (the fix round, H3: a walled class out read its own odds, level and kit)
 	if one_save:
 		end_noted(sim, bot, cls, pl, g, played)
@@ -663,6 +697,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
 	var save_path := "res://docs/balance/pass/%s%s.save" % [build.replace(" as ", "-"), ("-" + read_n) if read_n != "" else ""]
+	if long_read:
+		save_path = long_save_path(cls, element, false)
 	var sf := FileAccess.open(save_path, FileAccess.WRITE)
 	if sf != null:
 		sf.store_string(JSON.stringify({"sim": sim.to_dict()}))
@@ -956,7 +992,7 @@ const STANDARD_PARAGON := 5       # DRAFT (31 Oct): to be replaced from the pass
 const GAUNTLET_TRIES := 3
 const ISSUED_ORDER := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]     # the slots a build gives up first
 const GAUNTLET_WALL_MIN := 50     # minutes of wall before the read stops and says so (the fix round, H1: balance.bat kills it at 60)
-func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "") -> Dictionary:
+func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "", save_path := "", camp := {}) -> Dictionary:
 	var out := spec.duplicate(true)
 	out["class"] = cls
 	out["element"] = element
@@ -964,8 +1000,9 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "") -> 
 	var path := ""
 	# the pass's read `read_n` (balance.bat's second gauntlet reads the second end state: the fix round), else its
 	# first, else its second (the review: one file both wrote)
-	for n in (["-" + read_n] if read_n != "" else []) + ["-1", "-2", ""]:
-		path = "res://docs/balance/pass/%s-%s%s.save" % [cls, element, n]
+	# the long pass's (1 Nov, BUILD38): the one save it names, no other
+	for n in ([save_path] if save_path != "" else (["-" + read_n] if read_n != "" else []) + ["-1", "-2", ""]):
+		path = save_path if save_path != "" else "res://docs/balance/pass/%s-%s%s.save" % [cls, element, n]
 		var text := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 		d = JSON.parse_string(text) if text != "" else null
 		if d is Dictionary and d.has("sim"):
@@ -1010,7 +1047,7 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "") -> 
 	for k in ["grid", "archive", "mint"]:
 		var ob: String = str(Data.pinnacle(k)["opened_by"])
 		sim.rebuilt[ob] = maxi(1, sim.rebuild_rank(ob))
-	if sim.level() < 50:
+	if sim.level() < 50 and not camp.get("keep_level", false):     # the hour-20 camp keeps its level (BUILD38)
 		var before_lv: int = sim.level()
 		out["lifted_from"] = before_lv         # a read the bot left under 50 starts the endgame at 50: the bot's pace, not the build's (27 Oct)
 		var pts0: int = sim.training_points
@@ -1019,7 +1056,7 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "") -> 
 		out["points_gained"] = sim.training_points - pts0
 		bot.tidy(sim)
 	out["reach_played"] = sim.reach
-	_standard_camp(sim, bot)                   # every build from the same camp (Matt, 27 Oct: the reads' reach was the bot's luck)
+	_standard_camp(sim, bot, int(camp.get("reach", STANDARD_REACH)), int(camp.get("paragon", STANDARD_PARAGON)))                   # every build from the same camp (Matt, 27 Oct: the reads' reach was the bot's luck)
 	if bot.holding():
 		bot._hold_broken(sim)
 	out["level0"] = sim.level()
@@ -1149,12 +1186,13 @@ static func gauntlet_ready(sim, bot, k: String) -> void:
 ## kit at its item level - a unique or a set piece worn rolled again as itself, the rest the best of STANDARD_ROLLS finds
 ## of the slot (a gun of the type worn), no commons; issued kit as the counter sells it at the camp's reach, a stamped
 ## piece stamped still. The rig as it is; the build's held pieces after, by _hold_broken.
-func _standard_camp(sim, bot) -> void:
-	sim.reach = STANDARD_REACH
+## `reach` and `par` the long pass's camp from its reads' hour 20 (1 Nov, BUILD38); the constants otherwise.
+func _standard_camp(sim, bot, reach := STANDARD_REACH, par := STANDARD_PARAGON) -> void:
+	sim.reach = reach
 	# the paragon at STANDARD_PARAGON, spent again by the bot (Matt, 27 Oct: the two that cleared everything had 673 and 213)
-	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + STANDARD_PARAGON) - Data.xp_for_level(Data.MAX_LEVEL)
+	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + par) - Data.xp_for_level(Data.MAX_LEVEL)
 	sim.paragon_reset_free()
-	var lv: int = mini(Items.max_ilvl_for(sim.level()), STANDARD_REACH)
+	var lv: int = mini(Items.max_ilvl_for(sim.level()), reach)
 	var tier: int = sim.tier_for_level(lv)
 	# the stash's kit past the camp's level goes: the bot's tidy wore it again (a read's ilvl-155 plate, 164k HP)
 	sim.stash = sim.stash.filter(func(x): return not (x is Dictionary and str(x.get("slot", "")) in Data.SLOTS and Items.ilvl(x) > lv))
@@ -1623,3 +1661,177 @@ static func parity_play(sim, bot, hours: float, limit_ms: int) -> Dictionary:
 static func exp_gates(sim, bot) -> Dictionary:
 	return {"sent": int(bot.exp_sent), "back": int(sim.exp_back_n), "held": int(sim.exp_held_n), "fetched": int(bot.exp_fetched), "paid": int(bot.exp_paid),
 		"walked": int(bot.exp_walked), "cargo_out": int(sim.exp_worth_out), "return_in": int(sim.exp_return_in), "wages": int(sim.exp_wages_paid), "scrap_out": int(sim.exp_scrap_out)}
+
+
+## ------------------------------------------------------------------ the long pass (1 Nov, BUILD38)
+## `tools\balance.bat 24 1 long`: six one-save reads, one a class, 24 game hours each with no two-hour stop (each stops
+## itself at LONG_WALL_MIN under balance.bat's 480-minute kill); an HOUR line every game hour, the state at hour 20 kept;
+## then the gauntlet twice a build - from the end state with the standard camp (as the full pass's), and from the hour-20
+## state at the camp the six reads' hour 20 made (the median reach and paragon, each build's own kit and level).
+
+## The long read's saves: its end state, or its state at hour 20 (long_snap_h).
+static func long_save_path(cls: String, element: String, h20: bool) -> String:
+	return "res://docs/balance/pass/long-%s-%s%s.save" % [cls, element, "-h20" if h20 else ""]
+
+
+## Every XP a camp holds: each class's (the runner's live, the crew's on the roster), the runner's name, the paragon's.
+static func xp_book(sim) -> Dictionary:
+	var x := {}
+	for n in sim.roster:
+		x[str(n)] = float(sim.roster[n].get("xp", 0.0))
+	if sim.cls != "":
+		x[str(sim.cls)] = float(sim.xp)
+	return {"p": float(sim.paragon_xp), "x": x, "r": str(sim.cls)}
+
+
+## A step's XP by where it came from (the long pass's HOUR lines; PROBE36's sources, read from outside the game): the
+## step's own chronicle names it - a repeat, a County place, an order (grid, archive, mint), Kev's story signal, a
+## signal, a site's run - in that order; a benched class's XP is an expedition's; a class swapped in lifted to the crew's
+## floor is "lift"; XP a death took back is "lost". The paragon's goes with the step's, or the expedition's on a step
+## with nothing else.
+static func xp_split(b0: Dictionary, b1: Dictionary, entries: Array, repeat: bool) -> Dictionary:
+	var kinds := {}
+	var lifted := {}
+	for e in entries:
+		var k := str(e.get("k", ""))
+		if not kinds.has(k):
+			kinds[k] = e
+		if k == "swap":
+			lifted[str(e.get("to", ""))] = Data.xp_for_level(int(e.get("level", 1)))
+	var src := "other"
+	if repeat:
+		src = "repeats"
+	elif kinds.has("county_done"):
+		src = "county"
+	elif kinds.has("order_done"):
+		src = str(kinds["order_done"].get("key", "order"))
+	elif kinds.has("signal_done"):
+		src = "kev" if kinds["signal_done"].get("story", false) else "signals"
+	elif kinds.has("run"):
+		src = "sites"
+	var out := {}
+	var x0: Dictionary = b0.get("x", {})
+	var x1: Dictionary = b1.get("x", {})
+	var runners: Array = [str(b0.get("r", "")), str(b1.get("r", ""))]
+	var exp_xp := 0.0
+	for c in x1:
+		var a: float = float(x0.get(c, 0.0))
+		var d: float = float(x1[c]) - a
+		if lifted.has(c):
+			var lift: float = clampf(float(lifted[c]) - a, 0.0, maxf(0.0, d))
+			if lift > 0.0:
+				out["lift"] = float(out.get("lift", 0.0)) + lift
+			d -= lift
+		if d < 0.0:
+			out["lost"] = float(out.get("lost", 0.0)) - d
+		elif d > 0.0:
+			var to: String = src if (c in runners) else "expeditions"
+			if to == "expeditions":
+				exp_xp += d
+			out[to] = float(out.get(to, 0.0)) + d
+	var dp: float = float(b1.get("p", 0.0)) - float(b0.get("p", 0.0))
+	if dp > 0.0:
+		var pto: String = "expeditions" if src == "other" and exp_xp > 0.0 else src
+		out[pto] = float(out.get(pto, 0.0)) + dp
+	return out
+
+
+## After each step of a long read: the Issue's hour and the County's first wins off the chronicle, the state at hour
+## long_snap_h kept, and an HOUR line for every game hour the step passed.
+static func long_book(sim, cls: String, element: String, g: Dictionary, lg: Dictionary, _c0: int) -> void:
+	var ci: int = int(lg.get("chron_i", 0))
+	for i in range(mini(ci, sim.chronicle.size()), sim.chronicle.size()):
+		var e: Dictionary = sim.chronicle[i]
+		var k := str(e.get("k", ""))
+		if k == "issue" and float(lg["issue_at"]) < 0.0:
+			lg["issue_at"] = snappedf(float(e.get("t", sim.elapsed)) / 3600.0, 0.01)
+		elif k == "county_done" and e.get("won", false):
+			if not lg.has("county"):
+				lg["county"] = []
+			if not lg["county"].any(func(x): return str(x[1]) == str(e.get("key", ""))):
+				lg["county"].append([snappedf(float(e.get("t", sim.elapsed)) / 3600.0, 0.01), str(e.get("key", ""))])
+	lg["chron_i"] = sim.chronicle.size()
+	if not bool(lg["h20"]) and sim.elapsed >= long_snap_h * 3600.0 and not sim.on_mission():
+		long_h20(sim, cls, element, g, lg, false)
+	var n_rows := 0
+	while sim.elapsed >= float(lg["next_h"]) * 3600.0:
+		var row: Dictionary = long_row(sim, cls, g, lg, float(lg["next_h"]), false)
+		if n_rows > 0:
+			row["same_step"] = true          # one step past several hours (the review): this hour's state is the step's end, its window empty
+		print("HOUR " + JSON.stringify(row))
+		n_rows += 1
+		lg["next_h"] = int(lg["next_h"]) + 1
+
+
+## One HOUR line: the hour, the build's level (the runner's too), the reach, the paragon and its points unspent, the cash
+## held and earned that hour, XP that hour by source, the deaths (all told and that hour), the Issue's hour, the County's
+## places won (and the new ones). The window's figures start again after it.
+static func long_row(sim, cls: String, g: Dictionary, lg: Dictionary, h: float, end: bool) -> Dictionary:
+	var xp := {}
+	for k in lg["xp"]:
+		xp[k] = snappedf(float(lg["xp"][k]), 1.0)
+	var county: Array = lg.get("county", [])
+	var row := {"h": h, "at": snappedf(sim.elapsed / 3600.0, 0.01), "end": end, "runner": str(sim.cls), "level": sim.crew_level(cls), "runner_level": sim.level(),
+		"reach": sim.reach, "paragon": sim.paragon(), "paragon_free": sim.paragon_free(), "cash": snappedf(float(sim.cash), 1.0),
+		"earned": snappedf(float(sim.cash_in) - float(lg["cash_from"]), 1.0), "xp": xp, "deaths": int(g["deaths"]), "deaths_h": int(g["deaths"]) - int(lg["deaths_from"]),
+		"issue_at": lg["issue_at"], "county": county.size(), "county_new": county.slice(int(lg["county_n"])).map(func(x): return str(x[1]))}
+	lg["xp"] = {}
+	lg["cash_from"] = float(sim.cash_in)
+	lg["deaths_from"] = int(g["deaths"])
+	lg["county_n"] = county.size()
+	return row
+
+
+## The state at hour long_snap_h (or the read's end, when it ended before): pass/long-<Class>-<element>-h20.save, the
+## read's own build put out on a copy first, as the end state is (its kit, its level on the crew's floor); an H20 line.
+static func long_h20(sim, cls: String, element: String, g: Dictionary, lg: Dictionary, at_end: bool) -> void:
+	var cp = Sim.new()
+	cp.load_dict(sim.to_dict())
+	if cp.on_mission():
+		cp.extract_now()
+	var b2 = Bot.new()
+	b2.cls = str(cp.cls)
+	b2.element = element if cp.cls == cls else str(Bot.CREW_BUILDS.get(str(cp.cls), ""))
+	b2.builds = {cls: {"element": element, "keystones_first": false}}
+	end_as_build(cp, b2, cls)
+	var path := long_save_path(cls, element, true)
+	var h: float = snappedf(sim.elapsed / 3600.0, 0.01)
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"sim": cp.to_dict(), "hour": h, "snap_h": long_snap_h}))
+		f.close()
+	lg["h20"] = true
+	g["h20_at"] = h
+	g["h20_save"] = path
+	print("H20 " + JSON.stringify({"at": h, "snap_h": long_snap_h, "end": at_end, "save": path, "class": str(cp.cls), "level": cp.level(), "reach": cp.reach, "paragon": cp.paragon()}))
+
+
+## The long read's end: the last part-hour's HOUR line (`end`), the hour-20 state if the read never got there, and its
+## figures on the GATES line.
+static func long_end(sim, cls: String, element: String, g: Dictionary, lg: Dictionary) -> void:
+	long_book(sim, cls, element, g, lg, 0)
+	if not bool(lg["h20"]):
+		long_h20(sim, cls, element, g, lg, true)
+	print("HOUR " + JSON.stringify(long_row(sim, cls, g, lg, snappedf(sim.elapsed / 3600.0, 0.01), true)))
+	g["long"] = true
+	g["deaths_after_qm"] = int(lg["deaths_after_qm"])
+	g["xp_lost"] = snappedf(float(lg["lost"]), 1.0)
+	g["snap_h"] = long_snap_h
+
+
+## The long pass's gauntlet (`-- 0 gauntlet <Class> <element> long|h20`): from the long read's end state with the
+## standard camp, as the full pass's; or from its hour-20 state at the camp the six reads' hour 20 made
+## (tools/balance_summary.gd long_camp: the median reach and paragon), its level kept.
+func _long_gauntlet(cls: String, element: String, h20: bool) -> Dictionary:
+	var camp := {}
+	if h20:
+		var Sum = load("res://tools/balance_summary.gd")
+		camp = Sum.long_camp(Sum.long_reads())
+		if int(camp.get("n", 0)) == 0:
+			return {"class": cls, "element": element, "long": "h20", "error": "no hour-20 figures in the pass's long reads"}
+		camp["keep_level"] = true
+	var out: Dictionary = _gauntlet(cls, element, {}, "", long_save_path(cls, element, h20), camp)
+	out["long"] = "h20" if h20 else "end"
+	if h20:
+		out["camp"] = camp
+	return out

@@ -806,6 +806,7 @@ func _init() -> void:
 	_p35_shelf_checks()                       # the designer's call (31 Oct): the Fence always stocks a primary at the zone's tier
 	_b34_played_checks()                      # BUILD34 phase 2: the bot as played - both elements, both joints' halves first, the kit's second element
 	_b34_reads_checks()                       # BUILD34 phase 3: the as-played reads' GATES fields, the summary's section and its gate
+	_long38_checks()                          # BUILD38 (1 Nov): the long pass's HOUR lines, the h20 save, the summary's Long reads
 	_crew_floor_checks(main)                  # the crew's floor, shared XP option B (30 Oct)
 	_exp_lead_xp_checks(main)                 # an expedition lead's XP: points, the cap, the run out, the lead's level (30 Oct, S4-S6)
 	_review28_checks(main)
@@ -10302,7 +10303,7 @@ func _harness_fix_checks() -> void:
 	var rd: String = FileAccess.get_file_as_string("res://tools/balance_read.bat")
 	var bb: String = FileAccess.get_file_as_string("res://tools/balance.bat")
 	_check(rd.contains("shift /3") and not rd.contains("%9") and rd.count("\n") == rd.count("\r\n"), "balance_read.bat drops arguments past the ninth, or lost its CRLF")
-	_check(bb.contains("[quick^|gauntlet^|broken^|hunt]") and bb.contains("gauntlet %%B %%A %%S") and bb.contains("parity %%B %%A %CAPARG%") and bb.count("\n") == bb.count("\r\n"),
+	_check(bb.contains("[quick^|gauntlet^|broken^|hunt^|long]") and bb.contains("gauntlet %%B %%A %%S") and bb.contains("parity %%B %%A %CAPARG%") and bb.count("\n") == bb.count("\r\n"),
 		"balance.bat: the bad flag's words, the gauntlet's read N, the quick parity cap, or its CRLF")
 	Sim._seed_n = int(dice0[0])
 	Items._next_id = int(dice0[1])
@@ -13202,6 +13203,106 @@ func _b34_reads_checks() -> void:
 	var all_gone: Array = Sum.played_with_missing([], ["Poacher-played-1", "Doorman-played-1", "Scrapper-played-1", "Paramedic-played-1", "Recruit-played-1", "Drifter-played-1"])
 	_check(all_gone.size() == 6 and not bool(Sum.both_joints_row(all_gone)[3]), "six as-played reads gone left %d judged" % all_gone.size())
 	print("b34 reads ok: the GATES line's played, the summary's As played section and the Both joints gate")
+
+
+## The long pass (1 Nov, BUILD38): a step's XP by source, the HOUR row's window, the h20 save's path, the summary's
+## "Long reads" from fixture HOUR / H20 / GATES lines - the camp's medians, gate 8 judged on 24 h reads, the table's hours.
+func _long38_checks() -> void:
+	var Bal = load("res://tests/balance.gd")
+	var Sum = load("res://tools/balance_summary.gd")
+	# the saves' paths
+	_check(Bal.long_save_path("Poacher", "poison", true) == "res://docs/balance/pass/long-Poacher-poison-h20.save" and Bal.long_save_path("Poacher", "poison", false) == "res://docs/balance/pass/long-Poacher-poison.save",
+		"the long read's saves: %s, %s" % [Bal.long_save_path("Poacher", "poison", true), Bal.long_save_path("Poacher", "poison", false)])
+	# a step's XP by source: the runner's to the step's own kind, a benched class's to the expeditions, the paragon with the step
+	var b0 := {"p": 0.0, "x": {"Poacher": 1000.0, "Doorman": 200.0}, "r": "Poacher"}
+	var x1: Dictionary = Bal.xp_split(b0, {"p": 40.0, "x": {"Poacher": 1300.0, "Doorman": 250.0}, "r": "Poacher"}, [{"k": "signal_done", "story": false}, {"k": "run"}], false)
+	_check(is_equal_approx(float(x1.get("signals", 0.0)), 340.0) and is_equal_approx(float(x1.get("expeditions", 0.0)), 50.0) and x1.size() == 2, "a signal's step: %s" % str(x1))
+	_check(Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 1100.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}, {"k": "signal_done", "story": true}], false).has("kev"), "Kev's story signal didn't read kev")
+	_check(Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 1100.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}, {"k": "county_done", "key": "c1"}], false).keys() == ["county"], "a County place's step didn't read county")
+	_check(Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 1100.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}, {"k": "order_done", "key": "mint"}], false).keys() == ["mint"], "the Mint's step didn't read mint")
+	_check(Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 1100.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}], true).keys() == ["repeats"], "a repeat's step didn't read repeats")
+	_check(Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 1100.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}], false).keys() == ["sites"], "a site's run didn't read sites")
+	var lv5: float = Data.xp_for_level(5)
+	var lv20: float = Data.xp_for_level(20)
+	var xs: Dictionary = Bal.xp_split({"p": 0.0, "x": {"Poacher": lv20, "Doorman": lv5}, "r": "Poacher"}, {"p": 0.0, "x": {"Poacher": lv20, "Doorman": lv20 + 30.0}, "r": "Doorman"},
+		[{"k": "swap", "from": "Poacher", "to": "Doorman", "level": 20}, {"k": "run"}], false)
+	_check(is_equal_approx(float(xs.get("lift", 0.0)), lv20 - lv5) and is_equal_approx(float(xs.get("sites", 0.0)), 30.0), "a swap's floor and the run after it: %s" % str(xs))
+	var xd: Dictionary = Bal.xp_split(b0, {"p": 0.0, "x": {"Poacher": 0.0, "Doorman": 200.0}, "r": "Poacher"}, [{"k": "run"}], false)
+	_check(is_equal_approx(float(xd.get("lost", 0.0)), 1000.0) and not xd.has("sites"), "a death's XP lost: %s" % str(xd))
+	# the HOUR row: the window's figures, then a fresh window
+	var w = Sim.new()
+	w.start()
+	w.elapsed = 3.0 * 3600.0
+	w.cash_in = 5000.0
+	var g := {"deaths": 3}
+	var lg := {"xp": {"sites": 120.0, "signals": 30.4}, "cash_from": 1500.0, "deaths_from": 1, "county_n": 0, "county": [[2.5, "c1"]], "issue_at": 2.2}
+	var row: Dictionary = Bal.long_row(w, str(w.cls), g, lg, 3.0, false)
+	_check(int(row["earned"]) == 3500 and int(row["deaths_h"]) == 2 and int(row["xp"]["sites"]) == 120 and row["county_new"] == ["c1"] and float(row["issue_at"]) == 2.2 and int(row["reach"]) == int(w.reach),
+		"the HOUR row: %s" % str(row))
+	var row2: Dictionary = Bal.long_row(w, str(w.cls), g, lg, 4.0, false)
+	_check(row2["xp"].is_empty() and int(row2["earned"]) == 0 and int(row2["deaths_h"]) == 0 and row2["county_new"].is_empty(), "the next HOUR row didn't start a fresh window: %s" % str(row2))
+	# the summary: three long reads from fixture lines
+	var mk := func(build: String, el: String, h20_reach: int, h20_par: int, lv50: float, county: Array, with_h20: bool) -> String:
+		var ls: Array = []
+		for h in range(1, 25):
+			ls.append("HOUR " + JSON.stringify({"h": float(h), "at": float(h), "end": false, "level": mini(50, 10 + h * 2), "runner_level": mini(50, 10 + h * 2), "reach": h20_reach - 20 + h,
+				"paragon": maxi(0, h20_par - 20 + h), "paragon_free": 0, "cash": 1000.0 * h, "earned": 100.0 * h, "xp": {"sites": 10.0, "signals": 30.0, "lift": 500.0}, "deaths": 0, "deaths_h": 0, "issue_at": 9.5, "county": 0, "county_new": []}))
+			if h == 20 and with_h20:
+				ls.append("H20 " + JSON.stringify({"at": 20.01, "snap_h": 20.0, "end": false, "save": "res://docs/balance/pass/x-h20.save", "class": build, "level": 50, "reach": h20_reach, "paragon": h20_par}))
+		ls.append("HOUR " + JSON.stringify({"h": 24.0, "at": 24.0, "end": true, "level": 50, "runner_level": 50, "reach": h20_reach + 4, "paragon": h20_par + 4, "cash": 1.0, "earned": 0.0, "xp": {}, "deaths": 0, "deaths_h": 0, "issue_at": 9.5, "county": 3}))
+		ls.append("GATES " + JSON.stringify({"build": "%s as %s" % [build, el], "class": build, "element": el, "hours": 24.0, "elapsed_h": 24.0, "lv50_at": lv50, "issue_at": 9.5,
+			"county_firsts": county, "deaths_after_qm": 2, "long": true}))
+		return "\n".join(ls)
+	var reads: Array = []
+	for f in [["Poacher", "poison", 40, 2, 13.0, [[10.0, "c1"], [23.5, "c2"], [24.5, "c3"]], true], ["Doorman", "bleed", 50, 4, 15.0, [], true], ["Drifter", "fire", 70, 9, 30.0, [], false]]:
+		var r: Dictionary = Sum.long_parse(mk.call(f[0], f[1], f[2], f[3], f[4], f[5], f[6]))
+		r["name"] = "long-%s-%s" % [f[0], f[1]]
+		reads.append(r)
+	_check(reads[0]["hours"].size() == 25 and int(reads[0]["h20"].get("reach", 0)) == 40 and reads[2]["h20"].is_empty() and str(reads[0]["gates"].get("build", "")) == "Poacher as poison",
+		"the long read's lines parsed: %d HOUR, h20 %s" % [reads[0]["hours"].size(), str(reads[0]["h20"])])
+	# the camp: the median of the H20 lines, a read without one at its last row (the Drifter's end: reach 74, paragon 13)
+	var camp: Dictionary = Sum.long_camp(reads)
+	_check(int(camp.get("n", 0)) == 3 and int(camp["reach"]) == 50 and int(camp["paragon"]) == 4 and int(camp["level"]) == 50, "the camp from the reads: %s" % str(camp))
+	var sec: Array = Sum.long_section(reads, [{"build": "Poacher-poison", "won": 15, "of": 15, "level0": 50, "reach0": 55, "gauntlet": []}], [{"build": "Poacher-poison", "long": "h20", "won": 9, "of": 15, "level0": 50, "reach0": 50, "gauntlet": []}])
+	var text := "\n".join(sec)
+	_check(text.contains("The standard camp, from the reads: reach 50, paragon 4"), "the section's camp line: %s" % text)
+	# gate 8 on the 24 h reads: median 15 h, in the window - judged, green; a read short of 24 h that never got there: not judged
+	_check(text.contains("Gate 8 on these reads: the median read 15.0 h (0 of 3 reads never): GREEN"), "gate 8 on 24 h reads: %s" % text)
+	var g8: Array = Sum.retirement_row([{"build": "a", "hours": 24.0, "elapsed_h": 24.0, "lv50_at": 13.0}, {"build": "b", "hours": 24.0, "elapsed_h": 10.0, "lv50_at": -1.0}])
+	_check(g8[3] == null and str(g8[2]).contains("not judged"), "gate 8 judged a read short of the window: %s" % str(g8))
+	_check(Sum.retirement_row([{"build": "a", "hours": 24.0, "elapsed_h": 24.0, "lv50_at": 6.0}])[3] == false, "gate 8 passed a read before hour 8")
+	# the table: the hours' cells, the County by hour 24 (24.5's not), level 50's word, the deaths after the Quartermaster
+	var prow: Array = sec.filter(func(l): return str(l).begins_with("| Poacher as poison |"))
+	_check(prow.size() == 1 and str(prow[0]).contains("| 13.0 h (in the window) |") and str(prow[0]).contains("| 2 of %d |" % Data.COUNTY.size()) and str(prow[0]).contains("| 28 · 8000 / 800 |")
+		and str(prow[0]).contains("| 44 · 24 k / 2400 |") and str(prow[0]).contains("| 9.5 h |"), "the Poacher's long row: %s" % str(prow))
+	_check(sec.any(func(l): return str(l).begins_with("| Drifter as fire |") and str(l).contains("30.0 h (late)")), "the Drifter's level 50 wasn't read late")
+	_check(sec.any(func(l): return str(l) == "- Poacher as poison: signals 75%, sites 25%"), "XP by source (the floor left out): %s" % str(sec.filter(func(l): return str(l).begins_with("- "))))
+	_check(sec.any(func(l): return str(l).begins_with("| G1 |") and str(l).contains("1 of 1 builds")) and sec.any(func(l): return str(l).begins_with("| G2 |") and str(l).contains("0 of 1 builds")),
+		"the two gauntlets' rows: %s" % str(sec.filter(func(l): return str(l).begins_with("| G"))))
+	_check(Sum.is_h20_gauntlet({"long": "h20"}) and Sum.is_h20_gauntlet({"build": "h20-Poacher-poison", "error": "no GAUNTLET line"}) and not Sum.is_h20_gauntlet({"long": "end", "build": "Poacher-poison"}),
+		"the hour-20 gauntlet's reads aren't told from the end state's")
+	# the review (1 Nov): a long read with no GATES line is judged by gate 8 off its HOUR lines, not dropped
+	var killed: Dictionary = Sum.long_parse("\n".join(range(1, 13).map(func(h): return "HOUR " + JSON.stringify({"h": float(h), "at": float(h), "end": false, "runner_level": 30 + h * 2, "level": 30 + h * 2, "reach": h, "cash": 1.0, "earned": 1.0, "xp": {}}))))
+	killed["name"] = "long-Recruit-physical"
+	var stub: Dictionary = Sum.long_gate8_read(killed)
+	_check(str(stub.get("element", "")) == "physical" and is_equal_approx(float(stub["lv50_at"]), 10.0) and is_equal_approx(float(stub["elapsed_h"]), 12.0), "the killed read's gate 8 stub: %s" % str(stub))
+	var sec_k: Array = Sum.long_section(reads + [killed], [], [])
+	_check("\n".join(sec_k).contains("Gate 8 on these reads: the median read 14.0 h (0 of 4 reads never): GREEN"), "gate 8 dropped the read with no GATES line: %s" % str(sec_k.filter(func(l): return str(l).begins_with("Gate 8"))))
+	# and a pass whose long reads all lack a GATES line still writes its summary: the header and the section
+	_check(not Sum.summary_aborts([], {}, [killed]) and Sum.summary_aborts([], {}, []), "the summary aborts on a long pass with no GATES line")
+	var lo: Array = Sum.long_only_summary([killed], ["long-Recruit-physical: killed: it ran past its minutes"], [], [])
+	_check(str(lo[0]) == "# Balance summary" and lo.has("## Long reads") and lo.any(func(l): return str(l).contains("killed: it ran past its minutes")) and lo.any(func(l): return str(l).begins_with("| Recruit as physical (no GATES line) |")),
+		"the long-only summary: %s" % str(lo.slice(0, 8)))
+	# an hour one step passed with the hour before is marked
+	var ss: Dictionary = Sum.long_parse("HOUR " + JSON.stringify({"h": 8.0, "at": 9.2, "end": false, "reach": 7, "cash": 5.0, "earned": 0.0, "same_step": true}))
+	ss["name"] = "long-Doorman-bleed"
+	_check(Sum.long_section([ss], [], []).any(func(l): return str(l).contains("| 7 · 5 / 0 (same step) |")), "an hour from the same step wasn't marked")
+	# balance.bat's branch (it can't run here): the flag taken, the six reads at 480 minutes as long reads, the wait, the two gauntlets
+	var bat: String = FileAccess.get_file_as_string("res://tools/balance.bat")
+	_check(bat.contains("if /i not \"%~3\"==\"long\" goto badflag") and bat.contains("if /i \"%~3\"==\"long\" goto long_reads") and bat.contains("tools\\balance_read.bat long-%%B-%%A 480 %HOURS% one %%B %%A 0 long")
+		and bat.contains("call :waitfor \"long-*.done\" 6 3300") and bat.contains("gauntlet-long-%%B-%%A 60 0 gauntlet %%B %%A long") and bat.contains("gauntlet-h20-%%B-%%A 60 0 gauntlet %%B %%A h20")
+		and bat.count("\n") == bat.count("\r\n"), "balance.bat's long branch: the flag, the reads, the wait, the gauntlets, or its CRLF")
+	print("long38 ok: XP by source, the HOUR window, the saves' paths, the summary's Long reads, the camp, gate 8")
 
 
 func _fix33_checks(main) -> void:

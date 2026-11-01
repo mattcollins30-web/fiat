@@ -12,6 +12,10 @@ rem   tools\balance.bat 0 0 broken    the six broken builds' gauntlets alone, fr
 rem                                  first): docs\balance\broken.md, the pass's own files left
 rem   tools\balance.bat 0 0 gauntlet  the gauntlet alone (27 Oct, the retune): every build's as played and the six pinnacle
 rem                                  builds', from the last pass's end states, then the summary; the pass's other reads kept
+rem   tools\balance.bat 24 1 long    the long pass (1 Nov, BUILD38): the checkpoint, then six one-save reads alone side by
+rem                                  side, one a class, 24 h each with no two-hour stop (killed at 480 minutes; each stops
+rem                                  itself at 440), an HOUR line a game hour and the hour-20 state kept; then the gauntlet
+rem                                  twice a build (from the end state; from the hour-20 camp), and the summary's "Long reads"
 rem   tools\balance.bat 2 0 hunt     the build hunt (26 Oct, Matt): stage 1 (every joint with every set or none), stage 2 (stage
 rem                                  1's best twenty with every unique that fits), each read 2 h; then stage 2's best six
 rem                                  through the gauntlet from the last pass's end states: docs\balance\hunt.md
@@ -50,7 +54,7 @@ rem a flag it can't read deletes nothing (the third review: a typo fell through 
 del /q docs\balance\flag_error.txt 2>nul
 echo %HOURS%| findstr /r "^[0-9][0-9]*$ ^[0-9][0-9]*\.[0-9][0-9]*$" >nul || goto badflag
 echo %READS%| findstr /r "^[0-9][0-9]*$" >nul || goto badflag
-if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" if /i not "%~3"=="gauntlet" if /i not "%~3"=="quick" goto badflag
+if not "%~3"=="" if /i not "%~3"=="broken" if /i not "%~3"=="hunt" if /i not "%~3"=="gauntlet" if /i not "%~3"=="quick" if /i not "%~3"=="long" goto badflag
 set CAPARG=
 if /i "%~3"=="quick" set CAPARG=cap20
 if /i "%~3"=="broken" goto broken_only
@@ -69,6 +73,7 @@ call tools\balance_read.bat checkpoint 90 40 one Drifter fire 0 checkpoint
 rem its .done kept as .end, so it doesn't count towards N but the summary still reads how it ended
 ren docs\balance\pass\checkpoint.done checkpoint.end 2>nul
 if not exist docs\balance\pass\radio_checkpoint.save echo No checkpoint written (see docs\balance\pass\checkpoint.txt): the parity reads will say so.
+if /i "%~3"=="long" goto long_reads
 
 set N=0
 for /l %%S in (1,1,%READS%) do (
@@ -169,6 +174,34 @@ echo Done: docs\balance\summary.md
 endlocal
 exit /b 0
 
+:long_reads
+rem the long pass (1 Nov, BUILD38): six one-save reads, one a class, nothing beside them - no parity, probe, as-played or
+rem loot read; each the hours given (24) with no two-hour stop, killed at 480 minutes (tests\balance.gd stops it at 440,
+rem so it still writes its GATES line); an HOUR line a game hour, its state at hour 20 kept (long-<Class>-<element>-h20.save)
+set N=0
+for %%E in ("poison Poacher" "bleed Doorman" "frost Paramedic" "fire Drifter" "physical Recruit" "shock Scrapper") do (
+	for /f "tokens=1,2" %%A in (%%E) do (
+		set /a N+=1
+		>>docs\balance\pass\expected.txt echo long-%%B-%%A
+		start "" /b cmd /c tools\balance_read.bat long-%%B-%%A 480 %HOURS% one %%B %%A 0 long
+	)
+)
+echo %N% long reads running, %HOURS% simulated hours each (eight hours of wall at most).
+call :waitfor "long-*.done" 6 3300
+rem the gauntlet twice a build: from the long read's end state with the standard camp (as the full pass's), and from its
+rem hour-20 state at the camp the six reads' hour 20 made (the median reach and paragon), its level kept
+for %%E in ("poison Poacher" "bleed Doorman" "frost Paramedic" "fire Drifter" "physical Recruit" "shock Scrapper") do (
+	for /f "tokens=1,2" %%A in (%%E) do (
+		>>docs\balance\pass\expected.txt echo gauntlet-long-%%B-%%A
+		start "" /b cmd /c tools\balance_read.bat gauntlet-long-%%B-%%A 60 0 gauntlet %%B %%A long
+		>>docs\balance\pass\expected.txt echo gauntlet-h20-%%B-%%A
+		start "" /b cmd /c tools\balance_read.bat gauntlet-h20-%%B-%%A 60 0 gauntlet %%B %%A h20
+	)
+)
+echo The gauntlet: 12 reads running.
+call :waitfor "gauntlet-*.done" 12 400
+goto summary
+
 :hunt
 rem the build hunt (26 Oct, Matt: "cook some different builds up"): twelve shards a stage side by side, each stage waiting on
 rem the last (stage 2's list is made from stage 1's lines), then the finalists; the pass's own reads and summary left
@@ -209,8 +242,8 @@ if %DONE% lss %~2 goto wf_loop
 exit /b 0
 
 :badflag
-echo Bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt]. Nothing was run or deleted.
->docs\balance\flag_error.txt echo bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt]; nothing run or deleted
+echo Bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt^|long]. Nothing was run or deleted.
+>docs\balance\flag_error.txt echo bad flag: "%*" - expected ^<hours^> [reads] [quick^|gauntlet^|broken^|hunt^|long]; nothing run or deleted
 endlocal
 exit /b 1
 

@@ -88,7 +88,17 @@ static func read_broken() -> Array:
 
 
 static func read_gauntlet() -> Array:
-	return _best_of(_read_lines("gauntlet-", "GAUNTLET "))
+	return _best_of(_read_lines("gauntlet-", "GAUNTLET ").filter(func(r): return not is_h20_gauntlet(r)))
+
+
+## The long pass's second gauntlet (1 Nov, BUILD38): from the hour-20 camp (pass/gauntlet-h20-<Class>-<element>.txt),
+## its own table; the first (gauntlet-long-*) is the full pass's, read as read_gauntlet's.
+static func read_gauntlet_h20() -> Array:
+	return _best_of(_read_lines("gauntlet-", "GAUNTLET ").filter(func(r): return is_h20_gauntlet(r)))
+
+
+static func is_h20_gauntlet(r: Dictionary) -> bool:
+	return str(r.get("long", "")) == "h20" or str(r.get("build", "")).begins_with("h20-")
 
 
 ## The gauntlet runs each build twice (27 Oct, Matt): the better of its reads - the most places won, then the most on
@@ -514,9 +524,19 @@ func _init() -> void:
 	var full: Array = []
 	for name in by_build:
 		full.append(_merged(by_build[name]))
-	if full.is_empty() and probe.is_empty():
+	var long_only: Array = long_reads()
+	if summary_aborts(full, probe, long_only):
 		printerr("no GATES lines under docs/balance; run tools\\balance.bat first")
 		quit(1)
+		return
+	if full.is_empty() and probe.is_empty():
+		# a long pass whose reads all ended without a GATES line (the review: killed at 480): the header, what ended how,
+		# and the Long reads section off their HOUR lines
+		var lf := FileAccess.open(SUMMARY, FileAccess.WRITE)
+		lf.store_string("\n".join(long_only_summary(long_only, bad_ends, read_gauntlet(), read_gauntlet_h20())))
+		lf.close()
+		print("-> docs/balance/summary.md (the long reads' HOUR lines alone)")
+		quit(0)
 		return
 	var rows: Array = []    # [name, green when, read, ok (true/false/null)]
 	# the element builds are the game (Matt, 11 Oct: every class has its two elements; who'd play without one?): every
@@ -675,12 +695,16 @@ func _init() -> void:
 	# the quick pass's cap (28 Oct): a read stopped on its wall cap is judged on the hours it got to - a "never" in it
 	# may be the cap, not the build
 	var capped: Array = []
+	var long_capped: Array = []          # the long read's own stop under its kill (BUILD38), not the quick pass's cap
 	for rd in reads + played:
 		if rd.has("capped_at"):
-			capped.append("%s at %.1f h of %d" % [rd.get("build", "?"), float(rd["capped_at"]), int(rd.get("hours", 0))])
+			(long_capped if rd.get("long", false) else capped).append("%s at %.1f h of %d" % [rd.get("build", "?"), float(rd["capped_at"]), int(rd.get("hours", 0))])
 	if not capped.is_empty():
 		out.append("")
 		out.append("Stopped at the quick pass's wall cap (its gates read to there; a \"never\" may be the cap): " + "; ".join(capped) + ".")
+	if not long_capped.is_empty():
+		out.append("")
+		out.append("Long reads stopped at their own wall limit, %d minutes (their gates read to there; a \"never\" may be the limit): " % LONG_WALL_MIN + "; ".join(long_capped) + ".")
 	if expected.is_empty():
 		out.append("")
 		out.append("No pass/expected.txt (a pass from before 25 Oct): a read that never wrote can't be named.")
@@ -691,7 +715,11 @@ func _init() -> void:
 		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	out.append_array(played_table(played))
 	var head := out.size()
-	out.append_array(gauntlet_table(read_gauntlet(), "The gauntlet: each build's end state as played", false))
+	var long_rs: Array = long_reads()      # the long pass (1 Nov, BUILD38): its own section, its first gauntlet's table in it
+	if not long_rs.is_empty():
+		out.append_array(long_section(long_rs, read_gauntlet(), read_gauntlet_h20()))
+	else:
+		out.append_array(gauntlet_table(read_gauntlet(), "The gauntlet: each build's end state as played", false))
 	out.append_array(gauntlet_table(broken, "The pinnacle builds: the gauntlet with their pieces on (gate G1)", true))
 	out.append("")
 	out.append("## The builds")
@@ -973,22 +1001,29 @@ func _ladder_rows(rows: Array, full: Array, el_reads: Array) -> void:
 		if h < 0.0 or h > STORY_BY:
 			late.append("%s %s" % [bd["build"], _hours(h)])
 	rows.append(["7. Kev's story", "the three beats done by hour %.0f" % STORY_BY, ("late: " + ", ".join(late)) if not late.is_empty() else "every build", late.is_empty()])
-	# level 50 by the median of every element read, a never counted later than any, and no read before LV50_FLOOR
-	# (Matt, 16 Oct: the same build lands either side of the window read to read)
+	rows.append(retirement_row(el_reads))
+
+
+## Gate 8 (moved out of _ladder_rows unchanged, 1 Nov, BUILD38: the long pass's section shows it and the smoke reads it):
+## level 50 by the median of every element read, a never counted later than any, and no read before LV50_FLOOR (Matt,
+## 16 Oct: the same build lands either side of the window read to read); unjudged while a read that never got there
+## was shorter than the window.
+static func retirement_row(el_reads: Array) -> Array:
+	var hrs := func(v: float) -> String: return "never" if v < 0.0 else "%.1f h" % v
 	var short: Array = el_reads.filter(func(g): return float(g.get("lv50_at", -1.0)) < 0.0 and float(g.get("elapsed_h", g["hours"])) < LV50[1])
 	var at50: Array = el_reads.map(func(g): return float(g.get("lv50_at", -1.0))).map(func(v): return INF if v < 0.0 else v)
 	var med50: float = _median(at50) if not at50.is_empty() else INF
-	var early: Array = el_reads.filter(func(g): return float(g.get("lv50_at", -1.0)) >= 0.0 and float(g["lv50_at"]) < LV50_FLOOR).map(func(g): return "%s %s" % [g["build"], _hours(float(g["lv50_at"]))])
+	var early: Array = el_reads.filter(func(g): return float(g.get("lv50_at", -1.0)) >= 0.0 and float(g["lv50_at"]) < LV50_FLOOR).map(func(g): return "%s %s" % [g["build"], hrs.call(float(g["lv50_at"]))])
 	var nevers: int = at50.filter(func(v): return is_inf(v)).size()
 	var ok50: Variant = null                 # unread when the reads were short
 	if short.is_empty():
 		ok50 = med50 >= LV50[0] and med50 <= LV50[1] and early.is_empty()
-	var t50: String = "the median read %s (%d of %d reads never)" % [_hours(-1.0 if is_inf(med50) else med50), nevers, at50.size()]
+	var t50: String = "the median read %s (%d of %d reads never)" % [hrs.call(-1.0 if is_inf(med50) else med50), nevers, at50.size()]
 	if not early.is_empty():
 		t50 += "; before %.0f h: %s" % [LV50_FLOOR, ", ".join(early)]
 	if not short.is_empty():
 		t50 += " (reads shorter than %.0f h: not judged)" % LV50[1]
-	rows.append(["8. Retirement", "level 50 on the median element read not before hour %.0f and by hour %.0f, and no read before hour %.0f" % [LV50[0], LV50[1], LV50_FLOOR], t50, ok50])
+	return ["8. Retirement", "level 50 on the median element read not before hour %.0f and by hour %.0f, and no read before hour %.0f" % [LV50[0], LV50[1], LV50_FLOOR], t50, ok50]
 
 
 ## Gates 10-11: the gang clock and staying.
@@ -1359,3 +1394,193 @@ static func _kind(name: String) -> String:
 		if name.begins_with(g):
 			return "bot timing"
 	return "design"
+
+
+
+## ------------------------------------------------------------------ the long pass (1 Nov, BUILD38)
+## `tools\balance.bat 24 1 long`: six one-save reads of 24 game hours, an HOUR line each game hour and an H20 line where
+## the hour-20 state was kept (tests/balance.gd long_book); the gauntlet from the end states and from the hour-20 camp.
+const LONG_AT := [8, 12, 16, 20, 24]     # the hours the section's table reads
+const LONG_WALL_MIN := 440               # tests/balance.gd's: the long read stops itself here, under the 480-minute kill
+
+
+## Every long read in the pass folder (pass/long-<Class>-<element>.txt): its HOUR rows, its H20 line, its GATES line.
+static func long_reads() -> Array:
+	var out: Array = []
+	var dir := DirAccess.open(FOLDER)
+	if dir == null:
+		return out
+	var files: Array = Array(dir.get_files()).filter(func(f): return str(f).begins_with("long-") and str(f).ends_with(".txt"))
+	files.sort()
+	for f in files:
+		var r: Dictionary = long_parse(FileAccess.get_file_as_string(FOLDER + "/" + str(f)))
+		r["name"] = str(f).get_basename()
+		out.append(r)
+	return out
+
+
+## A long read's text: {hours: its HOUR rows in order, h20: its H20 line or {}, gates: its GATES line or {}}.
+static func long_parse(text: String) -> Dictionary:
+	var r := {"hours": [], "h20": {}, "gates": {}}
+	for line in text.split("\n"):
+		for tag in ["HOUR ", "H20 ", "GATES "]:
+			if line.begins_with(tag):
+				var v = JSON.parse_string(line.substr(tag.length()).strip_edges())
+				if v is Dictionary:
+					if tag == "HOUR ":
+						r["hours"].append(v)
+					else:
+						r[tag.strip_edges().to_lower()] = v
+	return r
+
+
+## The standard camp from the long reads (the gauntlet's second, and the section's line): each read's hour-20 figures
+## (its H20 line; a read with none, its last HOUR row), the median reach, paragon and build's level.
+static func long_camp(reads: Array) -> Dictionary:
+	var pts: Array = []
+	for r in reads:
+		var p: Dictionary = r.get("h20", {})
+		if p.is_empty() and not r.get("hours", []).is_empty():
+			p = r["hours"][-1]
+		if p.is_empty():
+			continue
+		pts.append([long_build(r), int(p.get("reach", 0)), int(p.get("paragon", 0)), int(p.get("level", 0)), float(p.get("at", -1.0))])
+	if pts.is_empty():
+		return {"n": 0}
+	return {"n": pts.size(), "reach": int(round(_median(pts.map(func(x): return float(x[1]))))), "paragon": int(round(_median(pts.map(func(x): return float(x[2]))))),
+		"level": int(round(_median(pts.map(func(x): return float(x[3]))))), "points": pts}
+
+
+## A long read's build: its GATES line's, else from its name (long-Poacher-poison -> "Poacher as poison").
+static func long_build(r: Dictionary) -> String:
+	if r.get("gates", {}).has("build"):
+		return str(r["gates"]["build"])
+	var nm: PackedStringArray = str(r.get("name", "long-?-?")).trim_prefix("long-").split("-")
+	return "%s as %s" % [nm[0], nm[1] if nm.size() > 1 else "?"]
+
+
+## Gate 8's read of a long read (the review): its GATES line; one with none (killed before it wrote) a stub off its HOUR
+## lines - played to its last row's hour, level 50 at the first row with the runner at 50 - judged, not dropped.
+static func long_gate8_read(r: Dictionary) -> Dictionary:
+	if not r.get("gates", {}).is_empty():
+		return r["gates"]
+	var hrs: Array = r.get("hours", [])
+	var at50 := -1.0
+	for row in hrs:
+		if int(row.get("runner_level", 0)) >= 50:
+			at50 = float(row.get("at", -1.0))
+			break
+	var nm: PackedStringArray = str(r.get("name", "long-?-?")).trim_prefix("long-").split("-")
+	return {"build": long_build(r), "element": nm[1] if nm.size() > 1 else "", "hours": 24.0, "elapsed_h": float(hrs[-1].get("at", 0.0)) if not hrs.is_empty() else 0.0, "lv50_at": at50, "stub": true}
+
+
+## Whether the summary has nothing to write (the review: a long pass whose reads all lacked a GATES line aborted): no
+## build read, no probe and no long read.
+static func summary_aborts(full: Array, probe: Dictionary, long_rs: Array) -> bool:
+	return full.is_empty() and probe.is_empty() and long_rs.is_empty()
+
+
+## The summary of a long pass with no GATES line anywhere: the header, the reads that didn't end ok, the Long reads section.
+static func long_only_summary(long_rs: Array, bad_ends: Array, g_end: Array, g_h20: Array) -> Array:
+	var out: Array = ["# Balance summary", "", "Written %s by tools/balance_summary.gd from %d long reads, none with a GATES line (each killed or crashed before its end): the gates aren't judged; the Long reads section reads their HOUR lines." % [Time.get_datetime_string_from_system(false, true), long_rs.size()]]
+	if not bad_ends.is_empty():
+		out.append_array(["", "Reads that didn't finish ok: " + "; ".join(bad_ends) + "."])
+	out.append_array(long_section(long_rs, g_end, g_h20))
+	return out
+
+
+## A long read's HOUR row for game hour `h` (not the end's part-hour), or {}.
+static func long_at(r: Dictionary, h: int) -> Dictionary:
+	for row in r.get("hours", []):
+		if not row.get("end", false) and int(round(float(row.get("h", -1.0)))) == h:
+			return row
+	return {}
+
+
+static func _short(v: float) -> String:
+	var a := absf(v)
+	if a >= 1e9:
+		return "%.2f bn" % (v / 1e9)
+	if a >= 1e6:
+		return "%.2f M" % (v / 1e6)
+	if a >= 1e4:
+		return "%.0f k" % (v / 1e3)
+	return "%d" % int(round(v))
+
+
+## The long pass's section: a row a build (level 50's hour against the window, the Issue's, the County by hour 24, the
+## reach, cash held and earned at LONG_AT, the deaths after the Quartermaster), gate 8 on the 24 h reads, the XP's
+## sources, the standard camp the reads' hour 20 makes, and the two gauntlets.
+static func long_section(reads: Array, g_end: Array, g_h20: Array) -> Array:
+	var out: Array = ["", "## Long reads", "",
+		"Six one-save reads side by side, one a class, %s game hours each with no two-hour stop (each stops itself at %d minutes of wall, under the 480-minute kill); an HOUR line every game hour in pass/long-<Class>-<element>.txt, the state at hour 20 in pass/long-<Class>-<element>-h20.save. Hours are bot hours. At each hour: reach, then cash held / earned in that hour; \"(same step)\" marks an hour one bot step passed along with the hour before (its HOUR line says same_step): its figures are that step's end, its earnings in the hour before." % [str(reads[0].get("gates", {}).get("hours", 24)) if not reads.is_empty() else "24", LONG_WALL_MIN], ""]
+	var hdr: Array = ["Build", "Played to", "Level 50 (12-24 h)", "Issue", "County by 24 h", "Deaths after the Quartermaster"]
+	for h in LONG_AT:
+		hdr.append("Hour %d" % h)
+	out.append("| " + " | ".join(hdr) + " |")
+	out.append("| " + " | ".join(hdr.map(func(_x): return "---")) + " |")
+	var xp_lines: Array = []
+	for r in reads:
+		var g: Dictionary = r.get("gates", {})
+		var hrs: Array = r.get("hours", [])
+		var last: Dictionary = hrs[-1] if not hrs.is_empty() else {}
+		var played_to: float = float(g.get("elapsed_h", last.get("at", 0.0)))
+		var l50: float = float(g.get("lv50_at", -1.0))
+		if g.is_empty():
+			for row in hrs:
+				if int(row.get("runner_level", 0)) >= 50:
+					l50 = float(row.get("at", -1.0))
+					break
+		var l50_w: String = "never" if l50 < 0.0 else "%.1f h (%s)" % [l50, "early" if l50 < 12.0 else ("late" if l50 > 24.0 else "in the window")]
+		var issue: float = float(g.get("issue_at", last.get("issue_at", -1.0)))
+		var county := 0
+		if g.has("county_firsts"):
+			county = g["county_firsts"].filter(func(x): return float(x[0]) <= 24.0).size()
+		else:
+			for row in hrs:
+				if float(row.get("at", 0.0)) <= 24.0:
+					county = int(row.get("county", 0))
+		var cells: Array = [long_build(r) + ("" if not g.is_empty() else " (no GATES line)"), "%.1f h%s" % [played_to, " (stopped at its wall limit)" if g.has("capped_at") else ""], l50_w,
+			"never" if issue < 0.0 else "%.1f h" % issue, "%d of %d" % [county, Data.COUNTY.size()], str(int(g["deaths_after_qm"])) if g.has("deaths_after_qm") else "?"]
+		for h in LONG_AT:
+			var row: Dictionary = long_at(r, h)
+			cells.append("–" if row.is_empty() else "%d · %s / %s%s" % [int(row.get("reach", 0)), _short(float(row.get("cash", 0.0))), _short(float(row.get("earned", 0.0))), " (same step)" if row.get("same_step", false) else ""])
+		out.append("| " + " | ".join(cells) + " |")
+		var xs := {}
+		var tot := 0.0
+		for row in hrs:
+			var x: Dictionary = row.get("xp", {})
+			for k in x:
+				if str(k) == "lift":
+					continue                     # the crew's floor isn't XP earned
+				xs[k] = float(xs.get(k, 0.0)) + float(x[k])
+				tot += float(x[k])
+		var ks: Array = xs.keys()
+		ks.sort_custom(func(a, b): return float(xs[a]) > float(xs[b]))
+		xp_lines.append("- %s: %s" % [long_build(r), ", ".join(ks.map(func(k): return "%s %.0f%%" % [k, 100.0 * float(xs[k]) / maxf(1.0, tot)])) if tot > 0.0 else "none read"])
+	out.append("")
+	var gr: Array = retirement_row(reads.map(func(r): return long_gate8_read(r)).filter(func(g): return str(g.get("element", "")) != ""))
+	out.append("Gate 8 on these reads: %s: %s." % [gr[2], "not judged" if gr[3] == null else ("GREEN" if gr[3] else "RED")])
+	out.append("")
+	out.append("XP by source over each read (signals, sites, Kev's story, the orders by name, the County, repeats, expeditions; the crew's floor left out):")
+	out.append("")
+	out.append_array(xp_lines)
+	out.append("")
+	var camp: Dictionary = long_camp(reads)
+	if int(camp.get("n", 0)) > 0:
+		out.append("The standard camp, from the reads: reach %d, paragon %d (the median build's level %d; from %s)." % [int(camp["reach"]), int(camp["paragon"]), int(camp["level"]),
+			", ".join(camp["points"].map(func(x): return "%s reach %d paragon %d level %d at %.1f h" % [x[0], x[1], x[2], x[3], x[4]]))])
+	else:
+		out.append("The standard camp, from the reads: no hour-20 figures.")
+	out.append("")
+	out.append("| Gauntlet | From | Every place won | Read |")
+	out.append("| --- | --- | --- | --- |")
+	for gg in [["G1", "each build's end state, the standard camp as the full pass's (tests/balance.gd STANDARD_REACH / STANDARD_PARAGON), lifted to 50", g_end],
+			["G2", "each build's hour-20 state, the camp from the reads above, its level kept", g_h20]]:
+		var rows: Array = gg[2]
+		var ok: Array = rows.filter(func(b): return not b.has("error") and int(b.get("won", 0)) == int(b.get("of", -1)))
+		out.append("| %s | %s | %d of %d builds | %s |" % [gg[0], gg[1], ok.size(), rows.size(),
+			"; ".join(rows.map(func(b): return ("%s: %s" % [b.get("build", "?"), b["error"]]) if b.has("error") else "%s %d of %d (level %d, reach %d)" % [b.get("build", "?"), int(b.get("won", 0)), int(b.get("of", 0)), int(b.get("level0", 0)), int(b.get("reach0", 0))])) if not rows.is_empty() else "no reads"])
+	out.append_array(gauntlet_table(g_end, "G1: the gauntlet from each long read's end state", false))
+	out.append_array(gauntlet_table(g_h20, "G2: the gauntlet from each long read's hour-20 state, at the camp from the reads", false))
+	return out
