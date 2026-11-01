@@ -89,3 +89,14 @@ Later, if they still look right:
   Today: three events (convoy, trapped, cache) at EVENT_ODDS 0.3, a log line each, no choice, two of three pure
   upside. To design with Matt (canvas mockups, test art before any manifest); builds on "Materials in the pack".
 
+## Leaving a head's thing behind should cost its room (parked 1 Nov, Matt, during the 0.10.3 playtest)
+
+Matt: "we made the vet's bag and other quest items an actual item that drops - what's the penalty for just leaving it on
+the ground? presumably the room opens regardless. We should make a clear choice here so that if you do leave the quest
+item then the owner of that item is handicapped somehow - clinic heals slower or doesn't stock as much, fence doesn't
+sell as many items etc." Today: the drop is the sign - the head's thing opens its room when it drops (sim.gd, "the drop
+is the sign"), so leaving it costs nothing. To design: the room opens either way, but brought home it opens whole;
+left behind it opens handicapped (the Clinic heals slower / stocks less, the Fence's shelf shorter, ...) until a later
+fix (fetch it on a rerun? the head's thing turns up again?). One handicap per room, shown on the room. Not this round:
+in before the next balance pass, with everything else that moves numbers.
+

@@ -1345,6 +1345,8 @@ const LOG := {
 	"swapped": "Swapped to %s, parts and all: %d moved over%s",
 	"equipped": "%s equipped",
 	"equipped_into_pack": "%s equipped, %s into the pack",
+	"equipped_to_floor": "%s equipped, %s to the floor",     # worn off the floor, or no place for what came off (1 Nov)
+	"to_floor": "To the floor: %s",                            # what the new bag or rig can't hold (1 Nov)
 	"into_pack": "%s into the pack",
 	"put_on": "Put on: %s",
 	# the Radio, the papers and the codes

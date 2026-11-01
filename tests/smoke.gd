@@ -1462,7 +1462,7 @@ func _campaign_checks(main) -> void:
 	_check(sim.on_mission() and not sim.mission["boss"]["alive"], "the boss did not go down")
 	_check(sim.bosses_beaten[1], "beating the boss did not mark the zone")
 	var dropped := false
-	for it in sim.mission["found"]:
+	for it in sim.mission["found"] + sim.mission.get("floor", []):     # by hand, a head's unique lands on the floor (1 Nov)
 		if it.has("unique") and it["unique"] in sim.boss_of(5)["uniques"]:
 			dropped = true
 	_check(dropped, "the boss dropped nothing of their own")
@@ -4420,9 +4420,9 @@ func _atlas_checks(main) -> void:
 	sim.deploy(5)
 	var m: Dictionary = sim.mission
 	m["boss"] = {"name": sim.boss_of(5)["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
-	var found_before: int = m["found"].size()
+	var found_before: int = m["found"].size() + m.get("floor", []).size()
 	sim._boss_down(m, sim.effective(5))
-	var drops_n: int = m["found"].filter(func(x): return not Items.is_mag(x) and not Items.is_material(x)).size()     # a head's gun brings its magazine too (30 Oct): the drops counted without them; his handful of material too (1 Nov: a pack item)
+	var drops_n: int = (m["found"] + m.get("floor", [])).filter(func(x): return not Items.is_mag(x) and not Items.is_material(x)).size()     # a head's gun brings its magazine too (30 Oct): the drops counted without them; his handful of material too (1 Nov: a pack item)
 	_check(drops_n == found_before + 2, "Two of everything did not drop a second: %d" % (drops_n - found_before))
 	sim.extract_now()
 	_open_map(main)
@@ -5596,7 +5596,7 @@ func _pinnacle_checks(main) -> void:
 		m = sim.mission
 		m["boss"]["started"] = true
 		sim._boss_down(m, sim.effective(5))
-		for it in m["found"]:
+		for it in m["found"] + m.get("floor", []):     # on the floor by hand (1 Nov)
 			if it.get("unique", "") == "The Van Keys":
 				charms += 1
 		sim.extract_now()
@@ -5609,7 +5609,7 @@ func _pinnacle_checks(main) -> void:
 		m = sim.mission
 		m["boss"]["started"] = true
 		sim._boss_down(m, sim.effective(5))
-		for it in m["found"]:
+		for it in m["found"] + m.get("floor", []):     # on the floor by hand (1 Nov)
 			if it.get("unique", "") == "The Van Keys":
 				charms += 1
 		sim.extract_now()
@@ -5642,7 +5642,7 @@ func _pinnacle_checks(main) -> void:
 	_check(m["boss_queue"].size() == 2 and m["convoy"], "the mission did not carry the queue")
 	# the pool goes down; each head comes out in turn, the next as one falls
 	var names: Array = []
-	var found0: int = m["found"].size()
+	var found0: int = m["found"].size() + m.get("floor", []).size()     # the heads' uniques on the floor by hand (1 Nov)
 	m["remaining"] = 1
 	m["target_hp"] = 0.0
 	sim.advance(0.05)                          # the last of the pool goes; the first head comes out
@@ -5654,9 +5654,10 @@ func _pinnacle_checks(main) -> void:
 	_check(not m["boss"]["alive"] and m["boss_queue"].is_empty(), "the last head is still up")
 	_check(names == ["The Carpet Man", "The Manager", "The Quartermaster"], "the convoy came in the wrong order: %s" % str(names))
 	var ld := false
-	for it in m["found"]:
+	var got_all: Array = m["found"] + m.get("floor", [])
+	for it in got_all:
 		ld = ld or it.get("unique", "") == Data.CONVOY_UNIQUE
-	_check(ld and m["found"].size() >= found0 + 4, "the Lorry's Load did not come with the three drops: %d found" % (m["found"].size() - found0))
+	_check(ld and got_all.size() >= found0 + 4, "the Lorry's Load did not come with the three drops: %d found" % (got_all.size() - found0))
 	# the ending (7 Oct): the lorry beaten is written, the Yard says to move, the move lights
 	_check(sim.lorry_done and sim.lorries == 1 and sim.next_words() == Words.NEXT["done"] and sim.events.any(func(e): return str(e[1]).begins_with("The Lorry's Load is yours")), "the lorry beaten was not written: done %s, lorries %d, next '%s'" % [str(sim.lorry_done), sim.lorries, sim.next_words()])
 	sim.extract_now()
@@ -8646,7 +8647,10 @@ func _pack_grid_checks(sim) -> void:
 			for k in range(4):
 				var j: Dictionary = mk.call("Helmet", Data.BASES["Helmet"][0]["name"])
 				sim._place_find(m, j)
-			_check(not sim.can_equip_from_pack(tiny["id"]), "a 5x3 went on over a pack it can't hold (%d cells carried)" % sim.pack_used(m))
+			# (1 Nov) it goes on: what it can't hold goes to the floor, the school bag with it, nothing strapped on
+			var fl0: int = m["floor"].size()
+			var pv: Dictionary = sim.wear_preview(tiny["id"])
+			_check(sim.equip_from_pack(tiny["id"]) and m["floor"].size() == fl0 + pv["spill"].size() + (1 if pv["off"] != null else 0) and m["floor"].size() > fl0 and m["found"].all(func(x): return x.has("pos") and not x.get("strapped", false)), "a 5x3 over a pack it can't hold: its overflow not on the floor as said (%d down, %d said)" % [m["floor"].size() - fl0, pv["spill"].size()])
 	# auto (the bot's packer): a full pack's upgrade takes the place of the cheapest that frees room for it, by shape
 	sim.extract_now()
 	sim.loot_by_hand = false
@@ -9556,6 +9560,7 @@ func _loot_roll_checks(main) -> void:
 	_dots_chip_checks(main)
 	_top_works_checks(main)
 	_pick_panel_checks(main)
+	_floor_wear_checks(main)                  # Equip from the floor (1 Nov, BUILD42)
 	_bench_pick_checks(main)
 	_grenade_checks(main)
 	_grade_checks(main)
@@ -10160,6 +10165,209 @@ func _bench_pick_checks(main) -> void:
 	print("the Bench's pick frame ok: the part, the refusal, the fit, the fitted")
 
 
+## Equip from the floor (1 Nov, BUILD42; Matt's playtest: "why would I take off my current jacket, stuff it into the pack,
+## then equip the new jacket I just found on the floor - I'd just swap jackets - same with any other item too"): a find
+## on the floor worn straight off it, what it replaces down there and the pack untouched; a bag's carried things into the
+## new one, what it can't hold down, said on the card first; a rig's overflow the same; a head's unique on the floor like
+## any find; the bot takes a floor upgrade by the same swap; a save mid-run after a swap keeps it. The pick card in the
+## playtest's two states (shot 1: the Keeper's Wax Jacket over a full pack; shot 2: a better bag on the floor): Equip
+## live, its words fitting, never "No room in the pack" with Equip open.
+func _floor_wear_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var by_hand_was: bool = sim.loot_by_hand
+	sim.loot_by_hand = true
+	var work: Dictionary = sim._plain("Armour", "Work jacket")
+	sim.equipped["Armour"] = work
+	sim.equipped["Backpack"] = sim._plain("Backpack", "Feed sack")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission(), "the floor's fixture: no run")
+	if not sim.on_mission():
+		sim.loot_by_hand = by_hand_was
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	m["found"] = []
+	m["floor"] = []
+	while sim.pack_used(m) < sim.capacity():
+		m["found"].append(sim._plain(Data.AMMO, "Nails"))
+	sim.pack_layout(m)
+	var wax: Dictionary = Items.roll_unique(sim._unique_named("The Keeper's Wax Jacket"), sim.rng, 1, 1, true)
+	m["floor"].append(wax)
+	_check(sim.by_hand(m) and sim.pack_used(m) == sim.capacity() and not sim.floor_fits(wax) and sim.wear_lock(wax) == 0 and m["found"].all(func(x): return x.has("pos")),
+		"the shot 1 fixture: by hand %s, %d of %d cells, fits %s, lock %d" % [str(sim.by_hand(m)), sim.pack_used(m), sim.capacity(), str(sim.floor_fits(wax)), sim.wear_lock(wax)])
+	# shot 1: the card - Equip live, the jacket's going down said, no "No room in the pack", every word in its box
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	main._run._pick_floor(int(wax["id"]))
+	main.refresh()
+	var pk = main._run._pick
+	var said: Array = pk.text_nodes().map(func(l): return str(l.text))
+	_check(pk.button_texts().size() >= 1 and pk.button_texts()[0] == "Equip" and not pk._buttons[0].disabled, "shot 1: Equip isn't live on the floor's unique: %s, disabled %s" % [str(pk.button_texts()), str(pk._buttons[0].disabled if pk.button_texts().size() > 0 else true)])
+	_check(pk.hint_text() == "Your work jacket goes to the floor" and not said.any(func(t): return t.contains("No room in the pack")), "shot 1: the card doesn't say the work jacket goes down, or still says no room: '%s' / %s" % [pk.hint_text(), str(said.filter(func(t): return t.contains("room")))])
+	_check(pk.button_texts().has("Take") and pk._buttons[pk.button_texts().find("Take")].disabled, "shot 1: Take isn't there greyed beside Equip: %s" % str(pk.button_texts()))
+	_check_fit(main, "Run (floor, shot 1)")
+	var ids0: Array = m["found"].map(func(x): return int(x["id"]))
+	var used0: int = sim.pack_used(m)
+	pk.press(0)
+	main.refresh()
+	_check(sim.equipped["Armour"] == wax and sim.floor_items().has(work) and not sim.floor_items().has(wax), "the floor's jacket wasn't worn, the work jacket not down: worn %s, floor %s" % [str(sim.equipped["Armour"].get("unique", sim.equipped["Armour"]["base"])), str(sim.floor_items().map(func(x): return x["base"]))])
+	_check(m["found"].map(func(x): return int(x["id"])) == ids0 and sim.pack_used(m) == used0 and not m["found"].has(work), "the pack moved for a floor swap: %d cells (was %d), %d pieces (was %d)" % [sim.pack_used(m), used0, m["found"].size(), ids0.size()])
+	_check(main._run._floor_pick == -1 and str(sim.events.back()[1]) == "The Keeper's Wax Jacket equipped, work jacket to the floor", "worn off the floor: the pick stayed, or the log doesn't name them (the unique by its name, the base by mid_base): '%s'" % str(sim.events.back()[1]))
+	# a save mid-run after the swap: worn, down and carried as they were
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var back = Sim.new()
+	back.load_dict(d)
+	_check(back.on_mission() and str(back.equipped["Armour"].get("unique", "")) == "The Keeper's Wax Jacket" and back.floor_items().any(func(x): return str(x["base"]) == "Work jacket")
+		and back.mission["found"].size() == ids0.size(), "a save after a floor swap lost it: worn %s, floor %s, %d carried" % [str(back.equipped["Armour"].get("base")), str(back.floor_items().map(func(x): return x["base"])), back.mission["found"].size()])
+	# a gun off the floor with nothing to fire says so, as the pack's card does (the review), beside what goes down
+	sim.rig = []
+	sim._dry_memo.clear()
+	var smg: Dictionary = sim._plain("Primary", "Workshop SMG")
+	m["floor"].append(smg)
+	main._run._pick_floor(int(smg["id"]))
+	main.refresh()
+	var gh: String = pk.hint_text()
+	_check(sim.can_wear_from_floor(int(smg["id"])) and not sim.has_rounds(smg) and (gh.begins_with("No rounds") or gh.begins_with("No magazine")) and (sim.equipped["Primary"] == null or gh.contains("to the floor")) and not pk._buttons[0].disabled,
+		"a floor gun with nothing to fire: the card's hint '%s'" % gh)
+	_check_fit(main, "Run (floor, a gun with no rounds)")
+	m["floor"].erase(smg)
+	# shot 2: a better bag on the floor over the worn Feed sack; the pack's things move into it, the sack goes down
+	var school: Dictionary = sim._plain("Backpack", "School bag")
+	m["floor"].append(school)
+	main._run._pick_floor(int(school["id"]))
+	main.refresh()
+	said = pk.text_nodes().map(func(l): return str(l.text))
+	var pv: Dictionary = sim.wear_preview(int(school["id"]))
+	_check(pv["off"] != null and pv["spill"].is_empty() and pk.button_texts()[0] == "Equip" and not pk._buttons[0].disabled and pk.hint_text() == "Your feed sack goes to the floor"
+		and not said.any(func(t): return t.contains("No room in the pack")), "shot 2: the bigger bag's card: Equip %s, hint '%s', %d to spill" % [str(pk.button_texts()), pk.hint_text(), pv["spill"].size()])
+	_check_fit(main, "Run (floor, shot 2)")
+	var sack: Dictionary = sim.equipped["Backpack"]
+	pk.press(0)
+	main.refresh()
+	_check(sim.equipped["Backpack"] == school and sim.floor_items().has(sack) and m["found"].map(func(x): return int(x["id"])) == ids0 and m["found"].all(func(x): return x.has("pos") and not x.get("strapped", false)),
+		"a floor bag: not worn, the sack not down, or the pack's things didn't move into it: %d of %d, %s" % [m["found"].size(), ids0.size(), str(m["found"].filter(func(x): return not x.has("pos")).size())])
+	# a smaller bag off the floor: the overflow said first ("N things"), then down beside the old bag
+	var tiny: Dictionary = sim._plain("Backpack", "Plastic bag")
+	while sim.pack_used(m) < sim.capacity():
+		var n: Dictionary = sim._plain(Data.AMMO, "Nails")
+		m["found"].append(n)
+		sim.pack_layout(m)
+	m["floor"].append(tiny)
+	pv = sim.wear_preview(int(tiny["id"]))
+	var spill_n: int = pv["spill"].size()
+	main._run._pick_floor(int(tiny["id"]))
+	main.refresh()
+	_check(spill_n > 0 and pk.hint_text() == "Your school bag and %d things go to the floor" % spill_n and not pk._buttons[0].disabled, "a smaller floor bag's card doesn't say what goes down: '%s', %d said" % [pk.hint_text(), spill_n])
+	_check_fit(main, "Run (floor, a smaller bag)")
+	var down0: int = sim.floor_items().size()
+	pk.press(0)
+	main.refresh()
+	_check(sim.equipped["Backpack"] == tiny and sim.floor_items().has(school) and sim.floor_items().size() == down0 - 1 + 1 + spill_n and sim.pack_used(m) <= sim.capacity()
+		and m["found"].all(func(x): return x.has("pos") and not x.get("strapped", false)), "a smaller floor bag: %d down (said %d), %d of %d cells, strapped %d" % [sim.floor_items().size() - down0, spill_n, sim.pack_used(m), sim.capacity(), m["found"].filter(func(x): return x.get("strapped", false)).size()])
+	# a rig: a smaller one off the floor, its overflow into the pack where it lies (two cells freed), the rest down with
+	# the old rig (the review)
+	for k in range(2):
+		var nl: Array = m["found"].filter(func(x): return str(x["base"]) == "Nails")
+		if not nl.is_empty():
+			m["found"].erase(nl.back())
+	sim.pack_layout(m)
+	var free_cells: int = sim.capacity() - sim.pack_used(m)
+	var own0: int = m["found"].filter(func(x): return x.get("from_rig", false)).size()
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig.clear()
+	sim._dry_memo.clear()
+	while sim.rig_used() < sim.med_capacity():
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	var chest: Dictionary = sim.equipped["Rig"]
+	var bum: Dictionary = sim._plain("Rig", "Bum bag")
+	m["floor"].append(bum)
+	var over: Array = sim.rig_overflow(bum)
+	pv = sim.wear_preview(int(bum["id"]))
+	down0 = sim.floor_items().size()
+	var into: int = mini(free_cells, over.size())
+	_check(over.size() > free_cells and free_cells > 0 and pv["spill"].size() == over.size() - into and pv["off"] == chest and sim.wear_from_floor(int(bum["id"])) and sim.equipped["Rig"] == bum
+		and sim.floor_items().has(chest) and sim.rig_used() <= sim.med_capacity() and sim.floor_items().size() == down0 - 1 + 1 + over.size() - into
+		and m["found"].filter(func(x): return x.get("from_rig", false)).size() == own0 + into, "a smaller floor rig: %d over, %d free cells, %d said down, %d down, %d into the pack, %d of %d pouches" % [over.size(), free_cells, pv["spill"].size(), sim.floor_items().size() - down0, m["found"].filter(func(x): return x.get("from_rig", false)).size() - own0, sim.rig_used(), sim.med_capacity()])
+	# a smaller bag from the pack (the review: Wax-sealed bag to a Plastic bag kept the empty bag and spilled the loot):
+	# what's carried packed first, the old bag down when it won't lie; a first gun strapped on, never spilled
+	var wax_bag: Dictionary = sim._plain("Backpack", "Wax-sealed bag")
+	sim.equipped["Backpack"] = wax_bag
+	var plastic: Dictionary = sim._plain("Backpack", "Plastic bag")
+	sim.equipped["Backpack"] = plastic
+	var p_cap: int = sim.capacity()
+	sim.equipped["Backpack"] = wax_bag
+	m["found"] = [plastic]
+	for k in range(p_cap):
+		m["found"].append(sim._plain(Data.AMMO, "Nails"))
+	var fg: Dictionary = sim._plain(Data.AMMO, "Nails")
+	fg["first_gun"] = true
+	m["found"].append(fg)
+	sim.pack_layout(m)
+	pv = sim.wear_preview(int(plastic["id"]))
+	var nails_fl0: int = sim.floor_items().filter(func(x): return str(x["base"]) == "Nails").size()
+	var nails0: int = p_cap + 1
+	_check(sim.equip_from_pack(int(plastic["id"])) and sim.equipped["Backpack"] == plastic, "the Plastic bag wouldn't go on from the pack")
+	var nails_down: int = sim.floor_items().filter(func(x): return str(x["base"]) == "Nails").size() - nails_fl0
+	var strapped_n: int = m["found"].filter(func(x): return x.get("strapped", false)).size()
+	_check(pv["off"] == wax_bag and sim.floor_items().has(wax_bag) and not m["found"].has(wax_bag) and nails_down + strapped_n == 1 and nails_down == pv["spill"].size()
+		and m["found"].has(fg) and not sim.floor_items().has(fg) and m["found"].size() == nails0 - nails_down, "a smaller bag from the pack: the old bag kept %s, %d nails down (said %d), %d strapped, the first gun kept %s" % [str(m["found"].has(wax_bag)), nails_down, pv["spill"].size(), strapped_n, str(m["found"].has(fg))])
+	# the bot: a floor upgrade worn by the swap, the pack untouched
+	var bot = load("res://tests/bot.gd").new()
+	sim.equipped["Armour"] = work
+	sim._dry_memo.clear()
+	var up: Dictionary = {}
+	for b in Data.BASES["Armour"]:
+		var c: Dictionary = sim._plain("Armour", str(b["name"]))
+		if up.is_empty() and sim.is_upgrade(c) and not ("Armour" in bot.issued_slots(sim)):
+			up = c
+	_check(not up.is_empty(), "the bot's fixture: no armour better than the work jacket to wear")
+	if not up.is_empty():
+		m["floor"] = [up]                     # the floor's upgrade alone: the bot would wear the bags and the rig above too
+		ids0 = m["found"].map(func(x): return int(x["id"]))
+		bot._wear_ups(sim)
+		_check(sim.equipped["Armour"] == up and sim.floor_items().has(work) and m["found"].map(func(x): return int(x["id"])) == ids0, "the bot didn't take the floor's %s by the swap: worn %s, the jacket down %s" % [up["base"], sim.equipped["Armour"]["base"], str(sim.floor_items().has(work))])
+	# a head's unique lands on the floor like any find: no spot of its own past the pack's cells
+	m["boss"] = {"name": "The Gamekeeper", "zone": 0, "alive": true, "hp": 1.0, "started": true}
+	var on_floor0: int = sim.floor_items().filter(func(x): return x.has("unique")).size()
+	var in_pack0: int = m["found"].filter(func(x): return x.has("unique")).size()
+	var strapped0: int = m["found"].filter(func(x): return x.get("strapped", false)).size()
+	sim._boss_down(m, sim.effective(2))
+	var keeper_ids: Array = sim.floor_items().filter(func(x): return x.has("unique")).map(func(x): return int(x["id"]))
+	_check(sim.floor_items().filter(func(x): return x.has("unique")).size() > on_floor0 and m["found"].filter(func(x): return x.has("unique")).size() == in_pack0 and m["found"].filter(func(x): return x.get("strapped", false)).size() == strapped0,
+		"the Keeper's unique didn't land on the floor: %d down, %d in the pack, %d strapped" % [sim.floor_items().filter(func(x): return x.has("unique")).size() - on_floor0, m["found"].filter(func(x): return x.has("unique")).size() - in_pack0, m["found"].filter(func(x): return x.get("strapped", false)).size() - strapped0])
+	# left down and Get out now: a head's drop still comes home, as it did (the review); a pinnacle's too
+	m["remaining"] = 0
+	m["cleared"] = true
+	sim.get_out()
+	if sim.on_mission():
+		sim.extract_now()
+	_check(not keeper_ids.is_empty() and keeper_ids.all(func(i): return sim.stash.any(func(x): return int(x["id"]) == i)), "the Keeper's unique left on the floor didn't come home: %s" % str(keeper_ids))
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.on_mission():
+		var mm: Dictionary = sim.mission
+		mm["floor"] = []
+		sim.order_beaten["grid"] = 0
+		sim._order_down(mm, mm["t"], {"order": "grid", "name": Data.pinnacle("grid")["who"]})
+		var p_ids: Array = mm["floor"].filter(func(x): return x.has("unique")).map(func(x): return int(x["id"]))
+		mm["remaining"] = 0
+		mm["cleared"] = true
+		sim.get_out()
+		if sim.on_mission():
+			sim.extract_now()
+		_check(not p_ids.is_empty() and p_ids.all(func(i): return sim.stash.any(func(x): return int(x["id"]) == i)), "the Lineman's unique left on the floor didn't come home: %s" % str(p_ids))
+	if sim.on_mission():
+		sim.extract_now()
+	sim.loot_by_hand = by_hand_was
+	sim.load_dict(saved)
+	main.refresh()
+	print("floor wear ok: Equip off the floor, the old piece down, a bag's and a rig's overflow down and said, the head's unique on the floor, the bot's swap, the save")
+
+
 ## Pick-A (Matt, 6 Oct): the pick and the fitted laid the same on the run and in the Lock-up; a price tag, no fence
 ## line, no ditched line; Equip and Ditch on a run (what comes off goes into the pack); no Sell in the Lock-up.
 func _pick_panel_checks(main) -> void:
@@ -10264,8 +10472,13 @@ func _pick_panel_checks(main) -> void:
 	main.refresh()
 	main._run._inv._pick(main._run._inv.cell_of(small["id"]))
 	main.refresh()
-	_check(pk._buttons[0].disabled and pk.hint_text().begins_with("No room in the pack"), "a full pack did not grey Equip with the hint: '%s'" % pk.hint_text())
+	# (1 Nov, Matt's playtest: never blocked for room) Equip stays live, the hint says the suit goes down, and it does
+	_check(not pk._buttons[0].disabled and pk.hint_text() == "Your riot suit goes to the floor" and not pk.hint_text().contains("No room"), "a full pack greyed Equip or the hint isn't the floor's: '%s', disabled %s" % [pk.hint_text(), str(pk._buttons[0].disabled)])
 	_check_fit(main, "Run (Pick-A, no room)")
+	var used_was: int = sim.pack_used(m) - Items.size(small)
+	pk.press(0)
+	main.refresh()
+	_check(sim.equipped["Armour"]["id"] == small["id"] and sim.floor_items().has(worn) and not m["found"].has(worn) and sim.pack_used(m) == used_was, "Equip from a full pack didn't put the riot suit on the floor: worn %s, floor %s, %d cells (was %d)" % [sim.equipped["Armour"]["base"], str(sim.floor_items().map(func(x): return x["base"])), sim.pack_used(m), used_was])
 	# a smaller backpack found: Equip only when what's carried still fits in it
 	var worn_pack = sim.equipped["Backpack"]
 	var big_pack: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"].back()["name"])
@@ -10274,7 +10487,12 @@ func _pick_panel_checks(main) -> void:
 	m["found"] = [small_pack]
 	while sim.pack_used(m) + Items.size(big_pack) + 1 <= sim.capacity():
 		m["found"].append(sim._plain(Data.AMMO, "Nails"))
-	_check(not sim.can_equip_from_pack(small_pack["id"]), "a smaller backpack could go on over a pack it cannot hold")
+	# (1 Nov) it goes on all the same: what it can't hold is said first, then goes down
+	var spill_n: int = sim.wear_preview(small_pack["id"])["spill"].size() + (1 if sim.wear_preview(small_pack["id"])["off"] != null else 0)
+	_check(sim.can_equip_from_pack(small_pack["id"]) and spill_n > 0, "a smaller backpack over a pack it cannot hold: refused, or nothing said to go down (%d)" % spill_n)
+	var floor_was: int = sim.floor_items().size()
+	_check(sim.equip_from_pack(small_pack["id"]) and sim.floor_items().size() == floor_was + spill_n and m["found"].all(func(x): return x.has("pos") and not x.get("strapped", false)), "the smaller bag's overflow didn't go to the floor as said: %d down, %d said" % [sim.floor_items().size() - floor_was, spill_n])
+	sim.equipped["Backpack"] = big_pack
 	m["found"] = [small_pack]
 	_check(sim.can_equip_from_pack(small_pack["id"]), "a smaller backpack with room could not go on")
 	sim.equipped["Backpack"] = worn_pack
@@ -15654,8 +15872,9 @@ func _keepsake_checks(main) -> void:
 	var m: Dictionary = sim.mission
 	m["boss"] = {"name": gk["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
 	var n0: int = m["found"].size()
+	var f0: int = m.get("floor", []).size()
 	sim._boss_down(m, m["t"])
-	var got: Array = m["found"].slice(n0).map(func(x): return str(x.get("unique", x["base"])))
+	var got: Array = (m["found"].slice(n0) + m.get("floor", []).slice(f0)).map(func(x): return str(x.get("unique", x["base"])))     # his unique on the floor by hand (1 Nov)
 	_check(sim.room_open("clinic") and "The vet's bag" in sim.keepsakes and "The vet's bag" in got and got.any(func(x): return x in gk["uniques"]), "the Gamekeeper's drop: %s, keepsakes %s" % [str(got), str(sim.keepsakes)])
 	# his own, off him, is the first big find (21 Oct, Matt's playtest: the Twelve-Bore read under a Pump found before
 	# him): a tier past the site's loot, never under its own base, lifted - over every plain gun of its type at the
@@ -16242,7 +16461,7 @@ func _crates_checks(main) -> void:
 	var fl0: Dictionary = sim.floor_items().back()
 	run._pick_floor(int(fl0["id"]))
 	main.refresh()
-	_check(run._pick.visible and run._crates.visible and run._pick._kickers[0].text.to_lower().contains("on the floor") and run._pick._buttons[0].visible and run._pick._buttons[0].text == "Take", "a click on the floor did not show its comparison and Take: %s" % run._pick._kickers[0].text)
+	_check(run._pick.visible and run._crates.visible and run._pick._kickers[0].text.to_lower().contains("on the floor") and run._pick.button_texts().has("Take") and run._pick.button_texts()[0] == ("Equip" if sim.can_wear_from_floor(int(fl0["id"])) else "Take"), "a click on the floor did not show its comparison and Take (Equip first for a piece to wear, 1 Nov): %s %s" % [run._pick._kickers[0].text, str(run._pick.button_texts())])
 	_check_fit(main, "Run (a pick on the floor)")
 	var fits0: bool = sim.floor_fits(fl0)
 	var found_n: int = m["found"].size()
@@ -21711,7 +21930,7 @@ func _build_rounds_checks(main) -> void:
 	main._run._inv._pick(main._run._inv.cell_of(big["id"]))
 	main.refresh()
 	var hw: String = main._run._pick.hint_text()
-	_check((hw.begins_with("No rounds") or hw.begins_with("No magazine")) and hw.contains("No room"), "the run's pick does not carry both hints: '%s'" % hw)
+	_check((hw.begins_with("No rounds") or hw.begins_with("No magazine")) and hw.contains("to the floor") and not hw.contains("No room"), "the run's pick does not carry both hints (1 Nov: what comes off goes down): '%s'" % hw)
 	_check_fit(main, "Run (no rounds and no room)")
 	sim.extract_now()
 	# a charm over a worn unique charm is never the upgrade (its rule is beyond the charm's score)
@@ -23026,7 +23245,7 @@ func _rebuild_checks(main) -> void:
 		mm["remaining"] = 0
 		mm["cleared"] = true
 		s._boss_down(mm, mm["t"])
-		_check(mm["found"].any(func(x): return x.get("unique", "") in ["The Lineman's Lamp", "The Lineman's Tool Bag"]), "the Lineman's first kill dropped neither the Lamp nor the Tool Bag")      # two uniques now, one picked (24 Oct)
+		_check((mm["found"] + mm.get("floor", [])).any(func(x): return x.get("unique", "") in ["The Lineman's Lamp", "The Lineman's Tool Bag"]), "the Lineman's first kill dropped neither the Lamp nor the Tool Bag")      # two uniques now, one picked (24 Oct)
 		s.extract_now()
 		_check(s.mission == null and int(s.order_beaten.get("grid", 0)) == 1 and s.held_of("grid_key") == 1 and s.reach == reach0 and s._sig.is_empty(), "the Grid's win: beaten %d, key %d, reach %d from %d" % [int(s.order_beaten.get("grid", 0)), s.held_of("grid_key"), s.reach, reach0])
 		_check(s.order_level("grid") == int(Data.pinnacle("grid")["again"]), "the Grid after a win isn't on its ladder (%d): %d" % [int(Data.pinnacle("grid")["again"]), s.order_level("grid")])
@@ -25573,9 +25792,10 @@ func _order_fight_checks(main) -> void:
 		sim.deploy(3)
 		var mm: Dictionary = sim.mission
 		mm["found"] = []
+		mm["floor"] = []
 		sim.order_beaten["grid"] = 0
 		sim._order_down(mm, mm["t"], {"order": "grid", "name": p["who"]})
-		for it in mm["found"]:
+		for it in mm["found"] + mm["floor"]:     # on the floor by hand (1 Nov)
 			seen[str(it.get("unique", ""))] = true
 		sim.extract_now()
 	_check(seen.has(p["unique"]) and seen.has(p["unique2"]), "the Lineman doesn't drop one of his two: %s" % str(seen.keys()))

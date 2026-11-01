@@ -93,6 +93,7 @@ var on_swap := Callable()        # called with the camp before a class goes in (
 ## build keeps it); issued kit goes in the slots the build leaves free.
 var broken := ""
 var broken_slots: Array = []
+var held_slots: Array = []               # the slots _hold_broken wants (1 Nov): _wear_ups leaves them be
 ## A hunted build (26 Oct, Matt: "cook some different builds up"): {set, pieces, rule, gun}, held as a combo's is - the
 ## set at its count ("" none), a unique by its rule ("" none), a primary of the gun type ("" the bot's own). Set, it
 ## stands in for `broken`'s combo.
@@ -438,6 +439,8 @@ func step(sim) -> int:
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
 		sim.advance(1.0)
+		if sim.on_mission():
+			_wear_ups(sim)                    # an upgrade found worn there and then, by the swap (1 Nov)
 		if sim.on_mission() and sim.event_asking():
 			sim.event_by_orders()             # a run event (1 Nov): the bot goes by the standing orders, as a repeat run does
 		if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
@@ -565,6 +568,7 @@ func _hold_broken(sim) -> void:
 			first_set = str(st["pieces"][k]["slot"])
 			break
 	broken_slots = [unique_slot, first_set] + (["Primary"] if want.has("Primary") and want["Primary"][0] == "gun" else [])
+	held_slots = want.keys()                  # every slot the build wants: kept off a run's swaps too (_wear_ups, the review)
 	for sl in want:
 		var worn = sim.equipped.get(sl)
 		var kind: String = want[sl][0]
@@ -808,6 +812,40 @@ func tidy(sim) -> void:
 	_issued(sim)
 	_endgame(sim)
 	_lap("endgame", t0)
+
+
+## An upgrade found on a run worn there and then (1 Nov, BUILD42, Matt: "I'd just swap jackets"): off the floor by the
+## sim's swap (wear_from_floor), what comes off left down, never shuffled through the pack - and one the auto-run put in
+## the pack the same way (equip_from_pack: what comes off into the cells freed, else down). The slots a build holds (a
+## broken build's, the type's and the element's gun) and the County's issued slots are the tidy's at home, as before.
+## Each piece read once a run (a try-on each: the pass's time).
+var _ups_seen := {}
+var _ups_run := -1
+func _wear_ups(sim) -> void:
+	if int(sim.runs_total) != _ups_run:
+		_ups_run = int(sim.runs_total)
+		_ups_seen.clear()
+	var m: Dictionary = sim.mission
+	var fresh: Array = []
+	for it in sim.floor_items() + m["found"]:
+		if not _ups_seen.has(int(it["id"])):
+			_ups_seen[int(it["id"])] = true
+			if str(it.get("slot", "")) in Data.SLOTS:
+				fresh.append(it)
+	if fresh.is_empty():
+		return
+	var held: Array = broken_slots + issued_slots(sim) + (held_slots if holding() else [])     # every slot a held build wants (the review)
+	if (keystones_first and TYPE_OF.has(sim.cls)) or element != "":
+		held.append("Primary")
+	for it in fresh:
+		var id: int = int(it["id"])
+		var sl: String = str(it["slot"])
+		if sl in held or _keep_stamped(sim, sl) or not sim.is_upgrade(it):
+			continue
+		if sim.floor_items().has(it):
+			sim.wear_from_floor(id)
+		else:
+			sim.equip_from_pack(id)
 
 
 ## The kit looked over: the best of everything fitted, the points spent, the mounts, the spares sold, the shop.

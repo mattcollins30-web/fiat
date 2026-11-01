@@ -957,20 +957,39 @@ func _show_pick(m: Dictionary) -> void:
 	_pick.show_pick(it, sim, "The pick · on the floor" if on_floor else "The pick · in the pack", tail)
 	var buttons := []
 	if on_floor:
-		# off the floor (13 Oct): its comparison, and Take when there's room
+		# off the floor (13 Oct): its comparison, and Take when there's room; a piece to wear, Equip straight off the floor
+		# (1 Nov, Matt's playtest: "I'd just swap jackets"), what it replaces to the floor, no room needed
 		var fitted_f = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
+		var wear: bool = sim.wearable_on_run(it, true)     # the sim's rule, the padlock left out
+		var wearable: bool = sim.can_wear_from_floor(int(it["id"]))
 		if fitted_f != null:
 			_pick.show_fitted(fitted_f, sim, "Fitted now", "")
 			var vf: Array = PickPanel.verdict_for(sim, it)
 			_pick.set_verdict(vf[0], vf[1], PickPanel.deltas_for(sim, it, fitted_f))
+		elif wear:
+			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 		else:
 			_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()], ["%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]])
 		var fits: bool = sim.floor_fits(it)
-		if not fits:
+		var fl_buttons: Array = []
+		if wearable:
+			var down: Array = swap_forms(sim.wear_preview(int(it["id"])))
+			var rh: Array = _rounds_hint(it)          # a gun with nothing to fire, as the pack's card says (the review)
+			if not rh.is_empty():
+				if not down.is_empty():
+					rh.append(down[1])
+				_pick.set_hint_options(_hint_forms(rh))
+			elif not down.is_empty():
+				_pick.set_hint_options(down)          # what goes down, said before the click (never "No room" with Equip open)
+			fl_buttons.append({"text": "Equip", "action": _equip_floor.bind(_floor_pick), "enabled": true, "primary": true})
+		elif not fits:
 			_pick.set_hint_options(["No room in the pack: ditch something first (it takes %d cells)" % Items.size(it), "No room in the pack"])
 		elif sim.wear_lock(it) > 0 and fitted_f == null:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level (the review)
-		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
+		if wear and not wearable and sim.wear_lock(it) > 0:
+			fl_buttons.append({"text": "Equip at level %d" % sim.wear_lock(it), "action": _equip_floor.bind(_floor_pick), "enabled": false, "primary": true})
+		fl_buttons.append({"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": fl_buttons.is_empty()})
+		_pick.set_buttons(fl_buttons)
 		return
 	if Items.is_ammo(it) and not it.get("from_rig", false):
 		# a box found (28 Oct, magazines): it stays a box in the pack, and fills the rig's magazines at home
@@ -999,15 +1018,16 @@ func _show_pick(m: Dictionary) -> void:
 		var lock: int = sim.wear_lock(it)
 		# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct), no
 		# room for what comes off, or both
-		var hints: Array = []
-		if Items.is_gun(it) and not sim.has_rounds(it):
-			hints.append(Words.NO_MAG_HINT if sim.mags_for(it).is_empty() and Items.mag_size(it) > 0 else "No rounds for it in the rig")     # a magazine is what's missing (the three-stage review, UI 11)
-		if not can and fitted != null and lock == 0:
-			hints.append("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
+		var hints: Array = _rounds_hint(it)
+		var down_p: Array = swap_forms(sim.wear_preview(int(it["id"]))) if can else []     # no room for what comes off: it goes down (1 Nov)
 		if lock > 0 and fitted == null:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
 		elif not hints.is_empty():
+			if not down_p.is_empty():
+				hints.append(down_p[1])         # its short form: with the rounds' hint, both said
 			_pick.set_hint_options(_hint_forms(hints))
+		elif not down_p.is_empty():
+			_pick.set_hint_options(down_p)
 		buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": _equip_pick, "enabled": can, "primary": true})
 	else:
 		_pick.show_right_words("", "", [])
@@ -1451,6 +1471,41 @@ func _ditch_pick() -> void:
 func _equip_pick() -> void:
 	if _inv.selected >= 0 and sim.equip_from_pack(_inv.selected):
 		_inv.selected = -1
+
+
+## A gun's hint when it has nothing to fire (the try-on counts it fed, 11 Oct): no magazine for it, or no rounds; [] else.
+## The pack's card and the floor's (1 Nov).
+func _rounds_hint(it: Dictionary) -> Array:
+	if Items.is_gun(it) and not sim.has_rounds(it):
+		return [Words.NO_MAG_HINT if sim.mags_for(it).is_empty() and Items.mag_size(it) > 0 else "No rounds for it in the rig"]     # a magazine is what's missing (the three-stage review, UI 11)
+	return []
+
+
+## Off the floor and worn (1 Nov): what it replaces goes down; the pick's done with.
+func _equip_floor(id: int) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	if sim.wear_from_floor(id) and _floor_pick == id:
+		_floor_pick = -1
+	_shown = ""
+	acted.emit()
+
+
+## What a swap puts on the floor, as the pick card's hint, long to short (1 Nov): "Your work jacket goes to the floor",
+## "Your feed sack and 2 things go to the floor", "2 things go to the floor"; [] when nothing goes down.
+static func swap_forms(pv: Dictionary) -> Array:
+	var off = pv.get("off")
+	var n: int = pv.get("spill", []).size()
+	if off == null and n == 0:
+		return []
+	var things: String = "%d thing%s" % [n, "" if n == 1 else "s"]
+	if off == null:
+		return ["%s go%s to the floor" % [things, "es" if n == 1 else ""], "%s to the floor" % things]
+	var nm: String = str(off["unique"]).trim_prefix("The ") if off.has("unique") else Words.mid_base(str(off["base"]))     # "Your Keeper's Wax Jacket"
+	var short: String = str(off["unique"]) if off.has("unique") else str(off["base"])
+	if n == 0:
+		return ["Your %s goes to the floor" % nm, "%s to the floor" % short, "To the floor"]
+	return ["Your %s and %s go to the floor" % [nm, things], "%s and %s to the floor" % [short, things], "%s to the floor" % things]
 
 
 func _on_pick_acted() -> void:

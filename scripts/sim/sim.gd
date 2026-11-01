@@ -2539,6 +2539,7 @@ func _wearing_off(m: Dictionary) -> void:
 	m.erase("wearing")
 	var it: Dictionary = e["item"]
 	it["spared"] = true                       # the runner's own come back: no loot rule touches it (the review)
+	it["recovered"] = true                    # and no bag swap spills it (1 Nov, the review): off at home (_pack_unmark)
 	m["found"].append(it)
 	_read(it)
 	if e["from"] == "fence" or it.has("unique"):
@@ -5205,10 +5206,11 @@ func put_down(id: int) -> bool:
 	for k in range(mission["found"].size()):
 		var f: Dictionary = mission["found"][k]
 		if int(f["id"]) == id:
-			if f.get("from_rig", false) or f.get("carried", false) or Items.is_deeds(f):
+			if _stays_up(f):
 				return false                     # the runner's own rounds (the gate's box too), the deeds: not left behind by a drag
 			mission["found"].remove_at(k)
 			pack_off(f)
+			f.erase("head_drop")                 # put down by hand: left if left, as a ditched thing (1 Nov)
 			mission["floor"] = mission.get("floor", [])
 			mission["floor"].append(f)
 			return true
@@ -5228,6 +5230,8 @@ static func pack_off(it: Dictionary) -> void:
 func _pack_unmark(m: Dictionary) -> void:
 	for f in m["found"]:
 		pack_off(f)
+		f.erase("head_drop")                  # home: no longer a head's drop to bring in
+		f.erase("recovered")
 
 
 ## Whether every piece of `items` lies in a pack `w` across and `cap` cells, packed afresh (the biggest first): a bag
@@ -7550,8 +7554,7 @@ func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	if first or rng.randf() < Data.PINNACLE_UNIQUE:
 		var which: String = str(p["unique"]) if (not p.has("unique2") or rng.randf() < 0.5) else str(p["unique2"])     # one of the two (24 Oct)
 		var it := Items.roll_unique(_unique_named(which), rng, maxi(int(t.get("level", -1)), reach), int(t["loot_tier"]))     # at the reach if past the place (the third review)
-		m["found"].append(it)
-		_read(it)
+		_head_drop(m, it, false)
 		log_event(Words.LOG["order_down_found"] % [p["who"], it["unique"]])
 	else:
 		log_event(Words.LOG["order_down"] % p["who"])
@@ -11778,9 +11781,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
 		# the last of the convoy: the Lorry's Load comes home too, and the lorry's done for this Yard (7 Oct)
 		var ld := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
-		m["found"].append(ld)
-		_mag_in_pack(m, ld)
-		_read(ld)
+		_head_drop(m, ld)
 		log_event(Words.LOG["convoy_done"] % ld["unique"])
 		if not lorry_done:
 			lorry_done = true
@@ -11789,15 +11790,11 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)     # at the depth he's fought at (12 Oct); his own, off him (21 Oct)
-		m["found"].append(it)                  # theirs comes home whatever the pack holds
-		_mag_in_pack(m, it)
-		_read(it)
+		_head_drop(m, it)                      # on the floor by hand, like any find (1 Nov); else into the pack whatever it holds
 		log_event(Words.LOG["head_down_found"] % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
 			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)
-			m["found"].append(it2)
-			_mag_in_pack(m, it2)
-			_read(it2)
+			_head_drop(m, it2)
 			log_event(Words.LOG["second_unique"] % it2["unique"])
 	if pool.is_empty():
 		log_event(Words.LOG["head_down"] % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", "")])     # a head with no unique of his own (the Gamekeeper)
@@ -11824,6 +11821,21 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			_home_gate(thing)
 	if first and campaign_done():
 		log_event(Words.YARD["campaign"])
+
+
+## A head's unique off him (1 Nov, Matt's playtest: the Keeper's Wax Jacket sat in a spot of its own under the pack's
+## cells, "No room in the pack" and Equip greyed): by hand it lands on the floor like any other find, to take or wear
+## off the floor; on an auto-run or "Fill up, then go" into the pack whatever it holds (strapped on), as before. `mag`:
+## a gun's magazine on it, as the crew heads' always were.
+func _head_drop(m: Dictionary, it: Dictionary, mag := true) -> void:
+	if by_hand(m):
+		_floor_put(m, it)
+		it["head_drop"] = true                # left down, it still comes home (_floor_mythics_in; the review)
+	else:
+		m["found"].append(it)
+	if mag:
+		_mag_in_pack(m, it)
+	_read(it)
 
 
 ## A gun's standard magazine, empty (30 Oct: every gun the runner gets comes with one), {} for a gun that takes none.
@@ -12915,9 +12927,10 @@ func _record_reset() -> void:
 ## home as one in the pack does: into the pack first, over its size if need be, so each ending's own rule takes it.
 func _floor_mythics_in(m: Dictionary) -> void:
 	var fl: Array = m.get("floor", [])
-	for it in fl.filter(func(x): return x.get("mythic", false) or x.get("issued", false)):
-		fl.erase(it)
+	for it in fl.filter(func(x): return x.get("mythic", false) or x.get("issued", false) or (x.get("head_drop", false) and not x.get("ditched", false))):
+		fl.erase(it)                          # a head's drop left down too, unless ditched (1 Nov, the review: it came home before)
 		it.erase("ditched")
+		it.erase("head_drop")
 		m["found"].append(it)
 
 
@@ -14120,33 +14133,33 @@ func _rig_take(id: int) -> bool:
 	return _take_from(stash, id)
 
 
-## Gear found out there, fitted while the run's on (Matt, 6 Oct): what comes
-## off goes into the pack in its place, so it needs the cells the swap frees
-## plus any more the fitted piece takes.
+## Gear found out there, fitted while the run's on (Matt, 6 Oct): what comes off goes into the pack in its place when
+## the cells the swap frees hold it, else to the floor (1 Nov, Matt's playtest: "I'd just swap jackets"); a bag's what's
+## carried repacked in the new one, what it can't hold to the floor, the old bag placed after (the review: never the
+## empty bag kept and the loot spilled); a smaller rig's overflow into the pack where it lies, the rest to the floor.
+## Never blocked for room: the rules a piece is worn by are wearable_on_run's, the floor's swap's too.
 func can_equip_from_pack(id: int) -> bool:
 	if mission == null:
 		return false
 	for it in mission["found"]:
 		if it["id"] == id:
-			var slot: String = it["slot"]
-			if not equipped.has(slot) or Items.is_deeds(it) or not can_wear(it):
-				return false
-			# the room is read with the found piece on: a backpack found must hold what's carried, packed afresh in its
-			# own shape; any other piece, what comes off needs a place with the found piece's cells freed (the grid)
-			_pack_settle(mission)
-			var was = equipped[slot]
-			var rest: Array = mission["found"].filter(func(f): return int(f["id"]) != id)
-			equipped[slot] = it
-			_dry_memo.clear()
-			var ok: bool = slot != "Rig" or rig_used() <= med_capacity()
-			if ok and slot == "Backpack":
-				ok = _pack_all_fit(rest + ([was] if was != null else []), pack_w(), capacity())
-			elif ok and was != null:
-				ok = not _pack_swap_spot(mission, it, was).is_empty()
-			equipped[slot] = was
-			_dry_memo.clear()
-			return ok
+			return wearable_on_run(it)
 	return false
+
+
+## The rules a find is worn by on a run, from the pack or off the floor (1 Nov: one place for both, the pick card's too):
+## a slot the runner has, never the deeds, and the runner's level (can_wear) - `any_level`, the level left out (a piece
+## that waits on a padlock).
+func wearable_on_run(it: Dictionary, any_level := false) -> bool:
+	return equipped.has(str(it.get("slot", ""))) and not Items.is_deeds(it) and (any_level or can_wear(it))
+
+
+## A piece as the log names it (the review: a base never lowered in code): a unique by its name, a base as it is, or
+## mid-sentence by Words.mid_base.
+static func _log_name(it: Dictionary, mid := false) -> String:
+	if it.has("unique"):
+		return str(it["unique"])
+	return Words.mid_base(str(it["base"])) if mid else str(it["base"])
 
 
 func equip_from_pack(id: int) -> bool:
@@ -14157,33 +14170,227 @@ func equip_from_pack(id: int) -> bool:
 		var it: Dictionary = m["found"][k]
 		if it["id"] == id:
 			var slot: String = it["slot"]
-			var spot: Array = [] if slot == "Backpack" or equipped[slot] == null else _pack_swap_spot(m, it, equipped[slot])
+			var was = equipped[slot]
+			var spot: Array = [] if slot == "Backpack" or was == null else _pack_swap_spot(m, it, was)
 			m["found"].remove_at(k)
 			pack_off(it)
-			if equipped[slot] != null:
-				equipped[slot]["spared"] = true      # what he had on: his, not loot
-				if spot.is_empty():
-					m["found"].append(equipped[slot])     # a bag's swap: repacked below
-				else:
-					_pack_put(m, equipped[slot], spot)
-				log_event(Words.LOG["equipped_into_pack"] % [it["base"], equipped[slot]["base"].to_lower()])
+			it.erase("head_drop")                    # worn: the runner's now
+			if was != null:
+				was["spared"] = true                 # what he had on: his, not loot
+				if slot != "Backpack":
+					if spot.is_empty():
+						_floor_put(m, was)            # no place in the cells freed (1 Nov): down, not blocked
+						log_event(Words.LOG["equipped_to_floor"] % [_log_name(it), _log_name(was, true)])
+					else:
+						_pack_put(m, was, spot)
+						log_event(Words.LOG["equipped_into_pack"] % [_log_name(it), _log_name(was, true)])
 			else:
-				log_event(Words.LOG["equipped"] % it["base"])
-			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(equipped[slot])})
+				log_event(Words.LOG["equipped"] % _log_name(it))
+			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(was)})
 			equipped[slot] = it
-			if m.has("mag_in"):
-				m["mag_in"].erase(slot)           # a gun picked up loads its own magazine (28 Oct)
-				m["reload_t"].erase(slot)
-				m["reload_to"].erase(slot)
-			_mag_from_pack(m, it)
-			_read(it)
-			_dry_memo.clear()
-			if slot == "Backpack":
-				_pack_repack(m)                   # the new bag's own shape
-			if hp > max_hp():
-				hp = max_hp()
+			_worn_on_run(m, it, slot, was)
 			return true
 	return false
+
+
+## A piece just worn on a run, from the pack or off the floor: a gun loads its own magazine, a bag repacks what's carried
+## (what it can't hold to the floor, then `bag_was` - the old bag from the pack - placed, else down), a smaller rig's
+## overflow into the pack where it lies and the rest down, HP held to the new most.
+func _worn_on_run(m: Dictionary, it: Dictionary, slot: String, bag_was = null) -> void:
+	if m.has("mag_in"):
+		m["mag_in"].erase(slot)           # a gun picked up loads its own magazine (28 Oct)
+		m["reload_t"].erase(slot)
+		m["reload_to"].erase(slot)
+	_mag_from_pack(m, it)
+	_read(it)
+	_dry_memo.clear()
+	var down: Array = []
+	if slot == "Backpack":
+		var plan: Dictionary = _bag_settle(m, bag_was)
+		down = plan["down"]
+		if bag_was != null:
+			log_event(Words.LOG["equipped_to_floor" if plan["off"] else "equipped_into_pack"] % [_log_name(it), _log_name(bag_was, true)])
+	elif slot == "Rig":
+		var over: Array = []
+		while rig_used() > med_capacity() and not rig.is_empty():
+			over.append(rig.pop_back())       # the last packed first, as rig_overflow reads it
+		var spots: Array = _rig_over_spots(m, over, _pack_taken(m))
+		for j in range(over.size()):
+			var r: Dictionary = over[j]
+			if spots[j].is_empty():
+				_floor_put(m, r)
+				down.append(r)
+			else:
+				r["from_rig"] = true          # the runner's own: home to the rig, as rig_to_pack's (the review)
+				_pack_put(m, r, spots[j])
+		_dry_memo.clear()
+	if not down.is_empty():
+		var th: Array = _things(down)
+		log_event(Words.LOG["to_floor"] % Words.things_list(th[0], th[1]))
+	if hp > max_hp():
+		hp = max_hp()
+
+
+## A bag just worn (on `m`, the live run's or a copy's): what's carried packed afresh in it, what it can't place down
+## (what must come home, _spill_keeps, stays strapped on), then `was` - the old bag, from the pack - placed where it
+## lies, else down. {"down": what went down, "off": whether `was` did}.
+func _bag_settle(m: Dictionary, was) -> Dictionary:
+	_pack_repack(m)
+	var down: Array = []
+	for f in m["found"].duplicate():
+		if f.get("strapped", false) and not _spill_keeps(f):
+			m["found"].erase(f)
+			_floor_put(m, f)
+			down.append(f)
+	var off := false
+	if was != null:
+		var sp: Array = _pack_first(m, was, _pack_taken(m, int(was["id"])))
+		if sp.is_empty():
+			_floor_put(m, was)
+			off = true
+		else:
+			_pack_put(m, was, sp)
+	return {"down": down, "off": off}
+
+
+## Where a smaller rig's overflow lies in the pack, each in turn (cells `taken` already): [x, y, rot], or [] for the floor.
+func _rig_over_spots(m: Dictionary, over: Array, taken: Dictionary) -> Array:
+	var tk: Dictionary = taken.duplicate()
+	var w := pack_w()
+	var out: Array = []
+	for r in over:
+		var sp: Array = _pack_first(m, r, tk)
+		out.append(sp)
+		if sp.is_empty():
+			continue
+		var fp := pack_fp(r, bool(sp[2]))
+		for yy in range(fp.y):
+			for xx in range(fp.x):
+				tk[(int(sp[1]) + yy) * w + int(sp[0]) + xx] = -1
+	return out
+
+
+## Off the floor and worn (1 Nov, Matt's playtest: "realistically why would I take off my current jacket, stuff it into
+## the pack, then equip the new jacket I just found on the floor - I'd just swap jackets"): the piece it replaces goes
+## on the floor, never into the pack; the new one needs no room. A bag: the old one down, what's carried repacked in the
+## new one, what it can't hold down too; a rig: its overflow into the pack where it lies, the rest down. The floor has no
+## cap, so a swap is never refused for it.
+func can_wear_from_floor(id: int) -> bool:
+	for it in floor_items():
+		if int(it["id"]) == id:
+			return wearable_on_run(it)
+	return false
+
+
+func wear_from_floor(id: int) -> bool:
+	if not can_wear_from_floor(id):
+		return false
+	var m: Dictionary = mission
+	var fl: Array = m["floor"]
+	for k in range(fl.size()):
+		var it: Dictionary = fl[k]
+		if int(it["id"]) != id:
+			continue
+		var slot: String = it["slot"]
+		var was = equipped[slot]
+		fl.remove_at(k)
+		pack_off(it)
+		it.erase("head_drop")                 # worn: the runner's now
+		it["spared"] = true                   # taken off the floor by hand: chosen (as take_floor)
+		if was != null:
+			was["spared"] = true              # what he had on: his, not loot, should he pick it up again
+			_floor_put(m, was)
+			log_event(Words.LOG["equipped_to_floor"] % [_log_name(it), _log_name(was, true)])
+		else:
+			log_event(Words.LOG["equipped"] % _log_name(it))
+		chron("equip", {"slot": slot, "how": "floor", "on": _chron_item(it), "off": _chron_item(was)})
+		equipped[slot] = it
+		_worn_on_run(m, it, slot)
+		return true
+	return false
+
+
+## What wearing a find leaves on the floor, read before it's worn (the pick card says it first): {"off": the piece coming
+## off when it goes down, else null; "spill": what goes down besides}. For a find in the pack or on the floor.
+func wear_preview(id: int) -> Dictionary:
+	var out := {"off": null, "spill": []}
+	if mission == null:
+		return out
+	var m: Dictionary = mission
+	var it: Dictionary = {}
+	var on_floor := false
+	for f in floor_items():
+		if int(f["id"]) == id:
+			it = f
+			on_floor = true
+	for f in m["found"]:
+		if int(f["id"]) == id:
+			it = f
+	if it.is_empty() or not equipped.has(str(it["slot"])):
+		return out
+	var slot: String = it["slot"]
+	var was = equipped[slot]
+	if slot == "Backpack":
+		var pv: Dictionary = _bag_spill(m, it, null if on_floor else was)
+		if was != null and (on_floor or pv["off"]):
+			out["off"] = was
+		var ids: Dictionary = {}
+		for i in pv["down"]:
+			ids[i] = true
+		out["spill"] = m["found"].filter(func(f): return ids.has(int(f["id"])))
+		return out
+	var spot: Array = [] if was == null or on_floor else _pack_swap_spot(m, it, was)
+	if was != null and spot.is_empty():
+		out["off"] = was
+	if slot == "Rig":
+		var over: Array = rig_overflow(it)
+		var tk: Dictionary = _pack_taken(m, int(it["id"]))
+		if not spot.is_empty():
+			var fp := pack_fp(was, bool(spot[2]))
+			for yy in range(fp.y):
+				for xx in range(fp.x):
+					tk[(int(spot[1]) + yy) * pack_w() + int(spot[0]) + xx] = -1     # the old rig where it'll lie
+		var spots: Array = _rig_over_spots(m, over, tk)
+		var down: Array = []
+		for j in range(over.size()):
+			if spots[j].is_empty():
+				down.append(over[j])
+		out["spill"] = down
+	return out
+
+
+## What a bag put on would leave down, read on copies (the review: nothing live moved and put back): the pack's pieces
+## but `bag`, and `was` (the old bag, from the pack) to place after, packed in `bag` as _bag_settle does. Only the bag worn
+## is tried on for the shape's reads (pack_w, capacity), and put back. {"down": the ids that go down, "off": `was` too}.
+func _bag_spill(m: Dictionary, bag: Dictionary, was) -> Dictionary:
+	var scratch := {"found": [], "floor": []}
+	for f in m["found"]:
+		if int(f["id"]) != int(bag["id"]):
+			scratch["found"].append(f.duplicate(true))
+	var worn = equipped["Backpack"]
+	equipped["Backpack"] = bag
+	var plan: Dictionary = _bag_settle(scratch, was.duplicate(true) if was != null else null)
+	equipped["Backpack"] = worn
+	return {"down": plan["down"].map(func(f): return int(f["id"])), "off": plan["off"]}
+
+
+## Onto the floor (a swap's piece coming off, what a bag or rig can't hold): its place in the pack forgotten.
+func _floor_put(m: Dictionary, it: Dictionary) -> void:
+	pack_off(it)
+	m["floor"] = m.get("floor", [])
+	m["floor"].append(it)
+
+
+## What never goes down on the floor: the runner's own rounds and the gate's box, the deeds (put_down's rule).
+static func _stays_up(f: Dictionary) -> bool:
+	return f.get("from_rig", false) or f.get("carried", false) or Items.is_deeds(f)
+
+
+## What a bag swap never spills (the review): _stays_up's, and what was strapped on to come home - the first gun, a
+## head's keepsake paper, the runner's own taken back off a gang (recovered: "spared" alone is every find taken by hand),
+## a head's drop.
+static func _spill_keeps(f: Dictionary) -> bool:
+	return _stays_up(f) or f.get("first_gun", false) or Items.opens(f) != "" or f.get("recovered", false) or f.get("head_drop", false)
 
 
 ## A gun fitted from the pack (30 Oct, the playtest's item 4): with no magazine for it in the rig, the pack's one that
