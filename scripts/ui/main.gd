@@ -49,7 +49,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 16              # 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 18              # 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -130,6 +130,7 @@ var _missions
 var _workshop
 var _run
 var _juice
+var _event_said := ""              # the run event whose line has popped while away from the run (U3)
 var _sound
 var _events_seen := 0              # how many log lines the toasts have looked at
 var _fence
@@ -173,6 +174,8 @@ const MAX_FPS := 60
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	if get_tree().current_scene == self:
+		Sim.asks = true                      # the game itself (1 Nov, run events): a watched run's event asks; the tests' shells never are
 	if DisplayServer.get_name() != "headless":
 		Engine.max_fps = MAX_FPS             # drawn at the panel's own refresh, the Legion's fans ran on a menu (12 Oct); the tests run headless, uncapped
 	_fit_window_to_screen()
@@ -626,6 +629,9 @@ func close_top_overlay() -> bool:
 			return true
 	if _armoury != null and _armoury.visible and _armoury.rules_panel != null and _armoury.rules_panel.visible:
 		_armoury.close_rules()
+		return true
+	if _armoury != null and _armoury.visible and _armoury.orders_panel != null and _armoury.orders_panel.visible:
+		_armoury.close_orders()
 		return true
 	if _missions != null and _missions.visible:
 		if _missions._guide.visible:
@@ -1174,6 +1180,15 @@ func refresh() -> void:
 			_juice.toast("Two turn up at the Pitch: pick a trait on the Map", "warn")
 	elif sim.candidates.size() != 2:
 		_asked_runner = false
+	# a run event waiting on a watched run while you're in another room (the fix round, U3): its line pops, once an event
+	var ev_up: Dictionary = sim.event_now()
+	var ev_key: String = "%s@%.1f" % [str(ev_up.get("fam", "")), float(ev_up.get("at", -1.0))] if sim.event_asking() else ""
+	if ev_key == "":
+		_event_said = ""                      # nothing asking: the next event's line pops even with the same key (40-E review 8)
+	if ev_key != "" and ev_key != _event_said and room != MISSIONS:
+		_event_said = ev_key
+		var ln: String = str(ev_up.get("line", ""))
+		_juice.toast(ln, "warn", [ln, ln.get_slice(". ", 0) + ".", Words.EV["waiting_toast"] % str(Data.EVENT_FAMILIES.get(str(ev_up.get("fam", "")), {}).get("name", ""))])     # long to short: the family on the Map at the least
 	_radio_line.set_sim(sim)
 	if room_shut(room):
 		room = MISSIONS                       # a new camp starts in a Yard that isn't yours yet: the Map
@@ -1440,6 +1455,8 @@ func _rail_status(nm: String) -> Dictionary:
 				return {"badge": Words.REPEAT["badge_away"], "badge_tone": "warn"}     # the repeat (29 Oct): away, then back
 			if not sim.repeat_report.is_empty():
 				return {"badge": Words.REPEAT["badge_back"], "badge_tone": "good"}
+			if sim.on_mission() and sim.event_asking():
+				return {"badge": Words.EV["waiting"], "badge_tone": "warn"}     # a run event waits on you (the fix round, U3)
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
 			var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()     # the pools a press spends (25 Oct, the review: the elements' meters kept it lit for good; their points are the key's)

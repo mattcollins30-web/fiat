@@ -510,7 +510,7 @@ func show_state(s) -> void:
 		if is_open and sim.campaign_done() and not sim.material_split(i).is_empty():
 			var mk: String = str(sim.material_split(i).keys()[0])
 			var pc: int = int(round(sim.material_odds(i) * 100.0))
-			rows.push_front({"forms": [sim.thing_name(mk)], "colour": MATERIAL_TONE, "tail": ["%d%% a run brings some home, a death too" % pc, "%d%% a run" % pc]})
+			rows.push_front({"forms": [sim.thing_name(mk)], "colour": MATERIAL_TONE, "tail": ["%d%% a run finds some" % pc, "%d%% a run" % pc]})     # a find in the pack now, lost on a death (1 Nov)
 		c["intel"].show_rows(rows, WORD_ROWS)
 		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i, false), "CONDITIONS"])     # the weather is the row's (18 Oct, said once)     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
 		c["deploy"].visible = is_open

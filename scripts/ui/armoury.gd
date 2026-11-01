@@ -25,6 +25,7 @@ const Body := preload("res://scripts/ui/body.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const People := preload("res://scripts/ui/people.gd")
 const RulesPanel := preload("res://scripts/ui/rules_panel.gd")
+const OrdersPanel := preload("res://scripts/ui/orders_panel.gd")
 
 const BODY_W := Body.WIDTH                                    # 608
 ## The runner strip over the loadout (10 Oct, Runner-R A): the face, the level, HP with its bar, the damage, the
@@ -67,6 +68,7 @@ var _pace: Label
 var _carry: Label
 var rules_button: Button           # the loot filter's (24 Oct): on the stash's second bar, after Select
 var rules_panel                    # rules_panel.gd, over the stash and the pick panel while it's open
+var orders_panel                   # orders_panel.gd (1 Nov, run events): the standing orders, from the rules panel, in its place
 var loadout_cards: Array = []      # the three loadouts (24 Oct, the endgame chase): in the pick panel while nothing's picked
 
 
@@ -123,6 +125,13 @@ func _init() -> void:
 	rules_panel.closed.connect(close_rules)
 	rules_panel.changed.connect(func(): acted.emit())
 	add_child(rules_panel)
+	orders_panel = OrdersPanel.new()
+	orders_panel.position = Vector2(GRID_X, 0)
+	orders_panel.visible = false
+	orders_panel.closed.connect(close_orders)
+	orders_panel.changed.connect(func(): acted.emit())
+	add_child(orders_panel)
+	rules_panel.orders.connect(open_orders)
 	# the loadouts: three cards across the empty pick panel, between its line and its toggles
 	var lw: float = (GRID_W - 2 * PANEL_PAD - 2 * 12) / 3.0
 	for i in range(Data.LOADOUTS):
@@ -183,7 +192,9 @@ func show_state(s) -> void:
 	_containers.show_state(sim)
 	if rules_panel.visible and _inv.many:
 		rules_panel.visible = false          # Select-many works from the bar the panel covers (the review)
-	rules_button.visible = not _inv.many and not rules_panel.visible
+	rules_button.visible = not _inv.many and not rules_panel.visible and not orders_panel.visible
+	if orders_panel.visible and _inv.many:
+		orders_panel.visible = false
 	var n_on: int = sim.loot_rules.filter(func(r): return bool(r.get("on", true))).size() if sim.loot_rules_on else 0
 	var rw: String = Words.LOOT_RULES["button"] % n_on if n_on > 0 else Words.LOOT_RULES["button_none"]
 	if rules_button.text != rw:
@@ -489,6 +500,9 @@ func _notification(what: int) -> void:
 		_bin_arm.clear()                     # and the bin's and a kit's save's arms go (the second review)
 		_save_arm.clear()
 		_shown = ""
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and orders_panel != null and orders_panel.visible:
+		orders_panel.visible = false
+		_shown = ""
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and rules_panel != null and rules_panel.visible:
 		rules_panel.visible = false
 		_shown = ""
@@ -498,7 +512,7 @@ func _notification(what: int) -> void:
 func _show_loadouts() -> void:
 	for i in range(loadout_cards.size()):
 		var c: Dictionary = loadout_cards[i]
-		c["panel"].visible = not rules_panel.visible     # under the rules panel they'd only take its clicks
+		c["panel"].visible = not rules_panel.visible and not orders_panel.visible     # under the rules panel they'd only take its clicks
 		var e: Dictionary = sim.loadout(i)
 		var st: String = sim.loadout_state(i)
 		c["name"].text = Words.LOADOUTS["name"] % (i + 1)
@@ -566,6 +580,22 @@ func open_rules() -> void:
 
 func close_rules() -> void:
 	rules_panel.visible = false
+	_shown = ""
+	show_state(sim)
+
+
+## The standing orders (1 Nov, run events): from the rules panel's head, in its place; shut back to the stash.
+func open_orders() -> void:
+	rules_panel.visible = false
+	orders_panel.show_state(sim)
+	orders_panel.visible = true
+	move_child(orders_panel, -1)
+	_shown = ""
+	show_state(sim)
+
+
+func close_orders() -> void:
+	orders_panel.visible = false
 	_shown = ""
 	show_state(sim)
 

@@ -30,6 +30,12 @@ const GRENADE := "Grenade"        # thrown from a pouch (32): damage to everyone
 ## Medical supplies (28 Oct, docs/design/meds_ammo_clinic.md): a stack in the pack, found in medicine cabinets and on
 ## the sites that lean to meds (the Hospital most); handed to the medic, her shelf gets better for good.
 const SUPPLIES := "Supplies"
+## Scrap and the rebuild's materials in the pack (1 Nov, the designer's call: they stop being invisible run counters and
+## take pack room, competing with gear): a stack each, found on the run; home, each stack counts into the Pitch's scrap
+## or materials (the counters the Bench, the Workshop and the rebuild spend) and the item goes.
+const MATERIAL := "Material"
+const SCRAP_STACK := 50             # draft: scrap a stack, one cell
+const MATERIAL_STACK := 10          # draft: a material a stack, one cell
 ## Ammo: boxes of rounds, in the stash and the pack (30 Oct: never the rig - the rig carries magazines, filled from
 ## the boxes). A gun fires its type's rounds and runs dry without them: then the secondary, then fists.
 const AMMO := "Ammo"
@@ -46,7 +52,7 @@ const RADIO_EVERY := 3             # the radio comes on every this many runs hom
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
 const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Gloves": [2, 2], "Rig": [3, 2], "Backpack": [3, 3],
-	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1], "Magazine": [1, 1]}
+	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1], "Magazine": [1, 1], "Material": [1, 1]}
 const FOOTPRINTS := {
 	# melee
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
@@ -287,7 +293,7 @@ const RIG_CAP := 24
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
 	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour", "Gloves": "grip",     # gloves: the fight's damage a second, pace in (29 Oct)
-	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value", "Magazine": "mag",
+	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value", "Magazine": "mag", "Material": "value",
 	"Charm": "find",
 }
 
@@ -929,6 +935,18 @@ const BASES := {
 	## Medical supplies (28 Oct): a stack of `count`, for the Clinic
 	"Supplies": [
 		{"name": "Medical supplies", "tier": 1, "value": 6},     # draft
+	],
+	## Scrap and the rebuild's materials as pack items (1 Nov): a stack of `count`; `key` the counter it goes into at home;
+	## `value` a unit's, its worth on the exchange (EXCHANGE_BASE), so a full pack's swap gives up the least worth first
+	"Material": [
+		{"name": "Scrap", "key": "scrap", "tier": 1, "value": 24},     # SCRAP_PER_POUND
+		{"name": "Copper cable", "key": "copper_wire", "tier": 1, "value": 900},     # "Copper cable" on screen (1 Nov, Matt: Copper wire is the socketable); the key stays copper_wire, the saves' and the costs'
+		{"name": "Paving", "key": "paving", "tier": 1, "value": 900},
+		{"name": "Glass", "key": "glass", "tier": 1, "value": 900},
+		{"name": "Ledgers", "key": "ledgers", "tier": 1, "value": 900},
+		{"name": "Cable drums", "key": "cable_drums", "tier": 1, "value": 900},
+		{"name": "Army kit", "key": "army_kit", "tier": 1, "value": 900},
+		{"name": "Fuses", "key": "fuses", "tier": 1, "value": 900},
 	],
 	## Grenades (32): a pouch each, thrown at everyone on you; the hit is the type's, through the damage model
 	"Grenade": [
@@ -2871,15 +2889,127 @@ const BUILD_MED := 8                # a med, times its tier, with the one below 
 const BUILD_GUN := 40               # an improvised gun, times its tier
 const BUILD_GRENADE := 12           # with the element's socketable; the nail bomb scrap alone
 
-## Events: something happens on a run, once at most, EVENT_ODDS of runs,
-## some way in. A convoy passes (a bigger gang, and they carry notes); a
-## runner trapped under something (freed, they turn up at the Yard next:
-## `promised`); a locked cache (the Bench's tools open it for a find
-## a tier up, or it stays shut).
+## Events: something happens on a run, once at most, EVENT_ODDS of runs (1 Nov, docs/design/run_events.md: run events in
+## the fight). An event is a family (its rules), its slots filled from pools matched to the moment, and the choices the
+## family offers. It comes in the lull between gangs, never mid-volley, at the first lull from EVENT_WINDOW's seconds
+## in; never two a run, never the same family two runs running. A threat is a fight with no pause; everything else
+## stops the gang clock while the choice waits in the panel under the scene. Runs nobody watches use the standing
+## orders. The convoy, trapped and cache events folded into A threat passing, Someone in need and A locked thing.
 const EVENT_ODDS := 0.3
-const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
-const EVENTS := ["convoy", "trapped", "cache"]
-const CONVOY_FROM_RUN := 5         # no passing convoy before the sixth run (17 Oct, Matt: one on the first Allotments run used both starter bandages)
+const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it's due: it comes at the first lull from then
+const EVENT_ORDER := ["need", "threat", "locked", "trader"]     # the families, in the standing orders' order (the canvas's board 4)
+## A family: its name (the panel's head, the orders' row), whether it's a threat (a fight, no pause), its weight on the
+## dice, and its weights by site kind, zone, weather, night (a multiplier each; 1 where unnamed) and the site's level
+## (`level`: so much more a level). `from_run`: not before that many runs; a threat never before CONVOY_FROM_RUN.
+const EVENT_FAMILIES := {
+	"need": {"name": "Someone in need", "weight": 1.0, "kind": {"medical": 1.5, "estate": 1.2}, "weather": {"Rain": 1.2}},
+	"locked": {"name": "A locked thing", "weight": 1.0, "kind": {"retail": 1.3, "civic": 1.3, "military": 1.5}, "level": 0.02},
+	"threat": {"name": "A threat passing", "threat": true, "weight": 0.8, "kind": {"farm": 1.5}, "zone": [1.3, 1.0, 1.0, 1.1], "night": 1.6},     # from CONVOY_FROM_RUN
+	"trader": {"name": "A trader", "weight": 0.7, "weather": {"Fog": 1.4}, "night": 0.5, "from_run": 2},
+}
+## Each site's kind, by index (the pools lean on it): farm, retail, estate, civic, military, medical.
+const SITE_KIND := ["farm", "retail", "farm", "estate", "retail", "retail", "civic", "retail", "civic", "civic", "medical", "military"]
+## The pools: what fills a family's slots. Each entry: its words ("w"), its weight (1 unnamed), and its leanings - "zones"
+## (only there), "kind" (a multiplier by site kind), "night", "weather". A person's entry carries their pronoun ("he" or
+## "she"); a need's "what" is a pin (the HP risk; "it" names what slips) or a hurt (a med).
+const EVENT_POOLS := {
+	"need_who": [
+		{"w": "A farmhand", "he": "he", "zones": [0], "kind": {"farm": 3.0}},
+		{"w": "A woman in wellies", "he": "she", "zones": [0]},
+		{"w": "An old boy with a dog lead", "he": "he", "zones": [0]},
+		{"w": "A lad in a tracksuit", "he": "he", "zones": [1]},
+		{"w": "A woman from the flats", "he": "she", "zones": [1], "kind": {"estate": 2.0}},
+		{"w": "A delivery driver", "he": "he", "zones": [1, 2], "kind": {"retail": 1.5}},
+		{"w": "A security guard", "he": "he", "zones": [2, 3], "kind": {"retail": 1.5, "civic": 1.5}},
+		{"w": "A cashier", "he": "she", "zones": [1, 2], "kind": {"retail": 2.0}},
+		{"w": "A man in a suit", "he": "he", "zones": [2], "kind": {"civic": 2.0}},
+		{"w": "A soldier", "he": "he", "zones": [3], "kind": {"military": 4.0}},
+		{"w": "A nurse", "he": "she", "zones": [3], "kind": {"medical": 4.0}},
+		{"w": "A lorry driver", "he": "he", "zones": [3], "kind": {"retail": 2.0}},
+	],
+	"need_what": [
+		{"w": "a fallen beam", "it": "the beam", "pin": true, "kind": {"farm": 2.0}},
+		{"w": "a fence panel", "it": "the panel", "pin": true, "zones": [0], "kind": {"farm": 1.5}},
+		{"w": "a collapsed shelf unit", "it": "the shelving", "pin": true, "kind": {"retail": 2.5}},
+		{"w": "a car on its side", "it": "the car", "pin": true, "zones": [1, 2, 3], "kind": {"estate": 2.0}},
+		{"w": "rubble", "it": "the rubble", "pin": true},
+		{"w": "a vending machine", "it": "the machine", "pin": true, "zones": [2, 3], "kind": {"civic": 1.5, "medical": 1.5}},
+		{"w": "a bad cut to the leg", "pin": false, "weight": 0.8},
+		{"w": "a gash across the arm", "pin": false, "weight": 0.6},
+		{"w": "a broken ankle", "pin": false, "weight": 0.6, "weather": {"Rain": 1.5}},
+	],
+	"locked_what": [
+		{"w": "A council cabinet", "kind": {"civic": 2.0, "estate": 1.5}},
+		{"w": "A tin shed", "door": true, "zones": [0], "kind": {"farm": 2.5}},
+		{"w": "A garage, shuttered", "door": true, "zones": [1, 2], "kind": {"estate": 2.5}},
+		{"w": "A shop's cash office", "door": true, "zones": [1, 2, 3], "kind": {"retail": 3.0}},
+		{"w": "A works van", "kind": {"retail": 1.2}},
+		{"w": "A drugs cupboard", "zones": [3], "kind": {"medical": 5.0}},
+		{"w": "An armoury cage", "zones": [3], "kind": {"military": 5.0}},
+		{"w": "A safe in a back office", "zones": [2, 3], "kind": {"civic": 3.0}},
+	],
+}
+## Someone in need: Pull them out (NEED_FREE_S; a pin's HP risk at the odds below, a hurt's med from the rig) for a runner
+## at the Yard (the `promised` one: they turn up looking for work); Take the bag (NEED_BAG_S: a find, and they remember it:
+## a thread flag, no cost yet); Leave them. The clean odds: NEED_CLEAN, less a night's and weather's share and the share
+## under half HP, between NEED_CLEAN_MIN and NEED_CLEAN_MAX.
+const NEED_FREE_S := 15.0
+const NEED_BAG_S := 5.0
+const NEED_CLEAN := 0.75
+const NEED_CLEAN_NIGHT := 0.1
+const NEED_CLEAN_WEATHER := 0.05
+const NEED_CLEAN_LOW_HP := 0.15     # under half HP
+const NEED_CLEAN_MIN := 0.3
+const NEED_CLEAN_MAX := 0.9
+const NEED_SLIP := 0.2              # the pin slips: this share of max HP (never the last of it)
+## A locked thing: Force it (LOCK_FORCE_S, and the noise: the next gang LOCK_NOISE_S sooner), or Shoot the lock off
+## (LOCK_SHOOT_S and LOCK_ROUNDS from the gun in hand's magazines): a find a tier up (the cache's, as it paid); Leave it.
+const LOCK_FORCE_S := 10.0
+const LOCK_NOISE_S := 30.0
+const LOCK_SHOOT_S := 5.0
+const LOCK_ROUNDS := 10
+const LOCK_RARITY := 0.5            # the find's rarity over the site's (the cache's)
+## A threat passing, dogs (the convoy's fold): a pack the size of the next gang (DOGS_MORE more), each DOG_HP of a man's HP
+## and DOG_DPS of his fire, the site gang's damage types and resists - a normal gang's difficulty at the site, as specced
+## (the fix round: 0.6 / 0.8 and a bite through armour won 29 of 30 the gang would lose) - carrying nothing; DOG_XP of
+## a man's XP a dog. They stand DOGS_CLOSE_S in the lull (Get out now, or Stand and fight), then come on. Fought off, the
+## site's next gang comes DOGS_PUSH_S later. The odds on their face: DOG_READS dry fights through the real fight code.
+const DOG_READS := 6              # the face's odds: dry fights of the dogs (the fix round)
+const DOG_READ_STEP := 1.0      # the live fight's own tick: a coarser one read marginal packs short
+const DOG_READ_MAX_S := 180.0     # a dogs' fight longer than this reads as lost (as fifteen minutes is for the odds)
+const DOGS_MORE := 0               # the pack: the next gang's size (the fix round: a normal gang's difficulty, as specced)
+const DOG_HP := 1.0
+const DOG_DPS := 1.0
+const DOG_XP := 0.5
+const DOGS_MAX := 5
+const DOGS_CLOSE_S := 10.0
+const DOGS_PUSH_S := 20.0
+const EVENT_FIGHT_AT := 0.8         # a threat's standing order "at the run's odds" with no odds read at the gate
+## A trader, the Scrap man (recurring): he takes scrap from the pack's stacks for run-only buffs, one of each a visit.
+## Standing: a camp's trades with him, any class (trader_standing); at each step his shelf grows. A buff lasts the run.
+const TRADERS := {"scrap_man": {"name": "The Scrap man"}}
+const TRADER_SHELF := [
+	{"key": "plate", "price": 15, "armour_pct": 10.0},     # +armour this run (10-20% of one stat, the design's guardrail)
+	{"key": "mags", "price": 10},                          # the worn guns' magazines topped up, rounds of his own
+	{"key": "held", "price": 20, "held_s": 30.0},          # the next gang held up
+	{"key": "bandage", "price": 5},                        # a bandage (BUILD40E 4); from the first step the first a visit is on the house
+]
+## The steps (trades, counted as a visit ends: one step a visit at most): 3, a bandage on the house a visit; 10, 33% off
+## everything; 25, his good plate (+20% armour).
+const TRADER_STEPS := [3, 10, 25]
+const TRADER_STEP_OFF := 1.0 / 3.0
+const TRADER_GOOD_PLATE := 20.0
+## The standing orders (for runs nobody's watching: repeat runs, away, the bot): a family's choices, the first its default
+## - a player's (1 Nov, the designer's call on the fix round: player-like defaults for everyone, the bot too); a family not
+## listed defaults to "leave". A watched run always asks.
+const EVENT_ORDERS := {
+	"need": ["help_cheap", "leave", "bag"],
+	"threat": ["odds_80", "out", "odds_run", "always"],
+	"locked": ["force", "leave", "shoot"],
+	"trader": ["all", "leave", "armour30"],
+}
+const NEED_HELP_AT := 0.7           # "Help if it's a med or 70% clean": a pin's clean chance the order frees at
+const CONVOY_FROM_RUN := 5         # no threat passing before the sixth run (17 Oct, Matt: a convoy on the first Allotments run used both starter bandages)
 ## The first gun (17 Oct, Matt's two playtests: with no gun a save spiralled, with a shotgun the Gamekeeper fell at level 2):
 ## a Garden Centre clear leaves one of these, plain, with a box of its rounds, while there's no gun anywhere and none has
 ## come home yet - the same step for every save, and for the bot; kept by a full pack, given again if the run loses it.
@@ -3655,9 +3785,10 @@ const PILE_CAP := 60                        # the Radio's pile holds this many (
 ## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "a reason to keep grinding past the lorry"): materials from runs,
 ## the town's places put back with them, and the order's true pinnacles behind them. Every number here is a
 ## placeholder for the balance pass (Matt: "no balance yet").
-## The materials: counts, never cells, never sold, never lost (a death brings them home). An area's two, the signals' fuses.
+## The materials: counts at home, never sold; on a run pack items (1 Nov: Data.MATERIAL, lost as the pack's finds are).
+## An area's two, the signals' fuses.
 const MATERIALS := {
-	"copper_wire": {"name": "Copper wire", "area": 1},
+	"copper_wire": {"name": "Copper cable", "area": 1},     # shown as Copper cable (1 Nov): the key kept, so the counts in a save still load
 	"paving": {"name": "Paving", "area": 1},
 	"glass": {"name": "Glass", "area": 2},
 	"ledgers": {"name": "Ledgers", "area": 2},

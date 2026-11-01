@@ -336,7 +336,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	print("Fiat gate read: %.0f h, %s%s" % [hours, build, " (one save, from the %s)" % start_cls if one_save else ""])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
-		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [],
+		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "events": {},
 		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
 		"manager_at": -1.0, "first_death_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
@@ -452,6 +452,9 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 				g["first_bail_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 			mark_runs += n_runs
 			var r = sim.last_report if rep_t.is_empty() else {}     # a repeat's figures are counted above, run by run
+			if r != null and str(r.get("event", "")) != "":
+				var ek: String = "%s/%s" % [str(r["event"]), str(r.get("event_out", ""))]     # the run events (1 Nov, the fix round): seen, and what came of them
+				g["events"][ek] = int(g["events"].get(ek, 0)) + 1
 			if bool(r.get("timed_out", false)):
 				g["timeouts"] += 1                # out of time (9 Oct): the clock's gate
 			if sim.operators_lost > lost_before:

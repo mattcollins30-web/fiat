@@ -108,3 +108,40 @@ trader buffs about +10-20% of one stat for the run.
 - The traders' names and faces.
 - Whether a rival crew can kill your runner (a real death) or only drive you off.
 - Whether threads should ever cost you (a robbed crew coming back) or only reward.
+
+## Built, 1 Nov (the slice: build 40-E and its fix round)
+
+What the slice does, as built (data.gd's run events block holds every figure; words.gd's `EV` and `ORDERS` the words):
+
+- **Families:** Someone in need, A threat passing (dogs), A locked thing, A trader (the Scrap man). EVENT_ODDS 0.3 of
+  runs (every run with the Caretaker's Keys), at most one a run, never the family the last event had. Weighted by the
+  site's kind (`SITE_KIND`: farm, retail, estate, civic, military, medical), zone, weather, night and level; no threat
+  before run 6 (`CONVOY_FROM_RUN`), no trader before run 2. The convoy, trapped and cache events folded in; a signal's
+  convoy is unchanged.
+- **Timing:** due 15-70 s in, it comes at the first lull after the site's first search is done (nobody on you, no
+  head waiting, not on the way out, no Ghost's clear pending); a run that ends first has none.
+- **The pause:** everything but a threat stops the run (the gang clock, the run's clock, the search) while the choice
+  waits in the panel under the scene; "clock stopped" by the run's clock. A choice's seconds are spent at once: the
+  next gang that much sooner, the run's clock at the search rate, played time. A choice that would run the clock out
+  is greyed ("Not enough time").
+- **Someone in need:** pinned - Pull them out, 15 s, 75% clean less 10 at night, 5 in weather, 15 under half HP
+  (30-90%), a slip costs 20% of max HP (never the last of it); hurt - Patch them up, 15 s and a med. Freed, they're a
+  candidate when the next runner's needed (`promised`). Take the bag: 5 s, a find, a thread they remember (no cost
+  yet). Leave them.
+- **A locked thing:** Force it, 10 s and the next gang 30 s sooner; Shoot the lock off, 5 s and 10 rounds from a worn
+  gun's magazines; either a find a tier up. Leave it.
+- **Dogs:** the next gang's size (2-5), each `DOG_HP`/`DOG_DPS` (1.0 / 1.0) of a man of the site's gang, with its
+  damage types and resists - a normal gang's difficulty, as specced - nothing carried, half the XP. No pause: they stand
+  10 s (the count in their tile), then come on. Their odds are read by six short dry fights through the real fight code
+  as they arrive, from the HP they found you at; the face holds that reading through their 10 s. Fought off, the next
+  gang 20 s later. (For the pass and the designer: a normal gang after the clear is nearly always won, so the face
+  reads 100% and "Fight at 80% odds or better" fights; the 80% bar means 5 of the 6 fights.)
+- **The Scrap man:** scrap from the pack's stacks. A plate (+10% armour this run, 15), magazines topped up (10; not sold with nothing to fill), the
+  next gang 30 s later (20), a bandage (5); one of each a visit. Run-only: what's left of his rounds and his bandage
+  go back at the run's end. Standing (a camp's trades, counted as a visit ends): 3, the bandage on the house; 10, 33%
+  off; 25, his good plate (+20%).
+- **Standing orders** (the Kit's loot rules, "Standing orders"), the designer's player-like defaults for everyone, the
+  bot too: Help if it's a med or 70% clean; Fight at 80% odds or better; Force it; Buy what you can. A watched run
+  always asks; a repeat run and the bot use the orders.
+- **Test art:** placeholder shapes on the gang's slots with a caption; the manifest waits for the designer's play.
+- **The record:** a run's `event` and `event_out`; a row in balance_summary and playtest_summary.

@@ -6,6 +6,7 @@ extends Panel
 
 signal closed
 signal changed
+signal orders                      # the standing orders asked for (1 Nov, run events): their panel in this one's place
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -43,6 +44,7 @@ var _sub: Label
 var _add: Button
 var _on: Button
 var _close: Button
+var orders_button: Button          # "Standing orders" by the title (1 Nov)
 var _rows: Array = []              # [{"num", "words", "act", "on", "up"}] a row each, LOOT_RULES_MAX of them
 var _none: Label
 var _edit_head: Label
@@ -67,6 +69,10 @@ func _init() -> void:
 	_close = UI.button(self, Rect2(W - PAD - 110, 14, 110, HEAD_BTN_H), false)
 	_close.text = Words.LOOT_RULES["close"]
 	_close.pressed.connect(func(): closed.emit())
+	orders_button = UI.button(self, Rect2(PAD + ceilf(UI.text_width(_title, _title.text)) + 20, 14, 190, HEAD_BTN_H), false)
+	orders_button.add_theme_font_size_override("font_size", 18)
+	orders_button.text = Words.ORDERS["button"]
+	orders_button.pressed.connect(func(): orders.emit())
 	_on = UI.button(self, Rect2(W - PAD - 110 - 8 - 150, 14, 150, HEAD_BTN_H), false)
 	_on.pressed.connect(_toggle_all)
 	_add = UI.button(self, Rect2(W - PAD - 110 - 8 - 150 - 8 - 170, 14, 170, HEAD_BTN_H), true)
@@ -358,5 +364,5 @@ func text_nodes() -> Array:
 	var out := [_title, _sub, _note, _edit_head, _hint, _none]
 	for row in _rows:
 		out.append_array([row["num"], row["words"], row["act"], row["on"], row["up"]])
-	out.append_array(_edit_labels + _kind_btns + _slot_btns + _gun_btns + _tier_btns + _act_btns + [_from, _to, _delete, _add, _on, _close])
+	out.append_array(_edit_labels + _kind_btns + _slot_btns + _gun_btns + _tier_btns + _act_btns + [_from, _to, _delete, _add, _on, _close, orders_button])     # Standing orders too (the fix round, U8)
 	return out.filter(func(n): return n.visible)

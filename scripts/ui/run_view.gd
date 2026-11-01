@@ -12,6 +12,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const SkyLayer := preload("res://scripts/ui/sky.gd")
+const EventProp := preload("res://scripts/ui/event_prop.gd")
 
 ## A shot of yours lands, in the frame's space (13 Oct, Matt: the numbers came with no shot, and while ducked): the run
 ## screen shows what your gun's done since the last one here, on the one it hit.
@@ -110,6 +111,8 @@ const LOW_RED := 0.3                       # under a third of your HP the red ho
 static var _tex := {}
 
 var _plate: TextureRect
+var prop                                   # a run event in the scene (1 Nov, event_prop.gd): test art, on the gang's slots
+var _dogs_on := false                      # the dogs are being fought: they stand in the gang's places, the gang's art hidden
 var _site_key := "-"                      # the site the plate and cover are of
 var _zone_key := "the_estate"             # its zone's gang
 var _boss_key := ""                       # the head when he's out, "" else
@@ -347,6 +350,11 @@ func _init() -> void:
 	# under the wall, the hands, the bars and the numbers
 	_sky = SkyLayer.new(Vector2(W, H), true)     # the fight's fog thinner (23 Oct)
 	add_child(_sky)
+	prop = EventProp.new()
+	prop.view = self
+	prop.size = Vector2(W, H)
+	add_child(prop)
+	move_child(prop, _sky.get_index())         # with the figures: under the sky, the wall and the hands
 	_cover = _rect(null)
 	_site("")
 	_hands = _rect(null)                       # the gun's own, set by show_state (and its corner with it)
@@ -846,7 +854,10 @@ func show_state(sim, m: Dictionary) -> void:
 			_mz = muzzle_of(ht, _kind, Items.slug(Items.art_name(str(gun["base"]))))
 		_set_swing_parts(ht)
 	_hands.visible = ht != null
-	# the search: the view pans along to the crates in the street, the next three
+	# a run event in the scene (1 Nov): the dogs in the gang's places while they're fought
+	prop.set_event(sim.event_now(), float(m["elapsed"]))
+	_dogs_on = m.has("dogs_home")
+	# the search: the view pans along to the crates in the street, the next three (put by while an event's in the street)
 	var searching: bool = int(m["remaining"]) <= 0 and m["cleared"]
 	_pan_to = PAN if searching else 0.0
 	var cs: Array = m.get("crates", [])
@@ -854,7 +865,7 @@ func show_state(sim, m: Dictionary) -> void:
 	for k in range(_crates.size()):
 		var j: int = ci + k
 		var c: TextureRect = _crates[k]
-		c.visible = searching and j < cs.size() and not cs[j].get("passed", false)
+		c.visible = searching and j < cs.size() and not cs[j].get("passed", false) and not prop.holds_street()
 		_shadows[k].visible = c.visible
 		if c.visible:
 			var pic: Array = CratesPanel.crate_texture(str(cs[j]["key"]), false)
@@ -1048,6 +1059,8 @@ func _process(dt: float) -> void:
 				r.position.x += randf_range(-3.0, 3.0)
 				_arc(arc, r)
 		r.self_modulate = tint
+		if _dogs_on:
+			r.self_modulate.a = 0.0                    # the dogs are drawn in its place (event_prop.gd)
 		# the particles: on the figure while it's up, off when it's down or gone
 		var sz: Vector2 = r.size * r.scale
 		for el in f["fx"]:

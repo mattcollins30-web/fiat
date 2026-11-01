@@ -226,7 +226,7 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		chips_a.append(c)
 	# after them, as muted chips: the open slots ("1 open at the Bench"), a set's words in the set's tone, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_mag(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
-	var plain: bool = Items.is_ammo(it) or Items.is_mag(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it) or Items.is_supplies(it)
+	var plain: bool = Items.is_ammo(it) or Items.is_mag(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it) or Items.is_supplies(it) or Items.is_material(it)
 	var has_extra: bool = (not extra.is_empty()) if extra is Array else (str(extra) != "")
 	if has_extra:
 		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
@@ -399,6 +399,9 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 		out.append([str(Items.base_of(it)["type"]).capitalize(), str(Items.base_of(it)["type"])])
 	elif slot == Data.PAPER:
 		out.append(["Paper", ""])
+	elif slot == Data.MATERIAL:
+		if not Items.is_scrap(it):
+			out.append(["Material", ""])     # a rebuild material as a pack item (1 Nov); scrap's title says it, no chip (the review)
 	elif slot == Data.MAGAZINE:
 		out.append([Words.MAG_WORDS["chip"], ""])     # a magazine (30 Oct): what it is, its type, its level
 		out.append([Items.type_name(Items.mag_type(it)), ""])
@@ -413,7 +416,7 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 	var rarity_tone: String = Pal.item_tone(it)
 	if slot == Data.ATTACHMENT and Items.base_of(it).has("type"):
 		out.append([Items.only_words(it), ""])
-	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE or slot == Data.SUPPLIES or slot == Data.MAGAZINE
+	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE or slot == Data.SUPPLIES or slot == Data.MAGAZINE or slot == Data.MATERIAL
 	if not plain or int(it["rarity"]) > 0:
 		out.append([Items.rarity_name(it), rarity_tone])
 	if not plain:

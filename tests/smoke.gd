@@ -751,6 +751,8 @@ func _init() -> void:
 	_yard_own_checks(main.sim)
 	_words_checks(main)
 	_rebuild_checks(main)
+	_haul_checks(main)
+	_gang_late_checks(main)
 	_dot_compare_checks(main)
 	_paper_pile_checks(main)
 	_save_folder_checks()
@@ -4417,7 +4419,7 @@ func _atlas_checks(main) -> void:
 	m["boss"] = {"name": sim.boss_of(5)["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
 	var found_before: int = m["found"].size()
 	sim._boss_down(m, sim.effective(5))
-	var drops_n: int = m["found"].filter(func(x): return not Items.is_mag(x)).size()     # a head's gun brings its magazine too (30 Oct): the drops counted without them
+	var drops_n: int = m["found"].filter(func(x): return not Items.is_mag(x) and not Items.is_material(x)).size()     # a head's gun brings its magazine too (30 Oct): the drops counted without them; his handful of material too (1 Nov: a pack item)
 	_check(drops_n == found_before + 2, "Two of everything did not drop a second: %d" % (drops_n - found_before))
 	sim.extract_now()
 	_open_map(main)
@@ -4737,48 +4739,659 @@ func _exchange_checks(main) -> void:
 	_events_checks(main)
 
 
-## The run's events: a convoy, someone trapped, a locked cache.
+## The run's events (1 Nov, run events; docs/design/run_events.md; the fix round's checks): the dice (EVENT_ODDS of
+## runs, one a run, never the last run's family, the weights and the pools' zones), the lull after the first search, the
+## pause, every option's cost and reward, the time a choice needs, the dogs as a normal gang and their odds against the
+## fight, the Scrap man (paid from the pack's stacks, run-only, his standing), the default standing orders on a run
+## nobody's watching, the bot's answer, the panels' fit and words, the odds' dice untouched, and a save mid event.
 func _events_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
+	var asks_was: bool = Sim.asks
+	Sim.asks = false
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	var charm_was = sim.equipped["Charm"]
+	sim.equipped["Charm"] = null              # no Caretaker's Keys under the odds (T11: an event every run)
+	sim.event_last = ""
 	var fired := 0
-	for i in range(40):
+	for i in range(200):
 		sim.deploy(3)
-		if sim.mission["event"] != "":
+		var m0: Dictionary = sim.mission
+		if m0["event"] != "":
 			fired += 1
-			_check(sim.mission["event_at"] >= Data.EVENT_WINDOW[0] and sim.mission["event_at"] <= Data.EVENT_WINDOW[1], "an event is timed outside its window")
+			_check(m0["event_at"] >= Data.EVENT_WINDOW[0] and m0["event_at"] <= Data.EVENT_WINDOW[1], "an event is timed outside its window")
 		sim.extract_now()
-	_check(fired > 3 and fired < 25, "events on %d of 40 runs; 30%% was the aim" % fired)
-	# no passing convoy in the first runs (17 Oct, Matt: one on the very first Allotments run used both starter
-	# bandages and left the next site at 0%); the other two still come, and the convoy does once past them
+		sim.event_last = ""
+	_check(fired > 40 and fired < 80, "events on %d of 200 runs; 30%% was the aim" % fired)
+	# no threat in the first runs; the others still come, the threat once past them; never the family the last had
 	var runs_was: int = sim.runs_total
 	var early := {}
 	var later := {}
+	var after_need := {}
 	sim.runs_total = 0
 	for k in range(300):
-		early[sim.roll_event()] = true
+		early[sim.roll_event(3, 1)] = true
 	sim.runs_total = Data.CONVOY_FROM_RUN
 	for k in range(300):
-		later[sim.roll_event()] = true
+		later[sim.roll_event(3, 1)] = true
+	sim.event_last = "need"
+	for k in range(300):
+		after_need[sim.roll_event(3, 1)] = true
+	sim.event_last = ""
+	_check(not early.has("threat") and early.has("need") and early.has("locked") and later.has("threat") and later.has("trader"), "a threat can pass in the first %d runs, or the families stopped coming: early %s, later %s" % [Data.CONVOY_FROM_RUN, str(early.keys()), str(later.keys())])
+	_check(not after_need.has("need") and after_need.has("locked"), "the same family came two runs running: %s" % str(after_need.keys()))
+	# the weights lean (T12): a threat's share at a farm by night over a retail site's by day; the pools keep to their zone
+	var elapsed_was: float = sim.elapsed
+	sim.elapsed = (Data.NIGHT_FROM + 1.0 - Data.CLOCK_START) * 3600.0
+	var farm_night: float = sim.event_weight("threat", 2, 1) / (sim.event_weight("need", 2, 1) + sim.event_weight("locked", 2, 1) + sim.event_weight("threat", 2, 1) + sim.event_weight("trader", 2, 1))
+	sim.elapsed = (12.0 - Data.CLOCK_START) * 3600.0
+	var retail_day: float = sim.event_weight("threat", 5, 1) / (sim.event_weight("need", 5, 1) + sim.event_weight("locked", 5, 1) + sim.event_weight("threat", 5, 1) + sim.event_weight("trader", 5, 1))
+	sim.elapsed = elapsed_was
+	_check(farm_night > retail_day * 1.5, "the threat's weight doesn't lean to a farm at night: %.2f against %.2f" % [farm_night, retail_day])
+	var bad_who: Array = []
+	for k in range(60):
+		var who: Dictionary = sim._pool_pick("need_who", 0)
+		if who.has("zones") and not (0 in who["zones"]):
+			bad_who.append(who["w"])
+	_check(bad_who.is_empty(), "the pools put someone from another zone at the Allotments: %s" % str(bad_who))
 	sim.runs_total = runs_was
 	# a new camp's spare bandages in the stash (17 Oct, Matt), on top of the two in the rig
 	var fresh = Sim.new()
 	fresh.start()
 	var spares: int = fresh.stash.filter(func(it): return str(it["base"]) == "Bandage").size()
 	_check(spares == Data.START_STASH_BANDAGES and fresh.rig.size() == 2, "a new camp has %d bandages in the stash (not %d) and %d in the rig" % [spares, Data.START_STASH_BANDAGES, fresh.rig.size()])
-	_check(not early.has("convoy") and early.has("trapped") and early.has("cache") and later.has("convoy"), "a convoy can pass in the first %d runs, or the events stopped coming: early %s, later %s" % [Data.CONVOY_FROM_RUN, str(early.keys()), str(later.keys())])
-	# a convoy: a bigger gang, and their notes
+	# it comes in the lull after the first search (G1), never mid-volley, never on a Ghost's pending clear (G10), once a run
+	Sim.asks = true
+	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
+	m["event"] = "need"
+	m["event_at"] = 0.0
+	m["remaining"] = 3
+	m["target_hp"] = 1e9
+	m["cleared"] = true
+	m["searches"] = 1
+	sim.advance(1.0)
+	_check(sim.event_now().is_empty(), "an event came mid-volley")
+	m["remaining"] = 0
+	m["target_hp"] = 0.0
+	m["patrol_timer"] = 0.0
+	m["searches"] = 0
+	m["search"] = -1e9                        # no search finishes in this second
+	sim.advance(1.0)
+	_check(sim.event_now().is_empty(), "an event came before the site's first search was done")
+	m["searches"] = 1
+	m["ghost_pending"] = true
+	sim.advance(1.0)
+	_check(sim.event_now().is_empty(), "an event came while a Ghost's clear was pending")
+	m.erase("ghost_pending")
+	sim.advance(1.0)
+	_check(sim.event_asking() and str(sim.event_now()["fam"]) == "need" and float(m["event_at"]) < 0.0 and sim.event_last == "need", "the event didn't come in the lull, or isn't the last family: %s, last '%s'" % [str(sim.event_now()), sim.event_last])
+	var at0: float = float(sim.event_now()["at"])
+	sim.event_pick("leave")
+	for k in range(5):
+		sim.advance(1.0)
+	_check(str(sim.event_now().get("state", "")) == "done" and float(sim.event_now()["at"]) == at0, "a second event came on the run")
+	sim.extract_now()
+	# the Scrap man come naturally (G1): in a dozen runs he's met with scrap in the pack to pay him some of the time
+	sim.trader_standing = {}                  # no bandage on the house: "can pay" means a paid row (40-E review 7)
+	var can_pay := 0
+	var met := 0
+	for k in range(12):
+		sim.hp = sim.max_hp()
+		sim.deploy(3)
+		m = sim.mission
+		m["event"] = "trader"
+		m["event_at"] = Data.EVENT_WINDOW[0]      # due as the dice would have it: the lull after the first search brings it
+		var g := 0
+		while sim.on_mission() and sim.event_now().is_empty() and g < 900:
+			sim.hp = sim.max_hp()
+			sim.advance(1.0)
+			g += 1
+		if sim.event_asking():
+			met += 1
+			var cheapest: int = sim.trader_shelf().map(func(r): return int(r["price"])).min()
+			if sim.pack_scrap(m) >= cheapest:
+				can_pay += 1
+		if sim.on_mission():
+			sim.extract_now()
+	_check(met >= 8 and can_pay > 0, "the Scrap man came naturally %d times of 12 and could be paid %d" % [met, can_pay])
+	# the clock stops for a non-threat and goes again after
+	m = _ev_force(sim, "need")
+	var ck: Array = [float(m["clock"]), float(m["patrol_timer"]), float(m["elapsed"]), float(m.get("search", 0.0))]
+	for k in range(6):
+		sim.advance(1.0)
+	_check(sim.event_paused(m) and [float(m["clock"]), float(m["patrol_timer"]), float(m["elapsed"]), float(m.get("search", 0.0))] == ck, "the clock ran while someone in need waited: %s -> %s" % [str(ck), str([m["clock"], m["patrol_timer"], m["elapsed"]])])
+	# "Leave him" changes nothing
+	var before: Array = [sim.hp, sim.rig.size(), sim.promised, m["found"].size(), int(m.get("finds", 0)), float(m["patrol_timer"]), float(m["clock"]), sim.event_threads.duplicate()]
+	_check(sim.event_pick("leave"), "Leave him couldn't be taken")
+	_check([sim.hp, sim.rig.size(), sim.promised, m["found"].size(), int(m.get("finds", 0)), float(m["patrol_timer"]), float(m["clock"]), sim.event_threads.duplicate()] == before, "Leave him cost something or gave something: %s -> %s" % [str(before), str([sim.hp, sim.rig.size(), sim.promised, m["found"].size()])])
+	sim.advance(2.0)
+	_check(not sim.event_paused(m) and float(m["clock"]) < ck[0] and float(m["patrol_timer"]) > ck[1], "the clock didn't go again after the choice")
+	sim.extract_now()
+	# a choice that would run the clock out is greyed (G8): Leave stays open
+	m = _ev_force(sim, "need", {"pin": true, "what": "a fallen beam", "it": "the beam"})
+	m["clock"] = Data.NEED_FREE_S * Data.CLOCK_SEARCH_RATE * 0.5
+	var opt: Array = sim.event_options()
+	_check(not bool(opt[0]["ok"]) and opt[0]["face"][0] == Words.EV["no_time"] and not sim.event_pick("free") and bool(opt[2]["ok"]), "a choice with too few seconds left wasn't greyed: %s" % str(opt[0]))
+	sim.extract_now()
+	# Pull him out (a pin): its 15 s on the gang clock, the run's clock and played time, the runner thread; the slip's 20%
+	var clean := 0
+	var slipped := 0
+	var trials := 40
+	var slip_line := ""
+	for k in range(trials):
+		sim.promised = ""
+		m = _ev_force(sim, "need", {"pin": true, "what": "a fallen beam", "it": "the beam"})
+		sim.hp = sim.max_hp()
+		var pt: float = float(m["patrol_timer"])
+		var cl: float = float(m["clock"])
+		var el: float = float(m["elapsed"])
+		_check(sim.event_pick("free"), "Pull him out couldn't be taken")
+		_check(is_equal_approx(float(m["patrol_timer"]) - pt, Data.NEED_FREE_S) and is_equal_approx(cl - float(m["clock"]), Data.NEED_FREE_S * Data.CLOCK_SEARCH_RATE) and is_equal_approx(float(m["elapsed"]) - el, Data.NEED_FREE_S), "pulling him out didn't cost its 15 s, or they weren't played")
+		_check(sim.promised != "" and sim.promised != sim.runner_trait, "the freed one isn't a runner to come: '%s'" % sim.promised)
+		if is_equal_approx(sim.hp, sim.max_hp()):
+			clean += 1
+		elif is_equal_approx(sim.max_hp() - sim.hp, sim.max_hp() * Data.NEED_SLIP):
+			slipped += 1
+			slip_line = str(sim.events.back()[1])
+		sim.extract_now()
+	var want: float = Data.NEED_CLEAN - (Data.NEED_CLEAN_NIGHT if sim.is_night() else 0.0) - (Data.NEED_CLEAN_WEATHER if sim.fight_weather_of(3) != "" else 0.0)
+	_check(clean + slipped == trials and absf(float(clean) / trials - want) < 0.25 and slipped > 0, "the pin's odds are off: %d clean, %d slipped of %d against %d%% clean" % [clean, slipped, trials, roundi(want * 100.0)])
+	_check(slip_line.begins_with("The beam slips as you pull"), "the slip's line isn't in sentence case: '%s'" % slip_line)
+	# a hurt one takes a med from the rig (its article right), no HP risk
+	sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	m = _ev_force(sim, "need", {"pin": false, "what": "a bad cut to the leg"})
+	var rig0: int = sim.rig.size()
+	var hp0: float = sim.hp
+	opt = sim.event_options()
+	var med0: Dictionary = sim.first_med()
+	_check(not med0.is_empty() and opt[0]["face"][0] == Words.EV["free_hurt"] % [int(Data.NEED_FREE_S), Words.a_med(str(med0["base"]))] and str(opt[0]["text"]).begins_with("Patch "), "the hurt one's face or button is off: %s" % str(opt[0]))
+	_check(Words.a_med("Painkillers") == "painkillers" and Words.a_med("Bandage") == "a bandage", "the meds' articles are off: '%s', '%s'" % [Words.a_med("Painkillers"), Words.a_med("Bandage")])
+	sim.event_pick("free")
+	_check(sim.rig.size() == rig0 - 1 and sim.hp == hp0, "patching the hurt one up didn't take a med, or cost HP")
+	sim.extract_now()
+	# Take his bag: a find, its 5 s, the thread
+	m = _ev_force(sim, "need")
+	var finds0: int = int(m.get("finds", 0))
+	var bag0: int = int(sim.event_threads.get("bag", 0))
+	var pt0: float = float(m["patrol_timer"])
+	sim.event_pick("bag")
+	_check(int(m.get("finds", 0)) == finds0 + 1 and int(sim.event_threads.get("bag", 0)) == bag0 + 1 and is_equal_approx(float(m["patrol_timer"]) - pt0, Data.NEED_BAG_S), "the bag: no find, no thread or not its 5 s")
+	sim.extract_now()
+	# A locked thing: Force it (its time and the noise) for a find a tier up, in the pack (T4); Shoot the lock off shut
+	# with no rounds to spare, and with a magazine gun its rounds
+	var sec_was = sim.equipped["Secondary"]
+	var pri_was = sim.equipped["Primary"]
+	var rig_was: Array = sim.rig.duplicate()
+	m = _ev_force(sim, "locked")
+	sim.rig = []                              # no magazines (after the gate's top-up): no rounds to spare
+	finds0 = int(m.get("finds", 0))
+	pt0 = float(m["patrol_timer"])
+	opt = sim.event_options()
+	_check(opt.size() == 3 and opt[2]["key"] == "leave" and not bool(opt[1]["ok"]) and opt[1]["face"][0] == Words.EV["shoot_no"], "the locked thing's options are off with no rounds: %s" % str(opt))
+	sim.event_pick("force")
+	_check(int(m.get("finds", 0)) == finds0 + 1 and is_equal_approx(float(m["patrol_timer"]) - pt0, Data.LOCK_FORCE_S + Data.LOCK_NOISE_S), "forcing it: no find, or not its time and noise (%.0f s)" % (float(m["patrol_timer"]) - pt0))
+	sim.extract_now()
+	var tiers_up: Array = []
+	var want_tier := 0
+	var site_lt := 0
+	for k in range(16):
+		m = _ev_force(sim, "locked")
+		m["found"] = []
+		var site_t: Dictionary = m["t"]
+		site_lt = int(site_t["loot_tier"])
+		want_tier = mini(sim.loot_cap(int(site_t.get("level", sim.lv_at(int(site_t["tier"]), int(site_t["depth"]))))), site_lt + 1)
+		sim.event_pick("force")
+		for it in m["found"]:
+			if str(it.get("slot", "")) in Data.SLOTS:
+				tiers_up.append(int(it["tier"]))
+		sim.extract_now()
+	_check(want_tier > site_lt and not tiers_up.is_empty() and tiers_up.max() == want_tier, "forcing it didn't find a tier up into the pack: tiers %s, the site's %d" % [str(tiers_up), site_lt])
+	sim.equipped["Primary"] = null
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Old revolver")
+	sim.rig = [_rmag(sim, "Pistol rounds")]
+	m = _ev_force(sim, "locked")
+	var r0: int = sim.mag_rounds("Secondary")
+	finds0 = int(m.get("finds", 0))
+	_check(sim.event_pick("shoot") and sim.mag_rounds("Secondary") == r0 - Data.LOCK_ROUNDS and int(m.get("finds", 0)) == finds0 + 1, "shooting the lock off: %d rounds to %d, finds %d" % [r0, sim.mag_rounds("Secondary"), int(m.get("finds", 0)) - finds0])
+	sim.extract_now()
+	# the Scrap man's magazines: an emptied one takes a grade (G4), his rounds don't go home (G5), nor his bandage
+	sim.rig = [_rmag(sim, "Pistol rounds"), _rmag(sim, "Pistol rounds", 0)]
+	var stash_was: Array = sim.stash.duplicate()
+	sim.stash = sim.stash.filter(func(it): return not Items.is_ammo(it))     # no boxes at home to fill them again: what comes home is what's left
+	m = _ev_force(sim, "trader")
+	var mg_empty: Dictionary = sim.rig.filter(func(it): return Items.is_mag(it)).back()
+	mg_empty["rounds"] = 0                    # emptied after the gate's top-up: spent, no grade
+	mg_empty["ammo"] = ""
+	sim._haul_find(m, "scrap", 40)
+	_check(sim.trader_buy("mags") and int(mg_empty["rounds"]) == Items.mag_cap(mg_empty, sim.equipped["Secondary"]) and str(mg_empty["ammo"]) != "", "his magazines left one ungraded or empty: %s" % str([mg_empty["rounds"], mg_empty["ammo"]]))
+	_check(sim.trader_buy("bandage") and (sim.rig.any(func(it): return bool(it.get("his", false))) or m["found"].any(func(it): return bool(it.get("his", false)))), "his bandage didn't land")
+	sim.trader_done()
+	sim.extract_now()
+	_check(int(mg_empty["rounds"]) == 0 and str(mg_empty["ammo"]) == "" and not sim.rig.any(func(it): return bool(it.get("his", false))) and not sim.stash.any(func(it): return bool(it.get("his", false))), "his run-only goods went home: %s, %s" % [str([mg_empty["rounds"], mg_empty["ammo"]]), str(sim.rig.filter(func(it): return it.get("his", false)).size())])
+	# nothing to top up: his magazines aren't sold, and Buy what you can passes them by (40-E review 3)
+	sim.rig = [_rmag(sim, "Pistol rounds")]
+	m = _ev_force(sim, "trader")
+	for it in sim.rig:
+		if Items.is_mag(it):
+			it["rounds"] = Items.mag_cap(it, sim.equipped["Secondary"])
+	sim._haul_find(m, "scrap", 40)
+	var mrow: Array = sim.trader_shelf().filter(func(r): return r["key"] == "mags")
+	_check(not bool(mrow[0]["ok"]) and str(mrow[0]["why"]) == Words.EV["mags_none"] and not sim.trader_buy("mags"), "his magazines sold with nothing to fill: %s" % str(mrow))
+	sim.trader_done()
+	sim.extract_now()
+	Sim.asks = false
+	sim.deploy(3)
+	m = sim.mission
+	for it in sim.rig:
+		if Items.is_mag(it):
+			it["rounds"] = Items.mag_cap(it, sim.equipped["Secondary"])
+	sim._haul_find(m, "scrap", 60)
+	_ev_arrive(sim, m, "trader")
+	_check(not sim.event_now().get("bought", []).has("mags") and sim.event_now().get("bought", []).has("plate"), "Buy what you can bought magazines with nothing to fill: %s" % str(sim.event_now().get("bought", [])))
+	sim.extract_now()
+	Sim.asks = true
+	# an insured time-out that loses the rig: his rounds don't go home with it (40-E review 2)
+	var eq_was: Dictionary = sim.equipped.duplicate()
+	for sl in Data.SLOTS:
+		if not (sl in ["Rig", "Secondary"]):
+			sim.equipped[sl] = null
+	sim.stash = sim.stash.filter(func(it): return not Items.is_mag(it))     # what comes home is only what the rig held
+	sim.rig = [_rmag(sim, "Pistol rounds", 3), _rmag(sim, "Pistol rounds", 3)]
+	m = _ev_force(sim, "trader")
+	for it in sim.rig:
+		if Items.is_mag(it):
+			it["rounds"] = 3
+	sim._haul_find(m, "scrap", 40)
+	sim.trader_buy("mags")
+	sim.trader_done()
+	m["insured"] = true
+	m["clock"] = 0.5
+	m["remaining"] = 0
+	sim.advance(1.0)
+	var home_mags: Array = sim.stash.filter(func(it): return Items.is_mag(it) and Items.mag_type(it) == "pistol")
+	_check(not sim.on_mission() and not home_mags.is_empty() and home_mags.all(func(it): return int(it.get("rounds", 0)) <= 3), "an insured time-out sent his rounds home with the rig: %s" % str(home_mags.map(func(it): return int(it.get("rounds", 0)))))
+	sim.stash = sim.stash.filter(func(it): return not home_mags.has(it))
+	for sl in eq_was:
+		sim.equipped[sl] = eq_was[sl]
+	sim.stash = stash_was
+	sim.equipped["Secondary"] = sec_was
+	sim.equipped["Primary"] = pri_was
+	sim.rig = rig_was
+	# the dogs: a normal gang of the site's (G3), on the normal rules, no pause, nothing carried; fought off, the next gang
+	# 20 s later; their odds the dry fights' (G2)
+	m = _ev_force(sim, "threat")
+	_check(sim.dogs_waiting(m) and not sim.event_paused(m), "the dogs paused the clock, or aren't waiting")
+	var n: int = int(sim.event_now()["n"])
+	_check(n == clampi(sim.PATROL_BASE + int(m["patrols"]) + Data.DOGS_MORE, 2, Data.DOGS_MAX), "the pack isn't the next gang's size: %d" % n)
+	# the dogs a normal gang's difficulty (40-E review 4): on a marginal fixture - the site's gang made heavier till its read
+	# falls between the two ends - the dogs' read within 0.15 of the gang's
+	var lo_w := 1.0
+	var hi_w := 1.0
+	var g_read: float = sim._dogs_read(m, n, m["t"])
+	var site_base: Dictionary = m["t"].duplicate()
+	var heavier := func(w: float) -> Dictionary:
+		var h: Dictionary = site_base.duplicate()
+		h["hp"] = float(site_base["hp"]) * w
+		h["dps"] = float(site_base["dps"]) * w
+		return h
+	while g_read >= 0.9 and hi_w < 4096.0:
+		lo_w = hi_w
+		hi_w *= 2.0
+		g_read = sim._dogs_read(m, n, heavier.call(hi_w))
+	for k in range(6):
+		if g_read > 0.15 and g_read < 0.85:
+			break
+		var mid: float = sqrt(lo_w * hi_w)
+		var r_mid: float = sim._dogs_read(m, n, heavier.call(mid))
+		if r_mid >= 0.85:
+			lo_w = mid
+		else:
+			hi_w = mid
+			g_read = r_mid
+	var site_was: Dictionary = m["t"]
+	m["t"] = heavier.call(hi_w)
+	var d_read: float = sim._dogs_read(m, n)
+	m["t"] = site_was
+	_check(g_read < 0.9 and absf(d_read - g_read) <= 0.15, "the dogs aren't a normal gang's difficulty at the site: %.2f against the gang's %.2f (its weight ×%.1f)" % [d_read, g_read, hi_w])
+	var dt_: Dictionary = Sim.dogs_t(m["t"])
+	_check(dt_["types"] == m["t"].get("types", {"physical": 1.0}) and dt_.get("res", {}) == m["t"].get("res", {}) and is_equal_approx(float(dt_["dps"]), float(m["t"]["dps"]) * Data.DOG_DPS), "the dogs don't fight as the site's gang does: %s" % str(dt_["types"]))
+	var cl0: float = float(m["clock"])
+	sim.advance(1.0)
+	_check(float(m["clock"]) < cl0, "the clock stood for the dogs: a threat never pauses")
+	var site_t2: Dictionary = m["t"]
+	var kills0: int = int(m["kills"])
+	var notes0: int = int(m.get("notes", 0))
+	var cash0: float = float(m["cash"])
+	pt0 = float(m["patrol_timer"])
+	_check(sim.dogs_fight() and int(m["remaining"]) == n and bool(m["t"].get("dogs", false)) and is_equal_approx(float(m["t"]["hp"]), float(site_t2["hp"]) * Data.DOG_HP), "the dogs didn't come on as their own gang: %d on, %s" % [int(m["remaining"]), str(m["t"].get("dogs", false))])
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._view == null or main._run._view.prop.what == "dogs", "the dogs aren't in the scene while fought")
+	var guard := 0
+	while int(m["remaining"]) > 0 and guard < 600 and sim.on_mission():
+		sim.hp = sim.max_hp()
+		m["target_hp"] = minf(float(m["target_hp"]), 1.0)
+		sim.advance(1.0)
+		guard += 1
+	_check(int(m["kills"]) == kills0 + n and int(m.get("notes", 0)) == notes0 and is_equal_approx(float(m["cash"]), cash0), "the dogs weren't fought as a group, or carried something: %d kills of %d, notes %d, tins %.1f" % [int(m["kills"]) - kills0, n, int(m.get("notes", 0)) - notes0, float(m["cash"]) - cash0])
+	_check(not m["t"].get("dogs", false) and is_same(m["t"], site_t2) and absf(float(m["patrol_timer"]) - (pt0 - Data.DOGS_PUSH_S)) <= 1.01 and str(sim.event_now()["outcome"]) == "fought", "seen off, the site's gang isn't back or the next isn't 20 s later: %.1f from %.1f" % [float(m["patrol_timer"]), pt0])
+	sim.extract_now()
+	# they come on by themselves when the choice isn't made (T3: no way out of the check)
+	m = _ev_force(sim, "threat")
+	for k in range(int(Data.DOGS_CLOSE_S) + 1):
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+	_check(sim.on_mission() and str(sim.event_now().get("state", "")) == "fight" and bool(m["t"].get("dogs", false)), "the dogs never came on: %s" % str(sim.event_now().get("state", "")))
+	# a run ending mid-fight keeps the site in its record, not the dogs (G9), and says what came of the event (T7)
+	var site_hp: int = int(m["dogs_home"]["hp"])
+	sim.extract_now()
+	var runs_rec: Array = sim.chronicle.filter(func(e): return str(e.get("k", "")) == "run")
+	_check(not m["t"].get("dogs", false), "a run ended mid-dogs left the dogs as its site (the record reads it)")
+	_check(not runs_rec.is_empty() and int(runs_rec.back().get("their_hp", -1)) == site_hp and str(runs_rec.back().get("event", "")) == "threat" and str(runs_rec.back().get("event_out", "")) == "fight", "a run ended mid-dogs records the dogs, or no event: %s" % str(runs_rec.back() if not runs_rec.is_empty() else {}))
+	_check(str(sim.last_report.get("event", "")) == "threat", "the run's report doesn't carry its event")
+	# their odds against the fight itself (T8): a pack the runner beats and one that beats the runner, each fought for real
+	# on six dice; the face within 0.2 of the share won
+	for mult in [1.0, 60.0]:
+		var won := 0
+		var face := 0.0
+		var ends: Array = []
+		var rig_t: Array = sim.rig.duplicate(true)
+		for k in range(6):
+			sim.rig = rig_t.duplicate(true)       # each fight from the same rig: the magazines a trial spends come back
+			m = _ev_force(sim, "threat", {}, mult)
+			face += sim.dogs_odds() / 6.0
+			sim.rng.seed = 7000 + k
+			sim.dogs_fight()
+			var gd := 0
+			while sim.on_mission() and int(m["remaining"]) > 0 and sim.hp >= sim.max_hp() * Sim.BAIL and gd < 200:
+				sim.advance(1.0)
+				if sim.on_mission() and m["using"] == null and sim.hp < sim.max_hp() * 0.4 and not sim.first_med().is_empty():
+					sim.use_med(sim.first_med()["id"])
+				gd += 1
+			if sim.on_mission() and int(m["remaining"]) <= 0 and sim.hp >= sim.max_hp() * Sim.BAIL:
+				won += 1
+			ends.append("%d%% hp %d left %.0f s" % [roundi(100.0 * sim.hp / maxf(1.0, sim.max_hp())), int(m["remaining"]), float(m["elapsed"])])
+			if sim.on_mission():
+				sim.extract_now()
+			sim.hp = sim.max_hp()
+		sim.rig = rig_t
+		_check(absf(face - won / 6.0) <= 0.15 and (mult == 1.0 or face < 0.9), "the dogs' face reads %.2f where they were beaten %d of 6 (their weight ×%.0f; %s; %s, %s, %.0f dmg/s)" % [face, won, mult, ", ".join(ends),
+			str(sim.equipped["Primary"]["base"]) if sim.equipped["Primary"] != null else "-", str(sim.equipped["Secondary"]["base"]) if sim.equipped["Secondary"] != null else "-", float(sim.damage_split()["total"])])
+	# a save while the dogs wait: they still wait, their seconds kept
+	m = _ev_force(sim, "threat")
+	sim.advance(3.0)
+	var d0: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var back = Sim.new()
+	back.load_dict(d0)
+	_check(back.dogs_waiting(back.mission) and is_equal_approx(float(back.event_now()["close_t"]), float(sim.event_now()["close_t"])), "a save while the dogs wait lost them")
+	sim.extract_now()
+	# the Scrap man: scrap from the pack's stacks (the smallest first, across two), the buff this run only, his trades counted
+	# as the visit ends (a step never within it), then 3, 10 and 25
+	sim.trader_standing = {}
+	m = _ev_force(sim, "trader")
+	_check(sim.event_paused(m), "the clock ran while the Scrap man waited")
+	sim._haul_find(m, "scrap", 50)
+	sim._haul_find(m, "scrap", 3)              # a full stack, then a small one of its own
+	var small: Dictionary = m["found"].filter(func(it): return Items.is_scrap(it)).back()
+	var stacks0: int = m["found"].filter(func(it): return Items.is_scrap(it)).size()
+	var sc0: int = sim.pack_scrap(m)
+	var arm0: float = sim.armour()
+	_check(sim.trader_buy("plate") and sim.pack_scrap(m) == sc0 - int(Data.TRADER_SHELF[0]["price"]) and not m["found"].has(small) and m["found"].filter(func(it): return Items.is_scrap(it)).size() == stacks0 - 1, "the plate didn't take its scrap from the pack's stacks, the smallest first: %d to %d" % [sc0, sim.pack_scrap(m)])
+	var pct0: float = 100.0 + sim.tree_sum("armour_pct") + sim._affix_sum("armour_pct")
+	_check(arm0 <= 0.0 or absf(sim.armour() - arm0 * (pct0 + float(Data.TRADER_SHELF[0]["armour_pct"])) / pct0) < 0.01 * arm0, "the plate didn't add its 10%%: %.1f to %.1f" % [arm0, sim.armour()])
+	_check(not sim.trader_buy("plate"), "the plate sold twice in a visit")
+	pt0 = float(m["patrol_timer"])
+	_check(sim.trader_buy("held") and is_equal_approx(pt0 - float(m["patrol_timer"]), float(Data.TRADER_SHELF[2]["held_s"])), "the next gang wasn't held up")
+	sim.trader_buy("bandage")
+	_check(int(sim.trader_standing.get("scrap_man", 0)) == 0 and sim.trader_step() == 0, "a trade counted before the visit was done")
+	sim.trader_done()
+	_check(not sim.event_paused(m) and int(sim.trader_standing.get("scrap_man", 0)) == 3, "Done didn't start the clock or count the visit's trades: %d" % int(sim.trader_standing.get("scrap_man", 0)))
+	var armed: float = sim.armour()
+	sim.extract_now()
+	sim.deploy(3)
+	_check(arm0 <= 0.0 or sim.armour() < armed, "the plate lasted past its run: %.1f against %.1f" % [sim.armour(), armed])
+	sim.extract_now()
+	m = _ev_force(sim, "trader")
+	sim._haul_find(m, "scrap", 37)
+	var bd: Array = sim.trader_shelf().filter(func(r): return r["key"] == "bandage")
+	_check(sim.trader_step() == 1 and not bd.is_empty() and int(bd[0]["price"]) == 0, "at 3 trades the bandage isn't on the house")
+	_ev_ui(main, "trader")
+	var next0: Array = sim.trader_next_step()
+	var shelf_ep = main._run._event_panel
+	_check(shelf_ep._shelf[4]["panel"].position.y + shelf_ep._shelf[4]["panel"].size.y <= shelf_ep._done.position.y, "the shelf's last row runs into Done")
+	_check(main._run._event_panel._shelf[4]["panel"].visible and main._run._event_panel._shelf[4]["more"].text == Words.EV["step_more"] % int(next0[2]), "the next step isn't on the shelf at 3 trades")
+	_check(sim.trader_buy("bandage"), "the bandage on the house couldn't be had")
+	sim.trader_done()
+	_check(int(sim.trader_standing["scrap_man"]) == 3, "the bandage on the house counted as a trade")
+	sim.extract_now()
+	sim.trader_standing["scrap_man"] = 9
+	m = _ev_force(sim, "trader")
+	sim._haul_find(m, "scrap", 40)
+	sim.trader_buy("held")
+	sim.trader_done()
+	sim.extract_now()
+	m = _ev_force(sim, "trader")
+	var plate_row: Array = sim.trader_shelf().filter(func(r): return r["key"] == "plate")
+	_check(sim.trader_step() == 2 and int(plate_row[0]["price"]) == int(ceil(float(Data.TRADER_SHELF[0]["price"]) * (1.0 - Data.TRADER_STEP_OFF))), "at 10 trades his prices aren't 33%% off: %s" % str(plate_row))
+	sim.extract_now()
+	sim.trader_standing["scrap_man"] = 25
+	m = _ev_force(sim, "trader")
+	sim._haul_find(m, "scrap", 40)
+	sim.trader_buy("plate")
+	_check(sim.trader_step() == 3 and is_equal_approx(float(m["buff_armour_pct"]), Data.TRADER_GOOD_PLATE), "at 25 trades his good plate isn't +20%%: %.0f" % float(m.get("buff_armour_pct", 0.0)))
+	sim.trader_done()
+	sim.extract_now()
+	# the standing orders: the designer's defaults, each driving a run nobody's watching (section 1)
+	Sim.asks = false
+	sim.standing_orders = {}
+	_check(sim.event_order("need") == "help_cheap" and sim.event_order("locked") == "force" and sim.event_order("threat") == "odds_80" and sim.event_order("trader") == "all", "the standing orders' defaults are off")
+	m = _ev_force(sim, "need", {}, 1.0, {"pin": true, "what": "a fallen beam", "it": "the beam"})
+	_check(str(sim.event_now().get("outcome", "")) == ("free" if sim.need_clean_odds() >= Data.NEED_HELP_AT else "leave"), "Help if it's a med or 70%% clean: a pin at %.2f went '%s'" % [sim.need_clean_odds(), str(sim.event_now().get("outcome", ""))])
+	sim.extract_now()
+	sim.hp = sim.max_hp() * 0.3
+	m = _ev_force(sim, "need", {}, 1.0, {"pin": true, "what": "a fallen beam", "it": "the beam"}, false)
+	_check(sim.need_clean_odds() < Data.NEED_HELP_AT and str(sim.event_now().get("outcome", "")) == "leave", "a pin under 70% clean was helped by the default order")
+	sim.extract_now()
+	if sim.first_med().is_empty():
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	m = _ev_force(sim, "need", {}, 1.0, {"pin": false, "what": "a bad cut to the leg"})
+	_check(str(sim.event_now().get("outcome", "")) == "free", "a hurt one with a med to hand wasn't helped by the default order")
+	sim.extract_now()
+	var rig_keep: Array = sim.rig.duplicate()
+	sim.rig = sim.rig.filter(func(it): return not Items.is_medical(it))
+	m = _ev_force(sim, "need", {}, 1.0, {"pin": false, "what": "a bad cut to the leg"})
+	_check(str(sim.event_now().get("outcome", "")) == "leave", "a hurt one with no med was helped")
+	sim.extract_now()
+	sim.rig = rig_keep
+	m = _ev_force(sim, "locked")
+	_check(str(sim.event_now().get("outcome", "")) == "force", "Force it as the default didn't force it")
+	sim.extract_now()
+	m = _ev_force(sim, "threat")
+	_check(sim.dogs_odds() >= 0.8 and str(sim.event_now().get("state", "")) == "fight", "Fight at 80%% odds or better didn't fight at %.2f" % sim.dogs_odds())
+	sim.extract_now()
+	m = _ev_force(sim, "threat", {}, 60.0)
+	_check(not sim.on_mission() and str(sim.last_report.get("event_out", "")) == "out" and sim.events.any(func(e): return str(e[1]).begins_with("Out ahead of the dogs")), "under 80% the default didn't get out, or said nothing")
+	sim.set_order("threat", "odds_run")
+	sim.deploy(3)
+	m = sim.mission
+	m["odds_seen"] = 0.5
+	_ev_arrive(sim, m, "threat")
+	_check(str(sim.event_now().get("state", "")) == "fight", "Fight at the site's odds or better didn't fight at %.2f over %.2f" % [sim.dogs_odds(), 0.5])
+	sim.extract_now()
+	sim.standing_orders = {}
+	sim.trader_standing = {}
+	sim.deploy(3)
+	m = sim.mission
+	sim._haul_find(m, "scrap", 60)
+	_ev_arrive(sim, m, "trader")
+	var bought: Array = sim.event_now().get("bought", [])
+	_check(bought.has("plate") and bought.has("held") and bought.has("bandage") and str(sim.event_now()["state"]) == "done", "Buy what you can didn't buy what it could: %s" % str(bought))
+	sim.extract_now()
+	# a repeat run nobody's watching uses them with the shell's asks on; the bot's own line answers one that asks (T9)
+	Sim.asks = true
+	sim.set_order("locked", "leave")
+	sim.deploy(3)
+	m = sim.mission
+	m["unwatched"] = true
+	_ev_arrive(sim, m, "locked")
+	_check(str(sim.event_now().get("outcome", "")) == "leave", "an unwatched run didn't go by its standing order")
+	sim.extract_now()
+	sim.standing_orders = {}
+	var bot = load("res://tests/bot.gd").new()
+	bot.crew_on = false
+	bot.repeats = false
+	var bs = Sim.new()                        # a copy of the camp: the bot sets what a save doesn't keep (the hand's loot, its reads)
+	bs.load_dict(sim.to_dict())
+	bs.equipped["Charm"] = Items.roll_unique(bs._unique_named("The Caretaker's Keys"), bs.rng)     # an event every run
+	var outs: Array = []
+	for k in range(6):
+		bs.hp = bs.max_hp()
+		bot.step(bs)
+		if bs.last_report != null and str(bs.last_report.get("event", "")) != "":
+			outs.append(str(bs.last_report.get("event_out", "")))
+	_check(not outs.is_empty() and outs.all(func(o): return o != "ask" and o != ""), "the bot left a run event asking: %s" % str(outs))
+	# the panels: every family's, on the run screen, fits its boxes; the clock's chip holds its words; the words are clean
+	for fam in ["need", "locked", "threat"]:
+		m = _ev_force(sim, fam)
+		_ev_ui(main, fam)
+		sim.extract_now()
+	# the dogs' buttons hold still while their seconds run (U1): no redraw across a second, the count in their tile
+	m = _ev_force(sim, "threat")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var ep = main._run._event_panel
+	var redraws0: int = ep.redraws
+	var tile0: String = ep._tiles[0]["value"].text
+	sim._haul_find(m, "scrap", 5)             # a find in the dogs' 10 s (the search goes on): no redraw either (40-E review 1)
+	main.refresh()
+	sim.advance(1.0)
+	main.refresh()
+	_check(ep.redraws == redraws0 and ep._tiles[0]["value"].text != tile0 and ep._fight.visible and ep._fight.text == Words.EV["stand"], "the dogs' panel was drawn again as their seconds ran: %d to %d, '%s' to '%s'" % [redraws0, ep.redraws, tile0, ep._tiles[0]["value"].text])
+	_check(ep._feet[0].position.y > ep._fight.position.y + ep._fight.size.y, "the dogs' note isn't under their buttons")
+	# Get out now on the dogs when the leave isn't instant (a way out to walk): the event closed first, then the run's
+	# own way out (U2)
+	m["cleared"] = false
+	m["ghost_pending"] = true
+	ep.picked.emit("out")
+	_check(sim.on_mission() and bool(m.get("way_out", false)) and str(sim.event_now().get("outcome", "")) == "out" and not sim.dogs_waiting(m), "Get out now left the dogs waiting on the way out")
+	sim.extract_now()
+	# a second event alike in its options shows its own line (U7)
+	m = _ev_force(sim, "locked")
+	main.refresh()
+	m["ev"]["line"] = "A tin shed, locked. It's been waiting."
+	main.refresh()
+	_check(ep._lines[0].text.begins_with("A tin shed"), "the panel kept the last event's line: '%s'" % ep._lines[0].text)
+	# the crates come back to the street as the search resumes (U15)
+	sim.event_pick("leave")
+	main.refresh()
+	if main._run._view != null and not sim.crates_done(m):
+		_check(main._run._view._crates[0].visible, "the crates stayed hidden after the choice")
+	sim.extract_now()
+	# the drop-down in the game's own look (U12)
+	_check(main._armoury.orders_panel._menu.has_theme_stylebox_override("panel"), "the standing orders' drop-down isn't themed")
+	# away in another room while an event waits (U3): the Map's badge says so and the line pops
+	m = _ev_force(sim, "need")
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var badge: Dictionary = main._rail_status(main.MISSIONS)
+	_check(main._juice.lines().has(str(sim.event_now()["line"])), "an event waiting while you're in the Kit popped nothing")
+	_check(str(badge.get("badge", "")) == Words.EV["waiting"] and str(badge.get("badge_tone", "")) == "warn", "the Map's badge doesn't say an event waits: %s" % str(badge))
+	sim.extract_now()
+	main.show_room(main.MISSIONS)
+	# a pool word's capitals past its first letter stay (U13; 40-E review 13): only the first letter lowered
+	m = _ev_force(sim, "need", {"who": "A man from the Yard", "what": "a fallen beam", "pin": true})
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	if main._run._view != null:
+		var capt: String = main._run._view.prop.caption().text
+		_check(capt.begins_with("[a man from the Yard under"), "the caption lowered more than the first letter: '%s'" % capt)
+	sim.extract_now()
+	# the picture isn't drawn again while nothing moves (U16)
+	m = _ev_force(sim, "locked")
+	main.refresh()
+	if main._run._view != null:
+		var pr = main._run._view.prop
+		main._run._view._pan = main._run._view._pan_to     # the street done panning: nothing moves
+		pr._process(0.016)
+		var rd0: int = pr.redraws
+		for k in range(3):
+			main.refresh()
+			main._run._view._process(0.016)
+			pr._process(0.016)
+		_check(pr.redraws == rd0, "the event's picture is drawn every frame standing still: %d to %d" % [rd0, pr.redraws])
+	sim.extract_now()
+	# no event words name a room that may be shut (13 Oct, Matt's save; T1), none a banned word or "a third" (T10)
+	var ev_words: Array = _ev_strings(Words.EV) + _ev_strings(Words.ORDERS)
+	var rx := RegEx.new()
+	rx.compile("(?i)\\b(" + "|".join(WORDS_BANNED) + ")\\b")
+	for w in ev_words:
+		for room_word in ["Bench", "Workshop", "Clinic", "Fence", "Radio", "Yard", "Pitch"]:
+			_check(not str(w).contains(room_word), "an event's words name the %s: '%s'" % [room_word, w])
+		var hit := rx.search(str(w))
+		_check(hit == null or hit.get_string().to_lower() == "cache", "an event's words say \"%s\": %s" % [hit.get_string() if hit != null else "", w])
+	# the odds roll no event and move no dice for one: the same seeds read the same with an event every run as without
+	var dry_seeds: Array = [4242, 7, 1999, 31337, 86, 555]
+	var plain_st: Array = []
+	for sd in dry_seeds:
+		var r1 := RandomNumberGenerator.new()
+		r1.seed = sd
+		sim._dry_run(3, r1)
+		plain_st.append(r1.state)
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The Caretaker's Keys"), sim.rng)
+	_check(sim.has_rule("caretakers_keys"), "the Keys aren't worn for the odds' check")
+	var keys_st: Array = []
+	var main_rng: int = sim.rng.state
+	for sd in dry_seeds:
+		var r2 := RandomNumberGenerator.new()
+		r2.seed = sd
+		sim._dry_run(3, r2)
+		keys_st.append(r2.state)
+	_check(keys_st == plain_st and sim.rng.state == main_rng, "a dry run rolled an event: its dice %s against %s" % [str(keys_st), str(plain_st)])
+	sim.equipped["Charm"] = null
+	# the dogs' read moves no dice of the run
+	m = _ev_force(sim, "threat")
+	var rs: int = sim.rng.state
+	sim._dogs_read(m, 3)
+	_check(sim.rng.state == rs, "the dogs' read moved the run's dice")
+	sim.extract_now()
+	# a save mid event: the choice still waits, the clock still stopped, and it can still be made; a dogs' fight too
+	m = _ev_force(sim, "need")
+	sim.trader_standing = {"scrap_man": 7}
+	sim.set_order("trader", "leave")
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	back = Sim.new()
+	back.load_dict(d)
+	_check(back.event_asking() and back.event_paused(back.mission) and int(back.trader_standing.get("scrap_man", 0)) == 7 and back.event_order("trader") == "leave", "a save mid event lost it: %s" % str(back.event_now()))
+	var c1: float = float(back.mission["clock"])
+	back.advance(3.0)
+	_check(float(back.mission["clock"]) == c1 and back.event_pick("bag") and str(back.event_now()["state"]) == "done", "after a load the event didn't hold the clock or take its choice")
+	sim.extract_now()
+	m = _ev_force(sim, "threat")
+	sim.dogs_fight()
+	d = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	back = Sim.new()
+	back.load_dict(d)
+	back.mission["target_hp"] = 0.0
+	back.mission["remaining"] = 1
+	back.hp = back.max_hp()
+	back.advance(1.0)
+	_check(back.mission != null and not back.mission["t"].get("dogs", false) and str(back.event_now()["outcome"]) == "fought", "a dogs' fight loaded didn't finish: %s" % str(back.event_now()))
+	sim.extract_now()
+	# a signal's convoy (the run's own folded into the threat): a bigger gang and their notes, counted on the run screen
+	sim.deploy(3)
+	m = sim.mission
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["event"] = "convoy"
 	m["event_at"] = 0.0
-	var notes0: int = int(m.get("notes", 0))
+	var cnotes0: int = int(m.get("notes", 0))
 	sim.advance(0.1)
-	_check(m["remaining"] == sim.PATROL_BASE + 2 and int(m["notes"]) > notes0 and m["event_done"] == "convoy" and m["event_at"] < 0.0, "the convoy did not come: %d left, %d notes" % [m["remaining"], int(m["notes"])])
-	# and the run screen counts them (8 Oct, Matt: "11 of 10 down"): the bar's "of" is the pool as it stands, with the
-	# convoy's crew in, and the band says a convoy came
+	_check(m["remaining"] == sim.PATROL_BASE + 2 and int(m["notes"]) > cnotes0 and m["event_done"] == "convoy" and m["event_at"] < 0.0, "the convoy did not come: %d left, %d notes" % [m["remaining"], int(m["notes"])])
 	m["cleared"] = false
 	m["kills"] = int(sim.tier(3)["pool"])
 	main.show_room(main.MISSIONS)
@@ -4786,38 +5399,6 @@ func _events_checks(main) -> void:
 	var bar_words: String = main._run._band._bar_label.text
 	_check(bar_words == "%d of %d down" % [m["kills"], m["kills"] + m["remaining"]], "the run's bar reads the site's pool with a convoy's crew in: '%s'" % bar_words)
 	_check(main._run._band.right[1].text.contains("convoy"), "the band does not say a convoy came: '%s'" % main._run._band.right[1].text)
-	sim.extract_now()
-	# someone trapped: a trait promised to the next arrival
-	sim.promised = ""
-	sim.deploy(3)
-	m = sim.mission
-	m["event"] = "trapped"
-	m["event_at"] = 0.0
-	sim.advance(0.1)
-	_check(sim.promised != "" and sim.promised != sim.runner_trait, "the trapped runner promised nothing: %s" % sim.promised)
-	sim.extract_now()
-	sim.promised = ""
-	# a cache: opened at any Bench (9 Oct: it wanted Bench 2)
-	sim.deploy(3)
-	m = sim.mission
-	m["event"] = "cache"
-	m["event_at"] = 0.0
-	m["remaining"] = 999                   # keep the search from finding on its own
-	var found0: int = int(m.get("finds", 0))     # finds counted (the fix round: a box joins the gate's box in the pack, no new cell)
-	var ids0: Array = m["found"].map(func(x): return int(x["id"]))
-	var stk := func() -> int:
-		var n := 0
-		for x in m["found"]:
-			n += Items.stack_size(x) if Items.stacks(x) else 0
-		return n
-	var stk0: int = stk.call()
-	sim.advance(0.1)
-	var reached: bool = m["found"].any(func(x): return not (int(x["id"]) in ids0)) or stk.call() > stk0     # in the pack, or merged into a stack there (the three-stage review, tools 11)
-	_check(int(m.get("finds", 0)) == found0 + 1 and reached, "the cache did not open, or its find never reached the pack: %d finds from %d" % [int(m.get("finds", 0)), found0])
-	# its words never name a room that may be shut (13 Oct, Matt's save: "the Bench's tools" with the Workshop shut)
-	var cache_line: String = str(sim.events.back()[1])
-	for room_word in ["Bench", "Workshop", "Clinic", "Fence", "Radio", "Yard", "Pitch"]:
-		_check(not cache_line.contains(room_word), "the cache's line names the %s: '%s'" % [room_word, cache_line])
 	sim.extract_now()
 	# a run out to a site with no codes says so with no colon left hanging (13 Oct, Matt's save: "depth 1: ")
 	sim.deploy(0)
@@ -4827,9 +5408,155 @@ func _events_checks(main) -> void:
 		var ol: String = str(out_lines.back()[1])
 		_check(not ol.strip_edges().ends_with(":") and (sim.mission["t"]["intel"].is_empty() != ol.contains(": ")), "the run's line is off: '%s' (codes %s)" % [ol, str(sim.mission["t"]["intel"])])
 	sim.extract_now()
+	# an old save's shape loads with the new parts at their defaults
+	var old: Dictionary = sim.to_dict()
+	for k in ["trader_standing", "standing_orders", "event_last", "event_threads"]:
+		old.erase(k)
+	back = Sim.new()
+	back.load_dict(old)
+	_check(back.trader_standing.is_empty() and back.event_order("need") == "help_cheap" and back.event_last == "", "an old save's events didn't load at their defaults")
+	# the standing orders' screen: beside the loot rules, a row a family in the canvas's order, the drop-down sets it
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var arm = main._armoury
+	arm.open_rules()
+	_check(arm.rules_panel.text_nodes().has(arm.rules_panel.orders_button), "the Standing orders button isn't in the rules panel's fit checks")
+	arm.rules_panel.orders_button.pressed.emit()
+	var op = arm.orders_panel
+	_check(op.visible and not arm.rules_panel.visible, "the standing orders didn't open from the loot rules")
+	_check(Data.EVENT_ORDER == ["need", "threat", "locked", "trader"], "the orders' rows aren't in the canvas's order: %s" % str(Data.EVENT_ORDER))
+	for fam in Data.EVENT_ORDER:
+		_check(op.drop(fam).text.begins_with(op.order_words(fam, sim.event_order(fam))), "the %s row doesn't show its order: %s" % [fam, op.drop(fam).text])
+	op.choose("threat", Data.EVENT_ORDERS["threat"].find("odds_run"))
+	_check(sim.event_order("threat") == "odds_run" and op.drop("threat").text.begins_with(Words.ORDERS["threat"]["odds_run"]), "the drop-down didn't set the order")
+	for fam in Data.EVENT_ORDER:
+		for k in range(Data.EVENT_ORDERS[fam].size()):
+			op.choose(fam, k)
+			_ev_fits(op.text_nodes(), Rect2(Vector2.ZERO, op.size), op, "the standing orders, %s %s" % [fam, Data.EVENT_ORDERS[fam][k]])
+	_check(main.close_top_overlay() and not op.visible, "Esc didn't shut the standing orders")
+	main.show_room(main.MISSIONS)
+	Sim.asks = asks_was
+	sim.equipped["Charm"] = charm_was
 	sim.load_dict(saved)
-	print("events ok: the convoy, the trapped runner, the cache, the run's line")
+	print("events ok: the dice and their leanings, one a run, the lull after a search, the pause, every option, the time a choice needs, the dogs as a gang and their odds, the Scrap man, the default orders, the bot, the panels, the words, the odds' dice, a save mid event")
 	_pinnacle_checks(main)
+
+
+## Every string in a words table, flattened (Words.EV, Words.ORDERS).
+func _ev_strings(v) -> Array:
+	var out: Array = []
+	if v is String:
+		out.append(v)
+	elif v is Array:
+		for x in v:
+			out.append_array(_ev_strings(x))
+	elif v is Dictionary:
+		for k in v:
+			if str(k) in ["kind"]:
+				continue
+			out.append_array(_ev_strings(v[k]))
+	return out
+
+
+## A run out at the Streets, cleared, a search done and quiet, `fam` arrived and asking (or answered, asks off); `slots`
+## laid over the event; `weight` the site's gang made that much heavier first (the dogs read off it); `full` HP first.
+func _ev_force(sim, fam: String, slots := {}, weight := 1.0, slots2 := {}, full := true) -> Dictionary:
+	if sim.on_mission():
+		sim.extract_now()
+	if full:
+		sim.hp = sim.max_hp()
+	var hp_set: float = sim.hp
+	sim.deploy(3)
+	sim.hp = hp_set
+	var m: Dictionary = sim.mission
+	if weight != 1.0:
+		m["t"] = m["t"].duplicate()
+		m["t"]["dps"] = float(m["t"]["dps"]) * weight
+		m["t"]["hp"] = float(m["t"]["hp"]) * weight
+	if not slots2.is_empty():
+		# slots fixed before it's answered: the standing order reads them (asks off)
+		var keep: bool = Sim.asks
+		Sim.asks = true
+		_ev_arrive(sim, m, fam)
+		for k in slots2:
+			m["ev"][k] = slots2[k]
+		Sim.asks = keep
+		if not keep:
+			sim.event_by_orders()
+		return m
+	_ev_arrive(sim, m, fam)
+	if not slots.is_empty() and m.has("ev"):
+		for k in slots:
+			m["ev"][k] = slots[k]
+	return m
+
+
+## The site cleared, a search done and quiet, `fam` due: one tick brings it.
+func _ev_arrive(sim, m: Dictionary, fam: String) -> void:
+	m["remaining"] = 0
+	m["target_hp"] = 0.0
+	m["cleared"] = true
+	m["searches"] = maxi(1, int(m.get("searches", 0)))
+	m["patrol_timer"] = 0.0
+	m["event"] = fam
+	m["event_at"] = 0.0
+	sim.advance(0.5)
+
+
+## The run screen with an event up: its panel fits, every word in its box and the panel in the column; the buttons
+## it should have; the clock's chip round its words while it stops; the scene's caption inside the frame.
+func _ev_ui(main, fam: String) -> void:
+	var sim = main.sim
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var run = main._run
+	var ep = run._event_panel
+	_check(ep.visible and ep.fam == fam, "the %s panel isn't up on the run screen" % fam)
+	_check_fit(main, "run events: %s" % fam)
+	_ev_fits(ep.text_nodes(), Rect2(Vector2.ZERO, ep.size), ep, "the %s panel" % fam)
+	_check(Rect2(Vector2.ZERO, run._left.size).encloses(Rect2(ep.position, ep.size)), "the %s panel runs out of the column" % fam)
+	var b: Dictionary = ep.buttons()
+	var want: Array = {"need": ["free", "bag", "leave"], "locked": ["force", "shoot", "leave"], "threat": ["out", "fight"], "trader": ["done"]}[fam]
+	_check(want.all(func(k): return b.has(k)), "the %s panel lacks its buttons: %s" % [fam, str(b.keys())])
+	_check(not run._button.visible and not run._button2.visible and not run._crates.visible, "the run's own buttons or the crates show under the %s panel" % fam)
+	if fam == "threat":
+		_check(ep._tiles[1]["value"].text == "%d%%" % roundi(sim.dogs_odds() * 100.0) and ep._tiles[2]["value"].text == Words.EV["carry_none"], "the dogs' tiles are off: %s, %s" % [ep._tiles[1]["value"].text, ep._tiles[2]["value"].text])
+	var chip: Panel = run._stop_chip
+	var unit: Label = run._band.unit
+	if fam == "threat":
+		_check(not chip.visible and unit.text != Words.EV["stopped"], "the clock reads stopped for a threat")
+	else:
+		var tw: float = UI.text_width(unit, unit.text)
+		_check(chip.visible and unit.text == Words.EV["stopped"] and chip.position.x <= unit.position.x and chip.position.x + chip.size.x >= unit.position.x + tw and chip.position.x + chip.size.x <= run._band.size.x, "the clock-stopped chip doesn't hold its words: '%s' %s against %s" % [unit.text, str(Rect2(chip.position, chip.size)), str(Rect2(unit.position, Vector2(tw, unit.size.y)))])
+	if run._view != null:
+		var pr = run._view.prop
+		var cap: Label = pr.caption()
+		_check(pr.shown and cap.text != "" and UI.text_width(cap, cap.text) <= cap.size.x and Rect2(Vector2.ZERO, pr.size).encloses(Rect2(cap.position, cap.size)), "the %s caption isn't in the frame: '%s' at %s" % [fam, cap.text, str(cap.position)])
+		var c1: String = cap.text.substr(1, 1)
+		_check(c1 == c1.to_lower(), "the %s caption doesn't start in lower case: '%s'" % [fam, cap.text])
+	# the words on the panel (T10): no screen slip, no unfilled format
+	var fmt := RegEx.new()
+	fmt.compile("%[-0-9.]*[sdf]")
+	for nd in ep.text_nodes():
+		for bw in WORDS_SCREEN_BANNED:
+			var hit: bool = (nd.text.find(bw) >= 0) if bw == "Boss" or bw.begins_with(" ") or bw.contains(" ") else (nd.text.to_lower().find(bw) >= 0)
+			_check(not hit, "the %s panel shows \"%s\": %s" % [fam, bw, nd.text])
+		_check(fmt.search(nd.text) == null, "the %s panel shows an unfilled format code: %s" % [fam, nd.text])
+
+
+## Every label and button in `nodes` holds its words and sits inside `box` (in `root`'s space).
+func _ev_fits(nodes: Array, box: Rect2, holder: Control, where: String) -> void:
+	for n in nodes:
+		if not n.visible:
+			continue
+		var pad: float = 32.0 if n is Button else 0.0
+		var r := Rect2(n.position, n.size)
+		var p: Node = n.get_parent()
+		while p != null and p != holder:
+			r.position += (p as Control).position
+			p = p.get_parent()
+		_check(UI.text_width(n, n.text) + pad <= n.size.x + 0.5, "%s: '%s' needs %.0f px, has %.0f" % [where, n.text, UI.text_width(n, n.text) + pad, n.size.x])
+		_check(box.grow(0.5).encloses(r), "%s: '%s' runs out of its panel" % [where, n.text])
 
 
 ## Pinnacles from depth 10: dearer, harder, their charm in the pool. The
@@ -8948,16 +9675,17 @@ func _build_checks(main) -> void:
 	m["event_at"] = -1.0
 	m["crates_off"] = true                    # a site that can't be picked clean before a scrap roll (15 Oct, item 4: the flake)
 	var guard := 0
-	while int(m.get("scrap", 0)) == 0 and guard < 600:
+	while _haul_in_pack(m, "scrap") == 0 and guard < 600:
 		sim.hp = sim.max_hp()
+		m["found"] = m["found"].filter(func(x): return Items.material_key(x) == "scrap" or x.get("carried", false))     # room kept: a pack filled with gear first sends the scrap to the floor (the fix round, 40-E: the dice found it)
 		sim.advance(1.0)
 		guard += 1
-	var run_scrap: int = int(m.get("scrap", 0))
+	var run_scrap: int = _haul_in_pack(m, "scrap")     # scrap in the pack as an item (1 Nov)
 	_check(run_scrap >= Data.SCRAP_HANDFUL[0], "searches brought no scrap in %d seconds" % guard)
 	var vest: Dictionary = sim._plain("Armour", "Riot suit")
 	m["found"].append(vest)
 	sim.ditch(vest["id"])
-	_check(int(m.get("scrap", 0)) == run_scrap and sim.floor_items().has(vest) and vest.get("ditched", false), "a ditch paid scrap or didn't put it down (27 Oct: scrapping's the Workshop's alone): %d" % int(m.get("scrap", 0)))
+	_check(_haul_in_pack(m, "scrap") == run_scrap and sim.floor_items().has(vest) and vest.get("ditched", false), "a ditch paid scrap or didn't put it down (27 Oct: scrapping's the Workshop's alone): %d" % _haul_in_pack(m, "scrap"))
 	sim.extract_now()
 	_check(sim.scrap == run_scrap, "the run's scrap did not come home: %d" % sim.scrap)
 	var junk: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
@@ -20799,7 +21527,7 @@ func _rig_checks(main) -> void:
 	sim.rig.append(depot)
 	var band: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 	sim.rig.append(band)
-	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))     # deploy tops the rig up from the stash: only these stacks
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))     # deploy tops the rig up from the stash: only these stacks (the fix round, 40-E: a stash's loaded Match magazine came in on other dice and fired before the plain one)
 	_check(sim.feed_stack(sim.equipped["Primary"]) == depot and sim.grade_bonus(sim.equipped["Primary"]) == 25.0, "the Depot rounds behind the plain ones don't fire first")
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -20811,9 +21539,14 @@ func _rig_checks(main) -> void:
 		sim.advance(1.0)
 		g += 1
 	_check(int(depot["rounds"]) == 0 and sim.rig.has(depot) and int(plain["rounds"]) <= p0, "the Depot rounds did not run out first (plain %d of %d)" % [int(plain["rounds"]), p0])     # a spent magazine stays in the rig (30 Oct)
-	sim.hp = sim.max_hp()
-	sim.advance(5.0)                          # past the reload into the next magazine (30 Oct)
-	_check(int(plain["rounds"]) < p0 and sim.feed_stack(sim.equipped["Primary"]) == plain, "the plain rounds did not take over when the Depot rounds ran out")
+	for k in range(15):                       # past the reload into the next magazine (30 Oct); up to 15 s, the reload's length on any dice (the fix round, 40-E: the dice found it at 5)
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+		if int(plain["rounds"]) < p0:
+			break
+	var diag: String = ("%s on, cleared %s, reload %s, fire_x %s, mag_in %s, refill %s, %s, skills %s" % [str(sim.mission["remaining"]), str(sim.mission["cleared"]), str(sim.mission.get("reload_t", {})),
+		str(sim.mission.get("fire_x", {})), str(sim.mission.get("mag_in", {})), str(sim.mission.get("refill", {})), sim.cls, str(sim.skill_slots)]) if sim.on_mission() else "the run's over"
+	_check(int(plain["rounds"]) < p0 and sim.feed_stack(sim.equipped["Primary"]) == plain, "the plain rounds did not take over when the Depot rounds ran out (%d of %d, feeding %s; %s)" % [int(plain["rounds"]), p0, str(sim.feed_stack(sim.equipped["Primary"]).get("base", "-")), diag])
 	# into the pack, from the run screen
 	main.show_room(main.MISSIONS)
 	main.refresh()
@@ -22235,11 +22968,11 @@ func _rebuild_checks(main) -> void:
 	_check(is_equal_approx(s.mint_tins(), tins), "the FIAT note still doubles the mint: the Issue is its job now (25 Oct)")
 	for k in ["substation", "pumping", "bus_depot", "library", "market_hall", "mint"]:
 		_check(not s.rebuild_words(k, 1).is_empty(), "%s has no words" % k)
-	# materials: a head's handful and the run's roll home, death included
-	var m := {"tier": 3, "kills": 1, "materials": {"glass": 2}, "found": []}
+	# materials: a stack in the pack home counts in (1 Nov: pack items, lost as the pack's finds are - _haul_checks)
+	var m := {"tier": 3, "kills": 1, "found": [Items.haul("glass", 2)]}
 	var g0: int = s.held_of("glass")
-	s._bank_materials(m)
-	_check(s.held_of("glass") == g0 + 2, "the run's materials did not come home: %d from %d" % [s.held_of("glass"), g0])
+	s._haul_home(m, true)
+	_check(s.held_of("glass") == g0 + 2 and m["found"].is_empty(), "the run's materials did not come home: %d from %d" % [s.held_of("glass"), g0])
 	_check(Data.SITE_MATERIAL.size() == Data.TIERS.size() and s.material_at(0) == "" and s.material_at(3) == "copper_wire" and s.material_odds(0) == 0.0 and is_equal_approx(s.material_odds(3), Data.MATERIAL_RUN), "the sites' materials are off")
 	# a signal brings its crew's area's two, the one held fewer of the likelier (20 Oct, Matt: flooded in some, none of others)
 	var mat_was: Dictionary = s.materials.duplicate()
@@ -22262,10 +22995,12 @@ func _rebuild_checks(main) -> void:
 	s.deploy(3)
 	_check(s.mission != null, "the fixture: no run to die on")
 	if s.mission != null:
-		s.mission["materials"] = {"paving": 3}
+		s.mission["found"].append(Items.haul("paving", 3))     # 1 Nov: a find in the pack, so a death loses it (no fetch, no insurance here)
+		s._pack_settle(s.mission)
 		var p0: int = s.held_of("paving")
+		_check(not s.yard_has("fetch") and not s.mission.get("insured", false), "the fixture: the dog or the paper would carry it home")
 		s._kia()
-		_check(s.held_of("paving") == p0 + 3, "a death cost the run's materials: %d from %d" % [s.held_of("paving"), p0])
+		_check(s.held_of("paving") == p0, "a death brought the pack's materials home: %d from %d" % [s.held_of("paving"), p0])
 	# the save and the move keep it
 	var d: Dictionary = s.to_dict()
 	var s2 = Sim.new()
@@ -22468,7 +23203,456 @@ func _rebuild_checks(main) -> void:
 	sim.load_dict(saved)
 	main.show_room(was)
 	main.refresh()
-	print("the rebuild ok: shut till Kev's done, costs and ranks, the places' effects, materials home through death, a save and a move, the order's Grid run and won, the town view and the order tab fit")
+	print("the rebuild ok: shut till Kev's done, costs and ranks, the places' effects, materials home, lost on a death, a save and a move, the order's Grid run and won, the town view and the order tab fit")
+
+
+## Materials in the pack (1 Nov, the designer's call: scrap and the rebuild's materials stop being invisible run counters
+## and take pack room): a search's scrap and a run's material land as stacks in the pack (scrap 50 a cell, a material 10),
+## a full pack sends them to the floor (or, on "Fill up, then go", past), home counts them into the Pitch's scrap and
+## materials with no stash cell taken, a death, a bail or the clock loses them with the pack, the bot gives them up for an
+## upgrade and leaves a pack full of them; the card and the cell say what each is and how many.
+func _haul_checks(main) -> void:
+	# a search's scrap: a pack item, a handful, and no counter on the run
+	var s = _haul_camp(true)
+	if s == null:
+		_check(false, "the fixture: no run in the Ransacked Streets for the haul's checks")
+		return
+	var m: Dictionary = s.mission
+	var guard := 0
+	while _haul_in_pack(m, "scrap") == 0 and guard < 600:
+		s.hp = s.max_hp()
+		s.advance(1.0)
+		guard += 1
+	var st: Array = m["found"].filter(func(x): return Items.is_scrap(x))
+	_check(st.size() == 1 and st[0].has("pos") and Items.stack_size(st[0]) >= int(Data.SCRAP_HANDFUL[0]) and Items.stack_size(st[0]) <= int(Data.SCRAP_HANDFUL[1]) and int(m.get("scrap", 0)) == 0,
+		"a search's scrap isn't one stack in the pack: %d stacks, %s, the run's counter %d (after %d s)" % [st.size(), str(st.map(func(x): return Items.stack_size(x))), int(m.get("scrap", 0)), guard])
+	# it stacks to 50 in one cell, the rest a new stack; a material to 10
+	if not st.is_empty():
+		Items.set_stack(st[0], 45)
+		s._haul_find(m, "scrap", 10)
+		var sizes: Array = m["found"].filter(func(x): return Items.is_scrap(x)).map(func(x): return Items.stack_size(x))
+		sizes.sort()
+		_check(sizes == [5, 50] and Data.SCRAP_STACK == 50, "45 scrap and a handful of 10 stack as %s, not 50 and 5" % str(sizes))
+	s._haul_find(m, "copper_wire", 12)
+	var cw: Array = m["found"].filter(func(x): return Items.material_key(x) == "copper_wire").map(func(x): return Items.stack_size(x))
+	cw.sort()
+	_check(cw == [2, 10] and m["found"].filter(func(x): return Items.is_material(x)).all(func(x): return Items.size(x) == 1), "12 copper wire stack as %s, not 10 and 2, a cell each" % str(cw))
+	# a run's material at its first kill, and a head's handful: pack items, the site's own
+	var s2 = _haul_camp(false)
+	if s2 != null:
+		var m2: Dictionary = s2.mission
+		var tries := 0
+		while _haul_in_pack(m2, "copper_wire") == 0 and tries < 400:
+			m2.erase("mat_rolled")
+			m2["found"] = m2["found"].filter(func(x): return Items.is_material(x))
+			m2.erase("floor")
+			m2["kills"] = 0
+			s2._kill(m2, m2["t"])
+			tries += 1
+		var got: int = _haul_in_pack(m2, "copper_wire")
+		_check(got >= int(Data.MATERIAL_HANDFUL[0]) and got <= int(Data.MATERIAL_HANDFUL[1]) and m2.get("materials", {}).is_empty(), "a run's first kill in the Ransacked Streets brought no copper wire into the pack in %d tries (%d; the run's counter %s)" % [tries, got, str(m2.get("materials", {}))])
+		s2._head_materials(m2)
+		var more: int = _haul_in_pack(m2, "copper_wire") - got
+		_check(more >= int(Data.MATERIAL_HEAD[0]) and more <= int(Data.MATERIAL_HEAD[1]), "a head's handful didn't land in the pack: %d" % more)
+		# a printed man down (the Issuer's, the Collector's) is a kill to the roll too (the review)
+		m2.erase("mat_rolled")
+		var ph: float = float(m2["t"]["hp"])
+		m2["print_pool"] = ph * 2.0
+		m2["printed"] = 2
+		m2["target_hp"] = 1e6
+		s2._order_absorb(m2, m2["t"], 1e6 + ph * 1.5, "mint")
+		_check(int(m2.get("printed", 0)) == 1 and bool(m2.get("mat_rolled", false)), "a printed man down didn't roll the run's material: printed %d, rolled %s" % [int(m2.get("printed", 0)), str(m2.get("mat_rolled", false))])
+	# a full pack: by hand, the stack waits on the floor; on "Fill up, then go", it's passed over
+	var s3 = _haul_camp(true)
+	if s3 != null:
+		var m3: Dictionary = s3.mission
+		m3["found"] = []
+		s3.loot_by_hand = true
+		_haul_fill(s3, m3, func(): return s3._plain(Data.MEDICAL, "Painkillers"))
+		var n3: int = m3["found"].size()
+		s3._haul_find(m3, "glass", 2)
+		var fl: Array = s3.floor_items().filter(func(x): return Items.material_key(x) == "glass")
+		_check(n3 > 0 and m3["found"].size() == n3 and fl.size() == 1 and Items.stack_size(fl[0]) == 2 and not s3.floor_fits(fl[0]), "a full pack didn't send the glass to the floor: the pack %d from %d, on the floor %s" % [m3["found"].size(), n3, str(fl.map(func(x): return Items.stack_size(x)))])
+		m3["leave_full"] = true                # "Fill up, then go" as its flag: set_leave_full on a cleared full pack would end the run (the review)
+		_check(s3.on_mission(), "the fixture: the run ended before the Fill up check")
+		var left0: int = int(m3["left"])
+		var floor0: int = s3.floor_items().size()
+		s3._haul_find(m3, "scrap", 6)
+		_check(int(m3["left"]) == left0 + 1 and s3.floor_items().size() == floor0 and m3["found"].size() == n3, "Fill up, then go didn't pass the scrap over as a find: left %d from %d" % [int(m3["left"]), left0])
+	# home: counted into the Pitch's scrap and materials, the items gone, no stash cell taken; the report, the card, the log
+	var s4 = _haul_camp(true)
+	if s4 != null:
+		var m4: Dictionary = s4.mission
+		m4["found"] = []
+		s4._haul_find(m4, "scrap", 50)
+		s4._haul_find(m4, "paving", 4)
+		var sc0: int = s4.scrap
+		var pv0: int = s4.held_of("paving")
+		var used0: int = s4.stash_used()
+		var cb0: int = int(s4.came_back.get("scrap", 0)) if not s4.came_back.is_empty() else 0
+		_check(_haul_in_pack(m4, "scrap") == 50 and _haul_in_pack(m4, "paving") == 4, "the fixture: the pack holds %d scrap and %d paving" % [_haul_in_pack(m4, "scrap"), _haul_in_pack(m4, "paving")])
+		s4.extract_now()
+		_check(s4.mission == null and s4.scrap == sc0 + 50 and s4.held_of("paving") == pv0 + 4, "home didn't count the pack's stacks in: scrap %d from %d, paving %d from %d" % [s4.scrap, sc0, s4.held_of("paving"), pv0])
+		_check(s4.stash_used() == used0 and not s4.stash.any(func(x): return Items.is_material(x)) and s4.stash_free(Items.haul("scrap", 1)), "the stash took cells or items for them: %d from %d" % [s4.stash_used(), used0])
+		_check(int(s4.last_report.get("scrap", -1)) == 50 and int(s4.came_back.get("scrap", 0)) == cb0 + 50 and s4.events.any(func(e): return str(e[1]) == Words.REBUILD["material"] % "4 paving"),
+			"the report, the card or the log don't say what came home: report %s, card %d from %d" % [str(s4.last_report.get("scrap", -1)), int(s4.came_back.get("scrap", 0)), cb0])
+	# a death, a bail, the clock: lost with the pack (no dog, no paper)
+	for how in ["death", "bail", "clock"]:
+		var s5 = _haul_camp(true)
+		if s5 == null:
+			continue
+		var m5: Dictionary = s5.mission
+		s5._haul_find(m5, "scrap", 30)
+		s5._haul_find(m5, "glass", 3)
+		var sc5: int = s5.scrap
+		var gl5: int = s5.held_of("glass")
+		_check(not s5.yard_has("fetch") and not m5.get("insured", false) and _haul_in_pack(m5, "scrap") >= 30, "the fixture (%s): the dog or the paper would carry it home, or no scrap packed" % how)
+		match how:
+			"death":
+				s5._kia()
+			"bail":
+				s5._bail(m5)
+			"clock":
+				s5._time_out(m5)
+		_check(s5.scrap == sc5 and s5.held_of("glass") == gl5 and not s5.stash.any(func(x): return Items.is_material(x)), "a %s brought the pack's scrap or materials home: scrap %d from %d, glass %d from %d" % [how, s5.scrap, sc5, s5.held_of("glass"), gl5])
+	# a death with the Kennel's Fetch: gear before scrap and materials (the review: their exchange worth ranked a stack over
+	# any gear); with no gear, the dearest stack, counted in at home and said on the report, the Dead line and the card
+	for case in ["no_gear", "gear", "desk"]:
+		var s8 = _haul_camp(true)
+		if s8 == null:
+			continue
+		var m8: Dictionary = s8.mission
+		m8["found"] = []
+		s8._haul_find(m8, "scrap", 30)
+		if case != "desk":
+			s8._haul_find(m8, "glass", 3)
+		var cheap: Dictionary = {}
+		if case == "gear":
+			cheap = s8._plain("Helmet", str(Data.BASES["Helmet"][0]["name"]))
+			s8._pack_put(m8, cheap, s8.pack_spot(m8, cheap))
+		s8._yard_set = {"insurance_desk": true} if case == "desk" else {"fetch": true}
+		s8._yard_dirty = false
+		if case == "desk":
+			m8["insured"] = true
+		var sc8: int = s8.scrap
+		var gl8: int = s8.held_of("glass")
+		var cb8: int = int(s8.came_back.get("scrap", 0))
+		s8._kia()
+		var dead: Array = s8.chronicle.filter(func(e): return str(e.get("k", "")) == "run" and str(e.get("outcome", "")) == "Dead")
+		var de: Dictionary = dead.back() if not dead.is_empty() else {}
+		match case:
+			"no_gear":
+				_check(s8.held_of("glass") == gl8 + 3 and s8.scrap == sc8 and not s8.stash.any(func(x): return Items.is_material(x)), "with no gear the dog didn't fetch the glass, or the scrap came too, or it sat in the stash: glass %d from %d, scrap %d from %d" % [s8.held_of("glass"), gl8, s8.scrap, sc8])
+				_check(s8.last_report.get("materials", {}) == {"glass": 3} and de.get("materials", {}) == {"glass": 3}, "the death's report or Dead line doesn't say the glass came home: %s / %s" % [str(s8.last_report.get("materials")), str(de.get("materials"))])
+			"gear":
+				_check(s8.stash.has(cheap) and s8.held_of("glass") == gl8 and s8.scrap == sc8, "the dog took a stack over the gear: the helmet home %s, glass %d from %d" % [str(s8.stash.has(cheap)), s8.held_of("glass"), gl8])
+			"desk":
+				_check(s8.scrap == sc8 + 30 and int(s8.last_report.get("scrap", -1)) == 30 and int(de.get("scrap", -1)) == 30 and int(s8.came_back.get("scrap", 0)) == cb8 + 30 and not s8.stash.any(func(x): return Items.is_material(x)),
+					"the Insurance desk's scrap isn't counted in and said: scrap %d from %d, report %s, Dead line %s, card %d from %d" % [s8.scrap, sc8, str(s8.last_report.get("scrap")), str(de.get("scrap")), int(s8.came_back.get("scrap", 0)), cb8])
+	# the Lorry's Load (the Cargo frame): the cells scrap fills are filled - an empty pack pays the notes, six stacks don't
+	var lorry_gain: Array = []
+	for n_st in [0, 6]:
+		var s9 = _haul_camp(true)
+		if s9 == null:
+			continue
+		s9.equipped["Backpack"] = Items.roll_unique(s9._unique_named("The Lorry's Load"), s9.rng)
+		var m9: Dictionary = s9.mission
+		m9["found"] = []
+		m9["notes"] = 0
+		for k in range(n_st):
+			s9._haul_find(m9, "scrap", Data.SCRAP_STACK)
+		var nt9: int = s9.notes
+		_check(s9.has_rule("lorrys_load") and _haul_in_pack(m9, "scrap") == n_st * Data.SCRAP_STACK, "the fixture: the Lorry's Load not worn, or %d scrap packed" % _haul_in_pack(m9, "scrap"))
+		s9.extract_now()
+		lorry_gain.append([s9.notes - nt9, int(m9["t"]["depth"])])
+	_check(lorry_gain.size() == 2 and int(lorry_gain[0][0]) - int(lorry_gain[1][0]) == 6 * int(lorry_gain[0][1]), "the Lorry's Load paid the cells scrap filled as empty: %s" % str(lorry_gain))
+	# the dog with no wearable kit in the pack: the dearest of the rest by sale - Copper cable ×10 over a box of Nails
+	var s15 = _haul_camp(true)
+	if s15 != null:
+		var m15: Dictionary = s15.mission
+		m15["found"] = []
+		var nails: Dictionary = s15._plain(Data.AMMO, "Nails")
+		s15._pack_put(m15, nails, s15.pack_spot(m15, nails))
+		s15._haul_find(m15, "copper_wire", 10)
+		s15._yard_set = {"fetch": true}
+		s15._yard_dirty = false
+		var cc15: int = s15.held_of("copper_wire")
+		_check(s15.sell_price(Items.haul("copper_wire", 10)) > s15.sell_price(nails), "the fixture: the cable isn't dearer than the Nails")
+		s15._kia()
+		_check(s15.held_of("copper_wire") == cc15 + 10 and not s15.stash.has(nails), "with no kit the dog took the Nails over Copper cable ×10: cable %d from %d" % [s15.held_of("copper_wire"), cc15])
+	# a kept find's swap gives up a stack before any gear, whatever their worth (the review)
+	var s10 = _haul_camp(true)
+	if s10 != null:
+		var m10: Dictionary = s10.mission
+		m10["found"] = []
+		s10.loot_by_hand = false
+		_haul_fill(s10, m10, func(): return s10._plain(Data.MEDICAL, "Painkillers"))
+		var pk10: Dictionary = m10["found"][0]
+		m10["found"].erase(pk10)
+		var gl10: Dictionary = Items.haul("glass", 3)
+		s10._pack_put(m10, gl10, [int(pk10["pos"][0]), int(pk10["pos"][1]), false])
+		s10.equipped["Charm"] = null
+		var charm: Dictionary = s10._plain("Charm", str(Data.BASES["Charm"][0]["name"]))
+		var gear10: int = m10["found"].filter(func(x): return not Items.is_material(x)).size()
+		_check(s10.is_upgrade(charm) and Items.size(charm) == 1 and int(gl10["value"]) > int(m10["found"][0]["value"]), "the fixture: the charm's no one-cell upgrade, or the glass isn't dearer than the meds")
+		s10._place_find(m10, charm)
+		_check(m10["found"].has(charm) and not m10["found"].has(gl10) and m10["found"].filter(func(x): return not Items.is_material(x) and x != charm).size() == gear10, "the charm's swap gave up gear before the glass: glass kept %s" % str(m10["found"].has(gl10)))
+	# the bot (the pack as the sim fills it, loot not by hand): a pack of scrap keeps it for a find that's no upgrade, gives
+	# up the least worth for an upgrade bigger than a cell, and leaves full rather than stall
+	var s6 = _haul_camp(true)
+	if s6 != null:
+		var m6: Dictionary = s6.mission
+		m6["found"] = []
+		s6.loot_by_hand = false
+		var base_h: String = str(Data.BASES["Helmet"][0]["name"])
+		s6.equipped["Helmet"] = s6._plain("Helmet", base_h)
+		_haul_fill(s6, m6, func(): return Items.haul("scrap", Data.SCRAP_STACK))
+		var full_n: int = m6["found"].size()
+		var junk: Dictionary = s6._plain("Helmet", base_h)
+		_check(not s6.is_upgrade(junk) and full_n >= 4, "the fixture: the same helmet as worn reads an upgrade, or the pack holds %d" % full_n)
+		s6._place_find(m6, junk)
+		_check(m6["found"].size() == full_n and not m6["found"].has(junk), "a find that's no upgrade pushed scrap out of a full pack")
+		s6.equipped["Helmet"] = null
+		var up: Dictionary = s6._plain("Helmet", base_h)
+		_check(s6.is_upgrade(up) and Items.size(up) > 1, "the fixture: a helmet over none isn't an upgrade, or it's one cell")
+		var left6: int = int(m6["left"])
+		s6._place_find(m6, up)
+		var scrap_n: int = m6["found"].filter(func(x): return Items.is_scrap(x)).size()
+		_check(m6["found"].has(up) and up.has("pos") and scrap_n == full_n - Items.size(up) and int(m6["left"]) == left6 + Items.size(up), "the upgrade didn't take the room of the scrap it needed: in %s, %d stacks of %d left" % [str(m6["found"].has(up)), scrap_n, full_n])
+		# a handful of scrap on a full pack of gear alone (no stack to give up first), loot not by hand: passed over, the pack
+		# as it was (the re-review: a pack already holding scrap swaps scrap for scrap, and can't show this)
+		var s14 = _haul_camp(true)
+		if s14 != null:
+			var m14: Dictionary = s14.mission
+			m14["found"] = []
+			s14.loot_by_hand = false
+			s14.equipped["Helmet"] = s14._plain("Helmet", base_h)     # the pack's helmets no upgrade
+			_haul_fill(s14, m14, func(): return s14._plain("Helmet", base_h))
+			_haul_fill(s14, m14, func(): return s14._plain(Data.MEDICAL, "Painkillers"))
+			var was14: Array = m14["found"].map(func(x): return [int(x["id"]), str(x["pos"])])
+			var left14: int = int(m14["left"])
+			_check(s14.pack_used(m14) == s14.capacity() and not m14["found"].any(func(x): return Items.is_material(x) or s14.is_upgrade(x)), "the fixture: the pack of gear holds %d of %d, or an upgrade or a stack" % [s14.pack_used(m14), s14.capacity()])
+			s14._haul_find(m14, "scrap", 8)
+			_check(m14["found"].map(func(x): return [int(x["id"]), str(x["pos"])]) == was14 and int(m14["left"]) == left14 + 1, "a handful of scrap changed a full pack of gear: left %d from %d, the pack %s" % [int(m14["left"]), left14, "the same" if m14["found"].map(func(x): return [int(x["id"]), str(x["pos"])]) == was14 else "changed"])
+		# a handful of scrap on a full pack of gear and full stacks, loot not by hand: passed over, never swapped in for the gear
+		var s11 = _haul_camp(true)
+		if s11 != null:
+			var m11: Dictionary = s11.mission
+			m11["found"] = []
+			s11.loot_by_hand = false
+			s11.equipped["Helmet"] = s11._plain("Helmet", base_h)     # the pack's helmets no upgrade: nothing keeps them but the rule
+			for g in range(2):
+				var hg11: Dictionary = s11._plain("Helmet", base_h)
+				var sp11: Array = s11.pack_spot(m11, hg11)
+				if not sp11.is_empty():
+					s11._pack_put(m11, hg11, sp11)
+			_haul_fill(s11, m11, func(): return Items.haul("scrap", Data.SCRAP_STACK))
+			var gear11: Array = m11["found"].filter(func(x): return not Items.is_material(x))
+			var left11: int = int(m11["left"])
+			s11._haul_find(m11, "scrap", 10)
+			_check(gear11.size() == 2 and gear11.all(func(x): return m11["found"].has(x)) and int(m11["left"]) == left11 + 1, "a handful of scrap on a full pack pushed gear out: %d of %d pieces kept, left %d from %d" % [gear11.filter(func(x): return m11["found"].has(x)).size(), gear11.size(), int(m11["left"]), left11])
+		# the bot's own run loop on a site that never runs dry (no crates: every search a find, scrap one in three), the pack
+		# two helmets and scrap but one cell: it ends on the full pack within the time (scrap's cells count as filled, or
+		# it would stay out on a pack of scrap), and no scrap ever lands where gear just was
+		var s7 = _haul_camp(true)
+		if s7 != null:
+			var m7: Dictionary = s7.mission
+			m7["found"] = []
+			m7["clock"] = 1e6
+			s7.loot_by_hand = false
+			s7.equipped["Helmet"] = s7._plain("Helmet", base_h)
+			for g in range(2):
+				var hg: Dictionary = s7._plain("Helmet", base_h)
+				var sp: Array = s7.pack_spot(m7, hg)
+				if not sp.is_empty():
+					s7._pack_put(m7, hg, sp)
+			_haul_fill(s7, m7, func(): return Items.haul("scrap", Data.SCRAP_STACK - 5))
+			var last7: Array = m7["found"].filter(func(x): return Items.is_scrap(x))
+			if not last7.is_empty():
+				m7["found"].erase(last7.back())       # one cell left for the next find
+			_check(s7.pack_used(m7) == s7.capacity() - 1 and m7["found"].filter(func(x): return not Items.is_material(x)).size() == 2, "the fixture: the bot's pack holds %d of %d" % [s7.pack_used(m7), s7.capacity()])
+			var bt = Bot.new()
+			var sc7: int = s7.scrap
+			var bad := ""
+			var secs := 0
+			while s7.on_mission() and secs < HAUL_BOT_S:
+				var gear_at := {}
+				var hauls0: Array = []
+				for f in m7["found"]:
+					if Items.is_material(f):
+						hauls0.append(int(f["id"]))
+					elif f.has("pos"):
+						gear_at[int(f["id"])] = _haul_cells(s7, f)
+				s7.hp = s7.max_hp()
+				s7.advance(1.0)
+				secs += 1
+				if not s7.on_mission():
+					break
+				var ids: Array = m7["found"].map(func(x): return int(x["id"]))
+				for f in m7["found"]:
+					if Items.is_material(f) and not (int(f["id"]) in hauls0) and f.has("pos"):
+						for gid in gear_at:
+							if not (gid in ids) and _haul_cells(s7, f).any(func(c): return c in gear_at[gid]):
+								bad = "%s in gear %d's place at %d s" % [str(f["base"]), gid, secs]
+				if bt.should_leave(s7) and not s7.mission.get("way_out", false):
+					s7.get_out()
+			var lr7: Dictionary = s7.last_report if s7.last_report is Dictionary and not s7.on_mission() else {}
+			_check(not s7.on_mission() and secs < HAUL_BOT_S and not bool(lr7.get("timed_out", false)) and s7.scrap > sc7, "the bot's loop on a site of scrap: still out %s after %d s, out of time %s, scrap %d from %d" % [str(s7.on_mission()), secs, str(lr7.get("timed_out", false)), s7.scrap, sc7])
+			_check(bad == "", "scrap swapped in for gear on the bot's run: %s" % bad)
+	# Copper cable (1 Nov, Matt): the material off the socketable's name - its own name and picture's file, the socketable
+	# keeps Copper wire, no material shares a name with any other thing; the key and the costs stay copper_wire
+	var names_other: Array = []
+	for sl in Data.BASES:
+		if sl != Data.MATERIAL:
+			names_other.append_array(Data.BASES[sl].map(func(b): return str(b["name"])))
+	names_other.append_array(Data.ATTACHMENTS.map(func(b): return str(b["name"])))
+	var clash: Array = Data.BASES[Data.MATERIAL].map(func(b): return str(b["name"])).filter(func(nm): return nm in names_other)
+	var cc: Dictionary = Items.haul("copper_wire", 1)
+	_check(clash.is_empty() and str(cc["base"]) == "Copper cable" and Items.slug(Items.art_name(str(cc["base"]))) == "copper_cable" and Sim.thing_name("copper_wire") == "Copper cable" and Items.base_named(Data.ATTACHMENT, "Copper wire").get("mount", "") == "socket" and Words.item_words("Copper wire") == Words.ITEMS["Copper wire"] and Words.material_words("Copper cable") != "",
+		"the material's rename: clashes %s, base '%s', slug '%s', shown '%s'" % [str(clash), str(cc["base"]), Items.slug(str(cc["base"])), Sim.thing_name("copper_wire")])
+	# a save from before it, a run out with a stack of "Copper wire" in the pack and on the floor, loads as Copper cable
+	var s12 = _haul_camp(true)
+	if s12 != null:
+		var m12: Dictionary = s12.mission
+		m12["found"] = []
+		s12._haul_find(m12, "copper_wire", 3)
+		m12["floor"] = [Items.haul("copper_wire", 2)]
+		var d12: Dictionary = JSON.parse_string(JSON.stringify(s12.to_dict()))
+		for it in d12["mission"]["found"] + d12["mission"]["floor"]:
+			if str(it.get("slot", "")) == Data.MATERIAL:
+				it["base"] = "Copper wire"            # as a SAVE_VERSION 17 save wrote it
+		var s13 = Sim.new()
+		s13.load_dict(d12)
+		var got13: Array = s13.mission["found"] + s13.mission["floor"] if s13.mission != null else []
+		var mats13: Array = got13.filter(func(x): return str(x.get("slot", "")) == Data.MATERIAL)
+		_check(mats13.size() == 2 and mats13.all(func(x): return str(x["base"]) == "Copper cable" and Items.material_key(x) == "copper_wire") and _haul_in_pack(s13.mission, "copper_wire") == 3, "an old save's Copper wire stacks didn't load as Copper cable: %s" % str(mats13.map(func(x): return [x["base"], Items.material_key(x)])))
+	# the card and the cell on the run screen: the name, the chip, the count, its own line; no price; fitted
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.mission == null:
+		_check(false, "the fixture: no run on the main camp for the haul's card")
+		sim.load_dict(saved)
+		return
+	var mm: Dictionary = sim.mission
+	mm["found"] = []
+	sim._haul_find(mm, "scrap", 50)
+	sim._haul_find(mm, "copper_wire", 4)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var pk = main._run._pick
+	for pair in [["scrap", "Scrap", "", "×50", "for the Workshop"], ["copper_wire", "Copper cable", "Material", "×4", "for the rebuild"]]:
+		var it: Dictionary = mm["found"].filter(func(x): return Items.material_key(x) == pair[0])[0]
+		var k: int = main._run._inv.cell_of(int(it["id"]))
+		main._run._inv._pick(k)
+		main.refresh()
+		var h = pk._heads[0]
+		var chips: Array = range(h.CHIPS).filter(func(j): return h._chips[j].visible).map(func(j): return str(h._chip_labels[j].text))
+		var chip_ok: bool = chips.has(pair[2]) if pair[2] != "" else not (chips.has("Scrap") or chips.has("Material"))     # scrap's title says it: no chip (the review)
+		_check(h._title.text == pair[1] and chip_ok and h._figure.text == pair[3] and h._unit.text == pair[4], "the %s card reads '%s' %s '%s %s'" % [pair[0], h._title.text, str(chips), h._figure.text, h._unit.text])
+		_check(pk._words.visible and pk._words.text != "" and Words.material_words(str(pair[1])).begins_with(pk._words.text) and pk._words.text != Words.ITEMS.get(pair[1], ""), "the %s card's line isn't its own: '%s'" % [pair[0], pk._words.text])
+		_check(not pk._tags[0].visible, "the %s card shows a price: they're never sold" % pair[0])
+		var cell = main._run._inv._cells[k]
+		var shows: bool = (cell._corner.visible and cell._corner.text == pair[3]) or cell._lines.any(func(l): return l.visible and str(l.text).contains(pair[3]))
+		_check(k >= 0 and shows, "the %s cell doesn't show its count %s" % [pair[0], pair[3]])
+		_check_fit(main, "Run (a stack of %s picked)" % pair[0])
+	sim.load_dict(saved)
+	main.refresh()
+	print("materials in the pack ok: a search's scrap, the stacks, a run's and a head's material, the floor, home, a death, a bail and the clock, the bot, the card and the cell")
+
+
+
+## The six's Gang in tile with the next gang due after the clock (1 Nov: "too late" needed 79 px of the tile's 73 - the
+## smoke's own run 5 reached it once the pack's scrap moved the bot's runs): the form it shows fits.
+func _gang_late_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	if sim.mission == null:
+		_check(false, "the fixture: no run for the Gang in tile")
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["clock"] = 1.0                          # the next gang well after it
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var run = main._run
+	var gl: Label = run._six[0]["value"]
+	var nx: float = sim.patrol_s(m["t"], m["patrols"] == 0) - float(m["patrol_timer"])
+	_check(run.gang_after_clock(m, nx) and not sim.gang_held(m) and str(run._six[0]["key"].text) == "Gang in" and gl.text in Words.RUN_GANG_LATE, "the fixture: the tile reads '%s' '%s', not a late gang" % [run._six[0]["key"].text, gl.text])
+	_check(UI.text_width(gl, gl.text) <= gl.size.x + 0.5, "the Gang in tile's late gang doesn't fit: '%s' (%.0f in %.0f px)" % [gl.text, UI.text_width(gl, gl.text), gl.size.x])
+	_check_fit(main, "Run (the next gang after the clock)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the late gang ok: the Gang in tile fits its form")
+
+## A camp with a run on in the Ransacked Streets (site 3, its material copper cable, keyed copper_wire): cleared and searching, or the fight still on.
+func _haul_camp(cleared: bool):
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	_open_camp(s)
+	for i in range(Data.TIERS.size()):
+		s.best_depth[i] = maxi(1, int(s.best_depth[i]))     # as an area alone's camp (_run_only): every site open
+	s.xp = maxf(s.xp, Data.xp_for_level(15))
+	s.hp = s.max_hp()
+	s.deploy(3)
+	if not s.on_mission():
+		return null
+	var m: Dictionary = s.mission
+	if cleared:
+		m["remaining"] = 0
+		m["cleared"] = true
+		m["patrol_timer"] = -1e9
+		m["event_at"] = -1.0
+		m["crates_off"] = true
+	else:
+		m["t"]["dps"] = 0.0
+		m["clock"] = 1e6
+	return s
+
+
+const HAUL_BOT_S := 120                  # the bot's loop on a pack of scrap ends inside this (it takes about 20 s: the next find fills the last cell)
+
+
+## The pack cells a placed piece covers, as y * w + x.
+func _haul_cells(s, it: Dictionary) -> Array:
+	var out: Array = []
+	var w: int = s.pack_w()
+	var fp: Vector2i = s.pack_fp(it)
+	for yy in range(fp.y):
+		for xx in range(fp.x):
+			out.append((int(it["pos"][1]) + yy) * w + int(it["pos"][0]) + xx)
+	return out
+
+
+## How much of a scrap or material key the run's pack holds.
+func _haul_in_pack(m: Dictionary, key: String) -> int:
+	var n := 0
+	for it in m.get("found", []):
+		if Items.material_key(it) == key:
+			n += Items.stack_size(it)
+	return n
+
+
+## The pack filled, every place, with what `make` makes.
+func _haul_fill(s, m: Dictionary, make: Callable) -> void:
+	var guard := 0
+	while guard < 400:
+		guard += 1
+		var it: Dictionary = make.call()
+		var spot: Array = s.pack_spot(m, it)
+		if spot.is_empty():
+			return
+		s._pack_put(m, it, spot)
 
 
 ## A fire build's verdict (18 Oct, Matt's two machine pistols: a Common with +5% damage read as the Upgrade over an Epic

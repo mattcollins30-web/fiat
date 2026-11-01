@@ -133,8 +133,8 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 	_kickers[0].visible = true
 	_kickers[0].text = (kicker + " · " + _cells(it)).to_upper()
 	_tag(0, Fmt.money(sim.sell_price(it)))
-	if Items.is_paper(it):
-		_tags[0].visible = false              # a paper's worth adds nothing (16 Oct, Matt): the kicker takes the width
+	if Items.is_paper(it) or Items.is_material(it):
+		_tags[0].visible = false              # a paper's worth adds nothing (16 Oct, Matt): the kicker takes the width; scrap and materials are never sold (1 Nov)
 		_kickers[0].size.x = col_w
 	_heads[0].visible = true
 	_heads[0].show_item(it, sim, tail, extra, false)
@@ -142,6 +142,8 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 		_flavour_text = Words.UNIQUES.get(it["unique"], Words.item_words(it["base"]))
 	elif Items.is_paper(it):
 		_flavour_text = Words.paper_words(it["base"], sim.room_open("radio"))     # the code encrypted till the Radio (15 Oct)
+	elif Items.is_material(it):
+		_flavour_text = Words.material_words(str(it["base"]))     # scrap or a material's own line (1 Nov)
 	else:
 		_flavour_text = Words.item_words(it["base"])
 	_lay_flavour()

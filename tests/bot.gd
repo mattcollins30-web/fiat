@@ -428,6 +428,8 @@ func step(sim) -> int:
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
 		sim.advance(1.0)
+		if sim.on_mission() and sim.event_asking():
+			sim.event_by_orders()             # a run event (1 Nov): the bot goes by the standing orders, as a repeat run does
 		if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
 			sim.use_med(sim.first_med()["id"])
 		if sim.on_mission() and should_leave(sim) and not sim.mission.get("way_out", false):

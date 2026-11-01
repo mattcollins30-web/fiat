@@ -12,7 +12,7 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Gloves": "GLV", "Rig": "RIG", "Backpack": "PCK",
-	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP", "Magazine": "MAG"}
+	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP", "Magazine": "MAG", "Material": "MAT"}
 const INSET := 3                   # the picture sits inside the border
 const NAME_MIN := 9                # the smallest type a name steps down to in a cell of two or more across (29 Oct)
 ## The tone made to read at a glance (17 Oct, Matt: the item-colours canvas): a wash of the tone up from the cell's
@@ -393,7 +393,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		# does: 64 a cell, the cell 64 plus the gaps); only a bigger one is scaled
 		var fits: bool = tex.get_width() <= _art.size.x and tex.get_height() <= _art.size.y
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if Items.is_ammo(it) or Items.is_mag(it) or ((Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1):
+		if Items.is_ammo(it) or Items.is_mag(it) or ((Items.is_socketable(it) or Items.is_supplies(it) or Items.is_material(it)) and int(it.get("count", 1)) > 1):
 			_corner.text = ("%d" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else ("×%d" % int(it["count"]))
 			var small: bool = size.y < 48.0               # a shrunk pouch (a full rig, 44 px and under): the count smaller, "1.2k" past 999
 			var tiny: bool = size.x < 34.0                # the smallest pouches: 9 px, whole thousands
@@ -437,7 +437,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	var words: Array = []
 	var cure: String = Items.cure_of(it)     # a cure's one cell names its element, in its tone (28 Oct, the review: "MED Stops")
 	if f.x == 1 and f.y == 1:
-		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it)) and int(it.get("count", 1)) > 1 else (cure.capitalize() if cure != "" else h[0]))]
+		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else (("×%d" % int(it["count"])) if (Items.is_socketable(it) or Items.is_supplies(it) or Items.is_material(it)) and int(it.get("count", 1)) > 1 else (cure.capitalize() if cure != "" else h[0]))]
 	else:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if (Items.is_ammo(it) or Items.is_mag(it)) else "%s %s" % [h[0], h[1]]]
 		if big:

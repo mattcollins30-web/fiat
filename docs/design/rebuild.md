@@ -37,14 +37,20 @@ Two different jobs, two different screens, never the same word.
 
 ## 3. Materials
 
-- **One tab of their own** beside the stash, as counts, not cells. They never take stash room and are never sold. They
-  can't be ditched by accident, and the pack doesn't carry them: they come home with the run whatever happens, death
-  included (they are the one thing a death never costs).
+- **One tab of their own** beside the stash, as counts, not cells. They never take stash room and are never sold.
+- **They ride in the pack** (1 Nov, the designer's call, build 39-M): found on the run as stacks (a material 10 to a
+  cell, scrap 50), they compete with gear for pack room. A run home (the extract) counts them into the town's materials
+  and the items go. A bail or the clock running out loses them with the pack; a death too - only the dog's fetch (the
+  Kennel) or the Fence's Insurance desk brings any home. The dog takes the dearest wearable kit first (guns, armour,
+  the rig, the pack, a charm); with none in the pack, the dearest of the rest by sale worth - rounds, meds, magazines,
+  scrap and material stacks alike.
+- **Copper cable** (1 Nov, Matt): the Estate's first material was "Copper wire", a socketable's name; it reads Copper
+  cable on screen and its picture is art/items/copper_cable.png. Its key stays `copper_wire` (costs, saves, odds).
 - **Each area drops its own**, two per area from the Estate on, one per site pair, so a player knows where to farm:
 
 | Area | Material | From | Fiction |
 |---|---|---|---|
-| The Estate | Copper wire | Ransacked Streets, the Parade | Stripped out of every house, coiled in a bin bag |
+| The Estate | Copper cable | Ransacked Streets, the Parade | Stripped out of every house, coiled in a bin bag |
 | The Estate | Paving | the Retail Park | Stacked slabs from the car park works that stopped |
 | The Town | Glass | the Pleasure Park, the Shopping Centre | Whole panes, which nobody has any more |
 | The Town | Ledgers | the Bank | The records of who owned what |
@@ -53,7 +59,7 @@ Two different jobs, two different screens, never the same word.
 | Signals, any area | Fuses | any signal | Rarer; every rebuild of rank 2 and up wants some |
 
   The Outskirts drop none: it's the tutorial, and the first material arriving on the Estate is a small moment of its
-  own ("Copper wire. Kev says someone used to want that.").
+  own ("Copper cable. Kev says someone used to want that.").
 
 - **The drop**: a run's chance at its area's material, higher on a signal and higher with its level; a head's kill a
   guaranteed handful. Placeholder: 8% a run on a campaign site, 20% on a signal plus 1% a level past 10, cap 50%.
@@ -68,11 +74,11 @@ is where the open end lives.
 
 | Rebuild | Costs (rank 1) | Does | Opens |
 |---|---|---|---|
-| The substation | Copper wire 20, Cable drums 10 | Night runs lose their slower feet (the lights are on) | The Grid: the first true pinnacle |
+| The substation | Copper cable 20, Cable drums 10 | Night runs lose their slower feet (the lights are on) | The Grid: the first true pinnacle |
 | The pumping station | Paving 20, Glass 10 | +HP regen at the Pitch, and the Clinic's prices down | — |
 | The bus depot | Paving 15, Army kit 10 | Runs set off quicker; the auto-run's gap halves | — |
 | The library | Glass 15, Ledgers 15 | Papers drop more; Kev's lines come back as readable pages | The Archive: the second true pinnacle |
-| The market hall | Glass 20, Copper wire 20 | The Fence's shelf grows and his prices fall | — |
+| The market hall | Glass 20, Copper cable 20 | The Fence's shelf grows and his prices fall | — |
 | The mint | Ledgers 30, Army kit 20, Fuses 5, the Grid's key | The town's worth starts paying: tins a run by worth | The Mint: the third true pinnacle |
 
 Six to start; more places are content we add later without touching the system (a new row and its art). A place's
@@ -127,7 +133,8 @@ A mockup of the Radio's town view and the fifth Map tab goes on the canvas befor
 1. The screen: a third Radio view, "The town".
 2. The materials: counts in the town view and two lines on the Pitch's purse (Materials, The town's worth); no stash filter.
 3. Six places, as above.
-4. A death never costs materials.
+4. ~~A death never costs materials.~~ Changed 1 Nov (materials in the pack): a death costs the pack's materials, bar
+   what the dog's fetch or the Insurance desk brings home.
 5. The pinnacles on the Map's fifth tab, "The order".
 6. No new art in the first slice: the City, Town and Bank plates stand in until it reads (test art first).
 

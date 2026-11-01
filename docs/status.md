@@ -532,9 +532,10 @@ items when you can." Everything below is in, with its checks, and the balance pa
   open, each wanting so many of a slot at a rarity, paying cash, notes or (one in five, three rares) a
   loose unique; the cheapest that fit go; a handed-in one is replaced; turn one down for nothing. The
   mate sells a loose unique for notes (150 × its base's tier), a different one every five runs.
-- **Events** (`Data.EVENTS`): on three runs in ten, some way in: a convoy (a bigger gang, carrying
-  notes), someone trapped (freed, `promised` to the yard), a locked cache (a bench at level 2 opens it:
-  a find a tier up with +0.5 rarity; else it stays shut).
+- **Run events** (1 Nov, docs/design/run_events.md; `Data.EVENT_FAMILIES`): on three runs in ten, in the lull after
+  the first search: someone in need, a threat passing (dogs), a locked thing, the Scrap man - in the scene, a choice in
+  the panel (the clock stopped but for a threat), standing orders for runs nobody watches. The convoy, trapped and cache
+  events folded in.
 - **Pinnacles and the convoy** (`Data.PINNACLE_*`, `CONVOY_*`): from depth 10 a crew's head comes at
   full strength (×2.5 HP, ×1.6 fire, twice the price) with their charm in the pool - the van keys
   (you drive: pace +25%), the manager's pen (notes come in twos), the quartermaster's ledger (a kill's
@@ -6117,6 +6118,24 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 1 Nov: materials in the pack, run events (0.10.3, SAVE_VERSION 18)
+
+Matt: "move all materials into the inventory during fights ... finding clinical supplies and having to make a decision
+over bringing them or gear is a real choice"; then the runs' events: "art ... a pause in the gunplay ... choices",
+recurring traders, "more than 3 ... procedural", "the events should happen in the fight window".
+- Materials in the pack: scrap (stacks of 50) and the rebuild's materials (stacks of 10) are pack finds; tins and notes
+  stay counters; no stash cells. A run home counts them in; a bail, a time-out or a death loses them with the pack
+  (Matt: lost, like other finds); the dog's fetch and the Insurance desk can bring some home (the dog takes worn kit
+  first, then the dearest of the rest). The material "Copper wire" is now "Copper cable" (the socketable keeps its
+  name); its picture: tools/make_copper_cable_manifest.py (not run). The Gang-in tile's "late" form (79 px in 73) went
+  in with it (Matt: keep).
+- Run events (docs/design/run_events.md, the canvas approved): four families as a slice (Someone in need, A locked
+  thing, A threat passing - the dogs, a fight with no pause - and A trader, the Scrap man, paid in pack scrap,
+  run-only buffs, standing at 3/10/25 trades); in the lull after a site's first search; the clock stops for a choice
+  with its odds on the face; standing orders for repeat runs and the bot, player-like by default (Matt). Test art in
+  the scene (placeholders); the art manifest after Matt plays it. The dogs nearly always lose as tuned: the pass.
+- Process: builder, per-diff review x2, the three-stage review, two language passes, two fix rounds, the smoke green.
 
 ## 31 Oct, the night round: everything open, Matt's calls (0.10.2, SAVE_VERSION 16)
 

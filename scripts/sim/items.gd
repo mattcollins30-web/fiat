@@ -85,7 +85,7 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
 		r = mini(r, Data.PAPER_RARITY_MAX) if slot == Data.PAPER else 0     # a box is a box; a bottle a bottle; a grenade a grenade; a paper rare or plain (15 Oct: a rare one rolls its signal deeper)
 		affixes = []
-	if slot == Data.SUPPLIES or slot == Data.MAGAZINE:
+	if slot == Data.SUPPLIES or slot == Data.MAGAZINE or slot == Data.MATERIAL:
 		r = 0                                 # a magazine is a magazine (30 Oct): its kind is its figure
 		affixes = []
 	if slot == Data.MEDICAL and base.has("cure"):
@@ -102,7 +102,7 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 		it["mount"] = base["mount"]
 		if base["mount"] == "socket":
 			it["count"] = 1
-	if slot == Data.SUPPLIES:
+	if slot == Data.SUPPLIES or slot == Data.MATERIAL:
 		it["count"] = 1
 	if slot == Data.MAGAZINE:
 		it["rounds"] = 0                      # empty: filled at the gate from the stash's boxes
@@ -1151,6 +1151,33 @@ static func is_supplies(it: Dictionary) -> bool:
 	return it.get("slot", "") == Data.SUPPLIES
 
 
+## Scrap or a rebuild material in the pack (1 Nov): a stack that counts into the Pitch's scrap or materials at home.
+static func is_material(it: Dictionary) -> bool:
+	return it.get("slot", "") == Data.MATERIAL
+
+
+static func is_scrap(it: Dictionary) -> bool:
+	return is_material(it) and str(it.get("base", "")) == "Scrap"
+
+
+## The counter a scrap or material stack goes into at home: "scrap" or a Data.MATERIALS key; "" for anything else.
+static func material_key(it: Dictionary) -> String:
+	return str(base_of(it).get("key", "")) if is_material(it) else ""
+
+
+## A stack of scrap or a material, `n` in it, by its counter's key (1 Nov): plain, no dice drawn (a find's own rolls
+## stay as they were). {} for a key that has none.
+static func haul(key: String, n: int) -> Dictionary:
+	for b in Data.BASES[Data.MATERIAL]:
+		if str(b["key"]) == key:
+			var it := {"id": _next_id, "slot": Data.MATERIAL, "base": b["name"], "rarity": 0, "affixes": [], "attachments": {},
+				"tier": int(b["tier"]), "ilvl": int(b["tier"]), "value": int(b["value"]), "count": 1}
+			_next_id += 1
+			set_stack(it, n)
+			return it
+	return {}
+
+
 ## What goes in the rig's pouches: meds, magazines, grenades (30 Oct: rounds live in boxes, never the rig).
 static func rig_item(it: Dictionary) -> bool:
 	return is_medical(it) or is_mag(it) or is_grenade(it)
@@ -1319,6 +1346,8 @@ static func kind_words(it: Dictionary) -> String:
 		return "Cure" if is_cure(it) else "Med"
 	if slot == Data.SUPPLIES:
 		return "Supplies"
+	if slot == Data.MATERIAL:
+		return "Scrap" if is_scrap(it) else "Material"
 	if slot == Data.PAPER:
 		return "Paper"
 	if is_melee(it):
@@ -1384,6 +1413,8 @@ static func headline(it: Dictionary, gun = null) -> Array:
 		return ["Stops", str(b["cure"])]              # a cure (28 Oct): what it stops
 	if it["slot"] == Data.SUPPLIES:
 		return ["×%d" % int(it.get("count", 1)), "for the Clinic"]
+	if it["slot"] == Data.MATERIAL:
+		return ["×%d" % int(it.get("count", 1)), "for the Workshop" if is_scrap(it) else "for the rebuild"]     # scrap the Bench's, a material the rebuild's (1 Nov)
 	if it["slot"] == Data.MAGAZINE:
 		var cap: int = mag_cap(it, gun)          # against the gun it feeds, as the card reads it (the fix round); never over it
 		return ["%d" % mini(int(it.get("rounds", 0)), cap), "of %d rounds" % cap]
@@ -1471,19 +1502,21 @@ static func stack_cap(it: Dictionary) -> int:
 		return Data.SOCKET_STACK
 	if is_supplies(it):
 		return Data.SUPPLY_STACK
+	if is_material(it):
+		return Data.SCRAP_STACK if is_scrap(it) else Data.MATERIAL_STACK     # 1 Nov
 	return 1
 
 
 static func stack_size(it: Dictionary) -> int:
 	if is_ammo(it):
 		return int(it.get("rounds", 0))
-	if is_socketable(it) or is_supplies(it):
+	if is_socketable(it) or is_supplies(it) or is_material(it):
 		return int(it.get("count", 1))
 	return 1
 
 
 static func stacks(it: Dictionary) -> bool:
-	return is_ammo(it) or is_supplies(it) or (is_socketable(it) and it.get("affixes", []).is_empty())
+	return is_ammo(it) or is_supplies(it) or is_material(it) or (is_socketable(it) and it.get("affixes", []).is_empty())
 
 
 ## Two stacks that can merge: the same base, both plain.
@@ -1497,7 +1530,7 @@ static func set_stack(it: Dictionary, n: int) -> void:
 	if is_ammo(it):
 		it["rounds"] = n
 		it["value"] = int(round(float(b["value"]) * n / float(b["rounds"])))
-	elif is_socketable(it) or is_supplies(it):
+	elif is_socketable(it) or is_supplies(it) or is_material(it):
 		it["count"] = n
 		it["value"] = int(b["value"]) * n
 	elif is_mag(it):

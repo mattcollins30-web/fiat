@@ -122,7 +122,7 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   fix that grows a feature in the designing: the fix goes in, the growth to the backlog.
 - Balance passes are bought time: shorter reads while iterating, the full pass for a final.
 - The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>; the build counts the commits
-  Matt plays within a milestone. 0.10.2 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
+  Matt plays within a milestone. 0.10.3 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
   count. Claude bumps the version in the commit Matt plays and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")

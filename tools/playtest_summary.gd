@@ -263,6 +263,22 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	# the gate, by its words, and what came of it - the bot's PUSH is set from where people actually go
 	var read_runs: Array = runs.filter(func(e): return float(e.get("odds", -1.0)) >= 0.0 and not e.get("away", false))
 	L.append("")
+	# the run events (1 Nov, the fix round): seen on watched runs, and what came of each - the choice split against the bot's
+	var evs := {}
+	for e in runs:
+		if str(e.get("event", "")) != "":
+			var ek: String = "%s: %s" % [str(e["event"]), str(e.get("event_out", ""))]
+			evs[ek] = int(evs.get(ek, 0)) + 1
+	L.append("## Run events (seen on watched runs, and what came of them)")
+	L.append("")
+	if evs.is_empty():
+		L.append("None recorded.")
+	else:
+		var eks: Array = evs.keys()
+		eks.sort()
+		for ek in eks:
+			L.append("- %s: %d" % [ek, int(evs[ek])])
+	L.append("")
 	L.append("## The odds set off at (the Runs card's reading at the gate)")
 	L.append("")
 	if read_runs.is_empty():

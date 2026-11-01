@@ -1419,12 +1419,114 @@ const SET_PIECES := {
 
 ## What happens on a run, once in a while.
 const EVENTS := {
-	"convoy": "A convoy comes through. Lorries, and a crew riding on them. They stop.",
+	"convoy": "A convoy comes through. Lorries, and a crew riding on them. They stop.",     # a signal's convoy now (1 Nov: the run's own folded into A threat passing)
 	"convoy_notes": "They're carrying notes. For now.",
-	"trapped": "Someone under a fallen ceiling, alive. You get them out. They say they'll look you up if you're ever short a runner.",
-	"cache": "A locked cabinet, council green. It gives to a crowbar.",     # not the Bench's tools: it opens with the Workshop shut (13 Oct)
-	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
+
+## Run events in the fight (1 Nov, docs/design/run_events.md): each family's lines a zone (the Outskirts, the Estate, the
+## Town, the City), with slots - {who} {what} {it} {he} {him} {his} {n} - filled from Data.EVENT_POOLS; the panel's
+## options, the faces' costs and odds, the outcomes in the log, the scene's captions, the standing orders. Drafts for
+## the language pass (it reads the pools, not every combination).
+const EV := {
+	# a line is a string, or {"t": its words, "kind": [the site kinds it's for], "night": true (nights only), "door": true
+	# (a locked thing with a door)} - the fix round's language pass: no tills at a council office, no dark by day
+	"need_pin": [
+		["{who} under {what}, alive. {He}'s got a bag on {him}.", "{who} pinned under {what} by the gate, swearing quietly. There's a bag on {his} back."],
+		["{who} under {what} in a stairwell, alive. {He}'s got a bag on {him}.", "{who} stuck under {what}, shouting for anyone. A bag on {his} shoulder."],
+		["{who} under {what}, alive, just. {He}'s got a bag on {him}.", {"t": "{who} trapped under {what} by the tills. A bag strapped to {him}.", "kind": ["retail"]}],
+		["{who} under {what}, alive. {He}'s got a bag on {him}.", "{who} pinned by {what}, breathing hard. There's a bag on {him}."],
+	],
+	"need_hurt": [
+		["{who} sat in the mud with {what}, white as a sheet. A bag beside {him}."],
+		["{who} propped in a doorway with {what}. {He}'s kept hold of {his} bag."],
+		["{who} on the floor with {what}, past shouting. A bag under {his} arm."],
+		["{who} slumped against a wall with {what}. A bag on {his} lap."],
+	],
+	"locked": [
+		["{what}, locked. Someone thought it worth a padlock.", "{what}, chained shut. It rattles when you kick it.", "{what}, its lock rusted but holding."],
+		["{what}, locked. Whoever had the key isn't coming back.", "{what}, shut tight. Nobody's had it open since.", {"t": "{what}, a new padlock on an old door.", "door": true}],
+		["{what}, locked. Somebody meant it to stay that way.", "{what}, shut, the key long gone.", "{what}, its lock still holding. Not for long."],
+		["{what}, locked and stencilled. Property of somebody.", "{what}, shut tight. The seal's never been broken.", "{what}, locked. It's been waiting."],
+	],
+	"dogs": [
+		["A pack off the moor, thin and quick. They've smelt blood.", "Farm dogs gone feral, {n} of them, working the farmyard."],
+		["Dogs off the estate, {n} of them, collars still on. Nobody's fed them in weeks.", "A pack out of the flats' bin store, {n} of them. They don't back off."],
+		["Dogs out of the park, {n} of them, lean and bold. They don't scare.", "A pack through the precinct, {n} of them, noses down."],
+		["Dogs off the motorway verge, {n} of them, big ones. They've stopped being scared of people.", {"t": "A pack out of the dark, {n} of them, quiet as anything.", "night": true}],
+	],
+	"trader": [
+		["The Scrap man, pushing his barrow up the lane like it's market day."],
+		["The Scrap man, his barrow piled high, parked between the bins."],
+		["The Scrap man, his barrow under an awning, out of the weather."],
+		["The Scrap man, his barrow on the hard shoulder, kettle on."],
+	],
+	"trader_says": ["\"Bits and bobs for bits and bobs. This run only, mind.\"", "\"Scrap's scrap. I'll take it off your hands.\"", "\"Don't ask where I got it. This run only, mind.\""],
+	# the panel
+	"free": "Pull %s out", "patch": "Patch %s up", "bag": "Take %s bag", "leave_him": "Leave %s", "force": "Force it", "shoot": "Shoot the lock off", "leave_it": "Leave it",
+	"free_pin": ["%d s · %d%% clean, %d%% %s slips: −%d%% HP", "%d s · %d%% clean · −%d%% HP"],
+	"free_hurt": "%d s · uses %s", "free_no_med": "No meds to spare", "no_time": "Not enough time",
+	"bag_face": "%d s · A find · %s'll remember", "nothing": "Nothing gained, nothing spent",
+	"force_face": "%d s · Next gang %d s sooner", "shoot_face": "%d s · %d rounds", "shoot_no": "No rounds to spare",
+	"need_foot": "Pulled free, %s'll look you up if you're ever short a runner. The chance moves with HP, night and the weather.",
+	"locked_foot": "Forced or shot, it gives up a find a tier above the site's.",
+	"dogs_foot": "A threat is a fight with no pause. Fought off, the next gang comes %d seconds later.",
+	"dogs_key": "Dogs", "dogs_val": "%d", "dogs_val_in": "%d · %d s", "odds_key": "Your odds", "carry_key": "They carry", "carry_none": "Nothing",
+	"get_out": "Get out now", "stand": "Stand and fight",
+	"trader_known": ["Trades: %d of %d · Scrap ×%d", "%d of %d · Scrap ×%d"],
+	"trader_known_top": ["Trades: %d · Scrap ×%d", "%d · Scrap ×%d"],
+	"shelf_plate": "A plate stitched in: +%d%% armour this run", "shelf_mags": "Magazines topped up", "shelf_held": "The next gang %d s later",
+	"shelf_bandage": "A bandage", "mags_none": "Nothing to top up", "shelf_bandage_free": "A bandage on the house", "price": "Scrap %d", "bought": "Bought", "take_it": "Take it",
+	"step_at": "At %d trades: %s", "step_more": "%d more",
+	"step_words": ["a bandage on the house", "33% off everything", "his good plate: +%d%% armour"],
+	"done": "Done: back to it",
+	"stopped": "clock stopped",
+	"waiting": "Waiting", "waiting_toast": "%s · on the Map",
+	# the log: the outcomes
+	"freed": "%s pulled free. %s'll look you up if you're ever short a runner.",
+	"freed_slip": "%s slips as you pull: −%d HP. Freed all the same: %s'll look you up if you're ever short a runner.",
+	"freed_med": "%s patched up with %s. %s'll look you up if you're ever short a runner.",
+	"bagged": "You take the bag. %s watches you go.",
+	"left_him": "You leave %s there.",
+	"forced": "It gives. Loud, though: they'll have heard.",
+	"shot": "%d rounds, and the lock's gone.",
+	"left_it": "You leave it shut.",
+	"dogs_on": "The dogs come on.",
+	"dogs_off": "The dogs are seen off. The next gang comes %d seconds later.",
+	"dogs_out": "Out ahead of the dogs: %d%% odds, under the standing order's %d%%.",
+	"traded": "The Scrap man: %s, for %d scrap.",
+	"traded_free": "The Scrap man: a bandage, on the house.",
+	"trader_gone": "The Scrap man pushes off.",
+	# the scene's captions (test art)
+	"cap_need": "[%s under %s]", "cap_hurt": "[%s, hurt]", "cap_freed": "[freed]", "cap_bag": "[the bag's gone]", "cap_left": "[left there]",
+	"cap_locked": "[%s, shut]", "cap_open": "[open]", "cap_dogs": "[%d dogs]", "cap_trader": "[the Scrap man at his barrow]",
+	"trade_plate": "a plate stitched in", "trade_mags": "magazines topped up", "trade_held": "the next gang %d s later", "trade_bandage": "a bandage",
+}
+
+## The standing orders (1 Nov; the fix round's words): the screen beside the loot rules, a family a row, a drop-down each.
+const ORDERS := {"button": "Standing orders", "title": "Standing orders", "sub": "For repeat runs",
+	"intro": "A repeat run can't stop and ask. What the runner does when one comes up:",
+	"foot": "Anything you haven't set uses these. A watched run always asks.", "close": "Close",
+	"need": {"help_cheap": "Help if it's a med or 70% clean", "leave": "Leave them", "bag": "Take the bag"},
+	"locked": {"force": "Force it", "leave": "Leave it", "shoot": "Shoot the lock off, rounds allowing"},
+	"threat": {"odds_80": "Fight at 80% odds or better", "out": "Get out", "odds_run": "Fight at the site's odds or better", "always": "Always fight"},
+	"trader": {"all": "Buy what you can", "leave": "Walk on", "armour30": "Buy armour with 30 scrap or more"},
+	"default": "Leave it"}
+
+
+## The first letter up, the rest as written (the fix round's language pass: `capitalize()` made "The Beam").
+static func cap1(text: String) -> String:
+	return text.substr(0, 1).to_upper() + text.substr(1) if text != "" else text
+
+
+## The first letter down, the rest as written: a pool's word mid-sentence ("[a farmhand under a fallen beam]").
+static func low1(text: String) -> String:
+	return text.substr(0, 1).to_lower() + text.substr(1) if text != "" else text
+
+
+## A med with its article, or none for a plural base: "a bandage", "painkillers".
+static func a_med(base: String) -> String:
+	var b: String = mid_base(base)
+	return b if b.ends_with("s") else a_thing(base)
 
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
@@ -1584,9 +1686,29 @@ static func paper_words(base: String, radio_open: bool) -> String:
 
 
 
+## Scrap and the rebuild's materials as pack items (1 Nov): a line each on the card, by the stack's base. Their own table:
+## Their own table, so a material's line never reads a socketable's (Copper cable was Copper wire, the socketable's name, till 1 Nov).
+const MATERIAL_WORDS := {
+	"Scrap": "Bent brackets, stripped screws, the hinge off something. It all goes on the bench.",
+	"Copper cable": "Pulled out of a wall and coiled round an elbow. It'll carry a current again.",
+	"Paving": "Slabs off somebody's front path, the moss still in the cracks.",
+	"Glass": "Panes wrapped in an old duvet. Mind your fingers.",
+	"Ledgers": "Who paid and who didn't, in a good clear hand.",
+	"Cable drums": "A wooden reel the size of a table, half the cable still on it.",
+	"Army kit": "Webbing, a folding stove, a crate with a stencil on every side.",
+	"Fuses": "A box of them, sorted by colour. Someone was careful once.",
+}
+
+
+static func material_words(base: String) -> String:
+	return str(MATERIAL_WORDS.get(base, ""))
+
+
 static func item_words(base: String, code := true) -> String:
 	if ITEMS.has(base):
 		return ITEMS[base]
+	if MATERIAL_WORDS.has(base):
+		return MATERIAL_WORDS[base]
 	if SET_PIECES.has(base):
 		return SET_PIECES[base]
 	if base == DEEDS["name"]:
@@ -1672,7 +1794,7 @@ const RUN_HOME_CLEAN := "%s picked clean, nothing more before time's up: home wi
 ## The Mint's card before the Issue (the third review's A1(a)): what the win would turn the camp's money into.
 const MINT_WARN := {"forms": ["Beat him: you come out at ≈ƒ%s", "Comes out ≈ƒ%s", "≈ƒ%s"],
 	"tip": "Beat him and the town goes on his money. What you hold now, tins, notes and kit, comes out at about ƒ%s, plus what the run brings, and your kit sells at ×%.2f of its worth after."}
-const RUN_GANG_LATE := ["after time's up", "too late"]     # a gang due after the clock runs out (the first review's 15)
+const RUN_GANG_LATE := ["after time's up", "too late", "late"]     # a gang due after the clock runs out (the first review's 15); "late" for the six's tile (1 Nov: "too late" needed 79 px of its 73)
 const GREED := {"short": "Greed +%d%%", "tip": "Greed: +%d%% quality and +%d%% loot, from the patrols beaten since the site was cleared. Each one more adds to it."}
 const FENCE_SURE := "Sell %d"     # a rarity row's Sell, pressed once (25 Oct): the second sells; how many it will (the second review)
 ## Every ask-twice press, one form (Matt, 26 Oct): what goes, then "press again"; "Again?" where there's no room.

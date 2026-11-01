@@ -26,6 +26,7 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
+const EventPanel := preload("res://scripts/ui/event_panel.gd")
 
 const BODY_W := Pal.RUN_W - Inventory.WIDTH - 24               # 832: the run beside the folded rail (15 Oct, frame_mockup_B)
 const GAP := 24
@@ -148,6 +149,9 @@ var _view = null                   # the run view (run_view.gd), when its art is
 var _skills = null                 # the skills over the frame (skill_bar.gd, milestone 8): the energy bar and the three buttons
 var _six: Array = []               # the six figures under the frame
 var _six_groups: Array = []        # their two panels, THEM and YOU (17 Oct)
+var _event_panel                   # a run event's choice (1 Nov, event_panel.gd): in the crates' and the rig's place, the buttons' too
+var _stop_chip: Panel              # "clock stopped" by the run's clock while an event's choice waits
+var _stopped_shown := false
 
 
 func _init() -> void:
@@ -253,6 +257,14 @@ func _init() -> void:
 	_pick.position = Vector2(GRID_X, PICK_Y)
 	_pick.acted.connect(_on_pick_acted)
 	add_child(_pick)
+	# a run event's choice (1 Nov): over the crates, the rig and the buttons, to the column's foot
+	_event_panel = EventPanel.new(INNER, Pal.ROOM_H - PAD - CRATES_Y)
+	_event_panel.position = Vector2(PAD, CRATES_Y)
+	_event_panel.picked.connect(_on_event_pick)
+	_left.add_child(_event_panel)
+	_stop_chip = UI.panel(_band, Rect2(0, 0, 10, 10), UI.box(Color("3a2f12"), 6))
+	_band.move_child(_stop_chip, _band.unit.get_index())
+	_stop_chip.visible = false
 	if RunView.has_art():
 		_view_make()
 
@@ -369,7 +381,12 @@ func show_state(s) -> void:
 		_band.set_words("The way out", t["name"], Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"])))),
 			["to the way out · see them off", "see them off", "left"], Pal.BAD if float(m["way_out_t"]) <= 5.0 else Pal.ACCENT)
 	else:
-		_band.set_words(sim.sky_words(tier_i), t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)     # the sky over the site's name, the clock (16 Oct; the sky 23 Oct, parked item 8)
+		# a run event's choice waiting (1 Nov, the canvas's board 1): the clock greyed, "clock stopped" by it in an amber chip
+		var stopped: bool = sim.event_paused(m)
+		_band.set_words(sim.sky_words(tier_i), t["name"], Fmt.mss(ceilf(clock)), [Words.EV["stopped"]] if stopped else clock_unit, Pal.TEXT_2 if stopped else clock_colour)     # the sky over the site's name, the clock (16 Oct; the sky 23 Oct, parked item 8)
+		if stopped != _stopped_shown:
+			_stopped_shown = stopped              # the unit's colour set once a change, not every frame (a theme change lays the band out again)
+			_band.unit.add_theme_color_override("font_color", Pal.ACCENT if stopped else Pal.TEXT_2)
 	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
 	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
@@ -419,7 +436,7 @@ func show_state(s) -> void:
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
-		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT · THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
+		_fight["head"].text = Words.EV["dogs_key"].to_upper() if m.has("dogs_home") else ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT · THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
 			["Their fire", incoming_forms(float(m["last_incoming"]))], ["Firing now", fire_forms(fire_now)], ["Kills", [Fmt.group(int(m["kills"])), Fmt.short_num(float(m["kills"]))]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
@@ -542,9 +559,11 @@ func show_state(s) -> void:
 		_floor_pick = -1                      # taken, or the run's over
 	if _inv.selected >= 0 or _rig_pick >= 0:
 		_floor_pick = -1                      # a pick in the pack or the rig takes over
+	var ev_on: bool = _event_show()
 	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d|f%d|%d" % [_rig_pick, _floor_pick, sim.floor_items().size()], "", _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
 		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
 	sig += "|L%d" % sim.level()             # a level mid-run takes a pick's padlock off (15 Oct, the review)
+	sig += "|E%s" % str(ev_on)              # an event's choice holds the buttons' place (1 Nov)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -580,7 +599,52 @@ func show_state(s) -> void:
 		_button2.size.x = INNER - _button.size.x - 12
 	else:
 		_button.size.x = INNER
+	if ev_on:
+		_button.visible = false
+		_button2.visible = false
 	_show_pick(m)
+
+
+## A run event's choice (1 Nov): its panel up over the crates, the floor, the rig and the buttons while it asks, and the
+## clock's chip; true while it shows.
+func _event_show() -> bool:
+	var m: Dictionary = sim.mission
+	var instant: bool = m["cleared"] and not m.get("ghost_pending", false)
+	_event_panel.out_text = Words.EV["get_out"] if instant else "Get out · %s, a gang" % Fmt.mss(ceilf(sim.way_out_s(m["t"], m)))     # the run's own words (U2)
+	var on: bool = _event_panel.show_event(sim)
+	_stop_chip.visible = sim.event_paused(sim.mission)
+	if _stop_chip.visible:
+		_stop_chip.position = _band.unit.position - Vector2(8, 1)
+		_stop_chip.size = Vector2(_band.unit.size.x + 14, _band.unit.size.y + 2)
+	if on:
+		_crates.visible = false
+		_rig_head.visible = false
+		for c in _rig_cells + _rig_outlines:
+			c.visible = false
+		for n in [_take_head, _take_strip["panel"], _note, _button, _button2]:
+			n.visible = false
+	else:
+		_rig_head.visible = true
+	return on
+
+
+func _on_event_pick(key: String) -> void:
+	if not sim.on_mission():
+		return
+	if key == "out":
+		sim.dogs_out()                         # the event closed first, then the run's own way out (the fix round, U2)
+		acted.emit()
+		return
+	if key == "fight":
+		sim.dogs_fight()
+	elif key == "done":
+		sim.trader_done()
+	elif key.begins_with("buy:"):
+		sim.trader_buy(key.trim_prefix("buy:"))
+	else:
+		sim.event_pick(key)
+	acted.emit()
+	show_state(sim)
 
 
 ## A bar: its track, its fill and its words, at `y` across the column.
@@ -792,7 +856,7 @@ func gang_in_forms(m: Dictionary, next: float) -> Array:
 	if next >= 1e8:
 		return ["never"]
 	if gang_after_clock(m, next):
-		return [Words.RUN_GANG_LATE[0], Words.RUN_GANG_LATE[1]]
+		return Words.RUN_GANG_LATE.duplicate()
 	return [Fmt.mss(next)]
 
 
@@ -1499,6 +1563,7 @@ func text_nodes() -> Array:
 	out.append_array(_inv.text_nodes())
 	if _crates.visible:
 		out.append_array(_crates.text_nodes())
+	out.append_array(_event_panel.text_nodes())
 	return out
 
 

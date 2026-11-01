@@ -1127,6 +1127,7 @@ func _economy_rows(rows: Array, full: Array) -> void:
 				over.append("%s holds %s %d, %.1f hours' income" % [bd["build"], "fiat" if bool(r[0]) else "tins", int(r[1]), held])
 	rows.append(["14. Cash sink", "cash in hand at the end no more than %.0f hours' income" % CASH_HOURS, "; ".join(over) if not over.is_empty() else "every build under (most %.1f)" % most, over.is_empty()])
 	rows.append(scrap_row(full))
+	rows.append(events_row(full))
 	# the Issue and the County (25 Oct): the Issuer beaten and the town on fiat by the read's end on most builds; how far
 	# into the County each got, and the fiat's state, for the read
 	var issued_n := 0
@@ -1137,6 +1138,23 @@ func _economy_rows(rows: Array, full: Array) -> void:
 			issued_n += 1
 		bits.append("%s %s, County %d/12, %d issued" % [bd["build"], ("on fiat at %.1f h" % at) if at >= 0.0 else "no Issue", int(bd.get("county_taken", 0)), int(bd.get("issued_bought", 0))])
 	rows.append(["18. The Issue", "the Issuer beaten and the town on fiat by the read's end, most builds (the County's progress read alongside)", "; ".join(bits), issued_n * 2 > full.size()])
+
+
+## The run events (1 Nov, shown, not judged): each build's events seen and what came of them, by family - the bot plays
+## them by the standing orders, so this is the defaults' split to read against a person's save.
+static func events_row(full: Array) -> Array:
+	var bits: Array = []
+	for bd in full:
+		var ev: Dictionary = bd.get("events", {})
+		var n := 0
+		var parts: Array = []
+		var keys: Array = ev.keys()
+		keys.sort()
+		for k in keys:
+			n += int(ev[k])
+			parts.append("%s %d" % [k, int(ev[k])])
+		bits.append("%s %d (%s)" % [bd.get("build", "?"), n, ", ".join(parts)] if n > 0 else "%s none" % bd.get("build", "?"))
+	return ["Run events", "seen and what came of them (shown, not judged)", "; ".join(bits), true]
 
 
 ## Gate 15: scrap in hand against the whole read's scrap income - held, spent at the Bench, and shipped on the
