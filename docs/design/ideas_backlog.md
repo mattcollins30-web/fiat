@@ -100,3 +100,11 @@ left behind it opens handicapped (the Clinic heals slower / stocks less, the Fen
 fix (fetch it on a rerun? the head's thing turns up again?). One handicap per room, shown on the room. Not this round:
 in before the next balance pass, with everything else that moves numbers.
 
+## Two magazines in the rig: the empty one refills while you fire the other, as an upgrade (parked 1 Nov, Matt, the 0.10.3 playtest)
+
+Matt: "if I have two mags in my rig I want the one that runs out first to be reloading while I'm shooting from the
+other one - or actually let's make that some sort of upgrade." Today a spent magazine refills on its own, slowly, from
+the box in the pack (0.10.2, docs/design/meds_ammo_clinic.md). The idea: an upgrade (a rig affix, a Workshop part, a
+tree node or the rig's own tier - to decide) under which a spent magazine refills in the background while the next is
+fired, so two magazines mean no pause. In before the next balance pass, with everything else that moves numbers.
+
