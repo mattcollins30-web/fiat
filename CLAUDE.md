@@ -31,6 +31,13 @@ moments to come back to it. Each was missed at least once.
    date; a new manifest goes with its `art.flag` (2 Nov: 0.10.4-0.10.6 shipped with no status entry; 1 Nov: the
    Copper cable manifest sat without its flag).
 
+## No balance passes until Matt has played through (2 Nov, Matt)
+
+"I don't think there's any point running any more balancing until I've played thru to county and fiat etc. we keep
+getting wasting cycles on balancing, changing stuff and then running a pass." No balance pass (quick, full or long)
+is dropped until Matt has played a save through to the County and the Issue (fiat) and says one is wanted. Findings
+that would need a pass go on the status board's "For the balance pass" list instead.
+
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
 At the start of every work item, and after every compaction, find its row and read what it names before writing
