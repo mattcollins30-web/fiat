@@ -18,7 +18,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   mid-game fight frame; dogs on a repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint
   (the bot's build); the stats_room past wall shows the newest 8 (correct after the fold); "13 ObjectDB instances
   leaked at exit" at the smoke's end (not in the bar).
-- **Parked from this playtest:** (none yet)
+- **Parked from this playtest (0.10.6, 2 Nov):**
+  1. UI: a magazine doesn't show which rounds are loaded in it (its grade/type) - in the rig, the stash or the pack.
+  2. UI/new: no way to unload a magazine in the stash and load it with a different ammo type.
+  3. UI/new: no way to choose which rounds go in the pack for a run (today the gate picks the box).
+  (Matt: "no way of knowing what rounds are loaded into what mags, no way of unloading mags in the stash and loading
+  a different ammo type, no way of selecting which rounds to take with you in the pack".)
 
 ## First slice (2026-10-01)
 
