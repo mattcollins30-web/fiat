@@ -2,6 +2,22 @@
 
 The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\mattc\Documents\fiat`.
 
+## Now, next, parked (the board: updated with every delivery commit)
+
+- **Now (2 Nov):** 0.10.6 out for Matt's playtest - fresh save (SAVE_VERSION 20). Bugs he raises are parked below
+  unless he says fix now.
+- **Next, after the playtest, in this order:**
+  1. Run events: the other six families and the Vagabond (docs/design/run_events.md), then the full event art
+     manifest (figures and props; test art first, as agreed).
+  2. Parked: a head's thing left behind costs its room (docs/design/ideas_backlog.md, 1 Nov).
+  3. Parked: two magazines - the spent one refills while the other fires, as an upgrade (ideas_backlog, 1 Nov).
+  4. The long pass (`24 1 long`) on all of it together, then the balance from it and Matt's play.
+- **Open notes (small, no date):** a late-save fight isn't timed by the smoke's speed guard (it prints 0); one 53 ms
+  mid-game fight frame; dogs on a repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint
+  (the bot's build); the stats_room past wall shows the newest 8 (correct after the fold); "13 ObjectDB instances
+  leaked at exit" at the smoke's end (not in the bar).
+- **Parked from this playtest:** (none yet)
+
 ## First slice (2026-10-01)
 
 Built. One operator, the Ring Road in three tiers, missions as the idle action with combat as numbers, loot with
@@ -6118,6 +6134,40 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 2 Nov: 0.10.6 - the odds read, the bot's loops, speed on every screen (SAVE_VERSION 20; 92abfbb)
+
+Matt: "just do everything now before I play" (after the second long pass and the perf review, perf44). Builders A
+(game/bot) and B (UI speed) in parallel, merged 3-way, a per-diff review each, two fix rounds, the smoke green here.
+- The odds' dry run steps 1 s as the live fight (DRY_STEP 2 s let a gang killed under 2 s die before it hit: County
+  places read 1.00 where the runner died 5 in 6). The all-dead early settle kept (a 1-in-6 fight can read 0%: the
+  alternative cost the Map and County 2.7x the reading).
+- The bot: the 30-min spacing kept after a death (the 1,000+ deaths were one place retried), a place backed off 2 h
+  after two losses; the best 3 of each socketable kept (the Drifter's 589 lighter fluids filled its stash, ending
+  its repeats); the gauntlet never takes the build's armour.
+- Past runners: the newest 100 kept, older folded into totals (`past_folded`, `past_count()`).
+- Speed: the stash's arrows judged lazily on the shown page; Training laid out ahead and restated in slices; the
+  floor-bag preview light; idle rooms not repainted (up to 1 s); the Radio/County/Map odds not re-asked once
+  settled; sounds warmed behind the title; a boot scene (scenes/boot.tscn) shows the card while main compiles.
+  Late save on Matt's machine: wear 17 ms (was ~700), a sale 47 (300+), Training 20 (900), bag pick 110 (1,500).
+- Smoke: b45_budget (a mid and a late camp, tests/fixtures/), b45a areas, tests/boot_check.gd (cloud only).
+- The long pass on db4ae2b (2 Nov) before it: level 50 median 13.4 h (green); the deaths and the Drifter's stall
+  were the bot bugs above; the gauntlet's wall is the Docks (bleed resisted).
+
+## 1 Nov (late): 0.10.5 - the frame-time fix (db4ae2b)
+
+Matt: lag in fights and on the Map ("the rain"). Measured (perf43): the rain was a bystander; script work was the
+lag - the stats re-read several times a frame (no live memo), the DPS line re-reading every frame. A live stat memo
+(cleared by `_stats_dirty()`, a per-read context, a once-a-frame guard), the Map's and the dogs' reads stepped across
+frames, the HP bars and hidden cells off per-frame work. Speed only: the fingerprint identical before and after. A
+fight frame's script 13 ms median / 31 p95 -> ~2 / ~8.
+
+## 1 Nov (evening): 0.10.4 - equip from the floor (5baa33b)
+
+Matt, playtest: a unique on the floor couldn't be worn ("No room in the pack"); a bigger sack couldn't replace the
+worn one. Any wearable on the floor has a live Equip: the replaced piece goes to the floor, a bag's or rig's contents
+move across (what won't fit to the floor, said first); equip from the pack never blocked for room; a head's unique
+lands on the floor like any find and still comes home if left. The bot wears upgrades the same way.
 
 ## 1 Nov: the long pass's fixes (BUILD41; PROBE40; SAVE_VERSION 19)
 

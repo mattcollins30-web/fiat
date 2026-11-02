@@ -4,7 +4,7 @@ Matt's standing conventions for any session on this repo (house rule, 21 Oct: th
 chat or a compacted one). Read this first. Design is in docs/design/ (the statement: docs/design/vision.md); what's
 been done and why is docs/status.md.
 
-## Stop checks (28 Oct, Matt: "plug the gap" - three CLAUDE.md rules missed in one day; the sixth 31 Oct)
+## Stop checks (28 Oct, Matt: "plug the gap" - three CLAUDE.md rules missed in one day; the sixth 31 Oct, the seventh 2 Nov)
 
 This file isn't loaded by itself in a cloud session (it reaches the repo over the device bridge), so these are the
 moments to come back to it. Each was missed at least once.
@@ -26,6 +26,10 @@ moments to come back to it. Each was missed at least once.
    starts; at delivery, check again (Matt's side may have moved: a doc Claude edited on the device, his own change)
    and 3-way merge what differs, never overwrite (31 Oct: a stale menu.gd in the cloud base failed the version check
    through two builds; docs/running.md edited on the device conflicted with a builder's copy at delivery).
+7. **Every delivery commit, and every art manifest**: in the same commit, docs/status.md gets the dated entry (what
+   changed, Matt's words that asked for it, the commit) and its "Now, next, parked" board at the top is brought up to
+   date; a new manifest goes with its `art.flag` (2 Nov: 0.10.4-0.10.6 shipped with no status entry; 1 Nov: the
+   Copper cable manifest sat without its flag).
 
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
