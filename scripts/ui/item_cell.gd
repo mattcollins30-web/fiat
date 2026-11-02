@@ -66,6 +66,7 @@ var _up: Label                     # the upgrade's arrow (11 Oct): top right, on
 const UP := 18                     # the arrow's disc
 const UP_NUDGE := 6                # a one-row cell's words, moved down out of the arrow's corner
 var _nudged := false
+var _shown_key := 0                # what show_item last laid out (BUILD45)
 var _lock: Label                   # gear over the runner's level (15 Oct, signals_kit.png): a padlock and its level, red, top right
 var _lock_icon: TextureRect
 const LOCK_H := 18
@@ -143,6 +144,8 @@ const MAG_PIP_SMALL := 4
 
 func set_mags(fills: Array, it := {}) -> void:
 	_mag_fill = fills
+	if not fills.is_empty():
+		_shown_key = 0                        # the picture may be the pouch's now: the next show lays it out afresh (BUILD45)
 	var mag_tex: Texture2D = Items.mag_art(it) if not fills.is_empty() else null
 	if mag_tex != null:
 		_art.visible = true                   # the pouch drawn as its magazines once their pictures are in (28 Oct)
@@ -379,6 +382,13 @@ static func rarity_tone(it: Dictionary) -> String:
 ## (a body slot fills its box whatever is in it; a rig pouch is one cell).
 func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	id = it["id"]
+	# BUILD45 (perf44 6: a grid's repaint styled every cell again, 0.7 ms each): the same piece, as it was shown, with
+	# nothing laid over it since (no padlock, no nudge) is left as it is; the caller's arrow, lock, mark and turn follow
+	var k := hash([it, on, box, glass, no_pics])
+	if k == _shown_key and not _nudged and not _lock.visible and not _mags.visible:
+		_up.visible = false
+		return
+	_shown_key = k
 	_up.visible = false
 	_mags.visible = false
 	_mag_fill = []

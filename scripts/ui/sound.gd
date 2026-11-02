@@ -201,8 +201,12 @@ func _load(path: String) -> AudioStream:
 	if _streams.has(path):
 		return _streams[path]
 	var s: AudioStream = null
-	if ResourceLoader.exists(path):
+	if _asked.has(path):
+		_asked.erase(path)
+		s = ResourceLoader.load_threaded_get(path) as AudioStream     # warmed behind the title (BUILD45): done by now, or waited for
+	elif ResourceLoader.exists(path):
 		s = load(path)
+		plain_loads += 1                         # the smoke's count: none after the warm (review45u 3)
 	elif FileAccess.file_exists(path):
 		var bytes := FileAccess.get_file_as_bytes(path)
 		if path.ends_with(".mp3"):
@@ -218,6 +222,24 @@ func _load(path: String) -> AudioStream:
 ## The old placeholder by name (the tests, and the fallback).
 func stream(nm: String) -> AudioStream:
 	return _load(OLD_DIR % nm)
+
+
+## BUILD45 (2 Nov, perf44 7: every sound loaded on its first play, 280 ms of a repeat's start, and the title emptied
+## them): every file the game's sounds could ask for asked of the loader's threads behind the title; _load collects
+## each when it's first played (waiting only for one not yet in).
+var _asked := {}
+var plain_loads := 0                         # loads on the play's own thread, not the warm's (the smoke counts them)
+func warm() -> void:
+	for id in SOUNDS:
+		var names: Array = [id] + range(1, TAKES + 1).map(func(n): return "%s_%d" % [id, n])
+		var paths: Array = names.map(func(nm): return NEW_DIR % nm)
+		if SOUNDS[id].has("old"):
+			paths.append(OLD_DIR % str(SOUNDS[id]["old"]))
+		for path in paths:
+			if _streams.has(path) or _asked.has(path) or not ResourceLoader.exists(path):
+				continue
+			if ResourceLoader.load_threaded_request(path, "", false, ResourceLoader.CACHE_MODE_REUSE) == OK:
+				_asked[path] = true
 
 
 ## A sound's takes: <id> and <id>_1.. from the new files, else the old placeholder it replaces, else none.
@@ -487,7 +509,10 @@ func _music(sim) -> void:
 func title() -> void:
 	on_title = true
 	_takes.clear()                         # files the batch made since the last look are picked up here
-	_streams.clear()
+	for path in _streams.keys():
+		if _streams[path] == null:
+			_streams.erase(path)               # BUILD45: only what wasn't there is looked for again; what's loaded stays
+	warm()
 	_quiet_world()
 	set_loop("music", "music_title" if music_on else "")
 

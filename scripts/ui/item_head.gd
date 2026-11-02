@@ -264,6 +264,9 @@ func _lay_tail() -> void:
 	_tail_chips.show_chips(chips, 1, true)
 	if not warning.is_empty() and _tail_chips.shown() == 0:
 		_tail_chips.show_chips([chips[0]], 1, true)     # too long beside the tail (the review): the warning alone, the row's whole width
+	var first: String = str(warning.back()).get_slice(" · ", 0) if not warning.is_empty() else ""
+	if not warning.is_empty() and _tail_chips.shown() == 0 and first != str(warning.back()):
+		_tail_chips.show_chips([{"forms": [first], "colour": "warn"}], 1, true)     # still none: its first part (BUILD45: "No magazine · Security guard's carbine to the floor" fitted no form, and the card said nothing)
 	_tail_chips.visible = not chips.is_empty()
 
 

@@ -1100,6 +1100,7 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "", sav
 ## try; past `limit_ms` of the process's wall (the engine's own clock, the one balance.bat's kill reads) the rest go
 ## unfought, "cut short" (the fix round, H1: killed at 60 min, it wrote no line). {rows, deaths, wounds, tries, cut}.
 static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
+	gauntlet_bot(bot)
 	var rows: Array = []
 	var deaths := 0
 	var wounds := 0
@@ -1294,6 +1295,13 @@ static func _gauntlet_room(sim) -> void:
 		guard += 1
 
 
+## The slots the gauntlet never swaps for issued kit, its own and the bot's tidy between tries (BUILD45, probe45 #3:
+## the tidy's issued step took the h20 Doorman's coat at the Golf Club): stamped instead, or left short.
+const GAUNTLET_KEEP := ["Primary", "Secondary", "Armour"]
+static func gauntlet_bot(bot) -> void:
+	bot.stamp_only = ["Armour"]
+
+
 ## Issued kit for a County zone: bought at the counter (the fixture's money) and worn, the slots the build holds kept,
 ## till `want` are on. Why a piece wasn't bought, if one wasn't ("Wear at level 50": the runner's under the County).
 static func _gauntlet_issued(sim, bot, want: int) -> String:
@@ -1317,8 +1325,8 @@ static func _gauntlet_issued(sim, bot, want: int) -> String:
 			if sim.stamp(int(w["id"])):
 				continue
 			why = sim.stamp_block(w)
-			if sl in ["Primary", "Secondary"]:
-				continue                          # a gun is never swapped
+			if sl in GAUNTLET_KEEP:
+				continue                          # a gun, or the armour, is never swapped (BUILD45, probe45 #3)
 		sim.cash = maxf(sim.cash, float(sim.issued_price(sl)) * 2.0)
 		_gauntlet_room(sim)
 		if sim.buy_issued(sl):

@@ -151,12 +151,14 @@ func _labels_by_entry() -> void:
 	# the order the names are placed in: one that ends up far from its starter goes first and the lot again, so the
 	# crowded ones (Knuckles under the Pitch's rails, 25 Oct) take the near places before a roomier neighbour does
 	var order: Array = _axis.keys()
+	_index_nodes(func(id): return radius_of(node_of(id)) if sim != null else R_PLAIN)     # BUILD45: the nodes by place, their radii once
 	for attempt in range(LABEL_TRIES):
 		var far_one: String = _labels_in(order)
 		if far_one == "":
-			return
+			break
 		order.erase(far_one)
 		order.push_front(far_one)
+	_near = {}
 
 
 const LABEL_TRIES := 6
@@ -237,10 +239,49 @@ func entry_label_rect(tn: String, rim := false) -> Rect2:
 	return Rect2(x0, p.y - top, full, top + foot)
 
 
+## BUILD45 (2 Nov, perf44 3: the names' places and the bends walked every node for every try, 0.6 s on Training's first
+## open): the nodes bucketed by place for one pass, each one's radius read once. A pass only; emptied after it.
+const NEAR_CELL := 128.0
+var _near := {}                        # Vector2i bucket -> ids
+var _rad := {}                         # id -> radius, for the pass
+var _rad_max := 0.0
+
+
+func _index_nodes(radius: Callable) -> void:
+	_near = {}
+	_rad = {}
+	_rad_max = 0.0
+	for id in layout:
+		var p: Vector2 = layout[id]
+		var c := Vector2i(floori(p.x / NEAR_CELL), floori(p.y / NEAR_CELL))
+		if not _near.has(c):
+			_near[c] = []
+		_near[c].append(id)
+		var r: float = float(radius.call(id))
+		_rad[id] = r
+		_rad_max = maxf(_rad_max, r)
+
+
+## The ids bucketed under a box (every node inside it among them).
+func _ids_in(box: Rect2) -> Array:
+	var out: Array = []
+	for cx in range(floori(box.position.x / NEAR_CELL), floori(box.end.x / NEAR_CELL) + 1):
+		for cy in range(floori(box.position.y / NEAR_CELL), floori(box.end.y / NEAR_CELL) + 1):
+			var b = _near.get(Vector2i(cx, cy))
+			if b != null:
+				out.append_array(b)
+	return out
+
+
 func _label_clear(box: Rect2, placed: Array) -> bool:
 	for b in placed:
 		if box.intersects(b):
 			return false
+	if not _near.is_empty():
+		for id in _ids_in(box.grow(_rad_max + 2.0)):     # BUILD45: only the nodes near the box, as the walk below finds them
+			if box.grow(float(_rad[id]) + 2.0).has_point(layout[id]):
+				return false
+		return true
 	for id in layout:
 		var q: Vector2 = layout[id]
 		var rr: float = (radius_of(node_of(id)) if sim != null else R_PLAIN) + 2.0
@@ -280,7 +321,7 @@ func state_sig() -> String:
 func state_for(id: String) -> Dictionary:
 	var nd: Dictionary = sim.node(id)
 	var taken: bool = sim.tree.has(id)
-	var block: String = sim.train_block(id, true) if not taken else ""
+	var block: String = sim.train_block(id, true, false) if not taken else ""     # the reach (BUILD45: no path walked for words the web never shows)
 	return {"taken": taken, "active": taken and sim.node_active(id), "reach": not taken and block == "",
 		"theirs": not Data.for_classes(nd, sim.my_classes()), "cost": sim.node_cost(id), "block": block}
 
@@ -521,13 +562,139 @@ func show_state(s) -> void:
 	var sig := state_sig()
 	if sig != _state_sig:
 		_state_sig = sig
-		_state = {}
-		for id in layout:
-			_state[id] = state_for(id)
+		if slice_restate and not _state.is_empty() and sim.has_method("held_trees"):
+			sim.held_trees(_restate_touched)     # BUILD45: what a change reaches now, the rest a few a frame
+		else:
+			_state = {}
+			_stale = {}
+			if sim.has_method("held_trees"):
+				sim.held_trees(_restate)         # BUILD45: the runner's trees read once for the lot
+			else:
+				_restate()
+		_tree_was = _tree_set()
 	queue_redraw()
 
 
+func _restate() -> void:
+	for id in layout:
+		_state[id] = state_for(id)
+
+
+## BUILD45 (2 Nov, perf44 3: a node trained restated all 630, 25-45 ms of the click): with `slice_restate` (Training's
+## web), a change restates at once the nodes it can reach directly - those trained or let go, their links, and every
+## node a rule of its own gates (the starters, keystones, capstones, bridges, the ring) - and every other node after,
+## SLICE_US of them a frame (_process); state_of reads a node still waiting afresh. The web is the plain restate's within
+## a few frames, whatever the change.
+const SLICE_US := 3000
+var slice_restate := false
+var _stale := {}                       # id -> true: restated after the change, a slice a frame
+var _tree_was := {}
+var _special: Array = []
+
+
+func _tree_set() -> Dictionary:
+	var out := {}
+	if sim != null:
+		for id in sim.tree:
+			out[id] = true
+	return out
+
+
+func _restate_touched() -> void:
+	if _special.is_empty():
+		for id in layout:
+			var nd: Dictionary = node_of(id)
+			if nd.get("entry", false) or nd.get("keystone", false) or nd.get("capstone", false) or nd.has("bridge") or nd.has("ring") or Data.web_entry(nd) or sim.is_element_starter(id):
+				_special.append(id)
+	var now := _tree_set()
+	var moved: Array = []
+	for id in now:
+		if not _tree_was.has(id):
+			moved.append(id)
+	for id in _tree_was:
+		if not now.has(id):
+			moved.append(id)
+	var first := {}
+	var links: Dictionary = links_all()
+	for id in moved:
+		first[id] = true
+		for other in links.get(id, []):
+			first[other] = true
+	for id in _special:
+		first[id] = true
+	_stale = {}
+	for id in layout:
+		if first.has(id):
+			_state[id] = state_for(id)
+		else:
+			_stale[id] = true
+
+
+func _process(_dt: float) -> void:
+	if _stale.is_empty() or sim == null:
+		return
+	sim.held_trees(_restate_slice)
+	if _stale.is_empty():
+		queue_redraw()                       # once, when the last slice is in (a redraw a slice was the web drawn a frame)
+
+
+func _restate_slice() -> void:
+	var t0 := Time.get_ticks_usec()
+	for id in _stale.keys():
+		_state[id] = state_for(id)
+		_stale.erase(id)
+		if Time.get_ticks_usec() - t0 >= SLICE_US:
+			break
+
+
+## The nodes still to restate after a change (the tests).
+func restates_waiting() -> int:
+	return _stale.size()
+
+
+## BUILD45 (2 Nov, perf44 3: Training's first open laid the names out and packed every picture, 0.45-0.9 s): the same
+## work ahead of it, a step a frame while the game runs (main._warm_rooms) - the names in one step, the pictures a
+## few milliseconds' worth a frame, then the rest of _pack_all. True once done (or the canvas has been shown).
+var _warm_ids: Array = []
+var _warm_at := 0
+var _warm_phase := 0
+func warm_step(s, budget_us := 4000) -> bool:
+	if _labels_sim:
+		return true
+	sim = s
+	if _warm_phase == 0:
+		_labels_by_entry()
+		_warm_phase = 1
+		return false
+	if _warm_phase == 1:
+		for kind in ["disc", "diamond", "square"]:         # _pack_all's order, so the atlas packs as it did
+			for n in DISC_SIZES:
+				shape(kind, n / 2.0)
+		for tn in _trees:
+			if _trees[tn].has("class"):
+				atlased(wheel_portrait(str(_trees[tn]["class"])))
+		_warm_ids = layout.keys()
+		_warm_at = 0
+		_warm_phase = 2
+		return false
+	var t0 := Time.get_ticks_usec()
+	while _warm_at < _warm_ids.size() and Time.get_ticks_usec() - t0 < budget_us:
+		var nd: Dictionary = node_of(str(_warm_ids[_warm_at]))
+		_warm_at += 1
+		atlased(picture(picture_slug(nd)))
+		if glyph_of(nd) != "":
+			atlased(NodeGlyphs.texture(glyph_of(nd)))
+	if _warm_at < _warm_ids.size():
+		return false
+	_labels_sim = true
+	_pack_all()                              # what's left of it: the emblems, the atlas sent up, the bends
+	return true
+
+
 func state_of(id: String) -> Dictionary:
+	if _stale.has(id) and sim != null:
+		_state[id] = state_for(id)           # waiting on a slice: read now (BUILD45)
+		_stale.erase(id)
 	return _state.get(id, {})
 
 
@@ -963,11 +1130,11 @@ func _blockers(path: PackedVector2Array, a: String, b: String) -> float:
 	for q in path:
 		box = box.expand(q)
 	box = box.grow(R_CAPSTONE + BEND_CLEAR + 4.0)
-	for id in layout:
+	for id in (_ids_in(box) if not _near.is_empty() else layout.keys()):     # BUILD45: the nodes near the path only
 		if id == a or id == b or not box.has_point(layout[id]):
 			continue
 		var p: Vector2 = layout[id]
-		var need: float = _bend_r(id) + BEND_CLEAR
+		var need: float = (float(_rad[id]) if not _near.is_empty() else _bend_r(id)) + BEND_CLEAR
 		for k in range(path.size() - 1):
 			var d: float = p.distance_to(Geometry2D.get_closest_point_to_segment(p, path[k], path[k + 1]))
 			worst = maxf(worst, need - d)
@@ -985,6 +1152,12 @@ func _bend_r(id: String) -> float:
 func _find_bends() -> void:
 	_bends = {}
 	_bends_for = _layout_sig()
+	_index_nodes(_bend_r)
+	_find_bends_indexed()
+	_near = {}
+
+
+func _find_bends_indexed() -> void:
 	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
@@ -1000,7 +1173,7 @@ func _find_bends() -> void:
 			var best_short := INF
 			for push in [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]:
 				for sgn in [1.0, -1.0]:
-					var c: Vector2 = mid + side * sgn * (_bend_r(str(a)) + BEND_CLEAR) * push * 1.2     # a quadratic peaks half way to its control point
+					var c: Vector2 = mid + side * sgn * (float(_rad[str(a)]) + BEND_CLEAR) * push * 1.2     # a quadratic peaks half way to its control point
 					var short: float = _blockers(_curve(pa, c, pb), str(a), str(b))
 					if short < best_short:
 						best_short = short

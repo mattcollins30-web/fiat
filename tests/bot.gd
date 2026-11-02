@@ -379,6 +379,7 @@ func step(sim) -> int:
 		t = int(sim.mission["tier"])
 		last_tier = -1
 	var okey: String = _pick_order(sim) if sim.campaign_done() and not fetched else ""
+	var o_beaten: int = int(sim.order_beaten.get(okey, 0)) if okey != "" else 0
 	if okey != "":
 		var o_lv: int = sim.order_level(okey)
 		var o_ins: int = order_insure_cost(sim, okey)
@@ -390,6 +391,8 @@ func step(sim) -> int:
 			t = int(Data.pinnacle(okey)["site"])
 			last_tier = -1
 			bought.append([sim.elapsed, "ran %s at level %d" % [str(Data.pinnacle(okey)["place"]), o_lv]])
+			_order_ran = okey
+			_order_beaten0 = o_beaten
 		t0 = _lap("step/order", t0)
 	if t < 0 and not fetched and sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
@@ -452,6 +455,9 @@ func step(sim) -> int:
 		guard += 1
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still
+	if _order_ran != "":
+		order_done(sim, _order_ran, int(sim.order_beaten.get(_order_ran, 0)) > _order_beaten0)
+		_order_ran = ""
 	_lap("step/run", t0)
 	if bool(sim.last_report.get("timed_out", false)) and float(sim.last_report.get("time", -1.0)) >= 0.0 and int(sim.runs_total) != _to_seen:
 		_to_seen = int(sim.runs_total)
@@ -464,6 +470,8 @@ func step(sim) -> int:
 	return t
 var ran_signal: Array = []
 var _to_seen := -1
+var _order_ran := ""                  # the place this step's run went to (BUILD45): its outcome counted after the run
+var _order_beaten0 := 0
 
 
 ## The order's places and the County's (25 Oct, the Issue): read every ORDER_EVERY of the yard's time - a dry run is a
@@ -483,7 +491,7 @@ func _pick_order(sim) -> String:
 	var best := ""
 	var best_rank := -1
 	for k in keys:
-		if sim.order_block(k) != "":
+		if sim.order_block(k) != "" or order_backed_off(sim, k):
 			continue
 		var county: bool = sim.is_county(k)
 		var first: bool = int(sim.order_beaten.get(k, 0)) == 0
@@ -498,6 +506,30 @@ func _pick_order(sim) -> String:
 	return best
 
 
+## A place lost ORDER_LOSSES runs in a row is let be ORDER_BACK_OFF of the yard's time (BUILD45, probe45 #1: the
+## Doorman ran the Toll Plaza 1,039 times, the Poacher the Golf Club 855, on a read that said 1.00). A loss is a run
+## that didn't beat it: dead, or out by the way out; a win clears the count.
+const ORDER_LOSSES := 2
+const ORDER_BACK_OFF := 7200.0
+var _order_lost := {}                 # place key -> runs lost in a row
+var _order_off := {}                  # place key -> the yard's time it's read again
+
+
+func order_done(sim, k: String, won: bool) -> void:
+	if won:
+		_order_lost.erase(k)
+		return
+	_order_lost[k] = int(_order_lost.get(k, 0)) + 1
+	if int(_order_lost[k]) >= ORDER_LOSSES:
+		_order_lost.erase(k)
+		_order_off[k] = sim.elapsed + ORDER_BACK_OFF
+		bought.append([sim.elapsed, "backed off %s for %.0f h: lost %d in a row" % [str(Data.pinnacle(k)["place"]), ORDER_BACK_OFF / 3600.0, ORDER_LOSSES]])
+
+
+func order_backed_off(sim, k: String) -> bool:
+	return sim.elapsed < float(_order_off.get(k, -1e9))
+
+
 ## Issued kit (25 Oct): a piece a slot from the Issuer once the town's on fiat, while three times its price is in hand
 ## (the County's first zones want them worn), a slot's piece bought again when the counter's is ten levels past it;
 ## worn whatever the score says. And a burn when the prices run past half again and the fiat's there four times.
@@ -510,7 +542,7 @@ func _issued(sim) -> void:
 		if not (sl in slots):
 			continue                          # only what the next zone wants (Matt, 26 Oct: the build's gun stays on)
 		var worn = sim.equipped.get(sl)
-		if sl in GUN_SLOTS and worn != null and not worn.get("issued", false):
+		if (sl in GUN_SLOTS or sl in stamp_only) and worn != null and not worn.get("issued", false):
 			# the build's own gun stamped at the Bench, not swapped for his (Matt, 26 Oct: stamping for entry)
 			if not worn.get("stamped", false) and sim.cash >= sim.stamp_price(worn) * 3.0 and sim.stamp(int(worn["id"])):
 				bought.append([sim.elapsed, "stamped %s for %d fiat" % [sl, sim.stamp_price(worn)]])
@@ -620,6 +652,10 @@ func _roll_gun(sim, type: String, lv: int, tier: int) -> Dictionary:
 ## armour and sidearm before the gun; a held build's slots kept.
 const ISSUED_FIRST := ["Helmet", "Rig", "Charm", "Armour", "Secondary", "Primary"]
 const GUN_SLOTS := ["Primary", "Secondary"]     # stamped rather than swapped
+## Other slots whose own piece is stamped, never swapped for the Issuer's (BUILD45, probe45 #3: the gauntlet's tidy
+## swapped the h20 Doorman's coat for the Issued plate at the Golf Club, HP 4,178 to 2,263). The gauntlet sets it; the
+## bot's own play doesn't.
+var stamp_only: Array = []
 func issued_slots(sim) -> Array:
 	var z := 0
 	for k in range(Data.COUNTY_ZONES.size()):
@@ -644,6 +680,8 @@ func _wear_issued(sim) -> void:
 		var own = sim.equipped.get(sl)
 		if own != null and own.get("stamped", false):
 			continue                              # a stamped piece of its own stays on
+		if sl in stamp_only and own != null and not own.get("issued", false):
+			continue                              # the gauntlet's build keeps its own (BUILD45)
 		var best = null
 		for it in sim.stash:
 			if it.get("issued", false) and str(it.get("slot", "")) == sl and sim.can_wear(it) and (best == null or Items.ilvl(it) > Items.ilvl(best)):
@@ -1250,8 +1288,9 @@ func order_insure_cost(sim, k: String) -> int:
 
 
 ## After a death (BUILD41, PROBE40 4: 32 of the Doorman's 91 came on the first or second run after one): every odds
-## figure the bot holds is the dead runner's - the signals' and the sites' reads cleared, the lorry's and the orders'
-## read again - so the next run goes on a read of the kit the new runner has.
+## figure the bot holds is the dead runner's - the signals' and the sites' reads cleared, the lorry's read again - so the
+## next run goes on a read of the kit the new runner has. The orders are read afresh at their next ORDER_EVERY, not at
+## once (BUILD45, probe45 #1: at once, a place that read 1.00 was run again the minute after each death).
 var _lost_seen := -1
 func after_death(sim) -> bool:
 	if _lost_seen < 0:
@@ -1264,8 +1303,7 @@ func after_death(sim) -> bool:
 	sim._surv_cache.clear()
 	lorry_ok = false
 	lorry_read_at = -1e9
-	_order_read_at = -1e9
-	return true
+	return true                               # the orders' ORDER_EVERY kept (BUILD45, probe45 #1: reset here, a death re-ran the place at once)
 
 
 ## The fence's gamble as a flush player takes it: one a run at most, the kind of the primary's type
@@ -2360,6 +2398,7 @@ func _sell_spares(sim) -> void:
 			var ranked: Array = sim.attachments_for(it["mount"])
 			for r in range(ranked.size()):
 				mount_rank[int(ranked[r]["id"])] = r
+	var sock_rank: Dictionary = _sock_ranks(sim)
 	for it in sim.stash.duplicate():
 		if Items.is_medical(it) or Items.is_paper(it) or Items.is_supplies(it) or it.get("mythic", false):
 			continue                      # a paper's a key to the endgame now (15 Oct): kept; a mythic never goes; supplies are the medic's
@@ -2387,6 +2426,8 @@ func _sell_spares(sim) -> void:
 		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and not type_best.is_empty() and int(type_best["id"]) == int(it["id"]):
 			continue                      # the best spare of the class's type stays; the rest of them go
 		if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
+			if int(sock_rank.get(int(it["id"]), 0)) >= SOCK_KEPT:
+				_dispose(sim, it)                # the best SOCK_KEPT of each kept, as the attachments (BUILD45, probe45 #2: 589 stacks of Lighter fluid filled the Drifter's stash)
 			continue
 		if element != "" and it["slot"] == "Primary":
 			var cur = sim.equipped["Primary"]
@@ -2399,6 +2440,25 @@ func _sell_spares(sim) -> void:
 			continue
 		if int(best_id.get(str(it["slot"]), -1)) != int(it["id"]):
 			_dispose(sim, it)
+
+
+## The build's element's socketables, each kind ranked best first by worth (a stack's count and an affix's in it):
+## item id -> its rank among its kind (BUILD45).
+const SOCK_KEPT := 3
+func _sock_ranks(sim) -> Dictionary:
+	var by_base := {}
+	for it in sim.stash:
+		if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
+			if not by_base.has(it["base"]):
+				by_base[it["base"]] = []
+			by_base[it["base"]].append(it)
+	var out := {}
+	for b in by_base:
+		var l: Array = by_base[b]
+		l.sort_custom(func(a, c): return int(a.get("value", 0)) > int(c.get("value", 0)) or (int(a.get("value", 0)) == int(c.get("value", 0)) and int(a["id"]) < int(c["id"])))
+		for r in range(l.size()):
+			out[int(l[r]["id"])] = r
+	return out
 
 
 ## The best primary of a type in the stash, by score; {} when none.

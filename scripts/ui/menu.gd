@@ -178,7 +178,7 @@ static func _load_art(path: String, from_file := false) -> Texture2D:
 
 ## The game's version, on the title's foot (Matt, 11 Oct: the window line went with the Deck's fix). Raise it with
 ## each build Matt plays: the second number for a playtest build, the first for a milestone.
-const VERSION := "0.10.5"     # 0.<milestone>.<build> (CLAUDE.md, the project manager): 7 the web; 8 the skills, the Recruit, the unlocks; 9 the endgame chase; 10 the itemisation, repeat runs, expeditions, wagers, magazines, materials in the pack, run events; bumped in the commit Matt plays
+const VERSION := "0.10.6"     # 0.<milestone>.<build> (CLAUDE.md, the project manager): 7 the web; 8 the skills, the Recruit, the unlocks; 9 the endgame chase; 10 the itemisation, repeat runs, expeditions, wagers, magazines, materials in the pack, run events; bumped in the commit Matt plays
 
 
 static func _build_words() -> String:

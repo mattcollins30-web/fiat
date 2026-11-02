@@ -94,7 +94,31 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
-	for r in range(_rows.size()):
+	_rows_due = range(_rows.size())
+	_show_boxes()
+
+
+## BUILD45 (2 Nov, perf44 1: a sale read every rarity's row in its click, 290-380 ms late): the rows read a rarity a frame
+## after a change, each on one try-ons' key (held_kit_key); the Sell's press reads its row afresh as ever. The tests'
+## readers (row_of, text_nodes) finish them first.
+var _rows_due: Array = []
+
+
+func _process(_dt: float) -> void:
+	if not _rows_due.is_empty() and sim != null:
+		var r: int = _rows_due.pop_front()
+		sim.held_kit_key(_show_row.bind(r))
+
+
+## Every row waiting read now.
+func finish_rows() -> void:
+	while not _rows_due.is_empty() and sim != null:
+		var r: int = _rows_due.pop_front()
+		sim.held_kit_key(_show_row.bind(r))
+
+
+func _show_row(r: int) -> void:
+	if r < _rows.size():
 		var row: Dictionary = _rows[r]
 		var spare: Array = sim.rarity_spare(r)
 		var tone: Color = Pal.TEXT if r == 0 else Pal.tone_color(Pal.rarity_tone(r))
@@ -119,6 +143,9 @@ func show_state(s) -> void:
 		else:
 			row["sell"].text = "Sell"
 		UI.style_button(row["sell"], false, "bad" if armed else "")
+
+
+func _show_boxes() -> void:
 	# the boxes: your guns' first, lit; then the others in a fixed order; the rest named under them
 	var worn: Array = worn_types()
 	var order: Array = worn.duplicate()
@@ -190,6 +217,7 @@ func _buy(k: int) -> void:
 
 ## For the tests: a rarity's row, a box by its place.
 func row_of(r: int) -> Dictionary:
+	finish_rows()
 	return _rows[r]
 
 
@@ -198,6 +226,7 @@ func box_of(k: int) -> Dictionary:
 
 
 func text_nodes() -> Array:
+	finish_rows()
 	var out: Array = [_head, _box_head, _rest]
 	for r in _rows:
 		out.append_array([r["name"], r["count"], r["worth"], r["sell"]])

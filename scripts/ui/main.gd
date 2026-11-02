@@ -15,6 +15,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Card := preload("res://scripts/ui/card.gd")
 const YardTree := preload("res://scripts/ui/yard_tree.gd")
+const Boot := preload("res://scripts/ui/boot.gd")     # its window fit (BUILD45 review)
 const RadioScreen := preload("res://scripts/ui/radio.gd")
 const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
@@ -49,7 +50,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 19              # 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 20              # 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -146,6 +147,8 @@ const PREV_GAP := 48
 var _speed_label: Label
 var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
+var card_shown := false            # the boot scene put the studio card up already (BUILD45): the title next
+var booted := false                # made by the boot scene (BUILD45): the game itself, as the main scene was
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var room_intros := true            # the Settings' Room intros (14 Oct): off, no room's card comes up by itself
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
@@ -174,14 +177,14 @@ const MAX_FPS := 60
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	if get_tree().current_scene == self:
+	if get_tree().current_scene == self or booted:
 		Sim.asks = true                      # the game itself (1 Nov, run events): a watched run's event asks; the tests' shells never are
 	if DisplayServer.get_name() != "headless":
 		Engine.max_fps = MAX_FPS             # drawn at the panel's own refresh, the Legion's fans ran on a menu (12 Oct); the tests run headless, uncapped
 	_fit_window_to_screen()
 	get_viewport().size_changed.connect(_on_resize)
 	_on_resize()
-	if intro:
+	if intro and not card_shown:
 		var card := Intro.new()
 		card.done.connect(show_title)
 		add_child(card)
@@ -384,21 +387,7 @@ func _build() -> void:
 ## Desktop mode on the Deck (a window manager, the window fitted by it) was
 ## fine both times; game mode (gamescope alone) was not.
 func _fit_window_to_screen() -> void:
-	if DisplayServer.get_name() == "headless" or OS.get_name() != "Linux":
-		return
-	var win := get_window()
-	if win == null or win.mode in [Window.MODE_FULLSCREEN, Window.MODE_EXCLUSIVE_FULLSCREEN]:
-		return
-	var screen: Vector2i = DisplayServer.screen_get_size(win.current_screen)
-	if screen.x <= 0 or screen.y <= 0:
-		return
-	# the project opens the window maximized on Windows only (window/size/mode.windows=2, 8 Oct): on
-	# the Deck a maximized 1920 x 1080 window had gamescope set its own screen to 1920 x 1080 (the
-	# foot read "1920×1080 → 1920×1080" in game mode), so there was no smaller screen to size to;
-	# windowed, as Greenhorn's is, the screen stays the panel's 1280 x 800. Windowed here too, in case.
-	win.mode = Window.MODE_WINDOWED
-	win.size = screen                      # through the Window, so the canvas follows at once
-	win.position = DisplayServer.screen_get_position(win.current_screen)
+	Boot.fit_window(get_window())          # the boot scene's own fit (BUILD45 review 8: the card's window fitted first), again here for the tests' shells
 
 
 func _on_resize() -> void:
@@ -476,6 +465,7 @@ func _lay_fold() -> void:
 # ------------------------------------------------------------------ the clock
 
 func _process(delta: float) -> void:
+	_warm_rooms()
 	if sim == null or _menu.visible:
 		return
 	if _opening != null and is_instance_valid(_opening):
@@ -504,7 +494,35 @@ func _process(delta: float) -> void:
 	_since_refresh += delta
 	if _since_refresh >= REFRESH_S:
 		_since_refresh = 0.0
-		refresh()
+		if _idle_skip():
+			sim.live_guard()                  # the memo's guard keeps its ten a second (BUILD43); the paint waits for a change
+			_idle_for += REFRESH_S
+		else:
+			refresh()
+
+
+## BUILD45 (2 Nov, perf44 3): Training's web laid out ahead of its first open (web_view.warm_step) - its names' places
+## and its pictures, the 0.45-0.9 s its first open took - a step a frame behind the title (where nothing's playing; the
+## web reads only the trees' shape, so a camp not yet loaded does: a bare Sim), or, Continue pressed first, from a second
+## into the game.
+const WARM_AFTER := 60                     # frames after the game's first: a load's own frames go first
+var _warm_wait := WARM_AFTER
+var _warm_done := false
+var _warm_sim = null
+func _warm_rooms() -> void:
+	if _warm_done or _barracks == null:
+		return
+	if _menu != null and _menu.visible:
+		if _warm_sim == null:
+			_warm_sim = sim if sim != null else Sim.new()
+		_warm_done = _barracks.web().warm_step(_warm_sim)
+		return
+	if sim == null:
+		return
+	if _warm_wait > 0:
+		_warm_wait -= 1
+		return
+	_warm_done = _barracks.web().warm_step(sim)
 
 
 ## The damage line moves with the fight (Matt, 8 Oct: "a static bar looks weird"): on a run it shows what's
@@ -544,16 +562,25 @@ func _dps_target_now(split := {}) -> float:
 func _read_odds(budget_ms := ODDS_MS) -> void:
 	if not (room == MISSIONS or room == COMMS) or sim.on_mission():
 		return
+	sim.live_guard()                              # the signature's odds_state is this frame's, whoever calls (review45a 8)
+	var what: String = _odds_what()
+	var base: Array = _odds_base() if what != "" else []
+	var sig: Array = _odds_sig(what, base) if what != "" else []
+	if what != "" and _odds_done.get(what, []) == sig:
+		return                                    # settled, and nothing it hangs on has moved (BUILD45): nothing asked
 	sim.odds_time_ms = budget_ms
 	sim.odds_frame_start()
+	var done := true                              # every read this frame asked has settled, none cut short by the time
 	if room == COMMS and not sim.signals.is_empty():
 		var o: Array = sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
-		if bool(o[1]):
+		done = bool(o[1])
+		if done:
 			for nm in sim.crew_played():             # then the crew's, one class a frame until each has settled (21 Oct)
 				if str(nm) != sim.cls and not bool(sim.signal_odds_class(_radio.selected, str(nm), true)[1]):
 					sim.signal_odds_class(_radio.selected, str(nm))
+					done = false
 					break
-		sim.odds_time_ms = 0.0
+		_odds_settle(what, done, sig)
 		return
 	if room == MISSIONS and _missions.exp_on:
 		var ep = _missions._exp_panel           # the Expeditions (29 Oct): the picked place's odds for the picked lead
@@ -562,40 +589,121 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 		sim.odds_time_ms = 0.0
 		return
 	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin
-	# wears its odds' colour), then the order's open places
+	# wears its odds' colour), then the order's open places. A place read to its count under this base is passed over
+	# without asking (BUILD45: each ask re-keys the runner, ~2 ms a County place a frame on a late save)
 	if room == MISSIONS and _missions.county_on:
 		sim.odds_step = true
 		for c in Data.COUNTY:                     # the County's open places (25 Oct), each read to its count in turn
+			var ck: String = "order/" + str(c["key"])
+			if _odds_part.get(ck, []) == base:
+				continue
 			if sim._odds_time_up():
+				done = false
 				break
 			if sim.order_open(str(c["key"])) and not bool(sim.order_odds_now(str(c["key"]))[1]):
 				sim.order_odds(str(c["key"]))
+				if not bool(sim.order_odds_now(str(c["key"]))[1]):
+					done = false
+					continue
+			_odds_part[ck] = base
 		sim.odds_step = false
-		sim.odds_time_ms = 0.0
+		_odds_settle(what, done, sig)
 		return
 	if room == MISSIONS and _missions.order_key != "" and sim.order_open(_missions.order_key):
-		sim.order_odds(_missions.order_key)       # read on to the whole count: its card's figure
+		done = bool(sim.order_odds(_missions.order_key)[1])       # read on to the whole count: its card's figure
 	var order: Array = [_missions.selected] if _missions.selected >= 0 else []
 	for i in range(Data.TIERS.size()):
 		if not (i in order):
 			order.append(i)
+	# hurt, the picked site's repeat gate reads the runner whole (29 Oct, the designer), right after the site's own read
+	# (BUILD45: behind every site's read it took twice the frames at the 1 s dry step)
+	var gate: bool = room == MISSIONS and _missions.selected >= 0 and sim.tier_open(_missions.selected) and int(sim.best_depth[_missions.selected]) > 0 and sim.hp < sim.max_hp() - 0.01
 	sim.odds_step = true                          # a dry run stops at the frame's few ms and goes on in the next (BUILD43)
 	for i in order:
-		if sim._odds_time_up():
-			break
-		if sim.tier_open(i) and not sim.odds_settled(i):
-			sim.survival(i)
-	if room == MISSIONS and _missions.selected >= 0 and not sim._odds_time_up() and sim.tier_open(_missions.selected) and int(sim.best_depth[_missions.selected]) > 0:
-		sim.repeat_read(_missions.selected)       # the repeat's gate reads the runner whole (29 Oct, the designer)
+		var tk: String = "site/%d" % i
+		if _odds_part.get(tk, []) != base:
+			if sim._odds_time_up():
+				done = false
+				break
+			var read := true
+			if sim.tier_open(i) and not sim.odds_settled(i):
+				sim.survival(i)
+				read = sim.odds_settled(i)
+			if read:
+				_odds_part[tk] = base
+			else:
+				done = false
+		if gate and i == _missions.selected and not sim._odds_time_up():
+			sim.repeat_read(i)
+	if gate:
+		done = false                              # hurt: read each frame as before (the HP moves as the runner rests)
 	if room == MISSIONS:
 		for p in Data.PINNACLES:
+			var pk: String = "order/" + str(p["key"])
+			if _odds_part.get(pk, []) == base:
+				continue
 			if sim._odds_time_up():
+				done = false
 				break
 			if sim.order_open(p["key"]) and not bool(sim.order_odds_now(p["key"])[1]):
 				sim.order_odds(p["key"])          # a pin's colour: read to the showing count, then left
+				if not bool(sim.order_odds_now(p["key"])[1]):
+					done = false
+					continue
+			_odds_part[pk] = base
 	sim.odds_step = false
-	sim.odds_time_ms = 0.0
+	_odds_settle(what, done, sig)
 
+
+## The odds' reads settled (BUILD45, perf44 #2 and #8: the Radio and the County asked their settled reads every frame,
+## ~5-7 ms of the runner re-keyed a frame on a late save; the Map read its sites again on every arrival): which read the
+## screen makes -> the signature it settled at, and each site and place read to its count -> the base it was read
+## under. Kept across leaving and coming back; asked again only when the signature moves.
+var _odds_done := {}
+var _odds_part := {}
+
+
+## The read the screen on show makes: "radio", "radio_sites", "county", "map", or "" (the expeditions: theirs keep their own).
+func _odds_what() -> String:
+	if room == COMMS:
+		return "radio" if not sim.signals.is_empty() else "radio_sites"     # no signal held: the sites' reads, not the Map's whole (no pins, no order card: review45a 1)
+	if _missions.exp_on:
+		return ""
+	return "county" if _missions.county_on else "map"
+
+
+## What every read hangs on, cheaply: the runner's state as the live guard hashed it this frame (odds_state: the kit
+## by value, the trees, the level, the wounds, the sky, the Yard, the standing), the HP to the tenth (the odds key's),
+## every run and chronicle line, the reach, the lookout's count, the campaign, and the places: the sites' depths, codes
+## and heads armed, the orders' and the County's ladder, the issued kit worn.
+func _odds_base() -> Array:
+	return [sim.odds_state(), sim.cls, int(round(sim.hp * 10.0 / maxf(sim.max_hp(), 1.0))), sim.runs_total, sim.chron_count, sim.reach, sim.odds_runs(),
+		sim.campaign_done(), hash(sim.depth), hash(sim.words), hash(sim.boss_armed), hash(sim.order_beaten), hash(sim.clear_level), sim.issued_worn()]
+
+
+## A screen's whole read: the base, and what it picks - the Radio's signal as it stands and the crew, the Map's pin.
+func _odds_sig(what: String, base: Array) -> Array:
+	if what == "radio":
+		return [base, _radio.selected, hash(sim.signal_at(_radio.selected)), sim.crew_played()]
+	if what == "map":
+		return [base, _missions.selected, _missions.order_key]
+	return [base]
+
+
+## Every settled read forgotten: a new or loaded camp's Sim has read nothing (review45a 2).
+func _odds_forget() -> void:
+	_odds_done = {}
+	_odds_part = {}
+
+
+func _odds_settle(what: String, done: bool, sig: Array) -> void:
+	sim.odds_time_ms = 0.0
+	if what == "":
+		return
+	if done:
+		_odds_done[what] = sig
+	else:
+		_odds_done.erase(what)
 
 ## The log's best lines as toasts: what was found, who's out and who's down,
 ## a level, what came off him, a yard moved. Lines the shell's seen stay seen.
@@ -881,6 +989,7 @@ func new_game(hardcore := false) -> void:
 	Fmt.note_fiat = 0.0
 	_archive_record()                    # the last game's record kept beside, this one's starts empty
 	sim = Sim.new()
+	_odds_forget()                       # a new Sim's reads are all to do, whatever the base hashes to (review45a 2)
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.hardcore = hardcore
 	sim.start()
@@ -1105,6 +1214,7 @@ func load_game(path := "") -> void:
 			if DirAccess.copy_absolute(record_file(path), record_file()) != OK:
 				push_warning("the slot's playtest record did not come in")
 	sim = Sim.new()
+	_odds_forget()                       # the same save twice hashes the same base; the new Sim has read nothing (review45a 2)
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.load_dict(d["sim"])
 	room = OVERVIEW
@@ -1333,6 +1443,43 @@ func refresh() -> void:
 		_prev_label.text = ""
 		_prev_time.text = ""
 	UI.dots_under(self)                       # the caps pass (27 Oct, Matt): a capital after every "·", whatever set the words
+	_idle_sig = _idle_sig_now()
+	_idle_for = 0.0
+	_poked = false
+
+
+## BUILD45 (2 Nov, perf44 6: a room with nothing moving painted ten times a second, a full stash's Kit 20-34 ms a time):
+## the ten-a-second paint is skipped while nothing it shows could have moved - no input since the last, the camp's
+## signature the same (what a paint reads that moves by itself: the stats' version, the purse, the stash's count, the
+## level and XP, the trees, HP, the log, a runner busy or picked, the clock's minute) - and comes anyway once a second.
+## Never on a run, away, on the Map or the Radio (their odds and the run's frames move by themselves); every refresh()
+## a click or an act asks for paints as ever.
+const IDLE_FULL_S := 1.0
+const IDLE_ROOMS := [ARMOURY, BARRACKS, WORKSHOP, MARKET, MEDIC, RUNNER, OVERVIEW]
+var _idle_sig := 0
+var _idle_for := 0.0
+var _poked := true
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton or event is InputEventKey or event is InputEventJoypadButton:     # a press: hover is the controls' own
+		_poked = true
+
+
+func _idle_sig_now() -> int:
+	if sim == null:
+		return 0
+	var kit: Array = []
+	for sl in Data.SLOTS:
+		kit.append(sim.equipped[sl]["id"] if sim.equipped[sl] != null else -1)
+	return hash([room, sim.stat_v, sim.stash.size(), int(sim.cash), int(sim.notes), int(sim.scrap), sim.salvage, sim.xp, sim.level(), sim.tree.size(), sim.training_points,
+		int(sim.hp), sim.events_total, sim.chron_count, sim.runner_busy(), sim.candidates.size(), sim.came_back.size(), kit, sim.rig.size(), int(sim.elapsed / 60.0), _menu.visible])
+
+
+func _idle_skip() -> bool:
+	if _poked or sim.on_mission() or sim.away() or not (room in IDLE_ROOMS) or _idle_for + REFRESH_S >= IDLE_FULL_S:
+		return false
+	return _idle_sig_now() == _idle_sig
 
 
 ## A line's shorter forms: the whole, then fewer sentences, then the first clause - never trailing off.

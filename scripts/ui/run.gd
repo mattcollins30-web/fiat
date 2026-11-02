@@ -547,7 +547,7 @@ func show_state(s) -> void:
 			_runner["key"].visible = false
 			_runner["chips"].visible = false
 	# the pack
-	sim.pack_layout(m)                    # every piece placed (or strapped on) before it's drawn
+	sim.held_pack(sim.pack_layout.bind(m))     # every piece placed (or strapped on) before it's drawn; the pack's size read once (BUILD45)
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
@@ -971,7 +971,7 @@ func _show_pick(m: Dictionary) -> void:
 			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 		else:
 			_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()], ["%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]])
-		var fits: bool = sim.floor_fits(it)
+		var fits: bool = sim.held_pack(sim.floor_fits.bind(it))     # the pack's size read once through the search (BUILD45)
 		var fl_buttons: Array = []
 		if wearable:
 			var down: Array = swap_forms(sim.wear_preview(int(it["id"])))

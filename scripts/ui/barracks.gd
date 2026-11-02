@@ -234,6 +234,7 @@ static func _words_w() -> float:
 ## The web in the lanes' place (22 Oct): the canvas, and three buttons over its corner to jump the zoom.
 func _build_web() -> void:
 	_web = WebView.new(Vector2(Pal.GRID_W, LANES_H))
+	_web.slice_restate = true                  # a change's far nodes restated a few a frame (BUILD45)
 	_web.position = Vector2(0, LANES_Y)
 	_web.picked.connect(_pick_web)
 	add_child(_web)
@@ -472,7 +473,7 @@ func show_state(s) -> void:
 	if _armed != "" and (sim.cls != _armed_cls or sim.runner_busy() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
 		_armed = ""                            # a swap's arm runs out like every ask-twice (Matt, 26 Oct)
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.runner_busy()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.elements_lifted(), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.elements_lifted(), sim.past_count(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -1095,12 +1096,29 @@ func _show_past() -> void:
 		return
 	var long := []
 	var short := []
+	# BUILD45 (perf44: a late camp's thousand past runners joined and measured, 50-90 ms an open): the lists stop once
+	# they're longer than the line could hold at its narrowest letters - a form past that can't fit, as it couldn't before
+	var cap: int = _past_cap()
+	var n_long := 0
+	var n_short := 0
 	for k in range(sim.past.size() - 1, -1, -1):
+		if n_long > cap and n_short > cap and long.size() >= 2:
+			break
 		var r: Dictionary = sim.past[k]
 		var held: String = (", %s at level %d" % [Words.mid(str(r["site"])), int(r.get("held_lv", 0))]) if int(r.get("held_lv", 0)) > 0 else ""
 		long.append("a %s, %d run%s%s, %s" % [str(r["class"]), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
 		short.append("%s %d" % [str(r["class"]), int(r["runs"])])
-	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + "; ".join(long.slice(0, 2)), "Before: " + ", ".join(short), long[0], "%d runner%s before this one" % [sim.past.size(), "" if sim.past.size() == 1 else "s"]])
+		n_long += str(long.back()).length() + 2
+		n_short += str(short.back()).length() + 2
+	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + "; ".join(long.slice(0, 2)), "Before: " + ", ".join(short), long[0], "%d runner%s before this one" % [sim.past_count(), "" if sim.past_count() == 1 else "s"]])
+
+
+## The most letters the past's line could hold: its width over the narrowest of the letters its words use (BUILD45).
+func _past_cap() -> int:
+	var narrow: float = INF
+	for ch in [" ", ".", ",", ";", ":", "i", "l", "I", "1", "'"]:
+		narrow = minf(narrow, UI.text_width(_past, ch))
+	return ceili(_past.size.x / maxf(1.0, narrow)) + 8
 
 
 # ------------------------------------------------------------------ acting

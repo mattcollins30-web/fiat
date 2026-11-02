@@ -310,12 +310,11 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page * 1000 + top_row, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
 		(("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else "") + (str(sim.runner_busy()) if scrapping and sim != null else "")]     # the lot's button reads the cash and the room (23 Oct); the Workshop's Scrap the run (28 Oct, the review)
-	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
+	var ups := _arrows()               # the arrows (BUILD45): the page's, judged a few a frame, as they come
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
-		ups[it["id"]] = _upgrade(it)
 		locks[it["id"]] = sim.wear_lock(it) if sim != null else 0
-		sig += ",%d:%d%s%d%s" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else "", locks[it["id"]], str(it.get("pos", "")) + str(it.get("rot", false)) if pack_mode else ""]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes; a piece as it moves
+		sig += ",%d:%d%s%d%s" % [it["id"], Items.stack_size(it), "^" if ups.get(int(it["id"]), false) else "", locks[it["id"]], str(it.get("pos", "")) + str(it.get("rot", false)) if pack_mode else ""]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes; a piece as it moves
 	if sig == _shown:
 		return
 	_shown = sig
@@ -406,7 +405,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		var turned: bool = pack_mode and bool(it.get("rot", false)) and it.has("pos")
 		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected, Vector2(cpx(r.size.x), cpx(r.size.y)) if pack_mode else Vector2.ZERO)
 		c.set_turned(turned)
-		c.set_upgrade(ups[it["id"]])
+		c.set_upgrade(ups.get(int(it["id"]), false))
 		c.set_locked(locks[it["id"]])
 		c.set_mark(str(marks.get(it["id"], "hl" if it.get("hl", false) else "")))     # a rule's highlight where no contract marks it
 		k += 1
@@ -420,7 +419,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 ## `cap` cells, or as far as the packing reached when it had to go further, so every item sits on an outline.
 func _lay_grid(cap: int) -> void:
 	_pack_cols = COLS
-	_placed = _pack(items, page_rows)
+	_placed = _grid_places()
 	var reach := 0
 	for id in _placed:
 		var r: Rect2i = _placed[id]
@@ -505,17 +504,146 @@ func _upgrade(it: Dictionary) -> bool:
 	return upgrades and sim != null and sim.is_upgrade(it, moved_reads)
 
 
+## BUILD45 (2 Nov, perf44 1: a kit change judged every piece in one paint, up to 0.7 s a click late): an arrow is
+## judged only for a piece on the page shown, ARROW_US of them a frame (_process), and kept against the key it was
+## judged on (sim.arrow_key: the try-ons' key, the pack's fill only where armour an empty cell reads it) and the piece as
+## it is. Until it's judged a piece shows none.
+const ARROW_US := 4000               # a frame's judging, in microseconds (at least one piece a frame)
+const JUDGE_WAIT := 2                # frames after a paint that queued before the judging starts: the click's frame is the paint's
+var _judge_from := 0
+var _ticks := 0                      # this grid's frames (_process calls), for JUDGE_WAIT
+var _verdicts := {}                  # id -> [key, verdict]
+var _todo: Array = []                # [id, piece, key] waiting to be judged, the page's
+var _place_sig := ""                 # what the grid's first-fit was worked out for
+var _place_memo := {}
+
+
+## The page's arrows: id -> verdict for each piece judged against the key as it stands; the rest queued.
+func _arrows() -> Dictionary:
+	var out := {}
+	_todo = []
+	if not upgrades or sim == null:
+		return out
+	var keys := _arrow_keys()
+	var shown := _page_ids()
+	for it in items:
+		var id: int = int(it["id"])               # a loaded save's ids are floats: one kind of key throughout
+		if not shown.has(id):
+			continue
+		if sim.reads_pack(it) and keys[1] == null:
+			keys[1] = sim.arrow_key(true)
+		var k: int = hash([keys[1] if sim.reads_pack(it) else keys[0], it, moved_reads])
+		var v = _verdicts.get(id)
+		if v != null and v[0] == k:
+			out[id] = v[1]
+		elif pack_mode:
+			# the run's pack: judged in the paint, as before BUILD45 (a try-on on a run reads the run, and its frames are the
+			# fight's), but kept on the key without the pack's fill - a find picked up no longer judges the pack again
+			var pv := _upgrade(it)
+			_verdicts[id] = [k, pv]
+			out[id] = pv
+		else:
+			_todo.append([id, it, k])
+	if not _todo.is_empty():
+		_judge_from = _ticks + JUDGE_WAIT      # the click's own frame and the next left to the paint
+	return out
+
+
+## The keys a piece's arrow stands on: [without the pack's fill, with it] (the same off a run; on one, the second only
+## worked out when a piece that reads the pack asks).
+func _arrow_keys() -> Array:
+	var k0: int = sim.arrow_key()
+	var out: Array = [k0, k0]
+	if sim.mission != null:
+		out[1] = null
+	return out
+
+
+## Judges what's waiting, ARROW_US a frame, the page's top first; each arrow goes straight onto its cell.
+func judge_arrows(budget_us := ARROW_US) -> int:
+	var t0 := Time.get_ticks_usec()
+	var n := 0
+	if _todo.is_empty() or sim == null:
+		return 0
+	var keys := _arrow_keys()                # as it stands now: a show's may be a frame old
+	while not _todo.is_empty() and (n == 0 or Time.get_ticks_usec() - t0 < budget_us):
+		var job: Array = _todo.pop_front()
+		var v := _upgrade(job[1])
+		if sim.reads_pack(job[1]) and keys[1] == null:
+			keys[1] = sim.arrow_key(true)
+		_verdicts[int(job[0])] = [hash([keys[1] if sim.reads_pack(job[1]) else keys[0], job[1], moved_reads]), v]
+		n += 1
+		for c in _cells:
+			if c.visible and c.id == job[0]:
+				c.set_upgrade(v)
+	return n
+
+
+## Shown: this grid and every control over it visible (out of the tree too, as the tests' frames run it).
+func _shown_now() -> bool:
+	var n: Node = self
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return false
+		n = n.get_parent()
+	return true
+
+
+## A fight on: the try-ons read the whole fight (a piece 20-60 ms on a late camp) and the kit's key moves with it, so
+## the arrows wait for the fight to end - before BUILD45 they were all judged again on a paint, the fight's 80 ms frames.
+func _fighting() -> bool:
+	return sim != null and sim.mission != null and int(sim.mission.get("remaining", 0)) > 0
+
+
+## Every arrow waiting judged now (the tests; a show that must be whole).
+func judge_all() -> void:
+	judge_arrows(1 << 40)
+
+
+## How many arrows are waiting (the tests).
+func arrows_waiting() -> int:
+	return _todo.size()
+
+
+## The ids on the page shown: the grid's first-fit, kept while the list's shape stands; the pack's every piece.
+func _page_ids() -> Dictionary:
+	var out := {}
+	if pack_mode:
+		for it in items:
+			out[int(it["id"])] = true
+		return out
+	var places := _grid_places()
+	var top := page * page_rows
+	for it in items:
+		var r = places.get(it["id"])
+		if r != null and r.position.y >= top and r.position.y < top + page_rows:
+			out[int(it["id"])] = true
+	return out
+
+
+## The grid's first-fit (_pack), worked out again only when the list's order or a footprint moved.
+func _grid_places() -> Dictionary:
+	var ps := "%d|" % page_rows
+	for it in items:
+		ps += "%s:%s," % [str(it["id"]), str(Items.footprint(it))]     # str: a float id (a load's) and an int one key apart
+	if ps != _place_sig:
+		_place_sig = ps
+		_place_memo = _pack(items, page_rows)
+	return _place_memo
+
+
 ## First-fit: each item in order takes the first free place, scanning rows
 ## then columns, that holds its footprint without crossing a page edge.
 ## Returns id -> Rect2i in cells.
 static func _pack(list: Array, rows_a_page: int, y0 := 0) -> Dictionary:
 	var taken := {}        # Vector2i -> true
 	var out := {}
+	var low := y0          # BUILD45: the first row with a free cell - every row above it is full, so no piece can go there
 	for it in list:
 		var f := Items.footprint(it)
 		var w := mini(f.x, COLS)
 		var h := f.y
-		var y := y0
+		var y := low
 		var placed_v := false
 		while not placed_v:
 			@warning_ignore("integer_division")
@@ -539,7 +667,16 @@ static func _pack(list: Array, rows_a_page: int, y0 := 0) -> Dictionary:
 					placed_v = true
 					break
 			y += 1
+		while _row_full(taken, low):
+			low += 1
 	return out
+
+
+static func _row_full(taken: Dictionary, y: int) -> bool:
+	for x in range(COLS):
+		if not taken.has(Vector2i(x, y)):
+			return false
+	return true
 
 
 ## How many outlines are showing (for the tests).
@@ -747,6 +884,9 @@ func _edge_tick(now: float) -> void:
 
 
 func _process(_dt: float) -> void:
+	_ticks += 1
+	if not _todo.is_empty() and _ticks >= _judge_from and _shown_now() and not _fighting():
+		judge_arrows()                         # the page's arrows, a few a frame (BUILD45)
 	if _edge_dir != 0:
 		if not _dragging() or not edge_held():
 			_edge_dir = 0                      # the drag ended, or left the pack (28 Oct, the review: it ran on to the top)
