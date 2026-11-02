@@ -1027,6 +1027,8 @@ const MAG_KINDS := {
 }
 const MAGAZINE := "Magazine"
 const REFILL_MULT := 2.0            # draft (3 to 2.5 to 2, the fix round: the estate read's Poacher at the Pleasure Park under a coin flip): a magazine refilled by hand mid-run from a box in the pack, the gun's reload times this
+const PLAN_BOXES_MAX := 9           # BUILD46-R (2 Nov): the most boxes of a type the rounds picker's − N + goes to (the pack's room bounds it again)
+const BOT_ROUNDS_X := 1.2           # BUILD46-R: the bot's boxes bring its primary's rounds to this times the fight's want
 const RIG_MAG_SHARE := 0.5          # draft: the gate's top-up packs magazines into up to this share of the rig's pouches, the meds the rest
 const SHELF_MAGS := 2               # draft: the Fence's standard magazines on the shelf, of each type a gun you hold takes, every restock
 const MAG_OF_PARTS := 0.2          # draft: of a find that would be a gun part, the share that's a magazine instead (the five magazine parts were a seventh of the parts)
@@ -1827,6 +1829,11 @@ const AFFIXES := [
 	{"stat": "cure_shock", "label": "Stops a shock too", "short": "stops shock", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
 	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
 	{"stat": "guard_pct", "label": "Guard cap", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
+	# the rig's swap (BUILD46-R, 2 Nov, Matt's call: a rig affix): a gun with a second loaded magazine swaps with no reload,
+	# the spent one refilled from the pack's box as it fires, at a hand refill's pace (Sim.hot_swap). On or off. `tier_w`:
+	# its weight by the rig's base tier, 1 to 9 - likelier on the better rigs (drafts)
+	{"stat": "hot_swap", "label": "No reload pause: a spare magazine swaps in while the spent one refills", "short": "No reload pause", "min": 1, "max": 1, "slots": ["Rig"], "flag": true,
+		"weight": 0.4, "tier_w": [0.08, 0.12, 0.18, 0.25, 0.32, 0.4, 0.5, 0.6, 0.7]},
 	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
 	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
 	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
@@ -2897,7 +2904,9 @@ const BUILD_GRENADE := 12           # with the element's socketable; the nail bo
 ## orders. The convoy, trapped and cache events folded into A threat passing, Someone in need and A locked thing.
 const EVENT_ODDS := 0.3
 const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it's due: it comes at the first lull from then
-const EVENT_ORDER := ["need", "threat", "locked", "trader"]     # the families, in the standing orders' order (the canvas's board 4)
+const EVENT_SLICE := ["need", "threat", "locked", "trader"]     # the slice's four (1 Nov): "the events themselves play well"
+const EVENT_SLICE_MIN := 0.6        # of a site's events at least, the slice's four (fix 46, E7): the six scaled to fit
+const EVENT_ORDER := ["need", "threat", "locked", "trader", "danger", "stash", "body", "wreck", "broadcast", "weather"]     # the families, in the standing orders' order (the canvas's board 4; BUILD46-E the other six after the slice's four)
 ## A family: its name (the panel's head, the orders' row), whether it's a threat (a fight, no pause), its weight on the
 ## dice, and its weights by site kind, zone, weather, night (a multiplier each; 1 where unnamed) and the site's level
 ## (`level`: so much more a level). `from_run`: not before that many runs; a threat never before CONVOY_FROM_RUN.
@@ -2906,6 +2915,13 @@ const EVENT_FAMILIES := {
 	"locked": {"name": "A locked thing", "weight": 1.0, "kind": {"retail": 1.3, "civic": 1.3, "military": 1.5}, "level": 0.02},
 	"threat": {"name": "A threat passing", "threat": true, "weight": 0.8, "kind": {"farm": 1.5}, "zone": [1.3, 1.0, 1.0, 1.1], "night": 1.6},     # from CONVOY_FROM_RUN
 	"trader": {"name": "A trader", "weight": 0.7, "weather": {"Fog": 1.4}, "night": 0.5, "from_run": 2},
+	# BUILD46-E (2 Nov): the other six families
+	"danger": {"name": "A dangerous place", "weight": 0.7, "kind": {"civic": 1.3, "medical": 1.3, "estate": 1.2}, "weather": {"Rain": 1.3}, "level": 0.02},
+	"stash": {"name": "A haul with a catch", "weight": 0.8, "kind": {"retail": 1.2, "estate": 1.3}, "night": 1.2},
+	"body": {"name": "A body", "weight": 0.6, "kind": {"military": 1.5, "medical": 1.3}, "from_run": 3},
+	"wreck": {"name": "A wreck", "weight": 0.7, "kind": {"farm": 1.2, "retail": 1.4}, "zone": [0.8, 1.0, 1.2, 1.4]},
+	"broadcast": {"name": "A broadcast", "weight": 0.5, "night": 1.4, "from_run": 3},
+	"weather": {"name": "The weather turning", "weight": 0.5, "weather": {"Fog": 0.5, "Rain": 0.7}},
 }
 ## Each site's kind, by index (the pools lean on it): farm, retail, estate, civic, military, medical.
 const SITE_KIND := ["farm", "retail", "farm", "estate", "retail", "retail", "civic", "retail", "civic", "civic", "medical", "military"]
@@ -2939,14 +2955,64 @@ const EVENT_POOLS := {
 		{"w": "a broken ankle", "pin": false, "weight": 0.6, "weather": {"Rain": 1.5}},
 	],
 	"locked_what": [
-		{"w": "A council cabinet", "kind": {"civic": 2.0, "estate": 1.5}},
-		{"w": "A tin shed", "door": true, "zones": [0], "kind": {"farm": 2.5}},
-		{"w": "A garage, shuttered", "door": true, "zones": [1, 2], "kind": {"estate": 2.5}},
-		{"w": "A shop's cash office", "door": true, "zones": [1, 2, 3], "kind": {"retail": 3.0}},
-		{"w": "A works van", "kind": {"retail": 1.2}},
-		{"w": "A drugs cupboard", "zones": [3], "kind": {"medical": 5.0}},
-		{"w": "An armoury cage", "zones": [3], "kind": {"military": 5.0}},
-		{"w": "A safe in a back office", "zones": [2, 3], "kind": {"civic": 3.0}},
+		{"w": "A council cabinet", "art": "cabinet", "kind": {"civic": 2.0, "estate": 1.5}},
+		{"w": "A tin shed", "art": "shutter", "door": true, "zones": [0], "kind": {"farm": 2.5}},
+		{"w": "A garage, shuttered", "art": "shutter", "door": true, "zones": [1, 2], "kind": {"estate": 2.5}},
+		{"w": "A shop's cash office", "art": "shutter", "door": true, "zones": [1, 2, 3], "kind": {"retail": 3.0}},
+		{"w": "A works van", "art": "van", "kind": {"retail": 1.2}},
+		{"w": "A drugs cupboard", "art": "cabinet", "zones": [3], "kind": {"medical": 5.0}},
+		{"w": "An armoury cage", "art": "cabinet", "zones": [3], "kind": {"military": 5.0}},
+		{"w": "A safe in a back office", "art": "safe", "zones": [2, 3], "kind": {"civic": 3.0}},
+	],
+	# BUILD46-E (2 Nov): the other six families' slots. "art": the prop's picture (art/events/<art>_shut / _open.png).
+	"danger_what": [
+		{"w": "A flooded cellar", "it": "the water", "zones": [0, 1], "kind": {"farm": 1.5}, "weather": {"Rain": 2.0}},
+		{"w": "A grain store with its roof sagging", "it": "the roof", "zones": [0], "kind": {"farm": 3.0}},
+		{"w": "A floor that's half gone", "it": "the floor", "kind": {"retail": 1.5, "civic": 1.5}},
+		{"w": "A basement that smells of gas", "it": "the gas", "zones": [1, 2, 3], "kind": {"estate": 2.0}},
+		{"w": "A stairwell with its treads rotten", "it": "the stairs", "zones": [1, 2, 3], "kind": {"estate": 1.5, "civic": 1.5}},
+		{"w": "A ward with its ceiling down", "it": "the ceiling", "zones": [3], "kind": {"medical": 4.0}},
+		{"w": "A store hut with the floor rotted through", "it": "the floor", "zones": [3], "kind": {"military": 4.0}},
+	],
+	"danger_prize": [
+		{"w": "a holdall"}, {"w": "a locker at the back"}, {"w": "something glinting at the bottom"},
+		{"w": "a rucksack hung on a hook", "zones": [1, 2, 3]}, {"w": "a toolbox left on a shelf", "kind": {"farm": 2.0, "retail": 1.5}},
+	],
+	"stash_what": [
+		{"w": "A holdall in plain sight"}, {"w": "A rucksack under a car", "zones": [1, 2, 3], "kind": {"estate": 1.5}},
+		{"w": "A pile of boxes under a tarp", "kind": {"farm": 2.0, "retail": 1.5}}, {"w": "A sports bag stuffed in a bin", "zones": [1, 2]},
+		{"w": "A crate on a pallet, lid on", "kind": {"retail": 2.0, "military": 2.0}}, {"w": "A cool box under a hedge", "zones": [0]},
+	],
+	# the catch: "trip" costs HP, "watched" brings the next gang now
+	"stash_catch": [
+		{"w": "a tripwire", "catch": "trip"}, {"w": "a rotten board under it", "catch": "trip"},
+		{"w": "someone watching it", "catch": "watched"}, {"w": "a lad keeping an eye on it", "catch": "watched", "zones": [1, 2]},
+	],
+	"body_who": [
+		{"w": "A courier in a hi-vis"}, {"w": "A lad with a rucksack", "zones": [0, 1]}, {"w": "A woman in walking boots", "zones": [0]},
+		{"w": "A man in a council fleece", "zones": [1, 2], "kind": {"civic": 2.0}}, {"w": "Someone in a stab vest", "zones": [2, 3]},
+		{"w": "A man in fatigues", "zones": [3], "kind": {"military": 4.0}}, {"w": "A woman in scrubs", "zones": [3], "kind": {"medical": 4.0}},
+	],
+	"wreck_what": [
+		{"w": "A tractor in a ditch", "zones": [0], "kind": {"farm": 3.0}}, {"w": "A burnt-out car"},
+		{"w": "A van on its side", "zones": [1, 2, 3], "kind": {"retail": 1.5}}, {"w": "A bus with no windows", "zones": [1, 2]},
+		{"w": "A crashed lorry", "zones": [2, 3], "kind": {"retail": 2.0, "civic": 1.5}},
+		{"w": "An army truck, stripped once already", "zones": [3], "kind": {"military": 5.0}},
+		{"w": "An ambulance with its doors open", "zones": [3], "kind": {"medical": 5.0}},
+	],
+	"radio_what": [
+		{"w": "A radio in a parked car, still on"}, {"w": "A wind-up radio on a windowsill", "zones": [0, 1]},
+		{"w": "A scanner hissing in a guard's hut", "zones": [2, 3], "kind": {"civic": 2.0, "military": 3.0}},
+		{"w": "A phone in the gutter, a voice on it", "zones": [1, 2, 3]}, {"w": "A tannoy crackling into life", "zones": [2, 3], "kind": {"retail": 2.0, "medical": 2.0}},
+	],
+	# the weather turning: "loot" (loot quality, %) and "harder" (the gangs' damage, %) for the rest of the run if you press on;
+	# "not": no turn into the weather the site already has; "alone": only the zone's line that reads as its own sentence
+	"turn": [
+		{"w": "Fog rolls in", "loot": 40, "harder": 20, "not": "Fog"},
+		{"w": "The rain comes on hard", "loot": 30, "harder": 15, "not": "Rain"},
+		{"w": "The light's going early", "loot": 50, "harder": 25, "alone": true},
+		{"w": "A wind gets up", "loot": 25, "harder": 10},
+		{"w": "The power comes back on", "loot": 35, "harder": 20, "zones": [1, 2, 3], "alone": true},
 	],
 }
 ## Someone in need: Pull them out (NEED_FREE_S; a pin's HP risk at the odds below, a hurt's med from the rig) for a runner
@@ -2987,7 +3053,7 @@ const DOGS_PUSH_S := 20.0
 const EVENT_FIGHT_AT := 0.8         # a threat's standing order "at the run's odds" with no odds read at the gate
 ## A trader, the Scrap man (recurring): he takes scrap from the pack's stacks for run-only buffs, one of each a visit.
 ## Standing: a camp's trades with him, any class (trader_standing); at each step his shelf grows. A buff lasts the run.
-const TRADERS := {"scrap_man": {"name": "The Scrap man"}}
+const TRADERS := {"scrap_man": {"name": "The Scrap man"}, "vagabond": {"name": "The Vagabond"}}     # the Vagabond: BUILD46-E
 const TRADER_SHELF := [
 	{"key": "plate", "price": 15, "armour_pct": 10.0},     # +armour this run (10-20% of one stat, the design's guardrail)
 	{"key": "mags", "price": 10},                          # the worn guns' magazines topped up, rounds of his own
@@ -3007,9 +3073,95 @@ const EVENT_ORDERS := {
 	"threat": ["odds_80", "out", "odds_run", "always"],
 	"locked": ["force", "leave", "shoot"],
 	"trader": ["all", "leave", "armour30"],
+	# BUILD46-E (2 Nov): the other six, their first a player's (as the slice's: the designer's player-like defaults)
+	"danger": ["careful", "leave", "go"],
+	"stash": ["check", "take", "leave"],
+	"body": ["search", "pockets", "leave"],
+	"wreck": ["strip", "cut", "leave"],
+	"broadcast": ["listen", "short", "leave"],
+	"weather": ["press_80", "leave", "press", "home"],
 }
 const NEED_HELP_AT := 0.7           # "Help if it's a med or 70% clean": a pin's clean chance the order frees at
 const CONVOY_FROM_RUN := 5         # no threat passing before the sixth run (17 Oct, Matt: a convoy on the first Allotments run used both starter bandages)
+## BUILD46-E (2 Nov, docs/design/run_events.md: the rest of the run events). Every figure a draft for the pass, inside the
+## design's guardrails: an event's best choice about a third of a run's loot (a find or two, a tier up at best), a rival
+## crew x1.5 a normal gang's difficulty, a trader's buff 10-20% of one stat for the run.
+## The odds on a risky choice move as the pin's do (NEED_CLEAN_NIGHT, _WEATHER, _LOW_HP), between NEED_CLEAN_MIN and _MAX.
+## A dangerous place: Go in (DANGER_S, DANGER_CLEAN; the bad outcome DANGER_HURT of max HP, never the last of it), or Go
+## in carefully (DANGER_CAREFUL_S at DANGER_CAREFUL_CLEAN): a find a tier up (LOCK_RARITY, the locked thing's); Leave it.
+const DANGER_S := 15.0
+const DANGER_CLEAN := 0.6
+const DANGER_CAREFUL_S := 35.0
+const DANGER_CAREFUL_CLEAN := 0.9
+const DANGER_HURT := 0.25
+## A stash with a catch: Take it (STASH_TAKE_S; STASH_CATCH the catch: a trip, STASH_TRIP of max HP, or watched, the
+## next gang now), or Check it first (STASH_CHECK_S, the catch found and cleared): STASH_FINDS finds; Leave it.
+const STASH_TAKE_S := 3.0
+const STASH_CHECK_S := 20.0
+const STASH_CATCH := 0.4
+const STASH_TRIP := 0.2
+const STASH_FINDS := 2
+## A body: Search it (BODY_S: a find, and BODY_CLUE a clue to what killed them - the site's next gang tougher, BODY_GANG
+## its HP and fire and BODY_GANG notes a man for its trouble, warned; or the site's head's weakness, BODY_HEAD_CUT off
+## his HP the next run he's out, a thread); Go through the pockets (BODY_POCKETS_S: BODY_TINS a man's tins); Leave it.
+const BODY_S := 10.0
+const BODY_POCKETS_S := 3.0
+const BODY_CLUE := 0.5
+const BODY_GANG := 1.3
+const BODY_GANG_NOTES := 2
+const BODY_HEAD_CUT := 0.15
+const BODY_TINS := 4.0
+## A wreck: Strip it (WRECK_S: WRECK_SCRAP scrap), or Cut it open (WRECK_CUT_S and WRECK_CUT_SCRAP scrap from the pack for
+## the torch: the site's material, WRECK_MAT of it, and a find a tier up); Leave it.
+const WRECK_S := 20.0
+const WRECK_SCRAP := [15, 25]
+const WRECK_CUT_S := 8.0
+const WRECK_CUT_SCRAP := 10
+const WRECK_MAT := [2, 4]
+## A broadcast: Listen (RADIO_S: a tip), or Catch the end (RADIO_SHORT_S: RADIO_SHORT_TIP a tip); Leave it. A tip is a
+## thread: a stash at another open site on a later run there (the site's next run has it, no catch, STASH_FINDS finds a
+## tier up), or, TIP_TRADER of them, the Vagabond's whereabouts (the next run's event is him). A tip goes stale after
+## TIP_RUNS runs.
+const RADIO_S := 20.0
+const RADIO_SHORT_S := 8.0
+const RADIO_SHORT_TIP := 0.5
+const TIP_TRADER := 0.25
+const TIP_RUNS := 12
+## The weather turning: Press on (the turn's loot quality and the gangs' damage for the rest of the run: its "loot" and
+## "harder" in EVENT_POOLS.turn), Head home (out now with the pack), or Let it pass (the family's "Leave it").
+const WEATHER_PRESS_AT := 0.8        # the default order presses on at the run's odds this or better
+## A rival crew (A threat passing, beside the dogs: BUILD46-E; the designer, 2 Nov: a normal fight, it can kill the
+## runner, odds shown, Get out now always open): the next gang's size, each CREW_HP and CREW_DPS of a man of the site's gang
+## (x1.5 a normal gang's difficulty), a man's XP; seen off, what they carry - CREW_NOTES notes a man, or (CREW_FIND) a find
+## a tier up. CREW_SHARE of threats by zone are a crew, none before CREW_FROM_RUN.
+const CREW_HP := 1.25
+const CREW_DPS := 1.2
+const CREW_NOTES := 3
+const CREW_FIND := 0.4
+const CREW_SHARE := [0.25, 0.4, 0.5, 0.6]
+const CREW_FROM_RUN := 8
+## Threads (BUILD46-E): what carries between runs, each list THREAD_MAX at most (the oldest goes). A bag taken from someone
+## in need, or a crew seen off (CREW_ROBBED of them), leaves a robbed crew: while one's out there a threat's weight is
+## x ROBBED_THREAT and ROBBED_BACK of threats are them, back for you (a rival crew, at their own words). A freed person
+## is a runner to come (`promised`, as the slice); a trader remembers you (his standing, his own words).
+const THREAD_MAX := 3
+const CREW_ROBBED := 0.5
+const ROBBED_THREAT := 1.5
+const ROBBED_BACK := 0.6
+## The Vagabond (the second trader, BUILD46-E): he takes tins (the run's) and the rebuild materials (the pack's stacks).
+## His shelf: VAG_GEAR pieces of gear at the site's tier (VAG_UP of them one above), priced off its worth
+## (the Fence's x VAG_SELL_X, fix 46); now and then (VAG_RUMOUR) a rumour - a tip, as a
+## broadcast's - for VAG_RUMOUR_MAT materials, or VAG_RUMOUR_TINS a man's tins with none. Standing, as the Scrap man's
+## (TRADER_STEPS): 3, a third piece; 10, 33% off; 25, the shelf a tier up and a rumour every visit. Gear off his shelf
+## goes into the pack (it comes home, as a find); a rumour's tip is a thread.
+const VAG_FROM_RUN := 4
+const VAG_GEAR := 2
+const VAG_UP := 0.25
+const VAG_SELL_X := 1.5            # his gear's price: the Fence's for it x this (fix 46, E1); his 33% off still over it
+const VAG_RUMOUR := 0.35
+const VAG_RUMOUR_MAT := 3
+const VAG_RUMOUR_TINS := 3.0
+const VAG_SHARE := 0.5              # of traders, once he's about, the Vagabond
 ## The first gun (17 Oct, Matt's two playtests: with no gun a save spiralled, with a shotgun the Gamekeeper fell at level 2):
 ## a Garden Centre clear leaves one of these, plain, with a box of its rounds, while there's no gun anywhere and none has
 ## come home yet - the same step for every save, and for the bot; kept by a full pack, given again if the run loses it.

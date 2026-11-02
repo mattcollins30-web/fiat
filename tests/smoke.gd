@@ -36,6 +36,7 @@ static func _player_saves() -> Dictionary:
 			out[path] = [f.get_length(), FileAccess.get_modified_time(path)]
 	return out
 const Sim := preload("res://scripts/sim/sim.gd")
+const RoundsPanel := preload("res://scripts/ui/rounds_panel.gd")     # BUILD46-R
 const RunView := preload("res://scripts/ui/run_view.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
@@ -832,6 +833,9 @@ func _init() -> void:
 	_ui30c_checks(main)                       # the fix round's UI oddities (30 Oct, builder C)
 	_wager_take_checks(main)                  # Kev's every word and pay through the take path (30 Oct, builder C)
 	_art_inventory_checks(main)               # the pictures the copy should hold, apart from the logic (30 Oct, builder C)
+	_b46r_sim_checks(main)                    # BUILD46-R: the rounds plan a site at the gate, Unload and Load with
+	_b46r_ui_checks(main)                     # BUILD46-R: the dots, the card's line, the stash's buttons, the rounds picker
+	_b46r_affix_checks(main)                  # BUILD46-R: the rig's swap
 	_b43_steps_checks(main)                   # BUILD43 (1 Nov): a Map read stepped across frames reads the same odds; the dogs a few ms a frame
 	_b43_frames_checks(main)                  # BUILD43: the frame budget - a fight, the Map, two minutes played with the dogs
 	_b45a_odds_checks()                       # BUILD45 A (2 Nov): the odds' dry run at the live step
@@ -839,6 +843,10 @@ func _init() -> void:
 	_b45a_past_checks(main)                   # BUILD45 A: the past runners folded past 100
 	_b45a_reads_checks(main)                  # BUILD45 A: settled odds not asked again till they move
 	_b45a_hint_checks(main)                   # BUILD45 A: a gun's rounds hint never vanishes beside a long name
+	_b46s_card_checks(main)                   # BUILD46 S: the Map's site card, one fixed layout, the toggle, the chips that act, you here
+	_b46s_half_checks(main)                   # BUILD46 S: a head's thing left behind, the room at half till it's home
+	_m46_join_checks(main)                    # merge 46: R's rounds picker and plan read in S's site card
+	_fix46s_checks(main)                      # fix 46: the site card's locked head, its words, the deeds' is/are
 	_b43_memo_checks(main)                    # BUILD43: the live stat memo moves with each change (last: it loads a save)
 	_b45_ui_checks(main)                      # BUILD45: each cheaper read against the old way
 	_b45_budget_checks(main)                  # BUILD45: the UI's speed on a mid and a late camp (its own fixtures, then the camp back)
@@ -4785,6 +4793,7 @@ func _events_checks(main) -> void:
 	var charm_was = sim.equipped["Charm"]
 	sim.equipped["Charm"] = null              # no Caretaker's Keys under the odds (T11: an event every run)
 	sim.event_last = ""
+	sim.event_threads = {}                    # BUILD46-E: no tip or robbed crew from the bot's runs steering these
 	var fired := 0
 	for i in range(200):
 		sim.deploy(3)
@@ -4815,11 +4824,29 @@ func _events_checks(main) -> void:
 	# the weights lean (T12): a threat's share at a farm by night over a retail site's by day; the pools keep to their zone
 	var elapsed_was: float = sim.elapsed
 	sim.elapsed = (Data.NIGHT_FROM + 1.0 - Data.CLOCK_START) * 3600.0
-	var farm_night: float = sim.event_weight("threat", 2, 1) / (sim.event_weight("need", 2, 1) + sim.event_weight("locked", 2, 1) + sim.event_weight("threat", 2, 1) + sim.event_weight("trader", 2, 1))
+	var all_w := func(i: int) -> float:       # BUILD46-E: every family's weight
+		return Data.EVENT_ORDER.reduce(func(acc, f): return acc + sim.event_weight(f, i, 1), 0.0)
+	var farm_night: float = sim.event_weight("threat", 2, 1) / all_w.call(2)
 	sim.elapsed = (12.0 - Data.CLOCK_START) * 3600.0
-	var retail_day: float = sim.event_weight("threat", 5, 1) / (sim.event_weight("need", 5, 1) + sim.event_weight("locked", 5, 1) + sim.event_weight("threat", 5, 1) + sim.event_weight("trader", 5, 1))
+	var retail_day: float = sim.event_weight("threat", 5, 1) / all_w.call(5)
 	sim.elapsed = elapsed_was
 	_check(farm_night > retail_day * 1.5, "the threat's weight doesn't lean to a farm at night: %.2f against %.2f" % [farm_night, retail_day])
+	# the slice's four keep EVENT_SLICE_MIN of every site's events, day and night, whichever came last (fix 46, E7); the six still come
+	var share_low := []
+	var six_any := false
+	for night in [false, true]:
+		sim.elapsed = ((Data.NIGHT_FROM + 1.0) if night else 12.0) * 3600.0 - Data.CLOCK_START * 3600.0
+		for i in range(Data.TIERS.size()):
+			for last in [""] + Data.EVENT_SLICE:
+				sim.event_last = last
+				var tot: float = all_w.call(i)
+				var four: float = Data.EVENT_SLICE.reduce(func(acc, f): return acc + sim.event_weight(f, i, 1), 0.0)
+				six_any = six_any or tot - four > 0.0
+				if tot > 0.0 and four / tot < Data.EVENT_SLICE_MIN - 0.001:
+					share_low.append("%s %s after '%s': %.2f" % [Data.TIERS[i]["name"], "night" if night else "day", last, four / tot])
+	sim.event_last = ""
+	sim.elapsed = elapsed_was
+	_check(share_low.is_empty() and six_any, "the slice's four fall under %.0f%% of the events: %s (the six come: %s)" % [Data.EVENT_SLICE_MIN * 100.0, str(share_low.slice(0, 4)), str(six_any)])
 	var bad_who: Array = []
 	for k in range(60):
 		var who: Dictionary = sim._pool_pick("need_who", 0)
@@ -4874,6 +4901,7 @@ func _events_checks(main) -> void:
 		sim.deploy(3)
 		m = sim.mission
 		m["event"] = "trader"
+		m["event_who"] = "scrap_man"              # BUILD46-E: the Scrap man, not the Vagabond
 		m["event_at"] = Data.EVENT_WINDOW[0]      # due as the dice would have it: the lull after the first search brings it
 		var g := 0
 		while sim.on_mission() and sim.event_now().is_empty() and g < 900:
@@ -5453,7 +5481,7 @@ func _events_checks(main) -> void:
 	arm.rules_panel.orders_button.pressed.emit()
 	var op = arm.orders_panel
 	_check(op.visible and not arm.rules_panel.visible, "the standing orders didn't open from the loot rules")
-	_check(Data.EVENT_ORDER == ["need", "threat", "locked", "trader"], "the orders' rows aren't in the canvas's order: %s" % str(Data.EVENT_ORDER))
+	_check(Data.EVENT_ORDER == ["need", "threat", "locked", "trader", "danger", "stash", "body", "wreck", "broadcast", "weather"], "the orders' rows aren't in the canvas's order: %s" % str(Data.EVENT_ORDER))
 	for fam in Data.EVENT_ORDER:
 		_check(op.drop(fam).text.begins_with(op.order_words(fam, sim.event_order(fam))), "the %s row doesn't show its order: %s" % [fam, op.drop(fam).text])
 	op.choose("threat", Data.EVENT_ORDERS["threat"].find("odds_run"))
@@ -5468,7 +5496,607 @@ func _events_checks(main) -> void:
 	sim.equipped["Charm"] = charm_was
 	sim.load_dict(saved)
 	print("events ok: the dice and their leanings, one a run, the lull after a search, the pause, every option, the time a choice needs, the dogs as a gang and their odds, the Scrap man, the default orders, the bot, the panels, the words, the odds' dice, a save mid event")
+	_events_more_checks(main)
 	_pinnacle_checks(main)
+
+
+## The rest of the run events (BUILD46-E, 2 Nov; docs/design/run_events.md): the other six families fire, their choices'
+## costs and rewards land and "Leave it" changes nothing; a rival crew beside the dogs (x1.5 a gang, carrying, it can
+## kill); the Vagabond trades tins and materials and steps up; the threads persist, stay bounded and bring a crew back;
+## the standing orders cover the new families; every panel fits; the event art is found by name or falls back.
+func _events_more_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var asks_was: bool = Sim.asks
+	var charm_was = sim.equipped["Charm"]
+	sim.equipped["Charm"] = null
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.event_threads = {}
+	sim.trader_standing = {}
+	sim.standing_orders = {}
+	sim.runs_total = maxi(sim.runs_total, Data.CREW_FROM_RUN + 1)
+	Sim.asks = true
+	# every family comes on the dice somewhere (the ten), and each can be met in a site's zone
+	var seen := {}
+	for i in range(Data.TIERS.size()):
+		for k in range(120):
+			sim.event_last = ""
+			seen[sim.roll_event(i, 3)] = true
+	sim.event_last = ""
+	_check(Data.EVENT_ORDER.all(func(f): return seen.has(f)), "a family never comes on the dice: %s" % str(Data.EVENT_ORDER.filter(func(f): return not seen.has(f))))
+	_check(Data.EVENT_ORDER.all(func(f): return Data.EVENT_FAMILIES.has(f) and Data.EVENT_ORDERS.has(f) and Words.ORDERS.has(f)), "a family lacks its row, its orders or their words")
+	# the six arrive, ask, stop the clock, and offer their choices with "Leave it" last
+	var want := {"danger": ["go", "careful", "leave"], "stash": ["take", "check", "leave"], "body": ["search", "pockets", "leave"],
+		"wreck": ["strip", "cut", "leave"], "broadcast": ["listen", "short", "leave"], "weather": ["press", "home", "leave"]}
+	var m: Dictionary
+	for fam in want:
+		m = _ev_force(sim, fam)
+		sim._haul_find(m, "scrap", 20)
+		var keys: Array = sim.event_options().map(func(o): return str(o["key"]))
+		_check(sim.event_asking() and str(sim.event_now()["fam"]) == fam and sim.event_paused(m) and keys == want[fam], "%s didn't come and ask with its choices: %s" % [fam, str(keys)])
+		_check(not str(sim.event_now().get("line", "")).contains("{"), "%s's line has an unfilled slot: %s" % [fam, str(sim.event_now().get("line", ""))])
+		# "Leave it" changes nothing (the weather's "Let it pass")
+		var before: Array = _ev_state(sim, m)
+		_check(sim.event_pick("leave") and _ev_state(sim, m) == before, "%s: Leave it cost or gave something: %s -> %s" % [fam, str(before), str(_ev_state(sim, m))])
+		sim.extract_now()
+	# A dangerous place: Go in - its seconds, a find a tier up, the odds on the face against the outcome; Go in carefully
+	for row in [["go", Data.DANGER_S, Data.DANGER_CLEAN], ["careful", Data.DANGER_CAREFUL_S, Data.DANGER_CAREFUL_CLEAN]]:
+		var clean := 0
+		var hurt := 0
+		var face_c := 0.0
+		for k in range(30):
+			m = _ev_force(sim, "danger")
+			face_c = sim.event_clean_odds(float(row[2]))
+			var cl: float = float(m["clock"])
+			var pt: float = float(m["patrol_timer"])
+			var f0: int = int(m.get("finds", 0))
+			_check(sim.event_pick(str(row[0])), "%s couldn't be taken" % row[0])
+			_check(is_equal_approx(float(m["patrol_timer"]) - pt, float(row[1])) and is_equal_approx(cl - float(m["clock"]), float(row[1]) * Data.CLOCK_SEARCH_RATE) and int(m.get("finds", 0)) == f0 + 1, "%s: not its %d s, or no find" % [row[0], int(row[1])])
+			if is_equal_approx(sim.hp, sim.max_hp()):
+				clean += 1
+			elif is_equal_approx(sim.max_hp() - sim.hp, sim.max_hp() * Data.DANGER_HURT):
+				hurt += 1
+			sim.extract_now()
+		_check(clean + hurt == 30 and absf(clean / 30.0 - face_c) < 0.25, "%s's odds are off: %d clean, %d hurt of 30 against %d%%" % [row[0], clean, hurt, roundi(face_c * 100.0)])
+	m = _ev_force(sim, "danger")
+	var dopt: Array = sim.event_options()
+	_check(str(dopt[0]["face"][0]).begins_with("%d s · %d%% clean" % [int(Data.DANGER_S), roundi(sim.event_clean_odds(Data.DANGER_CLEAN) * 100.0)]), "the dangerous place's face doesn't show its odds: %s" % str(dopt[0]["face"]))
+	var tiers_up: Array = []
+	var site_lt: int = int(m["t"]["loot_tier"])
+	sim.extract_now()
+	for k in range(16):
+		m = _ev_force(sim, "danger")
+		m["found"] = []
+		sim.event_pick("careful")
+		for it in m["found"]:
+			if str(it.get("slot", "")) in Data.SLOTS:
+				tiers_up.append(int(it["tier"]))
+		sim.extract_now()
+	_check(not tiers_up.is_empty() and tiers_up.max() > site_lt, "going in found nothing a tier up: %s against %d" % [str(tiers_up), site_lt])
+	# A stash with a catch: Take it (its 3 s, two finds, the catch at its odds - a trip's HP or the next gang now); Check it
+	# first (20 s, two finds, never the catch)
+	var caught := 0
+	for k in range(30):
+		m = _ev_force(sim, "stash")
+		var f0: int = int(m.get("finds", 0))
+		var pt0: float = float(m["patrol_timer"])
+		sim.event_pick("take")
+		var ev: Dictionary = sim.event_now()
+		if bool(ev.get("caught", false)):
+			caught += 1
+			_check(sim.hp < sim.max_hp() or float(m["patrol_timer"]) >= sim.patrol_s(m["t"], int(m["patrols"]) == 0), "the catch cost nothing: %s" % str(ev.get("catch_kind", "")))
+		_check(int(m.get("finds", 0)) == f0 + Data.STASH_FINDS and float(m["patrol_timer"]) >= pt0 + Data.STASH_TAKE_S - 0.01, "taking the stash: not its finds or its seconds")
+		sim.extract_now()
+	_check(absf(caught / 30.0 - Data.STASH_CATCH) < 0.25 and caught > 0, "the stash's catch came %d of 30 against %d%%" % [caught, roundi(Data.STASH_CATCH * 100.0)])
+	m = _ev_force(sim, "stash")
+	var hp_c: float = sim.hp
+	var fc: int = int(m.get("finds", 0))
+	var ptc: float = float(m["patrol_timer"])
+	sim.event_pick("check")
+	_check(sim.hp == hp_c and int(m.get("finds", 0)) == fc + Data.STASH_FINDS and is_equal_approx(float(m["patrol_timer"]) - ptc, Data.STASH_CHECK_S), "checking it first: a catch, or not its finds and 20 s")
+	sim.extract_now()
+	# A body: Search it (10 s, a find, the clue at its odds); Go through the pockets (3 s, a man's tins)
+	var clues := 0
+	var gang_clue := false
+	for k in range(24):
+		m = _ev_force(sim, "body")
+		var f0: int = int(m.get("finds", 0))
+		var hp_site: float = float(m["t"]["hp"])
+		sim.event_pick("search")
+		_check(int(m.get("finds", 0)) == f0 + 1, "searching the body found nothing")
+		var clue: String = str(sim.event_now().get("clue", ""))
+		if clue != "":
+			clues += 1
+		if clue == "gang" and not gang_clue:
+			gang_clue = true
+			# whatever killed them: the next gang tougher, then beaten - its notes, the site's gang back
+			_check(is_equal_approx(float(m["t"]["hp"]), hp_site * Data.BODY_GANG) and m.has("clue_home"), "the clue's gang isn't tougher: %.0f against %.0f" % [float(m["t"]["hp"]), hp_site])
+			var notes0: int = int(m.get("notes", 0))
+			var kills0: int = int(m["kills"])
+			m["patrol_timer"] = 1e9
+			var g := 0
+			while sim.on_mission() and m.has("clue_home") and g < 400:
+				sim.hp = sim.max_hp()
+				m["target_hp"] = minf(float(m["target_hp"]), 1.0)
+				sim.advance(1.0)
+				g += 1
+			var killed: int = int(m["kills"]) - kills0
+			_check(not m.has("clue_home") and is_equal_approx(float(m["t"]["hp"]), hp_site) and int(m.get("notes", 0)) >= notes0 + Data.BODY_GANG_NOTES * killed and killed > 0, "the clue's gang beaten: the site's gang not back, or no notes (%d killed, notes %d to %d)" % [killed, notes0, int(m.get("notes", 0))])
+		sim.extract_now()
+	_check(clues > 4 and clues < 20 and gang_clue, "the body's clue came %d of 24 (%d%%), gang clue %s" % [clues, roundi(Data.BODY_CLUE * 100.0), str(gang_clue)])
+	m = _ev_force(sim, "body")
+	var cash0: float = float(m["cash"])
+	var tins: int = sim.body_tins()
+	sim.event_pick("pockets")
+	_check(is_equal_approx(float(m["cash"]) - cash0, float(tins)) and tins > 0, "the pockets didn't give a man's tins: %.0f" % (float(m["cash"]) - cash0))
+	sim.extract_now()
+	# a head's weakness: a thread, his HP down the next run he's out, then gone
+	var ih := -1
+	for i in range(Data.TIERS.size()):
+		if not sim.boss_of(i).is_empty() and sim.tier_open(i):
+			ih = i
+			break
+	_check(ih >= 0, "no site with a head to read a clue against")
+	if ih >= 0:
+		for k in range(40):
+			_ev_at(sim, ih, "body")
+			sim.event_pick("search")
+			var got: bool = str(sim.event_now().get("clue", "")) == "head"
+			sim.extract_now()
+			if got:
+				break
+		_check(sim.thread_list("weak").any(func(wk): return int(wk["site"]) == ih), "a head's clue left no thread: %s" % str(sim.event_threads))
+		sim.notes += 100000
+		sim.arm_boss(ih, true)
+		var full_hp: float = float(sim.effective(ih)["boss"]["hp"]) if sim.effective(ih).has("boss") else 0.0
+		sim.hp = sim.max_hp()
+		sim.deploy(ih)
+		_check(sim.on_mission() and sim.mission.has("boss") and is_equal_approx(float(sim.mission["boss"]["hp"]), full_hp * (1.0 - Data.BODY_HEAD_CUT)) and sim.thread_list("weak").is_empty(), "the head's weakness didn't come off his HP: %.0f against %.0f" % [float(sim.mission.get("boss", {}).get("hp", 0.0)) if sim.on_mission() else 0.0, full_hp])
+		if sim.on_mission():
+			sim.extract_now()
+	# A wreck: Strip it (20 s, scrap into the pack); Cut it open (8 s, 10 scrap, the site's material and a find); no scrap,
+	# no cutting
+	m = _ev_force(sim, "wreck")
+	var sc0: int = sim.pack_scrap(m)
+	sim.event_pick("strip")
+	_check(sim.pack_scrap(m) - sc0 >= Data.WRECK_SCRAP[0] and sim.pack_scrap(m) - sc0 <= Data.WRECK_SCRAP[1], "stripping it: %d scrap" % (sim.pack_scrap(m) - sc0))
+	sim.extract_now()
+	m = _ev_force(sim, "wreck")
+	m["found"] = m["found"].filter(func(it): return not Items.is_scrap(it))
+	var copt: Array = sim.event_options().filter(func(o): return o["key"] == "cut")
+	_check(not bool(copt[0]["ok"]) and copt[0]["face"][0] == Words.EV["cut_no"] and not sim.event_pick("cut"), "cutting it open with no scrap was open: %s" % str(copt))
+	sim._haul_find(m, "scrap", 30)
+	var mk: String = sim.wreck_mat(int(m["tier"]))
+	var mat0: int = sim.pack_materials(m)
+	var f1: int = int(m.get("finds", 0))
+	_check(sim.event_pick("cut") and sim.pack_scrap(m) == 30 - Data.WRECK_CUT_SCRAP and int(m.get("finds", 0)) == f1 + 1 and (mk == "" or sim.pack_materials(m) - mat0 >= Data.WRECK_MAT[0]), "cutting it open: scrap %d, finds %d, materials %d (%s)" % [sim.pack_scrap(m), int(m.get("finds", 0)) - f1, sim.pack_materials(m) - mat0, mk])
+	sim.extract_now()
+	# A broadcast: Listen (20 s, a tip - a thread); Catch the end (8 s, a tip at its odds)
+	sim.event_threads = {}
+	m = _ev_force(sim, "broadcast")
+	var ptb: float = float(m["patrol_timer"])
+	sim.event_pick("listen")
+	_check(sim.thread_list("tips").size() == 1 and is_equal_approx(float(m["patrol_timer"]) - ptb, Data.RADIO_S), "listening left no tip, or not its 20 s: %s" % str(sim.event_threads))
+	sim.extract_now()
+	var shorts := 0
+	for k in range(20):
+		sim.event_threads = {}
+		m = _ev_force(sim, "broadcast")
+		sim.event_pick("short")
+		shorts += sim.thread_list("tips").size()
+		sim.extract_now()
+	_check(shorts > 3 and shorts < 17, "catching the end gave a tip %d of 20 against %d%%" % [shorts, roundi(Data.RADIO_SHORT_TIP * 100.0)])
+	# a tip's stash: the site's next run has it (the run's event, no catch, two finds a tier up), the tip spent
+	sim.event_threads = {"tips": [{"kind": "site", "site": 3, "run": sim.runs_total}]}
+	sim.deploy(3)
+	m = sim.mission
+	_check(str(m.get("event", "")) == "stash" and bool(m.get("event_tip", false)) and sim.thread_list("tips").is_empty(), "a tip's site didn't get its stash: %s, %s" % [str(m.get("event", "")), str(sim.event_threads)])
+	m["event_who"] = ""
+	_ev_arrive(sim, m, "stash")
+	var topt: Array = sim.event_options().map(func(o): return str(o["key"]))
+	_check(bool(sim.event_now().get("tip", false)) and topt == ["take", "leave"], "the tip's stash isn't one: %s" % str(topt))
+	var ft: int = int(m.get("finds", 0))
+	var hpt: float = sim.hp
+	sim.event_pick("take")
+	_check(int(m.get("finds", 0)) == ft + Data.STASH_FINDS and sim.hp == hpt and not bool(sim.event_now().get("caught", false)), "the tip's stash had a catch, or not its finds")
+	sim.extract_now()
+	# a stale tip goes; word of the Vagabond makes him the next run's event
+	sim.event_threads = {"tips": [{"kind": "site", "site": 3, "run": sim.runs_total - Data.TIP_RUNS - 2}]}
+	sim.deploy(3)
+	_check(not bool(sim.mission.get("event_tip", false)) and sim.thread_list("tips").is_empty(), "a stale tip still paid out")
+	sim.extract_now()
+	sim.event_threads = {"tips": [{"kind": "trader", "run": sim.runs_total}]}
+	sim.deploy(3)
+	_check(str(sim.mission.get("event", "")) == "trader" and str(sim.mission.get("event_who", "")) == "vagabond", "word of the Vagabond didn't bring him")
+	sim.extract_now()
+	# The weather turning: Press on - the turn's loot quality and the gangs' damage for the rest of the run, the site back on
+	# the record; Head home - out now with the pack
+	m = _ev_force(sim, "weather")
+	var ew: Dictionary = sim.event_now()
+	var t0: Dictionary = m["t"]
+	sim.event_pick("press")
+	_check(is_equal_approx(float(m["t"]["rarity"]) - float(t0.get("rarity", 0.0)), float(ew["loot"]) / 100.0) and is_equal_approx(float(m["t"]["dps"]), float(t0["dps"]) * (1.0 + float(ew["harder"]) / 100.0)) and int(ew["loot"]) > 0, "pressing on didn't move the loot and the gangs: %s" % str(ew))
+	sim.extract_now()
+	_check(is_same(m["t"], t0), "the weather's turn stayed on the run's record")
+	m = _ev_force(sim, "weather")
+	_check(sim.event_pick("home") and not sim.on_mission() and str(sim.last_report.get("event_out", "")) == "home", "Head home didn't take the runner home: %s" % str(sim.last_report.get("event_out", "")))
+	# A rival crew: beside the dogs, the zone's share past CREW_FROM_RUN; x1.5 a normal gang; what they carry, paid seen off
+	var whos := {}
+	for k in range(40):
+		sim.deploy(3)
+		m = sim.mission
+		m["event_who"] = ""
+		_ev_arrive(sim, m, "threat")
+		whos[str(sim.event_now().get("who", ""))] = true
+		sim.extract_now()
+	_check(whos.has("crew") and whos.has("dogs"), "a threat is never a rival crew, or never the dogs: %s" % str(whos.keys()))
+	_check(is_equal_approx(Data.CREW_HP * Data.CREW_DPS, 1.5), "a rival crew isn't x1.5 a gang: x%.2f" % (Data.CREW_HP * Data.CREW_DPS))
+	m = _ev_at(sim, 3, "threat", "crew")
+	var cev: Dictionary = sim.event_now()
+	var ct: Dictionary = Sim.crew_t(m["t"])
+	_check(str(cev["who"]) == "crew" and is_equal_approx(float(ct["hp"]), float(m["t"]["hp"]) * Data.CREW_HP) and is_equal_approx(float(ct["dps"]), float(m["t"]["dps"]) * Data.CREW_DPS) and ct["types"] == m["t"].get("types", {"physical": 1.0}) and str(cev.get("carry", "")) in ["notes", "find"], "the crew aren't the site's gang made harder, or carry nothing: %s" % str(cev))
+	_check(sim.dogs_waiting(m) and not sim.event_paused(m), "the crew paused the clock, or aren't standing")
+	# harder than the gang: on a fixture where the gang's read is marginal, the crew's reads lower
+	var site_base: Dictionary = m["t"].duplicate()
+	var heavy := func(wt: float) -> Dictionary:
+		var h: Dictionary = site_base.duplicate()
+		h["hp"] = float(site_base["hp"]) * wt
+		h["dps"] = float(site_base["dps"]) * wt
+		return h
+	var lo_w := 1.0
+	var w := 1.0
+	var g_read: float = sim._dogs_read(m, int(cev["n"]), site_base)
+	while g_read >= 0.85 and w < 4096.0:
+		lo_w = w
+		w *= 2.0
+		g_read = sim._dogs_read(m, int(cev["n"]), heavy.call(w))
+	for k in range(8):                        # between the two ends: a gang the runner beats some of the time
+		if g_read > 0.3 and g_read < 0.85:
+			break
+		var mid: float = sqrt(lo_w * w)
+		var r_mid: float = sim._dogs_read(m, int(cev["n"]), heavy.call(mid))
+		if r_mid >= 0.85:
+			lo_w = mid
+		else:
+			w = mid
+			g_read = r_mid
+	var c_read: float = sim._dogs_read(m, int(cev["n"]), Sim.crew_t(heavy.call(w)))
+	_check(g_read < 0.85 and c_read < g_read, "a rival crew reads no harder than the gang: %.2f against %.2f (x%.1f)" % [c_read, g_read, w])
+	# fought and seen off: a man's XP, what they carried, the next gang 20 s later; a thread they may come back on
+	cev["carry"] = "notes"                    # notes here, the find below: both carries paid
+	cev["carry_n"] = Data.CREW_NOTES * sim.notes_a_kill(m["t"]) * int(cev["n"])
+	var ccarry: String = str(cev["carry"])
+	var notes1: int = int(m.get("notes", 0))
+	var finds1: int = int(m.get("finds", 0))
+	var xp1: float = float(m["xp"])
+	var n1: int = int(cev["n"])
+	_check(sim.dogs_fight() and bool(m["t"].get("crew", false)), "the crew didn't come on as their own gang")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	# the view read for this fight (fix 46, E10: was `_view == null or ...`, true with no view): it's there, the fight is a
+	# threat's (dogs_home), and the crew stand as the zone's gang, not the dogs' shapes
+	_check(main._run._view != null, "no run view for the crew's fight (the art's in the copy)")
+	if main._run._view != null:
+		main._run._view.show_state(sim, m)
+		_check(m.has("dogs_home") and not main._run._view._dogs_on, "the crew are hidden for the dogs' shapes in the fight")
+	var gc := 0
+	while int(m["remaining"]) > 0 and gc < 600 and sim.on_mission():
+		sim.hp = sim.max_hp()
+		m["target_hp"] = minf(float(m["target_hp"]), 1.0)
+		sim.advance(1.0)
+		gc += 1
+	_check(str(sim.event_now().get("outcome", "")) == "fought" and not m["t"].get("crew", false), "the crew weren't seen off")
+	_check(sim.events.any(func(e): return str(e[1]) == Words.EV["crew_off_push"] % int(Data.DOGS_PUSH_S)), "a crew seen off doesn't say the next gang's later (fix 46, E11)")
+	if ccarry == "notes":
+		_check(int(m.get("notes", 0)) >= notes1 + int(cev["carry_n"]) and int(cev["carry_n"]) > 0, "the crew's notes didn't land: %d to %d" % [notes1, int(m.get("notes", 0))])
+	else:
+		_check(int(m.get("finds", 0)) > finds1, "the crew's find didn't land")
+	_check(float(m["xp"]) - xp1 >= float(site_base["xp"]) * n1 * 0.99, "the crew didn't pay a man's XP each: %.1f" % (float(m["xp"]) - xp1))
+	sim.extract_now()
+	m = _ev_at(sim, 3, "threat", "crew")
+	sim.event_now()["carry"] = "find"
+	var finds2: int = int(m.get("finds", 0))
+	sim.dogs_fight()
+	gc = 0
+	while int(m["remaining"]) > 0 and gc < 600 and sim.on_mission():
+		sim.hp = sim.max_hp()
+		m["target_hp"] = minf(float(m["target_hp"]), 1.0)
+		sim.advance(1.0)
+		gc += 1
+	_check(str(sim.event_now().get("outcome", "")) == "fought" and int(m.get("finds", 0)) > finds2, "the crew's find didn't land")
+	sim.extract_now()
+	# the crew can kill the runner (the designer, 2 Nov): a heavy crew, no meds, little HP, a watched run
+	var rig_k: Array = sim.rig.duplicate()
+	sim.rig = sim.rig.filter(func(it): return not Items.is_medical(it))
+	var past_n: int = sim.past.size()
+	var past_last = sim.past.back() if not sim.past.is_empty() else null
+	sim.hp = sim.max_hp()
+	m = _ev_at(sim, 3, "threat", "crew", 50.0)
+	sim.hp = sim.max_hp() * 0.3
+	sim.dogs_fight()
+	var gk := 0
+	while sim.on_mission() and gk < 600:
+		sim.advance(1.0)
+		gk += 1
+	var died: bool = not sim.past.is_empty() and (sim.past.size() > past_n or not is_same(sim.past.back(), past_last)) and str(sim.past.back().get("end", "")).begins_with("died")
+	_check(not sim.on_mission() and died, "a rival crew couldn't kill the runner: %s" % str(sim.past.back() if not sim.past.is_empty() else {}))
+	if not sim.candidates.is_empty():
+		sim.choose_runner(0)
+	sim.rig = rig_k
+	sim.hp = sim.max_hp()
+	# a crew you robbed comes back for you: a bag taken leaves the thread; a threat while it's out is them (their words)
+	sim.event_threads = {}
+	m = _ev_force(sim, "need")
+	sim.event_pick("bag")
+	_check(sim.thread_list("robbed").size() == 1, "taking the bag left no robbed crew: %s" % str(sim.event_threads))
+	sim.extract_now()
+	_check(sim.event_weight("threat", 3, 1) > 0.0, "no threat weight to test")
+	var back := false
+	for k in range(12):
+		sim.deploy(3)
+		m = sim.mission
+		m["event_who"] = ""
+		_ev_arrive(sim, m, "threat")
+		var tev: Dictionary = sim.event_now()
+		if bool(tev.get("back", false)):
+			back = true
+			_check(str(tev["who"]) == "crew" and sim.thread_list("robbed").is_empty() and Words.EV["crew_back"][int(tev["zone"])].any(func(l): return str(l).replace("{n}", str(int(tev["n"]))) == str(tev["line"])), "the robbed crew's back without their words, or the thread stays: %s" % str(tev))
+		sim.extract_now()
+		if back:
+			break
+	_check(back, "a robbed crew never came back")
+	# the threads bounded: never more than THREAD_MAX a list
+	for k in range(10):
+		sim._thread_add("robbed", {"zone": 1, "run": k})
+		sim._thread_add("tips", {"kind": "site", "site": 4, "run": sim.runs_total})
+	_check(sim.thread_list("robbed").size() == Data.THREAD_MAX and sim.thread_list("tips").size() == Data.THREAD_MAX and int(sim.thread_list("robbed")[0]["run"]) == 10 - Data.THREAD_MAX, "the threads grew past THREAD_MAX: %d robbed, %d tips" % [sim.thread_list("robbed").size(), sim.thread_list("tips").size()])
+	# saved: they persist through a save, and a tip loaded still pays at its site
+	var dsv: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var bk = Sim.new()
+	bk.load_dict(dsv)
+	_check(bk.thread_list("robbed").size() == Data.THREAD_MAX and bk.thread_list("tips").size() == Data.THREAD_MAX, "the threads didn't survive a save: %s" % str(bk.event_threads))
+	bk.hp = bk.max_hp()
+	bk.deploy(4)
+	_check(bk.on_mission() and str(bk.mission.get("event", "")) == "stash" and bool(bk.mission.get("event_tip", false)), "a loaded tip didn't pay at its site")
+	sim.event_threads = {}
+	# The Vagabond: tins and materials; gear off his shelf into the pack, a rumour a tip; his standing's steps
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	m["cash"] = 1e6
+	var vev: Dictionary = sim.event_now()
+	var shelf: Array = sim.trader_shelf()
+	var gear: Array = shelf.filter(func(r): return str(r["key"]).begins_with("gear"))
+	_check(str(vev["who"]) == "vagabond" and gear.size() == Data.VAG_GEAR and sim.event_paused(m), "the Vagabond's shelf isn't his: %s" % str(shelf.map(func(r): return r["key"])))
+	var g0: Dictionary = gear[0]
+	var it0: Dictionary = vev["shelf"][0]["it"]
+	var found0: int = m["found"].size()
+	_check(sim.trader_buy(str(g0["key"])) and is_equal_approx(float(m["cash"]), 1e6 - int(g0["price"])) and m["found"].any(func(it): return int(it["id"]) == int(it0["id"])) and not sim.trader_buy(str(g0["key"])), "his gear: tins %.0f, in the pack %s, sold twice?" % [float(m["cash"]), str(m["found"].size() > found0)])
+	_check(str(it0["slot"]) in Sim.VAG_SLOTS and int(it0["tier"]) >= int(m["t"]["loot_tier"]) - 1, "his gear isn't gear at the site's tier: %s tier %d" % [str(it0["slot"]), int(it0["tier"])])
+	# his price off the piece's worth, over what the Fence pays (fix 46, E1)
+	var sp0: int = sim.sell_price(it0)
+	_check(int(vev["shelf"][0]["price"]) == maxi(1, int(ceil(float(sp0) * Data.VAG_SELL_X))) and int(vev["shelf"][0]["price"]) > sp0, "his gear's price isn't off its worth: %d against the Fence's %d" % [int(vev["shelf"][0]["price"]), sp0])
+	# a full pack (fix 46, E2): the gear row greyed and said, no tins taken; loot by hand, bought onto the floor
+	var hand_was: bool = sim.loot_by_hand
+	sim.loot_by_hand = false
+	var fguard := 0
+	while fguard < 400:
+		var fill: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		fill["e2_fill"] = true
+		var fspot: Array = sim.pack_spot(m, fill)
+		if fspot.is_empty():
+			break
+		sim._pack_put(m, fill, fspot)
+		fguard += 1
+	var g1: Array = sim.trader_shelf().filter(func(r): return str(r["key"]) == "gear1")
+	var cash_full: float = float(m["cash"])
+	var left_full: int = int(m["left"])
+	_check(not g1.is_empty() and not bool(g1[0]["ok"]) and str(g1[0]["why"]) == Words.EV["vag_no_room"] and not sim.trader_buy("gear1") and is_equal_approx(float(m["cash"]), cash_full) and int(m["left"]) == left_full, "a full pack still sells his gear: %s, tins %.0f -> %.0f, left %d -> %d" % [str(g1), cash_full, float(m["cash"]), left_full, int(m["left"])])
+	sim.loot_by_hand = true
+	var g1b: Array = sim.trader_shelf().filter(func(r): return str(r["key"]) == "gear1")
+	var it1: Dictionary = vev["shelf"][1]["it"]
+	_check(not g1b.is_empty() and bool(g1b[0]["ok"]) and sim.trader_buy("gear1") and m.get("floor", []).any(func(x): return int(x["id"]) == int(it1["id"])), "loot by hand, a full pack: his gear isn't on the floor")
+	sim.loot_by_hand = hand_was
+	m["found"] = m["found"].filter(func(x): return not x.has("e2_fill"))     # the pack as it was for the rumour's materials
+	vev["rumour"] = true
+	sim.event_threads = {}
+	sim._haul_find(m, "paving", 6)
+	var rrow: Array = sim.trader_shelf().filter(func(r): return r["key"] == "rumour")
+	var mats0: int = sim.pack_materials(m)
+	_check(not rrow.is_empty() and str(rrow[0]["pay"]) == "mat" and sim.trader_buy("rumour") and sim.pack_materials(m) == mats0 - Data.VAG_RUMOUR_MAT and sim.thread_list("tips").size() == 1, "his rumour: not for materials, or no tip: %s" % str(rrow))
+	_ev_ui(main, "trader")
+	var vep = main._run._event_panel
+	_check(vep._name.text == Data.TRADERS["vagabond"]["name"] and vep._known.text.contains("tins"), "the Vagabond's panel isn't his: '%s', '%s'" % [vep._name.text, vep._known.text])
+	sim.trader_done()
+	_check(int(sim.trader_standing.get("vagabond", 0)) == 3 and int(sim.trader_standing.get("scrap_man", 0)) == 0, "his trades didn't count on his own standing: %s" % str(sim.trader_standing))
+	sim.extract_now()
+	# no materials: the rumour for tins
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	m["cash"] = 1e6
+	sim.event_now()["rumour"] = true
+	var rr2: Array = sim.trader_shelf().filter(func(r): return r["key"] == "rumour")
+	_check(str(rr2[0]["pay"]) == "tins" and int(rr2[0]["price"]) > 0, "with no materials his rumour isn't for tins: %s" % str(rr2))
+	sim.trader_done()
+	sim.extract_now()
+	# the steps: 3 another piece, 10 a third off, 25 the shelf a tier up and a rumour every visit
+	sim.trader_standing["vagabond"] = 3
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	_check(sim.trader_shelf().filter(func(r): return str(r["key"]).begins_with("gear")).size() == Data.VAG_GEAR + 1, "at 3 trades he has no more on his shelf")
+	sim.extract_now()
+	sim.trader_standing["vagabond"] = 10
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	var r10: Dictionary = sim.trader_shelf()[0]
+	_check(int(r10["price"]) == maxi(1, int(ceil(float(sim.event_now()["shelf"][0]["price"]) * (1.0 - Data.TRADER_STEP_OFF)))), "at 10 trades his prices aren't 33%% off: %d of %d" % [int(r10["price"]), int(sim.event_now()["shelf"][0]["price"])])
+	sim.extract_now()
+	sim.trader_standing["vagabond"] = 25
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	# a site under its loot cap, so a tier up can show (fix 46, E10: at the cap the old check passed untested)
+	var cap25: int = sim.loot_cap(int(m["t"].get("level", 1)))
+	var s25 := 3
+	while int(m["t"]["loot_tier"]) >= cap25 and s25 > 0:
+		s25 -= 1
+		m = _ev_at(sim, s25, "trader", "vagabond")
+		cap25 = sim.loot_cap(int(m["t"].get("level", 1)))
+	_check(int(m["t"]["loot_tier"]) < cap25 and not sim.event_now()["shelf"].is_empty(), "no site under its loot cap for the 25 trades' check: tier %d, cap %d" % [int(m["t"]["loot_tier"]), cap25])
+	_check(bool(sim.event_now().get("rumour", false)) and sim.event_now()["shelf"].all(func(r): return bool(r["up"])), "at 25 trades his shelf isn't a tier up with a rumour")
+	_check(sim.trader_next_step().is_empty(), "his steps go past 25")
+	sim.extract_now()
+	# he comes by himself once he's about, beside the Scrap man; a trader remembers you
+	var traders := {}
+	sim.trader_standing = {"scrap_man": 2}
+	for k in range(16):
+		sim.deploy(3)
+		m = sim.mission
+		m["event_who"] = ""
+		_ev_arrive(sim, m, "trader")
+		var tw: String = str(sim.event_now().get("who", ""))
+		traders[tw] = true
+		if tw == "scrap_man":
+			_check(Words.EV["trader_says_known"].has(str(sim.event_now()["says"])), "the Scrap man doesn't remember you: %s" % str(sim.event_now()["says"]))
+		sim.trader_done()
+		sim.extract_now()
+	_check(traders.has("vagabond") and traders.has("scrap_man"), "the traders don't both come: %s" % str(traders.keys()))
+	# the standing orders: the six's defaults, a player's, on a run nobody's watching (the bot's and a repeat's)
+	Sim.asks = false
+	sim.standing_orders = {}
+	sim.event_threads = {}
+	var defaults := {"danger": "careful", "stash": "check", "body": "search", "wreck": "strip", "broadcast": "listen"}
+	for fam in defaults:
+		_check(sim.event_order(fam) == str(Data.EVENT_ORDERS[fam][0]) and str(Data.EVENT_ORDERS[fam][0]) == defaults[fam], "%s's default order isn't %s" % [fam, defaults[fam]])
+		m = _ev_force(sim, fam)
+		_check(str(sim.event_now().get("state", "")) == "done" and str(sim.event_now().get("outcome", "")) == defaults[fam], "%s by its standing order went '%s'" % [fam, str(sim.event_now().get("outcome", ""))])
+		sim.extract_now()
+	for odds in [0.95, 0.5]:
+		sim.deploy(3)
+		m = sim.mission
+		m["odds_seen"] = odds
+		_ev_arrive(sim, m, "weather")
+		_check(str(sim.event_now().get("outcome", "")) == ("press" if odds >= Data.WEATHER_PRESS_AT else "leave"), "the weather's order at %.2f went '%s'" % [odds, str(sim.event_now().get("outcome", ""))])
+		sim.extract_now()
+	sim.set_order("wreck", "cut")
+	m = _ev_force(sim, "wreck")
+	_check(str(sim.event_now().get("outcome", "")) in ["cut", "strip"], "Cut it open, scrap allowing, did neither")
+	sim.extract_now()
+	sim.event_threads = {"tips": [{"kind": "site", "site": 3, "run": sim.runs_total}]}
+	sim.deploy(3)
+	m = sim.mission
+	m["event_who"] = ""
+	_ev_arrive(sim, m, "stash")
+	_check(str(sim.event_now().get("outcome", "")) == "take", "the tip's stash by the orders wasn't taken: %s" % str(sim.event_now().get("outcome", "")))
+	sim.extract_now()
+	m = _ev_at(sim, 3, "threat", "crew", 60.0)
+	_check(not sim.on_mission() and sim.events.any(func(e): return str(e[1]).begins_with("Out ahead of the crew")), "under 80% the order didn't get out ahead of the crew")
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	_check(str(sim.event_now().get("state", "")) == "done", "the Vagabond by the orders was left asking")
+	sim.extract_now()
+	sim.standing_orders = {}
+	Sim.asks = true
+	# the panels: every new family's, the crew's and the Vagabond's, on the run screen
+	for fam in want:
+		m = _ev_force(sim, fam)
+		sim._haul_find(m, "scrap", 20)
+		_ev_ui(main, fam)
+		sim.extract_now()
+	m = _ev_at(sim, 3, "threat", "crew")
+	_ev_ui(main, "threat")
+	var tep = main._run._event_panel
+	_check(tep._tiles[0]["key"].text.to_lower().contains(Words.EV["crew_key"].to_lower()) and tep._feet[0].visible, "the crew's tile doesn't say crew: '%s'" % tep._tiles[0]["key"].text)
+	sim.extract_now()
+	m = _ev_at(sim, 3, "trader", "vagabond")
+	m["cash"] = 123456.0
+	sim._haul_find(m, "paving", 4)
+	sim.event_now()["rumour"] = true
+	_ev_ui(main, "trader")
+	var pb: Dictionary = main._run._event_panel.buttons()
+	_check(pb.has("buy:gear0") and pb["buy:gear0"].text == sim._cash_words(float(sim.trader_shelf()[0]["price"])), "his gear's price isn't in tins: %s" % (pb["buy:gear0"].text if pb.has("buy:gear0") else "none"))
+	sim.extract_now()
+	# the art: found by name when it's there, the shapes when it isn't
+	var EventProp = load("res://scripts/ui/event_prop.gd")     # its static art folder and cache
+	var art_was: String = EventProp.art_dir
+	EventProp.art_dir = "user://ev_art_smoke/%s.png"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://ev_art_smoke"))
+	EventProp.art_reset()
+	m = _ev_force(sim, "locked")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._view != null, "no fight scene to check the event art in")
+	if main._run._view != null:
+		var pr = main._run._view.prop
+		var nm: String = "%s_shut" % str(sim.event_now()["art"])
+		_check(pr.art_names() == [nm] and pr.art_missing == [nm] and pr.art_drawn.is_empty(), "with no picture it isn't drawn as shapes: %s %s" % [str(pr.art_missing), str(pr.art_drawn)])
+		var img := Image.create(128, 128, false, Image.FORMAT_RGBA8)
+		img.fill_rect(Rect2i(20, 30, 88, 90), Color(0.5, 0.5, 0.5, 1.0))
+		img.save_png(ProjectSettings.globalize_path("user://ev_art_smoke/%s.png" % nm))
+		EventProp.art_reset()
+		pr.set_event(sim.event_now(), float(m["elapsed"]) + 0.01)
+		_check(pr.art_drawn == [nm] and pr.art_missing.is_empty(), "with its picture on disk it isn't found by name: %s" % str(pr.art_drawn))
+		var t_art: Texture2D = EventProp.art(nm)
+		var ar: Rect2 = pr.art_rect(t_art, 0)
+		var foot: Vector2 = pr._spot(0)[0]
+		var used_end: float = ar.position.y + main._run._view.used_of(t_art).end.y * float(main._run._view.slot_of(0)["scale"])
+		_check(t_art != null and absf(used_end - foot.y) < 0.6 and Rect2(Vector2.ZERO, pr.size).encloses(ar), "the picture doesn't stand on its slot's feet in the frame: %s, foot %s" % [str(ar), str(foot)])
+		sim.event_pick("force")
+		pr.set_event(sim.event_now(), float(m["elapsed"]))
+		_check(pr.art_names() == ["%s_open" % str(sim.event_now()["art"])], "opened, it doesn't ask for its open picture: %s" % str(pr.art_names()))
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://ev_art_smoke/%s.png" % nm))
+	sim.extract_now()
+	EventProp.art_dir = art_was
+	EventProp.art_reset()
+	# every name the code asks for is one the manifest makes (the art lands where it's looked for)
+	var man = JSON.parse_string(FileAccess.get_file_as_string("res://tools/pixellab_run_events_manifest.json"))
+	var outs: Array = man["jobs"].map(func(j): return str(j["out"])) if man is Dictionary else []
+	var asked: Array = EventProp.all_names()      # what the code draws (fix 46, E3: was a list of its own, crews' fire and down in it)
+	var lacking: Array = asked.filter(func(n): return not outs.has("art/events/%s.png" % n))
+	_check(not outs.is_empty() and lacking.is_empty(), "the code asks for event art the manifest doesn't make: %s" % str(lacking))
+	var unasked: Array = outs.filter(func(o2): return not asked.has(str(o2).trim_prefix("art/events/").trim_suffix(".png")))
+	_check(unasked.is_empty(), "the manifest pays for event art the code never draws: %s" % str(unasked))
+	# the new words: no room named, no banned word, no unfilled slot in a pool's line
+	var rx := RegEx.new()
+	rx.compile("(?i)\\b(" + "|".join(WORDS_BANNED) + ")\\b")
+	for pk in ["danger_what", "danger_prize", "stash_what", "stash_catch", "body_who", "wreck_what", "radio_what", "turn"]:
+		for e in Data.EVENT_POOLS[pk]:
+			var hit := rx.search(str(e["w"]))
+			_check(hit == null, "a pool's words say \"%s\": %s" % [hit.get_string() if hit != null else "", e["w"]])
+	Sim.asks = asks_was
+	sim.equipped["Charm"] = charm_was
+	sim.load_dict(saved)
+	# the chips lead with the number (fix 46, E8; the style guide §1): every " · " part of these starts with its figure
+	# the parts that aren't a figure's, by name: a label, the tins' own words (Fmt), the count after its noun as the Scrap man's
+	# standing has it ("Materials ×3", the language pass), and cut_face's material - "2–4 copper cable", its range filled in
+	var not_figures := {"cut_face": ["%s %s and a find"], "vag_known": ["Trades: %d of %d", "%s", "Materials ×%d"], "vag_known_top": ["Trades: %d", "%s", "Materials ×%d"],
+		"price_mat": ["Materials ×%d"]}
+	for fk in ["strip_face", "press_face", "price_mat", "take_face", "cut_face", "vag_known", "vag_known_top"]:
+		var fw: String = str(Words.EV[fk][0]) if Words.EV[fk] is Array else str(Words.EV[fk])
+		for pt in fw.split(" · "):
+			_check(pt in not_figures.get(fk, []) or pt.begins_with("%d") or pt.begins_with("+%d") or pt.begins_with("−%d"), "a chip's part doesn't lead with its number: '%s' in %s" % [pt, fk])
+	var cut_filled: String = Words.EV["cut_face"][0] % [8, 10, "2–4", Words.mid_base("Copper cable")]
+	_check(cut_filled.split(" · ")[2].begins_with("2–4 "), "cut_face's material doesn't lead with its count: '%s'" % cut_filled)
+	print("events more ok: the six families, their costs and rewards, Leave it, the rival crew (x1.5, carrying, it can kill), the Vagabond and his steps, the threads (saved, bounded, a crew back), the orders, the panels, the art by name or shapes")
+
+
+## What "Leave it" must not touch: HP, the rig, the runner to come, the pack, finds, the clocks, the threads, tins, notes,
+## the gang.
+func _ev_state(sim, m: Dictionary) -> Array:
+	return [sim.hp, sim.rig.size(), sim.promised, m["found"].size(), int(m.get("finds", 0)), float(m["patrol_timer"]), float(m["clock"]),
+		JSON.stringify(sim.event_threads), float(m["cash"]), int(m.get("notes", 0)), m["t"].get_instance_id() if m["t"] is Object else str(m["t"].get("hp", 0)), float(m["t"]["dps"]), sim.on_mission()]
+
+
+## A run out at site `i`, cleared, a search done and quiet, `fam` arrived (`who` pinned: the dogs or a crew, the Scrap man
+## or the Vagabond), the site's gang made `weight` heavier first; HP full.
+func _ev_at(sim, i: int, fam: String, who := "", weight := 1.0) -> Dictionary:
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.deploy(i)
+	var m: Dictionary = sim.mission
+	if weight != 1.0:
+		m["t"] = m["t"].duplicate()
+		m["t"]["dps"] = float(m["t"]["dps"]) * weight
+		m["t"]["hp"] = float(m["t"]["hp"]) * weight
+	m["event_who"] = who
+	_ev_arrive(sim, m, fam)
+	return m
 
 
 ## Every string in a words table, flattened (Words.EV, Words.ORDERS).
@@ -5529,6 +6157,8 @@ func _ev_arrive(sim, m: Dictionary, fam: String) -> void:
 	m["patrol_timer"] = 0.0
 	m["event"] = fam
 	m["event_at"] = 0.0
+	if not m.has("event_who"):
+		m["event_who"] = {"trader": "scrap_man", "threat": "dogs"}.get(fam, "")     # BUILD46-E: the slice's own unless asked
 	sim.advance(0.5)
 
 
@@ -5547,11 +6177,13 @@ func _ev_ui(main, fam: String) -> void:
 	_ev_fits(ep.text_nodes(), Rect2(Vector2.ZERO, ep.size), ep, "the %s panel" % fam)
 	_check(Rect2(Vector2.ZERO, run._left.size).encloses(Rect2(ep.position, ep.size)), "the %s panel runs out of the column" % fam)
 	var b: Dictionary = ep.buttons()
-	var want: Array = {"need": ["free", "bag", "leave"], "locked": ["force", "shoot", "leave"], "threat": ["out", "fight"], "trader": ["done"]}[fam]
+	var want: Array = {"need": ["free", "bag", "leave"], "locked": ["force", "shoot", "leave"], "threat": ["out", "fight"], "trader": ["done"],
+		"danger": ["go", "careful", "leave"], "stash": ["take", "check", "leave"], "body": ["search", "pockets", "leave"], "wreck": ["strip", "cut", "leave"],
+		"broadcast": ["listen", "short", "leave"], "weather": ["press", "home", "leave"]}[fam]
 	_check(want.all(func(k): return b.has(k)), "the %s panel lacks its buttons: %s" % [fam, str(b.keys())])
 	_check(not run._button.visible and not run._button2.visible and not run._crates.visible, "the run's own buttons or the crates show under the %s panel" % fam)
 	if fam == "threat":
-		_check(ep._tiles[1]["value"].text == "%d%%" % roundi(sim.dogs_odds() * 100.0) and ep._tiles[2]["value"].text == Words.EV["carry_none"], "the dogs' tiles are off: %s, %s" % [ep._tiles[1]["value"].text, ep._tiles[2]["value"].text])
+		_check(ep._tiles[1]["value"].text == "%d%%" % roundi(sim.dogs_odds() * 100.0) and ep._tiles[2]["value"].text == ep.carry_words(sim.event_now()), "the threat's tiles are off: %s, %s" % [ep._tiles[1]["value"].text, ep._tiles[2]["value"].text])
 	var chip: Panel = run._stop_chip
 	var unit: Label = run._band.unit
 	if fam == "threat":
@@ -6303,12 +6935,10 @@ func _places_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	var names := []
-	for r in range(c["intel"].shown()):
-		names.append(c["intel"].words(r))
-	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_head"].text.begins_with("CONDITIONS · 23:00, night") and not c["intel_head"].text.contains("rain"), "the card's clock line is off: %s" % c["intel_head"].text)
-	_check(c["tiles"][5]["key"].text == "The site" and (c["tiles"][5]["value"].text.begins_with("Safe") or c["tiles"][5]["value"].text.contains("left")), "the card does not say what's left at the site: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
+	var card = c["card"]                      # the site card (BUILD46-S): the sky on the picture's chip, its words at the foot
+	_check(card.foot.text.contains("Rain") or card.foot.text.contains("Night"), "the card does not show the sky's words: '%s'" % card.foot.text)
+	_check(card.sky.text.begins_with("23:00") and card.sky.text.to_lower().contains("rain"), "the card's clock chip is off: %s" % card.sky.text)
+	_check(card.here_right.text.begins_with("Safe") or card.here_right.text.contains("left"), "the card does not say what's left at the site: '%s'" % card.here_right.text)
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
@@ -7120,16 +7750,20 @@ func _why_checks(main) -> void:
 					break
 			M.select(i)
 			main.refresh()
-			var band = M._cols[0]["band"]
+			var card = M._cols[0]["card"]          # the fix chips (BUILD46-S): the reasons, each a button
 			var low: bool = sim.odds_settled(i) and sim.odds_now(i) < M.WHY_UNDER and not M.odds_reasons(sim, i).is_empty()
 			lows += 1 if low else 0
 			highs += 0 if low else 1
 			# the green chip leads where there's a site before (23 Oct, Matt: "grind previous level"); No meds first else
 			var first_want: String = "No meds" if sim.site_before(i) < 0 else "Grind"
-			_check(band.chips.visible == low and (not low or band.chips.words(0).begins_with(first_want)), "site %d at %s: the reasons %s, first '%s'" % [i, str(sim.odds_now(i)), "shown" if band.chips.visible else "hidden", band.chips.words(0) if band.chips.visible else ""])
-			if low:
-				_check(band.headline.position.y + band.headline.size.y <= band.chips.position.y + 1.0 and band.title.position.y + band.title.size.y <= band.headline.position.y + 1.0, "the odds' headline and the reasons overlap on site %d" % i)
-				_check(band.chips.position.y + band.chips.size.y <= band.size.y, "the reasons' rows leave the band on site %d" % i)
+			var shown: Array = card.chips.filter(func(b): return b.visible)
+			var texts: Array = shown.map(func(b): return str(b.text))
+			var reasons_on: bool = shown.any(func(b): return not b.text.begins_with(Words.SITE_CARD["fix_rounds"]))
+			_check(reasons_on == low and (not low or texts.any(func(t): return t.begins_with(first_want))), "site %d at %s: the reasons %s: %s" % [i, str(sim.odds_now(i)), "shown" if reasons_on else "hidden", str(texts)])
+			if low and sim.site_before(i) >= 0:
+				_check(str(texts.back()).begins_with("Grind"), "the green chip isn't the last on site %d: %s" % [i, str(texts)])     # the mockup's: what's short, then where to grind
+			for b in shown:
+				_check(b.position.x + b.size.x <= card.PAD + card.INNER + 0.5 and b.position.y >= card.FIX_Y and b.position.y + b.size.y <= card.FIX_Y + card.FIX_H, "a fix chip leaves its row on site %d: '%s'" % [i, b.text])
 			# the hints at 0% (23 Oct, parked item 7; Matt: "just hints in the form of chips"): what's short, never a figure or
 			# a word of how the odds are read; the green one first
 			if sim.odds_settled(i) and sim.odds_now(i) == 0.0:
@@ -7479,7 +8113,7 @@ func _playtest_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	_check(c["tiles"][main._missions.DEPTH_TILE]["key"].text == "Papers" and c["tiles"][main._missions.DEPTH_TILE]["value"].text.begins_with("1 in") and not c["depth_up"].visible and not c["depth_down"].visible, "the Papers tile is off, or the depth's −/+ show: '%s'" % c["tiles"][main._missions.DEPTH_TILE]["value"].text)     # 15 Oct, signals_map.png
+	_check(c["card"].tiles[2]["text"].text.begins_with("Papers: 1 in") or c["card"].tiles[2]["text"].text.begins_with("1 in"), "the papers' tile is off: '%s'" % c["card"].tiles[2]["text"].text)     # 15 Oct, signals_map.png; the bring-home tile since BUILD46-S
 	# the Map's sky (23 Oct, parked item 8): the layer under the pins follows the picked site's zone and the clock
 	var mv0 = main._missions._map
 	var sky_m: Dictionary = mv0._sky.showing()
@@ -7536,76 +8170,49 @@ func _playtest_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	_check_fit(main, "Runs (locked)")
-	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
-	var band0 = c["band"]
-	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
-	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.contains(" · Tier "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
-	_check(c["tiles"][0]["key"].text == "Gang" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · Clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
+	# the site card (BUILD46-S): the picture's words inside it, the verdict between the faces, every block in its own
+	# band of the card, none on another, the last clear of the note
+	var card = c["card"]
+	_check(card.title.position.y > card.kicker.position.y and card.foot.position.y + card.foot.size.y <= card.PIC_H and card.kicker.text.contains(" · Tier "), "the picture's words are off: '%s' / '%s'" % [card.kicker.text, card.title.text])
+	_check(card.verdict.text != "" and card.odds_line.text != "", "the matchup has no verdict: '%s' / '%s'" % [card.verdict.text, card.odds_line.text])
+	var blocks: Array = [Rect2(0, 0, card.W, card.PIC_H), Rect2(card.PAD, card.MATCH_Y, card.INNER, card.HEAD_Y - card.MATCH_Y - 2), Rect2(card.head_box.position, card.head_box.size),
+		Rect2(card.takes_box.position, card.takes_box.size), Rect2(card.PAD, card.FIX_Y, card.INNER, card.FIX_H), Rect2(card.PAD, card.HOME_Y, card.INNER, card.TILE_Y + card.TILE_H - card.HOME_Y),
+		Rect2(card.PAD, card.HERE_Y, card.INNER, 44)]
+	for a in range(blocks.size()):
+		for b2 in range(a + 1, blocks.size()):
+			_check(not blocks[a].intersects(blocks[b2]), "the site card's blocks %d and %d overlap: %s %s" % [a, b2, str(blocks[a]), str(blocks[b2])])
+	_check(card.position.y + Rect2(blocks.back()).end.y <= c["note"].position.y, "the card's last row runs into the note")
+	_check(card.keys.map(func(l): return l.text) == Words.SITE_CARD["keys"] and card.vals[0].text != "", "what it takes is off: %s" % str(card.vals.map(func(l): return l.text)))
 	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
 	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
 	if yard_note != null and yard_note.text != "":
 		_check(UI.text_width(yard_note, yard_note.text) <= yard_note.size.x + 0.5, "the Runner card's note trails off: '%s'" % yard_note.text)
-	# the depth's −/+ sit inside their tile, one above the other, never on each other
-	var du = c["depth_up"]
-	var dd = c["depth_down"]
-	_check(du.position.y + du.size.y <= dd.position.y and dd.position.y + dd.size.y <= c["tiles"][main._missions.DEPTH_TILE]["panel"].size.y, "the depth buttons overlap or leave the tile: up %s/%s down %s/%s" % [du.position.y, du.size.y, dd.position.y, dd.size.y])
-	_check(du.get_combined_minimum_size().y <= du.size.y, "the depth button's minimum (%.0f) is taller than its box (%.0f)" % [du.get_combined_minimum_size().y, du.size.y])
-	# the band's sky follows the zone
-	main._missions._pick_zone(2)
-	main.refresh()
-	_check(c["band"]._tone == 2 or not sim.zone_open(2), "the band's tone did not follow the zone")
 	main._missions._pick_zone(1)
 	main.refresh()
-	_check(c["intel_head"].text.begins_with("CONDITIONS"), "the air's head is off: '%s'" % c["intel_head"].text)
-	# three boxes under the band: the fight holds its tiles, the elements their chips, the word its rows and the site lines; none overlap, and the last clears the note
-	var bx: Array = c["boxes"]
-	var r0 := Rect2(bx[0].position, bx[0].size)
-	var r1 := Rect2(bx[1].position, bx[1].size)
-	var r2 := Rect2(bx[2].position, bx[2].size)
-	_check(r0.encloses(Rect2(c["tiles"][5]["panel"].position, c["tiles"][5]["panel"].size)) and r0.position.y >= main._missions.BAND_H, "the fight's box does not hold its tiles")
-	_check(r1.encloses(Rect2(c["chips"].position, c["chips"].size)) and r1.encloses(Rect2(c["resist"].position, c["resist"].size)) and r1.encloses(Rect2(c["resist_label"].position, c["resist_label"].size)), "the elements' box does not hold its chips")
-	_check(r2.encloses(Rect2(c["intel"].position, Vector2(c["intel"].size.x, main._missions.WORD_ROWS * (Chips.CHIP_H + Chips.ROW_GAP)))) and r2.encloses(Rect2(c["site"][0].position, c["site"][0].size)) and r2.encloses(Rect2(c["intel_head"].position, c["intel_head"].size)), "the word's box does not hold its rows")
-	_check(r0.end.y + 8 <= r1.position.y and r1.end.y + 8 <= r2.position.y and r2.end.y <= c["note"].position.y, "the Runs card's boxes run into each other or the note: %s %s %s note %.0f" % [str(r0), str(r1), str(r2), c["note"].position.y])
+	_check(card.foot.text != "" or not sim.tier_open(main._missions.selected), "the picture's foot says nothing: '%s'" % card.foot.text)
 	# the foot (23 Oct, parked item 4): the insurance and the rig's top-up share a row under Set off, neither on the other;
-	# the rig's button cycles Fill up, Best grades only, Leave it and back, and says which
+	# the rig's slot is the rounds picker's button (BUILD46-R in BUILD46-S's card)
 	_check(c["insure"].position.y == c["rig"].position.y and c["insure"].position.x + c["insure"].size.x <= c["rig"].position.x and c["deploy"].position.y + c["deploy"].size.y <= c["insure"].position.y, "the foot's buttons overlap")
-	var mode0: String = sim.top_up_mode
-	var seen_modes: Array = []
-	for k in range(3):
-		main._missions._rig(0)
-		main.refresh()
-		seen_modes.append(sim.top_up_mode)
-		_check(c["rig"].text.contains(Words.TOP_UP_MID[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_TINY[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
-		_check_fit(main, "Runs (the rig %s)" % sim.top_up_mode)
-	_check(seen_modes.size() == 3 and seen_modes.back() == mode0 and seen_modes.has("leave") and seen_modes.has("best") and seen_modes.has("fill"), "the rig's button didn't cycle the three: %s" % str(seen_modes))
-	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
-	_check(c["resist_label"].text == "THEY RESIST" and c["resist"].visible and c["resist"].shown() >= 1, "the resist chips are missing")
-	var t0: Dictionary = sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])
+	# BUILD46-R: the button is "Rounds ▾" now - it opens the rounds picker over the map, a second press shuts it, and the
+	# plan's not touched by either
+	var plans0: String = str(sim.rounds_plans)
+	_check(c["rig"].text == Words.ROUNDS["button"] or c["rig"].text == Words.ROUNDS["button_short"], "the rounds button reads '%s'" % c["rig"].text)
+	main._missions._rig(0)
+	main.refresh()
+	_check(main._missions.rounds_panel.visible and main._missions.rounds_panel.site == main._missions.selected, "Rounds ▾ didn't open the picker for the site")
+	var foot_t: String = " ".join(main._missions.rounds_panel._foot.map(func(l): return l.text)).strip_edges()
+	_check(foot_t.contains("takes your last choice") and foot_t.contains("1 box at least"), "the picker's foot doesn't say a site unset takes the last choice (fix 46, R3/R4): '%s'" % foot_t)
+	_check_fit(main, "Runs (the rounds picker)")
+	main._missions._rig(0)
+	main.refresh()
+	_check(not main._missions.rounds_panel.visible and str(sim.rounds_plans) == plans0, "a second press didn't shut the picker, or the plan moved: %s" % str(sim.rounds_plans))
+	# your fire against their resists, in words (BUILD46-S): "they resist nothing" exactly when they resist none of what you fire
+	var t0: Dictionary = sim.effective(main._missions.selected)
+	var mine: Dictionary = sim.type_dps()
 	var any_res := false
-	for ty in Data.ELEMENTS:
-		any_res = any_res or float(t0.get("res", {}).get(ty, 0.0)) > 0.0
-	_check((c["resist"].words(0) == "Nothing") == (not any_res), "the resist chips disagree with the site: '%s'" % c["resist"].words(0))
-	if any_res:
-		_check(c["resist"].words(0).contains("%"), "a resist chip has no figure: '%s'" % c["resist"].words(0))
-	# every resist shows: the row hides a chip that doesn't fit, so count them (12 Oct: the city showed 2 of 4) - each
-	# zone's first site, and the worst case: every element resisted at 70% (all five, past Kitted out)
-	var worst := {"res": {}}
-	for ty in Data.ELEMENTS:
-		worst["res"][ty] = 0.7
-	var res_cases := []
-	for z in range(Data.ZONES.size()):
-		res_cases.append(sim.effective(Data.ZONES[z]["tiers"][0]))
-	res_cases.append(worst)
-	for tz in res_cases:
-		var want: int = main._missions.show_resists(c["resist"], tz)
-		_check(c["resist"].shown() == want, "the resist chips drop one: %d of %d (%s)" % [c["resist"].shown(), want, str(tz.get("res", {}))])
-		var r1b := Rect2(bx[1].position, bx[1].size)
-		_check(r1b.encloses(Rect2(c["resist"].position, c["resist"].size)), "the resist chips run out of their box: %s" % str(tz.get("res", {})))
-	main._missions._shown = ""
-	main._missions.show_state(sim)                 # the card back to its own site
-	for k in range(c["intel"].shown()):
-		_check(c["intel"].tail(k) != "", "a word's effect is missing from its row: '%s'" % c["intel"].words(k))
-	_check(c["intel"].shown() == mini(main._missions.WORD_ROWS, sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])["intel"].size()), "the Runs card shows %d word rows" % c["intel"].shown())
+	for ty in mine:
+		any_res = any_res or (float(mine[ty]) > 0.0 and float(t0.get("res", {}).get(ty, 0.0)) > 0.0)
+	_check((card.vals[2].text == Words.SITE_CARD["resist_none"]) == (not any_res) and not card.vals[2].text.contains("%"), "your fire's row disagrees with the site: '%s'" % card.vals[2].text)
 	# five words (three called in, night, weather) never run past the rows into the site line (the reviewer's catch)
 	var tier0: int = Data.ZONES[main._missions.zone]["tiers"][0]
 	var hold_save: Dictionary = sim.to_dict()
@@ -7619,7 +8226,7 @@ func _playtest_checks(main) -> void:
 	sim.weather[main._missions.zone] = "Rain"
 	main._missions._shown = ""
 	main.refresh()
-	_check(sim.effective(tier0)["intel"].size() >= 4 and c["intel"].shown() <= main._missions.WORD_ROWS and c["intel"].position.y + c["intel"].size.y <= c["site"][0].position.y, "five words run past the word rows: %d shown, rows end %.0f, site at %.0f" % [c["intel"].shown(), c["intel"].position.y + c["intel"].size.y, c["site"][0].position.y])
+	_check(sim.effective(tier0)["intel"].size() >= 4 and card.foot.text != "" and UI.text_width(card.foot, card.foot.text) <= card.foot.size.x, "five words run past the picture's foot: '%s'" % card.foot.text)
 	_check_fit(main, "Runs (five words)")
 	sim.load_dict(hold_save)
 	sim.elapsed = hold_elapsed
@@ -9767,7 +10374,11 @@ func _build_checks(main) -> void:
 	for it in sim.stash.duplicate():
 		if it["base"] == "Lighter fluid":
 			sim.stash.erase(it)
-	_check(not sim.build_option("grenade", "Petrol bomb")["ok"] and sim.build_option("grenade", "Nail bomb")["ok"], "the grenade's socketable is not wanted")
+	var room_guard := 0
+	while not sim.stash_room(2) and not sim.stash.is_empty() and room_guard < 400:
+		sim.stash.pop_front()                 # room for the bomb whatever the bot's camp left in the stash (BUILD46-S: its camp came home fuller)
+		room_guard += 1
+	_check(not sim.build_option("grenade", "Petrol bomb")["ok"] and sim.build_option("grenade", "Nail bomb")["ok"], "the grenade's socketable is not wanted: %s / %s" % [str(sim.build_option("grenade", "Petrol bomb")), str(sim.build_option("grenade", "Nail bomb"))])
 	var fluid: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
 	fluid["count"] = 2
 	sim.stash.append(fluid)
@@ -12647,7 +13258,7 @@ func _fix32_checks(main) -> void:
 	main._armoury.selected = {"kind": "rig", "id": big["id"]}
 	main.refresh()
 	var bh = main._armoury._pick._heads[0]
-	_check(bh._figure.text == "8" and bh._unit.text == "of 8 rounds", "the card over its size: '%s' '%s'" % [bh._figure.text, bh._unit.text])
+	_check(bh._figure.text == "8" and bh._unit.text == "of 8 · Slugs", "the card over its size: '%s' '%s'" % [bh._figure.text, bh._unit.text])     # its grade after its size (BUILD46-R)
 	var sl0: int = sim._rounds_in_stash("Slugs")
 	sim._top_up()
 	_check(int(big["rounds"]) == 8 and sim._rounds_in_stash("Slugs") == sl0 + 3, "the gate didn't put the extra back: %d in it, %d slugs in the stash from %d" % [int(big["rounds"]), sim._rounds_in_stash("Slugs"), sl0])
@@ -15430,7 +16041,7 @@ func _signal_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	for c in main._missions._cols:
-		_check(not c["depth_up"].visible and not c["depth_down"].visible, "a Map card still has the depth's −/+")
+		_check(not c.has("depth_up") and not c.has("depth_down"), "a Map card still has the depth's −/+")
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
@@ -18873,16 +19484,9 @@ func _site_level_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c0: Dictionary = main._missions._cols[0]
-	_check(c0["band"].kicker.text == "The Estate · Tier 1", "the streets' kicker isn't its zone and tier: '%s'" % c0["band"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
-	var finds := -1
-	for r in range(6):
-		if c0["tiles"][r]["key"].text == "Item level":
-			finds = r
-	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with(str(sim.wear_of(8))), "the streets' Gear level tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Gear level tile"))
-	# every open site's tile reads the same way: the number first, never "level N gear" on one and "level N" on the next (Matt's shot)
-	for c in main._missions._cols:
-		if c["deploy"].visible:
-			_check(c["tiles"][finds]["value"].text.substr(0, 1).is_valid_int(), "a Gear level tile reads '%s'" % c["tiles"][finds]["value"].text)
+	_check(c0["card"].kicker.text == "The Estate · Tier 1", "the streets' kicker isn't its zone and tier: '%s'" % c0["card"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
+	var gear_t: String = c0["card"].tiles[0]["text"].text     # the bring-home tile since BUILD46-S: "Gear, level N"
+	_check(gear_t.ends_with("level %d" % sim.wear_of(8)) or gear_t == "Level %d" % sim.wear_of(8), "the streets' gear tile is off: '%s'" % gear_t)
 	main._missions._pick_zone(3)
 	main._missions._shown = ""
 	main.refresh()
@@ -18967,8 +19571,8 @@ func _find_at_mine_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var cc: Dictionary = main._missions._cols[0]
-	var card_chips: Array = cc["chips"].text_nodes().map(func(l): return str(l.text))
-	_check(not card_chips.is_empty() and str(card_chips[0]).contains("hort") and cc["chips"].shown() >= 1, "the Runs card doesn't say the rig's short: %s" % str(card_chips))
+	var card_chips: Array = cc["card"].chips.filter(func(b): return b.visible).map(func(b): return str(b.text))
+	_check(not card_chips.is_empty() and str(card_chips[0]).begins_with(Words.SITE_CARD["fix_rounds"]) and cc["card"].vals[4].text.contains("hort"), "the Runs card doesn't say the rig's short: %s / '%s'" % [str(card_chips), cc["card"].vals[4].text])
 	_check_fit(main, "Runs (rounds short)")
 	sim.rig = keep_rig
 	sim.equipped["Primary"] = keep_gun
@@ -19792,27 +20396,23 @@ func _place_art_checks(main) -> void:
 	main._missions._pick_zone(1)
 	main._missions._shown = ""
 	main.refresh()
-	var band = main._missions._cols[0]["band"]
+	var card = main._missions._cols[0]["card"]
 	var site: String = Data.TIERS[Data.ZONES[1]["tiers"][0]]["name"]
-	_check(band.has_art() == (UI.place_texture(site) != null), "the site band's art does not follow art/places/%s.png" % Items.slug(site))
+	_check(card._art.texture == UI.place_texture(site), "the site card's picture does not follow art/places/%s.png" % Items.slug(site))
 	var img := Image.create(64, 21, false, Image.FORMAT_RGBA8)
 	img.fill(Color("8899aa"))
 	var tex := ImageTexture.create_from_image(img)
 	var had_site = UI._places.get(Items.slug(site), null)
 	UI._places[Items.slug(site)] = tex
-	band._seed = 0
-	band.set_site(site)
-	_check(band.has_art() and band._art.texture == tex and band._art_fade.visible, "a painted site does not show in its band")
-	_check(band.get_child(0) == band._art and band._art.get_index() < band.title.get_index(), "the site art sits over the band's words")
 	main._missions._shown = ""
 	main.refresh()
+	_check(card._art.texture == tex and card._fade.visible, "a painted site does not show in its picture")
+	_check(card._art.get_index() < card._fade.get_index() and card.title.get_parent() == card.pic and card._fade.get_index() < card.title.get_index(), "the site art sits over the picture's words")
 	_check_fit(main, "Runs (site art)")
 	if had_site == null:
 		UI._places.erase(Items.slug(site))
 	else:
 		UI._places[Items.slug(site)] = had_site
-	band._seed = 0
-	band.set_site(site)
 	main._missions._shown = ""
 	main.refresh()
 	# the Clinic's and the Fence's bands read their own places (art/places/the_clinic.png, the_fence.png), the Map's its own
@@ -19925,16 +20525,14 @@ func _yard_checks(main) -> void:
 	main._missions._pick_zone(2)
 	main.refresh()
 	var col: Dictionary = main._missions._cols[0]
-	var chip_texts: Array = col["chips"].text_nodes().map(func(l): return l.text)
+	var fire_t: String = col["card"].vals[1].text      # their fire against your resist, in words (BUILD46-S)
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
-		_check(chip_texts.any(func(t): return str(t).to_lower().contains("fire")) and chip_texts.any(func(t): return str(t).to_lower().contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
-	# the odds in words, the figure small beside them; every band fits the card
+		_check((Data.ELEMENTS.any(func(e): return fire_t.to_lower().begins_with(e)) or fire_t.to_lower().begins_with("physical")) and (fire_t.contains("resist") or fire_t.contains("armour")), "the town's card does not say what it fires and what you resist: '%s'" % fire_t)
+	# the odds in words, the figure small under them; every verdict fits between the faces
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
-		_check(Words.ODDS.any(func(b): return b[1] == col["band"].headline.text) and col["band"].unit.text.ends_with("to clear") or col["band"].unit.text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["band"].headline.text, col["band"].unit.text])
+		_check(Words.ODDS.any(func(b): return b[1] == col["card"].verdict.text) and col["card"].odds_line.text.ends_with("to clear") or col["card"].odds_line.text == Words.SITE_CARD["reading"], "the odds don't read in words: '%s' / '%s'" % [col["card"].verdict.text, col["card"].odds_line.text])
 	for band in Words.ODDS:
-		col["band"].headline.text = band[1]
-		col["band"].unit.text = "100% to clear"
-		_check(UI.text_width(col["band"].headline, band[1]) + 16 + UI.text_width(col["band"].unit, col["band"].unit.text) <= col["band"].headline.size.x, "the odds band '%s' and its figure don't share the band's foot" % band[1])
+		_check(UI.text_width(col["card"].verdict, band[1]) <= col["card"].verdict.size.x and UI.text_width(col["card"].odds_line, "100% to clear") <= col["card"].odds_line.size.x, "the verdict '%s' doesn't fit between the faces" % band[1])
 	main.refresh()
 	_check(Words.odds_words(0.95) == "Safe" and Words.odds_words(0.5) == "A coin toss" and Words.odds_words(0.05) == "A bad idea", "the odds bands are off")
 	_check_fit(main, "Runs (elements)")
@@ -20699,7 +21297,7 @@ func _radio_juice_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	_check(c["intel"].shown() >= 1 and c["intel_head"].text.begins_with("CONDITIONS") and not c["intel_head"].text.contains("from the Radio"), "the Runs card's air head is off (the sky only since 18 Oct; the codes are on signals): '%s'" % c["intel_head"].text)
+	_check(c["card"].foot.text != "" and not c["card"].foot.text.contains("from the Radio"), "the Runs card's conditions are off (the sky only since 18 Oct; the codes are on signals): '%s'" % c["card"].foot.text)
 	_check_fit(main, "Runs (juiced)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -21182,7 +21780,7 @@ func _clock_checks(main) -> void:
 	main.refresh()
 	var cr: Dictionary = main._missions._cols[0]
 	var t00 = Data.ZONES[1]["tiers"][0]
-	_check(sim.estimate(t00) > sim.clock_of(t00) and cr["tiles"][2]["value"].get_theme_color("font_color") == Pal.BAD, "fists' Runs card is not red over the clock: %.0f of %.0f" % [sim.estimate(t00), sim.clock_of(t00)])
+	_check(sim.estimate(t00) > sim.clock_of(t00) and cr["card"].vals[0].get_theme_color("font_color") == Pal.BAD, "fists' Runs card is not red over the clock: %.0f of %.0f" % [sim.estimate(t00), sim.clock_of(t00)])
 	sim.equipped["Primary"] = gun0
 	sim.equipped["Secondary"] = sec0
 	sim.equipped["Helmet"] = hat0
@@ -21194,9 +21792,10 @@ func _clock_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	_check(c["tiles"][2]["value"].text.contains(Fmt.mss(sim.clock_of(Data.ZONES[1]["tiers"][0]))), "the Runs card's clock is off: '%s'" % c["tiles"][2]["value"].text)
-	var red: bool = c["tiles"][2]["value"].get_theme_color("font_color") == Pal.BAD
-	_check(red == (sim.estimate(Data.ZONES[1]["tiers"][0]) > sim.clock_of(Data.ZONES[1]["tiers"][0])), "the Runs card's clock is red when it shouldn't be, or not when it should")
+	var over_c: bool = sim.estimate(Data.ZONES[1]["tiers"][0]) > sim.clock_of(Data.ZONES[1]["tiers"][0])     # "You last" against the run's clock (BUILD46-S)
+	var last_t: String = c["card"].vals[0].text
+	_check(not over_c or (last_t.contains(Fmt.mss(sim.clock_of(Data.ZONES[1]["tiers"][0]))) or last_t == Words.SITE_CARD["over_short"]) and c["card"].vals[0].get_theme_color("font_color") == Pal.BAD, "the Runs card's clock is off: '%s'" % last_t)
+	_check(over_c or not last_t.contains("on the clock"), "the Runs card says over the clock when it isn't: '%s'" % last_t)
 	_check_fit(main, "Runs (the clock)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -21726,7 +22325,7 @@ func _came_back_checks(main) -> void:
 	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
 	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)) and card.position.y >= main._missions.ZONE_H, "the card leaves the Runs screen or sits on the zone row")
 	var c3: Dictionary = main._missions._cols[0]                 # the card, the right third (the drawn Map)
-	for db in [c3["depth_up"], c3["depth_down"], c3["deploy"], c3["insure"], c3["boss"]]:
+	for db in [c3["deploy"], c3["insure"], c3["boss"]]:
 		_check(not card.get_global_rect().intersects(db.get_global_rect()), "the card would cover the right-hand column's '%s' when it shows" % db.text)
 	_check_fit(main, "Runs (what came back)")
 	_came_back_buttons_clear(main, "the run from tier 1")
@@ -21762,7 +22361,7 @@ func _came_back_buttons_clear(main, where: String) -> void:
 	var card = main._missions._came
 	var cr: Rect2 = card.get_global_rect()
 	for c in main._missions._cols:
-		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
+		for b in [c["deploy"], c["boss"], c["insure"]]:
 			if _shown(b):                         # not is_visible_in_tree: the smoke's main is never in the tree (20 Oct)
 				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
 		if c["note"].text != "":
@@ -24276,7 +24875,7 @@ func _map_checks(main) -> void:
 		mv._gui_input(ev)
 	click.call(mv.pin_at(1))
 	main.refresh()
-	_check(M.selected == 1 and M._cols[0]["band"].title.text == str(Data.TIERS[1]["name"]), "a pin picked didn't show its card: selected %d, the card '%s'" % [M.selected, M._cols[0]["band"].title.text])
+	_check(M.selected == 1 and M._cols[0]["card"].title.text == str(Data.TIERS[1]["name"]), "a pin picked didn't show its card: selected %d, the card '%s'" % [M.selected, M._cols[0]["card"].title.text])
 	click.call(mv.pin_at(10))
 	main.refresh()
 	_check(M.selected == 1, "a shut zone's pin took the click")
@@ -24396,7 +24995,7 @@ func _map_checks(main) -> void:
 	main.refresh()
 	click.call(mv.pin_at(5))
 	main.refresh()
-	_check(M.selected == 5 and M._cols[0]["band"].unit.text == "Opens at level %d" % s.site_gate(5), "a gated site's pin: selected %d, the card '%s'" % [M.selected, M._cols[0]["band"].unit.text])
+	_check(M.selected == 5 and M._cols[0]["card"].odds_line.text == "Opens at level %d" % s.site_gate(5), "a gated site's pin: selected %d, the card '%s'" % [M.selected, M._cols[0]["card"].odds_line.text])
 	# what's over the map takes the click first: the guide, open over the room
 	# what's over the map takes the click first: the guide over the room, the came-back card - each later than the map
 	# among the room's children (drawn over it, offered the click first) and stopping the mouse, over the map's rect
@@ -32876,7 +33475,8 @@ func _b45_ui_checks(main) -> void:
 	while not w2.warm_step(sim) and steps < 2000:
 		steps += 1
 	_check(steps > 2 and w2._labels_sim and str(w2._axis) == str(wv._axis), "a warmed web's names aren't the shown one's (%d steps)" % steps)
-	bk2.queue_free()
+	main.remove_child(bk2)
+	bk2.free()                                # freed now (merge 46): the smoke runs without idle frames, so a queue_free left it in main and every later _check_fit sweep read its buttons as misfits
 	main._warm_done = false
 	main._warm_wait = 0
 	var bk = main._barracks
@@ -33475,3 +34075,863 @@ func _m45_fix_checks(main) -> void:
 	main.load_game(keep)
 	DirAccess.remove_absolute(keep)
 	print("m45 fixes ok: the Radio's own key, a load read again (%d frames), the idle log line, the boot's hand-over" % n_twice)
+
+
+# ------------------------------------------------------------------ BUILD46-R (2 Nov): rounds and magazines, the rig's swap
+
+## The kit the BUILD46-R areas read: a pump shotgun and a service pistol, a chest rig with a magazine of each, the stash's
+## rounds of both types and nothing else of them. The site the plans are for: 3.
+func _b46r_kit(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	sim.gate_box_always = false               # the bot's flag off: these read the save's plan
+	sim.rounds_plans = {}
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), sim._plain(Data.MAGAZINE, "Pistol magazine")]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	while not sim.stash_room(16) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var sh: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(sh, 600)
+	var sl: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	Items.set_stack(sl, 180)
+	var pr: Dictionary = sim._plain(Data.AMMO, "Pistol rounds")
+	sim.stash.append_array([sh, sl, pr])
+	sim.hp = sim.max_hp()
+	sim._dry_memo.clear()
+	sim._stats_dirty()
+
+
+## The sim's half: the plan a site packs N boxes of its grade (0.10.2's one-box rule gone), bounded by the pack; a site
+## never set reads the camp's, which follows the last set; the read (rounds_short, the panel's line) counts the plan's
+## boxes; the tick off sends the magazines as they are; the plan's grade swaps a magazine's at the gate; the old button's
+## setting migrates; the bot's boxes; Unload and Load with. `-- only b46r_sim`.
+func _b46r_sim_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var box_was: bool = sim.gate_box_always
+	_b46r_kit(sim)
+	var i := 3
+	# a site never set: the camp's plan, one box of the gun's own grade (the magazines' shells)
+	var r0: Array = sim.rounds_rows(i)
+	_check(r0.size() == 2 and str(r0[0]["type"]) == "shotgun" and str(r0[1]["type"]) == "pistol" and int(r0[0]["boxes"]) == 1 and str(r0[0]["grade"]) == "Shells", "the panel's rows unset: %s" % str(r0.map(func(r): return [r["type"], r["grade"], r["boxes"]])))
+	_check(str(r0[0]["grades"]) == str([["Slugs", 180], ["Shells", 600]]), "the shotgun row's grades, the best first: %s" % str(r0[0]["grades"]))
+	# three boxes of slugs for site 3: the plan's own, the camp's after it
+	sim.plan_set_grade(i, "shotgun", "Slugs")
+	sim.plan_set_boxes(i, "shotgun", 3)
+	_check(sim.rounds_plan_own(i) and sim.plan_boxes(i, "shotgun") == 3 and sim.plan_grade(i, "shotgun") == "Slugs", "the site's plan didn't keep: %s" % str(sim.rounds_plans))
+	_check(not sim.rounds_plan_own(5) and sim.plan_boxes(5, "shotgun") == 3, "a site never set doesn't read the camp's (the last set): %s" % str(sim.rounds_plan(5)))
+	var rr: Array = sim.rounds_rows(i)
+	_check(int(rr[0]["packed"]) == 2 and int(rr[0]["box_rounds"]) == 172 and str(rr[0]["grade"]) == "Slugs" and int(rr[0]["loaded"]) == 8, "the read's boxes of slugs (the magazine swapped to slugs first, 172 left: two boxes): %s" % str(rr[0]))
+	# the read: the boxes count toward the fight's rounds, and more boxes read more
+	var read3: Array = sim.rounds_read(i)
+	sim.plan_set_boxes(i, "shotgun", 0)
+	var read0: Array = sim.rounds_read(i)
+	_check(read3.size() == 2 and read0.size() == 2 and int(read3[0]) > int(read0[0]) and int(read3[1]) == int(read0[1]), "the boxes don't count in the read: 3 boxes %s, none %s" % [str(read3), str(read0)])
+	_check(sim.rounds_short(i).is_empty() == (int(read0[0]) >= int(read0[1])), "rounds_short isn't the read's: %s %s" % [str(sim.rounds_short(i)), str(read0)])
+	# the gate packs the plan: shells this time, four boxes (the stash has 600 = four of 150)
+	sim.plan_set_grade(i, "shotgun", "Shells")
+	sim.plan_set_boxes(i, "shotgun", 4)
+	sim.plan_set_boxes(i, "pistol", 0)
+	var sh0: int = sim._rounds_in_stash("Shells")
+	sim.deploy(i)
+	if sim.on_mission():
+		var boxes: Array = sim.mission["found"].filter(func(x): return Items.is_ammo(x) and x.get("carried", false))
+		var want_n: int = mini(4, sim.capacity())
+		var took: int = boxes.reduce(func(a, b): return a + int(b["rounds"]), 0)
+		_check(boxes.size() == want_n and boxes.all(func(b): return str(b["base"]) == "Shells" and int(b["rounds"]) == 150) and sim._rounds_in_stash("Shells") == sh0 - took, "the gate didn't pack the plan's four boxes of shells: %s, the stash %d -> %d" % [str(boxes.map(func(b): return [b["base"], b["rounds"]])), sh0, sim._rounds_in_stash("Shells")])
+		_check(not boxes.any(func(b): return Items.base_of(b)["type"] == "pistol"), "a pistol box went with the plan's none")
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the plan's boxes")
+	# the pack bounds it: two cells, three boxes - two go, and the panel says so
+	sim.plan_set_boxes(i, "shotgun", 3)
+	sim._pack_holding = true
+	sim._held_cap = 2
+	sim._held_w = 2
+	var room: Array = sim.rounds_room(i)
+	sim._pack_holding = false
+	_check(room == [3, 2, 2], "the pack's room didn't bound the boxes: %s" % str(room))
+	# the tick off: the magazines go as they are (a spent one stays spent); the rig's meds are still packed (fix 46, R2)
+	_b46r_kit(sim)
+	sim.rig[0]["rounds"] = 2
+	sim.stash.append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.plan_set_load(i, false)
+	sim._top_up(-1, i)
+	_check(int(sim.rig[0]["rounds"]) == 2 and sim.rig.filter(func(x): return Items.is_mag(x)).size() == 2, "the tick off still topped the magazines up: %s" % str(sim.rig.map(func(x): return [x["base"], x.get("rounds", 0)])))
+	_check(sim.rig.any(func(x): return str(x["slot"]) == Data.MEDICAL), "the tick off stopped the meds going into the rig: %s" % str(sim.rig.map(func(x): return x["base"])))
+	sim.plan_set_load(i, true)
+	sim._top_up(-1, i)
+	_check(int(sim.rig[0]["rounds"]) == 8, "the tick on didn't top the magazine up: %d" % int(sim.rig[0]["rounds"]))
+	# the plan's grade swaps a magazine's at the gate: shells back to the stash, slugs in
+	sim.plan_set_grade(i, "shotgun", "Slugs")
+	var sl0: int = sim._rounds_in_stash("Slugs")
+	var sh1: int = sim._rounds_in_stash("Shells")
+	sim._top_up(-1, i)
+	var shot: Dictionary = sim.rig.filter(func(x): return Items.is_mag(x) and Items.mag_type(x) == "shotgun")[0]
+	_check(str(shot["ammo"]) == "Slugs" and int(shot["rounds"]) == 8 and sim._rounds_in_stash("Shells") == sh1 + 8 and sim._rounds_in_stash("Slugs") == sl0 - 8, "the plan's grade didn't go in at the gate: %s, shells %d -> %d, slugs %d -> %d" % [str([shot["ammo"], shot["rounds"]]), sh1, sim._rounds_in_stash("Shells"), sl0, sim._rounds_in_stash("Slugs")])
+	# the old button's setting migrates: "Leave it" is the camp's no-top, no-box plan
+	var d: Dictionary = sim.to_dict()
+	d.erase("rounds_plans")
+	d["top_up_mode"] = "leave"
+	var s2 = Sim.new()
+	s2.load_dict(d)
+	_check(s2.top_up_mode == "leave" and not bool(s2.rounds_plan(i)["top"]) and s2.plan_boxes(i, "shotgun") == 0, "the old 'Leave it' didn't migrate: %s" % str(s2.rounds_plans))
+	d["top_up_mode"] = "best"
+	var s3 = Sim.new()
+	s3.load_dict(d)
+	_check(s3.top_up_mode == "best" and s3.plan_boxes(i, "shotgun") == 1, "the old 'Best grades only' didn't migrate: %s" % str(s3.rounds_plans))
+	# and the plans save
+	sim.plan_set_boxes(i, "shotgun", 5)
+	var s4 = Sim.new()
+	s4.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	_check(s4.plan_boxes(i, "shotgun") == 5 and s4.plan_grade(i, "shotgun") == "Slugs" and s4.rounds_plan_own(i), "the site's plan didn't save: %s" % str(s4.rounds_plans))
+	# the bot's boxes: ~1.2x the fight's want past its magazines, a box at least, a quarter of the pack at most, its best grade
+	_b46r_kit(sim)
+	sim.gate_box_always = true
+	var want: int = sim._rounds_want(i)
+	var have: int = 8
+	var bn: int = clampi(ceili(maxf(0.0, Data.BOT_ROUNDS_X * float(want) - float(have)) / 90.0), 1, maxi(1, floori(sim.capacity() / 4.0)))
+	var bb: Array = sim._gate_boxes(true, null, i).filter(func(b): return Items.base_of(b)["type"] == "shotgun")
+	_check(bb.size() == mini(bn, 2) and bb.all(func(b): return str(b["base"]) == "Slugs"), "the bot's boxes: %d of %s, want %d (fight %d)" % [bb.size(), str(bb.map(func(b): return b["base"])), bn, want])
+	sim.gate_box_always = false
+	# Unload and Load with
+	_b46r_kit(sim)
+	var mg: Dictionary = sim.rig[0]
+	var shs: int = sim._rounds_in_stash("Shells")
+	_check(sim.mag_unload(int(mg["id"])) and int(mg["rounds"]) == 0 and str(mg["ammo"]) == "" and sim._rounds_in_stash("Shells") == shs + 8, "Unload: %s, shells %d -> %d" % [str([mg["rounds"], mg["ammo"]]), shs, sim._rounds_in_stash("Shells")])
+	_check(not sim.can_mag_unload(int(mg["id"])), "an empty magazine still unloads")
+	var lg: Array = sim.load_grades(int(mg["id"]))
+	_check(lg.size() == 2 and str(lg[0][0]) == "Slugs" and int(lg[0][1]) == 180, "the load list: %s" % str(lg))
+	_check(sim.mag_load_with(int(mg["id"]), "Shells") and int(mg["rounds"]) == 8 and str(mg["ammo"]) == "Shells", "Load with shells: %s" % str([mg["rounds"], mg["ammo"]]))
+	var shs2: int = sim._rounds_in_stash("Shells")
+	_check(sim.mag_load_with(int(mg["id"]), "Slugs") and str(mg["ammo"]) == "Slugs" and int(mg["rounds"]) == 8 and sim._rounds_in_stash("Shells") == shs2 + 8 and sim._rounds_in_stash("Slugs") == 172, "Load with slugs didn't return the shells and fill: %s, shells %d -> %d" % [str([mg["rounds"], mg["ammo"]]), shs2, sim._rounds_in_stash("Shells")])
+	_check(not sim.can_mag_load(int(mg["id"]), "Pistol rounds") and not sim.can_mag_load(int(mg["id"]), "Slugs"), "a full magazine loads its own grade again, or another type's")
+	sim.deploy(i)
+	if sim.on_mission():
+		_check(not sim.can_mag_unload(int(mg["id"])) and not sim.can_mag_load(int(mg["id"]), "Shells"), "Unload or Load with on a run")
+		sim.extract_now()
+	# a pick the stash can't fully cover (fix 46, R1): 8 slugs, 300 shells, two full shells magazines, the plan's Slugs -
+	# one magazine swaps while the slugs last, the other keeps its shells, both go out full, and the box is shells
+	_b46r_kit(sim)
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells")]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
+	var sh_p: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(sh_p, 300)
+	var sl_p: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	Items.set_stack(sl_p, 8)
+	sim.stash.append_array([sh_p, sl_p])
+	sim.plan_set_grade(i, "shotgun", "Slugs")
+	var read_p: Array = sim.rounds_read(i)
+	sim._top_up(-1, i)
+	var mags_p: Array = sim.rig.filter(func(x): return Items.is_mag(x) and Items.mag_type(x) == "shotgun")
+	var boxes_p: Array = sim._gate_boxes(false, sim._gate_bg, i)
+	_check(mags_p.size() == 2 and mags_p.all(func(x): return int(x["rounds"]) == Items.mag_cap(x, sim.mag_gun(x))), "a short pick sent a magazine out short: %s" % str(mags_p.map(func(x): return [x["ammo"], x["rounds"]])))
+	_check(mags_p.any(func(x): return str(x["ammo"]) == "Slugs") and mags_p.any(func(x): return str(x["ammo"]) == "Shells"), "the slugs didn't go in while they lasted: %s" % str(mags_p.map(func(x): return [x["ammo"], x["rounds"]])))
+	_check(not boxes_p.is_empty() and str(boxes_p[0]["base"]) == "Shells" and int(boxes_p[0]["rounds"]) > 0, "the box stayed home with the pick run out: %s" % str(boxes_p.map(func(x): return [x["base"], x["rounds"]])))
+	_check(int(read_p[0]) >= 16 + int(boxes_p[0]["rounds"]) if not boxes_p.is_empty() else false, "the read with a short pick: %s" % str(read_p))
+	# 9 slugs (the re-review): one magazine of slugs, the other keeps its shells - never [Slugs 8, Slugs 1]
+	_b46r_kit(sim)
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells")]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
+	var sh_9: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(sh_9, 300)
+	var sl_9: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	Items.set_stack(sl_9, 9)
+	sim.stash.append_array([sh_9, sl_9])
+	sim.plan_set_grade(i, "shotgun", "Slugs")
+	sim._top_up(-1, i)
+	var got_9: Array = sim.rig.filter(func(x): return Items.is_mag(x) and Items.mag_type(x) == "shotgun").map(func(x): return [str(x["ammo"]), int(x["rounds"])])
+	got_9.sort()
+	_check(got_9 == [["Shells", 8], ["Slugs", 8]], "9 slugs: %s, not [Slugs 8, Shells 8]" % str(got_9))
+	sim.rounds_plans = {}
+	# Load with's list leaves out the grade a full magazine holds (fix 46, R7); its old rounds back onto their stacks, never
+	# over the stash's cells (R8): no Racks (rounds take cells), the stash full, a magazine of slugs
+	_b46r_kit(sim)
+	var full_sh: Dictionary = sim.rig[0]
+	var lg_full: Array = sim.load_grades(int(full_sh["id"])).map(func(g): return str(g[0]))
+	_check(not ("Shells" in lg_full) and ("Slugs" in lg_full), "Load with lists the grade a full magazine holds: %s" % str(lg_full))
+	sim.yard_picks = {}
+	sim._yard_dirty = true
+	var slug_mag: Dictionary = _mag_full(sim, "Shotgun magazine", "Slugs")
+	sim.rig = [slug_mag]
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))
+	var sh_full: Dictionary = sim._plain(Data.AMMO, "Shells")
+	Items.set_stack(sh_full, Items.stack_cap(sh_full))
+	sim.stash.append(sh_full)
+	while not sim.stash_room(0) and sim.stash.size() > 1:
+		sim.stash.remove_at(0)                 # the bot's camp over its cells once rounds count: back under, the shells kept last
+	var guard := 0
+	while sim.stash_room(1) and guard < 400:
+		sim.stash.push_front(sim._plain(Data.MEDICAL, "Bandage"))     # a cell each (no Racks)
+		guard += 1
+	var used_full: int = sim.stash_used()
+	_check(not sim.stash_room(1) and used_full == sim.stash_cap() and not sim.stash_free(sh_full), "the fixture: the stash isn't full or rounds take no cells")
+	_check(not sim.can_mag_load(int(slug_mag["id"]), "Shells") and not sim.mag_load_with(int(slug_mag["id"]), "Shells") and sim.stash_used() == used_full and int(slug_mag["rounds"]) > 0, "Load with put the old rounds over a full stash: %d of %d" % [sim.stash_used(), sim.stash_cap()])
+	_check(sim.load_block(int(slug_mag["id"])) == Words.ISSUED["no_room"], "a greyed Load with doesn't say why: '%s'" % sim.load_block(int(slug_mag["id"])))
+	var pk_r = main._armoury._pick
+	pk_r.set_buttons([{"text": Words.ROUNDS["load"], "action": func(): pass, "enabled": false, "tip": sim.load_block(int(slug_mag["id"]))}])
+	_check(pk_r._buttons[0].disabled and pk_r._buttons[0].tooltip_text == Words.ISSUED["no_room"], "the greyed button doesn't carry its reason: '%s'" % pk_r._buttons[0].tooltip_text)
+	var sl_room: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	Items.set_stack(sl_room, 1)
+	sim.stash[0] = sl_room                                 # a slugs stack with room in place of a filler
+	var n_items: int = sim.stash.size()
+	var in_mag: int = int(slug_mag["rounds"])
+	_check(sim.load_block(int(slug_mag["id"])) == "", "Load with open and still a reason: '%s'" % sim.load_block(int(slug_mag["id"])))
+	_check(sim.can_mag_load(int(slug_mag["id"]), "Shells") and sim.mag_load_with(int(slug_mag["id"]), "Shells") and sim.stash.size() == n_items and int(sl_room["rounds"]) == 1 + in_mag and in_mag > 0 and sim.stash_used() <= sim.stash_cap(), "Load with didn't merge the old rounds onto their stack: %d items (was %d), slugs %d" % [sim.stash.size(), n_items, int(sl_room["rounds"])])
+	sim.load_dict(saved)
+	sim.rounds_plans = {}
+	sim.gate_box_always = box_was
+	print("b46r sim ok: the plan's boxes and grade at the gate, the pack's bound, the tick, the read, the camp's plan, saves, the migration, the bot's boxes, Unload and Load with")
+
+
+## The screens' half: a magazine's dot in its rounds' colour in the stash grid, the rig strip, the pack and the run's rig;
+## the pick card's "8 of 8 · Slugs" with its box and "feeds the pump shotgun"; Unload and Load with ▾ by their buttons and
+## the list; the Map's "Rounds ▾" and the red chip opening the picker; its rows, grade list, − N +, tick, read and the
+## pack's line; every label fits. `-- only b46r_ui`.
+func _b46r_ui_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var box_was: bool = sim.gate_box_always
+	var kind_was: int = main._armoury._inv.kind
+	var site_was: int = main._missions.selected
+	_b46r_kit(sim)
+	# the colours: a grade's own, distinct within each type (none the same, none near)
+	var by_type := {}
+	for b in Data.BASES[Data.AMMO]:
+		_check(Pal.ROUND_COLOURS.has(str(b["name"])), "no dot colour for %s" % b["name"])
+		by_type[str(b["type"])] = by_type.get(str(b["type"]), []) + [Pal.round_colour(str(b["name"]))]
+	for ty in by_type:
+		var cs: Array = by_type[ty]
+		for a in range(cs.size()):
+			for b2 in range(a + 1, cs.size()):
+				var ca: Color = cs[a]
+				var cb: Color = cs[b2]
+				_check(Vector3(ca.r - cb.r, ca.g - cb.g, ca.b - cb.b).length() > 0.3, "two %s grades' dots are too alike: %s %s" % [ty, ca.to_html(false), cb.to_html(false)])
+	var loaded: Dictionary = _mag_full(sim, "Shotgun magazine", "Slugs")
+	var empty: Dictionary = sim._plain(Data.MAGAZINE, "Shotgun magazine")
+	sim.stash.append_array([loaded, empty])
+	main.show_room(main.ARMOURY)
+	var arm = main._armoury
+	arm._inv.kind = 5
+	arm._inv.page = 0
+	arm._inv.tab = ""
+	arm.selected = {}
+	main.refresh()
+	var kl: int = arm._inv.cell_of(int(loaded["id"]))
+	var ke: int = arm._inv.cell_of(int(empty["id"]))
+	_check(kl >= 0 and arm._inv._cells[kl].dot_grade == "Slugs" and arm._inv._cells[kl].dot_colour() == Pal.round_colour("Slugs"), "the stash's loaded magazine has no slugs dot: %s" % (str(arm._inv._cells[kl].dot_grade) if kl >= 0 else "no cell"))
+	_check(ke >= 0 and arm._inv._cells[ke].dot_grade == "" and arm._inv._cells[ke].dot_colour() == Color.TRANSPARENT, "an empty magazine shows a dot")
+	var rc: Array = arm._containers._rig_cells.filter(func(cl): return cl.visible and cl.id == int(sim.rig[0]["id"]))
+	_check(not rc.is_empty() and rc[0].dot_grade == "Shells" and rc[0].dot_colour() == Pal.round_colour("Shells"), "the rig strip's magazine has no shells dot")
+	# the pick card: "8 of 8 · Slugs", its box before it, "feeds the pump shotgun" after
+	arm.selected = {"kind": "stash", "id": int(loaded["id"])}
+	main.refresh()
+	var pk = arm._pick
+	var hd = pk._heads[0]
+	_check(hd._figure.text == "8" and hd._unit.text == "of 8 · Slugs" and hd._icon.visible and hd._icon.texture != null and hd._unit_tail.visible and hd._unit_tail.text.to_lower() == "· feeds the pump shotgun", "the magazine's line: '%s' '%s' icon %s '%s' (shown %s, %.0f to %.0f of %d)" % [hd._figure.text, hd._unit.text, hd._icon.visible, hd._unit_tail.text, hd._unit_tail.visible, hd._unit_tail.position.x, hd._unit_tail.position.x + hd._unit_tail.size.x, hd.width])
+	_check(hd._figure.position.x >= hd._icon.position.x + hd._icon.size.x and hd._unit_tail.position.x >= hd._unit.position.x + UI.text_width(hd._unit, hd._unit.text), "the line's box, figure and tail overlap")
+	var bt: Array = pk.button_texts()
+	_check(bt.has(Words.ROUNDS["unload"]) and bt.has(Words.ROUNDS["load"]) and bt.size() <= 3, "a loaded stash magazine's buttons: %s" % str(bt))
+	_check_fit(main, "Kit (a loaded magazine)")
+	# Unload by its button: the slugs back, the magazine still picked, its dot gone
+	var sl0: int = sim._rounds_in_stash("Slugs")
+	pk.press(bt.find(Words.ROUNDS["unload"]))
+	main.refresh()
+	kl = arm._inv.cell_of(int(loaded["id"]))
+	_check(int(loaded["rounds"]) == 0 and sim._rounds_in_stash("Slugs") == sl0 + 8 and arm.selected.get("id", -1) == int(loaded["id"]) and kl >= 0 and arm._inv._cells[kl].dot_grade == "", "Unload by its button: %d rounds, slugs %d -> %d, picked %s" % [int(loaded["rounds"]), sl0, sim._rounds_in_stash("Slugs"), str(arm.selected)])
+	# Load with ▾: the list over the right column, the stash's grades the best first; a pick loads it
+	bt = pk.button_texts()
+	pk.press(bt.find(Words.ROUNDS["load"]))
+	main.refresh()
+	var ll = arm.load_list
+	_check(ll.visible and ll.grade_at(0) == "Slugs" and ll.grade_at(1) == "Shells" and ll.grade_at(2) == "" and pk.button_texts().has(Words.ROUNDS["load_open"]), "Load with ▾ didn't open the list: %s %s" % [str([ll.grade_at(0), ll.grade_at(1)]), str(pk.button_texts())])
+	_check(Rect2(pk.get_global_rect()).encloses(ll.get_global_rect()) and ll.get_global_rect().end.y <= pk.get_global_rect().position.y + pk.foot_y, "the load list runs out of the pick panel or onto its buttons: %s in %s" % [str(ll.get_global_rect()), str(pk.get_global_rect())])
+	_check_fit(main, "Kit (the load list)")
+	ll.press(1)
+	main.refresh()
+	kl = arm._inv.cell_of(int(loaded["id"]))
+	_check(str(loaded["ammo"]) == "Shells" and int(loaded["rounds"]) == 8 and not ll.visible and kl >= 0 and arm._inv._cells[kl].dot_grade == "Shells", "a pick off the list didn't load shells: %s, list %s" % [str([loaded["ammo"], loaded["rounds"]]), ll.visible])
+	# from the rig strip too: Leave in the stash, Unload, Load with ▾
+	arm.selected = {"kind": "rig", "id": int(sim.rig[0]["id"])}
+	main.refresh()
+	_check(pk.button_texts() == ["Leave in the stash", Words.ROUNDS["unload"], Words.ROUNDS["load"]], "the rig's magazine's buttons: %s" % str(pk.button_texts()))
+	_check_fit(main, "Kit (a rig magazine)")
+	# Unload from the rig strip: its pouch's dot goes as the press does (the strip redraws on a magazine's load)
+	pk.press(pk.button_texts().find(Words.ROUNDS["unload"]))
+	main.refresh()
+	var rc2: Array = arm._containers._rig_cells.filter(func(c2): return c2.visible and c2.id == int(sim.rig[0]["id"]))
+	_check(int(sim.rig[0]["rounds"]) == 0 and not rc2.is_empty() and rc2[0].dot_grade == "", "the rig strip's dot stayed on an unloaded magazine: %d rounds, dot '%s'" % [int(sim.rig[0]["rounds"]), rc2[0].dot_grade if not rc2.is_empty() else "no cell"])
+	# the pack and the run's rig on a run: the dots
+	main._missions.select(3)
+	sim.deploy(3)
+	if sim.on_mission():
+		var pm: Dictionary = _mag_full(sim, "Shotgun magazine", "Slugs")
+		var spot: Array = sim.pack_spot(sim.mission, pm)
+		if not spot.is_empty():
+			sim._pack_put(sim.mission, pm, spot)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var kp: int = main._run._inv.cell_of(int(pm["id"]))
+		_check(not spot.is_empty() and kp >= 0 and main._run._inv._cells[kp].dot_grade == "Slugs", "the pack's magazine has no dot")
+		var rrc: Array = main._run._rig_cells.filter(func(cl): return cl.visible and cl.dot_grade != "")
+		_check(not rrc.is_empty(), "the run's rig shows no magazine's dot")
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run for the pack's dot")
+	# the Map: "Rounds ▾" opens the picker on the site's plan
+	_b46r_kit(sim)
+	main.show_room(main.MISSIONS)
+	main._missions.select(3)
+	main.refresh()
+	var c: Dictionary = main._missions._cols[0]
+	var rp = main._missions.rounds_panel
+	rp.visible = false
+	_check(c["rig"].text == Words.ROUNDS["button"], "the card's button reads '%s'" % c["rig"].text)
+	c["rig"].pressed.emit()
+	main.refresh()
+	_check(rp.visible and rp.site == 3 and rp.row_types() == ["shotgun", "pistol"], "Rounds ▾ didn't open the picker's rows: %s %s" % [rp.visible, str(rp.row_types())])
+	_check(rp.read_text().begins_with("Enough") or rp.read_text().begins_with("Short"), "the picker's read: '%s'" % rp.read_text())
+	_check(rp.rows[0]["grade"].text.begins_with("Shells") and rp.rows[0]["count"].text == "1", "the shotgun row: '%s' '%s'" % [rp.rows[0]["grade"].text, rp.rows[0]["count"].text])
+	_check_fit(main, "Map (the rounds picker)")
+	# every grade's name on the row's button fits it, the longest too ("Hardened bolts" ran out of it in the whole smoke)
+	var gb: Button = rp.rows[0]["grade"]
+	var gb_was: String = gb.text
+	for b in Data.BASES[Data.AMMO]:
+		UI.fit_button(gb, RoundsPanel.grade_forms(str(b["name"])))
+		_check(UI.text_width(gb, gb.text) + 32.0 <= gb.size.x, "the grade button's '%s' needs %.0f px, has %.0f" % [gb.text, UI.text_width(gb, gb.text) + 32.0, gb.size.x])
+	gb.text = gb_was
+	rp.press_step(0, 1)
+	main.refresh()
+	_check(sim.plan_boxes(3, "shotgun") == 2 and rp.rows[0]["count"].text == "2" and rp.rows[0]["line"].text.contains("300"), "+ didn't add a box: %d, '%s'" % [sim.plan_boxes(3, "shotgun"), rp.rows[0]["line"].text])
+	rp._grades_open(0)
+	main.refresh()
+	_check(rp.grades.visible and rp.grades.grade_at(0) == "Slugs" and rp.grades.grade_at(1) == "Shells", "the grade list: %s" % str([rp.grades.grade_at(0), rp.grades.grade_at(1)]))
+	_check(Rect2(rp.get_global_rect()).encloses(rp.grades.get_global_rect()), "the grade list runs out of the picker")
+	_check_fit(main, "Map (the picker's grades)")
+	rp.grades.press(0)
+	main.refresh()
+	_check(sim.plan_grade(3, "shotgun") == "Slugs" and rp.rows[0]["grade"].text.begins_with("Slugs") and not rp.grades.visible, "a grade picked didn't keep: '%s'" % rp.rows[0]["grade"].text)
+	var top0: bool = rp.tick_on()
+	rp.press_tick()
+	main.refresh()
+	_check(top0 and not rp.tick_on() and not bool(sim.rounds_plan(3)["load"]) and bool(sim.rounds_plan(3)["top"]), "the tick didn't turn off (the magazines' fill alone)")
+	rp.press_tick()
+	main.refresh()
+	_check(rp.tick_on() and bool(sim.rounds_plan(3)["load"]), "the tick didn't turn on")
+	# the pack's room said, when it bounds the boxes
+	sim._pack_holding = true
+	sim._held_cap = 2
+	sim._held_w = 2
+	rp.press_step(0, 1)
+	rp.show_state(sim)
+	var room_t: String = rp._room.text if rp._room.visible else ""
+	_check_fit(main, "Map (the picker, the pack short)")
+	sim._pack_holding = false
+	_check(room_t.begins_with("2 of 4 boxes fit"), "the pack's line: '%s'" % room_t)
+	# short: the read red, the card's chip "Rounds: 8 of ~N", the chip opens the picker
+	sim.stash = sim.stash.filter(func(x): return not (Items.is_ammo(x) and Items.base_of(x)["type"] == "shotgun"))
+	sim._dry_memo.clear()
+	sim._stats_dirty()
+	rp.visible = false
+	main._missions._shown = ""
+	main.refresh()
+	var short: Array = sim.rounds_short(3)
+	_check(not short.is_empty(), "the fixture: site 3 doesn't read short with 8 shells")
+	if not short.is_empty():
+		# the chip is the site card's first fix chip, without figures (the Rounds row says them; the language pass)
+		var chip0: Button = c["card"].chips[0]
+		_check(chip0.visible and chip0.text == Words.SITE_CARD["fix_rounds"] + " ›" and c["card"]._acts[0] == "rounds", "the rounds chip: '%s'" % chip0.text)
+		_check(c["card"].vals[4].text.contains(Words.group(int(short[0]))) and c["card"].vals[4].get_theme_color("font_color") == Pal.BAD, "the card's Rounds line isn't the plan's short read in red: '%s'" % c["card"].vals[4].text)
+		_check(str(c["rig"].get_meta("ui_style", "")) == "false|bad" and c["rig"].text.begins_with(Words.ROUNDS["button_short"]), "the Rounds button isn't red while short: '%s' %s" % [c["rig"].text, str(c["rig"].get_meta("ui_style", ""))])
+		chip0.pressed.emit()
+		main.refresh()
+		_check(rp.visible and rp.read_text().begins_with("Short") and rp._read.get_theme_color("font_color") == Pal.BAD, "the chip didn't open the picker short in red: '%s'" % rp.read_text())
+		_check_fit(main, "Map (the picker, short)")
+	rp._done.pressed.emit()
+	_check(not rp.visible, "Done didn't shut the picker")
+	sim.load_dict(saved)
+	sim.rounds_plans = {}
+	sim.gate_box_always = box_was              # the camp as it was for the areas after
+	main._armoury._inv.kind = kind_was
+	if site_was >= 0:
+		main._missions.select(site_was)
+	main.refresh()
+	print("b46r ui ok: the dots, the card's line, Unload and Load with by their buttons, the picker by its button and its chip, every label fits")
+
+
+## The rig's swap (Matt's call: a rig affix): a Rig's flag, likelier on better rigs; on its card; in the fight a gun with a
+## second loaded magazine swaps with no reload, the spent one refilled from the pack's box; without it the reload pauses;
+## the odds' read (mag_share) and the bot's figure read it. `-- only b46r_affix`.
+func _b46r_affix_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var box_was: bool = sim.gate_box_always
+	var d: Dictionary = Items.affix_def("hot_swap")
+	_check(not d.is_empty() and bool(d.get("flag", false)) and d["slots"] == ["Rig"] and Items.allowed_affixes("Rig").has(d), "the rig's swap isn't a rig's flag: %s" % str(d))
+	_check(Items.affix_weight(d, 9) > Items.affix_weight(d, 5) and Items.affix_weight(d, 5) > Items.affix_weight(d, 1), "the swap isn't likelier on better rigs: %s" % str(d.get("tier_w", [])))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4601
+	var hits := [0, 0]
+	for k in range(600):
+		for j in range(2):
+			var picks: Array = Items.pick_affixes("Rig", 3, rng, [], 1 if j == 0 else 9)
+			if picks.any(func(a): return str(a["stat"]) == "hot_swap"):
+				hits[j] += 1
+	_check(hits[1] > hits[0] * 2, "a tier-9 rig doesn't roll the swap more than a tier-1's: %s" % str(hits))
+	# its card: the words
+	var rig_it: Dictionary = sim._plain("Rig", "Chest rig")
+	rig_it["affixes"] = [{"stat": "hot_swap", "value": 1, "tier": 1}]
+	_check(Items.affix_lines(rig_it, true) == [d["short"]] and Items.affix_lines(rig_it) == [d["label"]], "the swap's lines: %s" % str(Items.affix_lines(rig_it)))
+	_check(str(d["short"]) == "No reload pause" and str(d["label"]).begins_with("No reload pause: ") and not str(d["label"]).contains(" you "), "the swap's words (fix 46, R10: the effect first, no 'you'): '%s' / '%s'" % [d["label"], d["short"]])
+	# the fight: two loaded magazines, a box in the pack; the first spent - with the swap no reload, without a pause
+	var runs: Array = []
+	for with_it in [true, false]:
+		_b46r_kit(sim)
+		sim.equipped["Secondary"] = null
+		var r2: Dictionary = sim._plain("Rig", "Chest rig")
+		r2["affixes"] = [{"stat": "hot_swap", "value": 1, "tier": 1}] if with_it else []
+		sim.equipped["Rig"] = r2
+		sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells")]
+		sim._stats_dirty()
+		sim.deploy(3)
+		if not sim.on_mission():
+			_check(false, "the fixture: no run for the swap")
+			continue
+		var m: Dictionary = sim.mission
+		m["remaining"] = 5
+		m["target_hp"] = 1e9
+		m["t"]["dps"] = 0.0
+		m["clock"] = 1e6
+		sim._tick(0.1)
+		var first: Dictionary = sim.mag_in("Primary")
+		sim._fire_rounds(m, "Primary", float(first.get("rounds", 0)))
+		var r_t: float = float(m.get("reload_t", {}).get("Primary", 0.0))
+		var now: Dictionary = sim.mag_in("Primary")
+		runs.append([with_it, r_t, int(m.get("swaps", 0)), not now.is_empty() and not is_same(now, first) and int(now.get("rounds", 0)) > 0, m.get("bg_refill", {}).has(int(first["id"]))])
+		if with_it:
+			# the spent one refills from the pack's box in the background, at a hand refill's pace: not in half a second, in
+			# the end from the box
+			var box: Dictionary = sim._pack_box(m, "shotgun")
+			var in_box: int = int(box.get("rounds", 0))
+			sim._bg_refills_tick(m, 0.5)
+			var early: int = int(first.get("rounds", 0))
+			sim._bg_refills_tick(m, 100.0)
+			_check(not box.is_empty() and early == 0 and int(first.get("rounds", 0)) == 8 and str(first.get("ammo", "")) == "Shells" and int(box.get("rounds", 0)) == in_box - 8, "the spent magazine's refill from the pack: %d at half a second, %d after, the box %d -> %d" % [early, int(first.get("rounds", 0)), in_box, int(box.get("rounds", 0))])
+		sim.extract_now()
+	if runs.size() == 2:
+		_check(bool(runs[0][0]) and float(runs[0][1]) == 0.0 and int(runs[0][2]) == 1 and bool(runs[0][3]) and bool(runs[0][4]), "with the swap the second magazine didn't go in with no reload: %s" % str(runs[0]))
+		_check(not bool(runs[1][0]) and float(runs[1][1]) > 0.0 and int(runs[1][2]) == 0, "without the swap there's no reload pause: %s" % str(runs[1]))
+	# the reads: the share of fire with it beats without (the odds, the sheet, the bot's figure)
+	_b46r_kit(sim)
+	sim.equipped["Secondary"] = null
+	sim.rig = [_mag_full(sim, "Shotgun magazine", "Shells"), _mag_full(sim, "Shotgun magazine", "Shells")]
+	var plain_rig: Dictionary = sim._plain("Rig", "Chest rig")
+	plain_rig["affixes"] = []
+	sim.equipped["Rig"] = plain_rig
+	sim._stats_dirty()
+	var without: float = sim.mag_share("Primary")
+	plain_rig["affixes"] = [{"stat": "hot_swap", "value": 1, "tier": 1}]
+	sim._stats_dirty()
+	sim._dry_memo.clear()
+	var with_s: float = sim.mag_share("Primary")
+	_check(with_s > without and is_equal_approx(with_s, 1.0), "the reads don't count the swap: %.3f with, %.3f without" % [with_s, without])
+	sim.load_dict(saved)
+	sim.gate_box_always = box_was
+	print("b46r affix ok: a rig's flag, likelier on better rigs, its lines, no reload pause with it and a pause without, the refill from the pack, the reads")
+
+
+# ------------------------------------------------------------------ BUILD46 S (2 Nov): the site card, a thing left behind
+
+## The site card's fixed rects: every block's place in the card (BUILD46-S, "one fixed layout, never resizing").
+func _b46s_rects(card) -> Array:
+	var out: Array = []
+	for n in [card.kicker, card.title, card.sky_box, card.foot, card.you_frame, card.them_frame, card.you_name, card.them_name, card.verdict,
+			card.odds_line, card.head_box, card.gang_btn, card.head_btn, card.takes_box, card.bar_track, card.home_head, card.here, card.here_right, card.last] \
+			+ card.keys + card.vals + card.tiles.map(func(t): return t["panel"]):
+		out.append(Rect2(n.global_position, n.size))
+	return out
+
+
+func _b46s_card_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_finish_campaign(sim)
+	sim.notes = 100000
+	sim.hp = sim.max_hp()
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	var first: Array = []
+	var heads := 0
+	for i in range(Data.TIERS.size()):
+		if not sim.zone_open(int(Data.TIERS[i]["zone"])):
+			continue
+		M.select(i)
+		for view in [false, true]:
+			card.head_view = view
+			M._shown = ""
+			main.refresh()
+			# one layout: every block where it was on the first site, whatever this one shows
+			var rs: Array = _b46s_rects(card)
+			if first.is_empty():
+				first = rs
+			_check(rs == first, "the site card moved a block on %s (%s view)" % [Data.TIERS[i]["name"], "head" if view else "gang"])
+			_check(card.title.text == str(Data.TIERS[i]["name"]), "%s's name doesn't fit the card whole: '%s'" % [Data.TIERS[i]["name"], card.title.text])
+			_check_fit(main, "the site card, %s (%s)" % [Data.TIERS[i]["name"], "head" if view else "gang"])
+			var b: Dictionary = sim.boss_of(i)
+			if not sim.tier_open(i):
+				continue
+			if view and card.has_head and not sim.is_convoy(i):
+				heads += 1
+				var hk: String = Items.slug(str(b["name"]))
+				_check(card._art.texture == RunView.tex(hk + "_plate") and card._figs[0].visible and card._figs[0].texture == RunView.tex("head_%s_stand" % hk) and not card._figs[1].visible,
+					"%s's head view isn't him standing in his own interior" % b["name"])
+				_check(card.them_name.text == str(b["name"]) or card.them_name.text == str(b["name"]).trim_prefix("The "), "the head view's face is named '%s'" % card.them_name.text)
+				_check(not card.count_box.visible and card.head_name.text.begins_with(str(b["name"])), "the head view's row is off: '%s'" % card.head_name.text)
+			elif not view:
+				_check(card._art.texture == UI.place_texture(str(Data.TIERS[i]["name"])) and card._figs[0].visible and card.count_box.visible and card.count.text == "×%d" % int(sim.effective(i)["pool"]),
+					"%s's gang view isn't the gang standing in the site's picture" % Data.TIERS[i]["name"])
+				_check(card.them_name.text == Words.SITE_CARD["the_gang"] and card.you_name.text.contains(sim.cls), "the matchup's names: '%s' against '%s'" % [card.you_name.text, card.them_name.text])
+			if b.is_empty() and not sim.is_convoy(i):
+				_check(card.head_btn.disabled and card.head_name.text == Words.SITE_CARD["no_head"] and card.head_box.visible, "a site with no head: the toggle's Head not greyed, or the row went: '%s'" % card.head_name.text)
+				card.head_view = false
+				card._toggle(true)
+				_check(not card.head_view, "the Head side took a press on a site with no head")
+	_check(heads >= 4, "only %d heads shown standing in their interiors" % heads)
+	# the Head button on the card's foot takes him on and the card shows him; off, the gang again
+	var hs: int = int(Data.BOSSES[0]["tier"])
+	M.select(hs)
+	card.head_view = false
+	sim.boss_armed.erase(hs)
+	M._boss(0)
+	main.refresh()
+	_check(sim.boss_armed.get(hs, false) and card.head_view and card.head_sub.text.begins_with(Words.SITE_CARD["armed_short"]), "taking the head on didn't show him: armed %s, view %s, '%s'" % [str(sim.boss_armed.get(hs, false)), str(card.head_view), card.head_sub.text])
+	M._boss(0)
+	main.refresh()
+	_check(not sim.boss_armed.get(hs, false) and not card.head_view, "letting the head be didn't show the gang again")
+	# the fix chips act: no meds and near dead on a site with one before it - the green chip picks that site, the meds'
+	# turns the gate's top-up on, the Kit's and the Clinic's go there
+	sim.rig = sim.rig.filter(func(it): return str(it["slot"]) != Data.MEDICAL)
+	sim.hp = sim.max_hp() * 0.03
+	sim.top_up_mode = "leave"                 # before the odds are read (merge 46: R's plan is in the odds' key, so a change after unsettles them)
+	var low := -1
+	for i in range(1, Data.TIERS.size()):
+		if sim.tier_open(i) and sim.site_before(i) >= 0:
+			for _n in range(200):
+				sim.survival(i)
+				if sim.odds_settled(i):
+					break
+			if sim.odds_now(i) < M.WHY_UNDER:
+				low = i
+				break
+	_check(low >= 0, "no site read low for the fix chips")
+	if low >= 0:
+		M.select(low)
+		M._shown = ""
+		main.refresh()
+		var shown: Array = card.chips.filter(func(x): return x.visible)
+		var grind: Array = shown.filter(func(x): return x.text.begins_with("Grind"))
+		var meds: Array = shown.filter(func(x): return x.text.begins_with("No meds"))
+		_check(not grind.is_empty() and not meds.is_empty(), "the fix chips on a low site: %s" % str(shown.map(func(x): return x.text)))
+		_check_fit(main, "the site card's fix chips")
+		if not meds.is_empty():
+			meds[0].pressed.emit()
+			_check(sim.top_up_mode == "fill", "the meds chip didn't turn the gate's top-up on: %s" % sim.top_up_mode)
+		M._shown = ""
+		main.refresh()
+		grind = card.chips.filter(func(x): return x.visible and x.text.begins_with("Grind"))
+		if not grind.is_empty():
+			grind[0].pressed.emit()
+			_check(M.selected == sim.site_before(low), "the green chip didn't pick the site before: %d, not %d" % [M.selected, sim.site_before(low)])
+		M._fix("kit")
+		_check(main.room == main.ARMOURY, "the Kit's chip didn't go to the Kit: %s" % main.room)
+		main.show_room(main.MISSIONS)
+		M._fix("clinic")
+		_check(main.room == main.MEDIC, "the Clinic's chip didn't go to the Clinic: %s" % main.room)
+		main.show_room(main.MISSIONS)
+	sim.hp = sim.max_hp()
+	# you here: a run home at the Allotments counts it - tried, cleared and how fast, how it ended
+	sim.site_runs = {}
+	M.select(0)
+	M._shown = ""
+	main.refresh()
+	_check(card.here.text == Words.SITE_CARD["here_never"] and card.last.text == Words.SITE_CARD["last_none"], "a site never tried: '%s' / '%s'" % [card.here.text, card.last.text])
+	sim.deploy(0)
+	var guard := 0
+	while sim.on_mission() and not sim.mission["cleared"] and guard < 3000:
+		sim.advance(1.0)
+		guard += 1
+	var cleared: bool = sim.on_mission() and sim.mission["cleared"]
+	var clear_t: float = float(sim.mission.get("clear_t", -1.0)) if sim.on_mission() else -1.0
+	if sim.on_mission():
+		sim.extract_now()
+	var rec: Dictionary = sim.site_record(0)
+	_check(int(rec["tries"]) == 1 and (int(rec["clears"]) == 1) == cleared and str(rec["last"]) != "" and (not cleared or is_equal_approx(float(rec["best"]), clear_t)), "the site's record after a run: %s (cleared %s at %.1f)" % [str(rec), str(cleared), clear_t])
+	M._shown = ""
+	main.refresh()
+	_check(card.here.text != Words.SITE_CARD["here_never"] and card.last.text.begins_with("Last run: "), "you here after a run: '%s' / '%s'" % [card.here.text, card.last.text])
+	_check(not cleared or card.here.text.contains(Fmt.mss(float(rec["best"]))), "you here doesn't say the best time: '%s'" % card.here.text)
+	_check_fit(main, "the site card's record")
+	var back = Sim.new()
+	back.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	_check(back.site_record(0) == sim.site_record(0), "the site's record didn't save: %s" % str(back.site_record(0)))
+	# the best time across runs (fix 46, S9): a slower clear keeps the best, a faster one takes it, a run not cleared neither
+	var s9 = Sim.new()
+	s9._site_run_note({"tier": 2, "cleared": true, "clear_t": 100.0, "elapsed": 110.0}, "Back", {})
+	s9._site_run_note({"tier": 2, "cleared": true, "clear_t": 140.0, "elapsed": 150.0}, "Back", {})
+	var best_slow: float = float(s9.site_record(2)["best"])
+	s9._site_run_note({"tier": 2, "cleared": false, "elapsed": 20.0}, "Dead", {})
+	s9._site_run_note({"tier": 2, "cleared": true, "clear_t": 80.0, "elapsed": 90.0}, "Back", {})
+	var r9: Dictionary = s9.site_record(2)
+	_check(is_equal_approx(best_slow, 100.0) and is_equal_approx(float(r9["best"]), 80.0) and int(r9["tries"]) == 4 and int(r9["clears"]) == 3, "the best time across runs: %.0f after the slower, then %s" % [best_slow, str(r9)])
+	sim.load_dict(saved)
+	main._missions._shown = ""
+	main.refresh()
+	print("the site card ok: one layout on every site and view, the head in his interior, the chips act, you here counts")
+
+
+func _b46s_half_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var gk: Dictionary = sim.zone_boss(0)
+	var gs: int = int(gk["tier"])
+	sim.left_behind = {}
+	sim.unlocked.erase("clinic")
+	var rest_whole: float = sim.rest_rate()
+	sim.unlocked.append("clinic")
+	var stock_whole: int = sim.clinic_stock()
+	sim.unlocked.erase("clinic")
+	# the drop opens the room at half; dead before home, it stays at half
+	sim.hp = sim.max_hp()
+	sim.deploy(gs)
+	var m: Dictionary = sim.mission
+	m["boss"] = {"name": gk["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
+	sim._boss_down(m, m["t"])
+	_check(sim.room_open("clinic") and sim.room_half("clinic") and sim.half_site("clinic") == gs, "the vet's bag dropped and the Clinic isn't open at half: %s" % str(sim.left_behind))
+	_check(is_equal_approx(sim.rest_rate(), rest_whole * 0.5) and sim.clinic_stock() == ceili(stock_whole / 2.0), "the Clinic at half: rest %.2f of %.2f, shelf %d of %d" % [sim.rest_rate(), rest_whole, sim.clinic_stock(), stock_whole])
+	sim._kia()
+	if sim.candidates.size() == 2:
+		sim.choose_runner(0)
+	_check(sim.room_half("clinic"), "the vet's bag lost with the runner and the Clinic is whole")
+	# the card marks it at that site, and only there
+	_finish_campaign(sim)
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	M.select(gs)
+	card.head_view = false
+	M._shown = ""
+	main.refresh()
+	_check(card.tiles[1]["text"].text == "The vet's bag" and card.tiles[1]["edge"].visible, "the card doesn't mark the vet's bag left at %s: '%s'" % [Data.TIERS[gs]["name"], card.tiles[1]["text"].text])
+	M.select(gs - 1)
+	main.refresh()
+	_check(card.tiles[1]["text"].text != "The vet's bag" and not card.tiles[1]["edge"].visible, "another site's card marks the vet's bag")
+	# the next clear there finds it again, once; home, the room is whole
+	sim.hp = sim.max_hp()
+	sim.deploy(gs)
+	m = sim.mission
+	sim._clear(m, m["t"])                     # the clear alone finds it (fix 46, S2: the check called _left_find itself)
+	var bags: int = m["found"].filter(func(x): return str(x["base"]) == "The vet's bag").size()
+	_check(bags == 1, "the clear at %s found the vet's bag %d times" % [Data.TIERS[gs]["name"], bags])
+	sim._left_find(m)                         # and again: never a second
+	bags = m["found"].filter(func(x): return str(x["base"]) == "The vet's bag").size()
+	_check(bags == 1, "a second look at %s found a second vet's bag: %d" % [Data.TIERS[gs]["name"], bags])
+	sim.extract_now()
+	_check(not sim.room_half("clinic") and sim.left_behind.is_empty() and is_equal_approx(sim.rest_rate(), rest_whole) and sim.clinic_stock() == stock_whole, "the vet's bag home and the Clinic still at half: %s" % str(sim.left_behind))
+	# a clear somewhere else finds nothing
+	sim.left_behind = {"clinic": gs}
+	sim.deploy(gs - 1)
+	m = sim.mission
+	sim._clear(m, m["t"])
+	_check(not m["found"].any(func(x): return str(x["base"]) == "The vet's bag"), "the vet's bag turned up at another site")
+	sim.extract_now()
+	# every room's half, and its line in the room's band at the longest site's name: fits, says it, on nothing else
+	var UI_v = load("res://scripts/ui/ui.gd")
+	var longest := 0
+	for i in range(Data.TIERS.size()):
+		if str(Data.TIERS[i]["name"]).length() > str(Data.TIERS[longest]["name"]).length():
+			longest = i
+	sim.unlock_all()
+	var whole := {"fence": sim.market_stock(), "yard": sim.yard_pick_cost("bench", 0), "radio": sim.signals_cap()}
+	var junk: Dictionary = sim._plain("Primary", str(Data.BASES["Primary"][3]["name"]))
+	var scrap_whole: int = sim.scrap_yield(junk)
+	var rooms := {"clinic": main.MEDIC, "fence": main.MARKET, "workshop": main.WORKSHOP, "yard": main.OVERVIEW, "radio": main.COMMS}
+	for room in rooms:
+		sim.left_behind = {room: longest}
+		if room == "yard":
+			sim.deeds_fate = ""
+		match room:
+			"fence":
+				_check(sim.market_stock() == ceili(int(whole["fence"]) / 2.0), "the Fence at half: %d of %d" % [sim.market_stock(), int(whole["fence"])])
+			"yard":
+				_check(sim.yard_pick_cost("bench", 0) >= 2 * int(whole["yard"]) - 100, "the Pitch at half doesn't build at double: %d against %d" % [sim.yard_pick_cost("bench", 0), int(whole["yard"])])
+			"radio":
+				_check(sim.signals_cap() == ceili(Data.SIGNALS_HELD / 2.0) and int(whole["radio"]) == Data.SIGNALS_HELD, "the Radio at half holds %d" % sim.signals_cap())
+			"workshop":
+				_check(scrap_whole <= 1 or sim.scrap_yield(junk) == ceili(scrap_whole * 0.5), "the Workshop at half: scrap %d of %d" % [sim.scrap_yield(junk), scrap_whole])
+		main.show_room(rooms[room])
+		main.refresh()
+		var hl: Label = main.half_line
+		var host: Control = main._half_room(rooms[room])
+		_check(hl != null and _shown(hl) and hl.get_parent() == host and hl.text.begins_with("Half till") and hl.text.to_lower().contains(sim.room_thing(room).to_lower()), "%s at half doesn't say so: '%s'" % [room, hl.text if hl != null else "none"])
+		_check(UI_v.text_width(hl, hl.text) <= hl.size.x + 0.5 and hl.position.y + hl.size.y <= Pal.BAND_H, "%s's half line leaves its place: '%s'" % [room, hl.text])
+		var nodes: Array = host.text_nodes() if host.has_method("text_nodes") else []
+		var hr: Rect2 = _text_rect(hl, UI_v)
+		for n in nodes:
+			if n is Control and n != hl and n.text != "" and _shown(n):
+				var x: Rect2 = hr.intersection(_text_rect(n, UI_v))
+				_check(not (x.size.x > 2.0 and x.size.y > 6.0), "%s's half line sits on '%s'" % [room, n.text])
+		_check_fit(main, "%s at half" % room)
+		sim.left_behind = {}
+		main.refresh()
+		_check(not main.half_line.visible, "%s whole and the half line still shows" % room)
+	# the deeds' fate decided frees the Pitch, fetched or not
+	sim.left_behind = {"yard": longest}
+	sim.deeds_fate = "sold"
+	_check(not sim.room_half("yard"), "the deeds sold and the Pitch still at half")
+	# saved
+	sim.left_behind = {"fence": 5}
+	var back = Sim.new()
+	back.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	_check(back.left_behind == {"fence": 5}, "a thing left behind didn't save: %s" % str(back.left_behind))
+	sim.load_dict(saved)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("a head's thing left behind ok: the room at half, found again on the next clear there, whole when it's home, the line in each room")
+
+
+# ------------------------------------------------------------------ merge 46 (2 Nov): the joins of R's rounds and S's card
+
+## The site card's Rounds line is R's plan read (green "331 of ~260" when it's enough, red when short); its rounds fix
+## chip and the foot's "Rounds ▾" open R's picker; the meds fix chip ticks this site's plan's top-up and leaves every
+## other site's plan alone (the old set_top_up wiped them). `-- only m46_join`.
+func _m46_join_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var box_was: bool = sim.gate_box_always
+	var site_was: int = main._missions.selected
+	_b46r_kit(sim)
+	main.show_room(main.MISSIONS)
+	main._missions.select(3)
+	main._missions._shown = ""
+	main.refresh()
+	var c: Dictionary = main._missions._cols[0]
+	var card = c["card"]
+	var r: Array = sim.rounds_read(3)
+	var rd: Dictionary = card.rounds_read(sim, 3)
+	_check(r.size() == 2 and int(rd["have"]) == int(r[0]) and int(rd["want"]) == int(r[1]), "the card's rounds read isn't the plan's: %s against %s" % [str(rd), str(r)])
+	_check(int(r[0]) >= int(r[1]) and str(rd["state"]) == "enough", "the fixture: site 3 doesn't read enough with 600 shells: %s" % str(r))
+	var want_t: String = Words.SITE_CARD["rounds_ok"] % [Words.group(int(r[0])), Words.group(int(r[1]))]
+	_check((card.vals[4].text == want_t or card.vals[4].text == Words.SITE_CARD["rounds_enough"]) and card.vals[4].get_theme_color("font_color") == Pal.GOOD, "the card's Rounds line isn't the plan's read in green: '%s'" % card.vals[4].text)
+	_check(str(c["rig"].get_meta("ui_style", "")) == "false|", "the Rounds button is red with enough: %s" % str(c["rig"].get_meta("ui_style", "")))
+	_check_fit(main, "Map (the card's Rounds line, enough)")
+	# the rounds fix chip's act opens R's picker on the site; again shuts it
+	main._missions._fix("rounds")
+	main.refresh()
+	_check(main._missions.rounds_panel.visible and main._missions.rounds_panel.site == 3, "the rounds chip's act didn't open the picker on the site")
+	main._missions._fix("rounds")
+	main.refresh()
+	_check(not main._missions.rounds_panel.visible, "the rounds chip's act didn't shut the picker")
+	# the meds chip: this site's top-up on, the other sites' plans kept
+	sim.plan_set_boxes(5, "shotgun", 3)
+	sim.plan_set_top(3, false)
+	_check(not bool(sim.rounds_plan(3)["top"]) and sim.rounds_plan_own(5), "the fixture: the plans didn't take")
+	main._missions._fix("meds")
+	_check(bool(sim.rounds_plan(3)["top"]) and sim.rounds_plan_own(5) and sim.plan_boxes(5, "shotgun") == 3, "the meds chip wiped the sites' plans or left the top-up off: %s" % str(sim.rounds_plans))
+	sim.load_dict(saved)
+	sim.gate_box_always = box_was
+	if site_was >= 0:
+		main._missions.select(site_was)
+	main._missions._shown = ""
+	main.refresh()
+	print("m46 joins ok: the card's Rounds line is the plan's read, its chips open the picker, the meds chip ticks the site's top-up alone")
+
+
+## Fix 46 (review46s): a locked site with a head shows him, the toggle greyed (S1); the share words never "a third" (S3);
+## the deeds' log line says "are" (S4); the head's price said once, in the head's row, never the note (S6); the card's
+## values in sentence case (S7). `-- only fix46s`.
+func _fix46s_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var site_was: int = main._missions.selected
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	# S3: the share words a band each, none of the fractions the guide bans
+	var shares: Array = []
+	for k in range(0, 101, 5):
+		var sw: String = card.share_words(k / 100.0)
+		if not (sw in shares):
+			shares.append(sw)
+	_check(not shares.any(func(w): return w.contains("third") or w.contains("quarter")) and shares.has("some"), "the share words: %s" % str(shares))
+	# S7 and S6 on every open site: the values start with a capital or a figure; the note never names the head's price
+	for i in range(Data.TIERS.size()):
+		if not sim.tier_open(i):
+			continue
+		M.select(i)
+		M._shown = ""
+		main.refresh()
+		for v in card.vals:
+			if v.visible and v.text != "":
+				var c0: String = v.text.substr(0, 1)
+				_check(c0 == c0.to_upper(), "%s: a value in lower case: '%s'" % [Data.TIERS[i]["name"], v.text])
+		var b: Dictionary = sim.boss_of(i)
+		if not b.is_empty() and sim.boss_cost(i) > 0:
+			var price: String = Fmt.notes(sim.boss_cost(i))
+			_check(not M._cols[0]["note"].text.contains(price), "%s: the head's price twice, the note '%s'" % [Data.TIERS[i]["name"], M._cols[0]["note"].text])
+	# S6: taken on and short of notes - the head's row says the price, the note doesn't
+	var hs: int = int(Data.BOSSES[0]["tier"])
+	if sim.tier_open(hs) and sim.boss_cost(hs) > 0:
+		sim.boss_armed[hs] = true
+		sim.notes = 0
+		M.select(hs)
+		card.head_view = false
+		M._shown = ""
+		main.refresh()
+		var pr: String = Fmt.notes(sim.boss_cost(hs))
+		_check(card.head_sub.text.contains(pr) and not M._cols[0]["note"].text.contains(pr), "taken on, short of notes: the head's row '%s', the note '%s'" % [card.head_sub.text, M._cols[0]["note"].text])
+		_check_fit(main, "the site card, taken on short of notes")
+		sim.load_dict(saved)
+	# S1: a locked site with a head - his name, the Head toggle greyed, no "No head here"
+	for k in range(sim.best_depth.size()):
+		sim.best_depth[k] = 0
+	var locked_head := -1
+	for bd in Data.BOSSES:
+		var bi: int = int(bd["tier"])
+		if sim.zone_open(int(Data.TIERS[bi]["zone"])) and not sim.tier_open(bi):
+			locked_head = bi
+			break
+	_check(locked_head >= 0, "the fixture: no locked site with a head")
+	if locked_head >= 0:
+		M.select(locked_head)
+		card.head_view = true
+		M._shown = ""
+		main.refresh()
+		var hn: String = str(sim.boss_of(locked_head).get("name", ""))
+		_check(card.has_head and card.head_name.text.begins_with(hn) and card.head_btn.disabled and not card.gang_btn.disabled and card.head_name.text != Words.SITE_CARD["no_head"], "a locked site with a head: '%s' / '%s', Head disabled %s" % [card.head_name.text, card.head_sub.text, str(card.head_btn.disabled)])
+		_check_fit(main, "the site card, a locked site with a head")
+		card.head_view = false
+	sim.load_dict(saved)
+	# S4: the deeds home - "are"
+	sim.left_behind = {"yard": 1}
+	sim.deeds_fate = ""
+	if not ("yard" in sim.unlocked):
+		sim.unlocked.append("yard")
+	_check(sim.room_half("yard") and sim.room_thing("yard") == "The deeds", "the fixture: the Pitch isn't at half for the deeds")
+	var deeds: Dictionary = sim._plain(Data.PAPER, sim.room_thing("yard"))
+	sim._left_home(deeds)
+	var said: String = str(sim.events.back()[1]) if not sim.events.is_empty() else ""
+	_check(said.begins_with("The deeds are home"), "the deeds' log line: '%s'" % said)
+	sim.load_dict(saved)
+	if site_was >= 0:
+		M.select(site_was)
+	M._shown = ""
+	main.refresh()
+	print("fix46 site card ok: a locked site's head, the share words, the price once, sentence case, the deeds are home")

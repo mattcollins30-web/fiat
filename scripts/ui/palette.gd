@@ -48,6 +48,17 @@ const ELEMENT_COLOURS := {"physical": TEXT, "fire": Color("ff6b3d"), "frost": Co
 # first colour is the first step up
 const TIER_COLOURS := [TEXT, GOOD, Color("6fa8e6"), Color("c48ae8"), ACCENT]
 const DIM := Color(0, 0, 0, 0.72)     # behind a full-screen moment
+# a grade of rounds by its own colour (BUILD46-R, 2 Nov, the canvas "Fiat – Rounds and magazines": a dot in a magazine's
+# corner says what it holds): the plain box of each type brass; the damage grades blue; the third-tier plain ones violet;
+# an element's grade its element's colour (hollow point bleed, incendiary fire, salted frost) - distinct within each type
+const ROUND_COLOURS := {
+	"Nails": Color("d9b382"), "Shells": Color("d9b382"), "Rifle rounds": Color("d9b382"), "SMG rounds": Color("d9b382"), "Pistol rounds": Color("d9b382"),
+	"Hardened bolts": Color("6fa8e6"), "Slugs": Color("6fa8e6"), "Match rounds": Color("6fa8e6"),
+	"Belt links": Color("c48ae8"), "Depot rounds": Color("c48ae8"),
+	"SMG hollow point": Color("b3203c"), "Pistol hollow point": Color("b3203c"),     # a deep crimson, well apart from the incendiary orange (fix 46, R11)
+	"Incendiary shells": Color("ff6b3d"), "Incendiary SMG rounds": Color("ff6b3d"),
+	"Salted rounds": Color("d2f1ff"),     # paler than the frost colour: the rifle's Match is blue
+}
 # the place's tone (the fifth slice): the screen's grounds shift a little by
 # place - neutral in the village, warmer in the town, cooler in the city; the
 # amber stays the action's colour everywhere
@@ -112,6 +123,11 @@ const INNER := CARD_W - 2 * PAD                            # 332
 const LINES := 6
 const LINE_H := 32
 const BUTTON_H := 56
+
+
+## A grade's dot colour; the text's for one with none.
+static func round_colour(grade: String) -> Color:
+	return ROUND_COLOURS.get(grade, TEXT_2)
 
 
 static func tier_color(tier: int) -> Color:

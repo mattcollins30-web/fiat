@@ -315,6 +315,8 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	for it in items:
 		locks[it["id"]] = sim.wear_lock(it) if sim != null else 0
 		sig += ",%d:%d%s%d%s" % [it["id"], Items.stack_size(it), "^" if ups.get(int(it["id"]), false) else "", locks[it["id"]], str(it.get("pos", "")) + str(it.get("rot", false)) if pack_mode else ""]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes; a piece as it moves
+		if Items.is_mag(it):
+			sig += "m%d%s" % [int(it.get("rounds", 0)), str(it.get("ammo", ""))]     # a magazine as it's loaded or unloaded (BUILD46-R: its dot, its count)
 	if sig == _shown:
 		return
 	_shown = sig

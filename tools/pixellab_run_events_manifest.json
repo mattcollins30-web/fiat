@@ -1,0 +1,707 @@
+{
+ "_readme": [
+  "FIAT RUN EVENTS (BUILD46-E, 2 Nov; docs/design/run_events.md): 38 jobs, $3.04 - a rival crew a zone standing, two dogs standing, firing and going down; the one in need a zone, down and up; the Scrap man and the Vagabond at their barrows; nine props shut and open. The test's four are the same jobs (skipped once on disk).",
+  "Run: tools\\art.bat run_events (the dry run first, then it asks).",
+  "Every job is generate-image-v2 at 65k px or under: $0.08 a job (docs/art/pixellab_lessons.md).",
+  "event_prop.gd finds each by name (art/events/<name>.png) and draws the slice's shapes where one isn't on disk.",
+  "Regenerate with python3 tools/make_run_events_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/events/crew_the_outskirts_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_a_stand.png",
+   "description": "A different person from the reference image, in the same pose and framing: a scavenger from a rival crew off the lanes: a waxed jacket gone shiny at the elbows, a plain wool hat, wellies, a sack over one shoulder, a single-barrel shotgun, standing ready, weapon held low across the body. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a rival crew, the_outskirts: stand (event_prop.gd; falls back to the zone's gang art)",
+   "reference_images": [
+    "res://art/fight/gang_the_outskirts_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/events/crew_the_estate_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_estate_a_stand.png",
+   "description": "A different person from the reference image, in the same pose and framing: a scavenger from a rival estate crew: a plain red zip-up tracksuit top done up to the chin, a plain grey beanie, a bright yellow cloth tied round one arm as the crew's mark, plain cargo trousers, a crowbar through the belt, a sawn-off shotgun, standing ready, weapon held low across the body. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a rival crew, the_estate: stand (event_prop.gd; falls back to the zone's gang art)",
+   "reference_images": [
+    "res://art/fight/gang_the_estate_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/events/crew_the_town_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_a_stand.png",
+   "description": "A different person from the reference image, in the same pose and framing: a scavenger from a rival town crew: a plain grey workman's fleece, a plain dark beanie, a utility belt of pouches, work boots, an old revolver, standing ready, weapon held low across the body. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a rival crew, the_town: stand (event_prop.gd; falls back to the zone's gang art)",
+   "reference_images": [
+    "res://art/fight/gang_the_town_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/events/crew_the_city_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_a_stand.png",
+   "description": "A different person from the reference image, in the same pose and framing: a scavenger from a rival city crew, well kitted out: a plain dark plate carrier with no badges over a plain jacket, a plain balaclava rolled up, knee pads, a short carbine, standing ready, weapon held low across the body. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a rival crew, the_city: stand (event_prop.gd; falls back to the zone's gang art)",
+   "reference_images": [
+    "res://art/fight/gang_the_city_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/events/dog_lean_stand.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A thin feral farm dog, a lean lurcher cross with a rough brindle coat and its ribs showing, a frayed collar, standing square, head low, hackles up, teeth bared. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_lean): stand, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/dog_lean_fire.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A thin feral farm dog, a lean lurcher cross with a rough brindle coat and its ribs showing, a frayed collar, lunging to the left mid-leap, side-on, jaws wide open. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_lean): fire, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/dog_lean_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A thin feral farm dog, a lean lurcher cross with a rough brindle coat and its ribs showing, a frayed collar, hit and collapsing onto its side, legs folding. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_lean): down, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/dog_big_stand.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_b_stand.png",
+   "description": "A big feral dog, a heavy mastiff cross with a short fawn coat, scarred muzzle, a chain collar, standing square, head low, hackles up, teeth bared. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_big): stand, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/dog_big_fire.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_b_stand.png",
+   "description": "A big feral dog, a heavy mastiff cross with a short fawn coat, scarred muzzle, a chain collar, lunging to the left mid-leap, side-on, jaws wide open. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_big): fire, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/dog_big_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_b_stand.png",
+   "description": "A big feral dog, a heavy mastiff cross with a short fawn coat, scarred muzzle, a chain collar, hit and collapsing onto its side, legs folding. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_big): down, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/person_the_outskirts_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A frightened person on the ground, a farmhand in a plain worn checked shirt and a padded gilet, muddy jeans and wellies, lying on their side propped on one elbow, one leg caught and held down, reaching out a hand for help. One person alone, the whole body in frame, lying across the frame from side to side, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_outskirts: on the ground, trapped or hurt"
+  },
+  {
+   "out": "art/events/person_the_outskirts_up.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A tired person just pulled free, a farmhand in a plain worn checked shirt and a padded gilet, muddy jeans and wellies, standing up stiffly, one hand on a sore shoulder, dusty and shaken. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_outskirts: freed, up on their feet"
+  },
+  {
+   "out": "art/events/person_the_estate_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_estate_b_stand.png",
+   "description": "A frightened person on the ground, a woman from the flats in a plain dark puffer jacket, plain leggings and trainers, hair scraped back, lying on their side propped on one elbow, one leg caught and held down, reaching out a hand for help. One person alone, the whole body in frame, lying across the frame from side to side, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_estate: on the ground, trapped or hurt"
+  },
+  {
+   "out": "art/events/person_the_estate_up.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_estate_b_stand.png",
+   "description": "A tired person just pulled free, a woman from the flats in a plain dark puffer jacket, plain leggings and trainers, hair scraped back, standing up stiffly, one hand on a sore shoulder, dusty and shaken. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_estate: freed, up on their feet"
+  },
+  {
+   "out": "art/events/person_the_town_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140014,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_b_stand.png",
+   "description": "A frightened person on the ground, a security guard in a plain black jumper with no badges, dark trousers and work boots, lying on their side propped on one elbow, one leg caught and held down, reaching out a hand for help. One person alone, the whole body in frame, lying across the frame from side to side, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_town: on the ground, trapped or hurt"
+  },
+  {
+   "out": "art/events/person_the_town_up.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140015,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_b_stand.png",
+   "description": "A tired person just pulled free, a security guard in a plain black jumper with no badges, dark trousers and work boots, standing up stiffly, one hand on a sore shoulder, dusty and shaken. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_town: freed, up on their feet"
+  },
+  {
+   "out": "art/events/person_the_city_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140016,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_b_stand.png",
+   "description": "A frightened person on the ground, a nurse in plain dark blue scrubs with no badges and a plain cardigan, flat shoes, lying on their side propped on one elbow, one leg caught and held down, reaching out a hand for help. One person alone, the whole body in frame, lying across the frame from side to side, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_city: on the ground, trapped or hurt"
+  },
+  {
+   "out": "art/events/person_the_city_up.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140017,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_city_b_stand.png",
+   "description": "A tired person just pulled free, a nurse in plain dark blue scrubs with no badges and a plain cardigan, flat shoes, standing up stiffly, one hand on a sore shoulder, dusty and shaken. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_city: freed, up on their feet"
+  },
+  {
+   "out": "art/events/scrap_man_barrow.png",
+   "width": 192,
+   "height": 192,
+   "no_background": true,
+   "seed": 140018,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_b_stand.png",
+   "description": "The Scrap man, an old rag-and-bone man in a flat cap and a long brown coat over a plain jumper, standing behind a wooden market barrow piled with plain scrap metal, copper pipe and old radiators, two big spoked wheels, facing the viewer, the whole of him and his barrow in frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a trader: scrap_man at his barrow"
+  },
+  {
+   "out": "art/events/vagabond_barrow.png",
+   "width": 192,
+   "height": 192,
+   "no_background": true,
+   "seed": 140019,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_b_stand.png",
+   "description": "The Vagabond, a weathered wandering trader with a long grey beard, a plain wide-brimmed hat and layers of patched coats, a big plain rucksack on his back, standing behind a wooden handcart piled with plain unlabelled tins, coils of cable and a few odd boots and jackets, two big spoked wheels, facing the viewer, the whole of him and his barrow in frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a trader: vagabond at his barrow"
+  },
+  {
+   "out": "art/events/cabinet_shut.png",
+   "width": 128,
+   "height": 160,
+   "no_background": true,
+   "seed": 140020,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/filing.png",
+   "description": "A realistic painted pixel-art view of a plain grey steel cabinet on its own with two doors shut and a heavy padlock through the handles, no labels. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: cabinet, shut"
+  },
+  {
+   "out": "art/events/cabinet_open.png",
+   "width": 128,
+   "height": 160,
+   "no_background": true,
+   "seed": 140021,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/filing.png",
+   "description": "A realistic painted pixel-art view of a plain grey steel cabinet on its own with both doors hanging open, empty steel shelves inside, a broken padlock hanging from one handle, no labels. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: cabinet, open"
+  },
+  {
+   "out": "art/events/shutter_shut.png",
+   "width": 160,
+   "height": 160,
+   "no_background": true,
+   "seed": 140022,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/military.png",
+   "description": "A realistic painted pixel-art view of a plain steel roller shutter on its own, rolled all the way down, dented, a padlock at its bottom edge, no lettering, no graffiti. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: shutter, shut"
+  },
+  {
+   "out": "art/events/shutter_open.png",
+   "width": 160,
+   "height": 160,
+   "no_background": true,
+   "seed": 140023,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/military.png",
+   "description": "A realistic painted pixel-art view of a plain steel roller shutter on its own, forced half up, its bottom edge bent, darkness behind it, no lettering, no graffiti. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: shutter, open"
+  },
+  {
+   "out": "art/events/van_shut.png",
+   "width": 240,
+   "height": 160,
+   "no_background": true,
+   "seed": 140024,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a plain white works van with no lettering and no number plate, side-on, its sliding side door shut and padlocked, rust at the arches. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: van, shut"
+  },
+  {
+   "out": "art/events/van_open.png",
+   "width": 240,
+   "height": 160,
+   "no_background": true,
+   "seed": 140025,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a plain white works van with no lettering and no number plate, side-on, its sliding side door wrenched open, the back dark and empty, rust at the arches. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: van, open"
+  },
+  {
+   "out": "art/events/safe_shut.png",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 140026,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/safe.png",
+   "description": "A realistic painted pixel-art view of a heavy dark grey steel office safe on its own, its thick door shut, a plain dial with no numbers and a chrome handle, scuffed and pry-marked. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: safe, shut"
+  },
+  {
+   "out": "art/events/safe_open.png",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 140027,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/safe.png",
+   "description": "A realistic painted pixel-art view of a heavy dark grey steel office safe on its own, its thick door hanging open, empty shelves inside, a plain dial with no numbers, scuffed and pry-marked. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: safe, open"
+  },
+  {
+   "out": "art/events/hazard_shut.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140028,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/cardboard.png",
+   "description": "A realistic painted pixel-art view of a broken floorboard section on its own, a square of old wooden boards splintered through the middle into a jagged hole, black water showing through it. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: hazard, shut"
+  },
+  {
+   "out": "art/events/hazard_open.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140029,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/cardboard.png",
+   "description": "A realistic painted pixel-art view of a broken floorboard section on its own, a square of old wooden boards splintered through the middle into a jagged hole, a scaffold plank laid across the hole. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: hazard, open"
+  },
+  {
+   "out": "art/events/stash_bag_shut.png",
+   "width": 128,
+   "height": 96,
+   "no_background": true,
+   "seed": 140030,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/cardboard.png",
+   "description": "A realistic painted pixel-art view of a plain dark unbranded holdall sitting on its own, zipped shut, bulging, a thin wire running from its handle. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: stash_bag, shut"
+  },
+  {
+   "out": "art/events/stash_bag_open.png",
+   "width": 128,
+   "height": 96,
+   "no_background": true,
+   "seed": 140031,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/cardboard.png",
+   "description": "A realistic painted pixel-art view of a plain dark unbranded holdall sitting on its own, unzipped and gaping open, its insides pulled half out, empty. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: stash_bag, open"
+  },
+  {
+   "out": "art/events/body_shut.png",
+   "width": 192,
+   "height": 96,
+   "no_background": true,
+   "seed": 140032,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/military.png",
+   "description": "A realistic painted pixel-art view of someone lying dead face down, still and grey, in a plain worn coat and boots, a plain rucksack still on their back; nothing gratuitous, no blood. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: body, shut"
+  },
+  {
+   "out": "art/events/body_open.png",
+   "width": 192,
+   "height": 96,
+   "no_background": true,
+   "seed": 140033,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/military.png",
+   "description": "A realistic painted pixel-art view of someone lying dead face down, still and grey, in a plain worn coat and boots, their plain rucksack beside them opened and emptied, pockets turned out; nothing gratuitous, no blood. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: body, open"
+  },
+  {
+   "out": "art/events/wreck_shut.png",
+   "width": 240,
+   "height": 160,
+   "no_background": true,
+   "seed": 140034,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a burnt-out car, side-on, scorched bare metal and rust, its windows gone, no wheels, no number plate. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: wreck, shut"
+  },
+  {
+   "out": "art/events/wreck_open.png",
+   "width": 240,
+   "height": 160,
+   "no_background": true,
+   "seed": 140035,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a burnt-out car, side-on, scorched bare metal and rust, stripped: its doors, bonnet and panels cut away, the bare frame showing, no number plate. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: wreck, open"
+  },
+  {
+   "out": "art/events/radio_shut.png",
+   "width": 128,
+   "height": 96,
+   "no_background": true,
+   "seed": 140036,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a battered old portable radio on its own, its plain dial blank with no numbers, its telescopic aerial down, switched off. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: radio, shut"
+  },
+  {
+   "out": "art/events/radio_open.png",
+   "width": 128,
+   "height": 96,
+   "no_background": true,
+   "seed": 140037,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/toolbox.png",
+   "description": "A realistic painted pixel-art view of a battered old portable radio on its own, its plain dial blank with no numbers, its telescopic aerial up and its little dial light glowing amber. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: radio, open"
+  }
+ ]
+}

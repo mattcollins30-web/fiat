@@ -50,7 +50,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 20              # 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 22              # 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -307,6 +307,8 @@ func _build() -> void:
 	_missions.acted.connect(refresh)
 	_missions.to_issuer.connect(open_issuer)
 	_missions.to_bench.connect(open_stamp)
+	_missions.to_kit.connect(show_room.bind(ARMOURY))       # the site card's fix chips (BUILD46-S)
+	_missions.to_clinic.connect(show_room.bind(MEDIC))
 	_missions.visible = false
 	add_child(_missions)
 	_workshop = Workshop.new()
@@ -1300,6 +1302,54 @@ func room_shut(nm: String) -> bool:
 	return sim != null and ROOM_KEY.has(nm) and not sim.room_open(ROOM_KEY[nm])
 
 
+## A room at half (2 Nov, BUILD46-S: a head's thing left behind): one line in the room's band, where each band has the
+## room for it - under the face and the headline in the Clinic's and the Fence's, under the headline in the Workshop's
+## and the Radio's, under the purse's chips on the Pitch. Laid in the room's own space, so it goes with the room.
+const HALF_AT := {MEDIC: Rect2(162, 118, 680, 28), MARKET: Rect2(162, 118, 680, 28), WORKSHOP: Rect2(20, 92, 700, 28),
+		COMMS: Rect2(20, 92, 840, 28), OVERVIEW: Rect2(20, 142, 680, 28)}
+var half_line: Label
+
+
+## The room's node a half line sits in.
+func _half_room(nm: String) -> Control:
+	return {MEDIC: _clinic, MARKET: _fence, WORKSHOP: _workshop, COMMS: _radio, OVERVIEW: _yard_tree}.get(nm, null)
+
+
+## The line's words, long to short: what's out and where, then what the half is.
+static func half_forms(s, key: String) -> Array:
+	var nm: String = s.room_thing(key)
+	var thing: String = nm.substr(0, 1).to_lower() + nm.substr(1)     # "a military radio", "the Carpet Man's ledger"
+	var be: String = "are" if nm == "The deeds" else "is"
+	var site: String = Words.mid(str(Data.TIERS[s.half_site(key)]["name"])) if s.half_site(key) >= 0 else ""
+	var what: String = str(Words.HALF["what"][key])
+	if key == "radio":
+		what = what % [s.signals_cap(), Data.SIGNALS_HELD]
+	var its: String = "they're" if be == "are" else "it's"
+	return [Words.HALF["line"] % [thing, be, what, its, site], Words.HALF["short"] % [thing, be, what], Words.HALF["tiny"] % [thing, be]]
+
+
+func _lay_half() -> void:
+	if half_line == null:
+		half_line = UI.label(self, Rect2(0, 0, 10, 28), "", "Medium", Pal.CELL_TEXT_BIG, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT, false)
+		UI.shadow(half_line)
+	var host: Control = _half_room(room)
+	var on: bool = host != null and ROOM_KEY.has(room) and sim.room_half(ROOM_KEY[room])
+	half_line.visible = on
+	if not on:
+		return
+	if half_line.get_parent() != host:
+		half_line.get_parent().remove_child(half_line)
+		host.add_child(half_line)
+	var r: Rect2 = HALF_AT[room]
+	for b in host.get_children():
+		if b is Button and b.visible and b.position.x > r.position.x and b.position.y < r.end.y and b.position.y + b.size.y > r.position.y:
+			r.size.x = minf(r.size.x, b.position.x - 16.0 - r.position.x)     # clear of the band's tabs (the Fence's five after the Issue)
+	half_line.position = r.position
+	half_line.size = r.size
+	half_line.move_to_front()
+	UI.fit(half_line, half_forms(sim, ROOM_KEY[room]))
+
+
 # ------------------------------------------------------------------ showing
 
 func refresh() -> void:
@@ -1442,6 +1492,7 @@ func refresh() -> void:
 		# no form fits whole (the Legion's smoke caught one that slipped the fit by ten pixels): it goes rather than trails off
 		_prev_label.text = ""
 		_prev_time.text = ""
+	_lay_half()                               # a room at half says why (2 Nov, BUILD46-S)
 	UI.dots_under(self)                       # the caps pass (27 Oct, Matt): a capital after every "·", whatever set the words
 	_idle_sig = _idle_sig_now()
 	_idle_for = 0.0

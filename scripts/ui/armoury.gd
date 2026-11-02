@@ -26,6 +26,7 @@ const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const People := preload("res://scripts/ui/people.gd")
 const RulesPanel := preload("res://scripts/ui/rules_panel.gd")
 const OrdersPanel := preload("res://scripts/ui/orders_panel.gd")
+const GradeList := preload("res://scripts/ui/grade_list.gd")
 
 const BODY_W := Body.WIDTH                                    # 608
 ## The runner strip over the loadout (10 Oct, Runner-R A): the face, the level, HP with its bar, the damage, the
@@ -112,6 +113,12 @@ func _init() -> void:
 	_pick = PickPanel.new(GRID_W, PANEL_H)
 	_pick.position = Vector2(GRID_X, PANEL_Y)
 	add_child(_pick)
+	# a magazine's Load with ▾ (BUILD46-R, the canvas "Fiat – Rounds and magazines"): the stash's grades that fit, over the
+	# pick panel's right column, down to its foot
+	load_list = GradeList.new(_pick.col_w + 2 * PickPanel.BOX_OUT)
+	load_list.position = Vector2(GRID_X + 2 * PickPanel.PAD + _pick.col_w - PickPanel.BOX_OUT, PANEL_Y + PickPanel.BOX_Y)
+	load_list.picked.connect(_load_pick)
+	add_child(load_list)
 	for i in range(PickPanel.BUTTONS):
 		_actions.append(Callable())
 	# the loot filter: its button where Select-many's Sell goes (hidden while that shows), its panel over the right half
@@ -231,6 +238,8 @@ func _signature() -> String:
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
+		if Items.is_mag(sel):
+			parts.append("m%d%s|%d|%s" % [int(sel.get("rounds", 0)), str(sel.get("ammo", "")), _load_open, str(sim._grade_counts())])     # loaded, unloaded, the list's counts (BUILD46-R)
 	for slot in Data.SLOTS:
 		parts.append(str(sim.equipped[slot]["id"]) if sim.equipped[slot] != null else "-")
 	for it in sim.rig:
@@ -245,6 +254,8 @@ func _signature() -> String:
 ## buttons for what can be done with it. Sell is the Fence's.
 func _show_panel() -> void:
 	var it := _selected_item()
+	if it.is_empty() or not Items.is_mag(it):
+		_show_load_list({})                   # the load list is a magazine's (BUILD46-R)
 	if it.is_empty():
 		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right"])     # the rules read on their buttons (18 Oct: said twice)
 		_show_loadouts()
@@ -457,16 +468,71 @@ func _show_magazine(it: Dictionary) -> Array:
 		# THE RIG card (the three-stage review, UI 1: one the same as the rig's isn't a compare; UI 14: no rig, said so)
 		var lines: Array = sim.rig_card_lines()
 		_pick.show_right_words("The rig", "No rig fitted" if sim.med_capacity() == 0 else "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines.slice(0, PickPanel.LINES))
+	_show_load_list(it)
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.runner_busy() and sim.stash_fits(it), "primary": true})
-		return buttons
-	# Take whenever the rig has a pouch for it (the three-stage review, UI 1: a second magazine was Swap alone); Swap alone
-	# when the rig's full
-	if other.is_empty() or room:
-		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and room, "primary": true})
-	if not other.is_empty():
-		buttons.append({"text": "Swap into the rig" if buttons.is_empty() else "Swap", "action": sim.mag_swap.bind(int(it["id"]), int(other["id"])), "enabled": sim.can_mag_swap(int(it["id"]), int(other["id"])), "primary": buttons.is_empty()})
+	else:
+		# Take whenever the rig has a pouch for it (the three-stage review, UI 1: a second magazine was Swap alone); Swap alone
+		# when the rig's full (BUILD46-R: Swap beside Take gave its place to Unload and Load with - Take, then Leave, swaps)
+		if other.is_empty() or room:
+			buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.runner_busy() and room, "primary": true})
+		if not other.is_empty():
+			buttons.append({"text": "Swap into the rig" if buttons.is_empty() else "Swap", "action": sim.mag_swap.bind(int(it["id"]), int(other["id"])), "enabled": sim.can_mag_swap(int(it["id"]), int(other["id"])), "primary": buttons.is_empty()})
+	# Unload and Load with ▾ (BUILD46-R, Matt: "no way of unloading mags in the stash and loading a different ammo type"):
+	# in the stash or the rig, at home; Unload while it holds rounds. Three buttons at most: Swap beside Take gives its
+	# place to them (Take, then Leave the other, is the swap)
+	var id: int = int(it["id"])
+	var more: Array = []
+	if int(it.get("rounds", 0)) > 0:
+		more.append({"text": Words.ROUNDS["unload"], "action": func():
+			_keep_pick = true
+			_load_open = -1
+			sim.mag_unload(id), "enabled": sim.can_mag_unload(id), "primary": false})
+	var compared: bool = not other.is_empty() and str(other["base"]) != str(it["base"])
+	if compared and more.is_empty():
+		return buttons                        # an empty one against the rig's: Take and Swap, the compare's foot kept whole (the gate fills it)
+	more.append({"text": Words.ROUNDS["load_open"] if _load_open == id else Words.ROUNDS["load"], "action": func():
+		_keep_pick = true
+		_load_open = -1 if _load_open == id else id, "enabled": not sim.runner_busy() and not sim.load_grades(id).is_empty(), "primary": false,
+		"tip": sim.load_block(id)})     # greyed for the stash's room: says so (the re-review)
+	if buttons.size() + more.size() > PickPanel.BUTTONS and buttons.size() > 1:
+		buttons = buttons.slice(0, 1)
+	buttons.append_array(more)
 	return buttons
+
+
+## The magazine Load with ▾ is open for, -1 for none (BUILD46-R).
+var _load_open := -1
+var load_list                          # grade_list.gd: "IN THE STASH, TO LOAD" over the pick panel's right column
+
+
+## The stash's grades for the picked magazine, while its Load with ▾ is open; else the list hidden.
+func _show_load_list(it: Dictionary) -> void:
+	var open: bool = not it.is_empty() and _load_open == int(it["id"]) and Items.is_mag(it) and not sim.runner_busy()
+	if not open:
+		load_list.visible = false
+		if it.is_empty() or _load_open != int(it.get("id", -2)):
+			_load_open = -1
+		return
+	var n: int = int(it.get("rounds", 0))
+	var foot: String = (Words.ROUNDS["load_foot"] % n) if n > 0 else Words.ROUNDS["load_foot_empty"]
+	load_list.show_list(Words.ROUNDS["load_head"], sim.load_grades(int(it["id"])), foot, Words.ROUNDS["load_none"], str(it.get("ammo", "")) if n > 0 else "", float(_pick.foot_y - 8 - PickPanel.BOX_Y))
+	load_list.move_to_front()
+
+
+## A label of the pick panel's under the open load list (its right column).
+func _under_list(n) -> bool:
+	return n is Control and load_list.get_global_rect().intersects(n.get_global_rect())
+
+
+## A grade picked off the list: the magazine loaded with it, the list shut, the magazine still picked.
+func _load_pick(grade: String) -> void:
+	var it := _selected_item()
+	if it.is_empty() or not Items.is_mag(it):
+		return
+	sim.mag_load_with(int(it["id"]), grade)
+	_load_open = -1
+	acted.emit()
 
 
 ## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
@@ -497,6 +563,9 @@ func _split_button(it: Dictionary) -> Dictionary:
 ## Leaving the room shuts the rules panel: back in, the stash shows (the review).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
+		_load_open = -1                      # the load list shuts with the room (BUILD46-R)
+		if load_list != null:
+			load_list.visible = false
 		_bin_arm.clear()                     # and the bin's and a kit's save's arms go (the second review)
 		_save_arm.clear()
 		_shown = ""
@@ -756,6 +825,9 @@ func line_pairs() -> Array:
 
 func text_nodes() -> Array:
 	var out: Array = _pick.text_nodes()
+	if load_list.visible:
+		out = out.filter(func(n): return not _under_list(n))     # the list covers the right column
+		out.append_array(load_list.text_nodes())
 	out.append_array(_containers.text_nodes())
 	out.append_array(_body.text_nodes())
 	out.append_array([_who, _hp, _dps, _armour, _pace, _carry])

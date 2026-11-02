@@ -23,7 +23,7 @@ const FOOT_H := 22
 const SHELF_Y := 64
 const SHELF_H := 40                           # five rows (the fix round, U4): his four and the next step, over Done
 const SHELF_GAP := 4
-const PRICE_W := 120
+const PRICE_W := 140                  # "Materials ×3" (the re-review: the price as the standing line says it)
 const OPTIONS := 3
 const SHELF := 5
 const DOGS_BTN_Y := LINE_Y + UI.TILE_H + 8 + 2 * LINE_H + 8     # the dogs' buttons under their line, the note under them (U11)
@@ -127,7 +127,7 @@ func show_event(sim) -> bool:
 	# the dogs' countdown and the odds aren't in it (the fix round, U1: a redraw a second lost a held click): they move in
 	# place below; the family and its line are (U7: two events alike in their options)
 	var sig: String = str([fam, ev.get("line", ""), ev["state"], ev.get("bought", []), sim.event_options(), sim.trader_shelf(), out_text]
-		+ ([sim.pack_scrap(sim.mission), sim.can_extract()] if fam == "trader" else []))     # the scrap the trader's alone (40-E review 1: a find in the dogs' 10 s lost a click)
+		+ ([sim.pack_scrap(sim.mission), sim.can_extract(), sim.pack_materials(sim.mission), int(sim.mission["cash"])] if fam == "trader" else []))     # the scrap the trader's alone (40-E review 1: a find in the dogs' 10 s lost a click)
 	if fam == "threat":
 		_threat_live(sim, ev)
 	if sig == _sig:
@@ -137,7 +137,7 @@ func show_event(sim) -> bool:
 	_head.visible = true
 	_head.text = str(Data.EVENT_FAMILIES[fam]["name"]).to_upper()
 	match fam:
-		"need", "locked":
+		"need", "locked", "danger", "stash", "body", "wreck", "broadcast", "weather":     # BUILD46-E: the other six alike
 			_show_options(sim, ev)
 		"threat":
 			_show_threat(sim, ev)
@@ -170,8 +170,21 @@ func _show_options(sim, ev: Dictionary) -> void:
 		row["face"].size.x = _w - 14.0 - fx
 		UI.fit(row["face"], o["face"])
 		row["name"].add_theme_color_override("font_color", Pal.TEXT if bool(o["ok"]) else Pal.TEXT_3)
-	var pr: Array = sim.event_pron(ev)
-	_feet_show(Words.EV["need_foot"] % pr[0] if fam == "need" else Words.EV["locked_foot"])
+	_feet_show(foot_words(sim, ev))
+
+
+## The note under a family's options (BUILD46-E: a family each).
+func foot_words(sim, ev: Dictionary) -> String:
+	match fam:
+		"need":
+			return Words.EV["need_foot"] % sim.event_pron(ev)[0]
+		"stash":
+			return Words.EV["stash_tip_foot"] if bool(ev.get("tip", false)) else Words.EV["stash_foot"] % roundi(Data.STASH_TRIP * 100.0)
+		"body":
+			return Words.EV["body_foot"] % [roundi(Data.BODY_CLUE * 100.0), roundi((Data.BODY_GANG - 1.0) * 100.0), Data.BODY_GANG_NOTES, roundi(Data.BODY_HEAD_CUT * 100.0)]
+		"locked", "danger", "wreck", "broadcast", "weather":
+			return Words.EV[fam + "_foot"]
+	return ""
 
 
 ## The first option's amber edge, as the canvas has it: the one most will take.
@@ -187,7 +200,8 @@ func _border(b: Button, lit: bool) -> void:
 func _threat_live(sim, ev: Dictionary) -> void:
 	var n: int = int(ev["n"])
 	var left: int = ceili(maxf(0.0, float(ev.get("close_t", 0.0))))
-	UI.set_tile(_tiles[0], Words.EV["dogs_key"], [Words.EV["dogs_val_in"] % [n, left], Words.EV["dogs_val"] % n])
+	var crew: bool = str(ev.get("who", "dogs")) == "crew"     # BUILD46-E: a rival crew reads as the dogs do
+	UI.set_tile(_tiles[0], Words.EV["crew_key" if crew else "dogs_key"], [Words.EV["dogs_val_in"] % [n, left], Words.EV["dogs_val"] % n])
 	if sim.dogs_reading():
 		UI.set_tile(_tiles[1], Words.EV["odds_key"], [Words.EV["odds_reading"]], Pal.TEXT_3)     # read a few ms a frame as they stand (BUILD43)
 	else:
@@ -200,7 +214,7 @@ func _threat_live(sim, ev: Dictionary) -> void:
 
 func _show_threat(sim, ev: Dictionary) -> void:
 	_threat_live(sim, ev)
-	UI.set_tile(_tiles[2], Words.EV["carry_key"], [Words.EV["carry_none"]])
+	UI.set_tile(_tiles[2], Words.EV["carry_key"], [carry_words(ev)])
 	for t in _tiles:
 		t["panel"].visible = true
 	for k in range(2):
@@ -215,7 +229,14 @@ func _show_threat(sim, ev: Dictionary) -> void:
 	_fight.position.y = DOGS_BTN_Y
 	for k in range(2):
 		_feet[k].position.y = DOGS_BTN_Y + Pal.BUTTON_H + 8 + k * FOOT_H
-	_feet_show(Words.EV["dogs_foot"] % int(Data.DOGS_PUSH_S))
+	_feet_show(Words.EV["crew_foot"] if str(ev.get("who", "dogs")) == "crew" else Words.EV["dogs_foot"] % int(Data.DOGS_PUSH_S))
+
+
+## What a threat carries, in its tile: the dogs nothing, a rival crew notes or a find (BUILD46-E).
+static func carry_words(ev: Dictionary) -> String:
+	if str(ev.get("who", "dogs")) != "crew":
+		return Words.EV["carry_none"]
+	return Words.EV["carry_find"] if str(ev.get("carry", "")) == "find" else Words.EV["carry_notes"] % int(ev.get("carry_n", 0))
 
 
 func _show_trader(sim, ev: Dictionary) -> void:
@@ -229,7 +250,14 @@ func _show_trader(sim, ev: Dictionary) -> void:
 	var n: int = int(sim.trader_standing.get(str(ev["who"]), 0))     # as the visit found it: this visit's trades count as it ends
 	var scrap: int = sim.pack_scrap(sim.mission)
 	var nx: Array = sim.trader_next_step()
-	if nx.is_empty():
+	if str(ev["who"]) == "vagabond":
+		var tins: String = sim._cash_words(floorf(float(sim.mission["cash"])))     # BUILD46-E: tins and materials, his trade
+		var mats: int = sim.pack_materials(sim.mission)
+		if nx.is_empty():
+			UI.fit(_known, [Words.EV["vag_known_top"][0] % [n, tins, mats], Words.EV["vag_known_top"][1] % [n, tins]])
+		else:
+			UI.fit(_known, [Words.EV["vag_known"][0] % [n, int(nx[0]), tins, mats], Words.EV["vag_known"][1] % [n, int(nx[0]), tins]])
+	elif nx.is_empty():
 		UI.fit(_known, Array(Words.EV["trader_known_top"]).map(func(f): return f % [n, scrap]))
 	else:
 		UI.fit(_known, Array(Words.EV["trader_known"]).map(func(f): return f % [n, int(nx[0]), scrap]))
@@ -243,13 +271,13 @@ func _show_trader(sim, ev: Dictionary) -> void:
 			break
 		var row: Dictionary = _shelf[k]
 		row["panel"].visible = true
-		UI.fit(row["text"], [str(r["text"]) + (" · " + str(r["why"]) if str(r.get("why", "")) != "" else ""), str(r["text"])])
+		UI.fit(row["text"], [str(r["text"]) + (" · " + str(r["why"]) if str(r.get("why", "")) != "" else ""), str(r["text"]), str(r.get("short", r["text"]))])
 		row["text"].add_theme_color_override("font_color", Pal.TEXT if bool(r["ok"]) or bool(r["bought"]) else Pal.TEXT_3)
 		row["more"].visible = false
 		var b: Button = row["price"]
 		b.visible = true
 		b.disabled = not bool(r["ok"])
-		b.text = Words.EV["bought"] if bool(r["bought"]) else (Words.EV["take_it"] if int(r["price"]) <= 0 else Words.EV["price"] % int(r["price"]))
+		b.text = Words.EV["bought"] if bool(r["bought"]) else (Words.EV["take_it"] if int(r["price"]) <= 0 else price_words(sim, r))
 		UI.style_button(b, bool(r["ok"]))
 		k += 1
 	if not nx.is_empty() and k < SHELF:
@@ -262,6 +290,16 @@ func _show_trader(sim, ev: Dictionary) -> void:
 		row["more"].text = Words.EV["step_more"] % int(nx[2])
 	_done.visible = true
 	_done.text = Words.EV["done"]
+
+
+## A shelf row's price on its button: the Scrap man's in scrap, the Vagabond's in tins or materials (BUILD46-E).
+static func price_words(sim, r: Dictionary) -> String:
+	match str(r.get("pay", "scrap")):
+		"tins":
+			return Words.EV["price_tins"] % sim._cash_words(float(r["price"]))
+		"mat":
+			return Words.EV["price_mat"] % int(r["price"])
+	return Words.EV["price"] % int(r["price"])
 
 
 func _lines_show(text: String) -> void:

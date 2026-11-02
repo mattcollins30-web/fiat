@@ -79,6 +79,8 @@ func show_state(s) -> void:
 	var sig := "%d|%d|%d|%d" % [cap, sim.capacity(), selected, sim.rig_used()]
 	for it in sim.rig:
 		sig += ",%d:%d" % [it["id"], Items.stack_size(it)]
+		if Items.is_mag(it):
+			sig += "m%d%s" % [int(it.get("rounds", 0)), str(it.get("ammo", ""))]     # a magazine as it's loaded or unloaded (BUILD46-R)
 	if sig == _shown:
 		return
 	_shown = sig

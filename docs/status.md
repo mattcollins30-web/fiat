@@ -4,26 +4,21 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (2 Nov):** 0.10.6 out for Matt's playtest - fresh save (SAVE_VERSION 20). Bugs he raises are parked below
-  unless he says fix now.
-- **Next, after the playtest, in this order:**
-  1. Run events: the other six families and the Vagabond (docs/design/run_events.md), then the full event art
-     manifest (figures and props; test art first, as agreed).
-  2. Parked: a head's thing left behind costs its room (docs/design/ideas_backlog.md, 1 Nov).
-  3. Parked: two magazines - the spent one refills while the other fires, as an upgrade (ideas_backlog, 1 Nov).
-  4. The Map's site card redesign (docs/design/site_card.md: one fixed layout, a Gang / Head toggle, the head
-     standing in their interior, records) - parked 2 Nov for the next round.
-  5. The long pass (`24 1 long`) on all of it together, then the balance from it and Matt's play.
-- **Open notes (small, no date):** a late-save fight isn't timed by the smoke's speed guard (it prints 0); one 53 ms
-  mid-game fight frame; dogs on a repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint
-  (the bot's build); the stats_room past wall shows the newest 8 (correct after the fold); "13 ObjectDB instances
-  leaked at exit" at the smoke's end (not in the bar).
-- **Parked from this playtest (0.10.6, 2 Nov):**
-  1. UI: a magazine doesn't show which rounds are loaded in it (its grade/type) - in the rig, the stash or the pack.
-  2. UI/new: no way to unload a magazine in the stash and load it with a different ammo type.
-  3. UI/new: no way to choose which rounds go in the pack for a run (today the gate picks the box).
-  (Matt: "no way of knowing what rounds are loaded into what mags, no way of unloading mags in the stash and loading
-  a different ammo type, no way of selecting which rounds to take with you in the pack".)
+- **Now (2 Nov, evening):** 0.11.0 - everything queued, built (Matt: "lets just do the lot now ... everything but the
+  long pass"): rounds and magazines, the rest of the run events and the Vagabond, the site card redesign, a head's
+  thing left behind. Fresh save (SAVE_VERSION 22). The event art is flagged (test manifest first, then the set).
+- **Next:** Matt's playtest of 0.11.0; the long pass (`24 1 long`) only on his call, overnight.
+- **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
+  bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
+  odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
+  last until that site's next clear (the bot only clears it by chance).
+- **Matt's word wanted (small):** the site card's low-HP and wound chips go to the Clinic (the design said the Kit);
+  the foot button that takes a head on now reads "Take him on" (the glossary had "Head"); the card's fight rows stay
+  in words (the style guide now says so for this card).
+- **Open notes (small, no date):** a late-save fight isn't timed by the smoke's speed guard (it prints 0); dogs on a
+  repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint (the bot's build); "13 ObjectDB
+  instances leaked at exit" at the smoke's end (not in the bar).
+- **Parked from the playtest:** (none open - the 0.10.6 three are built in 0.11.0)
 
 ## First slice (2026-10-01)
 
@@ -6141,6 +6136,27 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 2 Nov (night): 0.11.0 - the lot (SAVE_VERSION 22)
+
+Matt: "Lets just do the lot now - I havent sunk any time in". His calls: a head's thing left behind - the room at
+half until fetched; the two-magazine refill - a rig affix; rival crews can kill; threads can sometimes cost you;
+"the events themselves play well". Three builders in parallel (R rounds, E events, S site card), merged 3-way, a
+per-diff review each, a fix round, two language passes and their fixes, a re-review, the smoke green here.
+- Rounds and magazines: a magazine shows its rounds (a coloured dot, "8 of 8 · Shells · Feeds the ..."); Unload and
+  Load with ▾ in the stash; "Rounds ▾" on the site card opens the rounds picker (a grade and N boxes a gun, the
+  top-up tick, "Enough: 331 of ~260"), kept per site; the one-box rule gone; the bot packs ~1.2x its need. The rig
+  affix "No reload pause" (a spare magazine swaps in while the spent one refills).
+- Run events: the other six families (a dangerous place, a haul with a catch, a body, a wreck, a broadcast, the
+  weather turning), rival crews (a fight that can kill), the Vagabond (tins and materials for gear and rumours),
+  threads (tips, a robbed crew coming back, a head's weakness). The original four kept at 60%+ of events. The art
+  manifest: tools/pixellab_run_events_manifest.json (38 jobs, $3.04; test 4, $0.32).
+- The Map's site card redesigned (docs/design/site_card.md): one fixed layout, the Gang / Head toggle with the head
+  in his interior, you against them, what it takes (with Rounds), fix chips that act, what you'll bring home, your
+  record.
+- A head's thing left behind: its room at half (the Clinic rests at half speed and half the shelf, the Fence's shelf,
+  the Workshop's scrap, the Pitch's builds at double, the Radio holds 2 signals); it turns up again on that site's
+  next clear.
 
 ## 2 Nov: 0.10.6 - the odds read, the bot's loops, speed on every screen (SAVE_VERSION 20; 92abfbb)
 

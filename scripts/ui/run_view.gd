@@ -856,7 +856,7 @@ func show_state(sim, m: Dictionary) -> void:
 	_hands.visible = ht != null
 	# a run event in the scene (1 Nov): the dogs in the gang's places while they're fought
 	prop.set_event(sim.event_now(), float(m["elapsed"]))
-	_dogs_on = m.has("dogs_home")
+	_dogs_on = m.has("dogs_home") and not bool(m["t"].get("crew", false))     # a rival crew (BUILD46-E) is drawn as the zone's gang
 	# the search: the view pans along to the crates in the street, the next three (put by while an event's in the street)
 	var searching: bool = int(m["remaining"]) <= 0 and m["cleared"]
 	_pan_to = PAN if searching else 0.0

@@ -24,6 +24,7 @@ Every string is one of two kinds. Decide which before writing it.
 - Name things by their glossary name (section 3). Never invent a synonym for variety.
 - Where it lives: tooltips, stat rows, chips, item and affix lines, perk explanations, buttons, tile labels and values,
   odds and reasons, settings, errors and confirmations.
+- The Map's site card says shares in words (a little, some, half, most, nearly all) - the designer's call, 2 Nov.
 
 **Flavour** gives the world its character. The player reads it for pleasure; nothing in it is needed to play.
 

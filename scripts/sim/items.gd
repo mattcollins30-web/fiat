@@ -64,7 +64,7 @@ static func roll_on(slot: String, base: Dictionary, rng: RandomNumberGenerator, 
 	# base's tier and the depth as before (the shelf, the gamble, the Clinic)
 	var ilvl_v: int = level if level >= 0 else int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
-	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
+	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng, [], int(base["tier"]))
 	for a in picked:
 		affixes.append(roll_affix(a, ilvl_v, rng, 0, int(Data.RARITIES[r]["tier"])))
 	var attachments := {}
@@ -442,7 +442,7 @@ static func affix_def_for(stat: String, slot: String) -> Dictionary:
 
 
 ## `n` distinct affixes for a slot, by weight, none already in `have`.
-static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have: Array = []) -> Array:
+static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have: Array = [], base_tier := 0) -> Array:
 	var pool: Array = []
 	for a in allowed_affixes(slot):
 		if not (a["stat"] in have):
@@ -451,17 +451,26 @@ static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have:
 	while out.size() < n and not pool.is_empty():
 		var total := 0.0
 		for a in pool:
-			total += float(a.get("weight", 1.0))
+			total += affix_weight(a, base_tier)
 		var x := rng.randf() * total
 		var pick := 0
 		for k in range(pool.size()):
-			x -= float(pool[k].get("weight", 1.0))
+			x -= affix_weight(pool[k], base_tier)
 			if x <= 0.0:
 				pick = k
 				break
 		out.append(pool[pick])
 		pool.remove_at(pick)
 	return out
+
+
+## An affix's share of a roll on a base of this tier (BUILD46-R): its `tier_w` at the tier where it has one (the rig's
+## swap, likelier on better rigs), else its weight. 0: no tier known, the weight.
+static func affix_weight(a: Dictionary, base_tier := 0) -> float:
+	var tw = a.get("tier_w", null)
+	if tw is Array and base_tier > 0 and not (tw as Array).is_empty():
+		return float(tw[clampi(base_tier - 1, 0, (tw as Array).size() - 1)])
+	return float(a.get("weight", 1.0))
 
 
 ## The best tier an item level opens: T1 always, T5 from level TIER_CAP[4].
@@ -648,7 +657,7 @@ static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: Arr
 	for a in kept:
 		have.append(a["stat"])
 	it["affixes"] = kept
-	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
+	for a in pick_affixes(it["slot"], n - kept.size(), rng, have, int(it.get("tier", 0))):
 		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it), top))     # the Bench works as a drop does: the rarity's cap, the level's floor
 
 
@@ -697,7 +706,7 @@ static func add_affix(it: Dictionary, rng: RandomNumberGenerator, top := false) 
 			open.append(a)
 	if open.is_empty() or int(it["rarity"]) >= Data.RARITIES.size() - 1:
 		return false
-	var picked := pick_affixes(it["slot"], 1, rng, have)
+	var picked := pick_affixes(it["slot"], 1, rng, have, int(it.get("tier", 0)))
 	if picked.is_empty():
 		return false
 	it["rarity"] = int(it["rarity"]) + 1

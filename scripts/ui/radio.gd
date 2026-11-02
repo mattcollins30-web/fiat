@@ -1010,7 +1010,7 @@ func _show_decoder() -> void:
 	var why: String = sim.decrypt_block(chosen, crew_pick)
 	_decrypt.disabled = why != "" and not decrypting()
 	_decrypt.text = "Skip" if decrypting() else ("Decrypt · %d paper%s" % [chosen.size(), "" if chosen.size() == 1 else "s"] if not chosen.is_empty() else "Decrypt")     # a tap mid-decrypt goes to the end (item 20)
-	var room: int = Data.SIGNALS_HELD - sim.signals.size()
+	var room: int = maxi(0, sim.signals_cap() - sim.signals.size())     # half while the set is out (BUILD46-S)
 	var note: String = ("Decrypting spends the paper%s · %d more signal%s can be held" % ["" if chosen.size() == 1 else "s", room, "" if room == 1 else "s"]) if why == "" or why == sim.DECRYPT_NEEDS_PAPERS else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
 	var kb: String = sim.kev_block()
@@ -1025,7 +1025,7 @@ func _show_decoder() -> void:
 
 func _show_signals(od: Array) -> void:
 	var n: int = sim.signals.size()
-	UI.fit(_signals_title, ["SIGNALS · %d OF %d HELD" % [n, Data.SIGNALS_HELD]])
+	UI.fit(_signals_title, ["SIGNALS · %d OF %d HELD" % [n, sim.signals_cap()]])
 	_card.visible = n > 0
 	_empty.visible = n == 0
 	_empty2.visible = n == 0

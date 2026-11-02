@@ -37,6 +37,9 @@ var _chips: Array[Panel] = []
 var _chip_labels: Array[Label] = []
 var _figure: Label
 var _unit: Label
+var _unit_tail: Label              # a magazine's "feeds the over-and-under" after its figure (BUILD46-R)
+var _icon: TextureRect             # a magazine's rounds' box before its figure (BUILD46-R)
+const ICON := 36
 var _tail: Label                   # the tail's words, kept for what reads them; shown as chips (16 Oct, the item card's chips)
 var _tail_chips: Chips             # the tail as chips: what it takes, how many, a grade's bonus
 var _tchips: Array = []            # the tail's own chips, for a warning laid in front of them
@@ -72,6 +75,17 @@ func _init(w := 440, small := false) -> void:
 		_chip_labels.append(UI.label(p, Rect2(CHIP_PAD, 0, 10, CHIP_H), "", "Medium", Pal.CELL_TEXT if compact else Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_figure = UI.label(self, Rect2(0, headline_y, width, head_h), "", "SemiBold", fsize, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_unit_tail = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_unit_tail.visible = false
+	_icon = TextureRect.new()                 # a magazine's rounds' box (BUILD46-R), before its figure
+	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_icon.size = Vector2(ICON, ICON)
+	_icon.position = Vector2(0, headline_y + (head_h - ICON) / 2.0)
+	_icon.visible = false
+	add_child(_icon)
 	_tail = UI.label(self, Rect2(0, tail_y, width, TAIL_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_tail.visible = false
 	_tail_chips = Chips.new(width)
@@ -144,7 +158,22 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		h = ["%d%%" % int(round(Items.att_stat(it, "sling_pct"))), "secondary fire"]     # a narrow card: the figure and its unit
 	_figure.text = h[0]
 	var fw: float = ceilf(UI.text_width(_figure, h[0]))
-	_unit.position.x = fw + 10
+	# a magazine (BUILD46-R, the canvas "Fiat – Rounds and magazines"): its rounds' box before the figure, "8 of 8 · Shells",
+	# and "feeds the over-and-under" after it when the row has the room (the chip's then left off)
+	var ix := 0.0
+	_icon.visible = false
+	_unit_tail.visible = false
+	var mag_grade: String = str(it.get("ammo", "")) if Items.is_mag(it) and int(it.get("rounds", 0)) > 0 else ""
+	if mag_grade != "":
+		var gun = sim_in.mag_gun(it) if sim_in != null else null
+		h = [h[0], Words.MAG_WORDS["unit_grade"] % [Items.mag_cap(it, gun), mag_grade]]
+		var tex: Texture2D = Items.art({"slot": Data.AMMO, "base": mag_grade})
+		if tex != null:
+			_icon.texture = tex
+			_icon.visible = true
+			ix = ICON + 8.0
+	_figure.position.x = ix
+	_unit.position.x = ix + fw + 10
 	_unit.size.x = maxf(10.0, width - _unit.position.x)
 	# the tail's clauses: each a string, or [long, shorter, ...] forms; the fit
 	# tries every clause long, then each clause's shorter forms, then fewer clauses
@@ -199,6 +228,12 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		if grade != "" and bonus > 0.0:
 			tchips.append({"forms": ["%s: +%d%% damage" % [grade, int(bonus)], "+%d%% %s" % [int(bonus), Words.mid_base(grade)]], "colour": Pal.ACCENT})
 	_unit.text = h[1]
+	if mag_grade != "" and sim_in != null and sim_in.mag_gun(it) is Dictionary:
+		var uw: float = ceilf(UI.text_width(_unit, str(h[1])))
+		_unit_tail.text = UI.dots(Words.MAG_WORDS["feeds_low"] % Words.mid_base(str(sim_in.mag_gun(it)["base"])))     # the house capital after "·", measured as shown
+		_unit_tail.position.x = _unit.position.x + uw + ceilf(UI.text_width(_unit, " "))     # one space, the separator in the words (the language pass)
+		_unit_tail.size.x = ceilf(UI.text_width(_unit_tail, _unit_tail.text)) + 2.0
+		_unit_tail.visible = _unit_tail.position.x + _unit_tail.size.x <= width
 	_tchips = tchips
 	warning = []
 	_lay_tail()
@@ -241,6 +276,8 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		# a magazine's own chips (30 Oct, the approved canvas): its size, its reload, its pouches, the gun it feeds
 		var mchips: Array = []
 		for f in mag_chips(it, sim_in.mag_gun(it) if sim_in != null else null, sim_in):
+			if _unit_tail.visible and str(f[0]).begins_with(Words.MAG_WORDS["feeds"].get_slice("%", 0)):
+				continue                          # said after the figure (BUILD46-R): said once
 			mchips.append({"forms": f, "colour": Pal.TEXT_2})
 		chips_a = mchips + chips_a.filter(func(c): return not (str(c["forms"][0]) == "No affixes"))
 	for c in chips_a:
@@ -433,6 +470,8 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 
 func text_nodes() -> Array:
 	var out: Array = [_title, _figure, _unit]
+	if _unit_tail.visible:
+		out.append(_unit_tail)
 	if _tail_chips.visible:
 		out.append_array(_tail_chips.text_nodes())
 	for k in range(CHIPS):

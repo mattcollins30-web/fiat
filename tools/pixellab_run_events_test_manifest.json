@@ -1,0 +1,86 @@
+{
+ "_readme": [
+  "FIAT RUN EVENTS, THE TEST (BUILD46-E, 2 Nov): 4 jobs, $0.32 - a lean dog standing, the Estate's rival crew standing, the Town's person on the ground, a safe shut. Judge these in the fight's scene before the set.",
+  "Run: tools\\art.bat run_events_test (the dry run first, then it asks).",
+  "Every job is generate-image-v2 at 65k px or under: $0.08 a job (docs/art/pixellab_lessons.md).",
+  "event_prop.gd finds each by name (art/events/<name>.png) and draws the slice's shapes where one isn't on disk.",
+  "Regenerate with python3 tools/make_run_events_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/events/crew_the_estate_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 140001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_estate_a_stand.png",
+   "description": "A different person from the reference image, in the same pose and framing: a scavenger from a rival estate crew: a plain red zip-up tracksuit top done up to the chin, a plain grey beanie, a bright yellow cloth tied round one arm as the crew's mark, plain cargo trousers, a crowbar through the belt, a sawn-off shotgun, standing ready, weapon held low across the body. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a rival crew, the_estate: stand (event_prop.gd; falls back to the zone's gang art)",
+   "reference_images": [
+    "res://art/fight/gang_the_estate_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/events/dog_lean_stand.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_outskirts_b_stand.png",
+   "description": "A thin feral farm dog, a lean lurcher cross with a rough brindle coat and its ribs showing, a frayed collar, standing square, head low, hackles up, teeth bared. One dog alone, the whole animal in frame from nose to tail, side-on across the frame, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "the dogs (dog_lean): stand, the fire pose their lunge"
+  },
+  {
+   "out": "art/events/person_the_town_down.png",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 140014,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/gang_the_town_b_stand.png",
+   "description": "A frightened person on the ground, a security guard in a plain black jumper with no badges, dark trousers and work boots, lying on their side propped on one elbow, one leg caught and held down, reaching out a hand for help. One person alone, the whole body in frame, lying across the frame from side to side, centred, plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "someone in need, the_town: on the ground, trapped or hurt"
+  },
+  {
+   "out": "art/events/safe_shut.png",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 140026,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/crates/safe.png",
+   "description": "A realistic painted pixel-art view of a heavy dark grey steel office safe on its own, its thick door shut, a plain dial with no numbers and a chrome handle, scuffed and pry-marked. One thing alone, the whole of it in frame, seen from the front and a little above at the eye level of someone crouched behind cover, centred, nothing else around it: no floor, wall, ground or sky, a plain dark neutral background. Only the palette, light and painting style of the style image, not its subject. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no lettering, badges or numbers on anything.",
+   "_where": "a run event's prop: safe, shut"
+  }
+ ]
+}

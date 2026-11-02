@@ -235,11 +235,34 @@ const MAG_WORDS := {
 	"kit_line": "%s · %s", "no_rounds": "No rounds needed",
 	"figure": "%d of %d rounds", "own": "The gun's own %d", "holds": "Holds %d", "always": "Always %d rounds", "times": "×%s the gun's %d",
 	"quicker": "Reloads %s s quicker", "slower": "Reloads %s s slower", "pouches": "%d pouches", "feeds": "Feeds the %s",
+	"unit_grade": "of %d · %s", "feeds_low": "· feeds the %s",     # the card's line (BUILD46-R; the language pass): "8 of 8 · Shells · feeds the over-and-under"
 	"chip": "Magazine",
 	"sling_fig": "Secondary fires at %d%%", "sling_chip": "While the primary reloads",
 	"tile": "%d · %d spare", "refilling": "Refilling · %d s",
 	"shares": "Shares the %s's magazines", "shares_short": "Shares magazines", "shared": "Shared",
 	"rig_gun": "%s: %s", "rig_meds": "Meds: %s", "rig_grenades": "Grenades: %d", "rig_cure": "a cure for %s", "rig_cures": "%d cures for %s", "cure_for": {"fire": "burns", "frost": "a chill", "shock": "a shock", "poison": "poison", "bleed": "bleed"}, "rig_stash": "In the stash: %s to refill", "rig_stash_short": "In the stash: %s", "rig_none": "none",
+}
+
+
+## Rounds and magazines (BUILD46-R, 2 Nov, the canvas "Fiat – Rounds and magazines"): the stash's Unload and Load with,
+## and the rounds picker on the Map (scripts/ui/rounds_panel.gd). For the language pass.
+const ROUNDS := {
+	"unload": "Unload", "load": "Load with ▾", "load_open": "Load with ▴",
+	"load_head": "In the stash", "load_none": "None of its rounds in the stash",
+	"load_foot": "Unload returns the %d rounds to the stash. Load with swaps in a grade from the list.",
+	"load_foot_empty": "Load with fills it with a grade from the list.",
+	"button": "Rounds ▾", "button_short": "Rounds",
+	"head": "Rounds for the run",
+	"enough": "Enough: %s of ~%s needed", "enough_short": "Enough: %s of ~%s",
+	"short": "Short: %s of ~%s needed", "short_short": "Short: %s of ~%s",
+	"row": "%s loaded · %s boxed · %s", "row_short": "%s loaded · %s boxed", "row_none": "%s loaded · no box", "row_none_short": "%s · no box",
+	"cells": "%d cell", "cells_n": "%d cells",
+	"tick": "Top the magazines up first, from the stash", "tick_short": "Top the magazines up first",
+	"foot": "Boxes ride in the pack; what's left comes home. Kept per site: a new site takes your last choice. Repeat runs top the magazines up and take 1 box at least.",
+	"room": "%d of %d boxes fit the pack: the rest stay home", "room_short": "%d of %d boxes fit the pack",
+	"no_guns": "No gun in the kit takes rounds", "no_grades": "None in the stash", "no_grades_short": "None", "done": "Done",
+	"tip": "The rounds for the run: each gun's grade, the boxes in the pack, the top-up from the stash",
+	"grade_damage": "+%d%%",
 }
 
 
@@ -383,6 +406,50 @@ const GATE_ITEMS := {
 	"The fitter's kit": "Knives, a knee kicker, a staple gun and a tin of tacks, in the Carpet Man's own roll. A workshop, near enough.",
 }
 
+## The Map's site card (2 Nov, BUILD46-S; docs/design/site_card.md): its words. The fight's rows say it in words, not
+## figures (the style guide), the fix chips are odds_reasons' own forms, and "You here" is the site's record.
+const SITE_CARD := {
+	"gang": "Gang", "head": "Head",
+	"keys": ["How long you last", "Their fire", "Your fire", "Meds in the rig", "Rounds"], "key_last_short": "Your time",
+	"take_on": "Take him on", "taken_on": "Taken on ✓",
+	"the_gang": "The gang", "convoy": "The convoy", "locked": "Locked", "reading": "Reading the odds",
+	"no_head": "No head here", "no_head_sub": "The gang's all there is",
+	"armed": "Taken on: he comes once the gang's down", "armed_short": "Taken on",
+	"dear": "%s to take him on; you have %s", "cost": "%s to take him on", "free": "Free, the first time", "free_short": "Free",
+	"over": "A %s fight, %s on the clock", "over_short": "Longer than the clock",
+	"whole": "The whole %s fight", "whole_short": "The whole fight",
+	"lasted": "%s of a %s fight",
+	"resist_none": "They resist nothing",
+	"no_rig": "No rig worn",
+	"rounds_short": "Short: %s of ~%s", "rounds_ok": "%s of ~%s", "rounds_enough": "Enough for the fight", "rounds_none": "No gun in the kit takes rounds",
+	"fix_rounds": "Rounds",
+	"no_fix": "Nothing to fix",
+	"home": "WHAT YOU'LL BRING HOME",
+	"gear": "Item level %d", "scrap": "Scrap", "paper": "Papers: 1 in %d",
+	"no_material": "No material in %s", "no_material_short": "None here", "material_later": "Its material turns up after the campaign",
+	"his_own": "One of his own", "his_own_short": "His own",
+	"left_tip": "Left here: it turns up on the next clear",
+	"here_never": "Your record: never tried",
+	"here_tried": "Your record: %s, not cleared yet", "here_tried_short": "Your record: not cleared yet",
+	"here_cleared": "Your record: cleared %s · best %s", "here_cleared_short": "Your record: cleared %s",
+	"last_none": "Last run: none yet",
+	"last": "Last run: %s at %s", "full": ", pack full",
+	"ends": {"Back": "back", "Back, chased": "back, chased", "Cut and run": "cut and run", "Out of time": "out of time", "Dead": "dead"},
+}
+## A head's thing left behind (2 Nov, BUILD46-S; the designer: "the room at half until fetched"): the room's line, its
+## handicap in the mechanics voice, the log's two lines, and the Map card's mark on the bring-home tile.
+const HALF := {
+	# the effect first (the language pass): "Half till the vet's bag is home: rests at half speed, half the shelf (it's at
+	# Top Farm)" - the thing mid-sentence, "is" or "are" (the deeds), the what, "it's" or "they're", the site
+	"line": "Half till %s %s home: %s (%s at %s)",
+	"short": "Half till %s %s home: %s",
+	"tiny": "Half till %s %s home",
+	"what": {"clinic": "rests at half speed, half the shelf", "fence": "the shelf at half", "workshop": "half the scrap from breaking down",
+		"yard": "builds cost double", "radio": "holds %d signals, not %d"},
+	"room": {"clinic": "the Clinic", "fence": "the Fence", "workshop": "the Workshop", "yard": "the Pitch", "radio": "the Radio"},
+	"found": "%s %s up at %s.",                    # the thing, "turns" or "turn" (the deeds), the site
+	"whole": "%s home. %s whole again.",          # "The vet's bag's" or "The deeds are", "The Clinic's"
+}
 ## A room opening, in the log (13 Oct): the head's thing home, the room with it.
 const GATES := {
 	"clinic": "The vet's bag's come home. The Clinic's open.",
@@ -1502,6 +1569,104 @@ const EV := {
 	"cap_need": "[%s under %s]", "cap_hurt": "[%s, hurt]", "cap_freed": "[freed]", "cap_bag": "[the bag's gone]", "cap_left": "[left there]",
 	"cap_locked": "[%s, shut]", "cap_open": "[open]", "cap_dogs": "[%d dogs]", "cap_trader": "[the Scrap man at his barrow]",
 	"trade_plate": "a plate stitched in", "trade_mags": "magazines topped up", "trade_held": "the next gang %d s later", "trade_bandage": "a bandage",
+	# BUILD46-E (2 Nov): the other six families, the rival crew, the Vagabond, the threads - drafts for the language pass
+	"danger": [
+		["{what}, and {prize}. It won't be easy getting it out.", "{what}. Past it, {prize}."],
+		["{what}, and {prize}. Somebody's tried for it already.", "{what}. On the far side, {prize}."],
+		["{what}, and {prize}. Nobody's been in since.", "{what}. Beyond it, {prize}."],
+		["{what}, and {prize}. Whoever left it isn't coming back.", "{what}. Through it, {prize}."],
+	],
+	"stash": [
+		["{what}. Too easy, that.", "{what}. Nobody leaves a thing like that out here."],
+		["{what}. Round here, nothing's free.", "{what}. Somebody's left it for somebody."],
+		["{what}. It's been put there.", "{what}, just sat there. Nobody's that careless."],
+		["{what}. Bait, most likely.", "{what}. It's waiting for someone."],
+	],
+	"stash_tip": [
+		["{what}, where the tip said. Nobody's touched it."], ["{what}, where the tip said. Still there."],
+		["{what}, right where the tip said."], ["{what}, where the tip said it'd be."],
+	],
+	"body": [
+		["{who}, face down in the long grass. Shot, by the look of it.", "{who}, curled up by a fence. The dogs found them first."],
+		["{who}, sat against a wall like they're resting. They're not.", "{who}, face down on a landing. Shot in the back."],
+		["{who}, under a bus shelter. It wasn't quick.", "{who}, face down by the doors. Somebody's luck ran out here."],
+		["{who}, in the road. Shot, more than once.", "{who}, in a doorway. Their luck ran out here."],
+	],
+	"wreck": [
+		["{what}, the diesel long gone. There's metal on it yet.", "{what}, nettles through the wheels."],
+		["{what}, picked at but not picked clean.", "{what}, half up on the pavement."],
+		["{what}, across two lanes. Plenty still on it.", "{what}. The frame's worth having."],
+		["{what}, slewed across the road.", "{what}, glass everywhere. Plenty left on it."],
+	],
+	"broadcast": [
+		["{what}. A man's voice, reading out place names.", "{what}. Somebody's talking about a drop."],
+		["{what}. A woman going through what's where.", "{what}. Two voices, arguing over a haul."],
+		["{what}. Somebody giving out directions.", "{what}. A voice, calm, saying where they left it."],
+		["{what}. Somebody reading out a list, very slowly.", "{what}. A voice going through what they couldn't carry."],
+	],
+	"weather": [
+		["{what} across the fields.", "{what}. The birds have gone quiet."],
+		["{what} over the estate.", "{what}. Doors banging up and down the street."],
+		["{what} over the town.", "{what}. The streets go quiet."],
+		["{what} over the city.", "{what}. Everything goes quiet."],
+	],
+	"crew": [
+		["A rival crew, {n} of them, off the lane. They've seen you.", "{n} of another crew, working the hedges. They want what you've got."],
+		["A rival crew off the estate, {n} of them. They don't back off.", "{n} of another crew, hoods up, between the blocks."],
+		["A rival crew, {n} of them, coming through the precinct.", "{n} of another crew, spread out across the road."],
+		["A rival crew, {n} of them, kitted out. They've done this before.", "{n} of another crew, coming up the slip road."],
+	],
+	"crew_back": [
+		["The crew of somebody you robbed, {n} of them. They know your face."], ["The crew of somebody you robbed, {n} of them. They've come a long way for this."],
+		["The crew of somebody you robbed, {n} of them. They know your face."], ["The crew of somebody you robbed, {n} of them. They've come a long way for this."],
+	],
+	"vagabond": [
+		["The Vagabond, his barrow up on the verge, a dog asleep under it."],
+		["The Vagabond, his barrow under the walkway."],
+		["The Vagabond, his barrow parked in a shop doorway."],
+		["The Vagabond, his barrow under a flyover, a tarp over the good stuff."],
+	],
+	"vag_says": ["\"Tins or the good stuff. I'm not fussy which.\"", "\"Have a look. No touching.\"", "\"Found it, didn't steal it. Mostly.\""],
+	"vag_says_known": ["\"You again. I've put a few bits by.\"", "\"Back, are you? Good. Have a look.\""],
+	"trader_says_known": ["\"Oh, it's you. The usual, is it?\"", "\"Knew you'd be along. This run only, mind.\""],
+	# the panel
+	"go_in": "Go in", "careful": "Go in carefully", "danger_face": ["%d s · %d%% clean, %d%% hurt: −%d%% HP", "%d s · %d%% clean · −%d%% HP"],
+	"stash_take": "Take it", "check": "Check it first", "take_face": "%d s · %d%% a catch",
+	"check_face": "%d s · %d finds, no catch", "tip_face": "%d s · %d finds a tier up",
+	"search": "Search it", "search_face": "%d s · A find · %d%% a clue", "pockets": "Go through the pockets", "pockets_face": "%d s · About %s",
+	"strip": "Strip it", "strip_face": "%d s · %d–%d scrap", "cut": "Cut it open", "cut_face": ["%d s · −%d scrap · %s %s and a find", "%d s · −%d scrap · A find"], "cut_no": "No scrap to cut it",
+	"listen": "Listen", "listen_face": "%d s · A tip", "short": "Catch the end", "short_face": "%d s · %d%% a tip",
+	"press": "Press on", "press_face": "+%d%% loot quality · +%d%% gang damage", "home": "Go home", "home_face": "Out now with the pack", "let_pass": "Let it pass",
+	"danger_foot": "A find a tier above the site's. The chance moves with HP, night and the weather.",
+	"stash_foot": "A catch is a trip (−%d%% HP) or a watcher: the next gang comes now.",
+	"stash_tip_foot": "The tip's haul: no catch, a tier above the site's.",
+	"body_foot": "A clue (%d%%): the next gang here +%d%% HP and fire, %d notes a man; or its head −%d%% HP next time.",
+	"wreck_foot": "Cutting it open takes scrap for the torch. The material is the site's own.",
+	"broadcast_foot": "A tip is a haul on a later run somewhere else, or word of the Vagabond.",
+	"weather_foot": "Pressing on holds for the rest of the run.",
+	"crew_foot": "A rival crew is a fight with no pause. It can kill the runner. Seen off, they leave what they carry.",
+	"crew_key": "Crew", "carry_notes": "%d notes", "carry_find": "A find",
+	"vag_known": ["Trades: %d of %d · %s · Materials ×%d", "%d of %d · %s"],
+	"vag_known_top": ["Trades: %d · %s · Materials ×%d", "%d · %s"],
+	"price_tins": "%s", "price_mat": "Materials ×%d", "shelf_rumour": "A rumour", "shelf_gear": "%s · %s", "shelf_gear_up": "%s · %s · a tier up",
+	"vag_step_words": ["another piece on his shelf", "33% off everything", "his shelf a tier up, a rumour every visit"],
+	# the log
+	"danger_clean": "In and out, clean.", "danger_hurt": "Hurt on the way out: −%d HP. You get it all the same.",
+	"left_be": "You leave it be.",
+	"stash_took": "You take it. Nothing happens.", "stash_trip": "It was rigged: −%d HP. You take it all the same.", "stash_watched": "Someone was watching it. The next gang's on its way.",
+	"stash_checked": "You spot %s first. It's yours.", "stash_tip_took": "Where the tip said. All yours.",
+	"body_searched": "You go through their things.", "clue_gang": "A clue: whatever did this is still about. The next gang's tougher, and carrying notes.",
+	"clue_head": "A clue to %s: −%d%% HP the next time you meet.", "pocketed": "%s from their pockets.",
+	"stripped": "Stripped: %d scrap.", "cut_open": "Cut open, %d scrap on the torch.",
+	"tip_site": "A tip: something left at %s.", "tip_trader": "A tip: the Vagabond's headed your way.", "no_tip": "Nothing you can use.",
+	"pressed": "You press on.", "headed_home": "You head home before it sets in.", "let_passed": "You let it pass.",
+	"weak_used": "The clue pays off: −%d%% HP on %s.",
+	"crew_on": "The crew come on.", "crew_off": "The crew are seen off.", "crew_off_notes": "They had %d notes on them.",
+	"crew_off_find": "They had something on them.", "crew_off_push": "The crew are seen off. The next gang comes %d seconds later.", "crew_out": "Out ahead of the crew: %d%% odds, under the standing order's %d%%.",
+	"vag_traded": "The Vagabond: %s, for %s.", "vag_gone": "The Vagabond moves on.", "vag_rumour": "a rumour", "vag_mat": "%d materials", "vag_no_room": "No room in the pack",
+	# the scene's captions
+	"cap_thing": "[%s]", "cap_passed": "[it passes]", "cap_body": "[%s, dead]", "cap_crew": "[a rival crew, %d]", "cap_vagabond": "[the Vagabond at his barrow]",
+	"cap_done": {"danger": "[been in]", "stash": "[taken]", "body": "[searched]", "wreck": "[stripped]", "broadcast": "[heard]", "weather": "[pressing on]"},
 }
 
 ## The standing orders (1 Nov; the fix round's words): the screen beside the loot rules, a family a row, a drop-down each.
@@ -1512,6 +1677,12 @@ const ORDERS := {"button": "Standing orders", "title": "Standing orders", "sub":
 	"locked": {"force": "Force it", "leave": "Leave it", "shoot": "Shoot the lock off, rounds allowing"},
 	"threat": {"odds_80": "Fight at 80% odds or better", "out": "Get out", "odds_run": "Fight at the site's odds or better", "always": "Always fight"},
 	"trader": {"all": "Buy what you can", "leave": "Walk on", "armour30": "Buy armour with 30 scrap or more"},
+	"danger": {"careful": "Go in carefully, time allowing", "leave": "Leave it", "go": "Go in"},
+	"stash": {"check": "Check it first", "take": "Take it", "leave": "Leave it"},
+	"body": {"search": "Search it", "pockets": "Go through the pockets", "leave": "Leave it"},
+	"wreck": {"strip": "Strip it", "cut": "Cut it open, scrap allowing", "leave": "Leave it"},
+	"broadcast": {"listen": "Listen", "short": "Catch the end", "leave": "Leave it"},
+	"weather": {"press_80": "Press on at 80% odds or better", "leave": "Let it pass", "press": "Always press on", "home": "Go home"},
 	"default": "Leave it"}
 
 

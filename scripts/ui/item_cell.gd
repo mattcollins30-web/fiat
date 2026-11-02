@@ -127,11 +127,42 @@ func _init() -> void:
 	_mags.visible = false
 	_mags.draw.connect(_draw_mags)
 	add_child(_mags)
+	_dot = Panel.new()                     # a magazine's rounds by their colour, in the corner (BUILD46-R)
+	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dot.visible = false
+	add_child(_dot)
 	_mark = Control.new()                  # over everything: the Fence's contract marks (19 Oct)
 	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mark.draw.connect(_draw_mark)
 	add_child(_mark)
 	set_process(false)
+
+
+## A magazine's rounds by their own colour (BUILD46-R, 2 Nov, the canvas "Fiat – Rounds and magazines": "no way of knowing
+## what rounds are loaded into what mags"): a dot in the cell's top corner, Pal.ROUND_COLOURS; none while it's empty.
+var _dot: Panel
+var dot_grade := ""                    # the grade the dot shows, "" for none (the tests)
+const DOT := 10
+const DOT_SMALL := 6
+
+
+func _lay_dot(it: Dictionary) -> void:
+	dot_grade = str(it.get("ammo", "")) if Items.is_mag(it) and int(it.get("rounds", 0)) > 0 else ""
+	_dot.visible = dot_grade != ""
+	if not _dot.visible:
+		return
+	var d: int = DOT_SMALL if (size.x < 48.0 or size.y < 48.0) else DOT
+	_dot.size = Vector2(d, d)
+	_dot.position = Vector2(INSET + (2 if d == DOT_SMALL else 4), INSET + (2 if d == DOT_SMALL else 4))
+	@warning_ignore("integer_division")
+	_dot.add_theme_stylebox_override("panel", UI.box(Pal.round_colour(dot_grade), d / 2, 1, Color(Pal.BG, 0.9)))
+
+
+## The dot's colour as drawn (the tests), transparent with none.
+func dot_colour() -> Color:
+	if not _dot.visible:
+		return Color.TRANSPARENT
+	return (_dot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color
 
 
 ## A magazine's fill (28 Oct; 30 Oct, magazines as items: one bar, a magazine a tile, a drum two wide): `fills` 0 to 1
@@ -400,6 +431,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	f = Vector2i(maxi(1, roundi((size.x + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))), maxi(1, roundi((size.y + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))))
 	_style(on, rarity_tone(it))
 	_dress(it, rarity_tone(it))
+	_lay_dot(it)
 	var tex: Texture2D = null if no_pics else Items.art(it)
 	for l in _lines:
 		l.visible = false

@@ -7,13 +7,14 @@ extends Control
 signal acted
 signal to_issuer                       # the County card's links (the canvas 'The County board')
 signal to_bench
+signal to_kit                          # the site card's fix chips (2 Nov, BUILD46-S): armour, HP, damage, resist
+signal to_clinic                       # and a wound or HP under half
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
-const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 const TierGuide := preload("res://scripts/ui/tier_guide.gd")
@@ -22,11 +23,13 @@ const County := preload("res://scripts/ui/county.gd")
 const MapView := preload("res://scripts/ui/map_view.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const SkillPicker := preload("res://scripts/ui/skill_picker.gd")
+const RoundsPanel := preload("res://scripts/ui/rounds_panel.gd")
 const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 const RepeatReport := preload("res://scripts/ui/repeat_report.gd")
 const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
 const ExpeditionsPanel := preload("res://scripts/ui/expeditions_panel.gd")
 const ExpeditionReport := preload("res://scripts/ui/expedition_report.gd")
+const SiteCard := preload("res://scripts/ui/site_card.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
@@ -37,14 +40,6 @@ const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
 const BOSS_W := 150                # the boss toggle beside Set off
 const REPEAT_W := 170              # "Run it ×5" beside Set off (29 Oct, docs/design/trips.md 1); Kev's wagers in its place before a first clear or a head
-const DEPTH_BTN := 48              # the −/+ stacked at the depth tile's right, the endgame's ladder
-const DEPTH_TILE := 4              # the depth tile's place in the six
-const BAND_H := 180                # the art band at the top of a column: the rooms' one height (12 Oct: 200, the 20 paid the resists' second row)
-const FIRE_W := 148                # "They fire" / "They resist" before the chips
-const BOX_PAD := 10                # the outline round the fight, the elements and the word
-const BOX_GAP := 9                 # between the boxes (12 Oct: 12, the 6 paid the resists' second row)
-const RESIST_ROWS := 2             # what they resist wraps to a second row (12 Oct: one row dropped chips - the city showed 2 of 4)
-const WORD_ROWS := 4               # the radio's two words and the sky's two, a row each
 const FOOT_H := 48                 # the insurance's row, the rig's top-up beside it (23 Oct, parked item 4)
 
 var sim
@@ -55,6 +50,7 @@ var _map                           # map_view.gd
 var _title: Label                  # the row's left: the picked site's zone and its sky
 var _cols: Array = []              # the card (one, at the right since the drawn Map): its labels and buttons
 var _skill_pick: SkillPicker       # the run's three skills, over the map (milestone 8)
+var rounds_panel: RoundsPanel      # the rounds for the run, over the map (BUILD46-R): open_rounds
 var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
 var _came_btn: Button              # the tally's button at the zone row's right, before the guide's
@@ -111,60 +107,15 @@ func _init() -> void:
 		edge.corner_radius_top_left = 8
 		edge.corner_radius_bottom_left = 8
 		var c := {"panel": panel, "edge": UI.panel(self, Rect2(x, TOP, 6, Pal.ROOM_H - TOP), edge)}
-		# the art band: tier and zone, the site's name, the odds as the headline
-		var band := Band.new(COL_W, BAND_H, zone)
-		panel.add_child(band)
-		c["band"] = band
-		var y := BAND_H + 14
-		# three boxes under the band: the fight, the elements, the word
-		c["boxes"] = []
-		for k in range(3):
-			c["boxes"].append(UI.panel(panel, Rect2(PAD - BOX_PAD, 0, INNER + 2 * BOX_PAD, 10), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE)))
-		c["boxes"][0].position.y = y
-		y += BOX_PAD
-		# the fight, as tiles: them, their fire, the fight's length, the drops, the depth, the rewards
-		c["tiles"] = UI.tile_row(panel, PAD, y, INNER, 3) + UI.tile_row(panel, PAD, y + UI.TILE_H + 8, INNER, 3)
-		var depth_tile: Dictionary = c["tiles"][DEPTH_TILE]
-		c["depth_up"] = UI.button(depth_tile["panel"], Rect2(depth_tile["panel"].size.x - DEPTH_BTN - 6, 4, DEPTH_BTN, 26), false)
-		c["depth_down"] = UI.button(depth_tile["panel"], Rect2(depth_tile["panel"].size.x - DEPTH_BTN - 6, 32, DEPTH_BTN, 26), false)
-		c["depth_down"].text = "−"
-		c["depth_down"].pressed.connect(_depth.bind(col, -1))
-		for b in [c["depth_up"], c["depth_down"]]:
-			b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)     # small enough for a 26 px button
-		c["depth_up"].text = "+"
-		c["depth_up"].pressed.connect(_depth.bind(col, 1))
-		y += 2 * UI.TILE_H + 8 + BOX_PAD
-		c["boxes"][0].size.y = y - c["boxes"][0].position.y
-		y += BOX_GAP
-		c["boxes"][1].position.y = y
-		y += BOX_PAD
-		# what they fire, as chips in the element's colour, with your resist to each; what they resist, the same way
-		c["fire_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "THEY FIRE", "Medium", 20, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["chips"] = Chips.new(INNER - FIRE_W)
-		c["chips"].position = Vector2(PAD + FIRE_W, y)
-		panel.add_child(c["chips"])
-		y += Chips.CHIP_H + 8
-		c["resist_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "THEY RESIST", "Medium", 20, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["resist"] = Chips.new(INNER - FIRE_W)
-		c["resist"].position = Vector2(PAD + FIRE_W, y)
-		panel.add_child(c["resist"])
-		y += RESIST_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP + BOX_PAD
-		c["boxes"][1].size.y = y - c["boxes"][1].position.y
-		y += BOX_GAP
-		c["boxes"][2].position.y = y
-		y += BOX_PAD
-		# the word: the head carries the sky; a row a word, its name left and its effect right
-		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "Conditions")
-		y += UI.HEAD_H + 2
-		# the words as toned rows: the name in its tone, its effect muted beside it, one chip a row
-		c["intel"] = Chips.new(INNER)
-		c["intel"].position = Vector2(PAD, y)
-		panel.add_child(c["intel"])
-		y += WORD_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP + 8
-		# the site's own line at this depth, one row (the whole, else its first sentence)
-		c["site"] = [UI.label(panel, Rect2(PAD, y, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)]
-		y += 24 + BOX_PAD
-		c["boxes"][2].size.y = y - c["boxes"][2].position.y
+		# the card's body (2 Nov, BUILD46-S; docs/design/site_card.md): one fixed layout from the picture to "You here",
+		# the buttons under it as before
+		var body := SiteCard.new(COL_W)
+		panel.add_child(body)
+		body.fix.connect(_fix)
+		body.view_changed.connect(func():
+			_shown = ""
+			show_state(sim))
+		c["card"] = body
 		# the foot: Set off across, the insurance and the rig's top-up sharing the row under it (21 Oct, Matt: auto-run's
 		# gone; 23 Oct: the top-up beside the paper)
 		var fy := Pal.ROOM_H - TOP - PAD - FOOT_H
@@ -173,10 +124,10 @@ func _init() -> void:
 		# insurance: the Fence holds the paper on the kit for the next run
 		c["insure"] = UI.button(panel, Rect2(PAD, fy, half, FOOT_H), false)
 		c["insure"].pressed.connect(_insure.bind(col))
-		# the rig at the gate: one button that cycles Fill up, Best grades only, Leave it (parked item 4, the 21 Oct board)
+		# the rounds for the run (BUILD46-R): "Rounds ▾" opens the picker over the map (was the rig's top-up, cycling)
 		c["rig"] = UI.button(panel, Rect2(PAD + INNER - half, fy, half, FOOT_H), false)
 		c["rig"].pressed.connect(_rig.bind(col))
-		c["rig"].tooltip_text = Words.TOP_UP_TIP
+		c["rig"].tooltip_text = Words.ROUNDS["tip"]
 		# the skills (24 Oct, milestone 8; Matt: A): a third button in the row, the three pictures on it, the picker
 		# over the map behind it
 		c["skills"] = UI.button(panel, Rect2(PAD, fy, half, FOOT_H), false)
@@ -209,6 +160,12 @@ func _init() -> void:
 		c["wager"].visible = false
 		_cols.append(c)
 	_build_pick()
+	rounds_panel = RoundsPanel.new()
+	rounds_panel.position = Vector2(20, TOP + 8)
+	rounds_panel.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(rounds_panel)
 	_skill_pick = SkillPicker.new()
 	_skill_pick.position = Vector2(20, TOP + 8)
 	_skill_pick.acted.connect(func():
@@ -383,6 +340,11 @@ func show_state(s) -> void:
 		_skill_pick.visible = not sim.on_mission()     # set off: the three are locked
 		_skill_pick.show_state(sim)
 		_skill_pick.move_to_front()
+	if rounds_panel.visible:
+		if rounds_panel.site != selected or order_key != "":
+			rounds_panel.visible = false             # another site picked: its own plan's behind its own button
+		rounds_panel.show_state(sim)
+		rounds_panel.move_to_front()
 	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
 	_county_btn.visible = sim.issued and not picking
 	if not sim.issued:
@@ -434,90 +396,23 @@ func show_state(s) -> void:
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
-			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(sim.wager_site_open(selected)), str(sim.wagers.get(sim.wager_site_key(selected), {})), sim.repeat_count()]
+			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(sim.wager_site_open(selected)), str(sim.wagers.get(sim.wager_site_key(selected), {})), sim.repeat_count()] \
+			+ "|%s|%s|%s|%d|%d|%d|%s" % [str(sim.site_runs.get(str(selected), {})), str(sim.left_behind), sim.cls, sim.rig.size(), sim.stash.size(), sim.stat_v, str(_cols[0]["card"].head_view)]     # the site card's (BUILD46-S)
 	if sig == _shown:
 		return
 	_shown = sig
-	var tiers: Array = Data.ZONES[zone]["tiers"]
 	for k in range(1):
 		var i: int = selected
 		var c: Dictionary = _cols[k]
-		var tier_n: int = tiers.find(i) + 1
 		var t: Dictionary = sim.effective(i)
 		var is_open: bool = sim.tier_open(i)
 		var odds: float = sim.odds_now(i) if is_open else 0.0     # as read so far: the shell reads them a few ms a frame
 		var tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
 		c["edge"].visible = is_open
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
-		var band: Band = c["band"]
-		band.set_site(Data.TIERS[i]["name"])
-		band.set_tone(zone)
-		band.title.add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
-		if is_open:
-			# still reading: dimmer, and the screen keeps refreshing until it's settled
-			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = "%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n]     # the zone's, the map no longer a tab a zone (19 Oct); the gear's level is the Gear level tile's
-			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
-				("%s to clear" % Fmt.pct(odds)) if sim.odds_ready(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_ready(i) else Pal.TEXT_3)
-			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
-			var why: Array = odds_reasons(sim, i) if sim.odds_ready(i) and odds < WHY_UNDER else []
-			band.headline_under_title(not why.is_empty())
-			band.chips.visible = not why.is_empty()
-			if not why.is_empty():
-				band.chips.show_chips(why, 2, true)     # two rows for the hints (23 Oct)
-			band.chip_rows(band.chips._rows_used if not why.is_empty() else 1)
-		elif sim.level_gated(i) and (tiers.find(i) == 0 or int(sim.best_depth[i - 1]) > 0):
-			band.set_words("%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n], Data.TIERS[i]["name"], "Locked", "Opens at level %d" % sim.site_gate(i), Pal.TEXT_3)     # its drops' level less one (19 Oct)
-			band.headline_under_title(false)
-			band.chips.visible = false
-		else:
-			band.set_words("%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n], Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
-			band.headline_under_title(false)
-			band.chips.visible = false
-		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
-		c["depth_down"].visible = false
-		c["depth_up"].visible = false
-		var p_odds: float = sim.paper_odds(i)
-		var tiles: Array = [
-			["Gang", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
-			["Their fire", ["%.1f dmg/s each" % t["dps"], "%.1f/s" % t["dps"]]],
-			["Fight · clock", [     # "Fight time · run clock" wanted 179 px of the tile's 128 (18 Oct)
-			"%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))],
-			("over %s" % Fmt.mss(sim.clock_of(i))) if sim.estimate(i) > sim.clock_of(i) else "clock %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct); a fight too long to print says it's over the clock (19 Oct: it fell to "clock 5:12", the fight gone)
-			["Item level", sim.finds_words(int(t["level"]))],     # the level to wear what it drops, the number an item's own Level chip says (18 Oct)
-			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
-			["The site", sim.site_state_forms(i)],     # its crates (27 Oct): fresh, what's left, or picked clean
-		]
-		for r in range(6):
-			UI.set_tile(c["tiles"][r], tiles[r][0], tiles[r][1], Pal.TEXT if is_open else Pal.TEXT_3)
-		if is_open and sim.estimate(i) > sim.clock_of(i):
-			UI.set_tile(c["tiles"][2], tiles[2][0], tiles[2][1], Pal.BAD)     # a fight that won't fit the clock: the DPS check, failed
-		# the figure keeps clear of the −/+ when the ladder's open
-		for l in [c["tiles"][DEPTH_TILE]["value"], c["tiles"][DEPTH_TILE]["key"]]:
-			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20
-		UI.set_tile(c["tiles"][DEPTH_TILE], tiles[DEPTH_TILE][0], tiles[DEPTH_TILE][1], Pal.TEXT if is_open else Pal.TEXT_3)
-		_show_chips(c, t, is_open)
-		# what they resist, a chip an element in its colour, the same shape as what they fire; "nothing" when they don't
-		c["resist_label"].visible = is_open
-		c["resist"].visible = is_open
-		if is_open:
-			show_resists(c["resist"], t)
-		else:
-			c["resist"].show_chips([])
-		# four rows: the radio's words first, the sky's after; a fifth (three called in, at night, in weather) is left off the end
-		var wtiers: Dictionary = t.get("word_tiers", {})
-		var names: Array = wtiers.keys()
-		for nm in t["intel"]:
-			if not (nm in names):
-				names.append(nm)                 # the Radio's words first, the sky's after
-		var rows: Array = word_rows(sim, names, wtiers) if is_open else []
-		# what a run here brings for the rebuild (20 Oct, Matt: "never clear when said material drops"), the first row
-		if is_open and sim.campaign_done() and not sim.material_split(i).is_empty():
-			var mk: String = str(sim.material_split(i).keys()[0])
-			var pc: int = int(round(sim.material_odds(i) * 100.0))
-			rows.push_front({"forms": [sim.thing_name(mk)], "colour": MATERIAL_TONE, "tail": ["%d%% a run finds some" % pc, "%d%% a run" % pc]})     # a find in the pack now, lost on a death (1 Nov)
-		c["intel"].show_rows(rows, WORD_ROWS)
-		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i, false), "CONDITIONS"])     # the weather is the row's (18 Oct, said once)     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
+		# the card's body (BUILD46-S): what the runner's short of, as fix chips, at Risky and worse
+		var why: Array = odds_reasons(sim, i) if is_open and sim.odds_ready(i) and odds < WHY_UNDER else []
+		c["card"].show_state(sim, i, why)
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and not walks and sim.notes < sim.boss_cost(i))
@@ -531,7 +426,10 @@ func show_state(s) -> void:
 		_repeat_lay(c, i, is_open)
 		if c["boss"].visible:
 			var armed: bool = sim.boss_armed.get(i, false)
-			c["boss"].text = ("Convoy ✓" if armed else "Convoy") if convoy else ("Head ✓" if armed else "Head")
+			if convoy:
+				c["boss"].text = "Convoy ✓" if armed else "Convoy"
+			else:
+				UI.fit_button(c["boss"], [Words.SITE_CARD["taken_on"], "Head ✓"] if armed else [Words.SITE_CARD["take_on"], "Head"])     # the language pass
 			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
 			UI.style_button(c["boss"], false, "bad" if armed else "")
 		c["insure"].visible = is_open
@@ -541,7 +439,8 @@ func show_state(s) -> void:
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
 		c["rig"].visible = is_open
 		c["rig"].disabled = sim.on_mission()
-		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode], "%s ▾" % Words.TOP_UP_TINY[sim.top_up_mode]])
+		UI.fit_button(c["rig"], [Words.ROUNDS["button"], Words.ROUNDS["button_short"]])
+		UI.style_button(c["rig"], false, "bad" if not sim.rounds_short(i).is_empty() else "")     # red while the plan's short (BUILD46-R; the merge: the old chips' read went with _show_chips)
 		var rep_why: String = sim.repeat_block(i) if c["repeat"].visible else ""
 		if not is_open:
 			c["note"].text = ""
@@ -549,17 +448,11 @@ func show_state(s) -> void:
 			UI.fit(c["note"], [Words.REPEAT["shut_away"]])
 		elif sim.hp < sim.max_hp() * 0.5:
 			c["note"].text = "The runner is under half HP"
-		elif c["boss"].visible and sim.boss_armed.get(i, false):
-			var cost: int = sim.boss_cost(i)
-			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %s, you have %s" % [boss["name"], Fmt.notes(cost), Fmt.notes(sim.notes)]), "%s: %s" % [boss["name"], Fmt.notes(cost)], boss["name"]])
-		elif c["boss"].visible and not sim.boss_armed.get(i, false) and sim.boss_cost(i) > 0 and sim.notes < sim.boss_cost(i):
-			UI.fit(c["note"], ["%s wants %s; you have %s" % [boss["name"], Fmt.notes(sim.boss_cost(i)), Fmt.notes(sim.notes)], "%s: %s" % [boss["name"], Fmt.notes(sim.boss_cost(i))], "Not enough notes"])
 		elif rep_why != "":
 			var cnt: int = sim.repeat_count()
 			UI.fit(c["note"], [(Words.REPEAT["note"] % [cnt, rep_why]) if cnt > 0 else Words.REPEAT["note_full"] % rep_why, rep_why])     # why "Run it ×5" is shut, on the card (29 Oct)
 		else:
 			c["note"].text = ""
-		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
 
 
 ## The ladder's stations ahead on a site (the endgame, 7 Oct): the crew's head at full strength at PINNACLE_DEPTH
@@ -585,6 +478,8 @@ func _tier(_k: int) -> int:
 func select(i: int) -> void:
 	if i < 0 or i >= Data.TIERS.size() or sim == null or not sim.zone_open(int(Data.TIERS[i]["zone"])):
 		return
+	if i != selected:
+		_cols[0]["card"].head_view = bool(sim.boss_armed.get(i, false))     # a new pin: the gang, unless its head's taken on
 	selected = i
 	order_key = ""
 	if _wagers.visible and _wagers.key != sim.wager_site_key(i):
@@ -627,93 +522,30 @@ func _pick_zone(z: int) -> void:
 		select(int(Data.ZONES[z]["tiers"][0]))
 
 
-## The words as chip rows: the name in its tone (amber harder, green easier),
-## the effect as the tail, whole then cut by clause with "+N". Shared with the radio.
-const MATERIAL_TONE := Color("d6c27a")     # the materials' sand (the canvas "Fiat – The playtest batch")
-
-
-static func word_rows(sim_v, names: Array, tiers := {}) -> Array:
-	var out := []
-	for nm in names:
-		if tiers.has(nm):
-			# a Radio word (9 Oct): its tier as the tag, its bite and pay as the tail, amber - it bites for what it pays
-			var t: int = int(tiers[nm])
-			var ww: Array = sim_v.word_words(nm, t)
-			var tail := [str(ww[0]) + " · " + str(ww[1]), str(ww[0]).get_slice(", ", 0) + " · " + str(ww[1]).get_slice(", ", 0), str(ww[1]).get_slice(", ", 0)]
-			out.append({"forms": [nm], "tag": Data.WORD_TIER_NAMES[clampi(t, 1, 4) - 1], "colour": Pal.WARN, "tail": tail})
-			continue
-		var m: Dictionary = sim_v.modifier(nm)
-		var clauses: PackedStringArray = str(m["words"]).split(", ", false)
-		var forms := []
-		for n in range(clauses.size(), 0, -1):
-			forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
-		var tone := word_tone(m)
-		out.append({"forms": [nm], "colour": Pal.tone_color(tone) if tone != "" else Pal.TEXT_2, "tail": forms})
-	return out
-
-
-## A word's tone: amber when it makes the fight harder, green when it makes it
-## easier or richer, plain when it's a trade.
-static func word_tone(m: Dictionary) -> String:
-	var harder: bool = float(m.get("hp", 1.0)) > 1.0 or float(m.get("dps", 1.0)) > 1.0 or float(m.get("patrol", 1.0)) < 1.0 or int(m.get("contact", 0)) > 0
-	var easier: bool = float(m.get("hp", 1.0)) < 1.0 or float(m.get("dps", 1.0)) < 1.0 or float(m.get("patrol", 1.0)) > 1.0 or int(m.get("contact", 0)) < 0
-	if harder and not easier:
-		return "warn"
-	if easier and not harder:
-		return "good"
-	return ""
-
-
-## What a site resists, a chip an element in its colour, over RESIST_ROWS rows; "Nothing" when it resists nothing. When
-## the names don't all fit (all five, past Kitted out) every chip falls back to its figure alone, still in its colour,
-## so none is dropped. Returns the chips wanted; the smoke counts them against what shows.
-static func show_resists(chips, t: Dictionary) -> int:
-	var long := []
-	var short := []
-	for ty in Data.ELEMENTS:
-		if float(t.get("res", {}).get(ty, 0.0)) > 0.0:
-			var fig := "%.0f%%" % (float(t["res"][ty]) * 100.0)
-			long.append(["%s %s" % [ty.capitalize(), fig], ty])
-			short.append([fig, ty])
-	if long.is_empty():
-		long.append(["Nothing", Pal.TEXT_2])
-	chips.show_chips(long, RESIST_ROWS)
-	if chips.shown() < long.size():
-		chips.show_chips(short, RESIST_ROWS)
-	return long.size()
-
-
-## What they fire, a chip an element in its colour with your resist to it;
-## "Physical" alone when a site fires nothing else. Chips past the row are left off.
-func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
-	var chips := []
-	for ty in Data.ELEMENTS:
-		var share: float = float(t.get("types", {}).get(ty, 0.0))
-		if share > 0.0:
-			var over: float = sim.over_cap(ty)
-			var ot: String = (" +%.0f" % over) if over >= 0.5 else ""     # over the cap (12 Oct)
-			chips.append(["%.0f%% %s · you resist %.0f%%%s" % [share * 100.0, ty, sim.resist(ty) * 100.0, ot], "%s · resist %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
-	if chips.is_empty():
-		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
-	# the rig short of the fight's rounds (16 Oct): first, in red - the Bank's dry shotgun
-	var short: Array = sim.rounds_short(int(t["tier"])) if is_open else []
-	if not short.is_empty():
-		chips.push_front({"forms": ["Rounds short: %d of ~%d" % [int(short[0]), int(short[1])], "Short: %d of ~%d" % [int(short[0]), int(short[1])], "Rounds short"], "colour": "bad"})     # its shortest says it without the figures, so the resist chip after it keeps its room (18 Oct)
-	c["fire_label"].visible = is_open
-	c["chips"].visible = is_open
-	c["chips"].show_chips(chips if is_open else [], 1, true)     # every chip short before one's left off: the rounds' warning first, so it's never the one (the smoke caught it dropped)
-
-
 func _depth(k: int, by: int) -> void:
 	var i := _tier(k)
 	sim.set_depth(i, sim.depth[i] + by)
 	acted.emit()
 
 
-## The rig at the gate's button: Fill up, Best grades only, Leave it, round again (23 Oct).
-func _rig(_k: int) -> void:
-	var modes: Array = sim.TOP_UP_MODES
-	sim.set_top_up(modes[(modes.find(sim.top_up_mode) + 1) % modes.size()])
+## The card's "Rounds ▾" and its red rounds chip (BUILD46-R): the rounds picker for the site.
+func _rig(k: int) -> void:
+	open_rounds(_tier(k))
+
+
+## The rounds for the run over the map, on a site's plan (BUILD46-R, the canvas "Fiat – Rounds and magazines", board 2):
+## the one opener - the card's "Rounds ▾", its red rounds chip, and builder S's card call it. -1: the picked site.
+func open_rounds(i := -1) -> void:
+	if sim == null:
+		return
+	var at: int = selected if i < 0 else i
+	if rounds_panel.visible and rounds_panel.site == at:
+		rounds_panel.visible = false          # a second press shuts it
+		rounds_panel._grades_shut()
+	else:
+		_skill_pick.visible = false
+		rounds_panel.open(sim, at)
+		rounds_panel.move_to_front()
 	_shown = ""
 	acted.emit()
 
@@ -748,6 +580,7 @@ func _foot_lay(c: Dictionary, is_open: bool) -> void:
 func _skills_open() -> void:
 	if sim == null:
 		return
+	rounds_panel.visible = false               # one panel over the map at a time (BUILD46-R)
 	_skill_pick.open(sim)
 	_skill_pick.move_to_front()
 
@@ -761,6 +594,7 @@ func _insure(_k: int) -> void:
 func _deploy(k: int) -> void:
 	sim.deploy(_tier(k))
 	_skill_pick.visible = false                # set off: the three are locked
+	rounds_panel.visible = false               # and the rounds have gone out (BUILD46-R)
 	acted.emit()
 
 
@@ -788,6 +622,7 @@ func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
 func _repeat(k: int) -> void:
 	if sim.start_repeat(_tier(k)):
 		_skill_pick.visible = false
+		rounds_panel.visible = false
 	_shown = ""
 	acted.emit()
 
@@ -803,7 +638,28 @@ func _wager_open(k: int) -> void:
 func _boss(k: int) -> void:
 	var i := _tier(k)
 	sim.arm_boss(i, not sim.boss_armed.get(i, false))
+	_cols[k]["card"].head_view = bool(sim.boss_armed.get(i, false))     # taken on: the card shows him (BUILD46-S)
 	acted.emit()
+
+
+## A fix chip on the site card (2 Nov, BUILD46-S): the meds to the gate's top-up (then the Kit), the rounds to the
+## rounds picker, armour and the like to the Kit, a wound or HP to the Clinic, "<site> first" picks that site.
+func _fix(act: String) -> void:
+	if sim == null:
+		return
+	if act.begins_with("site:"):
+		select(int(act.trim_prefix("site:")))
+		acted.emit()
+	elif act == "rounds":
+		open_rounds(selected)
+	elif act == "meds" and not bool(sim.rounds_plan(selected).get("top", true)) and not sim.on_mission():
+		sim.plan_set_top(selected, true)       # the gate tops the rig up with meds: this site's plan's tick (merge 46, BUILD46-R's plans)
+		_shown = ""
+		acted.emit()
+	elif act == "clinic" and sim.room_open("clinic"):
+		to_clinic.emit()
+	else:
+		to_kit.emit()
 
 
 ## What came back (12 Oct): a button at the zone row's right while runs have come home since Seen, the zone tabs
@@ -865,13 +721,13 @@ func _toggle_came() -> void:
 static func odds_reasons(s, i: int) -> Array:
 	var out: Array = []
 	if s.meds_carried() <= 0:
-		out.append({"forms": ["No meds"], "colour": "bad"})
+		out.append({"forms": ["No meds"], "colour": "bad", "act": "meds"})
 	if s.hp < s.max_hp() * 0.5:
 		var hp_forms: Array = ["HP %d of %d" % [s.hp_shown(), s.max_hp_shown()], "HP %d" % s.hp_shown()]
 		if not s.on_mission() and s.rest_rate_now() > 0.0:
 			var full: String = Fmt.mss((s.max_hp() - s.hp) / s.rest_rate_now())
 			hp_forms = ["HP %d of %d, full in %s" % [s.hp_shown(), s.max_hp_shown(), full], "HP %d, full in %s" % [s.hp_shown(), full]] + hp_forms     # resting at camp mends it (17 Oct)
-		out.append({"forms": hp_forms, "colour": "bad"})
+		out.append({"forms": hp_forms, "colour": "bad", "act": "clinic"})
 	var gun = s.equipped["Primary"]
 	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and not Items.free_rounds(gun):
 		var have: int = s.rounds_for(gun)
@@ -880,14 +736,14 @@ static func odds_reasons(s, i: int) -> Array:
 				if Items.is_ammo(it) and Items.base_of(it)["type"] == Items.ammo_type(gun):
 					have += int(it.get("rounds", 0))
 		if s.mags_for(gun).is_empty() and not s.stash.any(func(x): return Items.mag_fits(x, gun)):
-			out.append({"forms": ["No magazine"], "colour": "bad"})     # boxes but nothing to load them in (the three-stage review, UI 15)
+			out.append({"forms": ["No magazine"], "colour": "bad", "act": "rounds"})     # boxes but nothing to load them in (the three-stage review, UI 15)
 		elif have <= 0:
-			out.append({"forms": ["No rounds"], "colour": "bad"})
+			out.append({"forms": ["No rounds"], "colour": "bad", "act": "rounds"})
 	if not s.wounds.is_empty():
-		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn"})
+		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn", "act": "clinic"})
 	var gear_lv: int = s.wear_of(int(s.effective(i)["level"]))
 	if s.level() < gear_lv:
-		out.append({"forms": ["Level %d; its gear needs level %d" % [s.level(), gear_lv], "Gear needs level %d" % gear_lv], "colour": "warn"})
+		out.append({"forms": ["Level %d; its gear needs level %d" % [s.level(), gear_lv], "Gear needs level %d" % gear_lv], "colour": "warn", "act": "kit"})
 	# hints off the odds' own runs (23 Oct, parked item 7; Matt: "just hints in the form of chips", never the figures or
 	# how the odds are worked): what the body or the guns are short of
 	var g: Dictionary = s.odds_gap(i)
@@ -908,11 +764,11 @@ static func odds_reasons(s, i: int) -> Array:
 			if s.meds_carried() > 0 and s.meds_carried() < 3:
 				hints.append("Not enough meds in the rig")
 		for h in hints:
-			out.append({"forms": [h, h.replace("Not enough ", "More ").replace(" in the rig", "")], "colour": "warn"})     # "Low HP" read as hurt (the language pass)
+			out.append({"forms": [h, h.replace("Not enough ", "More ").replace(" in the rig", "")], "colour": "warn", "act": "meds" if h.ends_with("in the rig") else "kit"})     # "Low HP" read as hurt (the language pass)
 	# and the one thing to do about it, in green: the site before this one, ground (Matt: "grind previous level")
 	var before: int = s.site_before(i)
 	if before >= 0 and not out.is_empty():
-		out.push_front({"forms": ["Grind %s first" % Words.mid(Data.TIERS[before]["name"]), "Grind %s" % Words.mid(Data.TIERS[before]["name"]), "Grind first"], "colour": "good"})
+		out.push_front({"forms": ["Grind %s first" % Words.mid(Data.TIERS[before]["name"]), "Grind %s" % Words.mid(Data.TIERS[before]["name"]), "Grind first"], "colour": "good", "act": "site:%d" % before})
 	return out
 
 
@@ -938,8 +794,8 @@ func _text_nodes_under() -> Array:
 	if _guide.visible:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
 	out.append(_title)
-	if not _skill_pick.visible:
-		out.append_array(_map.text_nodes())     # the picker covers the map
+	if not _skill_pick.visible and not rounds_panel.visible:
+		out.append_array(_map.text_nodes())     # the picker covers the map; the rounds picker too (BUILD46-R)
 	if _pick.visible:
 		out.append_array([_pick_kicker, _pick_title, _pick_line, _pick_line2, _pick_head, _pick_go])
 		for c in _pick_cards:
@@ -960,18 +816,11 @@ func _text_nodes_under() -> Array:
 		out.append_array(_exp_panel.text_nodes())     # the Expeditions over the map (29 Oct)
 		return out
 	out.append_array(_skill_pick.text_nodes())
+	out.append_array(rounds_panel.text_nodes())
 	for c in _cols:
-		out.append_array(c["band"].text_nodes())
-		out.append_array([c["intel_head"], c["note"], c["fire_label"], c["resist_label"]])
-		out.append_array(c["site"])
-		if c["resist"].visible:
-			out.append_array(c["resist"].text_nodes())
-		for t in c["tiles"]:
-			out.append_array([t["key"], t["value"]])
-		if c["chips"].visible:
-			out.append_array(c["chips"].text_nodes())
-		out.append_array(c["intel"].text_nodes())
-		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
+		out.append_array(c["card"].text_nodes())
+		out.append(c["note"])
+		for b in [c["deploy"], c["boss"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:
@@ -984,6 +833,9 @@ func _text_nodes_under() -> Array:
 ## Label/value pairs that share a line, for the fit check.
 func line_pairs() -> Array:
 	var out: Array = []
+	for c in _cols:
+		if c["panel"].visible and not _pick.visible and not _order.visible and not _county.visible:
+			out.append_array(c["card"].line_pairs())     # the card's rows, key and value (BUILD46-S)
 	return out
 
 

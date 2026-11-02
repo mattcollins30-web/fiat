@@ -636,6 +636,10 @@ func _on_event_pick(key: String) -> void:
 		sim.dogs_out()                         # the event closed first, then the run's own way out (the fix round, U2)
 		acted.emit()
 		return
+	if key == "home":
+		sim.event_pick(key)                    # the weather turning: Head home (BUILD46-E) - the run may end here
+		acted.emit()
+		return
 	if key == "fight":
 		sim.dogs_fight()
 	elif key == "done":

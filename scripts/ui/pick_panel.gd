@@ -299,7 +299,7 @@ func hint_text() -> String:
 	return _heads[0]._tail_chips.words(0) if not _heads[0].warning.is_empty() and _heads[0]._tail_chips.visible else ""
 
 
-## The buttons at the foot's right: [{text, action, enabled, primary, tone}], the first primary by default.
+## The buttons at the foot's right: [{text, action, enabled, primary, tone, tip}], the first primary by default.
 func set_buttons(items: Array) -> void:
 	var x: float = w - PAD
 	for i in range(BUTTONS):
@@ -310,6 +310,7 @@ func set_buttons(items: Array) -> void:
 		var d: Dictionary = items[i]
 		b.text = str(d["text"])
 		b.disabled = not bool(d.get("enabled", true))
+		b.tooltip_text = str(d.get("tip", ""))   # a greyed button's reason
 		b.size.x = ceilf(UI.text_width(b, b.text)) + 48
 		_actions[i] = d["action"]
 		UI.style_button(b, bool(d.get("primary", i == 0)), str(d.get("tone", "")))

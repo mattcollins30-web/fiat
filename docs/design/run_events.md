@@ -145,3 +145,51 @@ What the slice does, as built (data.gd's run events block holds every figure; wo
   always asks; a repeat run and the bot use the orders.
 - **Test art:** placeholder shapes on the gang's slots with a caption; the manifest waits for the designer's play.
 - **The record:** a run's `event` and `event_out`; a row in balance_summary and playtest_summary.
+
+## Built, 2 Nov (BUILD46-E: the rest of the families, the rival crew, the Vagabond, the threads, the art manifest)
+
+The designer's calls (2 Nov): a rival crew is a normal fight and can kill the runner (odds shown before, Get out now
+always open, like the dogs); threads can sometimes cost you (a crew you robbed can come back; mostly rewards); the
+traders' buffs are run-only and they get better with dealing. Every figure below is a draft for the pass, in
+data.gd's run events block; the words in words.gd's `EV` and `ORDERS`, drafts for the language pass.
+
+- **The ten families**, in the standing orders' order: Someone in need, A threat passing, A locked thing, A trader,
+  A dangerous place, A stash with a catch, A body, A wreck, A broadcast, The weather turning. Each new one has its
+  pools (zone, site kind, weather, night, level weights), its lines a zone, its standing order and test shapes in the
+  scene. Every non-threat pauses, odds and costs on the face, "Leave it" last and free (the weather's is "Let it pass").
+  - *A dangerous place*: Go in (15 s, 60% clean) or Go in carefully (35 s, 90% clean), the odds moving as the pin's
+    with night, weather and low HP; a slip −25% HP (never the last of it); a find a tier up either way.
+  - *A stash with a catch*: Take it (3 s, 40% the catch: a trip −20% HP, or a watcher - the next gang now) or Check it
+    first (20 s, no catch); two finds.
+  - *A body*: Search it (10 s, a find, 50% a clue: whatever killed them still about - the next gang ×1.3 HP and fire,
+    2 notes a man of it; or, at a site with a head, his weakness - −15% HP the next run he's out, a thread) or Go
+    through the pockets (3 s, 4 men's tins).
+  - *A wreck*: Strip it (20 s, 15–25 scrap) or Cut it open (8 s and 10 scrap off the pack: the site's material 2–4,
+    and a find a tier up; greyed with no scrap).
+  - *A broadcast*: Listen (20 s, a tip) or Catch the end (8 s, 50% a tip).
+  - *The weather turning*: Press on (the turn's loot quality and the gangs' damage for the rest of the run: fog +40% /
+    +20%, the light going early +50% / +25% ...), Head home (out now with the pack), or Let it pass.
+- **A rival crew** beside the dogs: of threats, 25/40/50/60% by zone from run 8. The next gang's size, each man the
+  site's gang ×1.25 HP and ×1.2 fire (×1.5 its difficulty), a man's XP; the same stand-off panel and stepped odds (the
+  read through the real fight code on the crew's figures); seen off, what they carry - 3 notes a man, or (40%) a find
+  a tier up. A normal fight: it can kill the runner on a watched run (a repeat run bails, as ever). The zone's gang art
+  stands in for them (their own picture once drawn).
+- **The Vagabond**, the second trader, from run 4, half of traders: tins off the run's and the rebuild materials off
+  the pack's stacks. His shelf: two pieces of gear at the site's tier (25% a tier up), 4 men's tins each (more by
+  rarity, ×1.5 a tier up); a rumour 35% of visits (a tip) for 3 materials, or 3 men's tins with none. Standing as the
+  Scrap man's: 3, another piece; 10, 33% off; 25, the shelf a tier up and a rumour every visit. Gear off his shelf
+  goes into the pack and comes home as a find.
+- **Threads** (saved, each list three at most, the oldest dropped): a freed person (the Yard's runner, as the slice);
+  a tip - a stash at another open site on a later run there (the run's event: no catch, two finds a tier up), or word
+  of the Vagabond (the next run's event is him), stale after 12 runs; a robbed crew - a bag taken from someone in
+  need, or a crew seen off (half the time) - while one's out there a threat is ×1.5 likelier and 60% of threats are
+  them, back for you; a head's weakness; a trader remembers you (his own lines once you've traded).
+- **Standing orders**, player-like as the slice's: Go in carefully, time allowing; Check it first; Search it; Strip it;
+  Listen; Press on at 80% odds or better. A threat's order covers the crew. Dry runs never roll an event.
+- **The art manifest** (tools/make_run_events_manifest.py): 38 jobs ($3.04; fix 46: the crews' fire and down
+  dropped - in the fight the gang's figures stand in) - a rival crew a zone standing, two dogs (lean, big) standing /
+  firing / going down, the one in need a zone down and up, the two traders at their barrows,
+  nine props shut and open (cabinet, shutter, van, safe, hazard, stash bag, body, wreck, radio); the test manifest's
+  four ($0.32) first. event_prop.gd finds each by name (art/events/<name>.png) at the slot's scale on its feet, the
+  shapes where it isn't there. Not flagged: the designer drops `art.flag`.
+- **SAVE_VERSION 21.**

@@ -66,6 +66,8 @@ var shelf: Array = []              # the uniques found, by name, in the order fo
 var sets_seen: Array = []          # the set pieces found, by name (24 Oct, the collection): a set's complete once all its pieces are here
 var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
 var site_crates := {}              # a campaign site's crates left between runs (27 Oct, Matt: "going back for the safe ... feels like a chase"): str(tier) -> {"left", "at", "full"}
+var site_runs := {}                # the Map card's "You here" (2 Nov, BUILD46-S): str(tier) -> {tries, clears, best, last, last_t, last_full}
+var left_behind := {}              # a head's thing not home yet (2 Nov, BUILD46-S): room -> the tier it waits at; the room at half till it's fetched
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
 var last_next := ""                # the last "what's next" line the log carried
@@ -2390,6 +2392,104 @@ func _deeds_held(m: Dictionary) -> bool:
 	return false
 
 
+## A head's thing left behind (2 Nov, BUILD46-S; the designer: "the room at half until fetched"): the drop still opens
+## its room, but at half - each room its one plain handicap - until the thing is home. It turns up again as a find on
+## the next clear of the site it was lost at (_left_find). The halves: the Clinic rests at half speed and stocks half
+## her shelf (rest_rate, clinic_stock); the Fence's shelf half (market_stock); the Workshop's scrap from breaking down
+## half (scrap_yield); the Pitch's builds at double (yard_pick_cost, yard_rank_cost); the Radio holds half the signals
+## (signals_cap).
+const HALF_ROOMS := ["clinic", "fence", "workshop", "yard", "radio"]
+
+
+func room_half(key: String) -> bool:
+	if not left_behind.has(key) or not room_open(key):
+		return false
+	return key != "yard" or deeds_fate == ""     # the deeds' fate decided (sold, burned) frees the Pitch: they never drop again
+
+
+## The thing that opens a room, by name ("The vet's bag"); "" for a room no head opens.
+static func room_thing(key: String) -> String:
+	for b in Data.BOSSES:
+		if b.get("opens", {}).has(key):
+			return str(b["opens"][key])
+	return ""
+
+
+## The site a room's thing waits at; -1 when the room is whole.
+func half_site(key: String) -> int:
+	return int(left_behind.get(key, -1)) if room_half(key) else -1
+
+
+## The rooms whose things wait at site i (the Map card's bring-home tile).
+func waits_at(i: int) -> Array:
+	return HALF_ROOMS.filter(func(r): return half_site(r) == i)
+
+
+## The signals the Radio holds: half, rounded up, while its set is still out.
+func signals_cap() -> int:
+	return ceili(Data.SIGNALS_HELD / 2.0) if room_half("radio") else Data.SIGNALS_HELD
+
+
+## A head's thing dropped on a run: its room waits at half on this site till the thing's home.
+func _left_drop(room: String, m: Dictionary) -> void:
+	if _dry_on or m.get("dry", false):
+		return
+	left_behind[room] = int(m["tier"])
+
+
+## A thing home: its room is whole.
+func _left_home(it: Dictionary) -> void:
+	var room: String = Items.opens(it)
+	if room == "" or not left_behind.has(room):
+		return
+	var was: bool = room_half(room)
+	left_behind.erase(room)
+	if was and not _dry_on:
+		var nm: String = str(it["base"])
+		var rm: String = Words.cap1(str(Words.HALF["room"][room]))
+		log_event(Words.HALF["whole"] % [(nm + " are") if nm == "The deeds" else (nm + "'s"), rm + "'s"])     # are / 's by the thing's name, as main.half_forms (fix 46, S4; the language pass)
+
+
+## A site cleared where a thing waits: it turns up again, in the pack (the deeds as the head drops them).
+func _left_find(m: Dictionary) -> void:
+	if _dry_on or m.get("dry", false) or m.get("signal", {}).has("order"):
+		return
+	for room in waits_at(int(m["tier"])):
+		var nm: String = room_thing(str(room))
+		if Array(m["found"]).any(func(x): return str(x.get("base", "")) == nm) or (room == "yard" and _deeds_held(m)):
+			continue
+		var thing := _plain(Data.PAPER, nm)
+		if Items.is_deeds(thing):
+			thing["deeds"] = true
+		m["found"].append(thing)
+		log_event(Words.HALF["found"] % [nm, "turn" if nm == "The deeds" else "turns", Words.mid(str(Data.TIERS[int(m["tier"])]["name"]))])
+
+
+## The Map card's "You here" (2 Nov, BUILD46-S): a run's end at its site - tried, cleared and how fast, how it ended.
+## A County place's run isn't its host's.
+func _site_run_note(m: Dictionary, outcome: String, extra: Dictionary) -> void:
+	if m.get("signal", {}).has("order"):
+		return
+	var k := str(int(m["tier"]))
+	var r: Dictionary = site_runs.get(k, {"tries": 0, "clears": 0, "best": -1.0})
+	r["tries"] = int(r["tries"]) + 1
+	if bool(m.get("cleared", false)) and float(m.get("clear_t", -1.0)) >= 0.0:
+		r["clears"] = int(r["clears"]) + 1
+		var t: float = float(m["clear_t"])
+		r["best"] = t if float(r["best"]) < 0.0 else minf(float(r["best"]), t)
+	r["last"] = outcome
+	r["last_t"] = snappedf(float(m["elapsed"]), 0.1)
+	r["last_full"] = int(extra.get("pack", 0)) >= int(extra.get("cap", 1 << 30))
+	site_runs[k] = r
+
+
+## A site's record: {tries, clears, best (s, -1 none), last ("" none), last_t, last_full}.
+func site_record(i: int) -> Dictionary:
+	var r: Dictionary = site_runs.get(str(i), {})
+	return {"tries": int(r.get("tries", 0)), "clears": int(r.get("clears", 0)), "best": float(r.get("best", -1.0)),
+		"last": str(r.get("last", "")), "last_t": float(r.get("last_t", 0.0)), "last_full": bool(r.get("last_full", false))}
+
+
 ## A head's thing: its room opens (at the drop; again a no-op home), the log and the radio say so; true unless it's
 ## kept (the deeds are, for their fate: held, sold or burned).
 func _home_gate(it: Dictionary) -> bool:
@@ -2769,7 +2869,7 @@ func bin(id: int) -> bool:
 
 ## What scrapping a thing at the Workshop gives: its scrap, half again with Salvage (27 Oct: from the ditch to the Workshop).
 func scrap_yield(it: Dictionary) -> int:
-	return int(ceil(scrap_of(it) * (Data.FX["node/salvage"] if has_node("salvage") else 1.0)))
+	return int(ceil(scrap_of(it) * (Data.FX["node/salvage"] if has_node("salvage") else 1.0) * (0.5 if room_half("workshop") else 1.0)))     # the fitter's kit still out (BUILD46-S)
 
 
 ## A stash item broken down at the Bench for its scrap. Gone for good.
@@ -4102,6 +4202,12 @@ func reload_s(gun: Dictionary) -> float:
 	return Items.reload_base(gun) / (1.0 + (_affix_sum("reload_pct") + tree_sum("reload_pct")) / 100.0)     # quicker reloads is the gloves' (29 Oct): theirs, base and affixes
 
 
+## The rig's swap (BUILD46-R, 2 Nov, Matt's call: a rig affix, Data's hot_swap): a gun with a second loaded magazine swaps
+## with no reload, and the spent one refills from the pack's box as the runner fires, at a hand refill's pace.
+func hot_swap() -> bool:
+	return _affix_sum("hot_swap") > 0.0
+
+
 ## The guns' rate of fire from a rule (the fix round, 29 Oct, the game review's C5): the Safecracker's Gloves' −15%. The damage
 ## a second carries it (_dps); the rounds spent, the rounds wanted and a rifle's opener a shot read it here.
 func rate_x() -> float:
@@ -4188,6 +4294,8 @@ func mag_share(slot: String) -> float:
 	for mg in mags:
 		fire_s += float(Items.mag_cap(mg, gun)) / rate
 		re_s += reload_s(gun) * Items.mag_reload_x(mg)
+	if mags.size() >= 2 and hot_swap():
+		re_s = 0.0                                # the rig's swap (BUILD46-R): no pause while a second one's loaded - the odds and the sheet read it
 	return fire_s / maxf(0.0001, fire_s + re_s)
 
 
@@ -4389,6 +4497,121 @@ func mag_swap(stash_id: int, rig_id: int) -> bool:
 	return true
 
 
+## A magazine in the stash or the rig, by id; {} for none (BUILD46-R: Unload and Load with).
+func _mag_by_id(id: int) -> Dictionary:
+	for it in stash + rig:
+		if int(it["id"]) == id and Items.is_mag(it):
+			return it
+	return {}
+
+
+## Unload (BUILD46-R, 2 Nov, Matt: "no way of unloading mags in the stash"): a magazine's rounds back to the stash as their
+## grade, the magazine empty. At home only, with room in the stash for the rounds (a stack's room, or a cell).
+func can_mag_unload(id: int) -> bool:
+	var it: Dictionary = _mag_by_id(id)
+	if runner_busy() or it.is_empty() or int(it.get("rounds", 0)) <= 0 or str(it.get("ammo", "")) == "":
+		return false
+	var back: Dictionary = _plain(Data.AMMO, str(it["ammo"]))
+	Items.set_stack(back, int(it["rounds"]))
+	return _stack_room(back) or stash_fits(back)
+
+
+func mag_unload(id: int) -> bool:
+	if not can_mag_unload(id):
+		return false
+	var it: Dictionary = _mag_by_id(id)
+	var back: Dictionary = _plain(Data.AMMO, str(it["ammo"]))
+	Items.set_stack(back, int(it["rounds"]))
+	if not stash_put(back):
+		stash.append(back)
+	it["rounds"] = 0
+	it["ammo"] = ""
+	_dry_memo.clear()
+	_stats_dirty()
+	return true
+
+
+## The stash's grades a magazine takes, [[grade, rounds], ...], the best first (the build's element first for the primary's).
+func load_grades(id: int) -> Array:
+	var it: Dictionary = _mag_by_id(id)
+	if it.is_empty():
+		return []
+	var counts: Dictionary = _grade_counts()
+	var els: Array = build_elements() if Items.mag_fits(it, equipped["Primary"]) else []
+	var out: Array = []
+	for g in counts:
+		var b: Dictionary = Items.base_named(Data.AMMO, str(g))
+		if not b.is_empty() and str(b["type"]) == Items.mag_type(it) and int(counts[g]) > 0 and can_mag_load(id, str(g)):
+			out.append([str(g), int(counts[g])])     # never the grade a full magazine already holds (fix 46, R7)
+	out.sort_custom(func(a, b2): return _grade_worth(Items.base_named(Data.AMMO, str(a[0])), els) > _grade_worth(Items.base_named(Data.AMMO, str(b2[0])), els))
+	return out
+
+
+## A grade's tag after its name (BUILD46-R, the stash's load list): "+20%" for a damage grade, its element for one that
+## lands as one ("fire"); "" for a plain box.
+static func grade_tag(grade: String) -> String:
+	var b: Dictionary = Items.base_named(Data.AMMO, grade)
+	for ty in Data.ELEMENTS:
+		if b.has("conv_%s_pct" % ty):
+			return ty
+	if b.has("damage_pct"):
+		return Words.ROUNDS["grade_damage"] % int(b["damage_pct"])
+	return ""
+
+
+## Load with (BUILD46-R, Matt: "loading a different ammo type"): what's in it back to the stash, then filled to its size
+## from that grade. A grade it already holds tops it up. At home only.
+func can_mag_load(id: int, grade: String) -> bool:
+	var it: Dictionary = _mag_by_id(id)
+	if runner_busy() or it.is_empty() or _rounds_in_stash(grade) <= 0:
+		return false
+	var b: Dictionary = Items.base_named(Data.AMMO, grade)
+	if b.is_empty() or str(b["type"]) != Items.mag_type(it):
+		return false
+	if str(it.get("ammo", "")) == grade:
+		return int(it.get("rounds", 0)) < Items.mag_cap(it, mag_gun(it))
+	if int(it.get("rounds", 0)) > 0 and str(it.get("ammo", "")) != "":
+		# what's in it goes back first: onto its grade's stacks, else a cell of its own - never over the stash (fix 46, R8)
+		var back: Dictionary = _plain(Data.AMMO, str(it["ammo"]))
+		Items.set_stack(back, int(it["rounds"]))
+		return _stack_room(back) or stash_fits(back)
+	return true
+
+
+func mag_load_with(id: int, grade: String) -> bool:
+	if not can_mag_load(id, grade):
+		return false
+	var it: Dictionary = _mag_by_id(id)
+	var cap: int = Items.mag_cap(it, mag_gun(it))
+	var have: int = int(it.get("rounds", 0)) if str(it.get("ammo", "")) == grade else 0
+	var n: int = mini(cap - have, _rounds_in_stash(grade))
+	if have == 0 and int(it.get("rounds", 0)) > 0 and str(it.get("ammo", "")) != "":
+		var back: Dictionary = _plain(Data.AMMO, str(it["ammo"]))
+		Items.set_stack(back, int(it["rounds"]))
+		if not stash_put(back):               # merged onto its stacks or a cell of its own: can_mag_load made sure (fix 46, R8)
+			return false
+	_take_rounds(grade, n)
+	it["rounds"] = have + n
+	it["ammo"] = grade
+	_dry_memo.clear()
+	_stats_dirty()
+	return true
+
+
+## Why Load with is shut on a magazine that has grades of its type in the stash, or "": the stash can't take its rounds
+## back (R8's room check; the re-review: a greyed button gives its reason).
+func load_block(id: int) -> String:
+	var it: Dictionary = _mag_by_id(id)
+	if it.is_empty() or runner_busy() or not load_grades(id).is_empty():
+		return ""
+	var counts: Dictionary = _grade_counts()
+	for g in counts:
+		var b: Dictionary = Items.base_named(Data.AMMO, str(g))
+		if not b.is_empty() and str(b["type"]) == Items.mag_type(it) and int(counts[g]) > 0 and not (str(g) == str(it.get("ammo", "")) and int(it.get("rounds", 0)) >= Items.mag_cap(it, mag_gun(it))):
+			return Words.ISSUED["no_room"]
+	return ""
+
+
 ## A magazine's fill, 0 to 1, against the gun it feeds (the cell's bar).
 func mag_fill(it: Dictionary) -> float:
 	return clampf(float(it.get("rounds", 0)) / float(maxi(1, Items.mag_cap(it, mag_gun(it)))), 0.0, 1.0)
@@ -4490,8 +4713,11 @@ func _mags_tick(m: Dictionary, dt: float) -> void:
 		m["reload_t"] = {}
 		m["reload_to"] = {}
 		m["refill"] = {}
+	if not m.has("bg_refill"):
+		m["bg_refill"] = {}                       # the rig's swap's refills (BUILD46-R): {magazine id: seconds left}
 	var dtp: float = dt * reload_pace(m)          # reloads and refills at the runner's pace, as the fire is (the fix round)
 	_refills_tick(m, dtp)
+	_bg_refills_tick(m, dtp)
 	for slot in ["Primary", "Secondary"]:
 		if not uses_mag(slot) or not has_rounds(equipped[slot]):
 			m["fire_x"][slot] = 1.0
@@ -4535,6 +4761,8 @@ func _refill_start(m: Dictionary, slot: String) -> void:
 	var ty: String = Items.ammo_type(gun)
 	if m["refill"].has(ty) or rounds_for(gun) > 0:
 		return
+	if _bg_refilling(m, ty):
+		return                                    # the rig's swap is refilling one already (BUILD46-R): that one's sooner
 	if _pack_box(m, ty).is_empty():
 		return
 	var mags: Array = mags_for(gun)
@@ -4582,27 +4810,29 @@ func _pack_box(m: Dictionary, ty: String) -> Dictionary:
 var gate_box_always := false     # the bot's (30 Oct): it packs on "fill" whatever the save says, its gate box too
 
 
-func _gate_boxes(read := false, bg_in = null) -> Array:
+func _gate_boxes(read := false, bg_in = null, at := -1) -> Array:
+	var p: Dictionary = rounds_plan(at)       # the site's plan (BUILD46-R)
 	var counts: Dictionary = _grade_counts()
-	var bg = null
-	if top_up_mode == "best":
-		bg = bg_in if bg_in != null else best_grades(counts)     # the gate's: the top-up's own, worked out before its fill
+	var bg = bg_in if bg_in != null else _plan_bg(p, counts)     # the gate's: the top-up's own, worked out before its fill
 	var plan: Array = []
 	if read:
-		plan = _gate_mags_plan()              # the read's box after a dry run of the same fill, grade by grade (the reviewer on m32c, 3)
-		_fill_plan(plan, counts, bg)
+		plan = _gate_mags_plan(p)             # the read's box after a dry run of the same fill, grade by grade (the reviewer on m32c, 3)
+		if bool(p.get("load", true)):
+			_fill_plan(plan, counts, bg, _plan_picks(p, counts))
 	if not read:
-		return _box_plan(counts, null, bg)     # the rig as it is: the gate's own, after its fill
-	return _box_plan(counts, plan, bg)
+		return _box_plan(counts, null, bg, p, at)     # the rig as it is: the gate's own, after its fill
+	return _box_plan(counts, plan, bg, p, at)
 
 
 ## The gate's boxes off `counts` (the stash's rounds by grade, after the fill): for each worn gun's type the grade its
 ## magazines hold (`plan`: the read's filled copies; null, the rig as it is), else the counts' best; on "Best grades only"
 ## that grade or nothing (the reviewer on m32c, 1). Each one box of its grade at most (the base's rounds), taken off
 ## `counts`.
-func _box_plan(counts: Dictionary, plan, bg) -> Array:
+func _box_plan(counts: Dictionary, plan, bg, rp = null, at := -1) -> Array:
 	var out: Array = []
 	var types: Array = []
+	var p: Dictionary = rp if rp is Dictionary else rounds_plan(at)
+	var room: int = capacity()               # the pack's cells at the gate (BUILD46-R): what doesn't fit stays home
 	for slot in ["Primary", "Secondary"]:
 		var g = equipped[slot]
 		if g == null or Items.mag_size(g) <= 0 or Items.ammo_type(g) in types:
@@ -4610,7 +4840,12 @@ func _box_plan(counts: Dictionary, plan, bg) -> Array:
 		var ty: String = Items.ammo_type(g)
 		types.append(ty)
 		var grade := ""
-		if bg is Dictionary:
+		var pick: String = _plan_grade(p, ty)
+		if pick != "" and int(counts.get(pick, 0)) > 0:
+			grade = pick                      # the plan's grade (BUILD46-R)
+		elif gate_box_always:
+			grade = _best_in_counts(counts, ty, slot == "Primary")     # the bot's: its best grade
+		elif bg is Dictionary and bg.has(ty):
 			grade = str(bg.get(ty, ""))
 		else:
 			var held: Dictionary = _plan_feed(plan, g, slot) if plan is Array else feed_stack(g)
@@ -4620,11 +4855,27 @@ func _box_plan(counts: Dictionary, plan, bg) -> Array:
 				grade = _best_in_counts(counts, ty, slot == "Primary")
 		if grade == "" or int(counts.get(grade, 0)) <= 0:
 			continue
-		var box: Dictionary = _plain(Data.AMMO, grade)
-		Items.set_stack(box, mini(int(Items.base_of(box)["rounds"]), int(counts[grade])))     # one box of the grade's own at most (0.10.2's size: the designer's call after PROBE33)
-		counts[grade] = int(counts[grade]) - int(box["rounds"])
-		box["carried"] = true                 # the runner's own: home to the stash, never loot
-		out.append(box)
+		# N boxes of the grade (BUILD46-R: the 0.10.2 one-box rule went), each its base's rounds, the last what's left;
+		# a repeat run's one at least (it always packed one); the bot's its own count
+		var n: int = _plan_boxes(p, ty)
+		var per: int = int(Items.base_named(Data.AMMO, grade)["rounds"])
+		if gate_box_always:
+			var have := 0
+			for r in (plan if plan is Array else rig):
+				if Items.mag_fits(r, g):
+					have += int(r.get("rounds", 0))
+			n = _bot_boxes(at, ty, have, per)
+		elif _repeat_going:
+			n = maxi(1, n)
+		for k in range(n):
+			if int(counts[grade]) <= 0 or room <= 0:
+				break
+			var box: Dictionary = _plain(Data.AMMO, grade)
+			Items.set_stack(box, mini(per, int(counts[grade])))
+			counts[grade] = int(counts[grade]) - int(box["rounds"])
+			box["carried"] = true                 # the runner's own: home to the stash, never loot
+			room -= Items.size(box)
+			out.append(box)
 	return out
 
 
@@ -4644,13 +4895,20 @@ func _plan_feed(plan: Array, g: Dictionary, slot: String) -> Dictionary:
 
 ## Whether the gate packs its box (the second review: one predicate for the run and the odds' read): not on "Leave it",
 ## except a repeat run's packing or the bot's.
-func gate_box_on() -> bool:
-	return top_up_mode != "leave" or _repeat_going or gate_box_always
+func gate_box_on(at := -1) -> bool:
+	if _repeat_going or gate_box_always:
+		return true
+	var p: Dictionary = rounds_plan(at)       # any boxes in the site's plan (BUILD46-R); the old "Leave it" none
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g != null and Items.mag_size(g) > 0 and _plan_boxes(p, Items.ammo_type(g)) > 0:
+			return true
+	return false
 
 
 ## The gate's boxes into the run's pack, off the stash, where the pack has the room; logged a box a line.
 func _pack_boxes(m: Dictionary) -> void:
-	for box in _gate_boxes(false, _gate_bg):     # "Best grades only": the grade the top-up worked out before filling (the reviewer on m32c)
+	for box in _gate_boxes(false, _gate_bg, int(m.get("tier", -1))):     # "Best grades only": the grade the top-up worked out before filling (the reviewer on m32c); the site's plan (BUILD46-R)
 		var spot: Array = pack_spot(m, box)
 		if spot.is_empty():
 			continue
@@ -4687,6 +4945,54 @@ func _refills_tick(m: Dictionary, dt: float, all_done := false) -> void:
 		_stats_dirty()
 
 
+## The rig's swap's refill begun (BUILD46-R): a spent magazine of a gun's type, refilled from the pack's best box of the
+## type over a hand refill's seconds while the gun fires the next. Nothing with no box in the pack.
+func _bg_refill_start(m: Dictionary, mg: Dictionary, gun: Dictionary) -> void:
+	if mg.is_empty() or not m.has("bg_refill") or m["bg_refill"].has(int(mg["id"])):
+		return
+	if _pack_box(m, Items.ammo_type(gun)).is_empty():
+		return
+	m["bg_refill"][int(mg["id"])] = reload_s(gun) * Data.REFILL_MULT
+	m["bg_refills"] = int(m.get("bg_refills", 0)) + 1
+
+
+## Whether the rig's swap is refilling a magazine of this type.
+func _bg_refilling(m: Dictionary, ty: String) -> bool:
+	for id in m.get("bg_refill", {}):
+		for it in rig:
+			if int(it["id"]) == int(id) and Items.mag_type(it) == ty:
+				return true
+	return false
+
+
+## The rig's swap's refills run on (BUILD46-R); done, the magazine is filled from the pack's best box of its type -
+## the one in neither gun - and waits in the rig for its turn.
+func _bg_refills_tick(m: Dictionary, dt: float, all_done := false) -> void:
+	for id in m["bg_refill"].keys():
+		var left: float = float(m["bg_refill"][id]) - dt
+		if left > 0.0 and not all_done:
+			m["bg_refill"][id] = left
+			continue
+		m["bg_refill"].erase(id)
+		var mg := {}
+		for it in rig:
+			if int(it["id"]) == int(id):
+				mg = it
+		if mg.is_empty() or int(mg.get("rounds", 0)) > 0:
+			continue
+		var box: Dictionary = _pack_box(m, Items.mag_type(mg))
+		if box.is_empty():
+			continue
+		var n: int = mini(Items.mag_cap(mg, mag_gun(mg)), int(box["rounds"]))
+		mg["rounds"] = n
+		mg["ammo"] = str(box["base"])
+		Items.set_stack(box, int(box["rounds"]) - n)
+		if int(box["rounds"]) <= 0:
+			m["found"].erase(box)
+		_dry_memo.clear()
+		_stats_dirty()
+
+
 ## Shots out of a slot's magazine (28 Oct; 30 Oct, as items): rounds come off the magazine in the gun; empty, the next
 ## loaded one goes in after a reload (the gun's, times the next magazine's kind). None left: out of rounds.
 func _fire_rounds(m: Dictionary, slot: String, shots: float) -> void:
@@ -4716,6 +5022,12 @@ func _fire_rounds(m: Dictionary, slot: String, shots: float) -> void:
 				log_event(Words.LOG["out_of_rounds"] % gun["base"])
 				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
 			return
+		if hot_swap():
+			# the rig's swap (BUILD46-R): the next one's in with no reload, the spent one refills from the pack as it fires
+			_bg_refill_start(m, cur, gun)
+			m["swaps"] = int(m.get("swaps", 0)) + 1
+			_mag_load(m, slot, nxt)
+			continue
 		m["reloads"] = int(m.get("reloads", 0)) + 1
 		var secs: float = reload_s(gun) * Items.mag_reload_x(nxt)
 		if secs <= 0.0:
@@ -4733,6 +5045,8 @@ func _mags_topped(m: Dictionary) -> void:
 		return
 	m.erase("refill_said")                    # the next gang's refills say so once again
 	_refills_tick(m, 0.0, true)
+	if m.has("bg_refill"):
+		_bg_refills_tick(m, 0.0, true)       # the rig's swap's too (BUILD46-R)
 	for slot in ["Primary", "Secondary"]:
 		if m["reload_t"].has(slot):
 			m["reload_t"].erase(slot)             # a reload under way when the last one went down: done in the quiet
@@ -5482,16 +5796,18 @@ func _pack_repack(m: Dictionary) -> void:
 
 func rest_rate() -> float:
 	var base: float = Data.REST_BASE + (Data.FX["yard/beds"] if yard_has("beds") else 0.0) + (Data.FX["yard/ward"] if yard_has("ward") else 0.0)
-	return base * (Data.FX["node/second_wind"] if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0) * (1.0 + town_stat("rest_pct") / 100.0)     # the pumping station (18 Oct)
+	return base * (Data.FX["node/second_wind"] if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0) * (1.0 + town_stat("rest_pct") / 100.0) * (0.5 if room_half("clinic") else 1.0)     # the pumping station (18 Oct); the Clinic at half (BUILD46-S)
 
 
 ## The Clinic's shelf and the Fence's, by the Yard's picks.
 func clinic_stock() -> int:
-	return Data.CLINIC_STOCK + (Data.FX["yard/shelf"] if yard_has("shelf") else 0) + (Data.FX["yard/stockroom"] if yard_has("stockroom") else 0)
+	var n: int = Data.CLINIC_STOCK + (Data.FX["yard/shelf"] if yard_has("shelf") else 0) + (Data.FX["yard/stockroom"] if yard_has("stockroom") else 0)
+	return ceili(n / 2.0) if room_half("clinic") else n     # the vet's bag still out (BUILD46-S)
 
 
 func market_stock() -> int:
-	return Data.MARKET_STOCK + (Data.FX["yard/stall"] if yard_has("stall") else 0) + (Data.FX["yard/shopfront"] if yard_has("shopfront") else 0) + int(floor(town_stat("shelf")))     # the market hall (18 Oct)
+	var n: int = Data.MARKET_STOCK + (Data.FX["yard/stall"] if yard_has("stall") else 0) + (Data.FX["yard/shopfront"] if yard_has("shopfront") else 0) + int(floor(town_stat("shelf")))     # the market hall (18 Oct)
+	return ceili(n / 2.0) if room_half("fence") else n     # the ledger still out (BUILD46-S)
 
 
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
@@ -6140,7 +6456,7 @@ func yard_pick_cost(key: String, col: int) -> int:
 	var b := Data.yard_building(key)
 	if b.is_empty() or col < 0 or col >= b["costs"].size():
 		return -1
-	var c: int = _inf(int(b["costs"][col]))
+	var c: int = _inf(int(b["costs"][col])) * (2 if room_half("yard") else 1)     # the deeds still out: double (BUILD46-S)
 	return _round_price(int(round(c * Data.YARD_SECOND)) if yard_side(key, col) != "" else c)
 
 
@@ -6205,7 +6521,7 @@ func yard_pick(key: String, col: int, side: String) -> bool:
 
 ## A rank's price: YARD_RANK_CASH × YARD_RANK_GROWTH a rank bought, at today's prices; salvage, one more a rank.
 func yard_rank_cost(key: String) -> int:
-	return _round_price(_inf(int(round(Data.YARD_RANK_CASH * pow(Data.YARD_RANK_GROWTH, yard_rank(key))))))
+	return _round_price(_inf(int(round(Data.YARD_RANK_CASH * pow(Data.YARD_RANK_GROWTH, yard_rank(key))))) * (2 if room_half("yard") else 1))     # the deeds still out (BUILD46-S)
 
 
 ## A Pitch price, rounded (20 Oct, Matt's video: prices climbing a few tins with the clock read as a click raising
@@ -8009,8 +8325,8 @@ func decrypt_block(ids: Array, crew := -1) -> String:
 		return "the Radio's shut"
 	if not campaign_done():
 		return "the campaign first"
-	if signals.size() >= Data.SIGNALS_HELD:
-		return "%d signals held: run or bin one" % Data.SIGNALS_HELD
+	if signals.size() >= signals_cap():
+		return "%d signals held: run or bin one" % signals_cap()     # half while the set's out (BUILD46-S)
 	if ids.is_empty():
 		return DECRYPT_NEEDS_PAPERS
 	if ids.size() > Data.SIGNAL_PAPERS:
@@ -8658,29 +8974,10 @@ func can_deploy_to(i: int) -> bool:
 ## the fight's estimate at the gun's rate of fire - when the rig's short; [] when it isn't, or the gun takes none. The rig
 ## read is the one that goes out: it tops up from the stash coming home.
 func rounds_short(i: int) -> Array:
-	var gun = equipped["Primary"]
-	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
-		return []
-	var t := effective(i)
-	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]) * mag_share("Primary") * rate_x())     # the reloads' pauses fire nothing (28 Oct)
-	var ty: String = Items.ammo_type(gun)
 	# what goes out (the reviewer on m32c, 3): a dry run of the gate's fill, grade by grade - the rig's magazines and the
-	# stash's the top-up may still pack - then the box the gate would pack off what's left (the three-stage review, game 5)
-	var counts: Dictionary = _grade_counts()
-	var bg = null
-	if top_up_mode == "best":
-		bg = best_grades(counts)
-	var plan: Array = _gate_mags_plan()
-	_fill_plan(plan, counts, bg)
-	var have := 0
-	for r in plan:
-		if Items.mag_fits(r, gun):
-			have += int(r.get("rounds", 0))
-	if gate_box_on():
-		for b in _box_plan(counts, plan, bg):
-			if str(Items.base_of(b)["type"]) == ty:
-				have += int(b["rounds"])
-	return [have, want] if have < want else []
+	# stash's the top-up may still pack - then the boxes the site's plan packs off what's left (BUILD46-R: rounds_read)
+	var r: Array = rounds_read(i)
+	return r if not r.is_empty() and int(r[0]) < int(r[1]) else []
 
 
 func estimate(i: int) -> float:
@@ -8733,7 +9030,8 @@ func _odds_key(i: int) -> Array:
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
 	var common: Array = _odds_key_common()
 	return common + [depth[i], str(words[i]), fight_weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
-		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0]     # a signal laid on the site reads apart from it (15 Oct)
+		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0,     # a signal laid on the site reads apart from it (15 Oct)
+		str(rounds_plans.get(str(i), rounds_plans.get("camp", "")))]     # the rounds the site's plan packs (BUILD46-R)
 
 
 ## The key's runner half, the same for every site: worked once a frame while the shell reads the odds (16 Oct: twelve
@@ -9052,7 +9350,7 @@ func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
 	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") or has_node("snare_and_wait") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	var m := {
-		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": _gate_boxes(true) if gate_box_on() else [], "insured": false, "clock": clock_budget(t),
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": _gate_boxes(true, null, i) if gate_box_on(i) else [], "insured": false, "clock": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
@@ -9195,7 +9493,7 @@ func deploy(i: int) -> void:
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
 	var odds_seen: float = _gate_odds(i)     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
-	_top_up(i if _repeat_going else -1)       # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9)
+	_top_up(i if _repeat_going else -1, i)    # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9); the site's plan (BUILD46-R)
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_stats_dirty()
@@ -9226,8 +9524,8 @@ func deploy(i: int) -> void:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
-	if gate_box_on():
-		_pack_boxes(mission)                  # a box of each worn gun's rounds into the pack, for the refills (30 Oct, the designer's A)
+	if gate_box_on(i):
+		_pack_boxes(mission)                  # the plan's boxes of each worn gun's rounds into the pack, for the refills (30 Oct, the designer's A; BUILD46-R)
 	var warm_key := _combo_warm(mission)
 	if warm_key != "":
 		log_event(Words.COMBOS[warm_key])       # the build's on: its one line, at the start now the loop starts warm
@@ -9263,6 +9561,7 @@ func deploy(i: int) -> void:
 	if not ck.is_empty():
 		zn = str(Data.COUNTY_ZONES[int(ck["cz"])]["name"])     # a County place's own zone, not its host's (the third review); a remixed one's too
 	log_event(Words.LOG["out_to"] % [Words.mid(t["name"]), Words.mid(zn), at_lv, (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
+	_threads_at_deploy(mission, i)            # BUILD46-E: a tip's stash here, word of the Vagabond, a head's weakness
 	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
@@ -9338,6 +9637,8 @@ func _tick(dt: float) -> void:
 		_fight(m, t, dt)
 		if mission != null and m.has("dogs_home") and int(m["remaining"]) <= 0:
 			_dogs_done(m)                        # a threat seen off (1 Nov): the site's own gang again, the next one later
+		if mission != null and m.has("clue_home") and int(m["patrols"]) > int(m.get("clue_from", 0)) and int(m["remaining"]) <= 0:
+			_clue_done(m)                        # a body's clue (BUILD46-E): the tougher gang beaten, its notes paid
 	else:
 		# the clock runs through a search too, at CLOCK_SEARCH_RATE (21 Oct: it stood while the site was clear, so a
 		# strong build never saw it; staying has a price). A dry run ends at the clear and never gets here.
@@ -9779,12 +10080,13 @@ func _repeat_go() -> void:
 	if bool(boss_armed.get(i, false)):
 		boss_armed[i] = false
 		_surv_cache.erase(i)
-	var bg = null     # once, before filling (the reviewer on m32c, 1): held for the gate's own top-up and box
-	if top_up_mode == "best":
-		bg = best_grades()
-	_fill_mags(bg)
+	var rp: Dictionary = rounds_plan(i)       # the site's plan (BUILD46-R): its grades; a repeat packs and fills whatever its tick
+	var rc: Dictionary = _grade_counts()
+	var bg = _plan_bg(rp, rc)     # once, before filling (the reviewer on m32c, 1): held for the gate's own top-up and box
+	var picks: Dictionary = _plan_picks(rp, rc)
+	_fill_mags(bg, picks)
 	pack_rig("fill", i)                      # the site's cures, not the front's (S9)
-	_fill_mags(bg)                            # the magazines it packed, filled (30 Oct)
+	_fill_mags(bg, picks)                     # the magazines it packed, filled (30 Oct)
 	var ins := insure_next
 	insure_next = false                       # the paper's for a watched run
 	_repeat_going = true
@@ -10628,12 +10930,31 @@ func roll_event(i := -1, lv := 0) -> String:
 	return fams.back()
 
 
-## A family's weight on the dice at site `i` (-1: no site) of level `lv`; 0 when it can't come.
+## A family's weight on the dice at site `i` (-1: no site) of level `lv`; 0 when it can't come. The six BUILD46-E families
+## are scaled down together wherever they'd take the slice's four (EVENT_SLICE) under EVENT_SLICE_MIN of the events (fix 46,
+## E7: the four the designer said "play well" fell to 47% at the Relay).
 func event_weight(f: String, i := -1, lv := 0) -> float:
+	var w: float = _event_raw(f, i, lv)
+	if w <= 0.0 or f in Data.EVENT_SLICE:
+		return w
+	var four := 0.0
+	var six := 0.0
+	for g in Data.EVENT_ORDER:
+		if g in Data.EVENT_SLICE:
+			four += _event_raw(g, i, lv)
+		else:
+			six += _event_raw(g, i, lv)
+	var room: float = four * (1.0 - Data.EVENT_SLICE_MIN) / Data.EVENT_SLICE_MIN
+	return w * minf(1.0, room / six) if six > 0.0 else w
+
+
+func _event_raw(f: String, i := -1, lv := 0) -> float:
 	var fd: Dictionary = Data.EVENT_FAMILIES[f]
 	if f == event_last or runs_total < int(fd.get("from_run", 0)) or (bool(fd.get("threat", false)) and runs_total < Data.CONVOY_FROM_RUN):
 		return 0.0
 	var w: float = float(fd["weight"])
+	if bool(fd.get("threat", false)) and not thread_list("robbed").is_empty():
+		w *= Data.ROBBED_THREAT                # a crew you robbed is out there (BUILD46-E threads)
 	if i >= 0:
 		w *= _event_lean(fd, i) * (1.0 + float(fd.get("level", 0.0)) * maxi(0, lv))
 		var zm: Array = fd.get("zone", [])
@@ -10728,21 +11049,31 @@ func _event_arrive(m: Dictionary) -> void:
 			var lw: Dictionary = _pool_pick("locked_what", i)
 			ev["what"] = str(lw["w"])
 			ev["door"] = bool(lw.get("door", false))
+			ev["art"] = str(lw.get("art", "cabinet"))     # its picture (BUILD46-E: art/events/<art>_shut / _open.png)
 			lines = Words.EV["locked"][z]
 		"threat":
 			ev["n"] = clampi(PATROL_BASE + int(m["patrols"]) + Data.DOGS_MORE, 2, Data.DOGS_MAX)
 			ev["close_t"] = Data.DOGS_CLOSE_S
+			ev["who"] = _threat_who(m, z)          # the dogs, or a rival crew (BUILD46-E): their own gang, carrying
+			if str(ev["who"]) == "crew":
+				_crew_arrive(m, ev)
 			if asks and not m.get("unwatched", false):
-				_dogs_job = {"ev": ev, "job": _dogs_begin(m, int(ev["n"]))}     # a watched run: taken now, read a few ms a frame (BUILD43)
+				_dogs_job = {"ev": ev, "job": _dogs_begin(m, int(ev["n"]), threat_as(ev, m))}     # a watched run: taken now, read a few ms a frame (BUILD43)
 			else:
-				ev["odds"] = _dogs_read(m, int(ev["n"]))     # read once as they come: the face, and the standing order's
-			lines = Words.EV["dogs"][z]
+				ev["odds"] = _dogs_read(m, int(ev["n"]), threat_as(ev, m))     # read once as they come: the face, and the standing order's
+			lines = Words.EV["dogs"][z] if str(ev["who"]) == "dogs" else Words.EV["crew_back" if bool(ev.get("back", false)) else "crew"][z]
 		"trader":
-			ev["who"] = "scrap_man"
+			ev["who"] = _trader_who(m)
 			ev["bought"] = []
 			ev["trades"] = 0
-			ev["says"] = Words.EV["trader_says"][rng.randi_range(0, Words.EV["trader_says"].size() - 1)]
-			lines = Words.EV["trader"][z]
+			var known: bool = int(trader_standing.get(str(ev["who"]), 0)) > 0     # a trader remembers you (BUILD46-E threads)
+			var says: Array = Words.EV[("vag_says" if str(ev["who"]) == "vagabond" else "trader_says") + ("_known" if known else "")]
+			ev["says"] = says[rng.randi_range(0, says.size() - 1)]
+			lines = Words.EV["vagabond" if str(ev["who"]) == "vagabond" else "trader"][z]
+			if str(ev["who"]) == "vagabond":
+				_vag_stock(m, ev)
+		"danger", "stash", "body", "wreck", "broadcast", "weather":
+			lines = _event_slots(m, ev, i, z)
 	lines = _event_lines(lines, ev, i)
 	var pick = lines[rng.randi_range(0, lines.size() - 1)]
 	ev["line"] = event_fill(str(pick["t"]) if pick is Dictionary else str(pick), ev)
@@ -10771,6 +11102,7 @@ static func event_fill(text: String, ev: Dictionary) -> String:
 	var she: bool = str(ev.get("he", "he")) == "she"
 	var p := {"he": "she" if she else "he", "him": "her" if she else "him", "his": "her" if she else "his"}
 	text = text.replace("{who}", str(ev.get("who", ""))).replace("{what}", str(ev.get("what", ""))).replace("{it}", str(ev.get("it", ""))).replace("{n}", str(int(ev.get("n", 0))))
+	text = text.replace("{prize}", str(ev.get("prize", "")))     # BUILD46-E: a dangerous place's prize
 	for k in p:
 		text = text.replace("{%s}" % k, p[k]).replace("{%s}" % Words.cap1(k), Words.cap1(p[k]))
 	return text
@@ -10822,6 +11154,8 @@ func event_options() -> Array:
 			var can: bool = lock_rounds_slot() != ""
 			out.append({"key": "shoot", "text": Words.EV["shoot"], "ok": can, "face": [Words.EV["shoot_face"] % [int(Data.LOCK_SHOOT_S), Data.LOCK_ROUNDS]] if can else [Words.EV["shoot_no"]], "s": Data.LOCK_SHOOT_S})
 			out.append({"key": "leave", "text": Words.EV["leave_it"], "face": [Words.EV["nothing"]], "ok": true, "s": 0.0})
+		"danger", "stash", "body", "wreck", "broadcast", "weather":
+			out = _options_more(ev)                # BUILD46-E
 	# a choice whose seconds would run the run's clock out is greyed (the fix round, G8)
 	for o in out:
 		if float(o["s"]) > 0.0 and bool(o["ok"]) and not event_time_for(float(o["s"])):
@@ -10888,6 +11222,11 @@ func event_pick(key: String) -> bool:
 	var t: Dictionary = m["t"]
 	var pr: Array = event_pron(ev)
 	var who: String = str(ev.get("who", ""))
+	if key == "home":
+		log_event(Words.EV["headed_home"])     # the weather turning: out now with the pack (BUILD46-E)
+		_event_close(m, "home")
+		get_out()
+		return true
 	match key:
 		"free":
 			_event_spend(m, Data.NEED_FREE_S)
@@ -10912,7 +11251,8 @@ func event_pick(key: String) -> bool:
 		"bag":
 			_event_spend(m, Data.NEED_BAG_S)
 			_find(m, t)
-			event_threads["bag"] = int(event_threads.get("bag", 0)) + 1     # they remember it (a thread, no cost yet)
+			event_threads["bag"] = int(event_threads.get("bag", 0)) + 1     # they remember it
+			_thread_add("robbed", {"zone": int(ev.get("zone", 0)), "run": runs_total})     # BUILD46-E: their crew may come for it
 			log_event(Words.EV["bagged"] % Words.cap1(pr[0]))
 		"force":
 			_event_spend(m, Data.LOCK_FORCE_S)
@@ -10925,7 +11265,12 @@ func event_pick(key: String) -> bool:
 			log_event(Words.EV["shot"] % Data.LOCK_ROUNDS)
 			_event_cache(m, t)
 		"leave":
-			log_event(Words.EV["left_him"] % pr[1] if str(ev["fam"]) == "need" else Words.EV["left_it"])
+			var fam_l: String = str(ev["fam"])
+			log_event(Words.EV["left_him"] % pr[1] if fam_l == "need" else (Words.EV["left_it"] if fam_l == "locked" else (Words.EV["let_passed"] if fam_l == "weather" else Words.EV["left_be"])))
+		_:
+			_pick_more(m, t, ev, key)              # BUILD46-E: the other six
+	if mission == null:
+		return true
 	_event_close(m, key)
 	return true
 
@@ -10988,7 +11333,7 @@ func dogs_odds() -> float:
 		if not _dogs_job.is_empty() and is_same(_dogs_job["ev"], ev):
 			_dogs_job_run(-1)                     # the read begun as they came, to its end now (BUILD43)
 		else:
-			ev["odds"] = _dogs_read(mission, int(ev["n"]))
+			ev["odds"] = _dogs_read(mission, int(ev["n"]), threat_as(ev, mission))
 	return float(ev["odds"])
 
 
@@ -11171,7 +11516,7 @@ func dogs_fight() -> bool:
 	var ev: Dictionary = m["ev"]
 	ev["state"] = "fight"
 	m["dogs_home"] = m["t"]
-	m["t"] = dogs_t(m["t"])
+	m["t"] = threat_t(ev, m["t"])            # the dogs, or a rival crew (BUILD46-E)
 	m["remaining"] = int(m["remaining"]) + int(ev["n"])
 	m["target_hp"] = float(m["t"]["hp"])
 	m["fresh"] = true
@@ -11180,7 +11525,7 @@ func dogs_fight() -> bool:
 	_gang_arrives(m)
 	_dry_memo.clear()
 	_stats_dirty()
-	log_event(Words.EV["dogs_on"])
+	log_event(Words.EV["crew_on" if str(ev.get("who", "dogs")) == "crew" else "dogs_on"])
 	return true
 
 
@@ -11201,6 +11546,10 @@ func _dogs_done(m: Dictionary) -> void:
 	m["target_hp"] = 0.0
 	m["patrol_timer"] = float(m["patrol_timer"]) - Data.DOGS_PUSH_S
 	_event_close(m, "fought")
+	if str(m["ev"].get("who", "dogs")) == "crew":
+		log_event(Words.EV["crew_off_push"] % int(Data.DOGS_PUSH_S))     # the push said, as the dogs' (fix 46, E11)
+		_crew_paid(m)                          # BUILD46-E: what they carried, and maybe a crew that'll want it back
+		return
 	log_event(Words.EV["dogs_off"] % int(Data.DOGS_PUSH_S))
 
 
@@ -11244,6 +11593,8 @@ func trader_shelf() -> Array:
 	var ev: Dictionary = event_now()
 	if str(ev.get("fam", "")) != "trader":
 		return []
+	if str(ev.get("who", "")) == "vagabond":
+		return _vag_shelf(ev)                  # BUILD46-E
 	var step: int = trader_step(str(ev["who"]))
 	var have: int = pack_scrap(mission)
 	var bought: Array = ev.get("bought", [])
@@ -11280,7 +11631,7 @@ func trader_next_step() -> Array:
 	var k: int = trader_step(who)
 	if k >= Data.TRADER_STEPS.size():
 		return []
-	var w: String = Words.EV["step_words"][k]
+	var w: String = Words.EV["vag_step_words" if who == "vagabond" else "step_words"][k]
 	if w.contains("%d"):
 		w = w % int(Data.TRADER_GOOD_PLATE)
 	return [int(Data.TRADER_STEPS[k]), w, int(Data.TRADER_STEPS[k]) - n]
@@ -11293,6 +11644,8 @@ func trader_buy(key: String) -> bool:
 	var row: Array = trader_shelf().filter(func(r): return r["key"] == key)
 	if row.is_empty() or not bool(row[0]["ok"]):
 		return false
+	if str(event_now().get("who", "")) == "vagabond":
+		return _vag_buy(row[0])                # BUILD46-E
 	var m: Dictionary = mission
 	var ev: Dictionary = m["ev"]
 	var cost_v: int = int(row[0]["price"])
@@ -11332,7 +11685,7 @@ func trader_buy(key: String) -> bool:
 func trader_done() -> bool:
 	if not event_asking() or str(event_now()["fam"]) != "trader":
 		return false
-	log_event(Words.EV["trader_gone"])
+	log_event(Words.EV["vag_gone" if str(event_now().get("who", "")) == "vagabond" else "trader_gone"])
 	_trader_count(mission["ev"])
 	_event_close(mission, "traded" if not event_now()["bought"].is_empty() else "leave")
 	return true
@@ -11391,6 +11744,10 @@ func _event_end(m: Dictionary) -> void:
 	if m.has("dogs_home"):
 		m["t"] = m["dogs_home"]
 		m.erase("dogs_home")
+	for hk in ["clue_home", "turn_home"]:      # BUILD46-E: a body's clue's gang, the weather pressed on in - the record reads the site
+		if m.has(hk):
+			m["t"] = m[hk]
+			m.erase(hk)
 	if m.has("ev") and str(m["ev"].get("fam", "")) == "trader":
 		_trader_count(m["ev"])
 	for list in [rig, m["found"], m.get("floor", [])]:
@@ -11453,18 +11810,514 @@ func _event_by_orders(m: Dictionary) -> void:
 			if o == "always" or (o == "odds_80" and odds >= 0.8) or (o == "odds_run" and odds >= run_odds(m)):
 				dogs_fight()
 			elif can_extract():
-				log_event(Words.EV["dogs_out"] % [roundi(odds * 100.0), roundi((0.8 if o == "odds_80" else run_odds(m)) * 100.0)])
+				log_event(Words.EV["crew_out" if str(ev.get("who", "dogs")) == "crew" else "dogs_out"] % [roundi(odds * 100.0), roundi((0.8 if o == "odds_80" else run_odds(m)) * 100.0)])
 				_event_close(m, "out")
 				extract_now()
 			else:
 				dogs_fight()                       # no way out (Stand): they come on
+		"danger", "stash", "body", "wreck", "broadcast", "weather":
+			_orders_more(m, ev, o)                 # BUILD46-E
 		"trader":
-			if o == "armour30" and pack_scrap(m) >= 30:
+			if o == "armour30" and pack_scrap(m) >= 30 and str(ev.get("who", "")) == "scrap_man":
 				trader_buy("plate")
 			elif o == "all":
 				for row in trader_shelf():
 					trader_buy(str(row["key"]))
 			trader_done()
+
+
+# ------------------------------------------------------------------ BUILD46-E (2 Nov): the other six families, the rival crew, the Vagabond, the threads
+
+## The other six families' slots from the pools (docs/design/run_events.md's table), and the zone's lines for them.
+## `art` names the prop's picture (art/events/<art>_shut.png and _open.png: event_prop.gd, shapes till they land).
+func _event_slots(m: Dictionary, ev: Dictionary, i: int, z: int) -> Array:
+	var fam: String = str(ev["fam"])
+	match fam:
+		"danger":
+			var d: Dictionary = _pool_pick("danger_what", i)
+			ev["what"] = str(d["w"])
+			ev["it"] = str(d.get("it", "it"))
+			ev["prize"] = str(_pool_pick("danger_prize", i)["w"])
+			ev["art"] = "hazard"
+		"stash":
+			ev["art"] = "stash_bag"
+			ev["what"] = str(_pool_pick("stash_what", i)["w"])
+			if bool(m.get("event_tip", false)):
+				ev["tip"] = true                   # a tip's stash (a thread): where they said, no catch
+				return Words.EV["stash_tip"][z]
+			var c: Dictionary = _pool_pick("stash_catch", i)
+			ev["catch"] = str(c["w"])
+			ev["catch_kind"] = str(c.get("catch", "trip"))
+		"body":
+			ev["art"] = "body"
+			ev["who"] = str(_pool_pick("body_who", i)["w"])
+		"wreck":
+			ev["art"] = "wreck"
+			ev["what"] = str(_pool_pick("wreck_what", i)["w"])
+		"broadcast":
+			ev["art"] = "radio"
+			ev["what"] = str(_pool_pick("radio_what", i)["w"])
+		"weather":
+			var tn: Dictionary = _pool_pick("turn", i)
+			if str(tn.get("not", "")) != "" and str(tn["not"]) == fight_weather_of(i):
+				tn = Data.EVENT_POOLS["turn"][2]       # no fog rolling into a fog: the light going early instead
+			ev["what"] = str(tn["w"])
+			ev["loot"] = int(tn["loot"])
+			ev["harder"] = int(tn["harder"])
+			if bool(tn.get("alone", false)):
+				return [Words.EV["weather"][z][1]]    # "The power comes back on. The streets go quiet." - never "... over the town"
+	return Words.EV[fam][z]
+
+
+## A risky choice's clean odds, as the face says: `base`, less the night's, the weather's and under half HP's shares (the
+## pin's: NEED_CLEAN_NIGHT, _WEATHER, _LOW_HP), between NEED_CLEAN_MIN and NEED_CLEAN_MAX.
+func event_clean_odds(base: float) -> float:
+	var c: float = base
+	if mission == null:
+		return c
+	if is_night():
+		c -= Data.NEED_CLEAN_NIGHT
+	if fight_weather_of(int(mission["tier"])) != "":
+		c -= Data.NEED_CLEAN_WEATHER
+	if hp < max_hp() * 0.5:
+		c -= Data.NEED_CLEAN_LOW_HP
+	return clampf(c, Data.NEED_CLEAN_MIN, Data.NEED_CLEAN_MAX)
+
+
+## A body's pockets: BODY_TINS a man of the site's gang's tins.
+func body_tins() -> int:
+	if mission == null:
+		return 0
+	return maxi(1, roundi(float(mission["t"].get("cash", 1.0)) * inflation() * Data.BODY_TINS))
+
+
+## The material a wreck's cut gives at site `i` (the site's own; "" for none: the Outskirts').
+func wreck_mat(i: int) -> String:
+	return str(Data.SITE_MATERIAL[i]) if i >= 0 and i < Data.SITE_MATERIAL.size() else ""
+
+
+## The other six families' choices, in the panel's order, "Leave it" last ("Let it pass" for the weather).
+func _options_more(ev: Dictionary) -> Array:
+	var fam: String = str(ev["fam"])
+	var out: Array = []
+	match fam:
+		"danger":
+			var hurt: int = roundi(Data.DANGER_HURT * 100.0)
+			for row in [["go", Words.EV["go_in"], Data.DANGER_S, Data.DANGER_CLEAN], ["careful", Words.EV["careful"], Data.DANGER_CAREFUL_S, Data.DANGER_CAREFUL_CLEAN]]:
+				var c: int = roundi(event_clean_odds(float(row[3])) * 100.0)
+				out.append({"key": row[0], "text": row[1], "ok": true, "s": float(row[2]),
+					"face": [Words.EV["danger_face"][0] % [int(row[2]), c, 100 - c, hurt], Words.EV["danger_face"][1] % [int(row[2]), c, hurt]]})
+		"stash":
+			if bool(ev.get("tip", false)):
+				out.append({"key": "take", "text": Words.EV["stash_take"], "ok": true, "s": Data.STASH_TAKE_S, "face": [Words.EV["tip_face"] % [int(Data.STASH_TAKE_S), Data.STASH_FINDS]]})
+			else:
+				var c: int = roundi((1.0 - Data.STASH_CATCH) * 100.0)
+				out.append({"key": "take", "text": Words.EV["stash_take"], "ok": true, "s": Data.STASH_TAKE_S,
+					"face": [Words.EV["take_face"] % [int(Data.STASH_TAKE_S), 100 - c]]})     # one figure (the language pass)
+				out.append({"key": "check", "text": Words.EV["check"], "ok": true, "s": Data.STASH_CHECK_S, "face": [Words.EV["check_face"] % [int(Data.STASH_CHECK_S), Data.STASH_FINDS]]})
+		"body":
+			out.append({"key": "search", "text": Words.EV["search"], "ok": true, "s": Data.BODY_S, "face": [Words.EV["search_face"] % [int(Data.BODY_S), roundi(Data.BODY_CLUE * 100.0)]]})
+			out.append({"key": "pockets", "text": Words.EV["pockets"], "ok": true, "s": Data.BODY_POCKETS_S, "face": [Words.EV["pockets_face"] % [int(Data.BODY_POCKETS_S), _cash_words(body_tins())]]})
+		"wreck":
+			out.append({"key": "strip", "text": Words.EV["strip"], "ok": true, "s": Data.WRECK_S, "face": [Words.EV["strip_face"] % [int(Data.WRECK_S), Data.WRECK_SCRAP[0], Data.WRECK_SCRAP[1]]]})
+			var can: bool = pack_scrap(mission) >= Data.WRECK_CUT_SCRAP
+			var mk: String = wreck_mat(int(mission["tier"])) if mission != null else ""
+			var cut_face: Array = [Words.EV["cut_no"]]
+			if can:
+				cut_face = [Words.EV["cut_face"][0] % [int(Data.WRECK_CUT_S), Data.WRECK_CUT_SCRAP, "%d–%d" % [int(Data.WRECK_MAT[0]), int(Data.WRECK_MAT[1])], Words.mid_base(str(Data.MATERIALS[mk]["name"]))], Words.EV["cut_face"][1] % [int(Data.WRECK_CUT_S), Data.WRECK_CUT_SCRAP]] if mk != "" else [Words.EV["cut_face"][1] % [int(Data.WRECK_CUT_S), Data.WRECK_CUT_SCRAP]]
+			out.append({"key": "cut", "text": Words.EV["cut"], "ok": can, "s": Data.WRECK_CUT_S, "face": cut_face})
+		"broadcast":
+			out.append({"key": "listen", "text": Words.EV["listen"], "ok": true, "s": Data.RADIO_S, "face": [Words.EV["listen_face"] % int(Data.RADIO_S)]})
+			out.append({"key": "short", "text": Words.EV["short"], "ok": true, "s": Data.RADIO_SHORT_S, "face": [Words.EV["short_face"] % [int(Data.RADIO_SHORT_S), roundi(Data.RADIO_SHORT_TIP * 100.0)]]})
+		"weather":
+			out.append({"key": "press", "text": Words.EV["press"], "ok": true, "s": 0.0, "face": [Words.EV["press_face"] % [int(ev.get("loot", 0)), int(ev.get("harder", 0))]]})
+			out.append({"key": "home", "text": Words.EV["home"], "ok": can_extract(), "s": 0.0, "face": [Words.EV["home_face"]]})
+	out.append({"key": "leave", "text": Words.EV["let_pass"] if fam == "weather" else Words.EV["leave_it"], "face": [Words.EV["nothing"]], "ok": true, "s": 0.0})
+	return out
+
+
+## A choice taken on one of the other six (event_pick's): its cost and its reward.
+func _pick_more(m: Dictionary, t: Dictionary, ev: Dictionary, key: String) -> void:
+	match key:
+		"go", "careful":
+			var c: float = event_clean_odds(Data.DANGER_CLEAN if key == "go" else Data.DANGER_CAREFUL_CLEAN)
+			_event_spend(m, Data.DANGER_S if key == "go" else Data.DANGER_CAREFUL_S)
+			if rng.randf() < c:
+				log_event(Words.EV["danger_clean"])
+			else:
+				var lost: float = minf(max_hp() * Data.DANGER_HURT, maxf(0.0, hp - 1.0))     # never the last of it
+				hp -= lost
+				ev["hurt"] = true
+				log_event(Words.EV["danger_hurt"] % roundi(lost))
+			_event_cache(m, t)
+		"take":
+			_event_spend(m, Data.STASH_TAKE_S)
+			if bool(ev.get("tip", false)):
+				log_event(Words.EV["stash_tip_took"])
+				for k in range(Data.STASH_FINDS):
+					_event_cache(m, t)
+				return
+			if rng.randf() < Data.STASH_CATCH:
+				ev["caught"] = true
+				if str(ev.get("catch_kind", "trip")) == "trip":
+					var lost: float = minf(max_hp() * Data.STASH_TRIP, maxf(0.0, hp - 1.0))
+					hp -= lost
+					log_event(Words.EV["stash_trip"] % roundi(lost))
+				else:
+					m["patrol_timer"] = maxf(float(m["patrol_timer"]), patrol_s(t, int(m["patrols"]) == 0))     # watched: the next gang now
+					log_event(Words.EV["stash_watched"])
+			else:
+				log_event(Words.EV["stash_took"])
+			for k in range(Data.STASH_FINDS):
+				_find(m, t)
+		"check":
+			_event_spend(m, Data.STASH_CHECK_S)
+			log_event(Words.EV["stash_checked"] % str(ev.get("catch", "")))
+			for k in range(Data.STASH_FINDS):
+				_find(m, t)
+		"search":
+			_event_spend(m, Data.BODY_S)
+			log_event(Words.EV["body_searched"])
+			_find(m, t)
+			if rng.randf() < Data.BODY_CLUE:
+				_clue(m, ev)
+		"pockets":
+			var n: int = body_tins()
+			_event_spend(m, Data.BODY_POCKETS_S)
+			m["cash"] = float(m["cash"]) + n
+			log_event(Words.EV["pocketed"] % _cash_words(n))
+		"strip":
+			_event_spend(m, Data.WRECK_S)
+			var n: int = rng.randi_range(Data.WRECK_SCRAP[0], Data.WRECK_SCRAP[1])
+			_haul_find(m, "scrap", n)
+			log_event(Words.EV["stripped"] % n)
+		"cut":
+			_event_spend(m, Data.WRECK_CUT_S)
+			_take_scrap(m, Data.WRECK_CUT_SCRAP)
+			var mk: String = wreck_mat(int(m["tier"]))
+			if mk != "":
+				_haul_find(m, mk, rng.randi_range(Data.WRECK_MAT[0], Data.WRECK_MAT[1]))
+			log_event(Words.EV["cut_open"] % Data.WRECK_CUT_SCRAP)
+			_event_cache(m, t)
+		"listen":
+			_event_spend(m, Data.RADIO_S)
+			_tip_roll(m)
+		"short":
+			_event_spend(m, Data.RADIO_SHORT_S)
+			if rng.randf() < Data.RADIO_SHORT_TIP:
+				_tip_roll(m)
+			else:
+				log_event(Words.EV["no_tip"])
+		"press":
+			m["turn_home"] = m["t"]                    # the site's own back at the run's end (_event_end): the record reads it
+			var nt: Dictionary = m["t"].duplicate()
+			nt["rarity"] = float(nt.get("rarity", 0.0)) + float(ev.get("loot", 0)) / 100.0
+			nt["dps"] = float(nt["dps"]) * (1.0 + float(ev.get("harder", 0)) / 100.0)
+			m["t"] = nt
+			log_event(Words.EV["pressed"])
+	_dry_memo.clear()
+	_stats_dirty()
+
+
+## A body's clue: the site's head's weakness (a thread: BODY_HEAD_CUT off his HP the next run he's out), or - no head
+## here, or the other half - whatever killed them still about: the next gang BODY_GANG tougher, BODY_GANG_NOTES notes a man.
+func _clue(m: Dictionary, ev: Dictionary) -> void:
+	var i: int = int(m["tier"])
+	var head: Dictionary = boss_of(i)
+	if not head.is_empty() and rng.randf() < 0.5:
+		ev["clue"] = "head"
+		_thread_add("weak", {"site": i, "run": runs_total})
+		log_event(Words.EV["clue_head"] % [Words.mid(str(head["name"])), roundi(Data.BODY_HEAD_CUT * 100.0)])
+		return
+	ev["clue"] = "gang"
+	m["clue_home"] = m["t"]
+	m["clue_from"] = int(m["patrols"])
+	m["clue_kills"] = int(m["kills"])
+	var nt: Dictionary = m["t"].duplicate()
+	nt["hp"] = float(nt["hp"]) * Data.BODY_GANG
+	nt["dps"] = float(nt["dps"]) * Data.BODY_GANG
+	m["t"] = nt
+	log_event(Words.EV["clue_gang"])
+
+
+## The clue's gang beaten: their notes, and the site's own gang again.
+func _clue_done(m: Dictionary) -> void:
+	m["notes"] = int(m.get("notes", 0)) + Data.BODY_GANG_NOTES * maxi(0, int(m["kills"]) - int(m.get("clue_kills", 0)))
+	m["t"] = m["clue_home"]
+	m.erase("clue_home")
+
+
+## A tip (a broadcast heard, the Vagabond's rumour): a stash at another open site on a later run there, or word of the
+## Vagabond (TIP_TRADER; or with nowhere else open) - the next run's event is him. A thread.
+func _tip_roll(m: Dictionary) -> void:
+	var here: int = int(m["tier"])
+	var sites: Array = range(Data.TIERS.size()).filter(func(si): return si != here and tier_open(si))
+	if sites.is_empty() or rng.randf() < Data.TIP_TRADER:
+		_thread_add("tips", {"kind": "trader", "run": runs_total})
+		log_event(Words.EV["tip_trader"])
+		return
+	var k: int = int(sites[rng.randi_range(0, sites.size() - 1)])
+	_thread_add("tips", {"kind": "site", "site": k, "run": runs_total})
+	log_event(Words.EV["tip_site"] % Words.mid(str(Data.TIERS[k]["name"])))
+
+
+## A thread's list (event_threads[key]): tips, robbed crews, heads' weaknesses. Never more than THREAD_MAX.
+func thread_list(key: String) -> Array:
+	var l = event_threads.get(key, [])
+	return l if l is Array else []
+
+
+func _thread_add(key: String, entry: Dictionary) -> void:
+	var l: Array = thread_list(key)
+	l.append(entry)
+	while l.size() > Data.THREAD_MAX:
+		l.pop_front()                          # bounded: the oldest goes
+	event_threads[key] = l
+
+
+## A run set off (deploy): the threads that land on it. A tip's stash here is the run's event (no catch); word of the
+## Vagabond makes him the run's event; a head's weakness here comes off his HP. A stale tip (TIP_RUNS) goes.
+func _threads_at_deploy(m: Dictionary, i: int) -> void:
+	if m.get("dry", false):
+		return
+	var tips: Array = thread_list("tips").filter(func(tp): return runs_total - int(tp.get("run", 0)) <= Data.TIP_RUNS)
+	event_threads["tips"] = tips
+	var here: Array = tips.filter(func(tp): return str(tp.get("kind", "")) == "site" and int(tp.get("site", -1)) == i)
+	var vag: Array = tips.filter(func(tp): return str(tp.get("kind", "")) == "trader")
+	if not here.is_empty() and str(m.get("event", "")) != "convoy":
+		tips.erase(here[0])
+		m["event"] = "stash"
+		m["event_tip"] = true
+		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
+	elif not vag.is_empty() and str(m.get("event", "")) != "convoy":
+		tips.erase(vag[0])
+		m["event"] = "trader"
+		m["event_who"] = "vagabond"
+		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
+	var weak: Array = thread_list("weak").filter(func(w): return int(w.get("site", -1)) == i)
+	if not weak.is_empty() and m.has("boss"):
+		event_threads["weak"].erase(weak[0])
+		m["boss"]["hp"] = float(m["boss"]["hp"]) * (1.0 - Data.BODY_HEAD_CUT)
+		log_event(Words.EV["weak_used"] % [roundi(Data.BODY_HEAD_CUT * 100.0), Words.mid(str(m["boss"]["name"]))])
+
+
+## The standing orders for the other six (_event_by_orders'): the order's choice when it can be had, else "leave".
+func _orders_more(m: Dictionary, ev: Dictionary, o: String) -> void:
+	var ok := func(k: String) -> bool:
+		return event_options().any(func(x): return x["key"] == k and bool(x["ok"]))
+	var pick: String = "leave"
+	match o:
+		"careful", "go", "take", "check", "search", "pockets", "strip", "cut", "listen", "short", "press", "home":
+			pick = o
+		"press_80":
+			pick = "press" if run_odds(m) >= Data.WEATHER_PRESS_AT else "leave"
+	if str(ev["fam"]) == "stash" and bool(ev.get("tip", false)) and pick != "leave":
+		pick = "take"                              # a tip's stash has no catch to check
+	if pick == "careful" and not ok.call("careful"):
+		pick = "leave"                             # "time allowing"
+	if pick == "cut" and not ok.call("cut"):
+		pick = "strip"                             # "scrap allowing": strip it instead
+	if not (ok.call(pick) and event_pick(pick)):
+		event_pick("leave")
+
+
+# ------------------------------------------------------------------ BUILD46-E: a rival crew (A threat passing, beside the dogs)
+
+## Who's passing: the event's pinned one (a thread, the tests), else a robbed crew back for you (ROBBED_BACK while one's
+## out there), else a rival crew (CREW_SHARE of the zone's, from CREW_FROM_RUN), else the dogs.
+func _threat_who(m: Dictionary, z: int) -> String:
+	var pin: String = str(m.get("event_who", ""))
+	if pin in ["dogs", "crew"]:
+		return pin
+	if pin == "crew_back" or (not thread_list("robbed").is_empty() and rng.randf() < Data.ROBBED_BACK):
+		m["crew_back"] = true
+		return "crew"
+	if runs_total >= Data.CREW_FROM_RUN and rng.randf() < float(Data.CREW_SHARE[clampi(z, 0, Data.CREW_SHARE.size() - 1)]):
+		return "crew"
+	return "dogs"
+
+
+## A rival crew as they come: whether they're a robbed crew back (the thread spent), and what they carry - notes
+## (CREW_NOTES a man's), or (CREW_FIND) a find a tier up.
+func _crew_arrive(m: Dictionary, ev: Dictionary) -> void:
+	if bool(m.get("crew_back", false)):
+		ev["back"] = true
+		var l: Array = thread_list("robbed")
+		if not l.is_empty():
+			l.pop_front()
+		event_threads["robbed"] = l
+	m.erase("crew_back")
+	if rng.randf() < Data.CREW_FIND:
+		ev["carry"] = "find"
+	else:
+		ev["carry"] = "notes"
+		ev["carry_n"] = Data.CREW_NOTES * notes_a_kill(m["t"]) * int(ev["n"])
+
+
+## A rival crew as a gang: the site's gang at CREW_HP and CREW_DPS a man (x1.5 its difficulty), its damage types and
+## resists, a man's XP, nothing a man carries (they carry it as a crew: _crew_paid).
+static func crew_t(t: Dictionary) -> Dictionary:
+	var d: Dictionary = t.duplicate()
+	d["hp"] = float(t["hp"]) * Data.CREW_HP
+	d["dps"] = float(t["dps"]) * Data.CREW_DPS
+	d["drop"] = 0.0
+	d["no_kill_cash"] = true
+	d["dogs"] = true                           # the kill's early return: its XP, nothing a man carries
+	d["crew"] = true
+	return d
+
+
+## The threat's gang: the dogs' or the crew's, off the site's `t`.
+static func threat_t(ev: Dictionary, t: Dictionary) -> Dictionary:
+	return crew_t(t) if str(ev.get("who", "dogs")) == "crew" else dogs_t(t)
+
+
+## The gang the threat's odds read (_dogs_read's `as_t`): {} for the dogs (their own), the crew's for a crew.
+func threat_as(ev: Dictionary, m: Dictionary) -> Dictionary:
+	return crew_t(m.get("dogs_home", m["t"])) if str(ev.get("who", "dogs")) == "crew" else {}
+
+
+## A rival crew seen off: what they carried, and (CREW_ROBBED, not a crew already back) a crew that'll want it back.
+func _crew_paid(m: Dictionary) -> void:
+	var ev: Dictionary = m["ev"]
+	if str(ev.get("carry", "")) == "find":
+		_event_cache(m, m["t"])
+		log_event(Words.EV["crew_off_find"])
+	else:
+		var n: int = int(ev.get("carry_n", 0))
+		m["notes"] = int(m.get("notes", 0)) + n
+		log_event(Words.EV["crew_off_notes"] % n)
+	if not bool(ev.get("back", false)) and rng.randf() < Data.CREW_ROBBED:
+		_thread_add("robbed", {"zone": int(ev.get("zone", 0)), "run": runs_total})
+
+
+# ------------------------------------------------------------------ BUILD46-E: the Vagabond (the second trader)
+
+const VAG_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack"]
+
+
+## Which trader: the event's pinned one (a tip, the tests), else the Vagabond VAG_SHARE of them from VAG_FROM_RUN.
+func _trader_who(m: Dictionary) -> String:
+	var pin: String = str(m.get("event_who", ""))
+	if Data.TRADERS.has(pin):
+		return pin
+	return "vagabond" if runs_total >= Data.VAG_FROM_RUN and rng.randf() < Data.VAG_SHARE else "scrap_man"
+
+
+## His stock as he comes: VAG_GEAR pieces (one more from the first step) at the site's tier, VAG_UP of them a tier up
+## (all from the third step), each priced off its worth (_vag_price); a rumour VAG_RUMOUR of visits (every visit from
+## the third step).
+func _vag_stock(m: Dictionary, ev: Dictionary) -> void:
+	var step: int = trader_step("vagabond")
+	var t: Dictionary = m["t"]
+	var cap: int = loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+	var stock: Array = []
+	for k in range(Data.VAG_GEAR + (1 if step >= 1 else 0)):
+		var tt: Dictionary = t.duplicate()
+		var up: bool = (step >= 3 or rng.randf() < Data.VAG_UP) and int(t["loot_tier"]) < cap
+		if up:
+			tt["loot_tier"] = int(t["loot_tier"]) + 1
+		var it := {}
+		for tries in range(4):
+			it = Dictionary(_find(m, tt, false, {"slots": VAG_SLOTS, "lean": 1.0}, true).get("it", {}))
+			if not it.is_empty() and str(it.get("slot", "")) in VAG_SLOTS:
+				break
+			it = {}
+		if not it.is_empty():
+			stock.append({"it": it, "up": up, "price": _vag_price(t, it, up)})
+	ev["shelf"] = stock
+	ev["rumour"] = step >= 3 or rng.randf() < Data.VAG_RUMOUR
+
+
+## His price off the piece's worth (fix 46, E1: off a man's tins it was a few percent of the Fence's): what the Fence would
+## pay for it x VAG_SELL_X, so even his best standing's discount stays over it - never a tins pump.
+func _vag_price(_t: Dictionary, it: Dictionary, _up: bool) -> int:
+	return maxi(1, int(ceil(float(sell_price(it)) * Data.VAG_SELL_X)))
+
+
+## The rebuild materials in the pack's stacks (not scrap).
+func pack_materials(m) -> int:
+	if m == null:
+		return 0
+	var n := 0
+	for it in m["found"]:
+		if Items.is_material(it) and not Items.is_scrap(it):
+			n += Items.stack_size(it)
+	return n
+
+
+## Materials out of the pack's stacks, the biggest first; a stack gone when it's spent.
+func _take_materials(m: Dictionary, n: int) -> void:
+	var stacks: Array = m["found"].filter(func(it): return Items.is_material(it) and not Items.is_scrap(it))
+	stacks.sort_custom(func(a, b): return Items.stack_size(a) > Items.stack_size(b))
+	for it in stacks:
+		var k: int = mini(n, Items.stack_size(it))
+		n -= k
+		if Items.stack_size(it) - k <= 0:
+			m["found"].erase(it)
+		else:
+			Items.set_stack(it, Items.stack_size(it) - k)
+		if n <= 0:
+			return
+
+
+## His shelf now (trader_shelf's): [{key, text, short, price, pay ("tins"/"mat"), ok, bought, why}] - the gear, then the
+## rumour (materials when the pack has them, else tins); from the second step 33% off.
+func _vag_shelf(ev: Dictionary) -> Array:
+	var step: int = trader_step("vagabond")
+	var off: float = (1.0 - Data.TRADER_STEP_OFF) if step >= 2 else 1.0
+	var tins: int = int(floor(float(mission["cash"])))
+	var mats: int = pack_materials(mission)
+	var bought: Array = ev.get("bought", [])
+	var out: Array = []
+	var stock: Array = ev.get("shelf", [])
+	for k in range(stock.size()):
+		var row: Dictionary = stock[k]
+		var key: String = "gear%d" % k
+		var it: Dictionary = row["it"]
+		var cost_v: int = maxi(1, int(ceil(float(row["price"]) * off)))
+		var text: String = Words.EV["shelf_gear_up" if bool(row.get("up", false)) else "shelf_gear"] % [Items.full_name(it), Items.rarity_name(it)]
+		# a full pack (fix 46, E2): greyed and said - never his tins for nothing; loot by hand, it waits on the floor
+		var room: bool = by_hand(mission) or not pack_spot(mission, it).is_empty()
+		out.append({"key": key, "text": text, "short": Items.full_name(it), "price": cost_v, "pay": "tins", "bought": key in bought,
+			"why": "" if room or key in bought else Words.EV["vag_no_room"],
+			"ok": not (key in bought) and tins >= cost_v and room and event_asking()})
+	if bool(ev.get("rumour", false)):
+		var mat_price: int = maxi(1, int(ceil(Data.VAG_RUMOUR_MAT * off)))
+		var by_mat: bool = mats >= mat_price
+		var cost_r: int = mat_price if by_mat else maxi(1, int(ceil(float(mission["t"].get("cash", 1.0)) * inflation() * Data.VAG_RUMOUR_TINS * off)))
+		out.append({"key": "rumour", "text": Words.EV["shelf_rumour"], "short": Words.EV["shelf_rumour"], "price": cost_r, "pay": "mat" if by_mat else "tins",
+			"bought": "rumour" in bought, "why": "", "ok": not ("rumour" in bought) and (mats if by_mat else tins) >= cost_r and event_asking()})
+	return out
+
+
+## Buy off his shelf: tins off the run's, or materials off the pack's stacks; gear into the pack (it comes home), a
+## rumour a tip. A trade on his standing as the visit ends.
+func _vag_buy(row: Dictionary) -> bool:
+	var m: Dictionary = mission
+	var ev: Dictionary = m["ev"]
+	var cost_v: int = int(row["price"])
+	var paid: String = ""
+	if str(row["pay"]) == "mat":
+		_take_materials(m, cost_v)
+		paid = Words.EV["vag_mat"] % cost_v
+	else:
+		m["cash"] = float(m["cash"]) - cost_v
+		paid = _cash_words(cost_v)
+	ev["bought"].append(row["key"])
+	ev["trades"] = int(ev.get("trades", 0)) + 1
+	if str(row["key"]) == "rumour":
+		log_event(Words.EV["vag_traded"] % [Words.EV["vag_rumour"], paid])
+		_tip_roll(m)
+	else:
+		var k: int = int(str(row["key"]).trim_prefix("gear"))
+		var it: Dictionary = Dictionary(ev["shelf"][k]["it"]).duplicate(true)
+		_place_find(m, it)
+		log_event(Words.EV["vag_traded"] % [Items.full_name(it), paid])
+	_dry_memo.clear()
+	_stats_dirty()
+	_memo_age = 0.0
+	return true
 
 
 ## The run's event, once: a signal's convoy (17 Oct; the run's own came in with the families, 1 Nov).
@@ -12309,6 +13162,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 				log_event(Words.LOG["found"] % thing["base"])
 				m["found"].append(thing)          # in the pack to see, a keepsake home (15 Oct): the room opens here, the thing goes to the drawer
 			_home_gate(thing)
+			_left_drop(str(room), m)              # at half till it's home (2 Nov, BUILD46-S)
 	if first and campaign_done():
 		log_event(Words.YARD["campaign"])
 
@@ -12768,6 +13622,8 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	m["cleared"] = true
 	if m.get("dry", false):
 		return
+	m["clear_t"] = float(m["elapsed"])         # the site's best time (2 Nov, BUILD46-S)
+	_left_find(m)                              # a head's thing left here: found again (2 Nov, BUILD46-S)
 	_wearing_off(m)
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (Data.FX["node/stand"] if has_node("stand") else 1.0) * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	m["xp"] += bonus
@@ -13272,6 +14128,7 @@ func _extract() -> void:
 			papers.append(it)                # the Radio's pile, whatever the room (18 Oct, Matt): never the stash
 			stashed += 1
 			continue
+		_left_home(it)                       # its room whole again (2 Nov, BUILD46-S)
 		if _home_gate(it):
 			stashed += 1                     # home, as a keepsake: not left behind (the review)
 			continue                         # a head's thing: its room opens, and it stays there (13 Oct)
@@ -13350,6 +14207,7 @@ func _record_run(m: Dictionary) -> void:
 func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	if _dry_on:
 		return                                    # chron would drop it: the odds' runs skip the reading too
+	_site_run_note(m, outcome, extra)             # the Map card's "You here" (2 Nov, BUILD46-S)
 	var et: Dictionary = m.get("t", tier(m["tier"]))
 	var b = m.get("boss", null)
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
@@ -14237,34 +15095,308 @@ func swap_with_parts(id: int) -> bool:
 ## rig's room before a run. "fill": every grade of the worn guns' rounds and the meds, the build's grade first;
 ## "best": the top grade of each, nothing plainer; "leave": the rig goes as packed. Set once on the Map, kept.
 const TOP_UP_MODES := ["leave", "fill", "best"]
-var top_up_mode := "fill"
+## The old Map button's three settings (BUILD46-R, 2 Nov: the rounds picker took its place): read off the camp's plan
+## (rounds_plan), and set as the whole of it - every site's own plan goes, the camp's is the mode's (_plan_of_mode).
+var top_up_mode: String:
+	get:
+		return _plan_mode(rounds_plan(-1))
+	set(v):
+		if v in TOP_UP_MODES:
+			rounds_plans = {"camp": _plan_of_mode(v)}
 
 
 func set_top_up(mode: String) -> void:
-	if mode in TOP_UP_MODES and mode != top_up_mode:
+	if mode in TOP_UP_MODES and (mode != top_up_mode or rounds_plans.size() > 1):
 		top_up_mode = mode
 		_dry_memo.clear()
 		_stats_dirty()
+
+
+# ------------------------------------------------------------------ rounds for the run (BUILD46-R)
+## Rounds for the run (2 Nov, Matt's playtest: "no way of selecting which rounds to take with you in the pack"; the
+## canvas "Fiat – Rounds and magazines", board 2): a plan a site - each worn gun's rounds type, its grade (`grade`: ""
+## the gate's own pick, the grade its magazines hold or the stash's best) and how many boxes of it ride in the pack
+## (`boxes`), and whether the rig is packed and its magazines topped up from the stash first (`top`). A site never set
+## reads the camp's plan, which follows the last one set anywhere. `load` false: the magazines go as they are, not even
+## topped up (the tick's off); the old "Leave it" kept `load` (its magazines were always filled). `best`: the old "Best
+## grades only". 0.10.2's one-box rule went (the designer's call: boxes cost pack cells).
+const PLAN_BASE := {"top": true, "load": true, "best": false, "boxes": 1, "guns": {}}
+var rounds_plans := {}                  # {"camp": plan, "<site>": plan}: only what's been set
+
+
+func _plan_of_mode(mode: String) -> Dictionary:
+	var p: Dictionary = PLAN_BASE.duplicate(true)
+	if mode == "leave":
+		p["top"] = false
+		p["boxes"] = 0
+	p["best"] = mode == "best"
+	return p
+
+
+func _plan_mode(p: Dictionary) -> String:
+	if not bool(p.get("top", true)):
+		return "leave"
+	return "best" if bool(p.get("best", false)) else "fill"
+
+
+## A site's plan as the gate reads it: its own, else the camp's, else the base's. -1: the camp's.
+func rounds_plan(i := -1) -> Dictionary:
+	var p: Dictionary = PLAN_BASE.duplicate(true)
+	var own = rounds_plans.get(str(i), null) if i >= 0 else null
+	var src = own if own is Dictionary else rounds_plans.get("camp", null)
+	if src is Dictionary:
+		p.merge(Dictionary(src).duplicate(true), true)
+	return p
+
+
+## Whether a site has its own plan (the panel's foot says where it's remembered).
+func rounds_plan_own(i: int) -> bool:
+	return rounds_plans.has(str(i))
+
+
+## The grade a site's plan picks for a type, "" for the gate's own.
+func plan_grade(i: int, ty: String) -> String:
+	return _plan_grade(rounds_plan(i), ty)
+
+
+## The boxes a site's plan packs of a type (the panel's count).
+func plan_boxes(i: int, ty: String) -> int:
+	return _plan_boxes(rounds_plan(i), ty)
+
+
+## The plan's grade for a rounds type, "" for the gate's own pick.
+static func _plan_grade(p: Dictionary, ty: String) -> String:
+	return str(Dictionary(p.get("guns", {}).get(ty, {})).get("grade", ""))
+
+
+## The boxes the plan packs of a type: its own count, else the plan's.
+static func _plan_boxes(p: Dictionary, ty: String) -> int:
+	var g: Dictionary = p.get("guns", {}).get(ty, {})
+	return maxi(0, int(g.get("boxes", p.get("boxes", 1))))
+
+
+## A change to a site's plan (the panel's): the site keeps its own from now, and the camp's follows it (a site never set
+## starts from the last choice). Not while the runner's out.
+func _plan_edit(i: int, f: Callable) -> bool:
+	if runner_busy():
+		return false
+	var p: Dictionary = rounds_plan(i)
+	f.call(p)
+	if i >= 0:
+		rounds_plans[str(i)] = p
+	rounds_plans["camp"] = p.duplicate(true)
+	_dry_memo.clear()
+	_stats_dirty()
+	if i >= 0:
+		_surv_cache.erase(i)
+	return true
+
+
+func plan_set_grade(i: int, ty: String, grade: String) -> bool:
+	return _plan_edit(i, func(p: Dictionary):
+		var g: Dictionary = p["guns"].get(ty, {})
+		g["grade"] = grade
+		p["guns"][ty] = g)
+
+
+func plan_set_boxes(i: int, ty: String, n: int) -> bool:
+	return _plan_edit(i, func(p: Dictionary):
+		var g: Dictionary = p["guns"].get(ty, {})
+		g["boxes"] = clampi(n, 0, Data.PLAN_BOXES_MAX)
+		p["guns"][ty] = g)
+
+
+## The rig packed at the gate (the meds and cures, the old Top up / Leave it): the meds chip's (merge 46).
+func plan_set_top(i: int, on: bool) -> bool:
+	return _plan_edit(i, func(p: Dictionary):
+		p["top"] = on)
+
+
+## The panel's tick, "Top the magazines up first, from the stash": the magazines' fill alone (fix 46, R2 - off, the
+## meds and cures are still packed into the rig).
+func plan_set_load(i: int, on: bool) -> bool:
+	return _plan_edit(i, func(p: Dictionary):
+		p["load"] = on)
+
+
+## The plan's explicit grades the stash holds, {type: grade}: what the gate's fill swaps a magazine to and fills an
+## empty one with.
+func _plan_picks(p: Dictionary, counts: Dictionary) -> Dictionary:
+	var out := {}
+	for ty in p.get("guns", {}):
+		var g: String = _plan_grade(p, str(ty))
+		if g != "" and int(counts.get(g, 0)) > 0:
+			out[str(ty)] = g
+	return out
+
+
+## The grades the fill holds to (`bg`): "Best grades only"'s; {} for none. The plan's picks are a preference, not a bar
+## (fix 46, R1): they stay out of it, so a pick that runs short leaves the other magazines their own or the best grade.
+func _plan_bg(p: Dictionary, counts: Dictionary) -> Dictionary:
+	return best_grades(counts) if bool(p.get("best", false)) else {}
+
+
+## A magazine holding another grade than the plan's pick, its rounds back to `counts` (and to the stash, `real`) so the
+## fill can load the pick (the panel's "Shells ▾"): only while the stash still has some of the pick at that moment (fix 46,
+## R1: a pick run out keeps the rest of the magazines as they are, filled with their own).
+func _plan_swap(it: Dictionary, counts: Dictionary, picks: Dictionary, real: bool) -> void:
+	var ty: String = Items.mag_type(it)
+	var have: int = int(it.get("rounds", 0))
+	if not picks.has(ty) or have <= 0 or str(it.get("ammo", "")) == str(picks[ty]) or str(it.get("ammo", "")) == "":
+		return
+	if int(counts.get(str(picks[ty]), 0)) < Items.mag_cap(it, mag_gun(it)):
+		return                                # only when the pick fills it: never a full magazine swapped for a few rounds (the re-review)
+	var was: String = str(it["ammo"])
+	if real:
+		var back: Dictionary = _plain(Data.AMMO, was)
+		Items.set_stack(back, have)
+		if not stash_put(back):
+			stash.append(back)
+	counts[was] = int(counts.get(was, 0)) + have
+	it["rounds"] = 0
+	it["ammo"] = ""
+
+
+## The bot's boxes (BUILD46-R, the brief: "~1.2x the fight's need within its pack room, its best grade"): for the
+## primary's type, the boxes that bring its rounds to BOT_ROUNDS_X the fight's want past what its magazines hold, one at
+## least, a quarter of the pack at most; any other type one.
+func _bot_boxes(i: int, ty: String, have: int, per: int) -> int:
+	var g = equipped["Primary"]
+	if g == null or Items.ammo_type(g) != ty or i < 0:
+		return 1
+	var want: int = _rounds_want(i)
+	var box: int = maxi(1, per)
+	@warning_ignore("integer_division")
+	var room: int = maxi(1, capacity() / 4)
+	return clampi(ceili(maxf(0.0, Data.BOT_ROUNDS_X * float(want) - float(have)) / float(box)), 1, room)
+
+
+## The fight's rounds for the primary at a site: its estimate at the gun's rate, its reloads' pauses firing nothing.
+func _rounds_want(i: int) -> int:
+	var gun = equipped["Primary"]
+	if gun == null:
+		return 0
+	var t := effective(i)
+	return ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]) * mag_share("Primary") * rate_x())
+
+
+## What goes out to a site under its plan: [the primary's rounds (its magazines after the fill, and its boxes), the fight's
+## want]; [] when the primary takes none.
+func rounds_read(i: int) -> Array:
+	var gun = equipped["Primary"]
+	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
+		return []
+	var ty: String = Items.ammo_type(gun)
+	var have := 0
+	var mags: Array = _gate_read(i)
+	for r in mags[0]:
+		if Items.mag_fits(r, gun):
+			have += int(r.get("rounds", 0))
+	for b in mags[1]:
+		if str(Items.base_of(b)["type"]) == ty:
+			have += int(b["rounds"])
+	return [have, _rounds_want(i)]
+
+
+## The gate's read for a site: [its magazines as copies after the plan's fill, the boxes it would pack] (the stash's
+## rounds by grade taken as they'd go).
+func _gate_read(i: int) -> Array:
+	var p: Dictionary = rounds_plan(i)
+	var counts: Dictionary = _grade_counts()
+	var bg: Dictionary = _plan_bg(p, counts)
+	var picks: Dictionary = _plan_picks(p, counts)
+	var plan: Array = _gate_mags_plan(p)
+	if bool(p.get("load", true)):
+		_fill_plan(plan, counts, bg, picks)
+	var boxes: Array = _box_plan(counts, plan, bg, p, i) if gate_box_on(i) else []
+	return [plan, boxes]
+
+
+## The panel's rows (the canvas's board 2), one a worn gun's rounds type, the primary's first: {type, slot, gun, grade (what
+## the gate packs), picked (the plan's own, "" for the gate's), grades [[name, rounds in the stash]] the best first,
+## boxes (planned), packed (the boxes that go), loaded (its magazines' rounds after the fill), box_rounds, cells}.
+func rounds_rows(i: int) -> Array:
+	var p: Dictionary = rounds_plan(i)
+	var read: Array = _gate_read(i)
+	var counts: Dictionary = _grade_counts()
+	var out: Array = []
+	var types: Array = []
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g == null or Items.mag_size(g) <= 0 or Items.ammo_type(g) in types:
+			continue
+		var ty: String = Items.ammo_type(g)
+		types.append(ty)
+		var grades: Array = []
+		for k in counts:
+			var b: Dictionary = Items.base_named(Data.AMMO, str(k))
+			if not b.is_empty() and str(b["type"]) == ty and int(counts[k]) > 0:
+				grades.append([str(k), int(counts[k])])
+		var els: Array = build_elements() if slot == "Primary" else []
+		grades.sort_custom(func(a, b2): return _grade_worth(Items.base_named(Data.AMMO, str(a[0])), els) > _grade_worth(Items.base_named(Data.AMMO, str(b2[0])), els))
+		var loaded := 0
+		var held := ""
+		for r in read[0]:
+			if Items.mag_fits(r, g):
+				loaded += int(r.get("rounds", 0))
+				if held == "" and int(r.get("rounds", 0)) > 0:
+					held = str(r.get("ammo", ""))
+		var box_r := 0
+		var cells := 0
+		var grade := ""
+		for b in read[1]:
+			if str(Items.base_of(b)["type"]) == ty:
+				box_r += int(b["rounds"])
+				cells += Items.size(b)
+				grade = str(b["base"])
+		var picked: String = _plan_grade(p, ty)
+		if grade == "":
+			grade = picked if picked != "" and int(counts.get(picked, 0)) > 0 else (held if held != "" else (str(grades[0][0]) if not grades.is_empty() else ""))
+		out.append({"type": ty, "slot": slot, "gun": str(g["base"]), "grade": grade, "picked": picked, "grades": grades,
+			"boxes": _plan_boxes(p, ty), "packed": cells, "loaded": loaded, "box_rounds": box_r, "cells": cells})
+	return out
+
+
+## Whether the plan's boxes all go (the panel's line when they don't): [boxes planned, boxes that go, the pack's cells].
+func rounds_room(i: int) -> Array:
+	var p: Dictionary = rounds_plan(i)
+	var planned := 0
+	var types: Array = []
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g != null and Items.mag_size(g) > 0 and not (Items.ammo_type(g) in types):
+			types.append(Items.ammo_type(g))
+			planned += _plan_boxes(p, Items.ammo_type(g))
+	var went := 0
+	for b in _gate_read(i)[1]:
+		went += Items.size(b)
+	return [planned, went, capacity()]
 
 
 ## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash; 30 Oct,
 ## magazines as items): every magazine in the rig is filled from the stash's boxes of its type, free, whatever the
 ## mode (loading is the game's, not the player's); then, unless the mode is "leave", pack_rig packs the rest from the
 ## stash and those are filled too. What's in the rig already stays. Logs what went in.
-func _top_up(at := -1) -> void:
+func _top_up(at := -1, site := -1) -> void:
 	if mission != null:
 		return
 	_mags_home()                              # the magazines that came home on their guns (the fix round)
-	var bg = null     # once a top-up, from the stash before filling (the reviewer on m32c, 1), the gate's box's too
-	if top_up_mode == "best":
-		bg = _bg_hold if _bg_hold != null else best_grades()
+	var plan: Dictionary = rounds_plan(site if site >= 0 else at)     # the site's plan (BUILD46-R), the camp's at home
+	var mode: String = _plan_mode(plan)
+	var counts: Dictionary = _grade_counts()
+	var bg = _plan_bg(plan, counts)     # once a top-up, from the stash before filling (the reviewer on m32c, 1), the gate's box's too
+	if _bg_hold != null:
+		bg = _bg_hold
+	var picks: Dictionary = _plan_picks(plan, counts)
 	_gate_bg = bg
-	var f: Array = _fill_mags(bg)
+	var fill_on: bool = bool(plan.get("load", true))     # the tick off (BUILD46-R): the magazines go as they are; the rig's meds still packed (fix 46, R2)
+	var f: Array = _fill_mags(bg, picks) if fill_on else [0, []]
 	var got: Array = [0, 0]
-	if top_up_mode != "leave":
-		got = pack_rig(top_up_mode, at)
-		var f2: Array = _fill_mags(bg)
-		f = [int(f[0]) + int(f2[0]), Array(f[1]) + Array(f2[1]).filter(func(g): return not (g in f[1]))]
+	if mode != "leave":
+		got = pack_rig(mode, at)
+		if fill_on:
+			var f2: Array = _fill_mags(bg, picks)
+			f = [int(f[0]) + int(f2[0]), Array(f[1]) + Array(f2[1]).filter(func(g): return not (g in f[1]))]
 	if int(f[0]) > 0 or int(got[0]) > 0 or int(got[1]) > 0:
 		_dry_memo.clear()
 		_stats_dirty()
@@ -14285,7 +15417,7 @@ func mag_gun(it: Dictionary):
 ## The rig's magazines filled at home (28 Oct; 30 Oct, as items): each one short of its size, from the stash's boxes of
 ## its type - one holding rounds tops up with its own grade, an empty one takes the best grade the stash has (the
 ## build's element first, for the primary's). Free. [magazines filled, the grades' names].
-func _fill_mags(bg = null) -> Array:
+func _fill_mags(bg = null, picks := {}) -> Array:
 	if bg == null and top_up_mode == "best":
 		bg = best_grades()
 	var counts: Dictionary = _grade_counts()
@@ -14296,6 +15428,7 @@ func _fill_mags(bg = null) -> Array:
 	for it in order:
 		var gun = mag_gun(it)
 		var cap: int = Items.mag_cap(it, gun)
+		_plan_swap(it, counts, picks, true)    # the plan's grade in place of another (BUILD46-R)
 		var have: int = int(it.get("rounds", 0))
 		if have > cap:
 			# over its size (a gun swapped for one with a smaller magazine): the rest back to the stash as a box of its grade
@@ -14306,7 +15439,7 @@ func _fill_mags(bg = null) -> Array:
 			counts[str(it["ammo"])] = int(counts.get(str(it["ammo"]), 0)) + have - cap
 			it["rounds"] = cap
 			continue
-		var grade: String = _fill_grade(it, gun, counts, bg)
+		var grade: String = _fill_grade(it, gun, counts, bg, picks)
 		var n: int = mini(cap - have, int(counts.get(grade, 0))) if grade != "" else 0
 		if n <= 0:
 			continue
@@ -14323,9 +15456,11 @@ func _fill_mags(bg = null) -> Array:
 ## The grade a magazine is filled with at the gate, off `counts` (the stash's rounds by grade): its own when it holds some,
 ## else the best the counts have for it; on "Best grades only" (`bg`, best_grades()) that grade or none - a plainer one
 ## never goes in (the three-stage review, tools 3; the reviewer on m32c, 1). "" for none.
-func _fill_grade(it: Dictionary, gun, counts: Dictionary, bg) -> String:
+func _fill_grade(it: Dictionary, gun, counts: Dictionary, bg, picks := {}) -> String:
 	var ty: String = Items.mag_type(it)
 	var grade: String = str(it.get("ammo", "")) if int(it.get("rounds", 0)) > 0 else _best_in_counts(counts, ty, is_same(gun, equipped["Primary"]))
+	if picks.has(ty) and int(counts.get(str(picks[ty]), 0)) > 0 and (int(it.get("rounds", 0)) <= 0 or grade == str(picks[ty])):
+		return str(picks[ty])                 # the plan's pick (BUILD46-R), over "Best grades only"'s bar (fix 46: picks left bg)
 	if grade == "" or (bg is Dictionary and bg.has(ty) and grade != str(bg[ty])):
 		return ""
 	return grade
@@ -14333,19 +15468,20 @@ func _fill_grade(it: Dictionary, gun, counts: Dictionary, bg) -> String:
 
 ## The gate's fill on copies, for the reads (the reviewer on m32c, 3): `mags` copies of magazines, filled as _fill_mags
 ## fills, off `counts`, which they take from. The rounds put in.
-func _fill_plan(mags: Array, counts: Dictionary, bg) -> int:
+func _fill_plan(mags: Array, counts: Dictionary, bg, picks := {}) -> int:
 	var put := 0
 	var order: Array = mags.duplicate()
 	order.sort_custom(func(a, b): return _mag_rank(a) < _mag_rank(b))
 	for it in order:
 		var gun = mag_gun(it)
 		var cap: int = Items.mag_cap(it, gun)
+		_plan_swap(it, counts, picks, false)
 		var have: int = int(it.get("rounds", 0))
 		if have > cap:
 			counts[str(it["ammo"])] = int(counts.get(str(it["ammo"]), 0)) + have - cap
 			it["rounds"] = cap
 			continue
-		var grade: String = _fill_grade(it, gun, counts, bg)
+		var grade: String = _fill_grade(it, gun, counts, bg, picks)
 		var n: int = mini(cap - have, int(counts.get(grade, 0))) if grade != "" else 0
 		if n <= 0:
 			continue
@@ -14407,9 +15543,9 @@ func best_grades(counts = null) -> Dictionary:
 
 ## The magazines the gate would fill, as copies (the reads): the rig's, and on a top-up the stash's the packing may still
 ## put in the pouches its magazines' share leaves - each worn gun's, the primary's first (rounds_short's rule, 16 Oct).
-func _gate_mags_plan() -> Array:
+func _gate_mags_plan(p = null) -> Array:
 	var out: Array = rig.filter(func(x): return Items.is_mag(x)).map(func(x): return x.duplicate())
-	if top_up_mode != "leave":
+	if (p is Dictionary and bool(p.get("top", true))) or (p == null and top_up_mode != "leave"):
 		var pouches: int = mini(mag_pouch_room(), med_capacity() - rig_used())
 		for slot in ["Primary", "Secondary"]:
 			var g = equipped[slot]
@@ -16911,11 +18047,11 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "supplies_in": supplies_in, "wounds": wounds.duplicate(true),
-		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "element_paid": element_paid.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "site_runs": site_runs.duplicate(true), "left_behind": left_behind.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "element_paid": element_paid.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"exchange_day": exchange_day, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
+		"exchange_day": exchange_day, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode, "rounds_plans": rounds_plans,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s,
 		"skill_slots": skill_slots, "skill_auto": skill_auto,
@@ -17061,6 +18197,12 @@ func load_dict(d: Dictionary) -> void:
 	site_crates = {}
 	for k in d.get("site_crates", {}):
 		site_crates[str(k)] = Dictionary(d["site_crates"][k]).duplicate(true)
+	site_runs = {}
+	for k in d.get("site_runs", {}):
+		site_runs[str(k)] = Dictionary(d["site_runs"][k]).duplicate(true)
+	left_behind = {}
+	for k in d.get("left_behind", {}):
+		left_behind[str(k)] = int(d["left_behind"][k])
 	if d.has("weather"):
 		for z in range(mini(weather.size(), d["weather"].size())):
 			weather[z] = str(d["weather"][z])
@@ -17176,7 +18318,9 @@ func load_dict(d: Dictionary) -> void:
 	runs_total = int(d.get("runs_total", 0))
 	wounded_total = int(d.get("wounded_total", 0))
 	insure_next = bool(d.get("insure_next", false))
-	top_up_mode = str(d.get("top_up_mode", "fill")) if str(d.get("top_up_mode", "fill")) in TOP_UP_MODES else "fill"
+	top_up_mode = str(d.get("top_up_mode", "fill")) if str(d.get("top_up_mode", "fill")) in TOP_UP_MODES else "fill"     # the old button's, as the camp's plan (BUILD46-R: it migrates)
+	if d.get("rounds_plans", null) is Dictionary:
+		rounds_plans = Dictionary(d["rounds_plans"]).duplicate(true)
 	var bb: Array = d.get("bosses_beaten", [])
 	for z in range(Data.ZONES.size()):
 		bosses_beaten[z] = bool(bb[z]) if z < bb.size() else false
