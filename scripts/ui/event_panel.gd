@@ -185,11 +185,14 @@ func _border(b: Button, lit: bool) -> void:
 
 ## What moves while the dogs stand, in place: the count down in their tile ("3 · 10 s"), the odds, Get out's words.
 func _threat_live(sim, ev: Dictionary) -> void:
-	var odds: float = sim.dogs_odds()
 	var n: int = int(ev["n"])
 	var left: int = ceili(maxf(0.0, float(ev.get("close_t", 0.0))))
 	UI.set_tile(_tiles[0], Words.EV["dogs_key"], [Words.EV["dogs_val_in"] % [n, left], Words.EV["dogs_val"] % n])
-	UI.set_tile(_tiles[1], Words.EV["odds_key"], ["%d%%" % roundi(odds * 100.0)], Pal.GOOD if odds >= 0.75 else (Pal.WARN if odds >= 0.5 else Pal.BAD))
+	if sim.dogs_reading():
+		UI.set_tile(_tiles[1], Words.EV["odds_key"], [Words.EV["odds_reading"]], Pal.TEXT_3)     # read a few ms a frame as they stand (BUILD43)
+	else:
+		var odds: float = sim.dogs_odds()
+		UI.set_tile(_tiles[1], Words.EV["odds_key"], ["%d%%" % roundi(odds * 100.0)], Pal.GOOD if odds >= 0.75 else (Pal.WARN if odds >= 0.5 else Pal.BAD))
 	if out_text != "" and _out.text != out_text:
 		UI.fit_button(_out, [out_text, Words.EV["get_out"]])
 	_out.disabled = not sim.can_extract()      # in place, as the rest of the dogs' live words

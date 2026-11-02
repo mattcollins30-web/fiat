@@ -1194,21 +1194,19 @@ func _lay_bars() -> void:
 		fb.size = Vector2(w, h)
 		fb.modulate.a = r.modulate.a
 		var of: float = float(_bar_info["of"])
-		fb.share = clampf(float(_bar_info["hp"]) / of, 0.0, 1.0) if hit else 1.0
 		var dots := {}
 		var ticking := 0.0
 		if hit:
 			for ty in _bar_info["dots"]:
 				dots[ty] = maxf(0.0, float(_bar_info["dots"][ty])) / of
 				ticking += maxf(0.0, float(_bar_info["dots"][ty]))
-		fb.dots = dots
-		fb.shield = float(_bar_info.get("shield", 0.0)) if (hit and head) else 0.0
-		fb.hit = hit
-		fb.finish = hit and float(_bar_info["hp"]) > 0.0 and ticking >= float(_bar_info["hp"])     # the skull (11 Oct): the dots will finish them
-		fb.queue_redraw()
+		fb.look(clampf(float(_bar_info["hp"]) / of, 0.0, 1.0) if hit else 1.0, dots, float(_bar_info.get("shield", 0.0)) if (hit and head) else 0.0, hit,
+			hit and float(_bar_info["hp"]) > 0.0 and ticking >= float(_bar_info["hp"]))     # the skull (11 Oct): the dots will finish them
 		if hit:
-			_hp_tag.text = "%d / %d" % [ceili(float(_bar_info["hp"])), int(round(of))]
-			_hp_tag.size.x = ceilf(UI.text_width(_hp_tag, _hp_tag.text)) + 8.0
+			var tag: String = "%d / %d" % [ceili(float(_bar_info["hp"])), int(round(of))]
+			if tag != _hp_tag.text:
+				_hp_tag.text = tag
+				_hp_tag.size.x = ceilf(UI.text_width(_hp_tag, _hp_tag.text)) + 8.0
 			_hp_tag.position = Vector2(clampf(at.x + w * 0.5 - _hp_tag.size.x * 0.5, 4.0, W * s - _hp_tag.size.x - 4.0), at.y - tag_h)
 			_hp_tag.modulate.a = r.modulate.a
 			_hp_tag.visible = true
@@ -1237,8 +1235,22 @@ class FigBar extends Control:
 	var hit := false
 	var finish := false
 
+	var redraws := 0                 # for the tests: redraws asked for (BUILD43: a bar standing still asks none)
+
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	## What the bar shows; drawn again only when it's moved (BUILD43, perf43: three bars redrawn every frame).
+	func look(p_share: float, p_dots: Dictionary, p_shield: float, p_hit: bool, p_finish: bool) -> void:
+		if p_share == share and p_dots == dots and p_shield == shield and p_hit == hit and p_finish == finish:
+			return
+		share = p_share
+		dots = p_dots
+		shield = p_shield
+		hit = p_hit
+		finish = p_finish
+		redraws += 1
+		queue_redraw()
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)

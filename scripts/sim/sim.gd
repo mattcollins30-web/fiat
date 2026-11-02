@@ -221,6 +221,7 @@ func _starter_loadout() -> void:
 	equipped["Rig"] = _plain("Rig", "Bum bag")
 	for k in range(2):
 		rig.append(_plain(Data.MEDICAL, "Bandage"))
+		_stats_dirty()
 
 
 const START_WEAPON := "Claw hammer"
@@ -366,17 +367,20 @@ func paragon_reset_free() -> void:
 	ring = {}
 	tree = tree.filter(func(id): return not is_ring(str(id)))
 	_dry_memo.clear()
+	_stats_dirty()
 
 
 func paragon_reset() -> bool:
 	if paragon_spent() == 0 or cash < paragon_reset_cost():
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	var paid := paragon_reset_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": paragon_spent(), "paragon": true})
 	ring = {}
 	tree = tree.filter(func(id): return not is_ring(str(id)))
+	_stats_dirty()
 	log_event(Words.LOG["paragon_reset"])
 	return true
 
@@ -401,11 +405,13 @@ func pitch_reset() -> bool:
 	if runner_busy() or pitch_nodes_spent() == 0 or cash < pitch_reset_cost():
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	var paid := pitch_reset_cost()
 	var pts := pitch_nodes_spent()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": pts, "pitch": true})
 	tree = tree.filter(func(id): return not is_pitch(str(id)))
+	_stats_dirty()
 	log_event(Words.LOG["pitch_reset"])
 	return true
 
@@ -419,11 +425,13 @@ func element_reset(el: String) -> bool:
 	if runner_busy() or element_spent(el) == 0 or cash < element_reset_cost(el):
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	var paid := element_reset_cost(el)
 	var pts := element_spent(el)
 	cash -= paid
 	chron("respec", {"cost": paid, "points": pts, "element": el})
 	tree = tree.filter(func(id): return element_of(str(id)) != el or is_element_starter(str(id)))
+	_stats_dirty()
 	log_event(Words.LOG["element_reset"] % str(Data.element_tree_of(el).get("name", el)))
 	return true
 
@@ -464,7 +472,8 @@ func _max_hp_raw() -> float:
 ## Damage a second: the primary while it has rounds, else the secondary at full
 ## (a third of it behind the primary, or all of it with Double tap), else fists.
 func dps() -> float:
-	if _trying or not (_dry_on or (fast_memo and mission != null)):
+	var live := not (_dry_on or (fast_memo and mission != null))
+	if _trying or (live and live_memo_off):
 		return _dps(null)
 	# the odds' runs and the reader's (15 Oct, refactor A4): the figure read twice a tick (dps, type_dps), so kept
 	# while nothing it reads has moved - each gun fed or not and by what, HP either side of half, the first lot, the
@@ -477,11 +486,30 @@ func dps() -> float:
 		feed.append(mission.get("mag_in", {}).values())     # the magazine in each gun: its grade (30 Oct)
 	var k := [feed, hp < max_hp() * 0.5, mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)), xp, wounds.keys(), _kit_ids(),
 		mission.get("fire_x", {}).values() if mission != null else []]     # the reloads (28 Oct)
+	if live:
+		return _live_dps(k)
 	var c = _dry_memo.get("dps")
 	if c != null and c[0] == k:
 		return c[1]
 	var v := _dps(null)
 	_dry_memo["dps"] = [k, v]
+	return v
+
+
+## dps() in the shell's play (BUILD43): kept in the live memo on the same key the dry memo's uses.
+func _live_dps(k: Array) -> float:
+	_live_sync()
+	var c = _live_memo.get("dps")
+	if c != null and c[0] == k:
+		if memo_check:
+			var fv := _dps(null)
+			if fv != float(c[1]):
+				memo_stale.append(["dps", c[1], fv, elapsed, mission != null])
+				_live_memo["dps"] = [k, fv]
+				return fv
+		return c[1]
+	var v := _dps(null)
+	_live_memo["dps"] = [k, v]
 	return v
 
 
@@ -651,6 +679,14 @@ func _class_gun_mult(it: Dictionary) -> float:
 
 
 func armour() -> float:
+	# BUILD43: read five times a paint, each a walk of the kit, the trees and the pack - kept in the live memo only: the
+	# dry runs, a try-on and fast_memo read it fresh as they always did (the dry memo would hold it, and move the odds)
+	if _trying or _dry_on or (fast_memo and mission != null):
+		return _armour_raw()
+	return _live_read("armour", _armour_raw)
+
+
+func _armour_raw() -> float:
 	var a := 0.0
 	for s in Data.SLOTS:
 		if equipped[s] != null:
@@ -712,6 +748,7 @@ func _wound(m: Dictionary) -> void:
 	wounds[area] = {"stat": str(spec["stat"]), "what": str(whats[rng.randi_range(0, whats.size() - 1)]), "from": str(tier(int(m.get("tier", 0)))["name"]),
 		"hp_pct": int(round(100.0 * hp / maxf(max_hp(), 1.0)))}
 	_dry_memo.clear()
+	_stats_dirty()
 	if spec["stat"] == "hp":
 		hp = minf(hp, max_hp())
 	log_event(Words.WOUNDS["took"] % [str(spec["name"]), str(wounds[area]["what"]), wound_stat_name(str(spec["stat"])), wound_pct(), wounds.size()])
@@ -1495,6 +1532,7 @@ func set_class(name: String) -> bool:
 	if runner_busy() or name == cls or Data.CLASSES.filter(func(c): return c["name"] == name).is_empty() or lead_out(name):     # a lead away on an expedition (29 Oct)
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	if cls == "":
 		cls = name                             # the first pick: this runner is that class's
 		chron("class", {"from": "", "to": name})
@@ -1518,6 +1556,7 @@ func set_class(name: String) -> bool:
 	else:
 		_runner_in(_new_runner())
 	tree = tree.filter(func(id): return not is_camp(str(id))) + pitch
+	_stats_dirty()
 	cls = name
 	_skills_known_only()
 	_caches_out()
@@ -1589,6 +1628,7 @@ func _runner_in(r: Dictionary) -> void:
 	rig = r.get("rig", [])
 	wounds = r.get("wounds", {})
 	tree = r.get("tree", [])
+	_stats_dirty()
 	training_points = int(r.get("training_points", 0))
 	best_level = int(r.get("best_level", 1))
 	runner_trait = str(r.get("trait", ""))
@@ -1615,6 +1655,7 @@ func _new_runner() -> Dictionary:
 	var r := {"xp": 0.0, "hp": Data.BASE_HP, "equipped": equipped, "rig": rig, "wounds": {}, "tree": [], "training_points": 0,
 		"best_level": 1, "trait": "", "candidates": [], "runner_runs": 0, "insure_next": false, "skill_slots": ["", "", ""], "skill_auto": [true, true, true]}
 	equipped = hold[0]
+	_stats_dirty()
 	rig = hold[1]
 	return r
 
@@ -1625,6 +1666,7 @@ func _new_runner() -> Dictionary:
 ## class's own tabs move with a swap); and the fast memo, which checks no key (runner_parts).
 func _caches_out() -> void:
 	_dry_memo.clear()
+	_stats_dirty()
 	_rules_key = []                            # the rules in play are the runner's (22 Oct)
 	_surv_cache = {}
 
@@ -1998,6 +2040,7 @@ func stamp(id: int) -> bool:
 	cash -= float(cost)
 	it["stamped"] = true
 	_dry_memo.clear()
+	_stats_dirty()
 	log_event(Words.STAMP["log"] % [Items.full_name(it), fiat_words(float(cost))])
 	chron("stamp", {"slot": str(it["slot"]), "fiat": cost})
 	return true
@@ -2127,6 +2170,7 @@ func _roll_weather() -> void:
 		return
 	weather_at = hour
 	_dry_memo.clear()                     # the weather is in the figures (fast_memo)
+	_stats_dirty()
 	for z in range(Data.ZONES.size()):
 		var odds: Array = Data.WEATHER_ODDS[mini(z, Data.WEATHER_ODDS.size() - 1)]
 		var r := rng.randf()
@@ -2872,6 +2916,7 @@ func build(kind: String, name: String) -> bool:
 	chron("build", {"name": name, "scrap": int(o["scrap"])})
 	log_event(Words.LOG["built"] % [int(o["scrap"]), name.to_lower()])
 	_dry_memo.clear()
+	_stats_dirty()
 	return true
 
 
@@ -2951,6 +2996,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 	if not stash.has(it):
 		_surv_cache = {}                       # a job on worn kit (the Workshop, 9 Oct): the odds read it again, the id is the same
 		_dry_memo.clear()
+		_stats_dirty()
 	if craft_in_notes(kind):
 		notes -= cost
 		log_event(Words.LOG["crafted_notes"] % [cost, it["base"].to_lower(), words_v])
@@ -3081,6 +3127,7 @@ func rank_atlas(key: String) -> bool:
 	if not can_rank_atlas(key):
 		return false
 	atlas[key] = atlas_rank(key) + 1
+	_stats_dirty()
 	chron("atlas", {"key": key, "rank": atlas[key]})
 	return true
 
@@ -3105,6 +3152,7 @@ func choose_runner(k: int) -> bool:
 	if candidates.is_empty() or k < 0 or k >= candidates.size():
 		return false
 	runner_trait = candidates[k]
+	_stats_dirty()                            # the trait multiplies HP, pace and damage
 	candidates = []
 	log_event(Words.LOG["runner_stays"] % [Data.TRAIT_WORDS.get(runner_trait, runner_trait.to_lower()), (" " + Words.TRAITS[runner_trait]) if Words.TRAITS.has(runner_trait) else ""])     # the trait's line (12 Oct): said of the one who stays
 	return true
@@ -3279,12 +3327,95 @@ func _memo(key: String, f: Callable) -> Variant:
 		_try_memo[key] = tv
 		return tv
 	if not (_dry_on or (fast_memo and mission != null)):
-		return f.call()
+		return _live_read(key, f)
 	if _dry_memo.has(key):
 		return _dry_memo[key]
 	var v = f.call()
 	_dry_memo[key] = v
 	return v
+
+
+## The live stat memo (1 Nov, BUILD43, perf43's cause 1: every stat worked out from scratch on every call, 12 ms of a
+## fight's frame). Where the dry memo and fast_memo aren't on - the shell's own play - a stat read is kept until
+## _stats_dirty() says something it reads has moved: kit worn, taken off, tempered or socketed, a tree or the ring
+## spent, a level, a wound, a buff, the sky, the rules, a run's start and end, a load. What moves inside a run without
+## a call (the rig's count, the pack, the clear, the soaking, the feed) is in _live_ctx, read on every hit; HP either
+## side of half is dps()'s own key, as the dry memo's. It must hand back what a fresh read would: `memo_check` reads each hit fresh as well and counts any
+## that differ (the smoke's check, tests/fingerprint.gd's `live` hash).
+var _live_memo := {}
+var _live_ctx_at: Array = []
+## Bumped wherever a stat can move: a screen's signature for "has the runner's figure moved" (the run screen's rig).
+var stat_v := 0
+static var live_memo_off := false        # the A/B switch: every read fresh, as before BUILD43
+static var memo_check := false           # each hit read fresh too; a differing one lands in memo_stale
+var memo_stale: Array = []
+
+
+func _stats_dirty() -> void:
+	stat_v += 1
+	_live_memo.clear()
+
+
+func _live_read(key: String, f: Callable) -> Variant:
+	if live_memo_off:
+		return f.call()
+	_live_sync()
+	if _live_memo.has(key):
+		var hv = _live_memo[key]
+		if memo_check:
+			var fv = f.call()
+			if typeof(fv) != typeof(hv) or fv != hv:
+				memo_stale.append([key, hv, fv, elapsed, mission != null])
+				_live_memo[key] = fv
+				return fv
+		return hv
+	var v = f.call()
+	_live_memo[key] = v
+	return v
+
+
+func _live_sync() -> void:
+	var ctx := _live_ctx()
+	if ctx != _live_ctx_at:
+		_live_ctx_at = ctx
+		_stats_dirty()
+
+
+## What a run moves under the stats without a call: compared on every live read, so it stays a handful of figures -
+## the level (a level-up mid-run: max HP), the rig's count (armour a med) and its loaded magazines (a gun's feed and
+## so its grade's conversion), at camp the front's level (the armour's cut), the pack's cells used (armour a free cell), the clear (the Milkman's pace), the Water
+## cannon's soaking, the run's plate, the magazine in each gun.
+func _live_ctx() -> Array:
+	var loaded := 0
+	for it in rig:
+		if int(it.get("rounds", 0)) > 0:
+			loaded += 1
+	var kit := []                             # what's worn by id, the trees' and the wounds' counts: cheap, and a piece
+	for sl in Data.SLOTS:                      # set straight in (a test's, or a path that forgot its call) is read afresh
+		kit.append(equipped[sl]["id"] if equipped[sl] != null else -1)
+	if mission == null:
+		return [false, level(), rig.size(), loaded, kit, tree.size(), wounds.size(), fight_level()]     # the front's level: the armour's cut at camp (review 43, 1)
+	var m: Dictionary = mission
+	var t: Dictionary = m.get("t", {})
+	return [true, level(), rig.size(), loaded, kit, tree.size(), wounds.size(), pack_used(m) if m.has("found") else 0, m.get("cleared", false), m.get("ghost_pending", false),
+		t.get("soaked", 0.0), m.get("buff_armour_pct", 0.0), Dictionary(m.get("mag_in", {})).values(), t.get("level", 0)]
+
+
+## The guard behind the calls (BUILD43): everything else a stat reads, hashed - the runner whole (runner_parts: the
+## kit by value, the trees, the level, the class, the skills), the wounds, the stash (its papers' rules), the Yard,
+## the lorries, the ring, the sky and the front. Read at each tick and each screen refresh, so a change some path
+## made without _stats_dirty() can't outlive the frame; the smoke's memo_check is what finds such a path.
+var _live_state_at := 0
+func live_guard() -> void:
+	if live_memo_off or _dry_on:
+		return
+	var h := hash([runner_parts(), wounds, stash.size(), _removed, yard_picks, yard_ranks, lorries, elements_open, weather, is_night(), front_tier(),
+		standing, atlas, issued, mission != null])     # the stash's count and what's gone from it: a paper's rule in or out
+	if h != _live_state_at:
+		_live_state_at = h
+		_stats_dirty()
+
+
 func _snapshot_rules() -> Dictionary:
 	var out := {}
 	for s in Data.SLOTS:
@@ -3407,6 +3538,7 @@ func _pin_class_elements() -> void:
 		var name: String = str(c["name"])
 		if not elements_open.has(name) and name != cls:
 			elements_open[name] = two.duplicate()
+			_stats_dirty()
 
 
 func _open_element(el: String) -> void:
@@ -3414,6 +3546,7 @@ func _open_element(el: String) -> void:
 	if not (el in list):
 		list.append(el)
 	elements_open[cls] = list
+	_stats_dirty()
 
 
 ## One of the class's two closed (free): its nodes stay the camp's, its meter stops for this class.
@@ -3424,6 +3557,7 @@ func close_element(el: String) -> bool:
 	list.erase(el)
 	elements_open[cls] = list
 	_dry_memo.clear()
+	_stats_dirty()
 	var et: Dictionary = Data.element_tree_of(el)
 	log_event(Words.LOG["element_closed"] % [et.get("name", el), cls])
 	chron("element_close", {"element": el})
@@ -3705,11 +3839,14 @@ func node_damage_gain(id: String) -> Array:
 	var keep: Array = tree.duplicate()             # put back as it was: the order is the order taken (the review)
 	if had:
 		tree.erase(id)
+		_stats_dirty()
 	else:
 		tree.append(id)
+		_stats_dirty()
 	_dry_memo = {}
 	var other: float = float(damage_split()["total"])
 	tree = keep
+	_stats_dirty()
 	_dry_memo = kept_memo
 	var with_it: float = now if had else other
 	var without: float = other if had else now
@@ -3721,6 +3858,7 @@ func train_node(id: String) -> bool:
 	if not can_train(id):
 		return false
 	_dry_memo.clear()                     # the memos read the tree (A4's review)
+	_stats_dirty()
 	var nd: Dictionary = node(id)
 	if is_element_starter(id):
 		if not tree.has(id):
@@ -3736,14 +3874,18 @@ func train_node(id: String) -> bool:
 	var held := keystone_held_against(id)
 	if held != "":
 		tree.erase(held)                  # the keystone choice: the one held goes, its points back (free_for reads the tree)
+		_stats_dirty()
 		log_event(Words.LOG["let_go"] % node(held)["name"])
 	if nd.has("ring"):
 		ring[id] = int(ring.get(id, 0)) + 1     # the ring (slice 4): a paragon point on the node, stacked
+		_stats_dirty()
 		if not tree.has(id):
 			tree.append(id)
+			_stats_dirty()
 		chron("paragon", {"key": str(nd["key"]), "points": paragon_pts(str(nd["key"]))})
 		return true
 	tree.append(id)
+	_stats_dirty()
 	log_event(Words.LOG["trained"] % nd["name"])
 	if nd.has("skill") and skill_known(str(nd["skill"])) and mission == null and not skill_slots.has(str(nd["skill"])):
 		var free_slot: int = skill_slots.find("")
@@ -3781,10 +3923,12 @@ func respec() -> bool:
 	if not can_respec():
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	var paid := respec_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": points_spent()})
 	tree = tree.filter(func(id): return is_camp(str(id)))     # the class's region (and its bridge, slice 3) back to points; the camp's stay
+	_stats_dirty()
 	_skills_known_only()
 	log_event(Words.LOG["training_reset"])
 	return true
@@ -4219,6 +4363,7 @@ func mag_swap(stash_id: int, rig_id: int) -> bool:
 		stash.append(b)
 	_fill_mags()
 	_dry_memo.clear()
+	_stats_dirty()
 	return true
 
 
@@ -4309,6 +4454,7 @@ func _mag_load(m: Dictionary, slot: String, it: Dictionary) -> void:
 	else:
 		m["mag_in"][slot] = int(it["id"])
 	_dry_memo.erase("conversion")
+	_stats_dirty()
 
 
 ## The magazines before a tick's fire (28 Oct; 30 Oct, as items): a reload under way runs on, the tick's share of fire
@@ -4516,6 +4662,7 @@ func _refills_tick(m: Dictionary, dt: float, all_done := false) -> void:
 			m["found"].erase(box)
 		_mag_load(m, slot, mg)
 		_dry_memo.clear()
+		_stats_dirty()
 
 
 ## Shots out of a slot's magazine (28 Oct; 30 Oct, as items): rounds come off the magazine in the gun; empty, the next
@@ -5159,9 +5306,18 @@ func _pack_settle(m: Dictionary) -> void:
 			f.erase("strapped")
 
 
-## Every piece placed, or strapped on, before the pack is drawn.
+## Every piece placed, or strapped on, before the pack is drawn. Settled again only when the pack has moved since
+## (BUILD43: a full pack's strapped pieces tried every cell each paint, 17 ms of it): a settled pack settles to itself.
+var _layout_sig := 0
+var _layout_m = null
+var pack_settles := 0                          # for the tests: the paints that settled the pack
 func pack_layout(m: Dictionary) -> void:
+	if is_same(m, _layout_m) and hash([pack_w(), capacity(), m["found"]]) == _layout_sig:
+		return
+	pack_settles += 1
 	_pack_settle(m)
+	_layout_m = m
+	_layout_sig = hash([pack_w(), capacity(), m["found"]])
 
 
 ## The player's drag: a piece in the pack to (x, y), turned or not. False when it won't lie there.
@@ -5996,6 +6152,7 @@ func yard_pick(key: String, col: int, side: String) -> bool:
 	sides[col] = "ab" if second else side
 	var before := _yard_before()
 	yard_picks[key] = sides
+	_stats_dirty()
 	_yard_changed(key)
 	_yard_grew(before)
 	var pk: Dictionary = b["picks"][col][0 if side == "a" else 1]
@@ -6055,6 +6212,7 @@ func buy_yard_rank(key: String) -> bool:
 	cash -= yard_rank_cost(key)
 	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_rank_salvage(key)
 	yard_ranks[key] = yard_rank(key) + 1
+	_stats_dirty()
 	_yard_changed(key)
 	log_event(Words.LOG["yard_rank"] % [b["name"], yard_rank(key), _first_lower(str(b["rank"]["words"]))])
 	return true
@@ -6086,11 +6244,22 @@ func _yard_buyable_ids() -> Array:
 ## The rail's badge (Matt, 9 Oct: lit nearly always, so it was ignored): only for news - a column opened since
 ## the Yard was last looked at, or something buyable that wasn't when it was. Looking clears it.
 func yard_news() -> bool:
-	if yard_cols() > yard_seen_cols:
+	var cols: int = yard_cols()
+	if cols > yard_seen_cols:
 		return true
-	for id in _yard_buyable_ids():
-		if not yard_seen.has(id) and not str(id).ends_with("+"):
-			return true                        # a column's other side lights nothing (the review: every first side built would)
+	# _yard_buyable_ids' list, each id's price read only when it's one not yet seen (BUILD43: the rail read every price
+	# and every column's count ten times a second, 1.2 ms a paint): true for the same ids
+	for b in Data.YARD:
+		var have: int = int(salvage.get(b["salvage"], 0))
+		for c in range(mini(cols, b["picks"].size())):
+			if yard_side(b["key"], c) != "" or yard_seen.has("%s/%d" % [b["key"], c]):
+				continue                       # a column's other side lights nothing (the review: every first side built would)
+			var next_side: bool = ["a", "b"].any(func(sd): return not yard_built_side(b["key"], c, sd) and (c == 0 or yard_built_side(b["key"], c - 1, sd)))     # a line's next step (28 Oct)
+			if next_side and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
+				return true
+		if cols >= Data.YARD_COLS and (yard_built_side(b["key"], 4, "a") or yard_built_side(b["key"], 4, "b")) and not yard_seen.has("%s/r%d" % [b["key"], yard_rank(b["key"]) + 1]) \
+				and cash >= yard_rank_cost(b["key"]) and have >= yard_rank_salvage(b["key"]):
+			return true
 	return false
 
 
@@ -6104,6 +6273,7 @@ func yard_mark_seen() -> void:
 func _yard_changed(_key: String) -> void:
 	_yard_dirty = true
 	_dry_memo.clear()
+	_stats_dirty()
 	_surv_cache = {}                          # the odds read the Yard too: the Jammer, the Med lab, the Charger
 	if not yard_has("dry_store"):
 		# the Dry store gone (a guard: no refit takes a pick away since 24 Oct, option B; a fixture can): its second tabs fold into the first, the class out's and the crew's
@@ -6241,6 +6411,7 @@ func fit(slot: String, id: int) -> bool:
 			if gun["attachments"][mount] != null:
 				stash_put(gun["attachments"][mount])
 			gun["attachments"][mount] = going
+			_stats_dirty()
 			return true
 	return false
 
@@ -6269,6 +6440,7 @@ func fit_socket(slot: String, mount: String, id: int) -> bool:
 			if it_at["attachments"][mount] != null:
 				stash_put(it_at["attachments"][mount])
 			it_at["attachments"][mount] = going
+			_stats_dirty()
 			return true
 	return false
 
@@ -6283,6 +6455,7 @@ func strip(slot: String, mount: String) -> bool:
 		return false
 	stash_put(gun["attachments"][mount])
 	gun["attachments"][mount] = null
+	_stats_dirty()
 	return true
 
 
@@ -7085,6 +7258,7 @@ func set_depth(i: int, d: int) -> void:
 	if not runner_busy():                     # away (29 Oct): the site's level stands while the repeat's on it
 		var top: int = best_depth[i] + 1 if campaign_done() else 1     # the ladder is the endgame's
 		depth[i] = clampi(d, 1, top)
+		_stats_dirty()                        # the front's level: the armour's cut at camp (review 43, 1)
 
 
 # ------------------------------------------------------------------ the rebuild (18 Oct, docs/design/rebuild.md)
@@ -8233,10 +8407,12 @@ func read_as_class(name: String, fn: Callable, lift := true, rested := false) ->
 	var hp0: float = hp
 	var whole: bool = rested or hp >= max_hp() - 0.001
 	xp = maxf(xp, Data.xp_for_level(jl)) if jl > 0 else xp
+	_stats_dirty()
 	if whole:
 		hp = max_hp()                          # at the lifted level
 	var out = fn.call()
 	xp = x0                                    # the bench keeps its own level: the floor's taken on the swap
+	_stats_dirty()
 	hp = hp0
 	if swap:
 		_read_back(h)
@@ -8259,6 +8435,7 @@ func _read_as(name: String) -> Dictionary:
 	var h := {"out": _runner_out(), "cls": cls, "pitch": tree.filter(func(id): return is_camp(str(id))), "surv": _surv_cache}     # the camp's whole: the Pitch, the elements, the ring (25 Oct, the review: is_pitch dropped the rest for good)
 	_runner_in(roster[name])
 	tree = tree + h["pitch"]
+	_stats_dirty()
 	cls = name
 	_caches_out()
 	return h
@@ -8271,6 +8448,7 @@ func _read_back(h: Dictionary) -> void:
 		roster[cls]["tab_items"] = tabs        # the class's own stash tabs stay with it (the merge's review: a read dropped them)
 	_runner_in(h["out"])
 	tree = tree + h["pitch"]
+	_stats_dirty()
 	cls = str(h["cls"])
 	_caches_out()
 	_surv_cache = h["surv"]
@@ -8585,7 +8763,10 @@ func survival(i: int) -> float:
 		if k > 0 and _odds_time_up():
 			break
 		_dry_last = {}                        # the tally pairs with this run alone (the review: a probe's run could sit there)
-		if _dry_run(i, c[4]):
+		var went: int = _dry_run_stepped(i, c)
+		if went < 0:
+			break                             # parked at the frame's end (BUILD43): it goes on in the next
+		if went == 1:
 			c[3] += 1
 		c[2] += 1
 		_tally(i, key)
@@ -8607,6 +8788,42 @@ func survival(i: int) -> float:
 	c[1] = float(c[3]) / maxf(1.0, c[2])
 	prof["surv_us"] += Time.get_ticks_usec() - p0
 	return c[1]
+
+
+## The Map's read steps a dry run across frames (BUILD43): the shell sets it around the reads it makes in its few
+## milliseconds a frame (main._read_odds), and nothing else does - the bot, the reads and the gate run each whole.
+var odds_step := false
+
+
+## One dry run of the read `c`: 1 back, 0 lost, -1 parked. With odds_step and a frame's time set, a run stops when
+## the time's up and is kept on the read itself (c[6]) for the next call; one parked there is taken up first, and
+## run to its end when the call isn't the Map's (the gate's read at deploy).
+func _dry_run_stepped(i: int, c: Array) -> int:
+	var stepping: bool = odds_step and odds_time_ms > 0.0
+	var job = c[6] if c.size() > 6 else null
+	if job != null and int(job["who"]) != runner_key():
+		(c[4] as RandomNumberGenerator).state = int(job["dice"])     # the runner's moved under a parked run (a piece by value, a
+		job = null                                                   # node): it starts again, on the dice it started on
+		c[6] = null
+	if job == null:
+		if not stepping:
+			return 1 if _dry_run(i, c[4]) else 0
+		var who := runner_key()
+		var dice: int = (c[4] as RandomNumberGenerator).state
+		job = _dry_begin(i, c[4])
+		job["who"] = who
+		job["dice"] = dice
+	else:
+		c[6] = null
+		_dry_resume(job)
+	if not _dry_steps(job, (_odds_t0 + int(odds_time_ms * 1000.0)) if stepping else -1):
+		_dry_park(job)
+		if c.size() > 6:
+			c[6] = job
+		else:
+			c.append(job)
+		return -1
+	return 1 if _dry_finish(job) else 0
 
 
 ## What the dry runs saw (23 Oct, parked item 7, Matt: "we need to do a better job of telling players why the odds
@@ -8748,6 +8965,16 @@ func odds_settled(i: int) -> bool:
 const DRY_STEP := 2.0
 const BAIL := 0.25                   # the HP a player (and the bots) get out at: the odds count that as lost
 func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
+	var job := _dry_begin(i, r)
+	_dry_steps(job, -1)
+	return _dry_finish(job)
+
+
+## A dry run in three parts (BUILD43, perf43's cause 4: one of 17-50 ms couldn't be split, and the Map's frames ran
+## over their 5 ms of odds): _dry_run calls them back to back, as it always ran; the Map's read (odds_step) parks one
+## at its frame's end (_dry_park) and takes it up in the next (_dry_resume) - the same ticks on the same dice in the
+## same order, so the odds read the same. The job: the live state kept, the scratch mission, the ticks so far.
+func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 	var p0 := Time.get_ticks_usec()
 	prof["dry_runs"] += 1
 	var t := effective(i)
@@ -8781,9 +9008,21 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_dry_memo = {}
 	_dry_on = true
 	_gang_arrives(m)                          # Guard at the first gang, as a run (12 Oct); after the memo's reset (the review)
-	var guard_v := 0
 	_dry_min_hp = 1.0
+	return {"keep": keep, "m": m, "pool": pool, "guard": 0, "elapsed": elapsed, "live_elapsed": elapsed}
+
+
+## The run's ticks, until it ends or the clock passes `until_us` (-1: to its end). True when it's ended. At least one
+## tick a call, so a parked run always moves on.
+func _dry_steps(job: Dictionary, until_us: int) -> bool:
+	var m: Dictionary = job["m"]
+	var guard_v: int = job["guard"]
+	var n := 0
 	while guard_v < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
+		if until_us >= 0 and n > 0 and Time.get_ticks_usec() >= until_us:
+			job["guard"] = guard_v
+			return false
+		n += 1
 		_tick(DRY_STEP)
 		prof["dry_ticks"] += 1
 		_dry_min_hp = minf(_dry_min_hp, hp / maxf(max_hp(), 1.0))
@@ -8798,6 +9037,15 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		if m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 			use_med(first_med()["id"])
 		guard_v += 1
+	job["guard"] = guard_v
+	return true
+
+
+func _dry_finish(job: Dictionary) -> bool:
+	var m: Dictionary = job["m"]
+	var guard_v: int = job["guard"]
+	var pool: int = job["pool"]
+	var keep: Dictionary = job["keep"]
 	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard_v < 450     # out of time reads as dead
 	_dry_last = {"alive": alive, "timed": not alive and (m.get("timed_out", false) or guard_v >= 450), "kills": int(m["kills"]), "pool": maxi(1, pool),
 		"elapsed": float(m["elapsed"]), "taken": float(m.get("taken", 0.0)), "taken_by": m.get("taken_by", {}), "min_hp": _dry_min_hp}     # for the tally (23 Oct)
@@ -8813,7 +9061,43 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	best_level = keep["best_level"]
 	insure_next = keep["insure_next"]
 	events_total = keep["events_total"]
+	elapsed = job["live_elapsed"]
 	return alive
+
+
+## What a dry run swaps in for its ticks: the keep's (the runner's HP, XP, rig, log, the run, the dice), and the dry
+## memo's own. A parked job holds its own of these; the live ones go back while it waits.
+const DRY_KEPT := ["hp", "xp", "rig", "events", "mission", "rng", "promised", "training_points", "best_level", "insure_next", "events_total"]
+const DRY_OWN := ["_dry_rules", "_dry_memo", "_dry_min_hp"]
+
+
+## A dry job stops at the frame's end: its state put by, the live state back as it was when it took up.
+func _dry_park(job: Dictionary) -> void:
+	var own := {}
+	for k in DRY_KEPT + DRY_OWN:
+		own[k] = get(k)
+	job["own"] = own
+	_dry_memo = {}                            # the live game's own while it waits: a clear there leaves the run's alone (review 43, 6)
+	_dry_rules = {}
+	_dry_on = false
+	for k in DRY_KEPT:
+		set(k, job["keep"][k])
+	elapsed = job["live_elapsed"]
+
+
+## And takes up again: the live state kept as it is now (what goes back at its end or its next stop), its own put in,
+## the clock held where it started (a run reads one moment, as one frame's run did).
+func _dry_resume(job: Dictionary) -> void:
+	var keep := {}
+	for k in DRY_KEPT:
+		keep[k] = get(k)
+	job["keep"] = keep
+	job["live_elapsed"] = elapsed
+	elapsed = job["elapsed"]
+	for k in DRY_KEPT + DRY_OWN:
+		set(k, job["own"][k])
+	job.erase("own")
+	_dry_on = true
 
 
 func deploy(i: int) -> void:
@@ -8826,6 +9110,7 @@ func deploy(i: int) -> void:
 	_top_up(i if _repeat_going else -1)       # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9)
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
+	_stats_dirty()
 	_memo_age = 0.0
 	var t := effective(i)
 	var sig_head: bool = not _sig.is_empty() and int(_sig["site"]) == i     # a signal's head comes with it: the papers paid
@@ -8912,10 +9197,15 @@ func advance(seconds: float) -> void:
 		fiat_rate = move_toward(fiat_rate, 1.0, Data.RATE_RECOVER_H * seconds / 3600.0)     # the rate drifts back
 	if issued and circulation > 0.0:
 		circulation *= pow(0.5, seconds / (Data.CIRC_HALF_H * 3600.0))     # the fiat about drains, and the prices drift back (Matt, 26 Oct)
+	live_guard()                             # the live memo's guard (BUILD43): once a frame, and each further step of a long advance
 	if hp > max_hp():
 		hp = max_hp()                        # the max can drop when kit comes off
 	var left := seconds
+	var steps := 0
 	while left > 0.0:
+		if steps > 0:
+			live_guard()
+		steps += 1
 		if mission != null:
 			var step := minf(1.0, left)
 			var p0 := Time.get_ticks_usec()
@@ -8924,6 +9214,7 @@ func advance(seconds: float) -> void:
 				if _memo_age >= FAST_MEMO_S:
 					_memo_age = 0.0
 					_dry_memo.clear()
+					_stats_dirty()
 			_tick(step)
 			if mission != null and bool(mission.get("unwatched", false)):
 				_unwatched_step()                 # a repeat's run (29 Oct): the bail at once, a med under 40%
@@ -9103,6 +9394,7 @@ func _time_out(m: Dictionary) -> void:
 		lost_slots.append(s)
 		var it: Dictionary = equipped[s]
 		equipped[s] = null
+		_stats_dirty()
 		lost.append(Items.full_name(it).to_lower() if not it.has("unique") else Items.full_name(it))
 		if insured:
 			stash.append(it)                     # the Fence held the paper on it
@@ -9119,6 +9411,7 @@ func _time_out(m: Dictionary) -> void:
 	for s in lost_slots:
 		if start_v.has(s):
 			equipped[s] = _plain(s, start_v[s])
+			_stats_dirty()
 	var kept_pack: bool = insured and yard_has("insurance_desk")
 	var carried := ""
 	if not kept_pack and not m["found"].is_empty():
@@ -9134,6 +9427,7 @@ func _time_out(m: Dictionary) -> void:
 		m["left"] = int(m["left"]) + rest.size()
 		m["found"] = keep
 	_dry_memo.clear()
+	_stats_dirty()
 	# the line says it all (16 Oct, Matt's playtest): what went, the rig's contents with the rig, where it went, and why
 	var rig_gone: bool = "Rig" in lost_slots and not insured
 	log_event(Words.LOG["out_of_time"] % [Words.mid(t["name"]), "" if lost.is_empty() else ", and %s with it" % " and ".join(lost),
@@ -9436,6 +9730,7 @@ func _rest_off_wounds() -> void:
 	for area in wounds.keys():
 		if not before.has(area) or not same.call(before[area], wounds[area]):
 			wounds.erase(area)
+			_stats_dirty()
 			changed = true
 	if changed:
 		_caches_out()
@@ -9904,6 +10199,7 @@ func apply_pattern(it: Dictionary, k: int) -> bool:
 	patterns.remove_at(k)
 	_rules_key = []                            # the rules read again: an item worn took a rule
 	_dry_memo.clear()
+	_stats_dirty()
 	chron("pattern_on", {"unique": str(pt["unique"]), "tins": int(c["tins"])})
 	log_event(Words.PATTERNS["put_on"] % [Items.full_name(it), pt["unique"]])
 	return true
@@ -10348,7 +10644,10 @@ func _event_arrive(m: Dictionary) -> void:
 		"threat":
 			ev["n"] = clampi(PATROL_BASE + int(m["patrols"]) + Data.DOGS_MORE, 2, Data.DOGS_MAX)
 			ev["close_t"] = Data.DOGS_CLOSE_S
-			ev["odds"] = _dogs_read(m, int(ev["n"]))     # read once as they come: the face, and the standing order's
+			if asks and not m.get("unwatched", false):
+				_dogs_job = {"ev": ev, "job": _dogs_begin(m, int(ev["n"]))}     # a watched run: taken now, read a few ms a frame (BUILD43)
+			else:
+				ev["odds"] = _dogs_read(m, int(ev["n"]))     # read once as they come: the face, and the standing order's
 			lines = Words.EV["dogs"][z]
 		"trader":
 			ev["who"] = "scrap_man"
@@ -10550,6 +10849,7 @@ func _event_close(m: Dictionary, outcome: String) -> void:
 	ev["outcome"] = outcome
 	ev["done_at"] = float(m["elapsed"])
 	_dry_memo.clear()
+	_stats_dirty()
 
 
 ## Time an event's choice costs: the gang clock moves on (the next gang that much sooner) and the run's clock spends it.
@@ -10597,7 +10897,10 @@ func dogs_odds() -> float:
 	if ev.is_empty() or str(ev["fam"]) != "threat":
 		return 0.0
 	if not ev.has("odds"):
-		ev["odds"] = _dogs_read(mission, int(ev["n"]))
+		if not _dogs_job.is_empty() and is_same(_dogs_job["ev"], ev):
+			_dogs_job_run(-1)                     # the read begun as they came, to its end now (BUILD43)
+		else:
+			ev["odds"] = _dogs_read(mission, int(ev["n"]))
 	return float(ev["odds"])
 
 
@@ -10607,34 +10910,65 @@ func dogs_odds() -> float:
 ## they're all down. Nothing kept - HP, XP, the rig, the log, the run and the run's dice go back as they were.
 ## `as_t`, given, reads that gang instead (a normal gang of the site's, for the dogs' tuning and its check).
 func _dogs_read(live: Dictionary, n: int, as_t: Dictionary = {}) -> float:
+	var job := _dogs_begin(live, n, as_t)
+	_dogs_steps(job, -1)
+	return _dogs_finish(job)
+
+
+## The dogs' read in parts (BUILD43, perf43's spike: six dry fights, 267-314 ms in one frame), as the dry run's: what
+## the fights start from taken as the dogs come (HP, the rig, the pack's boxes, the magazines, Guard), the fights run
+## back to back by _dogs_read, or a few ms a frame on a watched run (dogs_read_step) while they stand.
+func _dogs_begin(live: Dictionary, n: int, as_t: Dictionary = {}) -> Dictionary:
 	var site_t: Dictionary = live.get("dogs_home", live["t"])
 	var d: Dictionary = dogs_t(site_t) if as_t.is_empty() else as_t
 	var keep := {"hp": hp, "xp": xp, "rig": rig.duplicate(true), "events": events.duplicate(true), "mission": mission,
 		"rng": rng, "promised": promised, "training_points": training_points, "best_level": best_level, "insure_next": insure_next, "events_total": events_total}
-	var won := 0
-	for k in range(Data.DOG_READS):
-		var r := RandomNumberGenerator.new()
-		r.seed = hash([int(live["tier"]), n, roundi(keep["hp"])]) + k
-		rng = r
-		hp = keep["hp"]
-		rig = keep["rig"].duplicate(true)
-		var m := {
-			"tier": int(live["tier"]), "t": d, "remaining": n, "target_hp": float(d["hp"]), "kills": 0, "found": live["found"].filter(func(x): return Items.is_ammo(x)).duplicate(true), "insured": false, "clock": 1e9,
-			"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": true, "guard": float(live.get("guard", 0.0)),
-			"search": 0.0, "searches": 0, "patrol_timer": -1e9, "patrols": 0, "last_incoming": 0.0,
-			"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 0.0, "event": "", "event_at": -1.0, "dry": true,
-		}
-		for mk in ["fire_x", "mag_in", "reload_t", "reload_to", "refill"]:
-			if live.has(mk):
-				m[mk] = live[mk].duplicate(true)     # the magazines as they stand, and the pack's boxes above: the refills a fight has
-		_combo_warm(m)
-		mission = m
-		_dry_rules = _snapshot_rules()
-		_dry_memo = {}
-		_dry_on = true
-		_gang_arrives(m)
-		var guard_v := 0
+	var mags := {}
+	for mk in ["fire_x", "mag_in", "reload_t", "reload_to", "refill"]:
+		if live.has(mk):
+			mags[mk] = live[mk].duplicate(true)     # the magazines as they stand, and the pack's boxes below: the refills a fight has
+	return {"keep": keep, "d": d, "n": n, "tier": int(live["tier"]), "guard_hp": float(live.get("guard", 0.0)),
+		"ammo": live["found"].filter(func(x): return Items.is_ammo(x)).duplicate(true), "mags": mags, "k": 0, "won": 0, "m": null, "guard": 0,
+		"elapsed": elapsed, "live_elapsed": elapsed}
+
+
+## The fights, until the last is done or the clock passes `until_us` (-1: to the end); true when they're all done.
+## Expects the live state in place between fights and the fight's own in one (as _dry_steps).
+func _dogs_steps(job: Dictionary, until_us: int) -> bool:
+	var keep: Dictionary = job["keep"]
+	var d: Dictionary = job["d"]
+	var n: int = job["n"]
+	var ticks := 0
+	while int(job["k"]) < Data.DOG_READS:
+		var m = job["m"]
+		if m == null:
+			var r := RandomNumberGenerator.new()
+			r.seed = hash([int(job["tier"]), n, roundi(keep["hp"])]) + int(job["k"])
+			rng = r
+			hp = keep["hp"]
+			rig = keep["rig"].duplicate(true)
+			m = {
+				"tier": int(job["tier"]), "t": d, "remaining": n, "target_hp": float(d["hp"]), "kills": 0, "found": Array(job["ammo"]).duplicate(true), "insured": false, "clock": 1e9,
+				"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": true, "guard": float(job["guard_hp"]),
+				"search": 0.0, "searches": 0, "patrol_timer": -1e9, "patrols": 0, "last_incoming": 0.0,
+				"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 0.0, "event": "", "event_at": -1.0, "dry": true,
+			}
+			for mk in job["mags"]:
+				m[mk] = job["mags"][mk].duplicate(true)
+			_combo_warm(m)
+			mission = m
+			_dry_rules = _snapshot_rules()
+			_dry_memo = {}
+			_dry_on = true
+			_gang_arrives(m)
+			job["m"] = m
+			job["guard"] = 0
+		var guard_v: int = job["guard"]
 		while guard_v * Data.DOG_READ_STEP < Data.DOG_READ_MAX_S and not m.get("dead", false):
+			if until_us >= 0 and ticks > 0 and Time.get_ticks_usec() >= until_us:
+				job["guard"] = guard_v
+				return false
+			ticks += 1
 			_tick(Data.DOG_READ_STEP)
 			if hp < max_hp() * BAIL:
 				m["dead"] = true
@@ -10644,8 +10978,15 @@ func _dogs_read(live: Dictionary, n: int, as_t: Dictionary = {}) -> float:
 				use_med(first_med()["id"])
 			guard_v += 1
 		if not m.get("dead", false) and int(m["remaining"]) <= 0:
-			won += 1
+			job["won"] = int(job["won"]) + 1
 		_dry_on = false
+		job["m"] = null
+		job["k"] = int(job["k"]) + 1
+	return true
+
+
+func _dogs_finish(job: Dictionary) -> float:
+	var keep: Dictionary = job["keep"]
 	hp = keep["hp"]
 	xp = keep["xp"]
 	rig = keep["rig"]
@@ -10657,8 +10998,66 @@ func _dogs_read(live: Dictionary, n: int, as_t: Dictionary = {}) -> float:
 	best_level = keep["best_level"]
 	insure_next = keep["insure_next"]
 	events_total = keep["events_total"]
+	elapsed = job["live_elapsed"]
 	_dry_memo.clear()
-	return float(won) / float(Data.DOG_READS)
+	_stats_dirty()
+	return float(job["won"]) / float(Data.DOG_READS)
+
+
+## The dogs' read on a watched run (BUILD43): begun as they come (_event_arrive, the moment the old read was taken),
+## stepped a few ms a frame by the shell; the panel reads "reading…" until it's done. Not saved: a load reads afresh.
+var _dogs_job := {}
+
+
+## Whether the dogs' odds are still being read: the panel's "reading…".
+func dogs_reading() -> bool:
+	var ev: Dictionary = event_now()
+	return not _dogs_job.is_empty() and is_same(_dogs_job["ev"], ev) and not ev.has("odds")
+
+
+## The shell's frame: the dogs' read on for `ms`, from where it stopped. Done, the odds go on the event as the old
+## read put them there.
+func dogs_read_step(ms: float) -> void:
+	if _dogs_job.is_empty():
+		return
+	var ev: Dictionary = event_now()
+	if not is_same(_dogs_job["ev"], ev) or ev.has("odds") or mission == null or not dogs_waiting(mission):
+		_dogs_job = {}                        # gone, read some other way (dogs_odds at the order's call), or answered: nothing reads it now
+		return
+	_dogs_job_run(Time.get_ticks_usec() + int(ms * 1000.0))
+
+
+## The job on to `until_us` (-1: the end): its own state in for the ticks, the live state back after.
+func _dogs_job_run(until_us: int) -> void:
+	var job: Dictionary = _dogs_job["job"]
+	var live := {}
+	for k in DRY_KEPT:
+		live[k] = get(k)
+	var live_elapsed := elapsed
+	elapsed = job["elapsed"]                  # the read's moment, as the old read was one frame's
+	var own: Dictionary = _dogs_job.get("own", {})
+	for k in own:
+		set(k, own[k])
+	if job["m"] != null:
+		_dry_on = true
+	var done := _dogs_steps(job, until_us)
+	if done:
+		job["live_elapsed"] = live_elapsed
+		job["keep"] = live                    # what goes back is the live state as it is now
+		var ev: Dictionary = _dogs_job["ev"]
+		_dogs_job = {}
+		ev["odds"] = _dogs_finish(job)
+		return
+	var keep_own := {}
+	for k in DRY_KEPT + DRY_OWN:
+		keep_own[k] = get(k)
+	_dogs_job["own"] = keep_own
+	_dry_memo = {}                            # as _dry_park (review 43, 6)
+	_dry_rules = {}
+	_dry_on = false
+	for k in DRY_KEPT:
+		set(k, live[k])
+	elapsed = live_elapsed
 
 
 ## The run's own odds, as the Runs card read them at the gate (a threat's standing order); EVENT_FIGHT_AT unread.
@@ -10692,6 +11091,7 @@ func dogs_fight() -> bool:
 	m["sustain_t"] = 0.0
 	_gang_arrives(m)
 	_dry_memo.clear()
+	_stats_dirty()
 	log_event(Words.EV["dogs_on"])
 	return true
 
@@ -10835,6 +11235,7 @@ func trader_buy(key: String) -> bool:
 	else:
 		log_event(Words.EV["traded_free"])
 	_dry_memo.clear()
+	_stats_dirty()
 	_memo_age = 0.0
 	return true
 
@@ -11786,6 +12187,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		if not lorry_done:
 			lorry_done = true
 			lorries += 1
+			_stats_dirty()                     # the lorries multiply damage and HP: read afresh this tick (review 43, 4)
 			chron("lorry", {"lorries": lorries})
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
@@ -13023,6 +13425,7 @@ func _kia() -> void:
 	_dead_haul_said(m, hauled, dead_e)
 	for s in Data.SLOTS:
 		equipped[s] = null
+		_stats_dirty()
 	rig = []
 	operators_lost += 1
 	if level() >= Data.MAX_LEVEL:
@@ -13052,6 +13455,7 @@ func _kia() -> void:
 	else:
 		xp = 0.0
 	wounds = {}                          # theirs, gone with them
+	_stats_dirty()
 	hp = Data.BASE_HP
 	_signal_done(m, true)
 	_sweep_papers()                           # a paper the insurance or the dog brought home: the Radio's pile
@@ -13125,6 +13529,7 @@ func _refund_runner_trees() -> void:
 			kept.append(id)                  # the Pitch's and the elements' (slice 3) are the camp's: they stay
 	tree = kept
 	_dry_memo.clear()
+	_stats_dirty()
 	_skills_known_only()                     # the dead runner's skills leave the slots with his trees (the second review)
 	var freed := spent_before - points_spent()
 	if freed > 0:
@@ -13477,6 +13882,7 @@ func equip_best(slot: String) -> bool:
 	if equipped[slot] != null:
 		stash.append(equipped[slot])
 	equipped[slot] = best
+	_stats_dirty()
 	if slot == "Rig":
 		_rig_shed()
 	_feed(best)
@@ -13668,6 +14074,7 @@ func swap_with_parts(id: int) -> bool:
 			stash_put(on_kit["attachments"][mount])     # what won't go: off the old piece into the stash
 			on_kit["attachments"][mount] = null
 	_dry_memo.clear()
+	_stats_dirty()
 	var off: Array = Array(mv["left"]) + Array(mv["bumped"]).map(func(a): return str(a["base"]))
 	var nm: String = Words.mid(Items.full_name(new_piece)) if new_piece.has("unique") else "the " + Words.mid_base(Items.full_name(new_piece))     # never lowered whole (the language review)
 	log_event(Words.LOG["swapped"] % [nm, moved_n, (", %s to the stash" % ", ".join(off)) if not off.is_empty() else ""])
@@ -13685,6 +14092,7 @@ func set_top_up(mode: String) -> void:
 	if mode in TOP_UP_MODES and mode != top_up_mode:
 		top_up_mode = mode
 		_dry_memo.clear()
+		_stats_dirty()
 
 
 ## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash; 30 Oct,
@@ -13707,6 +14115,7 @@ func _top_up(at := -1) -> void:
 		f = [int(f[0]) + int(f2[0]), Array(f[1]) + Array(f2[1]).filter(func(g): return not (g in f[1]))]
 	if int(f[0]) > 0 or int(got[0]) > 0 or int(got[1]) > 0:
 		_dry_memo.clear()
+		_stats_dirty()
 	if int(got[0]) > 0 or int(got[1]) > 0:
 		log_event(Words.topped_up(int(got[0]), int(got[1])))
 	if int(f[0]) > 0:
@@ -14052,6 +14461,7 @@ func equip_item(id: int) -> bool:
 			if equipped[slot] != null:
 				stash.append(equipped[slot])
 			equipped[slot] = it
+			_stats_dirty()
 			if slot == "Rig":
 				_rig_shed()
 			return true
@@ -14064,9 +14474,11 @@ func rig_overflow(rig_it) -> Array:
 	var was = equipped["Rig"]
 	equipped["Rig"] = rig_it
 	_dry_memo.clear()
+	_stats_dirty()
 	var cap: int = med_capacity()
 	equipped["Rig"] = was
 	_dry_memo.clear()
+	_stats_dirty()
 	var used: int = rig_used()
 	var out: Array = []
 	var k: int = rig.size() - 1
@@ -14087,6 +14499,7 @@ func _rig_shed(line := Words.SMALLER_RIG) -> void:
 		back.append(it)
 	if not back.is_empty():
 		_dry_memo.clear()
+		_stats_dirty()
 		var th: Array = _things(back)
 		log_event(line % Words.things_list(th[0], th[1]))     # repeats counted (the three-stage review, UI 13)
 
@@ -14124,6 +14537,7 @@ func take(id: int) -> bool:
 	if rig.any(func(x): return int(x["id"]) == id and Items.is_mag(x)):
 		_fill_mags()                          # filled from the stash's boxes, as Swap does (the three-stage review, UI 2)
 		_dry_memo.clear()
+		_stats_dirty()
 	return true
 
 
@@ -14188,6 +14602,7 @@ func equip_from_pack(id: int) -> bool:
 				log_event(Words.LOG["equipped"] % _log_name(it))
 			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(was)})
 			equipped[slot] = it
+			_stats_dirty()
 			_worn_on_run(m, it, slot, was)
 			return true
 	return false
@@ -14204,6 +14619,7 @@ func _worn_on_run(m: Dictionary, it: Dictionary, slot: String, bag_was = null) -
 	_mag_from_pack(m, it)
 	_read(it)
 	_dry_memo.clear()
+	_stats_dirty()
 	var down: Array = []
 	if slot == "Backpack":
 		var plan: Dictionary = _bag_settle(m, bag_was)
@@ -14224,6 +14640,7 @@ func _worn_on_run(m: Dictionary, it: Dictionary, slot: String, bag_was = null) -
 				r["from_rig"] = true          # the runner's own: home to the rig, as rig_to_pack's (the review)
 				_pack_put(m, r, spots[j])
 		_dry_memo.clear()
+		_stats_dirty()
 	if not down.is_empty():
 		var th: Array = _things(down)
 		log_event(Words.LOG["to_floor"] % Words.things_list(th[0], th[1]))
@@ -14305,6 +14722,7 @@ func wear_from_floor(id: int) -> bool:
 			log_event(Words.LOG["equipped"] % _log_name(it))
 		chron("equip", {"slot": slot, "how": "floor", "on": _chron_item(it), "off": _chron_item(was)})
 		equipped[slot] = it
+		_stats_dirty()
 		_worn_on_run(m, it, slot)
 		return true
 	return false
@@ -14313,6 +14731,22 @@ func wear_from_floor(id: int) -> bool:
 ## What wearing a find leaves on the floor, read before it's worn (the pick card says it first): {"off": the piece coming
 ## off when it goes down, else null; "spill": what goes down besides}. For a find in the pack or on the floor.
 func wear_preview(id: int) -> Dictionary:
+	if mission == null:
+		return {"off": null, "spill": []}
+	# kept per pick and pack (BUILD43, perf43's spike: a bag's spill read 31-43 ms a paint, ten paints a second): the
+	# find, the worn kit, the pack and the floor as they lie, the rig's pieces
+	var key: int = hash([id, _kit_ids(), mission["found"], mission.get("floor", []), rig.map(func(x): return int(x.get("id", -1))), capacity(), med_capacity(), pack_w()])     # the pack's and the rig's shape too (review 43, 8)
+	if key != _wear_pv_key or not is_same(mission, _wear_pv_m):
+		_wear_pv_m = mission
+		_wear_pv_key = key
+		_wear_pv = _wear_preview_raw(id)
+	return _wear_pv
+var _wear_pv_key := 0
+var _wear_pv_m = null
+var _wear_pv := {}
+
+
+func _wear_preview_raw(id: int) -> Dictionary:
 	var out := {"off": null, "spill": []}
 	if mission == null:
 		return out
@@ -14369,8 +14803,10 @@ func _bag_spill(m: Dictionary, bag: Dictionary, was) -> Dictionary:
 			scratch["found"].append(f.duplicate(true))
 	var worn = equipped["Backpack"]
 	equipped["Backpack"] = bag
+	_stats_dirty()
 	var plan: Dictionary = _bag_settle(scratch, was.duplicate(true) if was != null else null)
 	equipped["Backpack"] = worn
+	_stats_dirty()
 	return {"down": plan["down"].map(func(f): return int(f["id"])), "off": plan["off"]}
 
 
@@ -14453,6 +14889,7 @@ func _rig_room_for(m: Dictionary, mag: Dictionary, gun: Dictionary) -> bool:
 	var th: Array = _things(heals)
 	log_event(Words.MADE_ROOM % [Words.things_list(th[0], th[1]), Words.mid_base(str(gun["base"]))])
 	_dry_memo.clear()
+	_stats_dirty()
 	return true
 
 
@@ -14565,6 +15002,7 @@ func unequip(slot: String) -> bool:
 			return false
 	stash.append(equipped[slot])
 	equipped[slot] = null
+	_stats_dirty()
 	if slot == "Rig":
 		_rig_shed(Words.RIG_OFF)
 	return true
@@ -14817,6 +15255,7 @@ func split_stack(id: int) -> bool:
 				Items.set_stack(it, Items.stack_size(it) - half)
 				where.append(off)                # not stash_put: that would merge it straight back
 				_dry_memo.clear()
+				_stats_dirty()
 				return true
 	return false
 
@@ -15369,12 +15808,14 @@ func set_skill_slot(i: int, id: String) -> bool:
 		if k != i and id != "" and skill_slots[k] == id:
 			skill_slots[k] = ""
 	skill_slots[i] = id
+	_stats_dirty()
 	return true
 
 
 func set_skill_auto(i: int, on: bool) -> void:
 	if i >= 0 and i < Data.SKILL_SLOTS:
 		skill_auto[i] = on
+		_stats_dirty()
 
 
 ## Fires slot `i` on the next tick if it can (the player's press: the rule set aside, not the cost or the cooldown).
@@ -16029,6 +16470,7 @@ func treat_wound(area := "") -> bool:
 		log_event(Words.WOUNDS["treated"] % [str(Data.WOUND_AREA[a]["name"]), wound_stat_name(str(wounds[a]["stat"]))])
 		wounds.erase(a)
 	_dry_memo.clear()
+	_stats_dirty()
 	return true
 
 
@@ -16043,6 +16485,7 @@ func treat() -> bool:
 	if not wounds.is_empty():
 		wounds = {}
 		_dry_memo.clear()
+		_stats_dirty()
 	hp = max_hp()
 	return true
 
@@ -16300,10 +16743,12 @@ func load_dict(d: Dictionary) -> void:
 	issue_moment = d.get("issue_moment", {})
 	cash = float(d.get("cash", Data.STARTING_CASH))
 	xp = float(d.get("xp", 0.0))
+	_stats_dirty()
 	hp = float(d.get("hp", Data.BASE_HP))
 	var e: Dictionary = d.get("equipped", {})
 	for s in Data.SLOTS:
 		equipped[s] = e.get(s, null)
+		_stats_dirty()
 	rig = d.get("rig", [])
 	stash = d.get("stash", [])
 	market = d.get("market", [])
@@ -16333,6 +16778,7 @@ func load_dict(d: Dictionary) -> void:
 		junk_keep = ""
 	came_back = d.get("came_back", {})
 	tree = d.get("tree", [])
+	_stats_dirty()
 	cls = d.get("class", "")
 	roster = {}
 	var cw = d.get("crew", {})
@@ -16363,11 +16809,13 @@ func load_dict(d: Dictionary) -> void:
 		if _on_show(str(id).get_slice("/", 0)) and not node(str(id)).is_empty():
 			kept.append(id)
 	tree = kept
+	_stats_dirty()
 	_load_yard(d)
 	skill_slots = d.get("skill_slots", ["", "", ""]).duplicate()
 	skill_auto = d.get("skill_auto", [true, true, true]).duplicate()
 	hardcore = bool(d.get("hardcore", false))
 	wounds = {}
+	_stats_dirty()
 	var saved_w = d.get("wounds", {})
 	if saved_w is Dictionary:
 		for a in saved_w:
@@ -16476,6 +16924,7 @@ func load_dict(d: Dictionary) -> void:
 	ring = {}
 	for k in d.get("ring", {}):
 		ring[str(k)] = int(d["ring"][k])     # JSON reads the counts as floats
+		_stats_dirty()
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	signals = d.get("signals", []).duplicate(true)
 	for sg in signals:
@@ -16729,6 +17178,7 @@ func loadout_wear(i: int) -> bool:
 	if e.is_empty() or runner_busy():
 		return false
 	_dry_memo.clear()
+	_stats_dirty()
 	var missed: Array = []
 	for slot in e["gear"]:
 		var id: int = int(e["gear"][slot])

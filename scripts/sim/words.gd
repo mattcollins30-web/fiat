@@ -1472,7 +1472,7 @@ const EV := {
 	"need_foot": "Pulled free, %s'll look you up if you're ever short a runner. The chance moves with HP, night and the weather.",
 	"locked_foot": "Forced or shot, it gives up a find a tier above the site's.",
 	"dogs_foot": "A threat is a fight with no pause. Fought off, the next gang comes %d seconds later.",
-	"dogs_key": "Dogs", "dogs_val": "%d", "dogs_val_in": "%d · %d s", "odds_key": "Your odds", "carry_key": "They carry", "carry_none": "Nothing",
+	"dogs_key": "Dogs", "dogs_val": "%d", "dogs_val_in": "%d · %d s", "odds_key": "Your odds", "odds_reading": "reading…", "carry_key": "They carry", "carry_none": "Nothing",
 	"get_out": "Get out now", "stand": "Stand and fight",
 	"trader_known": ["Trades: %d of %d · Scrap ×%d", "%d of %d · Scrap ×%d"],
 	"trader_known_top": ["Trades: %d · Scrap ×%d", "%d · Scrap ×%d"],

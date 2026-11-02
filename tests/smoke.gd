@@ -331,6 +331,7 @@ func _init() -> void:
 				# line eased toward it sits somewhere other than the Yard's share
 				_check(float(sim.mission.get("landed_rate", 0.0)) > 0.0, "a fight five seconds in has landed nothing a second")
 				var at_rest: float = main._dps_share()
+				main.refresh()                 # the line's target is the refresh's (BUILD43): per frame it only eases
 				for k in range(30):
 					main._move_dps_line(0.1)
 				var shown: float = main._top_lines["dps"][1].size.x / main._top_lines["dps"][0].size.x
@@ -827,6 +828,9 @@ func _init() -> void:
 	_ui30c_checks(main)                       # the fix round's UI oddities (30 Oct, builder C)
 	_wager_take_checks(main)                  # Kev's every word and pay through the take path (30 Oct, builder C)
 	_art_inventory_checks(main)               # the pictures the copy should hold, apart from the logic (30 Oct, builder C)
+	_b43_steps_checks(main)                   # BUILD43 (1 Nov): a Map read stepped across frames reads the same odds; the dogs a few ms a frame
+	_b43_frames_checks(main)                  # BUILD43: the frame budget - a fight, the Map, two minutes played with the dogs
+	_b43_memo_checks(main)                    # BUILD43: the live stat memo moves with each change (last: it loads a save)
 	_finish()
 
 
@@ -3639,6 +3643,7 @@ func _melee_checks(main) -> void:
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2) or sim.conversion()["physical"] <= 0.001, "the bat's nails are not 20%% bleed on top of %.2f: %s" % [bleed0, str(sim.conversion())])
 	var head: Dictionary = sim._plain("Attachment", "Nails through it")
 	bat["attachments"]["business end"] = head
+	sim._stats_dirty()                     # a fixture set straight in (BUILD43: the live stat memo hears of it)
 	var nails: float = float(Items.base_named(Data.ATTACHMENT, "Nails through it")["conv_bleed_pct"]) / 100.0     # 8 since the melee bleed cut (31 Oct)
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2 + nails) or sim.conversion()["physical"] <= 0.001, "nails through it did not add %.0f%% bleed: %s" % [nails * 100.0, str(sim.conversion())])
 	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1), 10.0 * (1.0 - sim.mitigation()) * Data.MELEE_INCOMING), "a melee runner is not hit %.2f× harder" % Data.MELEE_INCOMING)
@@ -4014,16 +4019,21 @@ func _over_cap_checks(main) -> void:
 	coat["affixes"] = [{"stat": "fire_res", "value": 60}]
 	var hat: Dictionary = sim._plain("Helmet", "Hard hat")
 	hat["affixes"] = [{"stat": "fire_res", "value": 50}]
+	sim._stats_dirty()
 	sim.equipped["Armour"] = coat
 	sim.equipped["Helmet"] = hat
 	_check(is_equal_approx(sim.resist("fire"), 0.75) and is_equal_approx(sim.resist_raw("fire"), 110.0) and is_equal_approx(sim.over_cap("fire"), 35.0), "110 fire resist is not 75%% and 35 over: %.2f / %.0f" % [sim.resist("fire"), sim.over_cap("fire")])
 	_check(is_equal_approx(sim.increased("fire") - inc0, 35.0), "35 over the cap is not +35%% fire: +%.0f" % (sim.increased("fire") - inc0))
 	hat["affixes"] = [{"stat": "fire_res", "value": 200}]
+	sim._stats_dirty()
 	_check(is_equal_approx(sim.over_cap("fire"), Data.OVER_CAP), "over the cap is not held at %d" % int(Data.OVER_CAP))
 	hat["affixes"] = [{"stat": "all_res", "value": 80}]
+	sim._stats_dirty()
 	coat["affixes"] = []
+	sim._stats_dirty()
 	_check(is_equal_approx(sim.over_cap("frost"), 5.0) and is_equal_approx(sim.over_cap("poison"), 5.0) and sim.over_cap("physical") == 0.0, "all resists did not go over the cap on each, or physical did")
 	hat["affixes"] = [{"stat": "fire_proofed", "value": 20}]
+	sim._stats_dirty()
 	_check(is_equal_approx(sim.resist("fire"), 0.2) and is_equal_approx(sim.increased("fire") - inc0, 20.0), "the -proofed line is not resist and damage")
 	# the Water cannon: a run's resists down
 	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("A Blue Plaque"), sim.rng)
@@ -5510,6 +5520,8 @@ func _ev_arrive(sim, m: Dictionary, fam: String) -> void:
 ## it should have; the clock's chip round its words while it stops; the scene's caption inside the frame.
 func _ev_ui(main, fam: String) -> void:
 	var sim = main.sim
+	if fam == "threat":
+		sim.dogs_odds()                            # the read to its end (BUILD43: a watched run's is a few ms a frame, "reading…" till then)
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	var run = main._run
@@ -6880,7 +6892,7 @@ func _dress_checks(main) -> void:
 		var col: Color = Pal.tone_color(ItemCell.rarity_tone(c[0])) if rank > 0 else Color.TRANSPARENT
 		_check(d["wash"] == (rank > 0) and (rank == 0 or (d["wash_colour"] as Color).is_equal_approx(Color(col, ItemCell.WASH))), "rank %d's wash: %s" % [rank, str(d)])
 		_check(d["glow"] == (rank >= ItemCell.GLOW_FROM), "rank %d's glow: %s" % [rank, str(d)])
-		_check(d["sheen"] == (rank >= 5) and d["pulse"] == (rank == 6) and cell.is_processing() == (rank == 6), "rank %d's sheen or pulse: %s" % [rank, str(d)])
+		_check(d["sheen"] == (rank >= 5) and d["pulse"] == (rank == 6) and cell.is_processing() == (rank == 6 and cell.is_visible_in_tree()), "rank %d's sheen or pulse: %s" % [rank, str(d)])
 	cell.show_item(my, false)
 	cell.set_locked(9)
 	_check(not cell.dress()["glow"], "a locked mythic kept its glow over its fade")
@@ -8036,7 +8048,9 @@ func _damage_model_checks(main) -> void:
 	_check(is_equal_approx(conv["physical"], 1.0), "a plain gun is not all physical: %s (rig %s)" % [str(conv), str(sim.rig.map(func(x): return x["base"]))])
 	var gun: Dictionary = sim.equipped["Primary"]
 	gun["attachments"]["socket 1"] = sim._plain("Attachment", "Lighter fluid")
+	sim._stats_dirty()
 	gun["affixes"] = [{"stat": "fire_pct", "value": 20, "tier": 3}]
+	sim._stats_dirty()
 	conv = sim.conversion()
 	_check(is_equal_approx(conv["fire"], 0.15) and is_equal_approx(conv["physical"], 0.85), "the fluid did not make 15%% fire: %s" % str(conv))
 	var td: Dictionary = sim.type_dps()
@@ -8045,6 +8059,7 @@ func _damage_model_checks(main) -> void:
 	_check(is_equal_approx(sim.damage_rate(t0), td["physical"] + td["fire"] * 0.5), "their fire resist did not halve the fire share")
 	_check(is_equal_approx(sim.damage_rate(t0, true), (td["physical"] + td["fire"] * 0.5) * (1.0 + Data.SHOCK)), "shocked did not take more")
 	gun["affixes"] = [{"stat": "conv_fire_pct", "value": 60, "tier": 5}, {"stat": "conv_frost_pct", "value": 60, "tier": 5}]
+	sim._stats_dirty()
 	conv = sim.conversion()
 	# 60 fire on the gun and 15 in the socket against 60 frost: shared out to the cap (31 Oct, the physical floor: was to
 	# one, no physical left), a tenth physical
@@ -19283,6 +19298,7 @@ func _growth_checks(main) -> void:
 	for id in sim.ring:
 		if sim.node(str(id))["key"] == "resists":
 			sim.ring[id] = 500                   # past any stack: the cap holds
+			sim._stats_dirty()                     # a fixture set straight in (BUILD43: the live stat memo hears of it)
 	sim._dry_memo.clear()
 	_check(is_equal_approx(sim.resist_raw("fire"), maxf(fire0, Data.RESIST_CAP)) and is_equal_approx(sim.over_cap("fire"), over0), "the board's resists went past the cap: %.1f, over the cap %.1f from %.1f" % [sim.resist_raw("fire"), sim.over_cap("fire"), over0])
 	# the Barracks (slice 4): the ring on the web - a node picked says its stack, Train puts a paragon point on it, the
@@ -25060,8 +25076,11 @@ func _skills_checks(sim) -> void:
 		sim._yard_changed("")
 		_check(is_equal_approx(sim.cooldown_cut(), Data.CDR_CAP) and is_equal_approx(sim.skill_cooldown("clean_shot"), 8.0 * 0.6), "the cooldown cap: %.1f%%, Clean shot %.2f s" % [sim.cooldown_cut(), sim.skill_cooldown("clean_shot")])
 		helm["affixes"].pop_back()
+		sim._stats_dirty()
 		helm["affixes"].append({"stat": "energy_max", "value": 10.0})
+		sim._stats_dirty()
 		helm["affixes"].append({"stat": "energy_regen_pct", "value": 8.0})
+		sim._stats_dirty()
 		_check(is_equal_approx(sim.max_energy(), Data.ENERGY_POOL + 10.0) and is_equal_approx(sim.energy_regen(), Data.ENERGY_REGEN * (1.0 + (sim.pace() - 1.0) * Data.ENERGY_PACE_SHARE) * 1.08), "the energy affixes: %.1f max, %.3f a second" % [sim.max_energy(), sim.energy_regen()])
 		var lines: Array = Items.affix_lines({"affixes": [{"stat": "cdr_pct", "value": 8.0}, {"stat": "energy_regen_pct", "value": 8.0}, {"stat": "energy_max", "value": 10.0}]})
 		_check(lines == ["8% shorter cooldowns", "+8% energy gain", "+10 max energy"], "the skills' affixes read: %s" % str(lines))
@@ -31925,3 +31944,454 @@ func _b41_bot_checks() -> void:
 	Sim._seed_n = int(dice0[0])
 	Items._next_id = int(dice0[1])
 	print("b41 bot ok: finished reads, the coin flip at %.2f past 50, the County insured, a re-read after a death" % Bot.SAFE_PAST_CAP)
+
+
+# ------------------------------------------------------------------ BUILD43 (1 Nov): the frame-time fix
+## A stat read, a change through the game's own call, the read again: it moved, and it's what a fresh read says - the
+## live stat memo kept nothing past the change (red with the change's bump taken out).
+func _b43_moves(what: String, f: Callable, act: Callable) -> void:
+	var before = f.call()
+	f.call()                                       # the second read is the memo's
+	act.call()
+	var after = f.call()
+	Sim.live_memo_off = true
+	var want = f.call()
+	Sim.live_memo_off = false
+	_check(after == want and after != before, "after %s the stat reads %s, a fresh read %s (before %s): the live memo kept it" % [what, str(after), str(want), str(before)])
+
+
+## The live stat memo (BUILD43 fix 1): each thing that can move a stat, through the game's own call - the kit off and
+## on, an affix added (a temper's in-place change), a socket filled, a node trained, a level, a wound and its
+## treatment, the trader's plate, a Yard pick, a run's start and end, a load - moves the read to what a fresh one says.
+## The sky moves no memoised stat: a weather roll reads as a fresh read does.
+func _b43_memo_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.cash = maxf(sim.cash, 1e7)
+	sim.scrap = maxf(sim.scrap, 1e5)
+	sim.notes = maxf(sim.notes, 1e5)
+	sim.hp = sim.max_hp()
+	var mit := Callable(sim, "mitigation")
+	var hp_of := Callable(sim, "max_hp")
+	var jacket = sim.equipped["Armour"]
+	_check(jacket != null and sim.armour() > 0.0, "the camp wears no armour to take off")
+	if jacket == null:
+		return
+	jacket["affixes"].append({"stat": "hp", "value": 25.0})     # a line the piece is sure to carry, whatever the bot left on
+	sim._stats_dirty()                             # the fixture set straight in
+	var kit_reads := func(): return [sim.mitigation(), sim.max_hp(), sim._affix_index()]
+	sim.stash = sim.stash.filter(func(it): return Items.is_paper(it))     # room in the stash for the jacket (the bot's leave it full)
+	_b43_moves("the armour taken off", kit_reads, func(): _check(sim.unequip("Armour"), "the armour wouldn't come off"))
+	_b43_moves("the armour put back on", kit_reads, func(): _check(sim.equip_item(int(jacket["id"])), "the armour wouldn't go back on"))
+	# an affix added to the worn jacket in place: its id stands, only the call says it moved
+	_b43_moves("an affix added to the worn armour", Callable(sim, "_affix_index"), func(): _check(sim.craft(int(jacket["id"]), "add"), "the Bench wouldn't add an affix to the worn armour"))
+	# a socket filled: salt in the armour's socket, its armour up
+	var salt: Dictionary = sim._plain("Attachment", "Road salt")
+	sim.stash.append(salt)
+	if Items.sockets(jacket) == 0:
+		jacket["attachments"]["socket 1"] = null
+		sim._stats_dirty()                         # the fixture's socket, set straight in
+	_b43_moves("salt in the armour's socket", Callable(sim, "armour"), func(): _check(sim.fit_socket("Armour", "socket 1", int(salt["id"])), "the salt didn't go in the armour's socket"))
+	# a level: the XP the game hands out
+	_b43_moves("a level gained", hp_of, func(): sim._gain_xp(Data.xp_for_level(sim.level() + 1) - sim.xp + 1.0))
+	# a node trained: one the class can train now with HP, armour, pace or a type's damage on it
+	sim.training_points = maxi(sim.training_points, 200)
+	var body_all := func(): return [sim.max_hp(), sim.mitigation(), sim.pace()] + Data.TYPES.map(func(ty): return sim.increased(ty))
+	var node_id := ""
+	for tree_d in sim.trees():
+		for k in range(tree_d["nodes"].size()):
+			var id: String = "%s/%d" % [tree_d["name"], k]
+			var eff: String = str(tree_d["nodes"][k].get("effect", ""))
+			if (eff in ["hp", "armour_pct", "pace_pct"] or (eff.ends_with("_pct") and eff.trim_suffix("_pct") in Data.TYPES)) and not sim.tree.has(id) and sim.can_train(id) and not tree_d["nodes"][k].has("type"):
+				node_id = id
+				break
+		if node_id != "":
+			break
+	_check(node_id != "", "no node with HP, armour, pace or damage on it the runner can train")
+	if node_id != "":
+		_b43_moves("a node trained (%s)" % node_id, body_all, func(): sim.train_node(node_id))
+	# the Theatre: a Yard pick
+	_b43_moves("the Theatre built", hp_of, func(): _yard_ids(sim, [], "theatre"))
+	# a run's start: armour for each free cell of the pack counts on a run only (the fixture's line on the jacket)
+	var site := 3
+	sim.equipped["Armour"]["affixes"].append({"stat": "armour_per_free", "value": 5.0})
+	sim._stats_dirty()                             # the fixture set straight in
+	_b43_moves("a run set off", mit, func(): sim.deploy(site))
+	_check(sim.on_mission(), "the memo's run didn't set off")
+	if sim.on_mission():
+		# a piece swapped in the pack for a bigger one, the count the same (review 43, 3): the free cells' armour moves
+		sim.mission["found"].append(sim._plain(Data.MEDICAL, "Bandage"))
+		mit.call()
+		_b43_moves("a bandage in the pack swapped for a vest", mit, func():
+			sim.mission["found"].pop_back()
+			sim.mission["found"].append(sim._plain("Armour", "Stab vest")))
+		sim.mission["found"].pop_back()
+		# the trader's plate: the run's own buff
+		_b43_moves("the trader's plate", mit, func(): sim.mission["buff_armour_pct"] = 30.0)
+		# a wound (any area: HP, armour or pace)
+		var body := func(): return [sim.max_hp(), sim.mitigation(), sim.pace()]
+		sim.mission["wounded"] = false
+		_b43_moves("a wound", body, func(): sim._wound(sim.mission))
+		_b43_moves("the run home", mit, func(): sim.extract_now())
+		_b43_moves("the wound treated", body, func(): _check(sim.treat(), "the Clinic wouldn't treat the wound"))
+	# the ladder (review 43, 1 and 5): the front site a few levels up at camp - the armour's cut reads the front's level
+	var front: int = sim.front_tier()
+	sim.best_depth[front] = maxi(int(sim.best_depth[front]), 30)
+	_check(sim.campaign_done(), "the memo's camp hasn't the ladder (the campaign isn't done)")
+	_b43_moves("the front's level raised on the ladder", mit, func(): sim.set_depth(front, int(sim.depth[front]) + 25))
+	_check(sim.front_tier() == front, "the ladder moved the front off its site: the check reads another site")
+	# a signal read on the front site: _sig_on moves its depth with no call of its own; then back
+	var sg := {"id": 4301, "site": front, "zone": int(Data.TIERS[front]["zone"]), "depth": int(sim.depth[front]) + 20, "codes": [], "papers": [], "head": false, "convoy": false, "line": 0}
+	_b43_moves("a signal laid on the front", mit, func(): sim._sig_on(sg))
+	_b43_moves("the signal taken off", mit, func(): sim._sig_off())
+	# a convoy's last lorry down mid-tick (review 43, 4): the lorries multiply HP; read in the same tick, no guard between
+	if sim.on_mission():
+		sim.extract_now()
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)         # at the cap: the heads' XP goes to the paragon, the level stands
+	sim._stats_dirty()                                 # the fixture set straight in
+	sim.hp = sim.max_hp()
+	sim.notes = maxf(sim.notes, 1e6)
+	sim.lorry_done = false
+	sim.best_depth[Data.CONVOY_TIER] = maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth())
+	sim.set_depth(Data.CONVOY_TIER, sim.convoy_depth())     # the Services at the convoy's depth
+	sim.arm_boss(Data.CONVOY_TIER, true)
+	sim.deploy(Data.CONVOY_TIER)
+	_check(sim.on_mission() and sim.mission.get("convoy", false), "the memo's convoy didn't set off")
+	if sim.on_mission() and sim.mission.get("convoy", false):
+		var cm: Dictionary = sim.mission
+		cm["boss_queue"] = []                          # the last of the three
+		cm["boss"]["started"] = true
+		var l0: int = sim.lorries
+		var by_hand_was: bool = sim.loot_by_hand
+		sim.loot_by_hand = true                        # the drops to the floor, the run's materials rolled already: the pack
+		cm["mat_rolled"] = true                        # stands, so only the lorry moves the read
+		var n0: int = cm["found"].size()
+		_b43_moves("the convoy's last lorry down", hp_of, func():
+			sim._boss_down(cm, cm["t"])
+			while cm["found"].size() > n0:
+				cm["found"].pop_back())                # the Lorry's Load strapped on put by: the pack as it was, only the lorry moved
+		sim.loot_by_hand = by_hand_was
+		_check(sim.lorries == l0 + 1, "the convoy's last lorry down beat no lorry")
+		sim.extract_now()
+	# a load: the jacket off in the save, read back
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	d["equipped"]["Armour"] = null
+	_b43_moves("a load", mit, func(): sim.load_dict(d))
+	# the sky: no memoised stat reads it, so a roll's figures stand as a fresh read's
+	var dmg := Callable(sim, "damage_total")
+	dmg.call()
+	sim.elapsed += Data.WEATHER_H * 3600.0 * 3.0
+	sim._roll_weather()
+	var after: float = dmg.call()
+	Sim.live_memo_off = true
+	var want: float = dmg.call()
+	Sim.live_memo_off = false
+	_check(after == want, "the damage after the weather turned reads %.3f, a fresh read %.3f" % [after, want])
+	# a played stretch with every memo hit read fresh as well: none differs
+	Sim.memo_check = true
+	sim.memo_stale.clear()
+	for k in range(3):
+		sim.deploy(site)
+		var g := 0
+		while sim.on_mission() and g < 300:
+			main._process(0.5)
+			if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
+				sim.use_med(sim.first_med()["id"])
+			if sim.on_mission() and (sim.hp < sim.max_hp() * 0.25 or sim.searching()):
+				sim.extract_now()
+			g += 1
+		for s in Data.SLOTS:
+			sim.equip_best(s)
+		main.refresh()
+		sim.hp = sim.max_hp()
+	Sim.memo_check = false
+	_check(sim.memo_stale.is_empty(), "the live memo handed back %d stale reads in three played runs: %s" % [sim.memo_stale.size(), str(sim.memo_stale.slice(0, 3))])
+	print("b43 memo ok: each change moves the read, three runs with every hit read fresh too")
+
+
+## One of the shell's frames as the engine runs it, timed (ms): every node whose script has a _process, in tree order -
+## the smoke's shell is never in a running tree, so nothing's processing by itself; a node that turns its own off
+## (a hidden item cell) is skipped once it's ready to.
+func _b43_frame(main, dt := 1.0 / 60.0) -> float:
+	_b43_unhold(main)
+	var procs: Array = []
+	_b43_procs(main, procs)
+	var t0 := Time.get_ticks_usec()
+	for n in procs:
+		if is_instance_valid(n):
+			n._process(dt)
+	return (Time.get_ticks_usec() - t0) / 1000.0
+
+
+## What would hold the game still in the shell (the menu, a room's card, the opening, a mythic's moment): put by, so
+## the frames are played ones. Not timed.
+func _b43_unhold(main) -> void:
+	if main._menu.visible:
+		main._menu.close()
+	for k in ["_opening", "_room_card", "_mythic_card"]:
+		var c = main.get(k)
+		if c != null and is_instance_valid(c):
+			c.queue_free()
+		main.set(k, null)
+
+
+var _b43_has_proc := {}
+func _b43_procs(n: Node, out: Array) -> void:
+	var sc = n.get_script()
+	if sc != null:
+		var path: String = str(sc.resource_path)
+		if not _b43_has_proc.has(path):
+			_b43_has_proc[path] = (sc as Script).get_script_method_list().any(func(mi): return str(mi["name"]) == "_process")
+		if _b43_has_proc[path] and not (str(path).ends_with("item_cell.gd") and not n.is_processing() and n.is_node_ready()):
+			out.append(n)
+	for c in n.get_children():
+		_b43_procs(c, out)
+
+
+static func _b43_stats(v: Array) -> Array:
+	var s: Array = v.duplicate()
+	s.sort()
+	if s.is_empty():
+		return [0.0, 0.0, 0.0]
+	return [float(s[int(s.size() / 2.0)]), float(s[mini(s.size() - 1, int(s.size() * 0.95))]), float(s.back())]
+
+
+## The frame budget (BUILD43 fix 6): a fight's frames and the Map's (its odds read afresh), the script time of each
+## under B43_MED / B43_P95, and a played two minutes - a run, home, out again, the dogs come - with no frame over
+## B43_SPIKE. The old code ran a fight at 12.5 / 28 ms, the Map's odds at 35-63 ms p95, the dogs' read 300 ms.
+const B43_MED := 6.0
+const B43_P95 := 16.0
+const B43_MAP_MED := 9.0                       # the Map's frames spend ODDS_MS (5 ms) on the odds by design while they read
+const B43_SPIKE := 50.0
+func _b43_frames_checks(main) -> void:
+	var sim = main.sim
+	var asks_was: bool = Sim.asks
+	Sim.asks = true                                # the game's own: a watched run's event asks
+	if sim.on_mission():
+		sim.extract_now()
+	var site := 3
+	for i in range(Data.TIERS.size()):
+		if not (str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES) and sim.can_deploy_to(i) and int(sim.best_depth[i]) > 0 and i <= 6:
+			site = i
+	# a fight
+	sim.hp = sim.max_hp()
+	main.show_room(main.MISSIONS)
+	sim.deploy(site)
+	main.refresh()
+	var fight: Array = []
+	var guard := 0
+	while fight.size() < 240 and guard < 4000:
+		guard += 1
+		if not sim.on_mission() or sim.searching():
+			if sim.on_mission():
+				sim.extract_now()
+			sim.hp = sim.max_hp()
+			sim.deploy(site)
+			main.refresh()
+		if sim.hp < sim.max_hp() * 0.5:
+			sim.hp = sim.max_hp()
+		var ms := _b43_frame(main)
+		if main._run._view != null and main._run._view._firing:
+			fight.append(ms)
+	var fs: Array = _b43_stats(fight)
+	_check(fight.size() >= 200 and fs[0] < B43_MED and fs[1] < B43_P95, "a fight's frames: %d, script median %.2f ms (under %.0f), p95 %.2f ms (under %.0f), max %.1f" % [fight.size(), fs[0], B43_MED, fs[1], B43_P95, fs[2]])
+	# the enemy bars: nothing moved, no redraw
+	var v = main._run._view
+	if v != null and sim.on_mission():
+		v._lay_bars()
+		var r0: Array = v._figs.map(func(f): return int(f["bar"].redraws))
+		v._lay_bars()
+		_check(v._figs.map(func(f): return int(f["bar"].redraws)) == r0, "the enemy bars were drawn again with nothing moved")
+	# the damage line: a frame reads no stat (its target's the refresh's)
+	sim._stats_dirty()
+	main._move_dps_line(1.0 / 60.0)
+	_check(sim._live_memo.is_empty(), "the damage line read a stat in a frame: %s" % str(sim._live_memo.keys()))
+	# a hidden item cell doesn't run a frame, a mythic's pulse included (its _process was on at ready for every cell)
+	var ItemCell := preload("res://scripts/ui/item_cell.gd")
+	var cell = ItemCell.new()
+	cell.visible = false
+	main.add_child(cell)
+	cell._ready()
+	cell.show_item(Items.roll_unique(sim._unique_named("The Last Orders"), sim.rng), false)
+	_check(cell.dress()["pulse"] and not cell.is_processing(), "a hidden mythic's cell runs _process: pulse %s" % str(cell.dress()["pulse"]))
+	cell.queue_free()
+	# the Map, its odds read afresh in the frames' few ms
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	main.show_room(main.MISSIONS)
+	main._missions.select(site)
+	sim._surv_cache = {}
+	main.refresh()
+	var mp: Array = []
+	for k in range(240):
+		mp.append(_b43_frame(main))
+	var ms2: Array = _b43_stats(mp)
+	_check(ms2[0] < B43_MAP_MED and ms2[1] < B43_P95, "the Map's frames reading its odds: script median %.2f ms (under %.0f), p95 %.2f ms (under %.0f), max %.1f" % [ms2[0], B43_MAP_MED, ms2[1], B43_P95, ms2[2]])
+	# two minutes played: out, home, out again, the dogs on one run
+	var played: Array = []
+	var worst := ""
+	var dogs_at := -1
+	var dogs_read_frames := 0
+	var saves: Array = []
+	var tops: Array = []
+	sim.deploy(site)
+	main.refresh()
+	for k in range(7200):
+		if not sim.on_mission():
+			sim.hp = sim.max_hp()
+			sim.deploy(site)
+			main.refresh()
+		elif sim.hp < sim.max_hp() * 0.3:
+			sim.hp = sim.max_hp()
+		if dogs_at < 0 and k > 600 and sim.on_mission() and sim.event_now().is_empty():
+			var m: Dictionary = sim.mission
+			m["remaining"] = 0
+			m["target_hp"] = 0.0
+			m["cleared"] = true
+			m["searches"] = maxi(1, int(m.get("searches", 0)))
+			m["patrol_timer"] = 0.0
+			m["event"] = "threat"
+			m["event_at"] = 0.0
+			dogs_at = k
+		var since_save: float = main._since_save
+		var was: String = ("run, %s" % str(sim.event_now().get("fam", "fight" if int(sim.mission.get("remaining", 0)) > 0 else "searching"))) if sim.on_mission() else "camp"
+		var ms := _b43_frame(main)
+		if main._since_save < since_save:
+			saves.append(ms)                       # the autosave's frame (every 30 s): weighed apart, not this build's (a question for the designer)
+			continue
+		played.append(ms)
+		if sim.dogs_reading():
+			dogs_read_frames += 1
+		tops.append([ms, k, was + ("" if sim.on_mission() else " -> home")])
+		if ms > B43_SPIKE and worst == "":
+			worst = "frame %d (%s)" % [k, was]
+	var ps: Array = _b43_stats(played)
+	_check(dogs_at > 0 and dogs_read_frames > 0, "the played two minutes met no dogs, or read them in one frame (%d frames reading)" % dogs_read_frames)
+	var over: int = played.filter(func(x): return x > B43_SPIKE).size()     # two allowed (review 43, 9): the OS taking the CPU from a frame on his machine isn't the game's
+	_check(over <= 2, "a played two minutes had %d frames over %.0f ms script (the worst %.1f): %s; median %.2f, p95 %.2f" % [over, B43_SPIKE, ps[2], worst, ps[0], ps[1]])
+	if sim.on_mission():
+		sim.extract_now()
+	Sim.asks = asks_was
+	_check(saves.size() >= 3, "two minutes played saved %d times, not every 30 s" % saves.size())
+	tops.sort_custom(func(a, b): return a[0] > b[0])
+	print("b43 the played run's slowest frames: %s" % str(tops.slice(0, 5).map(func(x): return "%.1f ms at %d (%s)" % x)))
+	print("b43 frames: fight %.2f/%.2f/%.1f ms, Map %.2f/%.2f/%.1f ms, played %.2f/%.2f/%.1f ms (median/p95/max), dogs read over %d frames; the autosave's frames %s ms" % [fs[0], fs[1], fs[2], ms2[0], ms2[1], ms2[2], ps[0], ps[1], ps[2], dogs_read_frames, str(saves.map(func(x): return snappedf(x, 0.1)))])
+
+
+## A Map read stepped across frames (BUILD43 fix 4): parked at a frame's end and taken up in the next, every site's odds
+## are what a read in one go makes - the runs, the share back, the lowest HP - and the runner's figures between the
+## steps are their own. The dogs' read stepped likewise: "reading…" in its tile till it's done, then the one-go read.
+func _b43_steps_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var dmg0: float = sim.damage_total()
+	var parked := 0
+	var sites := 0
+	for i in range(Data.TIERS.size()):
+		if not sim.tier_open(i) or sites >= 4:
+			continue
+		sites += 1
+		sim._surv_cache.erase(i)
+		sim.odds_time_ms = 0.0
+		sim.survival(i)
+		var one: Array = sim._surv_cache[i].slice(0, 4) + [sim._surv_cache[i][5]]
+		one.remove_at(0)
+		sim._surv_cache.erase(i)
+		sim.odds_step = true
+		sim.odds_time_ms = 0.2                     # a fifth of a ms a frame: every run parks, many times
+		var calls := 0
+		while not sim.odds_settled(i) and calls < 20000:
+			sim.odds_frame_start()
+			sim.survival(i)
+			calls += 1
+			var c: Array = sim._surv_cache[i]
+			if c.size() > 6 and c[6] != null:
+				parked += 1
+				if parked == 1:
+					_check(not is_same(sim._dry_memo, c[6]["own"]["_dry_memo"]) and sim._dry_rules.is_empty(), "a parked read left its dry memo or rules as the live game's (review 43, 6)")
+				_check(sim.mission == null and not sim._dry_on and is_equal_approx(sim.damage_total(), dmg0), "a parked dry run left its state in: mission %s, dry %s" % [str(sim.mission != null), str(sim._dry_on)])
+		sim.odds_step = false
+		sim.odds_time_ms = 0.0
+		var stepped: Array = sim._surv_cache[i].slice(0, 4) + [sim._surv_cache[i][5]]
+		stepped.remove_at(0)
+		_check(stepped == one, "%s's odds stepped across %d frames read %s, in one go %s" % [Data.TIERS[i]["name"], calls, str(stepped), str(one)])
+	_check(sites > 0 and parked > sites, "the stepped reads never parked (%d parks over %d sites)" % [parked, sites])
+	# the dogs on a watched run
+	var asks_was: bool = Sim.asks
+	Sim.asks = true
+	sim.deploy(3)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["target_hp"] = 0.0
+	m["cleared"] = true
+	m["searches"] = maxi(1, int(m.get("searches", 0)))
+	m["patrol_timer"] = 0.0
+	m["event"] = "threat"
+	m["event_at"] = 0.0
+	sim.hp = sim.max_hp()
+	sim.advance(0.5)
+	var ev: Dictionary = sim.event_now()
+	_check(str(ev.get("fam", "")) == "threat" and sim.dogs_reading() and not ev.has("odds"), "the dogs on a watched run were read as they came, not a few ms a frame")
+	if str(ev.get("fam", "")) == "threat":
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var ep = main._run._event_panel
+		_check(ep._tiles[1]["value"].text == Words.EV["odds_reading"], "the dogs' odds tile reads '%s' while they're read" % ep._tiles[1]["value"].text)
+		_check_fit(main, "the dogs being read")
+		var one_go: float = sim._dogs_read(m, int(ev["n"]))
+		var frames := 0
+		var worst := 0.0
+		while sim.dogs_reading() and frames < 2000:
+			var t0 := Time.get_ticks_usec()
+			sim.dogs_read_step(5.0)
+			worst = maxf(worst, (Time.get_ticks_usec() - t0) / 1000.0)
+			frames += 1
+		_check(ev.has("odds") and float(ev["odds"]) == one_go and frames > 1, "the dogs read over %d frames came to %s, in one go %.3f" % [frames, str(ev.get("odds", "-")), one_go])
+		_check(worst < 25.0, "a frame of the dogs' read took %.1f ms" % worst)
+		# answered before the read's done, the read stops (review 43, 7): nothing reads it once they're no longer waiting
+		var m2: Dictionary = m
+		ev.erase("odds")
+		sim._dogs_job = {"ev": ev, "job": sim._dogs_begin(m2, int(ev["n"]))}
+		sim.dogs_read_step(1.0)
+		_check(sim.dogs_reading(), "the dogs' second read didn't start")
+		ev["state"] = "fight"
+		sim.dogs_read_step(1.0)
+		_check(sim._dogs_job.is_empty() and not sim._dry_on and sim.mission != null and is_same(sim.mission, m2), "the dogs' read ran on after they were answered")
+		ev["state"] = "ask"
+		ev["odds"] = one_go
+		main.refresh()
+		_check(ep._tiles[1]["value"].text == "%d%%" % roundi(float(ev.get("odds", 0.0)) * 100.0), "the dogs' tile after the read: %s" % ep._tiles[1]["value"].text)
+	if sim.on_mission():
+		sim.extract_now()
+	Sim.asks = asks_was
+	# the pick card's spill: kept while the pick and the pack stand, read again when the pack moves
+	sim.deploy(3)
+	if sim.on_mission():
+		# a full pack's paint: settled once, not again while nothing in it moves; a piece in, settled again
+		for k in range(10):
+			sim.mission["found"].append(sim._plain("Armour", "Stab vest"))
+		sim.pack_layout(sim.mission)
+		var n0: int = sim.pack_settles
+		var placed0: Array = sim.mission["found"].map(func(f): return [f.get("pos", null), f.get("rot", false), f.get("strapped", false)])
+		sim.pack_layout(sim.mission)
+		_check(sim.pack_settles == n0 and sim.mission["found"].map(func(f): return [f.get("pos", null), f.get("rot", false), f.get("strapped", false)]) == placed0, "a full pack was settled again with nothing in it moved")
+		var med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		sim.mission["found"].append(med)
+		sim.pack_layout(sim.mission)
+		_check(sim.pack_settles == n0 + 1 and (med.has("pos") or med.get("strapped", false)), "a piece into the pack wasn't settled at the next paint")
+		for k in range(11):
+			sim.mission["found"].pop_back()
+		var bag: Dictionary = sim._plain("Backpack", str(Data.BASES["Backpack"].back()["name"]))
+		sim.mission["found"].append(bag)
+		var a: Dictionary = sim.wear_preview(int(bag["id"]))
+		_check(is_same(a, sim.wear_preview(int(bag["id"]))), "the pick card's spill was read again with nothing moved")
+		var box: Dictionary = sim._plain("Armour", "Work jacket")
+		sim.mission["found"].append(box)
+		var b: Dictionary = sim.wear_preview(int(bag["id"]))
+		_check(not is_same(a, b) and str(b) == str(sim._wear_preview_raw(int(bag["id"]))), "the spill wasn't read again when the pack moved")
+		sim.extract_now()
+	print("b43 steps ok: %d sites' odds stepped the same as in one go (%d parks), the dogs read a few ms a frame" % [sites, parked])

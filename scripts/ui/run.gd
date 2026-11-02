@@ -621,6 +621,7 @@ func _event_show() -> bool:
 		_rig_head.visible = false
 		for c in _rig_cells + _rig_outlines:
 			c.visible = false
+		_rig_sig = 0                          # hidden here: the rig lays out again when the panel goes (BUILD43)
 		for n in [_take_head, _take_strip["panel"], _note, _button, _button2]:
 			n.visible = false
 	else:
@@ -1375,8 +1376,19 @@ static func rig_places(widths: Array, cap: int, per_row: int, widest_first: bool
 
 
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
+var _rig_sig := 0
 func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
+	# laid out again only when what it shows has moved (BUILD43, perf43's cause 3: 1.6-2.4 ms of every paint): the
+	# rig's pieces by value (the rounds in), which are lit, the pick, the runner's figures the hovers read
+	var lits: Array = []
+	for it in sim.rig.slice(0, RIG_MAX):
+		lits.append((Items.is_heal(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0) \
+			or (Items.is_cure(it) and sim.ail_weight(sim.mission, Items.cure_of(it)) > 0.5 and not sim.cure_wards(sim.mission, Items.cure_of(it)) and not sim.mission["t"].get("no_meds", false)))     # a cure lit while its element's on you (28 Oct)
+	var sig: int = hash([cap, sim.rig, lits, _rig_pick, sim.stat_v, sim.mission["t"].get("level", 0), _rig_y])
+	if sig == _rig_sig:
+		return
+	_rig_sig = sig
 	# one row of full cells to eight, one row of smaller to twelve, two rows past that (the generator's row): the same 64 px tall
 	var rows: int = 1 if cap <= 12 else 2
 	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
@@ -1406,8 +1418,7 @@ func _show_rig() -> void:
 		var pos: int = int(places[n])
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
-		var lit: bool = (Items.is_heal(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0) \
-			or (Items.is_cure(it) and sim.ail_weight(sim.mission, Items.cure_of(it)) > 0.5 and not sim.cure_wards(sim.mission, Items.cure_of(it)) and not sim.mission["t"].get("no_meds", false))     # a cure lit while its element's on you (28 Oct)
+		var lit: bool = lits[n]
 		c.show_item(it, lit or int(it["id"]) == _rig_pick, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		# the hover (11 Oct): what a med heals, what a stack is and whether it's firing
 		if Items.is_medical(it):

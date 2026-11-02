@@ -494,7 +494,12 @@ func _process(delta: float) -> void:
 	_since_save += delta
 	if _since_save >= AUTOSAVE_S:
 		save_game()
-	_read_odds()
+	# a frame that paints (ten a second) reads the odds a fifth as long (BUILD43): the paint and the odds' 5 ms together
+	# were the Map's slow frames; the odds settle a little later, never otherwise
+	var paints: bool = _since_refresh + delta >= REFRESH_S
+	_read_odds(ODDS_MS * (0.2 if paints else 1.0))
+	var fighting: bool = sim.on_mission() and int(sim.mission.get("remaining", 0)) > 0
+	sim.dogs_read_step(ODDS_MS * (0.2 if paints or fighting else 1.0))     # the dogs' read as they stand, a few ms a frame (BUILD43); a fight's frames give it 1 ms
 	_move_dps_line(delta)
 	_since_refresh += delta
 	if _since_refresh >= REFRESH_S:
@@ -507,26 +512,39 @@ func _process(delta: float) -> void:
 ## climbs with walking fire, drops under a resist and falls away while the runner searches; in the Yard it
 ## settles to the kit's share. Eased, a few frames behind.
 var _dps_shown := -1.0
+## Where the line eases to, worked out in the refresh (BUILD43, perf43's cause 2: the share and the split read every
+## frame were 3-6 ms of it); -1 until the first refresh.
+var _dps_target := -1.0
 func _move_dps_line(delta: float) -> void:
 	if not _top_lines.has("dps"):
 		return
-	var target: float = _dps_share()
-	if sim.on_mission():
-		var m: Dictionary = sim.mission
-		target *= clampf(float(m.get("landed_rate", 0.0)) / maxf(float(sim.damage_split()["hits"]), 1.0), 0.0, 1.6)     # landed against the type-scaled hits expected (the review)
-		target = minf(target, 1.0)
+	if _dps_target < 0.0:
+		_dps_target = _dps_target_now()
+	var target: float = _dps_target
 	if _dps_shown < 0.0:
 		_dps_shown = target
 	_dps_shown = lerpf(_dps_shown, target, clampf(delta * 8.0, 0.0, 1.0))
 	_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_shown
 
 
+## The damage line's target: the kit's share, and on a run that scaled by what landed against the hits expected.
+## `split`: damage_split() when the caller has it.
+func _dps_target_now(split := {}) -> float:
+	var target: float = _dps_share(float(split["total"]) if split.has("total") else -1.0)
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		var hits: float = float(split["hits"]) if split.has("hits") else float(sim.damage_split()["hits"])
+		target *= clampf(float(m.get("landed_rate", 0.0)) / maxf(hits, 1.0), 0.0, 1.6)     # landed against the type-scaled hits expected (the review)
+		target = minf(target, 1.0)
+	return target
+
+
 ## The Runs screen's odds, a few milliseconds a frame (7 Oct: three dry runs a tier a refresh was half a second
 ## of stall at the top of the ladder): the zone on screen first, then the rest, until every open tier has settled.
-func _read_odds() -> void:
+func _read_odds(budget_ms := ODDS_MS) -> void:
 	if not (room == MISSIONS or room == COMMS) or sim.on_mission():
 		return
-	sim.odds_time_ms = ODDS_MS
+	sim.odds_time_ms = budget_ms
 	sim.odds_frame_start()
 	if room == COMMS and not sim.signals.is_empty():
 		var o: Array = sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
@@ -546,11 +564,13 @@ func _read_odds() -> void:
 	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin
 	# wears its odds' colour), then the order's open places
 	if room == MISSIONS and _missions.county_on:
+		sim.odds_step = true
 		for c in Data.COUNTY:                     # the County's open places (25 Oct), each read to its count in turn
 			if sim._odds_time_up():
 				break
 			if sim.order_open(str(c["key"])) and not bool(sim.order_odds_now(str(c["key"]))[1]):
 				sim.order_odds(str(c["key"]))
+		sim.odds_step = false
 		sim.odds_time_ms = 0.0
 		return
 	if room == MISSIONS and _missions.order_key != "" and sim.order_open(_missions.order_key):
@@ -559,6 +579,7 @@ func _read_odds() -> void:
 	for i in range(Data.TIERS.size()):
 		if not (i in order):
 			order.append(i)
+	sim.odds_step = true                          # a dry run stops at the frame's few ms and goes on in the next (BUILD43)
 	for i in order:
 		if sim._odds_time_up():
 			break
@@ -572,6 +593,7 @@ func _read_odds() -> void:
 				break
 			if sim.order_open(p["key"]) and not bool(sim.order_odds_now(p["key"])[1]):
 				sim.order_odds(p["key"])          # a pin's colour: read to the showing count, then left
+	sim.odds_step = false
 	sim.odds_time_ms = 0.0
 
 
@@ -1173,6 +1195,7 @@ func room_shut(nm: String) -> bool:
 func refresh() -> void:
 	if sim == null:
 		return
+	sim.live_guard()                     # the live stat memo (BUILD43): a change no call marked can't stand past a refresh
 	# two turned up after a death: the pick is the Map's (21 Oct, off the old menu); said once, wherever you are
 	if sim.candidates.size() == 2 and not sim.on_mission() and not _asked_runner:
 		_asked_runner = true
@@ -1214,8 +1237,9 @@ func refresh() -> void:
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
+	_dps_target = _dps_target_now(split)
 	if _dps_shown < 0.0:
-		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
+		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share(float(split["total"]))     # the first paint; _move_dps_line has it from there
 	_top_labels["where"].text = ("Out: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
 	if sim.away():
 		var rest_w: String = resting_words()     # between runs, hurt: the repeat's rest kept beside it
@@ -1414,11 +1438,11 @@ static func _short(x: float) -> String:
 
 ## The damage line's fill, 0 to 1: a minute's fire against the best open site's first gang at its depth
 ## - full when the gang falls inside the minute. It grows with the kit and drops back as a harder site opens.
-func _dps_share() -> float:
+func _dps_share(total := -1.0) -> float:
 	var i: int = clampi(sim.best_tier, 0, Data.TIERS.size() - 1)
 	var t: Dictionary = sim.effective(i)
 	var gang: float = float(t.get("pool", 1)) * float(t.get("hp", 1.0))
-	return clampf(sim.damage_total() * 60.0 / maxf(gang, 1.0), 0.0, 1.0)     # the figure beside it, the burn in (18 Oct)
+	return clampf((total if total >= 0.0 else sim.damage_total()) * 60.0 / maxf(gang, 1.0), 0.0, 1.0)     # the figure beside it, the burn in (18 Oct)
 
 
 ## The level's progress, 0 to 1, for the line under the XP figure.

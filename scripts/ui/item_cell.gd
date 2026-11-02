@@ -292,12 +292,23 @@ func _dress(it: Dictionary, tone: String) -> void:
 		_sheen.size = size - Vector2(2 * INSET, 2 * INSET)
 		_sheen.move_to_front()
 	_pulse = rank == 6
-	set_process(_pulse)
+	set_process(_pulse and is_visible_in_tree())
 	if not _pulse:
 		for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 			var sb := get_theme_stylebox(state) as StyleBoxFlat
 			if sb != null:
 				sb.shadow_size = 0
+
+
+## Only a shown mythic's cell runs a frame (BUILD43, perf43: 81 hidden cells ran _process, Godot turning it on at
+## ready over _init's off): off at ready and whenever the cell's hidden, back on when a pulsing one shows.
+func _ready() -> void:
+	set_process(_pulse and is_visible_in_tree())
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED:
+		set_process(_pulse and is_visible_in_tree())
 
 
 func _process(_dt: float) -> void:
