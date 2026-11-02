@@ -11,7 +11,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      manifest (figures and props; test art first, as agreed).
   2. Parked: a head's thing left behind costs its room (docs/design/ideas_backlog.md, 1 Nov).
   3. Parked: two magazines - the spent one refills while the other fires, as an upgrade (ideas_backlog, 1 Nov).
-  4. The long pass (`24 1 long`) on all of it together, then the balance from it and Matt's play.
+  4. The Map's site card redesign (docs/design/site_card.md: one fixed layout, a Gang / Head toggle, the head
+     standing in their interior, records) - parked 2 Nov for the next round.
+  5. The long pass (`24 1 long`) on all of it together, then the balance from it and Matt's play.
 - **Open notes (small, no date):** a late-save fight isn't timed by the smoke's speed guard (it prints 0); one 53 ms
   mid-game fight frame; dogs on a repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint
   (the bot's build); the stats_room past wall shows the newest 8 (correct after the fold); "13 ObjectDB instances
