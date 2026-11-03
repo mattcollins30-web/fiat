@@ -59,6 +59,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      would suffice". The start keeps the class's one skill; where the other skills go is a design call for the fix
      round (canvas first). And a skill node's card says "Notable" - it should say "Skill" (Matt: "skills identified
      as notable when they should be labelled 'skill' instead").
+  3. UI / speed: the Map reads every place's odds; Matt: "just calculate odds when a place is clicked on and keep the
+     last read odds for places not selected". Read the odds only for the place picked; the others show their last read
+     (to settle in the fix round: how a last read shows once the kit or level has changed since - marked as old, or as
+     today's dimmed odds chip).
 
 ## First slice (2026-10-01)
 
