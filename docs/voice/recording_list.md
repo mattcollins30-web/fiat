@@ -13,6 +13,7 @@ listener would hear.
 | Take | File | Why | Line 1 | Line 2 |
 |---|---|---|---|---|
 | The Workshop's card | `art/intro/rooms/workshop.mp3` | The Workshop opens at the Carpet Man now, with his fitter's kit | The Carpet Man's fitter's kit, laid out on the bench. Proper tools, for once. | Guns get better here, part by part. *(unchanged)* |
+| Training's card | `art/intro/rooms/training.mp3` | The skill web (3 Nov, BUILD47): each runner's web is their own, nothing stays with the camp | *(unchanged)* | Each runner has their own web. They start at their class and buy outward. *(was: Their past decides what they can learn. The Pitch's tree stays when they don't.)* |
 | The Fence's card | `art/intro/rooms/fence.mp3` | The contracts went for the exchange (28 Oct) | *(lines 1-2 unchanged)* | Line 3: Notes, tins, scrap. I'll change any of it. At a price. *(was: Want steady work? I've got contracts.)* |
 
 ## 2. Re-record, your call: the words still play, but the game's moved on

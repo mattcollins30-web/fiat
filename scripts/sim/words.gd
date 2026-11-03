@@ -84,7 +84,7 @@ const ROOM_INTROS := {
 		"tiles": [["Attack", "What they hit for"], ["Defence", "What they can take"], ["The record", "What they've done"]]},
 	"training": {"room": "Training", "face": "", "title": "The caravan at the back", "voice": "training", "cues": [0.0, 7.22], "lines": [
 		"The caravan at the back. Whoever runs for you sleeps here, and gets better here.",
-		"Their past decides what they can learn. The Pitch's tree stays when they don't."],
+		"Each runner has their own web. They start at their class and buy outward."],     # the skill web (3 Nov, BUILD47): the voice wants recording again
 		"tiles": [["Their past", "What they were, before"], ["Their trees", "What they can learn"], ["The crew", "Pick who goes out"]]},
 	"clinic": {"room": "The Clinic", "face": "medic", "title": "The medic", "voice": "clinic", "cues": [0.0, 4.60, 7.58, 12.74], "lines": [
 		"Sit down. Don't bleed on that, it's the only clean one.",
@@ -1380,12 +1380,6 @@ const ITEMS := {
 const LOG := {
 	# training and the Pitch
 	"paragon_reset": "Paragon reset: the points are free to spend again",
-	"pitch_reset": "The Pitch reset: its points are free to spend again",
-	"element_reset": "%s reset: its points are free to spend again",
-	"element_closed": "%s closed for the %s",
-	"element_opened": "%s opened for the %s",
-	"element_earned": "%s: %d point%s earned by use",
-	"let_go": "Let go: %s",
 	"trained": "Trained: %s",
 	"training_reset": "Training reset: the points are free to spend again",
 	"level_points": "Level %d: %d training point%s",
@@ -1802,11 +1796,9 @@ const ISSUED := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", 
 const STAMP := {"not_yet": "Not before the Issue", "on_a_run": "Not on a run", "not_kit": "Only a piece of kit", "issued": "Issued already",
 	"done": "Stamped already", "no_issue": "Nothing issued for this slot", "short": "Short of fiat", "log": "Stamped for the County: %s, for %s.", "tag": "Stamped · counts as issued for the County",
 	"tag_short": "Stamped"}
-const NODE_DARK_PAST_TWO := "idle without the Quartermaster's Manual, the Last Orders or the Headmaster's Cap"     # an element past the class's first two, the item off (31 Oct, BUILD37 G): Training's panel
-const NODE_BLOCK_IDLE := "%s: idle without the Quartermaster's Manual, the Last Orders or the Headmaster's Cap"     # train_block on an idle element's untrained node (31 Oct, the review)
-const NODE_DARK_NOT_OPEN := "idle: %s isn't open for the %s"     # a camp-trained element this class hasn't opened (31 Oct, the UI review: not "two elements" while the cap's lifted)
-const NODE_DARK_AND_LEVEL := "%s, and idle until level %d"     # idle for an element's reason and a keystone's or capstone's level both (31 Oct, the UI review)
-const NODE_DARK_LEVEL := "idle until level %d"     # a keystone or capstone the camp keeps, under its level (31 Oct, BUILD37 C): Training's panel
+## The skill web (3 Nov): why a node can't be taken (Sim.web_can_take), in the game's words; "owned" is the card's for one held.
+const WEB_BLOCK := {"joined": "Take one next to it first", "keystone": "Keystones open at %d points spent", "capstone": "Capstones open at %d points spent",
+	"points": "No points free", "owned": "Yours"}
 const CLASS_CARD := {"kicker": "A NEW CLASS IN TRAINING", "go": "To Training", "hint": "Click or Space · the class waits in Training",
 	"edge": "The class", "trees": "Its trees"}
 const CLASS_CARDS := {
@@ -1951,13 +1943,6 @@ const WOUNDS := {
 	"treated": "%s seen to: %s back",
 }
 
-## The Pitch circle (24 Oct): an element shut till its starter's opened - the class's own two free, any other a Pitch
-## point (31 Oct, the designer).
-const ELEMENT_SHUT := "shut"
-const ELEMENT_IDLE := "idle"     # the web key: an element opened past the class's two, its lifting item off (31 Oct)
-const ELEMENTS_NOTE := "Own 2 free; others 1 Pitch point"     # the language pass (31 Oct); web_key.fit_fails holds it to its room
-const OPEN_FREE := "Open: free"     # Training's button on an element's starter that costs nothing: the class's own two, or one the camp has
-const OPEN_COST := "Open: %s"     # one that costs: "Open: 1 Pitch point"
 
 ## The fight's breakdown (24 Oct, the endgame chase): the sources that aren't a gun or a skill.
 const BREAKDOWN := {"dot:fire": "Fire", "dot:poison": "Poison", "dot:bleed": "Bleed", "dot:shock": "Shock", "dot:frost": "Frost",
@@ -1987,7 +1972,7 @@ const LOADOUTS := {"name": "Kit %d", "empty": "Empty: save what's worn here", "w
 const BUILD := {"copy": "Copy build", "paste": "Paste build", "copied": "Build code copied", "bad": "That isn't a build code", "old": "A build code from an older version: the web has changed since",
 	"out": "Not while the runner's out", "class": "A %s build: swap to them in Training first", "short": "Short of tins: the reset is %s",
 	"title": "A %s build · %d perks · %d skills", "plan": "Resets every perk for %s, then trains %d of %d", "plan_free": "Trains %d of %d perks, no reset",
-	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Reset trees for %s", "ring_sure": "Reset the ring for %s", "pitch_sure": "Reset the Pitch for %s", "element_sure": "Reset %s for %s", "reset_copied": "Trees reset: the build code was copied first, to paste back"}
+	"missed": "%d can't be trained yet", "go": "Retrain into it", "cancel": "Cancel", "done": "Retrained: %d of %d perks", "reset_sure": "Reset trees for %s", "ring_sure": "Reset the ring for %s"}
 const COLLECTION := {"button": "The collection ›", "title": "The collection", "sub": "Every runner's, for the record · it gives no power", "close": "Close",
 	"uniques": "Uniques found", "mythics": "Mythics found", "sites": "Sites with every mark", "classes": "Classes at level 50", "order": "The order's three beaten", "sets": "Sets complete",
 	"of": "of %d", "grid_head": "Every unique · the found ones in colour, the rest by slot", "sites_head": "Sites · a mark at levels %s",
@@ -2111,3 +2096,27 @@ const EXPEDITIONS := {"tab": "Expeditions", "tab_short": "Far places", "tab_back
 	"better_shut": "Better faces come with Two along", "roster_none": "Nobody hired yet: pick one above",
 	"hand_lv": "Level %d", "hand_tier": "T%d · level %d", "hand_out": "Out", "hand_hurt": "Hurt", "hand_free": "Ready",
 	"short_cash": "Short of %s"}
+
+
+## Training's web (3 Nov, BUILD47 V; docs/design/skill_web.md "The screen"): the header's one counter, the tabs, the
+## node card, the pairs, the big nodes, the key and the reset. The web's words: points, paragon points, keystone,
+## notable, capstone, pair, the centre.
+const WEB_SCREEN := {
+	"free_one": "%d point free", "free": "%d points free",
+	"spent": "%d of %d spent · one a level past the %s's best", "spent_mid": "%d of %d spent · one a level past the best", "spent_short": "%d of %d spent",
+	"whole": "Whole web", "corner": "The %s's corner", "corner_short": "The corner",
+	"take": "Take it · 1 point", "yours": "Yours", "ring_take": "Take it · 1 paragon point", "ring_full": "Full",
+	"no_use": "%s only: no use to a %s", "no_use_short": "%s only",     # another class's start or skill, on the card under its words (3 Nov, merge 47)
+	"pairs": "Pairs", "pair_done": "%s + %s: %s", "pair_half": "%s + %s: you have %s; %s is %s away. %s", "pair_none": "%s + %s: %s and %s away. %s",
+	"pair_half_short": "%s + %s: %s is %s away", "pair_none_short": "%s + %s: %s and %s away",
+	"step": "1 step", "steps": "%d steps", "no_pairs": "No pairs for this runner",
+	"big": "Big nodes", "keys_open": "Keystones open at %d points spent: open", "keys_to_go": "Keystones open at %d points spent: %d to go",
+	"caps_open": "Capstones open at %d points spent: open", "caps_to_go": "Capstones open at %d points spent: %d to go",     # the two read alike (3 Nov, the review of build 47)
+	"reset": "Reset the web for %s", "reset_copied": "Web reset: the build code was copied first, to paste back",
+	"key_yours": "Yours", "key_take": "Can take: next to one you own", "key_dark": "Not reachable yet", "key_big": "Keystone: %d spent first · capstone: %d",
+	"key_paragon": "Paragon points", "key_paragon_free": "%d free",
+	"centre": "The centre", "between": "Between the %s and %s", "the_class": "The %s",
+	"tip": "the tip", "flower": "the flower", "run": "the run",
+	"small": "a small node", "notable": "a notable", "keystone": "a keystone", "capstone": "a capstone", "start": "the start", "ring": "the paragon ring",
+	"no_past": "No past yet", "level": "Level %d", "pick_past": "Pick one above: what the runner was, and how they fight now. Free for a new runner",
+}

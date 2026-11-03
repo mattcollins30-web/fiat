@@ -1,11 +1,9 @@
 extends Control
-## The Caravan's screen: what the runner was, and training (9 Oct, docs/design/trees.md). Every tree a lane
-## on one screen, read left to right in six columns: the class's first tree, the element it joins, the
-## class's second, the element that one joins, the Yard's. A joint is the link between a class lane and the
-## element lane under it, in the fourth column. Under the lanes the "Also" row - the elements off the pair,
-## the second past's tree, the drawer, the shelf - each a chip that swaps the Yard's lane for it. Then what
-## the trees add up to, and the strip for the selected node with Train and Respec. Fixed geometry inside the
-## card grid's 1536 x 916.
+## The Caravan's screen: what the runner was, and training. Since 3 Nov (docs/design/skill_web.md "The screen") the
+## skill web: the band - the face, the points free, what the web adds up to, the six runners; the web on the left with
+## its tabs, the find box and the key, the Also row under it (the drawer, the mantelpiece, the wireless); on the right
+## the node card (its picture, name, where it sits, its words and "Take it"), the runner's pairs, the big nodes' gates,
+## Copy, Paste and the reset. Fixed geometry inside the card grid's 1536 x 916.
 
 signal acted
 
@@ -42,46 +40,42 @@ const LINE_TOP_Y := NOTICE_Y
 const PILL_H := 28                 # a hairline between two pills, 4 px over the classes
 const PILL_PAD := 12
 const PILL_GLASS := Color(0.06, 0.07, 0.08, 0.62)
-# the lanes: five, a link strip between a class lane and its element, a gap between the pairs
-const LANES_Y := HEAD_H + 6
-const LANE_H := 100                                            # 104 → 100 (Bands-U A): the tiles keep 44, the pad 4
-const LINK_H := 20
-const PAIR_GAP := 6
-const TILE_TOP := 4                                            # a tile's row 0 from the lane's top
-const LANES := 5
-const LABEL_W := 170                                           # the lane's label block: name, whose, points in, the next gate
-const TILES_X := LABEL_W + 12
-const COLS := 6
-const TILE_GAP := 6
-const ROW_GAP := 4
-@warning_ignore("integer_division")
-const TILE_W := (Pal.GRID_W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS     # 219
-@warning_ignore("integer_division")
-const TILE_H := (LANE_H - 2 * TILE_TOP - ROW_GAP) / 2                          # 44
-const LANE_NODES := 12                                         # tiles a lane holds (a tree has eleven)
-## A node as a glyph (9 Oct, Tree-G A): a square tile, a notable round, a keystone a diamond, the capstone a bigger
-## diamond alone in its column; centred in its column's cell; the cost a chip on its corner, a tick once trained.
-const NODE := 44
-const DIAMOND := 32                                            # turned 45°: 45 across, a row's height
-const DIAMOND_BIG := 40                                        # the capstone, the lane's height to itself
-const GLYPH := 26
-const COST_W := 26
-const YARD_TONE := Color("8fb3d9")                             # the Yard's tree: its glyphs' tone (its lane's line is the card's)
-const LANES_H := LANES * LANE_H + 2 * LINK_H + 2 * PAIR_GAP    # 552
-const ALSO_Y := LANES_Y + LANES_H + 6
+## The skill web's screen (3 Nov, docs/design/skill_web.md "The screen"; the canvas's sw_final6): the web on the left
+## under the band, the Also row under it; the node card, the pairs, the big nodes and the build's buttons on the right.
+const LANES_Y := HEAD_H + 6                                    # the web's top
+const SIDE_W := 488                                            # the right column: the node card and what's under it
+const COL_GAP := 8
+const WEB_W := Pal.GRID_W - SIDE_W - COL_GAP                   # 1040
+const SIDE_X := WEB_W + COL_GAP
 const ALSO_H := 40
-const ALSO_HEAD_W := 150
+const LANES_H := Pal.ROOM_H - LANES_Y - ALSO_H - 6             # 684: the web's height
+const ALSO_Y := LANES_Y + LANES_H + 6
+const ALSO_HEAD_W := 110
 const ALSO_MAX := 10
-const CODE_W := 150
+const BTN_H := 46                                              # the right column's buttons: Copy, Paste, Reset
+const RESET_Y := Pal.ROOM_H - BTN_H
+const CODE_Y := RESET_Y - 8 - BTN_H
+const CP := 16                                                 # a card's padding
+const CARD_H := 318                                            # the node card
+const PAIRS_H := 168
+const BIG_H := 112
+const PAIRS_Y := LANES_Y + CARD_H + 8
+const BIG_Y := PAIRS_Y + PAIRS_H + 8
+const ICON := 76                                               # the node's picture in the card
+const HALF_ICON := 38
+const CARD_TEXT := 17                                          # the card's sentence, three lines
+const LINE_H := 25
+const PAIR_TEXT := 15
+const PAIR_LINE := 20
+const KEY_TABS := 6                                            # (the web's tabs' gap)
 # the sum ("Add up to") in the band, under the class's line (Bands-U A: the strip's 54 px pay for the band)
 const SUM_Y := 76                                              # under the points; the class's line goes right, over the classes
 const SUM_H := 3 * Chips.CHIP_H + 2 * Chips.ROW_GAP
 const SUM_HEAD_W := 96
 const SUM_ROWS := 3
-const PANEL_Y := ALSO_Y + ALSO_H + 6
-const PANEL_H := Pal.ROOM_H - PANEL_Y
-const WORDS_UNDER_Y := 50          # a node's sentence, under its title
-# the drawer and the shelf take the lanes' whole area: three columns of cards
+const PANEL_Y := LANES_Y                                       # the node card (the old strip's names: the tests read them)
+const PANEL_H := CARD_H
+# the drawer and the shelf take the web's and the card's place: three columns of cards
 const PAGE_COLS := 3
 const PAGE_GAP := 6
 @warning_ignore("integer_division")
@@ -110,9 +104,9 @@ var _line_pills: Array = []        # a glass pill a line, behind the class's lin
 var _class_buttons: Array = []
 var _class_cards: Array = []       # a card a past: {face, name, tag, lines[]}
 var _face_q: Panel                 # no past yet: a ? in the face's place
-var _web                            # the web (22 Oct): every tree as a region of one canvas, in the lanes' place
-var _web_buttons: Array = []       # over the web's corner: the whole web, the class's region, the Pitch
-var _key: WebKey                   # the points key (23 Oct): every pool's free points and the elements' meters, over the canvas's corner
+var _web                            # the skill web (3 Nov): the canvas, left under the band
+var _web_buttons: Array = []       # over the web's corner: the whole web, the runner's corner
+var _key: WebKey                   # the key in the web's foot (3 Nov): the three states, the big nodes' gates, the paragon points
 var _find: LineEdit                # "Find a perk" (22 Oct, slice 2): typing centres the web on the first name that fits
 var _also_panel: Panel
 var _also_head: Label
@@ -125,18 +119,32 @@ var _panel: Panel
 var _title: Label
 var _chips: Chips
 var _words: Label
-var _words2: Label                  # a node's sentence, its second line (the review: four buttons leave ~450 px)
+var _words2: Label                  # a node's sentence, its second line
+var _words3: Label                  # and its third (the card's 456 px)
+var _no_use: Label                   # under them: another class's start or skill, "<Class> only: no use to a <class>"
+var _where: Label                   # where a node sits and what it is: "The cold · the tip · a notable"
+var _icon: TextureRect              # the node's picture in the card, in its ring
+var _icon_ring: Panel
+var _pairs_panel: Panel             # the runner's two pairs
+var _pairs_head: Label
+var _pair_rows: Array = []          # {dot, lines[3]}
+var _big_panel: Panel               # the big nodes' gates
+var _big_head: Label
+var _big_lines: Array = []
+var _big_bar: Panel
+var _big_fill: Panel
+var _big_tick: Panel
 var _node_forms: Array = []          # a node's sentence in its forms, fitted once the buttons have their places
 var _past: Label
-var _past_bar: Panel                # the second past's points, under way (15 Oct)
-var _past_fill: Panel
 var _train: Button
 var _respec: Button
-var code_copy: Button               # the build code (24 Oct, the endgame chase): at the Also strip's end
+var code_copy: Button               # the build code (24 Oct, the endgame chase): at the right column's foot
 var code_paste: Button
 var code_panel: Panel               # a pasted code's plan over the detail strip, till it's taken or cancelled
 var _code_title: Label
 var _code_plan: Label
+var _code_plan2: Label
+var _code_plan3: Label
 var _code_go: Button
 var _code_cancel: Button
 var pending_build := {}             # the code read, waiting on Retrain
@@ -231,38 +239,47 @@ static func _words_w() -> float:
 	return _classes_x() - 24 - _words_x()
 
 
-## The web in the lanes' place (22 Oct): the canvas, and three buttons over its corner to jump the zoom.
+## The web's left: the canvas, its two tabs and the find box over its corner, the key in its foot (3 Nov).
 func _build_web() -> void:
-	_web = WebView.new(Vector2(Pal.GRID_W, LANES_H))
-	_web.slice_restate = true                  # a change's far nodes restated a few a frame (BUILD45)
+	_web = WebView.new(Vector2(WEB_W, LANES_H))
 	_web.position = Vector2(0, LANES_Y)
 	_web.picked.connect(_pick_web)
 	add_child(_web)
 	var x: float = 12.0
-	for words in ["Whole web", "The class's", "The Pitch"]:
-		var b := UI.button(self, Rect2(x, LANES_Y + 10, 120, 30), false)
-		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
-		b.text = words
-		b.pressed.connect(_web_jump.bind(words))
-		var w: float = ceilf(UI.text_width(b, words)) + 40.0
-		b.size.x = w
+	for k in range(2):
+		var b := UI.button(self, Rect2(x, LANES_Y + 10, 120, 32), false)
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+		b.pressed.connect(_web_jump.bind(k))
 		_web_buttons.append(b)
-		x += w + 6.0
 	_key = WebKey.new()
 	_key.position = Vector2(12.0, LANES_Y + LANES_H - _key.size.y - 12.0)
 	add_child(_key)
 	_find = LineEdit.new()
-	_find.position = Vector2(x + 6.0, LANES_Y + 10)
-	_find.size = Vector2(200, 30)
+	_find.size = Vector2(200, 32)
 	_find.placeholder_text = "Find a perk"
 	_find.add_theme_font_override("font", UI.font("Regular", false))
-	_find.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+	_find.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
 	_find.add_theme_stylebox_override("normal", UI.box(Pal.CARD, 6, 1, Pal.CARD_LINE))
 	_find.add_theme_stylebox_override("focus", UI.box(Pal.CARD, 6, 1, Pal.ACCENT))
 	_find.add_theme_color_override("font_color", Pal.TEXT)
 	_find.add_theme_color_override("font_placeholder_color", Pal.TEXT_3)
 	_find.text_changed.connect(_find_perk)
 	add_child(_find)
+	_lay_tabs()
+
+
+## The tabs' words and places: "Whole web", "The <Class>'s corner", then the find box after them.
+func _lay_tabs() -> void:
+	var cls: String = str(sim.cls) if sim != null else ""
+	var x: float = 12.0
+	for k in range(_web_buttons.size()):
+		var b: Button = _web_buttons[k]
+		var words: String = Words.WEB_SCREEN["whole"] if k == 0 else (Words.WEB_SCREEN["corner"] % cls if cls != "" else Words.WEB_SCREEN["corner_short"])
+		b.text = words
+		b.size.x = ceilf(UI.text_width(b, words)) + 40.0
+		b.position.x = x
+		x += b.size.x + KEY_TABS
+	_find.position = Vector2(x + KEY_TABS, LANES_Y + 10)
 
 
 ## The first perk whose name fits the words, centred and picked; nothing found, nothing moves.
@@ -276,17 +293,12 @@ func _find_perk(words: String) -> void:
 	_web.pick(id)
 
 
-func _web_jump(words: String) -> void:
-	match words:
-		"Whole web":
-			_web.focus_all()
-		"The Pitch":
-			_web.focus_tree(Data.COMMON_TREE)
-		_:
-			if sim != null and sim.cls != "":
-				_web.focus_class(sim.cls)
-			else:
-				_web.focus_all()
+## A tab: the whole web, or the runner's corner (its class's four flowers and its two elements).
+func _web_jump(k: int) -> void:
+	if k == 1 and sim != null and sim.cls != "":
+		_web.focus_class(sim.cls)
+	else:
+		_web.focus_all()
 
 
 func _pick_web(id: String) -> void:
@@ -295,8 +307,9 @@ func _pick_web(id: String) -> void:
 	show_state(sim)
 
 
+## The Also row under the web: the drawer, the mantelpiece and the wireless, each over the web and the card.
 func _build_also() -> void:
-	_also_panel = UI.panel(self, Rect2(0, ALSO_Y, Pal.GRID_W, ALSO_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_also_panel = UI.panel(self, Rect2(0, ALSO_Y, WEB_W, ALSO_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_also_head = UI.head(_also_panel, Rect2(PAD, 0, ALSO_HEAD_W, ALSO_H), "Also")
 	for k in range(ALSO_MAX):
 		var b := UI.button(_also_panel, Rect2(PAD + ALSO_HEAD_W, 5, 100, ALSO_H - 10), false)
@@ -304,14 +317,16 @@ func _build_also() -> void:
 		b.pressed.connect(_pick_also_at.bind(k))
 		b.visible = false
 		_also.append({"button": b, "name": ""})
-	code_paste = UI.button(_also_panel, Rect2(Pal.GRID_W - PAD - CODE_W, 5, CODE_W, ALSO_H - 10), false)
-	code_paste.text = Words.BUILD["paste"]
-	code_paste.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-	code_paste.pressed.connect(_paste_code)
-	code_copy = UI.button(_also_panel, Rect2(Pal.GRID_W - PAD - 2 * CODE_W - 8, 5, CODE_W, ALSO_H - 10), false)
+	@warning_ignore("integer_division")
+	var half: int = (SIDE_W - 8) / 2
+	code_copy = UI.button(self, Rect2(SIDE_X, CODE_Y, half, BTN_H), false)
 	code_copy.text = Words.BUILD["copy"]
-	code_copy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	code_copy.add_theme_font_size_override("font_size", Pal.CELL_TEXT + 1)
 	code_copy.pressed.connect(_copy_code)
+	code_paste = UI.button(self, Rect2(SIDE_X + half + 8, CODE_Y, SIDE_W - half - 8, BTN_H), false)
+	code_paste.text = Words.BUILD["paste"]
+	code_paste.add_theme_font_size_override("font_size", Pal.CELL_TEXT + 1)
+	code_paste.pressed.connect(_paste_code)
 
 
 func _build_pages() -> void:
@@ -329,23 +344,55 @@ func _build_pages() -> void:
 		_cells.append(c)
 
 
+## The right column (3 Nov): the node card - its picture, name, where it sits and what it is, its figures, its words,
+## the button - then the runner's two pairs, the big nodes' gates and a bar, the build's three buttons at the foot.
 func _build_panel() -> void:
-	_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	# the detail as a strip: the title, its chip and its sentence on one line, the buttons and the runners before on the second
-	_title = UI.label(_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_chips = Chips.new(600)
-	_chips.position = Vector2(PAD, 14)
+	var iw: float = SIDE_W - 2 * CP
+	_panel = UI.panel(self, Rect2(SIDE_X, LANES_Y, SIDE_W, CARD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_icon_ring = UI.panel(_panel, Rect2(CP, CP, ICON, ICON), UI.box(Pal.BG, HALF_ICON, 2, Pal.CARD_LINE))
+	_icon = TextureRect.new()
+	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_icon.position = Vector2(CP + 8, CP + 8)
+	_icon.size = Vector2(ICON - 16, ICON - 16)
+	_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.add_child(_icon)
+	var tx: float = CP + ICON + 14
+	_title = UI.label(_panel, Rect2(tx, CP + 2, SIDE_W - tx - CP, 38), "", "SemiBold", Pal.TITLE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_where = UI.label(_panel, Rect2(tx, CP + 44, SIDE_W - tx - CP, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_chips = Chips.new(int(iw))
+	_chips.position = Vector2(CP, CP + ICON + 12)
 	_panel.add_child(_chips)
-	_words = UI.label(_panel, Rect2(PAD, 13, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_words2 = UI.label(_panel, Rect2(PAD, WORDS_UNDER_Y + 28, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var by: float = PANEL_H - 12 - Pal.BUTTON_H
-	_past = UI.label(_panel, Rect2(PAD, by, Pal.GRID_W - 2 * PAD - 520, Pal.BUTTON_H), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_past_bar = UI.panel(_panel, Rect2(0, 0, 10, 6), UI.box(Pal.CARD_LINE, 3))
-	_past_fill = UI.panel(_past_bar, Rect2(0, 0, 0, 6), UI.box(Pal.ACCENT, 3))
-	_past_bar.visible = false
-	_train = UI.button(_panel, Rect2(0, by, 200, Pal.BUTTON_H), true)
+	var wy: float = CP + ICON + 12 + Chips.CHIP_H + 10
+	_words = UI.label(_panel, Rect2(CP, wy, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words2 = UI.label(_panel, Rect2(CP, wy + LINE_H, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words3 = UI.label(_panel, Rect2(CP, wy + 2 * LINE_H, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_past = UI.label(_panel, Rect2(CP, wy + 3 * LINE_H + 2, iw, LINE_H), "", "Regular", CARD_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_no_use = UI.label(_panel, Rect2(CP, wy + 3 * LINE_H + 2, iw, LINE_H), "", "Regular", CARD_TEXT - 1, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_no_use.visible = false
+	_train = UI.button(_panel, Rect2(CP, CARD_H - CP - 52, iw, 52), true)
+	_train.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 2)
 	_train.pressed.connect(_on_train)
-	_respec = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
+	# the pairs: two rows, a dot (lit when done) and three lines each
+	_pairs_panel = UI.panel(self, Rect2(SIDE_X, PAIRS_Y, SIDE_W, PAIRS_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_pairs_head = UI.head(_pairs_panel, Rect2(CP, 6, iw, 26), Words.WEB_SCREEN["pairs"])
+	for k in range(2):
+		var y0: float = 36.0 + k * (3 * PAIR_LINE + 6)
+		var dot := UI.panel(_pairs_panel, Rect2(CP, y0 + 4, 12, 12), UI.box(Pal.CARD_LINE, 6))
+		var lines: Array = []
+		for j in range(3):
+			lines.append(UI.label(_pairs_panel, Rect2(CP + 22, y0 + j * PAIR_LINE, iw - 22, PAIR_LINE), "", "Regular", PAIR_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_pair_rows.append({"dot": dot, "lines": lines})
+	# the big nodes: the two gates, a bar to 40 with a tick at 15
+	_big_panel = UI.panel(self, Rect2(SIDE_X, BIG_Y, SIDE_W, BIG_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_big_head = UI.head(_big_panel, Rect2(CP, 6, iw, 26), Words.WEB_SCREEN["big"])
+	for j in range(2):
+		_big_lines.append(UI.label(_big_panel, Rect2(CP, 34 + j * 24, iw, 24), "", "Regular", PAIR_TEXT + 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_big_bar = UI.panel(_big_panel, Rect2(CP, BIG_H - 20, iw, 8), UI.box(Pal.CARD_LINE, 4))
+	_big_fill = UI.panel(_big_bar, Rect2(0, 0, 0, 8), UI.box(Pal.ACCENT, 4))
+	_big_tick = UI.panel(_big_bar, Rect2(0, -3, 2, 14), UI.box(Pal.TEXT_2, 1))
+	_respec = UI.button(self, Rect2(SIDE_X, RESET_Y, SIDE_W, BTN_H), false)
+	_respec.add_theme_font_size_override("font_size", Pal.CELL_TEXT + 1)
 	_respec.pressed.connect(_on_respec)
 
 
@@ -364,6 +411,7 @@ const EFFECT_WORDS := {
 	"fire_last_pct": "Burns last %d%% longer", "bleed_last_pct": "Bleeds last %d%% longer", "frost_last_pct": "Chills last %d%% longer", "poison_last_pct": "Poison lasts %d%% longer",
 	# the skills' fillers (24 Oct, milestone 8: the affixes' words, skills.md §11)
 	"grenade_pct": "+%d%% grenade damage", "energy_regen_pct": "+%d%% energy gain", "cdr_pct": "%d%% shorter cooldowns", "energy_max": "+%d max energy",
+	"guard_pct": "+%d%% Guard cap",     # the centre's Guard ring (3 Nov, the skill web)
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
@@ -381,6 +429,7 @@ const PANEL_WORDS := {
 	"regen": "A little HP comes back every second, in a fight or out of one.", "fire_res": "Less of their fire gets through.", "frost_res": "Less of their frost gets through.",
 	"poison_res": "Less of their poison gets through.", "shock_res": "Less of their shock gets through.", "bleed_res": "Less of their bleed gets through.",
 	"grenade_pct": "Every grenade hits harder.", "energy_regen_pct": "Energy refills quicker.", "cdr_pct": "Skills come round again sooner.", "energy_max": "More energy to spend on skills.",
+	"guard_pct": "Your Guard can hold more before it breaks.",
 }
 
 
@@ -472,8 +521,8 @@ func show_state(s) -> void:
 	sim = s
 	if _armed != "" and (sim.cls != _armed_cls or sim.runner_busy() or Time.get_ticks_msec() - _armed_ms > int(Arm.WINDOW_S * 1000.0)):
 		_armed = ""                            # a swap's arm runs out like every ask-twice (Matt, 26 Oct)
-	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.runner_busy()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.elements_lifted(), sim.past_count(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+	var sig := "%s|%s|%d|%d|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%d|%d|%s" % [selected, str(sim.tree), sim.web_points(), int(sim.cash), sim.cls, str(sim.runner_busy()), alt, sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
+		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.past_count(), sim.web_spent(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -482,10 +531,14 @@ func show_state(s) -> void:
 	if alt != "" and not (alt in also_names()):
 		alt = ""                           # the chip went (a class change took that tree into a lane)
 	_show_head()
+	_lay_tabs()
 	var pages: bool = _is_pages(alt)
 	_web.visible = not pages
 	for b in _web_buttons:
 		b.visible = not pages
+	_find.visible = not pages
+	for n in [_panel, _pairs_panel, _big_panel, code_copy, code_paste, _respec]:
+		n.visible = not pages                  # the pages take the web's and the card's place
 	_web.selected = selected
 	_key.visible = not pages
 	if not pages:
@@ -503,15 +556,15 @@ func _show_head() -> void:
 	_face.visible = faced
 	_face_q.visible = not faced
 	UI.fit(_kicker, [("Training · %s" % td["name"]) if not td.is_empty() else "Training", "Training"])     # the class is the card's and the panel's (18 Oct, said once)
-	# every pool's points free in one figure (23 Oct, the key): the class's, the Pitch's, the ring's, the elements'
-	var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()
-	for el in Data.TYPES:
-		free += maxi(0, sim.element_free(el))
-	_points.text = "%d" % free
+	# one counter (3 Nov, the skill web): the runner's points free, then spent of all, and where they come from
+	var WS: Dictionary = Words.WEB_SCREEN
+	var free: int = sim.web_free()
+	_points.text = (WS["free_one"] if free == 1 else WS["free"]) % free
 	_points.add_theme_color_override("font_color", Pal.ACCENT if free > 0 else Pal.TEXT_2)
-	_unit.position.x = _points.position.x + ceilf(UI.text_width(_points, _points.text)) + 10
+	_unit.position.x = _points.position.x + ceilf(UI.text_width(_points, _points.text)) + 14
 	_unit.size.x = _kicker.position.x + _kicker.size.x - _unit.position.x
-	UI.fit(_unit, ["point%s free across the web · the key says where" % ("" if free == 1 else "s"), "point%s free across the web" % ("" if free == 1 else "s"), "free", ""])
+	var cls_n: String = str(sim.cls) if sim.cls != "" else "class"
+	UI.fit(_unit, [WS["spent"] % [sim.web_spent(), sim.web_points(), cls_n], WS["spent_mid"] % [sim.web_spent(), sim.web_points()], WS["spent_short"] % [sim.web_spent(), sim.web_points()], ""])
 	_class_line.text = ""                  # the class's sentence is its card's tooltip now (14 Oct); the notice is the line
 	_class_line.visible = false
 	for k in range(Data.CLASSES.size()):
@@ -601,23 +654,10 @@ func _lay_lines() -> void:
 		pill.size = Vector2(w, PILL_H)
 
 
-## A joint's two halves' names: the class tree's, the element tree's.
-static func _halves(j: Dictionary) -> Array:
-	var out: Array = ["", ""]
-	var k := 0
-	for tn in [j["tree"], j["element_tree"]]:
-		var t := Data.tree_named(tn)
-		for nd in t.get("nodes", []):
-			if str(nd.get("joint", "")) == j["key"]:
-				out[k] = nd["name"]
-		k += 1
-	return out
-
-
 func _show_also() -> void:
 	var names: Array = also_names()
 	var x: float = PAD + ALSO_HEAD_W
-	var right: float = Pal.GRID_W - PAD - 2 * CODE_W - 16      # the build code's two buttons at the end
+	var right: float = WEB_W - PAD
 	for k in range(ALSO_MAX):
 		var a: Dictionary = _also[k]
 		var b: Button = a["button"]
@@ -845,7 +885,7 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	var dot_inc: float = sim.tree_sum("dot_pct")
 	var extras: Array = []
 	for pair in [["Petrol/3", "burns"], ["The Rat Man/3", "poison"], ["Blades/3", "bleeds"]]:
-		if sim.tree.has(pair[0]):
+		if sim.web_owned(pair[0]):
 			extras.append("%s lasts twice as long" % pair[1])          # Lit, Dosed, Opened up: the trees' own, not the kit's (dot_seconds reads both)
 	if sim.has_node("poison_stacks"):
 		extras.append("poison stacks to 15")
@@ -861,16 +901,9 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	plain.call("Gangs", sums.get("patrol_pct", 0.0), "%.0f%% later")
 	plain.call("Quality", sums.get("rarity", 0.0), "+%.0f%%")
 	plain.call("Quantity", sums.get("loot_pct", 0.0), "+%.0f%%")
-	var joints := 0
-	var closed := 0
-	var on_show: Array = sim.trees().map(func(x): return x["name"])
-	for j in Data.JOINTS:
-		if j["class"] in sim.my_classes() and j["tree"] in on_show:     # a second past's joint in its second tree can't close
-			joints += 1
-			if sim.has_joint(j["key"]):
-				closed += 1
-	if joints > 0:
-		items.append({"tag": "Joints", "forms": ["%d of %d" % [closed, joints]], "colour": Pal.ACCENT})
+	var pairs: Array = sim.web_pairs() if sim.cls != "" else []     # the runner's two (3 Nov: pairs, the web's word)
+	if not pairs.is_empty():
+		items.append({"tag": "Pairs", "forms": ["%d of %d" % [pairs.filter(func(p): return p["done"]).size(), pairs.size()]], "colour": Pal.ACCENT})
 	if items.is_empty():
 		items.append({"forms": ["Nothing trained yet"], "colour": Pal.TEXT_2})
 	if not fit:
@@ -906,23 +939,35 @@ func _fits(items: Array) -> bool:
 	return _sum_chips.shown() == items.size()
 
 
+## The big nodes' gates (docs/design/skill_web.md, the one rule's 4): a keystone wants 15 points spent first, a capstone 40.
+const KEYSTONE_AT := Data.KEYSTONE_SPENT
+const CAPSTONE_AT := Data.CAPSTONE_SPENT
+
+
+## The node card, the pairs, the big nodes and the reset (3 Nov): what's picked - a node, the class (nothing picked) or
+## a swap armed - in the card; the runner's two pairs; the gates; the reset's price.
 func _show_panel() -> void:
+	var WS: Dictionary = Words.WEB_SCREEN
 	_train.visible = false
 	_chips.visible = false
-	_words.position = Vector2(PAD, 13)
-	_words2.text = ""
-	_words.size.x = Pal.GRID_W - 2 * PAD
-	var after_title := func() -> void:
-		_words.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
-		_words.size.x = Pal.GRID_W - PAD - _words.position.x
+	_past.visible = false
+	_past.text = ""
+	_no_use.visible = false
+	_no_use.text = ""
+	_where.text = ""
+	_icon.texture = null
+	_node_forms = []
+	var ring_tone: Color = Pal.CARD_LINE
+	_where.add_theme_color_override("font_color", Pal.TEXT_2)
+	if selected != "" and not _web.layout.has(selected):
+		selected = ""
 	if selected == "" and _armed != "":
 		var lv: int = sim.crew_level(_armed)
 		var el: String = sim.crew_element(_armed)
 		var r: Dictionary = sim.crew_runner(_armed)
-		_title.text = UI.dots(("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed)
+		UI.fit(_title, [UI.dots(("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed), _armed])
 		if el != "":
-			_title.text += " · " + el
-		after_title.call()
+			UI.fit(_where, [el])
 		var kit: Array = []
 		for sl in ["Primary", "Armour", "Helmet"]:
 			var it = r.get("equipped", {}).get(sl, null)
@@ -931,154 +976,254 @@ func _show_panel() -> void:
 		var trt: String = str(r.get("trait", ""))
 		var state: String = "wounded: send them out to see the Clinic" if not Dictionary(r.get("wounds", {})).is_empty() else ""
 		if lv <= 0:
-			UI.fit(_words, ["A new runner: level 1, the arrival's kit, their own points from here", "A new runner at level 1", ""])
+			_node_forms = ["A new runner: level 1, the arrival's kit, their own points from here.", "A new runner at level 1."]
 		else:
-			UI.fit(_words, ["%s%s%s" % [", ".join(kit), (" · " + trt) if trt != "" else "", (" · " + state) if state != "" else ""], ", ".join(kit), ""])
+			_node_forms = ["%s%s%s." % [", ".join(kit), (" · " + trt) if trt != "" else "", (" · " + state) if state != "" else ""], ", ".join(kit) + "."]
+		_icon.texture = People.portrait(_armed)
 		_train.visible = true
 		_train.text = "Swap to the %s" % _armed
 		_train.disabled = sim.runner_busy()
-		_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+		ring_tone = Pal.ACCENT
 	elif selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
-			_title.text = "No past yet"
-			after_title.call()
-			UI.fit(_words, ["Pick one above: what the runner was, and how they fight now. Free for a new runner", "Pick one above", ""])
+			UI.fit(_title, [WS["no_past"]])
+			_node_forms = [WS["pick_past"] + ".", "Pick one above."]
 		else:
 			var td: Dictionary = sim.trait_data()
-			_title.text = ("%s · %s" % [cd["name"], td["name"]]) if not td.is_empty() else "%s" % cd["name"]
-			after_title.call()
+			UI.fit(_title, [("%s · %s" % [cd["name"], td["name"]]) if not td.is_empty() else str(cd["name"]), str(cd["name"])])
+			UI.fit(_where, [WS["level"] % sim.level()])
 			if not td.is_empty():
-				UI.fit(_words, ["%s: %s · the runner's trait, one each, goes with them" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]], ""])
-			else:
-				_words.text = ""
+				_node_forms = ["%s: %s · the runner's trait, one each, goes with them." % [td["name"], td["words"]], "%s: %s." % [td["name"], td["words"]]]
+			var sid: String = Data.web_start(str(sim.cls))
+			if sid != "":
+				_icon.texture = _picture_of(sid)
+			ring_tone = Pal.TEXT
+			_past.visible = true
+			_show_past()
 	else:
-		var nd: Dictionary = sim.node(selected)
-		if nd.is_empty():
-			selected = ""
-			_show_panel()
-			return
-		_title.text = nd["name"] + (" · capstone" if nd.get("capstone", false) else (" · keystone" if nd.get("keystone", false) else (" · notable" if nd.get("notable", false) else "")))
-		var is_taken: bool = sim.tree.has(selected)
-		var sel_el: String = sim.element_of(selected)
-		var starter: bool = sim.is_element_starter(selected)
-		if starter:
-			is_taken = sim.element_opened(sel_el) or sim.element_idle(sel_el)     # two a class (28 Oct): a starter is "taken" when this class has it open
-		if nd.has("ring"):
-			# the ring (slice 4): the paragon's node, its points on it of its stack; "trained" is a full one
-			_title.text = "%s · the ring · %d of %d" % [nd["name"], int(sim.ring.get(selected, 0)), int(nd["stack"])]
-			is_taken = int(sim.ring.get(selected, 0)) >= int(nd["stack"])
-		elif is_taken:
-			_title.text += " · trained" if sim.node_active(selected) else " · trained, idle"
-		_title.text = UI.dots(_title.text)            # the caps pass (27 Oct)
-		var items := [{"forms": [_chip_words(nd)], "colour": _effect_tone(nd)}]
+		var nd: Dictionary = _web.node_of(selected)
+		var on_ring: bool = _web._region.get(selected, "") == "ring"
+		var kind: String = str(_web._kind.get(selected, "small"))
+		var nm: String = str(nd.get("name", ""))
+		UI.fit(_title, [nm if nm != "" else _cap1(str(WS.get(kind, WS["small"])))])
+		UI.fit(_where, [where_words(selected), where_words(selected, true)])
+		_where.add_theme_color_override("font_color", _web.tone_of(selected) if not _web._region.get(selected, "").begins_with("class:") else Pal.TEXT_2)
+		_icon.texture = _picture_of(selected)
+		var st: Dictionary = _web.state_of(selected)
+		ring_tone = _web.tone_of(selected) if st.get("taken", false) else (WebView.FRONTIER if st.get("reach", false) else Pal.CARD_LINE)
+		var items: Array = []
+		if nd.has("effect") or nd.get("keystone", false) or nd.get("capstone", false) or nd.get("notable", false):
+			items.append({"forms": [_chip_words(nd)], "colour": _effect_tone(nd)})
 		if nd.has("type"):
 			items.append({"forms": [type_words(nd)], "colour": Pal.TEXT_2})
-		var gain: Array = sim.node_damage_gain(selected)     # what it adds to the one figure, tried on (16 Oct, item 14)
-		if float(gain[0]) >= 0.5:
-			items.append({"forms": ["%s +%.0f a second (+%.0f%%)" % ["Adds" if is_taken else "For you:", float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s (+%.0f%%)" % [float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s" % float(gain[0])], "colour": Pal.GOOD})
-		_chips.visible = true
-		_chips.show_chips(items)
-		_chips.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
-		# the sentence under the title (10 Oct, Matt: the dead space there), the width the buttons leave (set below)
-		_words.position = Vector2(PAD, WORDS_UNDER_Y)
+		if not on_ring and sim.has_method("node_damage_gain") and nd.has("effect"):
+			var gain: Array = sim.node_damage_gain(selected)     # what it adds to the one figure, tried on (16 Oct, item 14)
+			if float(gain[0]) >= 0.5:
+				items.append({"forms": ["%s +%.0f a second (+%.0f%%)" % ["Adds" if st.get("taken", false) else "For you:", float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s (+%.0f%%)" % [float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s" % float(gain[0])], "colour": Pal.GOOD})
+		_chips.visible = not items.is_empty()
+		if _chips.visible:
+			_chips.show_chips(items)
+		var only: String = sim.web_class_only(selected) if not on_ring and sim.has_method("web_class_only") else ""
+		if only != "":
+			UI.fit(_no_use, [WS["no_use"] % [only, str(sim.cls)], WS["no_use_short"] % only])
+			_no_use.visible = true
 		var sentence: String = _sentence(nd)
+		var tail: String = _pair_tail(selected)
+		_node_forms = ["%s %s" % [sentence, tail], sentence, tail] if tail != "" else [sentence]
+		_train.visible = true
+		if on_ring:
+			var on: int = int(sim.ring.get(selected, 0))
+			var full: bool = on >= int(nd.get("stack", 1))
+			UI.fit_button(_train, [WS["ring_full"]] if full else [WS["ring_take"]])
+			_train.disabled = full or not sim.can_train(selected)
+		elif sim.web_owned(selected):
+			_train.text = WS["yours"]
+			_train.disabled = true
+		else:
+			var why: String = sim.web_can_take(selected)
+			UI.fit_button(_train, [WS["take"]] if why == "" else [why])
+			_train.disabled = why != ""
+	_icon_ring.add_theme_stylebox_override("panel", UI.box(Pal.BG, HALF_ICON, 2, ring_tone))
+	UI.style_button(_train, true)
+	fit_lines(_node_forms)
+	_node_forms = []
+	_show_pairs()
+	_show_big()
+	_show_reset()
+
+
+## A node's picture for the card: its painting (or its skill's), else its glyph.
+func _picture_of(id: String) -> Texture2D:
+	var nd: Dictionary = _web.node_of(id)
+	var pic: Texture2D = WebView.picture(_web.picture_slug(nd))
+	if pic == null and _web.glyph_of(nd) != "":
+		pic = NodeGlyphs.texture(_web.glyph_of(nd))
+	return pic
+
+
+## Where a node sits, in words: "The cold · the tip · a notable", "The Poacher · Stalking · a notable", "The centre · a
+## small node", "Between the Poacher and the cold · a small node"; `short` leaves the kind off.
+func where_words(id: String, short := false) -> String:
+	var WS: Dictionary = Words.WEB_SCREEN
+	var rg: String = str(_web._region.get(id, ""))
+	var kind: String = str(_web._kind.get(id, "small"))
+	var parts: Array = []
+	if rg == "centre":
+		parts.append(WS["centre"])
+	elif rg.begins_with("el:"):
+		parts.append(rg.substr(3))
+		var sn: String = Data.web_slot(id)
+		var tail: String = sn.get_slice("_", 1)
+		parts.append(WS["tip"] if tail == "4" else (WS["run"] if tail.begins_with("r") or tail in ["ks", "cap"] else WS["flower"]))
+	elif rg.begins_with("class:"):
+		parts.append(WS["the_class"] % rg.substr(6))
+		parts.append(id.get_slice("/", 0))
+	elif rg == "join":
+		var el: String = _web.join_element(id)
+		parts.append(WS["between"] % [_join_class(id), Words.mid(el)])
+	elif rg == "ring":
+		parts.append(_cap1(WS["ring"]))
+		parts.append("%d of %d" % [int(sim.ring.get(id, 0)), int(_web.node_of(id).get("stack", 1))])     # its paragon points on it
+	if not short and rg != "ring":
+		parts.append(str(WS.get(kind, WS["small"])))
+	return " · ".join(parts)
+
+
+## The class a join runs to: along the join's own nodes to the one next to a class's start.
+func _join_class(id: String) -> String:
+	var seen := {id: true}
+	var q: Array = [id]
+	while not q.is_empty():
+		var a: String = q.pop_front()
+		for o in _web._links.get(a, []):
+			var rg: String = str(_web._region.get(o, ""))
+			if rg.begins_with("class:"):
+				return rg.substr(6)
+			if rg == "join" and not seen.has(o):
+				seen[o] = true
+				q.append(o)
+	return ""
+
+
+## A pair's half (the runner's): what its other half is and how far.
+func _pair_tail(id: String) -> String:
+	if sim.cls == "":
+		return ""
+	for p in sim.web_pairs():
+		var h: Array = p["halves"]
+		if not (id in h):
+			continue
+		var other: String = str(h[1]) if str(h[0]) == id else str(h[0])
+		var on: String = str(_web.node_of(other).get("name", ""))
+		if p["done"]:
+			return "Its pair is done with %s: %s." % [on, _first_lower(str(p["words"]))]
+		var s: int = sim.web_steps(other)
+		return "Its pair is %s, %s: %s." % [on, Words.WEB_SCREEN["yours"].to_lower() if s == 0 else _steps_words(s) + " away", _first_lower(str(p["words"]))]
+	return ""
+
+
+static func _steps_words(n: int) -> String:
+	return Words.WEB_SCREEN["step"] if n == 1 else Words.WEB_SCREEN["steps"] % n
+
+
+static func _cap1(t: String) -> String:
+	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else t
+
+
+static func _first_lower(t: String) -> String:
+	return t.substr(0, 1).to_lower() + t.substr(1) if t != "" else t
+
+
+## The runner's two pairs: done, or what's had and how far the rest is (Sim.web_steps), each over three lines.
+func _show_pairs() -> void:
+	var WS: Dictionary = Words.WEB_SCREEN
+	var pairs: Array = sim.web_pairs() if sim.cls != "" else []
+	for k in range(_pair_rows.size()):
+		var row: Dictionary = _pair_rows[k]
+		var lines: Array = row["lines"]
+		if k >= pairs.size():
+			row["dot"].visible = false
+			UI.wrap(lines, WS["no_pairs"] if k == 0 and pairs.is_empty() else "")
+			continue
+		var p: Dictionary = pairs[k]
+		var h: Array = p["halves"]
+		var a: String = str(_web.node_of(str(h[0])).get("name", h[0]))
+		var b: String = str(_web.node_of(str(h[1])).get("name", h[1]))
+		var words: String = str(p["words"])
 		var forms: Array = []
-		var tail := ""
-		var j_key: String = str(nd.get("joint", ""))
-		if j_key != "" and Data.for_classes(nd, sim.my_classes()):
-			var j := Data.joint(j_key)
-			var halves := _halves(j)
-			var other: String = halves[1] if nd["name"] == halves[0] else halves[0]
-			var other_tree: String = j["element_tree"] if nd["name"] == halves[0] else j["tree"]
-			var jw: String = str(j["words"])
-			jw = jw.substr(0, 1).to_lower() + jw.substr(1)     # mid-line: only its first letter drops (18 Oct: "smgs")
-			tail = ("joined: %s" % jw) if sim.has_joint(j_key) else ("with %s in %s: %s" % [other, other_tree, jw])
-		var under_level: bool = is_taken and not sim.level_open(nd)
-		var gate_lv: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
-		if sel_el != "" and sim.tree.has(selected) and (sim.element_idle(sel_el) or not sim.element_opened(sel_el)):
-			# past the class's first two with no lifting item on, or not open for this class (31 Oct); the level's reason
-			# joined on when both hold (the UI review: one fix shown where two were needed)
-			tail = Words.NODE_DARK_PAST_TWO if sim.element_idle(sel_el) else Words.NODE_DARK_NOT_OPEN % [Words.mid(str(selected).get_slice("/", 0)), sim.cls]
-			if under_level and not starter:
-				tail = Words.NODE_DARK_AND_LEVEL % [tail, gate_lv]
-		elif under_level:
-			tail = Words.NODE_DARK_LEVEL % (Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL)     # trained, under its level (31 Oct)
-		elif is_taken and not sim.node_active(selected) and not sim._active(nd):
-			tail = "idle without %s in hand" % type_words(nd)
-		elif is_taken and not sim.node_active(selected):
-			tail = "idle until a joint in %s is joined again" % str(selected).get_slice("/", 0)
-		var block: String = "" if is_taken else sim.train_block(selected, true)     # the points are the tree's and the button's to say (Matt, 10 Oct)
-		var t2 := _as_sentence(tail)
-		var b2 := _as_sentence(block)
-		if tail != "" and block != "":
-			forms = ["%s %s %s" % [sentence, t2, b2], "%s %s" % [sentence, b2], "%s %s" % [sentence, t2]]
-		elif tail != "":
-			forms = ["%s %s" % [sentence, t2]]
-		elif block != "":
-			forms = ["%s %s" % [sentence, b2]]
-		forms.append_array([sentence, b2, ""])
-		_node_forms = forms
-		if not is_taken:
-			_train.visible = true
-			var cost: int = sim.node_cost(selected)
-			_train.text = ("Train (%d paragon point%s)" if nd.has("ring") else "Train (%d point%s)") % [cost, "" if cost == 1 else "s"]
-			if starter:
-				_train.text = Words.OPEN_FREE if sim.tree.has(selected) or cost == 0 else Words.OPEN_COST % Words.count_of(cost, "Pitch point")     # the class's own two free (31 Oct); the price from node_cost (the language pass)
-			_train.disabled = not sim.can_train(selected)
-			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
-		elif starter:
-			_train.visible = true                      # one of the class's two: closed for nothing, to open another (28 Oct)
-			_train.text = "Close %s" % str(selected).get_slice("/", 0)
-			_train.disabled = sim.on_mission()
-			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+		if p["done"]:
+			forms = [WS["pair_done"] % [a, b, _first_lower(words)]]
+		else:
+			var own_a: bool = sim.web_owned(str(h[0]))
+			var own_b: bool = sim.web_owned(str(h[1]))
+			if own_a or own_b:
+				var have: String = a if own_a else b
+				var other: String = b if own_a else a
+				var s: String = _steps_words(sim.web_steps(str(h[1]) if own_a else str(h[0])))
+				forms = [WS["pair_half"] % [a, b, have, other, s, words], WS["pair_half_short"] % [a, b, other, s]]
+			else:
+				var sa: String = _steps_words(sim.web_steps(str(h[0])))
+				var sb: String = _steps_words(sim.web_steps(str(h[1])))
+				forms = [WS["pair_none"] % [a, b, sa, sb, words], WS["pair_none_short"] % [a, b, sa, sb]]
+		row["dot"].visible = true
+		row["dot"].add_theme_stylebox_override("panel", UI.box(Pal.GOOD if p["done"] else Pal.CARD_LINE, 6))
+		_wrap_forms(lines, forms)
+		for l in lines:
+			l.add_theme_color_override("font_color", Pal.TEXT if p["done"] else Pal.TEXT_2)
+
+
+## The longest form that wraps into the labels whole (the last label's line inside its width).
+func _wrap_forms(lines: Array, forms: Array) -> void:
+	for f in forms:
+		UI.wrap(lines, str(f))
+		var last: Label = lines[lines.size() - 1]
+		if UI.text_width(last, last.text) <= last.size.x:
+			return
+	UI.wrap(lines, str(forms[forms.size() - 1]))
+
+
+## The big nodes: keystones at 15 points spent, capstones at 40, how far off, and the bar to 40 with the 15 marked.
+func _show_big() -> void:
+	var WS: Dictionary = Words.WEB_SCREEN
+	var spent: int = sim.web_spent()
+	UI.fit(_big_lines[0], [WS["keys_open"] % KEYSTONE_AT if spent >= KEYSTONE_AT else WS["keys_to_go"] % [KEYSTONE_AT, KEYSTONE_AT - spent]])
+	UI.fit(_big_lines[1], [WS["caps_open"] % CAPSTONE_AT if spent >= CAPSTONE_AT else WS["caps_to_go"] % [CAPSTONE_AT, CAPSTONE_AT - spent]])
+	var w: float = _big_bar.size.x
+	_big_fill.size.x = w * clampf(float(spent) / CAPSTONE_AT, 0.0, 1.0)
+	_big_tick.position.x = w * float(KEYSTONE_AT) / CAPSTONE_AT - 1.0
+
+
+## The reset: the web's (every point back, today's price), or the ring's with a ring node picked; it asks twice.
+func _show_reset() -> void:
 	var armed: bool = respec_armed()
-	var rk := _respec_key()
-	if rk == "ring":
+	if _respec_key() == "ring":
 		_respec.text = (Words.ASK["again"] % Words.BUILD["ring_sure"] if armed else Words.BUILD["ring_sure"]) % Fmt.money(sim.paragon_reset_cost())
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
-	elif rk == "pitch":
-		_respec.text = (Words.ASK["again"] % Words.BUILD["pitch_sure"] if armed else Words.BUILD["pitch_sure"]) % Fmt.money(sim.pitch_reset_cost())
-		_respec.disabled = sim.pitch_nodes_spent() == 0 or sim.cash < sim.pitch_reset_cost() or sim.runner_busy()
-	elif rk.begins_with("el:"):
-		var el: String = rk.get_slice(":", 1)
-		var el_name: String = str(Data.element_tree_of(el).get("name", el))
-		_respec.text = (Words.ASK["again"] % Words.BUILD["element_sure"] if armed else Words.BUILD["element_sure"]) % [el_name, Fmt.money(sim.element_reset_cost(el))]
-		_respec.disabled = sim.element_spent(el) == 0 or sim.cash < sim.element_reset_cost(el) or sim.runner_busy()
 	else:
-		_respec.text = (Words.ASK["again"] % Words.BUILD["reset_sure"] if armed else Words.BUILD["reset_sure"]) % Fmt.money(sim.respec_cost())
-		_respec.disabled = not sim.can_respec()     # the sim's own test (28 Oct, the review: live with only the camp's nodes, then refused)
+		var price: int = sim.respec_cost()
+		_respec.text = (Words.ASK["again"] % Words.WEB_SCREEN["reset"] if armed else Words.WEB_SCREEN["reset"]) % Fmt.money(price)
+		_respec.disabled = sim.runner_busy() or sim.web_spent() == 0 or sim.cash < price
 	UI.style_button(_respec, false, "bad" if armed else "")
-	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
-	var x: float = Pal.GRID_W - PAD
-	x -= _respec.size.x
-	_respec.position.x = x
-	if _train.visible:
-		x -= 12 + _train.size.x
-		_train.position.x = x
-	if selected != "" and not _node_forms.is_empty():
-		fit_two(_node_forms, x - 16 - PAD)            # under the title, clear of the buttons, over two lines
-	_node_forms = []
-	# the runners before, in what's left beside the buttons: on the class's panel, not under a node
-	_past.size.x = x - 12 - _past.position.x
-	_past.visible = selected == ""
-	_past_bar.visible = false
-	if selected == "":
-		_show_past()
 
 
-## A node's sentence under its title over two lines `w` wide: the longest form that wraps into them whole.
+## A sentence over the card's three lines: the longest form that wraps into them whole.
+func fit_lines(forms: Array) -> void:
+	var lines: Array = [_words, _words2, _words3]
+	var live: Array = forms.filter(func(f): return str(f) != "")
+	if live.is_empty():
+		UI.wrap(lines, "")
+		return
+	_wrap_forms(lines, live)
+
+
+## (The old strip's two lines: the tests fit a sentence `w` wide.)
 func fit_two(forms: Array, w: float) -> void:
-	_words.size.x = w
-	_words2.position.x = PAD
-	_words2.size.x = w
-	for f in forms:
-		if str(f) == "":
-			continue
-		UI.wrap([_words, _words2], str(f))
-		if UI.text_width(_words2, _words2.text) <= w:
-			return
-	UI.wrap([_words, _words2], str(forms[0]))       # nothing wraps whole: the fit checks will say so
+	for l in [_words, _words2, _words3]:
+		l.size.x = w
+	fit_lines(forms)
+	for l in [_words, _words2, _words3]:
+		l.size.x = SIDE_W - 2 * CP
 
 
 ## A clause as a sentence of its own: a capital, a full stop.
@@ -1190,14 +1335,13 @@ func _pick_class(nm: String) -> void:
 
 func _on_train() -> void:
 	if _armed != "" and selected == "":
-		_pick_class(_armed)                    # the panel's Swap button: the second press (21 Oct, the crew)
+		_pick_class(_armed)                    # the card's Swap button: the second press (21 Oct, the crew)
 		return
 	_armed = ""
-	if selected != "" and sim.is_element_starter(selected) and (sim.element_opened(sim.element_of(selected)) or sim.element_idle(sim.element_of(selected))):
-		if sim.close_element(sim.element_of(selected)):     # the class's element closed, for nothing (28 Oct)
+	if selected != "":
+		var ok: bool = sim.train_node(selected) if _web._region.get(selected, "") == "ring" else sim.web_take(selected)     # the ring's paragon points; the web's one point a node (3 Nov)
+		if ok:
 			acted.emit()
-	elif selected != "" and sim.train_node(selected):
-		acted.emit()
 	show_state(sim)
 
 
@@ -1208,20 +1352,15 @@ func _on_train() -> void:
 var _respec_arm := Arm.new()
 
 
-## What the reset resets, by the node picked (28 Oct, the three resets): the ring, the Pitch, an element, or the class's trees.
+## What the reset resets, by the node picked: the ring with a ring node, else the web (3 Nov: one reset, every point back).
 func _respec_key() -> String:
-	if selected == "":
-		return "trees"
-	if sim.is_ring(selected):
+	if selected != "" and _web._region.get(selected, "") == "ring":
 		return "ring"
-	if sim.is_pitch(selected):
-		return "pitch"
-	var el: String = sim.element_of(selected)
-	return ("el:" + el) if el != "" else "trees"
+	return "web"
 
 
 func _respec_fp() -> String:
-	return "%s|%d|%d|%s" % [selected, sim.tree.size(), sim.paragon_spent(), str(sim.class_elements())]
+	return "%s|%d|%d|%d" % [selected, sim.tree.size(), sim.web_spent(), sim.paragon_spent()]
 
 
 func respec_armed() -> bool:
@@ -1234,21 +1373,15 @@ func _on_respec() -> void:
 		_shown = ""
 		show_state(sim)
 		return
-	var rk := _respec_key()
-	var ring_one: bool = rk == "ring"
-	var code: String = sim.build_code() if rk == "trees" else ""     # read before the reset clears it; copied only once it's done (the review)
 	var done: bool = false
-	if ring_one:
+	if _respec_key() == "ring":
 		done = sim.paragon_reset()
-	elif rk == "pitch":
-		done = sim.pitch_reset()
-	elif rk.begins_with("el:"):
-		done = sim.element_reset(rk.get_slice(":", 1))
 	else:
-		done = sim.respec()
+		var code: String = sim.build_code()     # read before the reset clears it; copied only once it's done (the review)
+		done = sim.web_reset()
 		if done:
 			_clip(code)
-			sim.log_event(Words.BUILD["reset_copied"])
+			sim.log_event(Words.WEB_SCREEN["reset_copied"])
 	if done:
 		acted.emit()
 	_shown = ""
@@ -1263,11 +1396,14 @@ func line_pairs() -> Array:
 
 ## For the tests: every label with text on show.
 func text_nodes() -> Array:
-	var out: Array = [_title, _words, _words2, _past, _respec, _sum_head, _kicker, _points, _unit, _class_line, _notice, _also_head]
+	var out: Array = [_title, _where, _words, _words2, _words3, _past, _no_use, _respec, _sum_head, _kicker, _points, _unit, _class_line, _notice, _also_head, _pairs_head, _big_head]
+	out.append_array(_big_lines)
+	for r in _pair_rows:
+		out.append_array(r["lines"])
 	if _chips.visible:
 		out.append_array(_chips.text_nodes())
 	out.append_array(_sum_chips.text_nodes())
-	for b in [_train]:
+	for b in [_train, code_copy, code_paste]:
 		if b.visible:
 			out.append(b)
 	for c in _class_cards:
@@ -1290,17 +1426,22 @@ func text_nodes() -> Array:
 # ------------------------------------------------------------------ the build code (24 Oct, the endgame chase, phase 7)
 
 func _build_code_panel() -> void:
-	code_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.ACCENT))
+	var h: float = CODE_Y - 8 - LANES_Y
+	var iw: float = SIDE_W - 2 * CP
+	code_panel = UI.panel(self, Rect2(SIDE_X, LANES_Y, SIDE_W, h), UI.box(Pal.CARD, 8, 1, Pal.ACCENT))
 	code_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_code_title = UI.label(code_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var by: float = PANEL_H - 12 - Pal.BUTTON_H
-	_code_plan = UI.label(code_panel, Rect2(PAD, by, Pal.GRID_W - 2 * PAD - 440, Pal.BUTTON_H), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_code_cancel = UI.button(code_panel, Rect2(Pal.GRID_W - PAD - 160, by, 160, Pal.BUTTON_H), false)
-	_code_cancel.text = Words.BUILD["cancel"]
-	_code_cancel.pressed.connect(cancel_build)
-	_code_go = UI.button(code_panel, Rect2(Pal.GRID_W - PAD - 160 - 12 - 260, by, 260, Pal.BUTTON_H), true)
+	_code_title = UI.label(code_panel, Rect2(CP, CP, iw, 34), "", "SemiBold", Pal.TITLE - 6, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_code_plan = UI.label(code_panel, Rect2(CP, CP + 46, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_code_plan2 = UI.label(code_panel, Rect2(CP, CP + 46 + LINE_H, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_code_plan3 = UI.label(code_panel, Rect2(CP, CP + 46 + 2 * LINE_H, iw, LINE_H), "", "Regular", CARD_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	@warning_ignore("integer_division")
+	var half: int = int(iw - 8) / 2
+	_code_go = UI.button(code_panel, Rect2(CP, h - CP - BTN_H, half, BTN_H), true)
 	_code_go.text = Words.BUILD["go"]
 	_code_go.pressed.connect(_retrain_build)
+	_code_cancel = UI.button(code_panel, Rect2(CP + half + 8, h - CP - BTN_H, iw - half - 8, BTN_H), false)
+	_code_cancel.text = Words.BUILD["cancel"]
+	_code_cancel.pressed.connect(cancel_build)
 	code_panel.visible = false
 
 
@@ -1339,7 +1480,7 @@ func read_code(code: String) -> void:
 		words = Words.BUILD["plan"] % [Fmt.money(int(plan["cost"])), int(plan["trained"]), int(plan["of"])] if int(plan["cost"]) > 0 else Words.BUILD["plan_free"] % [int(plan["trained"]), int(plan["of"])]
 		if not plan["missed"].is_empty():
 			words += " · " + Words.BUILD["missed"] % plan["missed"].size()
-	UI.fit(_code_plan, [words])
+	_wrap_forms([_code_plan, _code_plan2, _code_plan3], [words])
 	_code_go.disabled = str(plan["block"]) != ""
 	code_panel.visible = true
 	move_child(code_panel, -1)
@@ -1352,7 +1493,7 @@ func _retrain_build() -> void:
 		cancel_build()
 		acted.emit()
 	else:
-		UI.fit(_code_plan, [str(r["block"])])
+		_wrap_forms([_code_plan, _code_plan2, _code_plan3], [str(r["block"])])
 
 
 ## Leaving the room drops a pasted code's plan.
@@ -1375,4 +1516,4 @@ func cancel_build() -> void:
 
 ## For the tests: the code panel's words.
 func code_text_nodes() -> Array:
-	return [_code_title, _code_plan, _code_go, _code_cancel, code_copy, code_paste].filter(func(n): return n != null and n.visible)
+	return [_code_title, _code_plan, _code_plan2, _code_plan3, _code_go, _code_cancel, code_copy, code_paste].filter(func(n): return n != null and n.visible)

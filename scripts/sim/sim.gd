@@ -388,57 +388,6 @@ func paragon_reset() -> bool:
 	return true
 
 
-## The three resets (28 Oct, Matt: "no way to reset pitch or elemental skill trees"; docs/design/resets_strip_exchange.md):
-## the class's trees (respec), the Pitch's, and an element's, each RESPEC_CASH a point it frees, each leaving the others.
-## The Pitch's and the elements' points are the camp's, so their resets free them for every class.
-func pitch_nodes_spent() -> int:
-	var n := 0
-	for id in tree:
-		if is_pitch(str(id)):
-			n += node_cost(id)
-	return n
-
-
-func pitch_reset_cost() -> int:
-	return _inf(pitch_nodes_spent() * Data.RESPEC_CASH)
-
-
-## The Pitch's nodes back to its points; the elements' starters on its circle stay (they open the elements).
-func pitch_reset() -> bool:
-	if runner_busy() or pitch_nodes_spent() == 0 or cash < pitch_reset_cost():
-		return false
-	_dry_memo.clear()
-	_stats_dirty()
-	var paid := pitch_reset_cost()
-	var pts := pitch_nodes_spent()
-	cash -= paid
-	chron("respec", {"cost": paid, "points": pts, "pitch": true})
-	tree = tree.filter(func(id): return not is_pitch(str(id)))
-	_stats_dirty()
-	log_event(Words.LOG["pitch_reset"])
-	return true
-
-
-func element_reset_cost(el: String) -> int:
-	return _inf(element_spent(el) * Data.RESPEC_CASH)
-
-
-## An element's nodes back to its own points; its starter stays, so it stays open for whoever has it.
-func element_reset(el: String) -> bool:
-	if runner_busy() or element_spent(el) == 0 or cash < element_reset_cost(el):
-		return false
-	_dry_memo.clear()
-	_stats_dirty()
-	var paid := element_reset_cost(el)
-	var pts := element_spent(el)
-	cash -= paid
-	chron("respec", {"cost": paid, "points": pts, "element": el})
-	tree = tree.filter(func(id): return element_of(str(id)) != el or is_element_starter(str(id)))
-	_stats_dirty()
-	log_event(Words.LOG["element_reset"] % str(Data.element_tree_of(el).get("name", el)))
-	return true
-
-
 ## XP in: the runner's to the cap, the rest the crew's paragon.
 func _gain_xp(g: float) -> void:
 	if mission != null and bool(mission.get("unwatched", false)):
@@ -1540,13 +1489,14 @@ func set_class(name: String) -> bool:
 	_stats_dirty()
 	if cls == "":
 		cls = name                             # the first pick: this runner is that class's
+		_ensure_start()                        # its start, owned from level 1 (the skill web)
 		chron("class", {"from": "", "to": name})
 		log_event(Words.LOG["class_before"] % name)
 		_say_next()
 		return true
 	var from := cls
 	var join := join_level(name)                # the crew's floor (30 Oct): read before the swap, off the other classes as they stand
-	var pitch: Array = tree.filter(func(id): return is_camp(str(id)))     # the camp's (the Pitch's and the elements', slice 3): they stay out whoever runs
+	var pitch: Array = tree.filter(func(id): return is_ring(str(id)))     # the crew's paragon ring stays out whoever runs; the web is each runner's own
 	var own_tabs: Array = stash.filter(func(x): return tab_of(x) != "")     # the class's own stash tabs go with them
 	stash = stash.filter(func(x): return tab_of(x) == "")
 	roster[from] = _runner_out()
@@ -1560,9 +1510,10 @@ func set_class(name: String) -> bool:
 		roster.erase(name)
 	else:
 		_runner_in(_new_runner())
-	tree = tree.filter(func(id): return not is_camp(str(id))) + pitch
+	tree = tree.filter(func(id): return not is_ring(str(id))) + pitch
 	_stats_dirty()
 	cls = name
+	_ensure_start()
 	_skills_known_only()
 	_caches_out()
 	var lv: int = maxi(level(), join)
@@ -1609,6 +1560,61 @@ func _crew_floor_lift(join: int) -> void:
 		hp = max_hp()
 
 
+## The runner's web made legal (a load): the start, then the saved nodes in their saved order, each kept only if the
+## rule takes it as it comes - joined back to the start through owned ones, its gate met, a point free, not another
+## class's start or skill - in passes until one keeps none. What's past the points goes latest first; a node cut off
+## from the start goes, and with it what hung only from it. The ring's own stay as they are.
+func _web_legal() -> void:
+	if cls == "":
+		return
+	var st: String = Data.web_start(cls)
+	var want: Array = []
+	var keep: Array = [st]
+	for id in tree:
+		var sid := str(id)
+		if is_ring(sid):
+			keep.append(id)
+		elif sid != st and not want.has(sid) and not node(sid).is_empty():
+			want.append(sid)
+	var was: int = tree.size()
+	tree = keep
+	_stats_dirty()
+	var took := true
+	while took and not want.is_empty():
+		took = false
+		var still: Array = []
+		for id in want:
+			if train_block(id) == "":
+				tree.append(id)
+				took = true
+			else:
+				still.append(id)
+		want = still
+	if tree.size() != was:
+		_dry_memo.clear()
+		_stats_dirty()
+
+
+## Every runner's web made legal as a save loads: the one out, then each of the crew's as their own class.
+func _web_legal_all() -> void:
+	_web_legal()
+	var hold := {"cls": cls, "tree": tree, "training_points": training_points}
+	for k in roster:
+		var r: Dictionary = roster[k]
+		if not (r.get("tree", []) is Array) or Array(r.get("tree", [])).is_empty():
+			continue
+		cls = str(k)
+		tree = Array(r["tree"]).duplicate()
+		training_points = int(r.get("training_points", 0))
+		_web_legal()
+		r["tree"] = tree.filter(func(id): return not is_ring(str(id)))
+	cls = hold["cls"]
+	tree = hold["tree"]
+	training_points = hold["training_points"]
+	_eff_hash = 0
+	_stats_dirty()
+
+
 ## A slot holding a skill this runner doesn't know empties (a swap, a load, a death, a respec): the picker counts it free.
 func _skills_known_only() -> void:
 	for k in range(skill_slots.size()):
@@ -1618,7 +1624,7 @@ func _skills_known_only() -> void:
 
 ## The runner out, as the crew holds them: the live fields, moved (not copied: the kit is the same items).
 func _runner_out() -> Dictionary:
-	return {"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "wounds": wounds, "tree": tree.filter(func(id): return not is_camp(str(id))), "training_points": training_points,
+	return {"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "wounds": wounds, "tree": tree.filter(func(id): return not is_ring(str(id))), "training_points": training_points,
 		"best_level": best_level, "trait": runner_trait, "candidates": candidates, "runner_runs": runner_runs, "record": record,
 		"insure_next": insure_next, "skill_slots": skill_slots.duplicate(), "skill_auto": skill_auto.duplicate()}     # the skills are the class's (25 Oct, the review)
 
@@ -1689,7 +1695,7 @@ func crew_level(name: String) -> int:
 	return 0 if r.is_empty() else Data.level_for_xp(float(r.get("xp", 0.0)))
 
 
-## The element a class's runner has trained most (by points), "" for none or a class not played.
+## The element a class's runner has trained most (by nodes in its flower), "" for none or a class not played.
 func crew_element(name: String) -> String:
 	var r := crew_runner(name)
 	var best := ""
@@ -1697,8 +1703,8 @@ func crew_element(name: String) -> String:
 	var count := {}
 	for id in r.get("tree", []):
 		var et := Data.element_tree(str(id).get_slice("/", 0))
-		if not et.is_empty():
-			count[et["element"]] = int(count.get(et["element"], 0)) + Data.base_cost(et, node(str(id)))
+		if not et.is_empty() and Data.web_region(str(id)).begins_with("el:"):
+			count[et["element"]] = int(count.get(et["element"], 0)) + 1     # its flower's nodes, not the joins in its colour
 	for el in count:
 		if int(count[el]) > most:
 			most = int(count[el])
@@ -1706,9 +1712,9 @@ func crew_element(name: String) -> String:
 	return best
 # ------------------------------------------------------------------ the tree
 
-## The trees on show: the class's, the Yard's, and every element's.
+## The trees on show: the whole web (every class's, the centre's, every element's) and the paragon ring.
 func trees() -> Array:
-	var out: Array = Data.trees_for(cls, bridge())
+	var out: Array = Data.TREES.duplicate()
 	out.append_array(Data.ELEMENT_TREES)
 	out.append(Data.RING)
 	return out
@@ -3261,8 +3267,8 @@ func choose_runner(k: int) -> bool:
 	return true
 
 
-## Training's 15 Oct gates (the core's points, the keystones' and capstones' levels, the second past's 20) on; only the
-## smoke's mechanics areas turn them off, to test a joint or a keystone without the build behind it. Not saved.
+## The web's two gates (a keystone at KEYSTONE_SPENT points spent, a capstone at CAPSTONE_SPENT) on; only the smoke's
+## mechanics areas turn them off, to test a pair or a keystone without the build behind it. Not saved.
 var core_gates := true
 
 
@@ -3270,19 +3276,6 @@ var core_gates := true
 func first_tree() -> String:
 	var ts: Array = Data.trees_for(cls)
 	return str(ts[0]["name"]) if not ts.is_empty() and ts[0].get("class", "") == cls else ""
-
-
-## An element tree's core (15 Oct): the class tree its joint is in for this runner, on show - the most-trained, with a second
-## past's - or the first class tree off the pair. "" for a tree that isn't an element's.
-func core_tree(tree_name: String) -> String:
-	if not Data.tree_named(tree_name).has("element"):
-		return ""
-	var best := ""
-	for c in my_classes():
-		var j: Dictionary = Data.joint_in(c, tree_name)
-		if not j.is_empty() and _on_show(str(j["tree"])) and (best == "" or points_in(str(j["tree"])) > points_in(best)):     # a second past's other tree isn't one it has
-			best = str(j["tree"])
-	return best if best != "" else first_tree()
 
 
 func node(id: String) -> Dictionary:
@@ -3300,13 +3293,9 @@ func gun_type() -> String:
 	return Items.base_of(equipped["Primary"]).get("type", "")
 
 
-## A trained node counts unless it's typed for a gun that isn't in hand ("type" is one gun type, or a
-## list of them), or it's the top of an element tree - column 5 or 6 - with no closed joint there: a class
-## change reopened it, so it stays trained and does nothing until a joint there closes again (9 Oct).
-## `_active` reads the type alone; `node_active` (by id) reads both - the screen's and the tests'.
+## An owned node counts unless it's typed for a gun that isn't in hand ("type" is one gun type, or a list of them).
+## Everything on the web is the runner's own (the skill web, 3 Nov): another class's half works like any node.
 func _active(n: Dictionary) -> bool:
-	if n.has("class") and not (n["class"] in my_classes()):
-		return false                          # another class's half, trained by them (the camp's tree, slice 3)
 	if not n.has("type"):
 		return true
 	var ty = n["type"]
@@ -3315,20 +3304,7 @@ func _active(n: Dictionary) -> bool:
 
 func node_active(id: String) -> bool:
 	var n := node(id)
-	var el := element_of(id)
-	return not n.is_empty() and _active(n) and (el == "" or element_opened(el)) and level_open(n)     # the web (22 Oct): an element's top works for anyone who paths to it; an element the class has open (28 Oct); its level reached (31 Oct)
-
-
-## A keystone or capstone works only at its level (31 Oct, BUILD37 C: the designer's "keystones open at KEYSTONE_LEVEL
-## and capstones at CAPSTONE_LEVEL"). train_block refuses one below it; this holds for one the camp keeps trained - the
-## Pitch's and the elements' stay after a death or a class swap - so a runner under the level holds it dark, and it
-## lights again at the level. Every other node: true. core_gates off (the smoke's mechanics areas): true.
-func level_open(n: Dictionary) -> bool:
-	if not core_gates:
-		return true
-	if n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
-		return false
-	return not (n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL)
+	return not n.is_empty() and _active(n)
 
 
 func has_node(effect: String) -> bool:
@@ -3347,40 +3323,40 @@ func tree_sum(effect: String) -> float:
 	return t
 
 
-## The trained nodes by effect - [node, its figure for that effect], a node under its "also" effects too - built once
-## per shape of the tree and the runner's classes: the fight asks for effects every tick. The joints closed are worked
-## out with it.
+## The owned nodes by effect - [node, its figure for that effect], a node under its "also" effects too - built once
+## per shape of the tree and the runner's class: the fight asks for effects every tick. The pairs done are worked
+## out with it. The class's start counts owned whether or not it's in the tree (a fixture's tree set straight).
 var _eff_cache := {}
 var _eff_hash := 0
-var _closed := {}                  # joint key -> true, closed
+var _closed := {}                  # pair key -> true, done
 func _nodes_for(effect: String) -> Array:
 	var cap: bool = has_rule("headmasters_cap")
-	var lv_now: int = level() if core_gates else 0     # read once (31 Oct, the review: has_node's key)
-	var h := hash([tree, cls, cap, elements_open.get(cls, null), _lifted_now(), core_gates and lv_now < Data.KEYSTONE_LEVEL, core_gates and lv_now < Data.CAPSTONE_LEVEL])     # the level gates' dark (31 Oct)
+	var h := hash([tree, cls, cap, core_gates])
 	if h != _eff_hash or _eff_cache.is_empty():
 		_eff_cache = {"": []}
 		_closed = {}
 		for j in Data.JOINTS:
-			if j["class"] == cls and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]) and element_opened(str(Data.element_tree(j["element_tree"]).get("element", ""))):
+			if j["class"] == cls and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]):
 				_closed[j["key"]] = true
 		var ids: Array = tree.duplicate()
+		var st: String = Data.web_start(cls) if cls != "" else ""
+		if st != "" and not ids.has(st):
+			ids.append(st)
 		if cap:
+			var cap_top: bool = not core_gates or points_spent() >= Data.CAPSTONE_SPENT     # its capstone only at CAPSTONE_SPENT spent, as the web's rule (3 Nov, the review of build 47: the Cap bought round the gate)
 			for ct in Data.trees_for(cls):      # the Headmaster's Cap (a mythic): every node of the class's trees -
 				if str(ct.get("class", "")) == "":
-					continue                          # the class's own, not the Yard's
+					continue                          # the class's own, not the centre's
 				for i in range(ct.get("nodes", []).size()):
 					var cid := "%s/%d" % [ct["name"], i]
+					if ct["nodes"][i].get("capstone", false) and not cap_top:
+						continue
 					if not (cid in ids) and not ct["nodes"][i].get("keystone", false) and not ct["nodes"][i].get("cost", false) and not ct["nodes"][i].has("skill"):
 						ids.append(cid)               # nor its skills (24 Oct, milestone 8: a mythic that taught all eight was the review's catch);               # but its keystones and the nodes with a cost (Data's "cost"), whose costs are the point (21 Oct, Matt: "fix both" - Hit and run, a notable, came with it)
 		for id in ids:
 			var n := node(id)
 			if n.is_empty():
 				continue
-			var el_n := element_of(str(id))
-			if el_n != "" and not element_opened(el_n):
-				continue                              # an element this class hasn't open: the camp's, not this runner's (28 Oct)
-			if not level_open(n):
-				continue                              # a keystone or capstone under its level: dark (31 Oct, BUILD37 C)
 			var e: String = n.get("effect", "")
 			if not _eff_cache.has(e):
 				_eff_cache[e] = []
@@ -3393,16 +3369,13 @@ func _nodes_for(effect: String) -> Array:
 	return _eff_cache.get(effect, [])
 
 
-## Whether a joint's half in a tree is trained: the node in that tree carrying the joint's key.
+## Whether a pair's half in a tree is owned: the node in that tree carrying the pair's key.
 func _half_trained(j: Dictionary, tree_name: String) -> bool:
-	var t := Data.tree_named(tree_name)
-	for i in range(t.get("nodes", []).size()):
-		if str(t["nodes"][i].get("joint", "")) == j["key"] and tree.has("%s/%d" % [tree_name, i]):
-			return true
-	return false
+	var hid := _half_id(j, tree_name)
+	return hid != "" and web_owned(hid)
 
 
-## A joint closed: both halves trained by a runner of its class.
+## A pair done: both halves owned by a runner of its class.
 func has_joint(key: String) -> bool:
 	_nodes_for("")
 	return _closed.has(key)
@@ -3512,7 +3485,7 @@ var _live_state_at := 0
 func live_guard() -> void:
 	if live_memo_off or _dry_on:
 		return
-	var h := hash([runner_parts(), wounds, stash.size(), _removed, yard_picks, yard_ranks, lorries, elements_open, weather, is_night(), front_tier(),
+	var h := hash([runner_parts(), wounds, stash.size(), _removed, yard_picks, yard_ranks, lorries, weather, is_night(), front_tier(),
 		standing, atlas, issued, mission != null])     # the stash's count and what's gone from it: a paper's rule in or out
 	if h != _live_state_at:
 		_live_state_at = h
@@ -3530,149 +3503,40 @@ func _snapshot_rules() -> Dictionary:
 	return out
 
 
+## Every node costs one point (the skill web, 3 Nov: the one rule); the class's start none; a paragon ring point one.
 func node_cost(id: String) -> int:
-	var parts := id.split("/")
-	var n := node(id)
-	if is_element_starter(id):
-		return starter_cost(id)
-	return Data.base_cost(Data.tree_named(parts[0]), n)
+	return 0 if is_start(id) else 1
 
 
-## An element's starter's price in Pitch points (31 Oct, the designer: a class's own two open free): one of the runner's
-## class's pair (Data.AFFINITY) 0, any other ELEMENT_OPEN_COST (the Pitch circle, 24 Oct). One in the camp's tree reads
-## what was paid for it when it was opened (element_paid), whoever runs now: the Pitch's pool counts it once.
-func starter_cost(id: String) -> int:
-	var el := element_of(id)
-	if tree.has(id):
-		return int(element_paid.get(el, Data.ELEMENT_OPEN_COST))     # none written (a fixture's starter put straight in): the old price
-	return 0 if el in Data.AFFINITY.get(cls, []) else Data.ELEMENT_OPEN_COST
+## The runner's class's start (Data.web_start): owned from level 1, free, its skill the class's first.
+func is_start(id: String) -> bool:
+	return cls != "" and id == Data.web_start(cls)
 
 
-## An element's starter (24 Oct, Matt: the Pitch a circle with the elements' starters on it): open at any time - the
-## class's own two free (31 Oct), any other a Pitch point from the Pitch's pool, free too where the camp already has it;
-## only an opened element's meter fills, so no element fills by the way a build plays without being opened.
-func is_element_starter(id: String) -> bool:
-	return element_of(id) != "" and Data.web_entry(node(id))
-
-
-## Two elements a class (28 Oct, Matt: two at most; the canvas's "Two elements", B): each class opens its own two, and
-## its runner uses and fills only those. The camp keeps every element's nodes and points, whoever opened them: a class
-## opens one another class trained for nothing, and closes one of its two for nothing, to open another.
-var elements_open := {}            # class -> [element, ...] in the order opened
-var element_paid := {}             # element -> the Pitch points its starter cost when the camp first opened it (31 Oct: own pair free)
-func element_opened(el: String) -> bool:
-	return el in class_elements()
-
-
-## The Quartermaster's Manual, the Last Orders or the Headmaster's Cap worn (31 Oct, the designer): the class may open
-## more than ELEMENTS_A_CLASS elements; taken off, its first two (in the order opened) work and the rest idle until it's
-## back. One has_rule (its snapshot read fresh), then the snapshot (the review: three has_rule calls made has_node 2.5x
-## slower).
-const LIFT_RULES := ["qm_manual", "last_orders", "headmasters_cap"]
-func elements_lifted() -> bool:
-	if has_rule(LIFT_RULES[0]):
-		return true
-	return _lifted_now()
-
-
-## The lift from the rules as last read (has_rule just called): no new snapshot.
-func _lifted_now() -> bool:
-	var rules: Dictionary = _dry_rules if _dry_on else _rules
-	for r in LIFT_RULES:
-		if rules.has(r):
-			return true
-	return false
-
-
-## An element the class opened that idles: past its first two with neither the Manual nor the Last Orders worn.
-func element_idle(el: String) -> bool:
-	return el in class_elements_held() and not element_opened(el)
-
-
-## Every element the class has opened, in the order opened, the idle ones too.
-func class_elements_held() -> Array:
-	if elements_open.has(cls):
-		return Array(elements_open[cls]).duplicate()
-	return _derived_elements()
-
-
-## The element's starter is in the camp's tree: some class opened it (its own two free, any other a Pitch point), so
-## any class opens it for nothing.
-func element_trained(el: String) -> bool:
-	for id in tree:
-		if element_of(str(id)) == el and Data.web_entry(node(str(id))):
-			return true
-	return false
-
-
-## The elements this runner's class has open. A class that's never opened or closed one takes the camp's first two
-## trained, in the circle's order: a class swapped in keeps the camp's elements (and an old save its own).
-func class_elements() -> Array:
-	var held: Array = class_elements_held()
-	return held if elements_lifted() else held.slice(0, Data.ELEMENTS_A_CLASS)     # past two: idle without the Manual or the Last Orders (31 Oct)
-
-
-## The camp's first two elements trained, in the circle's order: what a class that's never opened or closed one takes.
-func _derived_elements() -> Array:
-	var list: Array = []
-	for et in Data.ELEMENT_TREES:
-		var el := str(et.get("element", ""))
-		if list.size() < Data.ELEMENTS_A_CLASS and _element_in_tree(el):
-			list.append(el)
-	return list
-
-
-## Any of an element's nodes in the camp's tree (its starter first, in play; a fixture's node alone, in the tests).
-func _element_in_tree(el: String) -> bool:
-	for id in tree:
-		if element_of(str(id)) == el:
-			return true
-	return false
-
-
-## Every class that's never opened or closed one keeps the two it takes now (28 Oct, the review: a Doorman's derived pair
-## moved when the Drifter trained an element earlier in the circle, and his poison nodes went dark): written to
-## elements_open before a new element joins the camp, once the camp has two to take.
-func _pin_class_elements() -> void:
-	var two: Array = _derived_elements()
-	if two.size() < Data.ELEMENTS_A_CLASS:
+## The start in the tree and its skill in a slot (a new runner, a swap, a reset, a death, a load): the one node a
+## runner never lacks. `slot` (a class picked or swapped in): its skill into an empty slot too; off (a reset, a death,
+## a load): the tree alone, the slots as they were.
+func _ensure_start(slot := true) -> void:
+	var st: String = Data.web_start(cls) if cls != "" else ""
+	if st == "":
 		return
-	for c in Data.CLASSES:
-		var name: String = str(c["name"])
-		if not elements_open.has(name) and name != cls:
-			elements_open[name] = two.duplicate()
-			_stats_dirty()
+	if not tree.has(st):
+		tree.insert(0, st)
+		_dry_memo.clear()
+		_stats_dirty()
+	var sk: String = str(node(st).get("skill", ""))
+	if slot and sk != "" and skill_known(sk) and not skill_slots.has(sk):
+		var free_slot: int = skill_slots.find("")
+		if free_slot >= 0:
+			skill_slots[free_slot] = sk
 
 
-func _open_element(el: String) -> void:
-	var list: Array = class_elements_held()
-	if not (el in list):
-		list.append(el)
-	elements_open[cls] = list
-	_stats_dirty()
-
-
-## One of the class's two closed (free): its nodes stay the camp's, its meter stops for this class.
-func close_element(el: String) -> bool:
-	if runner_busy() or not (el in class_elements_held()):
-		return false                          # an idle one too (31 Oct)
-	var list: Array = class_elements_held()
-	list.erase(el)
-	elements_open[cls] = list
-	_dry_memo.clear()
-	_stats_dirty()
-	var et: Dictionary = Data.element_tree_of(el)
-	log_event(Words.LOG["element_closed"] % [et.get("name", el), cls])
-	chron("element_close", {"element": el})
-	return true
-
-
-## The class's points spent: its own trees (the Pitch's is the camp's, below).
+## The runner's points spent: every web node owned but the start.
 func points_spent() -> int:
 	var n := 0
 	for id in tree:
-		if not is_camp(str(id)):
-			n += node_cost(id)
+		if not is_ring(str(id)):
+			n += node_cost(str(id))
 	return n
 
 
@@ -3680,61 +3544,14 @@ func points_free() -> int:
 	return training_points - points_spent()
 
 
-## The Pitch's tree is the camp's (21 Oct, Matt: "The camp's, own points"): bought once, it works for every class, and
-## its points are one a level of the crew's best class - its own pool beside each class's.
+## The centre's tree (the old Pitch's name): a node of it is the runner's like any other now.
 func is_pitch(id: String) -> bool:
 	return id.get_slice("/", 0) == Data.COMMON_TREE
 
 
-## The camp's nodes (slice 3, web.md §1): the Pitch's and every element's stay allocated whoever runs; a class's
-## region (and a bridged one) is the runner's.
-func is_camp(id: String) -> bool:
-	return is_pitch(id) or is_ring(id) or not Data.element_tree(id.get_slice("/", 0)).is_empty()
-
-
-## The element points (web.md §3): not bought - earned on the element's use meter, spent in its region alone.
-var element_xp := {}               # element -> the meter, in site-pools of damage dealt
-var element_points := {}           # element -> points earned
+## The element a node's tree is ("" for a class's or the centre's).
 func element_of(id: String) -> String:
 	return str(Data.element_tree(id.get_slice("/", 0)).get("element", ""))
-
-
-func element_spent(el: String) -> int:
-	var n := 0
-	for id in tree:
-		if element_of(str(id)) == el and not is_element_starter(str(id)):
-			n += node_cost(id)
-	return n
-
-
-func element_free(el: String) -> int:
-	return int(element_points.get(el, 0)) - element_spent(el)
-
-
-## A run's damage by type fills each element's meter: the site's pool of HP (its heads' times their number) is one
-## unit, ELEMENT_METER of them a point. Each element the class has open earns from its own damage at full and from the
-## run's damage of every other type at ELEMENT_METER_SHARE (31 Oct, the designer). Never a dry run's.
-func _fill_meters(m: Dictionary) -> void:
-	if m.get("dry", false):
-		return
-	var t: Dictionary = m["t"]
-	var pool_hp: float = maxf(1.0, float(t["hp"]) * maxf(1.0, float(t.get("pool", 1))))
-	var dealt: Dictionary = m.get("dealt_by", {})
-	var all_dealt := 0.0
-	for ty in dealt:
-		all_dealt += float(dealt[ty])
-	for ty in class_elements():                   # the Pitch circle: an element not opened earns nothing
-		var own: float = float(dealt.get(ty, 0.0))
-		var units: float = (own + (all_dealt - own) * Data.ELEMENT_METER_SHARE) / pool_hp
-		if not is_finite(units) or units <= 0.0:
-			continue                          # a broken build's figure (the smoke's 1e30): no meter for it
-		var xp_v: float = float(element_xp.get(ty, 0.0)) + minf(units, Data.ELEMENT_METER * 2.0)     # a run earns two points at most (the review: a broken build's 1e30 filled a region)
-		var earned := int(floor(xp_v / Data.ELEMENT_METER))
-		element_xp[ty] = fmod(xp_v, Data.ELEMENT_METER)
-		if earned > 0:
-			element_points[ty] = int(element_points.get(ty, 0)) + earned
-			var et: Dictionary = Data.element_tree_of(ty)
-			log_event(Words.LOG["element_earned"] % [et.get("name", ty), earned, "" if earned == 1 else "s"])
 
 
 func crew_best_level() -> int:
@@ -3744,190 +3561,145 @@ func crew_best_level() -> int:
 	return b
 
 
-func pitch_points() -> int:
-	return maxi(0, crew_best_level() - 1)
-
-
-func pitch_spent() -> int:
-	var n := 0
-	for id in tree:
-		if is_pitch(str(id)) or is_element_starter(str(id)):
-			n += node_cost(id)
-	return n
-
-
-func pitch_free() -> int:
-	return pitch_points() - pitch_spent()
-
-
-## The points a node is bought from: the Pitch's pool or the class's.
+## The points a node is bought from: the paragon ring's own, or the runner's.
 func free_for(id: String) -> int:
-	if is_pitch(id) or is_element_starter(id):
-		return pitch_free()
-	if is_ring(id):
-		return paragon_free()
-	var el := element_of(id)
-	return element_free(el) if el != "" else points_free()
+	return paragon_free() if is_ring(id) else points_free()
 
 
-## The classes whose halves this runner can train: its own.
+## The classes whose pairs this runner closes: its own.
 func my_classes() -> Array:
-	return [cls] if cls != "" else []     # the halves and the joints are the class's own: a bridge (slice 3) opens a region, not its halves (web.md §3, the review)
+	return [cls] if cls != "" else []
 
 
-## The bridge (slice 3, web.md §4): the neighbouring class whose region this runner opened, or "". Memoised with the
-## dry memo (the review: trees() and the screen read it often; the memo clears with the tree).
-func bridge() -> String:
-	return _memo("bridge", _bridge_raw)
-
-
-func _bridge_raw() -> String:
-	for id in tree:
-		var n := node(str(id))
-		if n.has("bridge") and not is_camp(str(id)) and str(Data.tree_named(str(id).get_slice("/", 0)).get("class", "")) == cls:
-			return str(n["bridge"])
-	return ""
-
-
-## What's been spent in a tree, at the tree's own prices: what its gates count.
+## What's been spent in a tree: its nodes owned, a point each.
 func points_in(tree_name: String) -> int:
-	var t := Data.tree_named(tree_name)
 	var n := 0
 	for id in tree:
 		if str(id).get_slice("/", 0) == tree_name:
-			n += Data.base_cost(t, node(id))
+			n += node_cost(str(id))
 	return n
 
 
-## Why a node can't be trained now, in words, or "" when it can (the Training screen's line, the tests').
-## `ignore_points`: everything but the points free - the screen draws a node it could reach with more points as open.
-func train_block(id: String, ignore_points := false, said := true) -> String:
+## Why a node can't be taken now, in the game's words, or "" when it can (the Training screen's line, the tests').
+## A web node (skill_web.md, the one rule): joined to one owned, a point free, a keystone KEYSTONE_SPENT points spent
+## first and a capstone CAPSTONE_SPENT (core_gates off in the smoke's mechanics areas lifts those two). The paragon
+## ring keeps its own: a path round from an entry, a node's stack. `ignore_points`: everything but the points free.
+func train_block(id: String, ignore_points := false, _said := true) -> String:
 	var n := node(id)
 	if n.is_empty():
 		return "no such node"
-	if n.has("ring") and int(ring.get(id, 0)) >= int(n["stack"]):
-		return "full: %d points on it" % int(n["stack"])
-	var el_of := element_of(id)
-	if el_of != "" and is_element_starter(id):
-		if el_of in class_elements_held():
-			return "trained"                  # open, or idle past two (31 Oct)
-		if class_elements_held().size() >= Data.ELEMENTS_A_CLASS and not elements_lifted():
-			return "two elements open: close one first"
-		if tree.has(id):
-			return ""                         # trained by another class: open for this one, for nothing
-	if tree.has(id) and not n.has("ring"):
+	if n.has("ring"):
+		if int(ring.get(id, 0)) >= int(n["stack"]):
+			return "full: %d points on it" % int(n["stack"])
+		if not Data.web_entry(n) and not touches_trained(id):
+			return "wants a path round the ring"
+		if not ignore_points and paragon_free() < 1:
+			return "wants 1 point"
+		return ""
+	if not n.has("slot"):
+		return "no such node"
+	if web_owned(id):
 		return "trained"
-	var parts := id.split("/")
-	if not _on_show(parts[0]):
-		return "not one of this runner's trees"
-	if not Data.for_classes(n, my_classes()):
-		return "%s only" % n["class"]
-	if el_of != "" and not is_element_starter(id) and element_idle(el_of):
-		return Words.NODE_BLOCK_IDLE % Words.mid(str(Data.element_tree_of(el_of).get("name", el_of)))     # opened, past the class's two, its lifting item off (31 Oct, the review)
-	if el_of != "" and not is_element_starter(id) and not element_opened(el_of):
-		return "open %s first" % str(Data.element_tree_of(el_of).get("name", el_of))     # two a class (28 Oct)
-	if n.has("bridge"):
-		if bridge() != "":
-			return "one bridge a class: the %s's is taken" % bridge()
-		if str(Data.tree_named(parts[0]).get("class", "")) != cls:
-			return "a bridge is taken from your own region"
-	# the web (22 Oct): a node is reached by pathing - an entry, or touching a node trained - not by a column's gate;
-	# every element's region is open to every class (the pair gates went with the lanes)
-	if not Data.web_entry(n) and not touches_trained(id):
-		var near: String = path_next(id) if said else ""     # `said` off (BUILD45, the web's every node a show): the reach alone, no path walked for the words
-		return "wants a path to it: %s first" % (node(near).get("name", near) if near != "" else "an entry")
-	if core_gates and n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
-		return "opens at level %d" % Data.KEYSTONE_LEVEL
-	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
-		return "opens at level %d" % Data.CAPSTONE_LEVEL
-	if n.has("bridge") and core_gates and level() < Data.BRIDGE_LEVEL:
-		return "opens at level %d" % Data.BRIDGE_LEVEL
-	if n.has("ring") and not Data.web_entry(n) and not touches_trained(id):
-		return "wants a path round the ring"
-	var held := keystone_held_against(id)
-	var back := 0
-	if held != "":
-		var hangs := strands_without(held)
-		if hangs != "":
-			return "%s hangs off %s: let that go first" % [node(hangs)["name"], node(held)["name"]]
-		back = node_cost(held)                # the swap is free: the held one's points pay for it (the review)
-	if not ignore_points and free_for(id) + back < node_cost(id):
-		return "wants %d point%s" % [node_cost(id), "" if node_cost(id) == 1 else "s"]
+	if not touches_trained(id):
+		return Words.WEB_BLOCK["joined"]
+	var spent := points_spent()
+	if core_gates and n.get("keystone", false) and spent < Data.KEYSTONE_SPENT:
+		return Words.WEB_BLOCK["keystone"] % Data.KEYSTONE_SPENT
+	if core_gates and n.get("capstone", false) and spent < Data.CAPSTONE_SPENT:
+		return Words.WEB_BLOCK["capstone"] % Data.CAPSTONE_SPENT
+	if not ignore_points and points_free() < node_cost(id):
+		return Words.WEB_BLOCK["points"]
 	return ""
 
 
-## The keystone choice (22 Oct, web.md §2): a class's two lanes hold three keystones and a runner holds one of them.
-## The keystone this one would take the place of: the class's other keystone trained, or "".
-func keystone_held_against(id: String) -> String:
-	var n := node(id)
-	if not n.get("keystone", false):
-		return ""
-	var c: String = str(Data.tree_named(id.get_slice("/", 0)).get("class", ""))
-	if c == "":
-		return ""
-	for other in tree:
-		if other == id:
-			continue
-		if str(Data.tree_named(str(other).get_slice("/", 0)).get("class", "")) == c and node(other).get("keystone", false):
-			return other
-	return ""
-
-
-## A trained node that would lose its path were `id` let go ("" if none): the walk from the entries over the
-## trained nodes without it.
-func strands_without(id: String) -> String:
-	var links: Dictionary = Data.web_links_all()
-	var reached := {}
-	var queue: Array = []
-	for other in tree:
-		if other != id and Data.web_entry(node(other)):
-			reached[other] = true
-			queue.append(other)
-	while not queue.is_empty():
-		var cur: String = queue.pop_front()
-		for nb in links.get(cur, []):
-			if nb != id and tree.has(nb) and not reached.has(nb):
-				reached[nb] = true
-				queue.append(nb)
-	for other in tree:
-		if other != id and not reached.has(other):
-			return other
-	return ""
-
-
-## A node can be trained: reached by a path from its region's entry, a point free for it; a class's half is that
-## class's alone.
 func can_train(id: String) -> bool:
 	return train_block(id) == ""
 
 
-## The web's pathing (22 Oct): a node touches a trained one along a link.
+## Another class's start or skill node: its class's name, else "". Taken and walked through like any node (the one
+## rule: the next class is reached by distance), but it does nothing for this runner - a skill needs its class - and
+## the card says so (3 Nov, merge 47's second round); the bot never aims at one.
+var _barred_cls := "-"
+var _barred := {}
+func web_class_only(id: String) -> String:
+	if _barred_cls != cls:
+		_barred = {}
+		for wt in Data.TREES:
+			var tc: String = str(wt.get("class", ""))
+			if tc == "" or tc == cls:
+				continue
+			for i in range(wt.get("nodes", []).size()):
+				var nd: Dictionary = wt["nodes"][i]
+				if nd.get("start", false) or nd.has("skill"):
+					_barred["%s/%d" % [wt["name"], i]] = tc
+		_barred_cls = cls
+	return str(_barred.get(id, ""))
+
+
+## The web's pathing: a node joined to one owned (the start counts).
 func touches_trained(id: String) -> bool:
 	var links: Dictionary = Data.web_links_all()
 	for other in links.get(id, []):
-		if tree.has(other):
+		if web_owned(str(other)) or (is_ring(str(other)) and tree.has(other)):
 			return true
 	return false
 
 
-## The nearest node to train on the way to one not yet reachable: the linked node closest to the trained set (or an
-## entry), by a breadth-first walk back from the target; "" if none. The screen's path hint and the bot's walk.
-func path_next(id: String) -> String:
+## The path from what's owned to a node not owned: the ids to buy, nearest first, the node last ([] if owned or none).
+## A breadth-first walk out from every owned node over the web's links: the fewest nodes (every node costs one).
+func web_path(id: String) -> Array:
+	if web_owned(id) or node(id).is_empty() or is_ring(id):
+		return []
 	var links: Dictionary = Data.web_links_all()
-	var parent := {id: ""}
-	var queue: Array = [id]
-	while not queue.is_empty():
-		var cur: String = queue.pop_front()
-		for other in links.get(cur, []):
-			if parent.has(other) or not Data.for_classes(node(other), my_classes()):
-				continue                        # never through another class's half (the review)
-			parent[other] = cur
-			if tree.has(other):
-				return cur                      # the untrained node beside the trained one: the next step
-			if Data.web_entry(node(other)):
-				return other                    # an entry not yet taken: start there
-			queue.append(other)
-	return ""
+	var parent := {}
+	var queue: Array = []
+	for o in tree:
+		if not is_ring(str(o)):
+			parent[str(o)] = ""
+			queue.append(str(o))
+	var st: String = Data.web_start(cls) if cls != "" else ""
+	if st != "" and not parent.has(st):
+		parent[st] = ""
+		queue.append(st)
+	var head := 0
+	while head < queue.size():
+		var cur: String = queue[head]
+		head += 1
+		if cur == id:
+			var out: Array = []
+			var at: String = id
+			while at != "" and not web_owned(at):
+				out.push_front(at)
+				at = str(parent[at])
+			return out
+		for nb in links.get(cur, []):
+			if not parent.has(nb):
+				parent[nb] = cur
+				queue.append(nb)
+	return []
+
+
+## The next node to buy on the way to one not yet joined ("" if none): the path's first. The screen's hint, the bot's
+## walk. The ring: the node beside one with a point, or an entry.
+func path_next(id: String) -> String:
+	if is_ring(id):
+		var links: Dictionary = Data.web_links_all()
+		var parent := {id: ""}
+		var queue: Array = [id]
+		while not queue.is_empty():
+			var cur: String = queue.pop_front()
+			for other in links.get(cur, []):
+				if parent.has(other):
+					continue
+				parent[other] = cur
+				if tree.has(other):
+					return cur
+				if Data.web_entry(node(other)):
+					return other
+				queue.append(other)
+		return ""
+	var p := web_path(id)
+	return str(p[0]) if not p.is_empty() else ""
 
 
 ## What a node adds to the one damage figure (16 Oct, item 14): damage_split's total with it and without it - taken
@@ -3963,22 +3735,6 @@ func train_node(id: String) -> bool:
 	_dry_memo.clear()                     # the memos read the tree (A4's review)
 	_stats_dirty()
 	var nd: Dictionary = node(id)
-	if is_element_starter(id):
-		if not tree.has(id):
-			_pin_class_elements()             # the other classes keep the two they took (28 Oct, the review)
-		_open_element(element_of(id))         # two a class (28 Oct)
-		if tree.has(id):
-			log_event(Words.LOG["element_opened"] % [nd["name"], cls])
-			chron("element_open", {"element": element_of(id), "free": true})
-			return true
-	var paid: int = node_cost(id)
-	if is_element_starter(id):
-		element_paid[element_of(id)] = paid     # what the camp paid, kept: the next runner's price for it is another (31 Oct)
-	var held := keystone_held_against(id)
-	if held != "":
-		tree.erase(held)                  # the keystone choice: the one held goes, its points back (free_for reads the tree)
-		_stats_dirty()
-		log_event(Words.LOG["let_go"] % node(held)["name"])
 	if nd.has("ring"):
 		ring[id] = int(ring.get(id, 0)) + 1     # the ring (slice 4): a paragon point on the node, stacked
 		_stats_dirty()
@@ -3987,6 +3743,7 @@ func train_node(id: String) -> bool:
 			_stats_dirty()
 		chron("paragon", {"key": str(nd["key"]), "points": paragon_pts(str(nd["key"]))})
 		return true
+	var paid: int = node_cost(id)
 	tree.append(id)
 	_stats_dirty()
 	log_event(Words.LOG["trained"] % nd["name"])
@@ -3994,51 +3751,34 @@ func train_node(id: String) -> bool:
 		var free_slot: int = skill_slots.find("")
 		if free_slot >= 0:
 			skill_slots[free_slot] = str(nd["skill"])     # a skill learnt goes in the first empty slot; the Runs card changes them (milestone 8)
-	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "col": int(nd.get("col", 0)), "cost": paid,
+	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "slot": str(nd.get("slot", "")), "cost": paid,
 		"keystone": bool(nd.get("keystone", false)), "capstone": bool(nd.get("capstone", false)), "notable": bool(nd.get("notable", false)),
-		"joint": str(nd.get("joint", "")), "free": free_for(id)})
+		"joint": str(nd.get("joint", "")), "free": free_for(id), "spent": points_spent()})
 	return true
 
 
+## Every tree is on show: the web is one (the skill web, 3 Nov).
 func _on_show(branch: String) -> bool:
-	if _trees_holding:
-		return _trees_held.has(branch)       # BUILD45: one read of the runner's trees through a web's restate (held_trees)
-	for t in trees():
-		if t["name"] == branch:
-			return true
-	return false
+	return not Data.tree_named(branch).is_empty()
 
 
-## BUILD45 (2 Nov, perf44 3: Training restated its every node with a fresh read of the runner's trees each, 0.1 ms a
-## node): `f` called with the trees' names read once. Only for a read that changes no tree, class or bridge (the web's
-## restate); never on the bot's path.
-var _trees_holding := false
-var _trees_held := {}
+## BUILD45's one read of the runner's trees for a web's restate: the web is one now, so `f` is just called (the screen's hook).
 func held_trees(f: Callable) -> Variant:
-	if _trees_holding:
-		return f.call()
-	_trees_held = {}
-	for t in trees():
-		_trees_held[t["name"]] = true
-	_trees_holding = true
-	var v = f.call()
-	_trees_holding = false
-	return v
+	return f.call()
 
 
-## A reset is the class's own trees (21 Oct): the Pitch's is the camp's, bought once for every class, and stays.
+## A reset (skill_web.md: "a reset gives every point back"): every web node but the start back to points, at today's
+## price. The paragon ring has its own.
 func respec_cost() -> int:
 	return _inf(points_spent() * Data.RESPEC_CASH)
 
 
-## A class-trees reset can go: a node of the class's own trained, and its price (28 Oct, the review: Training's button
-## read the whole tree, the camp's nodes too).
 static func _first_lower(t: String) -> String:
 	return t.substr(0, 1).to_lower() + t.substr(1) if t != "" else t
 
 
 func can_respec() -> bool:
-	return not runner_busy() and not tree.filter(func(id): return not is_camp(str(id))).is_empty() and cash >= respec_cost()
+	return not runner_busy() and points_spent() > 0 and cash >= respec_cost()
 
 
 func respec() -> bool:
@@ -4049,11 +3789,88 @@ func respec() -> bool:
 	var paid := respec_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": points_spent()})
-	tree = tree.filter(func(id): return is_camp(str(id)))     # the class's region (and its bridge, slice 3) back to points; the camp's stay
+	tree = tree.filter(func(id): return is_ring(str(id)))     # the web back to points; the ring's are the crew's and stay
 	_stats_dirty()
+	_ensure_start(false)                  # its skill stays where it was slotted
 	_skills_known_only()
 	log_event(Words.LOG["training_reset"])
 	return true
+
+
+# ------------------------------------------------------------------ the web's API (BUILD47_COMMON.md)
+
+## Owned by this runner: in its tree, or its class's start.
+func web_owned(id: String) -> bool:
+	return tree.has(id) or is_start(id)
+
+
+## "" when the node can be taken now, else why in the game's words.
+func web_can_take(id: String) -> String:
+	var b := train_block(id)
+	return Words.WEB_BLOCK["owned"] if b == "trained" else b
+
+
+func web_take(id: String) -> bool:
+	return train_node(id)
+
+
+## The nodes takeable now (`ignore_points`: joined and gated, points or not - the screen's amber ring with none free).
+func web_frontier(ignore_points := false) -> Array:
+	var out: Array = []
+	var looked := {}
+	for o in tree + [Data.web_start(cls) if cls != "" else ""]:
+		if str(o) == "" or is_ring(str(o)):
+			continue
+		for nb in Data.web_links(str(o)):
+			if not looked.has(nb) and not web_owned(str(nb)):
+				looked[nb] = true
+				if train_block(str(nb), ignore_points) == "":
+					out.append(nb)
+	return out
+
+
+func web_points() -> int:
+	return training_points
+
+
+func web_spent() -> int:
+	return points_spent()
+
+
+func web_free() -> int:
+	return points_free()
+
+
+## The runner's class's two pairs: {"key", "words", "halves": [the class's half, the element's half], "done"}.
+func web_pairs() -> Array:
+	var out: Array = []
+	for j in Data.JOINTS:
+		if j["class"] != cls:
+			continue
+		var halves: Array = [_half_id(j, str(j["tree"])), _half_id(j, str(j["element_tree"]))]
+		out.append({"key": j["key"], "words": j["words"], "halves": halves, "done": web_owned(halves[0]) and web_owned(halves[1])})
+	return out
+
+
+## A pair's half in a tree: the node there carrying the pair's key.
+func _half_id(j: Dictionary, tree_name: String) -> String:
+	var t := Data.tree_named(tree_name)
+	for i in range(t.get("nodes", []).size()):
+		if str(t["nodes"][i].get("joint", "")) == j["key"]:
+			return "%s/%d" % [tree_name, i]
+	return ""
+
+
+## The fewest nodes to buy to own it (0 if owned; -1 if it can't be reached).
+func web_steps(id: String) -> int:
+	if web_owned(id):
+		return 0
+	var p := web_path(id)
+	return p.size() if not p.is_empty() else -1
+
+
+func web_reset() -> bool:
+	return respec()
 
 
 ## Levels earn points for the camp, whatever happens to the operator - but only past the camp's best
@@ -5126,26 +4943,21 @@ func _feed_stack_raw(gun: Dictionary) -> Dictionary:
 	return best
 
 
-## The elements the runner is built for: each element whose tree has a node trained, of the class's open two (28 Oct,
-## the review: the camp's elements fed a class the grade of one it had closed). Read again when the tree or the
-## class's two change (a hash of them, as the trees' own lookups key theirs every tick).
+## The elements the runner is built for: each element whose flower (its region on the web, not the joins it lends its
+## colour to) has a node owned. Read again when the tree or the class change.
 var _els_key := -1
 var _els: Array = []
 func build_elements() -> Array:
-	var k: int = hash([tree, cls, elements_open.get(cls, null), elements_lifted()])     # the nodes themselves: a respec retrained to the same count is another build (the review)
+	var k: int = hash([tree, cls])     # the nodes themselves: a respec retrained to the same count is another build (the review)
 	if k != _els_key:
 		_els_key = k
 		_els = []
-		var open_two: Array = class_elements()
 		for et in Data.ELEMENT_TREES:
-			if not (et["element"] in open_two):
-				continue
 			for id in tree:
-				if str(id).begins_with(str(et["name"]) + "/"):
+				if str(id).begins_with(str(et["name"]) + "/") and Data.web_region(str(id)).begins_with("el:"):
 					_els.append(et["element"])
 					break
 	return _els
-
 
 
 ## The Fence sells standard boxes of every type without end: a box a type.
@@ -8787,12 +8599,12 @@ func class_read_key(name: String, lift: bool, rested: bool) -> int:
 	var rr: Dictionary = roster.get(name, {})
 	return hash([name, lift, rested, join_level(name) if lift else 0, float(rr.get("xp", 0.0)), -1.0 if rested else float(rr.get("hp", 0.0)), rr.get("equipped", {}),
 		rr.get("tree", []), rr.get("skill_slots", []), rr.get("skill_auto", []), Dictionary(rr.get("wounds", {})).keys(), str(rr.get("trait", "")), Array(rr.get("rig", [])).size(),
-		elements_open.get(name, null), atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_camp(str(id))), ring, str(standing)])
+		atlas, yard_picks, yard_ranks, ring, str(standing)])
 
 
 ## Another class's runner out for a read only (the odds), and back: nothing's moved but for the moment.
 func _read_as(name: String) -> Dictionary:
-	var h := {"out": _runner_out(), "cls": cls, "pitch": tree.filter(func(id): return is_camp(str(id))), "surv": _surv_cache}     # the camp's whole: the Pitch, the elements, the ring (25 Oct, the review: is_pitch dropped the rest for good)
+	var h := {"out": _runner_out(), "cls": cls, "pitch": tree.filter(func(id): return is_ring(str(id))), "surv": _surv_cache}     # the crew's: the paragon ring (the web is each runner's own, 3 Nov)
 	_runner_in(roster[name])
 	tree = tree + h["pitch"]
 	_stats_dirty()
@@ -9059,7 +8871,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty() and _key_memo[0] == who:
 		return _key_memo[1]
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level(), str(class_elements()), str(skill_slots), str(skill_auto)]     # the skills slotted and their rules (T1: a slotted skill left the site's old odds); the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct); the class's two (28 Oct, the review: a close moves no tree)
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level(), str(skill_slots), str(skill_auto)]     # the skills slotted and their rules (T1: a slotted skill left the site's old odds); the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct); the class's two (28 Oct, the review: a close moves no tree)
 	if odds_time_ms > 0.0:
 		_key_memo = [who, k]
 		_key_memo_t = _odds_t0
@@ -9075,7 +8887,7 @@ func _odds_key_common() -> Array:
 ## the memo's switched off.
 func odds_state() -> int:
 	if live_memo_off:
-		return hash([runner_parts(), wounds, stash.size(), _removed, yard_picks, yard_ranks, lorries, elements_open, weather, is_night(), front_tier(),
+		return hash([runner_parts(), wounds, stash.size(), _removed, yard_picks, yard_ranks, lorries, weather, is_night(), front_tier(),
 			standing, atlas, issued, mission != null])
 	return _live_state_at
 
@@ -9859,10 +9671,10 @@ func _heal(m: Dictionary, amount: float, _med := false, overflow := 0.0) -> void
 
 
 ## Guard (12 Oct, docs/design/shields.md): a second bar over HP that their fire takes first. Its cap: GUARD_SHARE of
-## max HP (half with Transfusion), grown by Overtime and `guard_pct`. It lasts the run.
+## max HP (half with Transfusion), grown by Overtime and `guard_pct` (the kit's, and the web centre's rings, 3 Nov). It lasts the run.
 func guard_cap() -> float:
 	var share: float = Data.GUARD_SHARE * (Data.FX["node/cap_transfusion"] if has_node("cap_transfusion") else 1.0)
-	return max_hp() * share * (1.0 + (_affix_sum("guard_pct") + (Data.FX["node/overtime.guard"] if has_node("overtime") else 0.0)) / 100.0)
+	return max_hp() * share * (1.0 + (_affix_sum("guard_pct") + tree_sum("guard_pct") + (Data.FX["node/overtime.guard"] if has_node("overtime") else 0.0)) / 100.0)
 
 
 func guard() -> float:
@@ -14043,7 +13855,6 @@ func _extract() -> void:
 	var m: Dictionary = mission
 	_event_end(m)                         # the dogs off the record, his run-only goods back (the fix round)
 	var rep_pre: Dictionary = {"scrap": scrap, "mats": _materials_total()} if m.get("unwatched", false) else {}     # a repeat run's line (29 Oct)
-	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
 	_site_remember(m)                     # the crates left for next time (27 Oct)
 	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
@@ -14291,7 +14102,6 @@ func _kia() -> void:
 		_bail(m)                             # never a death unwatched (29 Oct, Matt's call 1): a bail
 		return
 	_event_end(m)
-	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
 	_site_remember(m)                     # the crates left for next time (27 Oct)
 	_bailiff_keeps_deeds(m)
 	_floor_mythics_in(m)
@@ -14466,17 +14276,18 @@ func death_keeps_level() -> bool:
 	return expeditions_open() and level() < Data.MAX_LEVEL
 
 
-## The runner's own trees - the class's and the elements' - back to points on a death; the class stays the class
-## (21 Oct, the crew: "puts that class back to level 1 with a trait"). Only the Pitch's tree stays taken.
+## The runner's web back to points on a death - the whole of it but the start (the skill web: it's all the runner's);
+## the class stays the class (21 Oct, the crew: "puts that class back to level 1 with a trait"). The ring stays.
 func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
 	var kept := []
 	for id in tree:
-		if is_camp(str(id)):
-			kept.append(id)                  # the Pitch's and the elements' (slice 3) are the camp's: they stay
+		if is_ring(str(id)):
+			kept.append(id)                  # the paragon ring is the crew's: it stays
 	tree = kept
 	_dry_memo.clear()
 	_stats_dirty()
+	_ensure_start(false)
 	_skills_known_only()                     # the dead runner's skills leave the slots with his trees (the second review)
 	var freed := spent_before - points_spent()
 	if freed > 0:
@@ -14715,7 +14526,7 @@ func _kit_parts() -> Array:
 ## gate's, through a run): checked a tick, it moved the fixed-dice fingerprint the balance pass is reading (a level gained
 ## mid-run keeps the old max HP till the memo ages), so it stays cleared by hand and aged.
 func runner_parts() -> Array:
-	return [cls, level(), runner_trait, equipped, tree, skill_slots, skill_auto, wounds.keys(), ring, class_elements(), rig.size()]
+	return [cls, level(), runner_trait, equipped, tree, skill_slots, skill_auto, wounds.keys(), ring, rig.size()]
 
 
 func runner_key() -> int:
@@ -18047,7 +17858,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "supplies_in": supplies_in, "wounds": wounds.duplicate(true),
-		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "site_runs": site_runs.duplicate(true), "left_behind": left_behind.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "element_paid": element_paid.duplicate(), "elements_open": elements_open.duplicate(true), "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "site_runs": site_runs.duplicate(true), "left_behind": left_behind.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -18146,6 +17957,7 @@ func load_dict(d: Dictionary) -> void:
 		if _on_show(str(id).get_slice("/", 0)) and not node(str(id)).is_empty():
 			kept.append(id)
 	tree = kept
+	_ensure_start(false)                  # the class's start (the skill web): an older tree's runner holds it too
 	_stats_dirty()
 	_load_yard(d)
 	skill_slots = d.get("skill_slots", ["", "", ""]).duplicate()
@@ -18182,6 +17994,7 @@ func load_dict(d: Dictionary) -> void:
 		standing.append(str(sw))
 	training_points = int(d.get("training_points", maxi(0, level() - 1)))
 	best_level = int(d.get("best_level", level()))
+	_web_legal_all()                         # a tree the rule can't make loads as one it can (3 Nov, the review of build 47)
 	depot_cleared = bool(d.get("depot_cleared", false))
 	past = d.get("past", [])
 	past_folded = Dictionary(d.get("past_folded", {})).duplicate()
@@ -18217,9 +18030,6 @@ func load_dict(d: Dictionary) -> void:
 	for k in d.get("clear_level", {}):
 		clear_level[int(k)] = int(d["clear_level"][k])     # JSON's keys come back as strings
 	workbench_day = int(d.get("workbench_day", -1))
-	element_xp = {}
-	for k in d.get("element_xp", {}):
-		element_xp[str(k)] = float(d["element_xp"][k])
 	loot_rules_on = bool(d.get("loot_rules_on", true))
 	sets_seen = Array(d.get("sets_seen", [])).map(func(x): return str(x))
 	loadouts = {}
@@ -18249,15 +18059,6 @@ func load_dict(d: Dictionary) -> void:
 	for pt in d.get("patterns", []):
 		if pt is Dictionary and pt.has("rule"):
 			patterns.append({"unique": str(pt.get("unique", "")), "slot": str(pt.get("slot", "")), "rule": str(pt["rule"])})
-	element_points = {}
-	element_paid = {}
-	for k in d.get("element_paid", {}):
-		element_paid[str(k)] = int(d["element_paid"][k])
-	for k in d.get("element_points", {}):
-		element_points[str(k)] = int(d["element_points"][k])
-	elements_open = {}
-	for k in d.get("elements_open", {}):
-		elements_open[str(k)] = Array(d["elements_open"][k]).map(func(x): return str(x))     # none saved: each class takes the camp's first two (class_elements)
 	deeds_found = bool(d.get("deeds_found", false))
 	unlocked = Array(d.get("unlocked", []))
 	met = Array(d.get("met", []))
@@ -18578,7 +18379,7 @@ static func _build_version() -> int:
 	for t in Data.TREES + Data.ELEMENT_TREES:
 		bits.append("%s:%d" % [t["name"], t["nodes"].size()])
 		for nd in t["nodes"]:
-			bits.append(str(nd.get("name", "")))
+			bits.append("%s@%s" % [nd.get("name", ""), nd.get("slot", "")])     # the web's layout too (3 Nov): a node moved is another build
 	bits.append_array(_build_skills())
 	return hash(",".join(bits)) & 0xff
 
@@ -18595,8 +18396,8 @@ func build_code() -> String:
 		b.append(skills.find(str(id)))
 	for id in tree:
 		var t: int = tree_names.find(str(id).get_slice("/", 0))
-		if t < 0 or is_camp(str(id)):
-			continue                          # the runner's own trees: the Pitch, the elements and the ring are the camp's (the review)
+		if t < 0 or is_ring(str(id)):
+			continue                          # the runner's web; the ring is the crew's (the review)
 		b.append(t)
 		b.append(int(str(id).get_slice("/", 1)))
 	return Data.BUILD_PREFIX + Marshalls.raw_to_base64(b).replace("+", "-").replace("/", "_").replace("=", "")
@@ -18679,22 +18480,34 @@ func build_apply(bd: Dictionary) -> Dictionary:
 
 func _build_apply(bd: Dictionary) -> Dictionary:
 	var cost := 0
-	var mine: Array = tree.filter(func(id): return not is_camp(str(id)))
-	var wanted: Array = bd["nodes"].filter(func(id): return not is_camp(str(id)))
+	var mine: Array = tree.filter(func(id): return not is_ring(str(id)))
+	var wanted: Array = bd["nodes"].filter(func(id): return not is_ring(str(id)))
 	if mine.any(func(id): return not wanted.has(id)):          # a reset only when something trained isn't in the code (the review)
 		cost = respec_cost()
 		if cash < cost:
 			return {"block": Words.BUILD["short"] % _tins_words(cost), "cost": cost, "trained": 0, "of": bd["nodes"].size(), "missed": []}
 		respec()
-	var missed: Array = []
 	var trained := 0
+	var left: Array = []
 	for id in wanted:
 		if tree.has(id):
 			trained += 1
-		elif train_node(str(id)):
-			trained += 1
 		else:
-			missed.append(str(node(str(id)).get("name", id)))
+			left.append(str(id))
+	# in passes until one trains none (3 Nov, the review of build 47): a code in any order trains whole, each node by
+	# the rule as it comes in reach - joined, its gate, a point free
+	var took := true
+	while took and not left.is_empty():
+		took = false
+		var still: Array = []
+		for id in left:
+			if train_node(str(id)):
+				trained += 1
+				took = true
+			else:
+				still.append(id)
+		left = still
+	var missed: Array = left.map(func(id): return str(node(str(id)).get("name", id)))
 	for k in range(Data.SKILL_SLOTS):
 		set_skill_slot(k, str(bd["skills"][k]) if k < bd["skills"].size() and skill_known(str(bd["skills"][k])) else "")
 	return {"block": "", "cost": cost, "trained": trained, "of": wanted.size(), "missed": missed}

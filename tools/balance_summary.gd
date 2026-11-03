@@ -250,9 +250,9 @@ static func walls_row(full: Array) -> Array:
 
 ## As played (31 Oct, BUILD34: the designer, "with the other classes each opening their two and every class adding
 ## points to the trees it makes sense that each class would be able to open its two joins and enjoy both elements"):
-## every as-played read closes both its class's joints by this level. 30: the Pitch and both joints' class halves are
-## 21-23 class points (one a level, so level 22-24 at the earliest) and each element's half 11-13 points earned on its
-## own meter; 30 leaves six or so levels for the meters, and it's the capstones' and the bridge's level.
+## every as-played read closes both its class's pairs by this level. 30 (the skill web, 3 Nov: a pair is about 5 + 6
+## points from the start, both about 20; the bot's targets take the first element's keystone and its class keystone
+## first, so 30 leaves room).
 const BOTH_JOINTS_BY := 30
 
 
@@ -316,14 +316,14 @@ static func both_joints_row(played: Array) -> Array:
 		("every read: " + "; ".join(ok_words)) if off.is_empty() else "off: " + "; ".join(off), off.is_empty()]
 
 
-## The section "As played: both elements" (shown): a row a read - its class's two joints' closing (hour, level), the
-## second element's points at the Quartermaster and at the end, the hours to the Manager and the Quartermaster.
+## The section "As played: both elements" (shown): a row a read - its class's two pairs' closing (hour, level), the
+## second element's flower nodes owned at the Quartermaster and at the end, the hours to the Manager and the Quartermaster.
 static func played_table(played: Array) -> Array:
 	if played.is_empty():
 		return []
 	var out: Array = ["", "## As played: both elements", "",
-		"Each class as the designer plays it (31 Oct): its first two Pitch points open its two elements, its class points go to both joints' class halves first, each element's points to its joint half first. The build's element first; the second is the class's other.", "",
-		"| Read | First joint closed | Second joint closed | Second element's points (Quartermaster / end) | Manager | Quartermaster | Pitch spent |",
+		"Each class as the bot plays the skill web (3 Nov): its points toward its targets by the shortest path - the build's element, its pair and keystones, the centre, the second element. The build's element first; the second is the class's other.", "",
+		"| Read | First pair done | Second pair done | Second element's nodes (Quartermaster / end) | Manager | Quartermaster | Points spent |",
 		"| --- | --- | --- | --- | --- | --- | --- |"]
 	for b in played:
 		if b.get("missing", false):
@@ -349,7 +349,7 @@ static func played_table(played: Array) -> Array:
 		var qm: float = float(b.get("qm_at", -1.0))
 		out.append("| %s%s | %s | %s | %s | %s | %s | %d of %d |" % [b.get("build", "?"), " (capped at %.1f h)" % float(b["capped_at"]) if b.has("capped_at") else "", cells[0], cells[1], second,
 			"never" if mgr < 0.0 else "%.1f h" % mgr, "never" if qm < 0.0 else "%.1f h" % qm,
-			int(b.get("played", {}).get("pitch_spent", 0)), int(b.get("played", {}).get("pitch_points", 0))])
+			int(b.get("played", {}).get("spent", 0)), int(b.get("played", {}).get("points", 0))])
 	out.append("")
 	return out
 

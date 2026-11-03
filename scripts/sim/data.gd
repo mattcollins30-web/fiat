@@ -1344,11 +1344,11 @@ const UNIQUES := [
 	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
 	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
 	{"name": "The Last Orders", "slot": "Primary", "base": "Old .303", "rule": "last_orders", "band": "mythic", "mythic": true, "range": [2, 9],
-		"words": "Every hit does full damage as physical and each of the 5 elements. The class can open more than 2 elements; taken off, those past 2 idle", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+		"words": "Every hit does full damage as physical and each of the 5 elements", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
 		"words": "The secondary always does its full damage beside the primary, and never spends a round", "short": "Secondary: full damage, no rounds", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
-		"words": "Every perk in the class's trees is yours except keystones. The class can open more than 2 elements; taken off, those past 2 idle", "short": "Every class perk yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
+		"words": "Every perk in the class's trees is yours except keystones", "short": "Every class perk yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Bomb Disposal Suit", "slot": "Armour", "base": "Police body armour", "rule": "bomb_suit", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "You never lose more than 5% of max HP a second, and the clock never runs out", "short": "At most 5% max HP lost a second; no clock", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Crash Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
@@ -2038,8 +2038,8 @@ const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any ga
 const EXPLOITS := {
 	"bad_blood": {"class": "Drifter", "nodes": ["Luck/Dead man's shoes", "Luck/Cut-throat"], "rule": "butchers_apron", "grow": 1.2},
 	"first_of_many": {"class": "Poacher", "nodes": ["Stalking/Clocked", "Stalking/One shot"], "rule": "starting_pistol", "grow": 1.1},
-	"second_opinion": {"class": "Paramedic", "nodes": ["Shifts/Second shift", "Triage/Field surgery"], "rule": "paramedics_bumbag"},
-	"last_orders_again": {"class": "Doorman", "nodes": ["The door/Last orders", "The door/Through the lot"], "rule": "issuers_revolver", "grow": 1.4},
+	"second_opinion": {"class": "Paramedic", "nodes": ["Triage/Second shift", "Triage/Field surgery"], "rule": "paramedics_bumbag"},
+	"last_orders_again": {"class": "Doorman", "nodes": ["The door/Last orders", "Muscle/Through the lot"], "rule": "issuers_revolver", "grow": 1.4},
 	"never_trips": {"class": "Scrapper", "nodes": ["Stripping/Ring main", "Stripping/Live wire"], "rule": "tester", "grow": 1.5},
 	"overdrawn": {"class": "Recruit", "nodes": ["Drill/Quick march", "Drill/Passing-out parade"], "rule": "registrars_stamp"},
 }
@@ -2095,7 +2095,7 @@ const TREES_SRC := [
 		{"name": "Zeroing", "col": 1, "row": 1, "effect": "damage_pct", "value": 7},
 		{"name": "Circuits", "col": 2, "row": 1, "effect": "hp", "value": 9},
 		{"name": "Keen eyes", "col": 3, "row": 0, "effect": "search_pct", "value": 15},
-		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Resting on the Pitch heals twice as fast"},
+		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Resting at home heals twice as fast"},
 		{"name": "Stashing", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Pack horse", "col": 4, "row": 1, "effect": "pack_mule", "notable": true, "words": "The pack holds 6 more cells"},
 		{"name": "The dog's share", "col": 5, "row": 0, "effect": "cap_dogs_share", "capstone": true, "words": "When the runner dies, their rig comes home"},
@@ -2105,7 +2105,7 @@ const TREES_SRC := [
 	# node can't be bought with a dip. A class tree's conversion notable is its half of a joint (column 4).
 	# Poacher
 	{"name": "Stalking", "class": "Poacher", "nodes": [
-		{"name": "Clean shot", "col": 0, "row": 0, "effect": "skill_clean_shot", "skill": "clean_shot", "notable": true, "cost_fixed": 1, "words": "Your next shot does ×2.5 damage"},
+		{"name": "Clean shot", "col": 0, "row": 0, "effect": "skill_clean_shot", "skill": "clean_shot", "notable": true, "words": "Your next shot does ×2.5 damage"},
 		{"name": "Breathing", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
 		{"name": "Patience", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
 		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Do double damage to the first of each gang with a rifle"},
@@ -2133,7 +2133,7 @@ const TREES_SRC := [
 	]},
 	# Doorman
 	{"name": "Muscle", "class": "Doorman", "nodes": [
-		{"name": "Shoulder charge", "col": 0, "row": 0, "effect": "skill_shoulder_charge", "skill": "shoulder_charge", "notable": true, "cost_fixed": 1, "words": "Hits the nearest man for ×3 damage and sends him to the back"},
+		{"name": "Shoulder charge", "col": 0, "row": 0, "effect": "skill_shoulder_charge", "skill": "shoulder_charge", "notable": true, "words": "Hits the nearest man for ×3 damage and sends him to the back"},
 		{"name": "Gym", "col": 0, "row": 1, "effect": "hp", "value": 14},     # 4 + Bulk's 10 (24 Oct, step 4: its hang went to Shoulder charge),
 		{"name": "Broad shoulders", "col": 1, "row": 0, "effect": "armour_pct", "value": 17},     # 5 + Hard case's 12 (24 Oct, step 4: its hang went to Brace),
 		{"name": "Shotgunner", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "shotgun", "notable": true, "words": "Shotgun damage +25%"},
@@ -2162,7 +2162,7 @@ const TREES_SRC := [
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
-		{"name": "Tourniquet", "col": 0, "row": 0, "effect": "skill_tourniquet", "skill": "tourniquet", "notable": true, "cost_fixed": 1, "words": "Clears bleed on you; no new bleed lands for 10 seconds"},     # 10 + Good hands's 20 (24 Oct, step 4: its hang went to Tourniquet),
+		{"name": "Tourniquet", "col": 0, "row": 0, "effect": "skill_tourniquet", "skill": "tourniquet", "notable": true, "words": "Clears bleed on you; no new bleed lands for 10 seconds"},     # 10 + Good hands's 20 (24 Oct, step 4: its hang went to Tourniquet),
 		{"name": "Fast hands", "col": 0, "row": 1, "effect": "med_speed_pct", "value": 35},     # 15 + Quick dressing's 20 (24 Oct, step 4: its hang went to Antidote),
 		{"name": "Kit bag", "col": 1, "row": 0, "effect": "heal_pct", "value": 10},
 		{"name": "Fast work", "col": 2, "row": 0, "effect": "triage", "notable": true, "words": "Meds take half the time"},
@@ -2191,7 +2191,7 @@ const TREES_SRC := [
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
-		{"name": "Ring main", "col": 0, "row": 0, "effect": "skill_ring_main", "skill": "ring_main", "notable": true, "cost_fixed": 1, "words": "×1.5 shock damage that jumps through 3 men"},     # 5 + Socket set's 10 (24 Oct, step 4: its hang went to Ring main),
+		{"name": "Ring main", "col": 0, "row": 0, "effect": "skill_ring_main", "skill": "ring_main", "notable": true, "words": "×1.5 shock damage that jumps through 3 men"},     # 5 + Socket set's 10 (24 Oct, step 4: its hang went to Ring main),
 		{"name": "Quick fingers", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
 		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Improvised gun damage +40%"},
@@ -2219,7 +2219,7 @@ const TREES_SRC := [
 	]},
 	# Drifter
 	{"name": "Moving on", "class": "Drifter", "nodes": [
-		{"name": "Duck and weave", "col": 0, "row": 0, "effect": "skill_duck_and_weave", "skill": "duck_and_weave", "notable": true, "cost_fixed": 1, "words": "The next 3 hits on you miss"},     # 5 + Tarmac's 6 (24 Oct, step 4: its hang went to Duck and weave),
+		{"name": "Duck and weave", "col": 0, "row": 0, "effect": "skill_duck_and_weave", "skill": "duck_and_weave", "notable": true, "words": "The next 3 hits on you miss"},     # 5 + Tarmac's 6 (24 Oct, step 4: its hang went to Duck and weave),
 		{"name": "Road legs", "col": 0, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Head start", "col": 1, "row": 0, "effect": "patrol_pct", "value": 20},     # 10 + Thumb out's 10 (24 Oct, step 4: its hang went to Look lively),
 		{"name": "Spray", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "smg", "notable": true, "words": "SMG damage +25%"},
@@ -2248,7 +2248,7 @@ const TREES_SRC := [
 	# Recruit (24 Oct, milestone 8: the sixth class, docs/design/skills.md §5): the class built round skills - Ordnance
 	# the throws, Drill the casting
 	{"name": "Ordnance", "class": "Recruit", "nodes": [
-		{"name": "Lob one in", "col": 0, "row": 0, "effect": "skill_lob_one_in", "skill": "lob_one_in", "notable": true, "cost_fixed": 1, "words": "Throws a grenade at everyone on you without using one from your rig"},
+		{"name": "Lob one in", "col": 0, "row": 0, "effect": "skill_lob_one_in", "skill": "lob_one_in", "notable": true, "words": "Throws a grenade at everyone on you without using one from your rig"},
 		{"name": "Cookhouse", "col": 0, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Spare pouch", "col": 1, "row": 0, "effect": "med_cap", "value": 1},
 		{"name": "Cook it off", "col": 2, "row": 0, "effect": "grenade_extra", "notable": true, "words": "Every grenade also hits a man who isn't on you yet"},
@@ -2308,7 +2308,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Wind chill", "col": 2, "row": 1, "effect": "frost_pct", "value": 15},
 		{"name": "Paramedic's ice", "col": 3, "row": 1, "effect": "frost_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_frost", "words": "Frost damage +25%"},
 		{"name": "Cold hands", "col": 4, "row": 1, "effect": "frost_more", "notable": true, "words": "Frost damage +40%; pace −15%"},
-		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true, "cost_less": 1,     # a point under (the twenty-eighth read: the frost Poacher's capstone 5.6 h against 5)
+		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true,
 		  "words": "Chilled targets take double physical damage"},
 		{"name": "Thermals", "col": 5, "row": 1, "beside": true, "effect": "proof_frost", "value": 1, "also": {"frost_res": 20}, "notable": true,
 		 "words": "Frost resist +20%; past the 75% cap, each 1% adds 2% frost damage"},     # over the cap (12 Oct)
@@ -2350,12 +2350,12 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "Bleed damage +30%; bleeds last twice as long"},
 		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 40},             # 12 to 20, the same; 20 to 40, Butcher's 20 (24 Oct: its place is the Recruit's half)
 		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed damage"},
-		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 2,     # two under (the twenty-seventh read 3.1 h, the twenty-eighth 2.9, against the 2 h gate)
+		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true,
 		 "words": "Bleeds last until the target dies, and stack to 3"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
 		{"name": "Drifter's razor", "col": 3, "row": 1, "effect": "bleed_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_bleed", "words": "Bleed damage +25%; every gang takes 10% longer to arrive"},     # the Recruit's bayonet's place (24 Oct, joints B: the Drifter takes bleed)
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed damage +40%; meds take 30% longer"},
-		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 2,     # two under (its capstone 8.9 h, then 5.8, against 5)
+		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true,
 		 "words": "Bleed damage +50%; a bleed carries to the next man when one dies"},
 		{"name": "Scar tissue", "col": 5, "row": 1, "beside": true, "effect": "proof_bleed", "value": 1, "also": {"bleed_res": 20}, "notable": true,
 		 "words": "Bleed resist +20%; past the 75% cap, each 1% adds 2% bleed damage"},     # over the cap (12 Oct)
@@ -2377,13 +2377,14 @@ const ELEMENT_TREES_SRC := [
 	]},
 ]
 
-## The web, slice 2 (22 Oct, docs/design/web.md §2 and §2a): the lanes above are the hand-written notables; the
-## built trees (TREES, ELEMENT_TREES) carry them with the fillers, the hung notables and the keystone choice, every
-## node with "at" [x along the lane in columns, y across it in rows] and "links" (indices in its tree; "xlinks" names
-## in another). A lane is two rails, y −1 and +1, a filler between each pair of columns on both; a column with one node
-## sits on the axis and both rails run into it; a class's half in an element lane hangs off its rail at y ±3; a hung
-## notable sits at y ±HANG_Y past a branch filler at ±BRANCH_Y, off the rail's node or filler at its x. The new
-## keystone of a class sits between its two lanes (LANE_OFF rows off the first) linked to both lanes' third column.
+## The skill web (3 Nov, docs/design/skill_web.md): one web, the layout generated into web_layout.gd (tools/
+## make_skill_web.py), each runner its own path on it. The trees above are the nodes; each layout slot holds one of
+## them - a named slot today's node of that name, moved into the slot's tree; an unnamed small one from its pool:
+## "class:<tree>" that tree's own smalls in order (the ones no slot names), then fillers; "stat:hp/guard/pace" the
+## centre's rings (STAT_SMALLS); "filler" the FILLERS cycle, its resist the region's element (armour elsewhere).
+## A tree's nodes: its own source nodes the layout keeps in it, in source order (so their ids, "<Tree>/<index>", as
+## they were where nothing moved), then the rest in slot order. Every web node carries "at" (web units, the centre
+## at 0,0, y down), "slot", "kind" and "web_region"; the links are WEB_LINKS (ids, both ways).
 const FILLERS := [
 	{"name": "Hardy", "effect": "hp", "value": 4}, {"name": "Keen", "effect": "damage_pct", "value": 3},
 	{"name": "Brisk", "effect": "pace_pct", "value": 2}, {"name": "Mending", "effect": "regen", "value": 0.2},
@@ -2391,59 +2392,28 @@ const FILLERS := [
 	{"name": "Nimble", "effect": "search_pct", "value": 5}, {"name": "Proofed", "effect": "res", "value": 3},
 ]
 const RES_NAMES := {"fire": "Singed", "frost": "Wrapped up", "poison": "Hardened", "shock": "Insulated", "bleed": "Clotted"}
-const HANG_Y := 3.7
-const BRANCH_Y := 2.3
-const HALF_Y := 3.0
-const LANE_OFF := 3.0              # a class's two lanes, rows off the class's axis
-## The wheel (23 Oct, Matt's playtest: "those nodes on the right of where I've pathed should be in a spiral/circle with
-## the nodes around and then you reach the middle on your way or through somewhere else"): a class's two lanes are
-## the two halves of one ring - the rails its two tracks, a column WHEEL_COL degrees of arc, the first lane round one
-## way and the second the other from a single starter node at the near pole - the hung notables outward off the
-## inter-column fillers (so they alternate with the stations, strictly), the halves inward toward their element, the
-## keystones on spokes to a hub, the capstones at the centre (linked to their lane's keystones: the middle is reached
-## off either half), the bridges past the far pole. "wheel": [degrees along the half, radius in rows] on every node of
-## a class lane; "at" stays the lane's own coordinates (the bot's order, the tests). The elements and the Pitch keep
-## their lanes.
-const WHEEL_R := 9.5               # the tracks' middle, in rows
-const WHEEL_TRACK := 1.6           # the two rails, this many rows apart
-const WHEEL_COL := 30.0            # a column's arc, degrees: six columns a half
-const WHEEL_BRANCH := 1.8          # a hung notable's branch filler, rows outside the outer track
-const WHEEL_HANG := 3.6            # the hung notable itself
-const WHEEL_HALF := 3.2            # a joint's half, rows inside the inner track (toward the element)
-const WHEEL_HUB := 5.2             # the keystones' radius
-const WHEEL_CAP := 1.1             # the capstones', either side of the centre
-const WHEEL_BRIDGE := 4.6          # the bridge, rows past the outer track at WHEEL_BRIDGE_DEG
-const WHEEL_BRIDGE_DEG := 168.0
-## Slice 3 (web.md §3-4): an element's points come off its use meter - a run's damage in the element over the site's
-## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
-## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
-const ELEMENT_METER := 1.5
-const ELEMENT_METER_SHARE := 0.25     # an open element's meter also fills from the run's damage of every other type at this (31 Oct, the designer)
+const STAT_SMALLS := {"stat:hp": {"name": "Hardy", "effect": "hp", "value": 4}, "stat:guard": {"name": "Guarded", "effect": "guard_pct", "value": 3},
+	"stat:pace": {"name": "Brisk", "effect": "pace_pct", "value": 2}}     # the centre's two rings (skill_web.md "The centre"): 4 HP, 3% Guard, 2% pace
+## The one rule's two gates (skill_web.md): a keystone wants this many points spent first, a capstone this many.
+const KEYSTONE_SPENT := 15
+const CAPSTONE_SPENT := 40
+const WL := preload("res://scripts/sim/web_layout.gd")
 ## The physical floor (31 Oct, the designer: the Recruit's camp poison and his own Tear gas converted every hit, and
 ## Knuckles' meter - the unconverted share - never moved): a hit's element conversion caps at this in all, shared out as
 ## before past it, so a tenth of every hit stays physical. Bust them up, the Weed Burner and the Last Orders keep their own.
 const CONV_CAP := 0.9
-const ELEMENT_OPEN_COST := 1      # the Pitch circle (24 Oct): an element's starter off the runner's class's own two costs a Pitch point (31 Oct: its own two free; any the camp already has free too); its meter fills from then
-const ELEMENTS_A_CLASS := 2     # two elements open a class at most (28 Oct, Matt: "otherwise you could just keep speccing into elemental nodes"); Knuckles counts
-const BRIDGE_LEVEL := 30
-const BRIDGE_COST := 3
-const BRIDGES := {"Poacher": ["Paramedic", "Recruit"], "Recruit": ["Poacher", "Doorman"], "Doorman": ["Recruit", "Drifter"], "Drifter": ["Doorman", "Scrapper"], "Scrapper": ["Drifter", "Paramedic"], "Paramedic": ["Scrapper", "Poacher"]}     # the ring's neighbours, joints B (24 Oct)
-## The hung notables and the keystone choice a tree: "hang" [x, side] places one; the keystones carry "at" (the
-## first lane's rows) and link by name ("links" in the tree, "xlinks" "Tree/Name").
+## The hung notables (the lanes' "hang" and the keystones' "at" are the old wheel's, kept as the nodes' history): each
+## that the layout names is placed by its slot, the rest stay off the web (BUILD47-W: the plain figures' hangs).
 const WEB_EXTRA := {
 	"Ordnance": [
-		{"name": "The second past", "bridge": "Doorman", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
 		{"name": "Pull the pin", "hang": [1.5, -1], "effect": "grenade_pct", "value": 10, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Flashbang", "hang": [2.5, -1], "effect": "skill_flashbang", "skill": "flashbang", "notable": true, "words": "Stuns everyone on you for 1.5 seconds; they do 50% less damage to you for 4 seconds"},
 		{"name": "Smoke", "hang": [3.5, -1], "effect": "skill_smoke", "skill": "smoke", "notable": true, "words": "Half their shots at you miss for 6 seconds"},
 		{"name": "Danger close", "hang": [4.5, -1], "effect": "skill_danger_close", "skill": "danger_close", "notable": true, "words": "×4 blast damage to everyone on you; you lose 10% of max HP"},
-		{"name": "Firing blanks", "at": [4, LANE_OFF], "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Tear gas"],
+		{"name": "Firing blanks", "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Tear gas"],
 		 "words": "Skills cost 25% less; you do 15% less damage"},
 	],
 	"Drill": [
-		{"name": "The second past", "bridge": "Poacher", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
 		{"name": "Suppressing fire", "hang": [1.5, 1], "effect": "skill_suppressing_fire", "skill": "suppressing_fire", "notable": true, "words": "Everyone on you fires 35% slower for 8 seconds"},
 		{"name": "Make ready", "hang": [2.5, 1], "effect": "skill_make_ready", "skill": "make_ready", "notable": true, "words": "+25% damage for your next 10 shots"},
 		{"name": "Stand to", "hang": [3.5, 1], "effect": "skill_stand_to", "skill": "stand_to", "notable": true, "words": "Gives 30 energy and takes 2 seconds off every cooldown"},
@@ -2458,90 +2428,70 @@ const WEB_EXTRA := {
 		{"name": "Word of mouth", "hang": [4.5, 1], "effect": "word_of_mouth", "notable": true, "words": "A note on each site's first clear"},
 	],
 	"Stripping": [
-		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
 		{"name": "Nose for parts", "hang": [1.5, -1], "effect": "att_share", "value": 15, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Hot work", "hang": [2.5, -1], "effect": "skill_hot_work", "skill": "hot_work", "notable": true, "words": "Sets the nearest man burning for ×2 fire damage over 4 seconds"},
 		{"name": "Breakdown", "hang": [3.5, -1], "effect": "skill_breakdown", "skill": "breakdown", "notable": true, "words": "The next man you kill drops 20 rounds for your gun"},
 		{"name": "Short circuit", "hang": [4.5, -1], "effect": "skill_short_circuit", "skill": "short_circuit", "notable": true, "words": "Shocks everyone on you and stuns them for 1.5 seconds. Your shock damage +30% for 6 seconds."},
-		{"name": "Breaker's yard", "at": [4, LANE_OFF], "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Workbench"], "xlinks": ["Fencing/Blowtorch"],
+		{"name": "Breaker's yard", "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Workbench"], "xlinks": ["Fencing/Blowtorch"],
 		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
 	],
 	"Fencing": [
-		{"name": "The second past", "bridge": "Drifter", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
 		{"name": "Bung", "hang": [1.5, 1], "effect": "skill_bung", "skill": "bung", "notable": true, "words": "Pay 20 tins: the nearest man is stunned for 8 seconds"},
 		{"name": "Knock-off kit", "hang": [2.5, 1], "effect": "skill_knock_off_kit", "skill": "knock_off_kit", "notable": true, "words": "+30% gun damage for 8 seconds"},
 		{"name": "Back of the van", "hang": [3.5, 1], "effect": "skill_back_of_the_van", "skill": "back_of_the_van", "notable": true, "words": "Puts a grenade in your rig. Once a fight."},
 		{"name": "Everything must go", "hang": [4.5, 1], "effect": "skill_everything_must_go", "skill": "everything_must_go", "notable": true, "words": "For 5 seconds, every shot fires twice"},
 	],
 	"Stalking": [
-		{"name": "The second past", "bridge": "Recruit", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
 		{"name": "Still hands", "hang": [1.5, -1], "effect": "first_pct", "value": 5, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)     # the skills take the hung notables (24 Oct, milestone 8)
 		{"name": "Flush them out", "hang": [2.5, -1], "effect": "skill_flush_them_out", "skill": "flush_them_out", "notable": true, "words": "Pulls the man at the back to the middle; he takes 20% more damage for 8 seconds"},
 		{"name": "Go to ground", "hang": [3.5, -1], "effect": "skill_go_to_ground", "skill": "go_to_ground", "notable": true, "words": "Out of sight for 3 seconds: nothing can hit you. Clears bleed and poison on you."},
 		{"name": "One for the pot", "hang": [4.5, -1], "effect": "skill_one_for_the_pot", "skill": "one_for_the_pot", "notable": true, "words": "A man on you under 25% HP dies at once. A head takes ×5 damage instead."},
-		{"name": "Snare and wait", "at": [4, LANE_OFF], "col": 4, "effect": "snare_and_wait", "keystone": true, "links": ["Lying up"], "xlinks": ["Snares/Cold snap"],
+		{"name": "Snare and wait", "col": 4, "effect": "snare_and_wait", "keystone": true, "links": ["Lying up"], "xlinks": ["Snares/Cold snap"],
 		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
 	],
 	"Snares": [
-		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
 		{"name": "Collared", "hang": [1.5, 1], "effect": "skill_collared", "skill": "collared", "notable": true, "words": "The nearest man is stunned for 3 seconds: he can't fire"},
 		{"name": "Gin trap", "hang": [2.5, 1], "effect": "skill_gin_trap", "skill": "gin_trap", "notable": true, "words": "The next man to join the fight takes ×3 damage and starts to bleed"},
 		{"name": "Decoy", "hang": [3.5, 1], "effect": "skill_decoy", "skill": "decoy", "notable": true, "words": "Everyone on you does 30% less damage to you for 6 seconds"},
 		{"name": "Net every hole", "hang": [4.5, 1], "effect": "skill_net_every_hole", "skill": "net_every_hole", "notable": true, "words": "Everyone on you is stunned for 2 seconds and starts to bleed"},
 	],
 	"Muscle": [
-		{"name": "The second past", "bridge": "Drifter", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
 		{"name": "Heavy hands", "hang": [1.5, -1], "effect": "damage_pct", "value": 4, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Headbutt", "hang": [2.5, -1], "effect": "skill_headbutt", "skill": "headbutt", "notable": true, "words": "Hits the nearest man for ×1.5 damage and stuns him for 2 seconds"},
 		{"name": "Brace", "hang": [3.5, -1], "effect": "skill_brace", "skill": "brace", "notable": true, "words": "+60% armour for 6 seconds"},
 		{"name": "Barred", "hang": [4.5, -1], "effect": "skill_barred", "skill": "barred", "notable": true, "words": "Throws the nearest man out: a kill, but he drops nothing. Not on a head."},
-		{"name": "Bin lid", "at": [4, LANE_OFF], "col": 4, "effect": "bin_lid", "keystone": true, "links": ["Big frame"], "xlinks": ["The door/Hands on"],
+		{"name": "Bin lid", "col": 4, "effect": "bin_lid", "keystone": true, "links": ["Big frame"], "xlinks": ["The door/Hands on"],
 		 "words": "Guard of 25% as each gang arrives. −20% damage while it holds."},
 	],
 	"The door": [
-		{"name": "The second past", "bridge": "Recruit", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
 		{"name": "Not on the list", "hang": [1.5, 1], "effect": "skill_not_on_the_list", "skill": "not_on_the_list", "notable": true, "words": "One fewer on you for 10 seconds"},
 		{"name": "Shutters down", "hang": [2.5, 1], "effect": "skill_shutters_down", "skill": "shutters_down", "notable": true, "words": "Take 80% less damage for 4 seconds"},
 		{"name": "Pat down", "hang": [3.5, 1], "effect": "skill_pat_down", "skill": "pat_down", "notable": true, "words": "The nearest man loses his armour and resists for 10 seconds"},
 		{"name": "Chucking-out time", "hang": [4.5, 1], "effect": "skill_chucking_out_time", "skill": "chucking_out_time", "notable": true, "words": "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds"},
 	],
 	"Triage": [
-		{"name": "The second past", "bridge": "Poacher", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
 		{"name": "Steady pulse", "hang": [1.5, -1], "effect": "heal_pct", "value": 30, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Antidote", "hang": [2.5, -1], "effect": "skill_antidote", "skill": "antidote", "notable": true, "words": "Clears poison and burns on you; neither lands again for 8 seconds"},
 		{"name": "Adrenaline", "hang": [3.5, -1], "effect": "skill_adrenaline", "skill": "adrenaline", "notable": true, "words": "+25% damage and rate of fire for 8 seconds"},
 		{"name": "Major incident", "hang": [4.5, -1], "effect": "skill_major_incident", "skill": "major_incident", "notable": true, "words": "Clears every ailment on you, and you take no wound this run"},
-		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Worst first"], "xlinks": ["Shifts/Defib"],
+		{"name": "Jab", "col": 4, "effect": "jab", "keystone": true, "links": ["Worst first"], "xlinks": ["Shifts/Defib"],
 		 "words": "+20% damage and pace for 8 seconds after a med. A med costs 5% max HP."},
 	],
 	"Shifts": [
-		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
 		{"name": "Two sugars", "hang": [1.5, 1], "effect": "skill_two_sugars", "skill": "two_sugars", "notable": true, "words": "Energy refills 50% quicker for 10 seconds"},
 		{"name": "Sedative dart", "hang": [2.5, 1], "effect": "skill_sedative_dart", "skill": "sedative_dart", "notable": true, "words": "One man on you sleeps for 4 seconds"},
 		{"name": "Strapped up", "hang": [3.5, 1], "effect": "skill_strapped_up", "skill": "strapped_up", "notable": true, "words": "The next hit that would wound you leaves no wound"},
 		{"name": "Code blue", "hang": [4.5, 1], "effect": "skill_code_blue", "skill": "code_blue", "notable": true, "words": "Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared"},
 	],
 	"Moving on": [
-		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
 		{"name": "Light feet", "hang": [1.5, -1], "effect": "pace_pct", "value": 11, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Look lively", "hang": [2.5, -1], "effect": "skill_look_lively", "skill": "look_lively", "notable": true, "words": "+40% pace for 6 seconds"},
 		{"name": "Elbow room", "hang": [3.5, -1], "effect": "skill_elbow_room", "skill": "elbow_room", "notable": true, "words": "Everyone on you does 25% less damage to you and takes 15% more from you, for 8 seconds"},
 		{"name": "Gone", "hang": [4.5, -1], "effect": "skill_gone", "skill": "gone", "notable": true, "words": "Out of sight for 4 seconds: nothing can hit you. Your next shot does triple damage."},
-		{"name": "On a roll", "at": [4, LANE_OFF], "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Cut-throat"],
+		{"name": "On a roll", "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Cut-throat"],
 		 "words": "+5% find and loot quality a kill untouched, to +50%. A hit resets it."},
 	],
 	"Luck": [
-		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
 		{"name": "Coin toss", "hang": [1.5, 1], "effect": "skill_coin_toss", "skill": "coin_toss", "notable": true, "words": "A 50% chance of double damage for 8 seconds"},
 		{"name": "Close shave", "hang": [2.5, 1], "effect": "skill_close_shave", "skill": "close_shave", "notable": true, "words": "The next ailment that would land on you misses"},
 		{"name": "Chancer", "hang": [3.5, 1], "effect": "skill_chancer", "skill": "chancer", "notable": true, "words": "The next man you kill always drops something, at +50% loot quality"},
@@ -2584,8 +2534,9 @@ const WEB_EXTRA := {
 		{"name": "Catching", "hang": [4, 1], "effect": "catching", "notable": true, "words": "A poisoned one that dies doses the next"},
 	],
 }
-static var TREES: Array = _web_build(TREES_SRC)
-static var ELEMENT_TREES: Array = _web_build(ELEMENT_TREES_SRC)
+static var _WEB: Dictionary = _web_build_all()
+static var TREES: Array = _WEB["trees"]
+static var ELEMENT_TREES: Array = _WEB["elements"]
 ## The paragon ring (slice 4, web.md §6): the board's five rows as RING_NODES nodes round the outside of the web, RING_STEP
 ## degrees apart, cycling damage, HP, resists, find, tins; the five at the classes' angles are entries. A node holds up
 ## to RING_STACK paragon points (the board had no top); a point costs one. The crew's, as the board was.
@@ -2593,7 +2544,8 @@ const RING_TREE := "The ring"
 const RING_NODES := 30
 const RING_STEP := 12.0
 const RING_STACK := 10
-const RING_ENTRY_ANGLES := [-120.0, -60.0, 0.0, 60.0, 120.0, 180.0]     # the classes' angles on the canvas (web_view's CLASS_LAY)
+const RING_ENTRY_ANGLES := [-90.0, -30.0, 30.0, 90.0, 150.0, -150.0]     # the classes' angles on the skill web (tools/make_skill_web.py CLASSES; 3 Nov, merge 47: were the wheel's)
+const RING_R := 500.0              # the ring's radius in web units (the skill web, 3 Nov): outside the web's ~480
 static var RING: Dictionary = _ring_build()
 
 
@@ -2601,168 +2553,146 @@ static func _ring_build() -> Dictionary:
 	var nodes := []
 	for i in range(RING_NODES):
 		var row: Dictionary = PARAGON_BOARD[(i + floori(i / 5.0)) % PARAGON_BOARD.size()]     # the cycle slips a row every five: the entries aren't all one row
-		var angle: float = -120.0 + i * RING_STEP     # from the Drifter's angle: every class's angle lands on a node
+		var angle: float = RING_ENTRY_ANGLES[0] + i * RING_STEP     # from the Poacher's angle: every class's angle lands on a node
 		var a: float = angle if angle <= 180.0 else angle - 360.0
 		nodes.append({"name": row["name"], "effect": "paragon", "key": row["key"], "value": row["pct"], "ring": a, "at": [a, 0.0], "stack": RING_STACK,
-			"cost_fixed": 1, "words": row["words"], "entry": a in RING_ENTRY_ANGLES, "links": [(i + RING_NODES - 1) % RING_NODES, (i + 1) % RING_NODES]})
+			"words": row["words"], "entry": a in RING_ENTRY_ANGLES, "links": [(i + RING_NODES - 1) % RING_NODES, (i + 1) % RING_NODES]})
 	return {"name": RING_TREE, "ring": true, "nodes": nodes}
 
 
-## A lane built into its region of the web: the source's nodes first (their indices, so their ids, as they were),
-## then the fillers and the extras, every node with "at" and "links".
-static func _web_build(src: Array) -> Array:
-	var out := []
-	for k in range(src.size()):
-		var t: Dictionary = src[k].duplicate(true)
-		var nodes: Array = t["nodes"]
-		var count := [0]                                       # the fillers made, for the cycle
-		var cols := {}                                         # col -> {row: index}, the rails' nodes
-		var halves := {}                                       # col -> {row: index}, a class's halves (off the rail)
-		for i in range(nodes.size()):
-			var nd: Dictionary = nodes[i]
-			nd["links"] = []
-			var c: int = int(nd.get("col", 0))
-			if c == 0:
-				nd["entry"] = true
-			var into: Dictionary = halves if nd.has("class") else cols
-			if not into.has(c):
-				into[c] = {}
-			into[c][int(nd.get("row", 0))] = i
-			if nd.has("class"):
-				nd["at"] = [float(c), HALF_Y if int(nd.get("row", 0)) == 1 else -HALF_Y]
-		for c in cols:
-			if cols[c].size() == 2:
-				nodes[cols[c][0]]["at"] = [float(c), -1.0]
-				nodes[cols[c][1]]["at"] = [float(c), 1.0]
-				if t["name"] != COMMON_TREE or c == 0:
-					_web_link(nodes, cols[c][0], cols[c][1])     # the rung (the Pitch's circle has its first alone, 24 Oct)
-			elif halves.has(c):
-				var r: int = cols[c].keys()[0]
-				nodes[cols[c][r]]["at"] = [float(c), -1.0 if r == 0 else 1.0]     # on its rail: a half takes the other's place
-			else:
-				nodes[cols[c].values()[0]]["at"] = [float(c), 0.0]      # alone in its column: on the axis, both rails run into it
-		# the rails: a station a column (the rail's node, the lone node, or a filler where a half hangs), a filler between
-		for y in [-1.0, 1.0]:
-			var r: int = 0 if y < 0 else 1
-			var last := -1
-			for c in range(COLUMNS):
-				var station := -1
-				if cols.has(c) and (cols[c].has(r) or not halves.has(c)):
-					station = cols[c].get(r, cols[c].values()[0])
-				else:
-					station = _web_filler(t, [float(c), y], count, k)
-					if halves.get(c, {}).has(r):
-						_web_link(nodes, halves[c][r], station)     # the half hangs off its rail
-				if last >= 0:
-					var f := _web_filler(t, [c - 0.5, y], count, k)
-					_web_link(nodes, last, f)
-					_web_link(nodes, f, station)
-				last = station
-		# one starter a region (23 Oct, Matt's 0.7.1 playtest: "elemental trees and the pitch's tree need a single starting
-		# node same as the classes"): the first column's row-0 node is the entry; the other first-column node reaches it
-		# by the rung, as the classes' second lane reaches theirs across
-		if not t.has("class") and cols.has(0) and cols[0].size() == 2:
-			nodes[cols[0][1]].erase("entry")
-		# the extras
-		for ex in WEB_EXTRA.get(t["name"], []):
-			var nd: Dictionary = ex.duplicate(true)
-			nd["links"] = []
-			nodes.append(nd)
-			var i := nodes.size() - 1
-			if nd.has("hang"):
-				var x: float = float(nd["hang"][0])
-				var side: float = float(nd["hang"][1])
-				nd["at"] = [x, side * HANG_Y]
-				nd["col"] = int(x)
-				var b := _web_filler(t, [x, side * BRANCH_Y], count, k)
-				_web_link(nodes, b, i)
-				var rail := _web_at(nodes, [x, side])
-				_web_link(nodes, b, rail if rail >= 0 else _web_at(nodes, [x, 0.0]))
-			for nm in ex.get("links", []):
-				_web_link(nodes, i, _web_named(nodes, nm))
-			if nd.has("link_at"):
-				_web_link(nodes, i, _web_at(nodes, [float(nd["link_at"][0]), float(nd["link_at"][1])]))     # the bridge (slice 3): off the rail's last filler
-		if t.get("class", "") != "":
-			_web_wheel(t, src, k)
-		for i in range(nodes.size()):
-			nodes[i]["region"] = t["name"]                      # the node knows its region (23 Oct: the entry's emblem)
-			assert(not nodes[i]["links"].is_empty() or not nodes[i].get("xlinks", []).is_empty(), "%s/%s links to nothing" % [t["name"], nodes[i]["name"]])     # the review: a lane's shape that leaves a node off the web
-		out.append(t)
-	return out
-
-
-## A class lane's nodes placed on its half of the class's wheel (the constants above): "wheel" on every node; the
-## first lane's first rail node the class's one starter, the second lane's first column linked to it across; each
-## keystone linked to the lane's capstone.
-static func _web_wheel(t: Dictionary, src: Array, k: int) -> void:
-	var lane := 0                                                   # the class's first or second lane, by the source's order
-	for j in range(k):
-		if str(src[j].get("class", "")) == str(t["class"]):
-			lane += 1
-	t["lane"] = lane
-	var nodes: Array = t["nodes"]
-	var keystones: Array = []
-	var capstone := -1
-	var entry := -1
-	for i in range(nodes.size()):
-		var nd: Dictionary = nodes[i]
-		var a: Array = nd["at"]
-		var x: float = float(a[0])
-		var y: float = float(a[1])
-		var deg: float = (x + 0.5) * WHEEL_COL                      # a station at the column's middle; a filler at x = c - 0.5 lands at c * WHEEL_COL, between two
-		var r: float = WHEEL_R
-		if nd.has("bridge"):
-			deg = WHEEL_BRIDGE_DEG
-			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_BRIDGE
-		elif nd.get("capstone", false):
-			deg = 90.0
-			r = WHEEL_CAP
-			capstone = i
-		elif nd.get("keystone", false):
-			keystones.append(i)
-			r = WHEEL_HUB
-		elif nd.has("class"):
-			r = WHEEL_R - WHEEL_TRACK / 2.0 - WHEEL_HALF              # a joint's half: inward, toward its element
-		elif nd.has("hang"):
-			deg = (float(nd["hang"][0]) + 0.5) * WHEEL_COL
-			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_HANG
-		elif nd.get("filler", false) and absf(y) > 1.5:
-			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_BRANCH             # a hung notable's branch filler
-		elif absf(y) < 0.5:
-			r = WHEEL_R                                              # a lone node: on the middle track
+## The web built from the layout (see FILLERS' note): {"trees", "elements", "ids" (every web id in slot order),
+## "of_slot" slot -> id, "links" id -> [ids], "starts" class -> id, "dropped" [today's names no slot holds]}.
+static func _web_build_all() -> Dictionary:
+	var srcs: Array = []
+	for t in TREES_SRC + ELEMENT_TREES_SRC:
+		var st: Dictionary = t.duplicate(true)
+		for ex in WEB_EXTRA.get(st["name"], []):
+			st["nodes"].append(ex.duplicate(true))         # the hung notables, after the lane's own (their ids follow)
+		srcs.append(st)
+	var named := {}                                        # name -> slot
+	for s in WL.SLOTS:
+		if str(s["name"]) != "":
+			named[str(s["name"])] = s
+	var trees := {}                                        # name -> the built tree
+	var order: Array = []
+	var smalls := {}                                       # tree -> its own smalls no slot names, in order
+	var src_of := {}                                       # name -> [tree, node]
+	for st in srcs:
+		var t: Dictionary = st.duplicate()
+		t["nodes"] = []
+		trees[st["name"]] = t
+		order.append(st["name"])
+		smalls[st["name"]] = []
+		for nd in st["nodes"]:
+			src_of[str(nd["name"])] = [st["name"], nd]
+			var big: bool = nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false) or nd.has("skill") or nd.has("hang")
+			if not named.has(str(nd["name"])) and not big:
+				smalls[st["name"]].append(nd)
+	# each slot's node: [tree, node] - a named one found, a pool's taken in turn
+	var pool_at := {}                                      # tree -> the next of its own smalls
+	var fill_at := {}                                      # tree -> the fillers made, for the cycle
+	var got := {}                                          # slot -> [tree, node]
+	var dropped: Array = []
+	for s in WL.SLOTS:
+		var tn: String = str(s["tree"])
+		var nd: Dictionary
+		var pool: String = str(s["pool"])
+		if str(s["name"]) != "":
+			assert(src_of.has(str(s["name"])), "a web slot names a node that isn't there: " + str(s["name"]))
+			nd = Dictionary(src_of[str(s["name"])][1]).duplicate(true)
+		elif pool.begins_with("class:") and int(pool_at.get(pool.substr(6), 0)) < smalls[pool.substr(6)].size():
+			var own: String = pool.substr(6)
+			nd = Dictionary(smalls[own][int(pool_at.get(own, 0))]).duplicate(true)
+			pool_at[own] = int(pool_at.get(own, 0)) + 1
+		elif STAT_SMALLS.has(pool):
+			nd = Dictionary(STAT_SMALLS[pool]).duplicate()
+			nd["filler"] = true
 		else:
-			r = WHEEL_R + (WHEEL_TRACK / 2.0 if y > 0.0 else -WHEEL_TRACK / 2.0)
-		nd["wheel"] = [deg, r]
-		if lane == 0 and int(nd.get("col", -1)) == 0 and int(nd.get("row", 0)) == 0 and not nd.get("filler", false) and not nd.has("class"):
-			entry = i
-	# the keystones spread round the hub's half, the capstone linked to each
-	for j in range(keystones.size()):
-		var frac: float = (j + 1.0) / (keystones.size() + 1.0)
-		nodes[keystones[j]]["wheel"][0] = 40.0 + frac * 110.0
-		if capstone >= 0:
-			_web_link(nodes, keystones[j], capstone)
-	# one starter a class (Matt, 22 Oct): the first lane's first rail node at the near pole; the other first-column
-	# nodes aren't entries, and the second lane's reach it across (xlinks by name)
-	for i in range(nodes.size()):
-		if nodes[i].get("entry", false) and i != entry:
-			nodes[i].erase("entry")
-	if entry >= 0:
-		nodes[entry]["wheel"] = [0.0, WHEEL_R]
-		nodes[entry]["entry"] = true
-	else:
-		for j in range(k):
-			if str(src[j].get("class", "")) == str(t["class"]):
-				var first: Dictionary = src[j]
-				var ename := ""
-				for nd in first["nodes"]:
-					if int(nd.get("col", -1)) == 0 and int(nd.get("row", 0)) == 0 and not nd.has("class"):
-						ename = str(nd["name"])
-						break
-				for i in range(nodes.size()):
-					if int(nodes[i].get("col", -1)) == 0 and not nodes[i].get("filler", false) and not nodes[i].has("class") and ename != "":
-						if not nodes[i].has("xlinks"):
-							nodes[i]["xlinks"] = []
-						nodes[i]["xlinks"].append("%s/%s" % [first["name"], ename])
+			var k: int = order.find(tn) % 6
+			var f: Dictionary = FILLERS[(int(fill_at.get(tn, 0)) + k * 3) % FILLERS.size()].duplicate()
+			fill_at[tn] = int(fill_at.get(tn, 0)) + 1
+			if f["effect"] == "res":
+				var el: String = str(trees[tn].get("element", ""))
+				f = {"name": "Tough", "effect": "armour_pct", "value": 4} if el == "" or el == "physical" else {"name": RES_NAMES[el], "effect": "%s_res" % el, "value": 3}
+			nd = f
+			nd["filler"] = true
+		for k in ["links", "xlinks", "hang", "link_at", "entry", "wheel", "beside", "notable", "keystone", "capstone"]:
+			nd.erase(k)
+		var kind: String = str(s["kind"])
+		if kind == "notable" or kind == "start":
+			nd["notable"] = true
+		elif kind == "keystone":
+			nd["keystone"] = true
+		elif kind == "capstone":
+			nd["capstone"] = true
+		if kind == "start":
+			nd["start"] = true
+		nd["at"] = [float(s["at"][0]), float(s["at"][1])]
+		nd["slot"] = str(s["slot"])
+		nd["kind"] = kind
+		nd["web_region"] = str(s["region"])
+		nd["region"] = tn
+		got[str(s["slot"])] = [tn, nd]
+	# each tree's nodes: its own source nodes kept in it, in source order, then the rest in slot order
+	var by_tree := {}
+	for sl in got:
+		var tn: String = got[sl][0]
+		if not by_tree.has(tn):
+			by_tree[tn] = []
+		by_tree[tn].append(sl)
+	var of_slot := {}
+	for st in srcs:
+		var tn: String = st["name"]
+		var t: Dictionary = trees[tn]
+		var here: Array = by_tree.get(tn, [])
+		var used := {}
+		for nd0 in st["nodes"]:
+			var hit := ""
+			for sl in here:
+				if not used.has(sl) and str(got[sl][1]["name"]) == str(nd0["name"]) and not got[sl][1].get("filler", false):
+					hit = sl
+					break
+			if hit != "":
+				used[hit] = true
+				t["nodes"].append(got[hit][1])
+				of_slot[hit] = "%s/%d" % [tn, t["nodes"].size() - 1]
+			elif src_of.get(str(nd0["name"]), [""])[0] == tn and not named.has(str(nd0["name"])) and not _taken(got, str(nd0["name"]), tn):
+				dropped.append("%s/%s" % [tn, nd0["name"]])
+		for sl in here:
+			if not used.has(sl):
+				t["nodes"].append(got[sl][1])
+				of_slot[sl] = "%s/%d" % [tn, t["nodes"].size() - 1]
+	var links := {}
+	for s in WL.SLOTS:
+		links[of_slot[str(s["slot"])]] = []
+	for l in WL.LINKS:
+		var a: String = of_slot[str(l[0])]
+		var b: String = of_slot[str(l[1])]
+		if not (b in links[a]):
+			links[a].append(b)
+		if not (a in links[b]):
+			links[b].append(a)
+	var ids: Array = []
+	for s in WL.SLOTS:
+		ids.append(of_slot[str(s["slot"])])
+	var starts := {}
+	for c in WL.STARTS:
+		starts[c] = of_slot[str(WL.STARTS[c])]
+	var out_t: Array = []
+	var out_e: Array = []
+	for st in TREES_SRC:
+		out_t.append(trees[st["name"]])
+	for st in ELEMENT_TREES_SRC:
+		out_e.append(trees[st["name"]])
+	return {"trees": out_t, "elements": out_e, "ids": ids, "of_slot": of_slot, "links": links, "starts": starts, "dropped": dropped}
+
+
+## A small of `tn` that a class pool took (it sits in some slot of its own tree): not dropped.
+static func _taken(got: Dictionary, nm: String, tn: String) -> bool:
+	for sl in got:
+		if got[sl][0] == tn and str(got[sl][1]["name"]) == nm and not got[sl][1].get("filler", false):
+			return true
+	return false
 
 
 static func _web_link(nodes: Array, a: int, b: int) -> void:
@@ -2773,37 +2703,63 @@ static func _web_link(nodes: Array, a: int, b: int) -> void:
 		nodes[b]["links"].append(a)
 
 
-## A filler appended to the tree at a place: the next of the cycle (offset by the lane, so neighbours differ), its
-## resist the region's element, or armour where there's none.
-static func _web_filler(t: Dictionary, at: Array, count: Array, lane: int) -> int:
-	var f: Dictionary = FILLERS[(count[0] + lane * 3) % FILLERS.size()].duplicate()
-	count[0] += 1
-	var el: String = str(t.get("element", ""))
-	if f["effect"] == "res":
-		if el == "" or el == "physical":
-			f = {"name": "Tough", "effect": "armour_pct", "value": 4}
-		else:
-			f = {"name": RES_NAMES[el], "effect": "%s_res" % el, "value": 3}
-	f["filler"] = true
-	f["at"] = at
-	f["links"] = []
-	t["nodes"].append(f)
-	return t["nodes"].size() - 1
+## --- the web's API (BUILD47_COMMON.md: the Training screen's and the tests'; static, the layout's) ---
+
+## Every node id on the web, in the layout's slot order (not the paragon ring).
+static func web_ids() -> Array:
+	return _WEB["ids"]
 
 
-static func _web_at(nodes: Array, at: Array) -> int:
-	for i in range(nodes.size()):
-		var a: Array = nodes[i].get("at", [])
-		if a.size() == 2 and is_equal_approx(float(a[0]), float(at[0])) and is_equal_approx(float(a[1]), float(at[1])):
-			return i
-	return -1
+static func _web_node(id: String) -> Dictionary:
+	var t := tree_named(id.get_slice("/", 0))
+	var i := int(id.get_slice("/", 1))
+	if t.is_empty() or i < 0 or i >= t.get("nodes", []).size():
+		return {}
+	return t["nodes"][i]
 
 
-static func _web_named(nodes: Array, nm: String) -> int:
-	for i in range(nodes.size()):
-		if str(nodes[i].get("name", "")) == nm:
-			return i
-	return -1
+## A node's place in web units (the centre 0,0, 12 o'clock up: y negative). The ring's at RING_R.
+static func web_at(id: String) -> Vector2:
+	var n := _web_node(id)
+	if n.has("ring"):
+		return Vector2.from_angle(deg_to_rad(float(n["ring"]))) * RING_R
+	var a: Array = n.get("at", [0.0, 0.0])
+	return Vector2(float(a[0]), float(a[1]))
+
+
+## small / notable / keystone / capstone / start ("" off the web).
+static func web_kind(id: String) -> String:
+	return str(_web_node(id).get("kind", ""))
+
+
+## The ids joined to it (both ways).
+static func web_links(id: String) -> Array:
+	return _WEB["links"].get(id, [])
+
+
+## The layout's region: "centre", "el:<element tree>", "class:<Class>" or "join".
+static func web_region(id: String) -> String:
+	return str(_web_node(id).get("web_region", ""))
+
+
+## The layout's slot name ("k0_S0").
+static func web_slot(id: String) -> String:
+	return str(_web_node(id).get("slot", ""))
+
+
+## A class's start: the node with its skill, owned from level 1.
+static func web_start(cls: String) -> String:
+	return str(_WEB["starts"].get(cls, ""))
+
+
+## A slot's node id, or "".
+static func web_of_slot(slot: String) -> String:
+	return str(_WEB["of_slot"].get(slot, ""))
+
+
+## Today's nodes (BUILD47) no slot holds: "Tree/Name", dropped from the web.
+static func web_dropped() -> Array:
+	return _WEB["dropped"]
 
 
 const AFFINITY := {"Drifter": ["fire", "bleed"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["shock", "frost"], "Recruit": ["physical", "poison"]}     # joints B (24 Oct, Matt): every element between the two classes that join it (the Recruit Knuckles and the Rat Man)     # the Recruit: Knuckles and Blades, his joints (24 Oct)
@@ -2843,10 +2799,6 @@ static func joint_in(cls: String, tree_name: String) -> Dictionary:
 			return j
 	return {}
 
-## Training's gating (15 Oct, Matt: "like Last Epoch"; endgame_radio.md §8): keystones open at KEYSTONE_LEVEL, capstones at
-## CAPSTONE_LEVEL, every tree.
-const KEYSTONE_LEVEL := 20
-const CAPSTONE_LEVEL := 30
 
 ## Insurance: the Fence holds the paper on the kit for a run. Dies, and the
 ## kit comes back to the Yard's stash. A share of what's worn, by depth.
@@ -3470,36 +3422,12 @@ const CLASSES := [
 ]
 
 
-## A node's cost in points by its column (the lanes, 9 Oct): 1, 1, 2, 2, 3, 3 across; a notable one more,
-## a keystone two more. The capstone's is its own (capstone_cost).
-const COLUMN_COST := [1, 1, 2, 2, 3, 3]
-const COLUMNS := 6
-const GATE_SHARE := 0.6            # a column opens on this share of what the columns before it cost, in that tree
-
-
-static func node_cost(col: int, notable: bool, keystone := false) -> int:
-	return int(COLUMN_COST[clampi(col, 0, COLUMNS - 1)]) + (2 if keystone else (1 if notable else 0))
-
-
-## A node's base cost from its data, the capstone's included: what a gate counts (a move's free node and
-## an off-pair element's doubling are the runner's price, not the tree's shape).
-static func base_cost(t: Dictionary, nd: Dictionary) -> int:
-	if nd.has("cost_fixed"):
-		return int(nd["cost_fixed"])                    # the bridge (slice 3): its own price
-	var less: int = int(nd.get("cost_less", 0))        # a node priced under its column (bleed's keystone and capstone, 9 Oct)
-	if nd.get("capstone", false):
-		return maxi(1, capstone_cost(t) - less)
-	return maxi(1, node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false)) - less)
-
-
-## The web (22 Oct, docs/design/web.md): a tree is a region of the web, its nodes linked by pathing, not opened by
-## column gates. The links are the built tree's ("links" indices, "xlinks" "Tree/Name" into another), as ids, both
-## ways. A node is an entry when it's the lane's first column (the region's join).
-static var _web_links := {}
-static func web_links(t: Dictionary) -> Dictionary:
+## A tree's own links ("links" indices in it) as ids, both ways: the paragon ring's (the web's are WEB_LINKS).
+static var _tree_links := {}
+static func tree_links(t: Dictionary) -> Dictionary:
 	var key: String = str(t.get("name", ""))
-	if _web_links.has(key):
-		return _web_links[key]
+	if _tree_links.has(key):
+		return _tree_links[key]
 	var out := {}
 	var nodes: Array = t.get("nodes", [])
 	for i in range(nodes.size()):
@@ -3510,32 +3438,19 @@ static func web_links(t: Dictionary) -> Dictionary:
 			var ib := "%s/%d" % [key, int(j)]
 			if not (ib in out[ia]):
 				out[ia].append(ib)
-		for nm in nodes[i].get("xlinks", []):
-			var ib := node_id_named(str(nm))
-			assert(ib != "", "a web xlink to nothing: " + str(nm))
-			if not (ib in out[ia]):
-				out[ia].append(ib)
-	_web_links[key] = out
+	_tree_links[key] = out
 	return out
 
 
-## Every tree's links in one dictionary, the cross-tree ones both ways (a path can cross a class's two lanes).
+## Every link in one dictionary: the web's and the paragon ring's.
 static var _web_all := {}
 static func web_links_all() -> Dictionary:
 	if not _web_all.is_empty():
 		return _web_all
-	var out := {}
-	for t in TREES + ELEMENT_TREES + [RING]:
-		for a in web_links(t):
-			if not out.has(a):
-				out[a] = []
-			for b in web_links(t)[a]:
-				if not (b in out[a]):
-					out[a].append(b)
-				if not out.has(b):
-					out[b] = []
-				if not (a in out[b]):
-					out[b].append(a)
+	var out: Dictionary = Dictionary(_WEB["links"]).duplicate(true)
+	var rl := tree_links(RING)
+	for a in rl:
+		out[a] = Array(rl[a]).duplicate()
 	_web_all = out
 	return out
 
@@ -3550,44 +3465,13 @@ static func node_id_named(path: String) -> String:
 	return ""
 
 
+## A paragon ring's entry (a node at a class's angle): a point goes there first.
 static func web_entry(nd: Dictionary) -> bool:
 	return nd.get("entry", false)
 
 
-## Whether a node is for these classes: a class's half in an element tree is that class's alone.
-static func for_classes(nd: Dictionary, classes: Array) -> bool:
-	return not nd.has("class") or nd["class"] in classes
-
-
-## The points spent in a tree that open column `col`: GATE_SHARE of what every node before it costs - the
-## nodes these classes could train (another class's half doesn't count) - rounded up. Column 0 is open.
-static func gate(t: Dictionary, col: int, classes: Array) -> int:
-	if col <= 0:
-		return 0
-	var before := 0
-	for nd in t["nodes"]:
-		if int(nd.get("col", 0)) < col and not nd.get("capstone", false) and for_classes(nd, classes):
-			before += base_cost(t, nd)
-	return ceili(before * GATE_SHARE)
-
-
-static func capstone_cost(t: Dictionary) -> int:
-	var total := 0
-	var half := 0                                      # a class's half counts once: one class trains one of them
-	for nd in t["nodes"]:
-		if nd.get("capstone", false) or nd.get("beside", false) or not nd.has("col") or nd.has("hang") or nd.has("xlinks") or nd.has("bridge"):
-			continue                                       # a node beside the capstone (12 Oct) is its peer, not behind it; the web's fillers and extras (22 Oct) don't price it
-		var c := node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
-		if nd.has("class"):
-			half = maxi(half, c)
-		else:
-			total += c
-	return maxi(1, ceili((total + half) / 4.0))     # the pass (6 Oct): a third left three builds at 4.3-4.6 h against the 4 h gate
-
-
-## The trees a class sees: its first, the common one, its second - and the
-## second past's first, when there is one.
-static func trees_for(cls: String, cls2 := "") -> Array:
+## A class's own two trees with the centre's between: its first, the Pitch's (the centre), its second.
+static func trees_for(cls: String) -> Array:
 	var mine := []
 	for t in TREES:
 		if t.get("class", "") == cls:
@@ -3598,10 +3482,6 @@ static func trees_for(cls: String, cls2 := "") -> Array:
 	out.append(tree_named(COMMON_TREE))
 	if mine.size() > 1:
 		out.append(mine[1])
-	if cls2 != "" and cls2 != cls:
-		for t in TREES:
-			if t.get("class", "") == cls2:
-				out.append(t)                 # the bridge (slice 3): the whole region, both lanes
 	return out
 
 

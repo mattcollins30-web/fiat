@@ -362,7 +362,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		# unread); on the real camp only - a wall's odds swap a copy
 		bot.on_swap = func(s) -> void:
 			if s == sim:
-				played_note(sim, pl, g, sim.pitch_spent())
+				played_note(sim, pl, g)
 	var farm_odds: Array = []
 	var boss_uniques: Dictionary = {}
 	for u in Data.UNIQUES:
@@ -413,7 +413,6 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		var dealt_ty: String = dealt_type(sim)
 		var rep0 = sim.last_report
 		var reps0: int = bot.repeats_gone
-		var pitch0: int = sim.pitch_spent()
 		var xb0: Dictionary = xp_book(sim) if long_read else {}
 		var t: int = bot.step(sim)
 		var rep_t: Dictionary = bot.last_repeat if bot.repeats_gone > reps0 else {}     # a repeat's runs, each counted (29 Oct, the tools review)
@@ -502,10 +501,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		_gate_firsts(sim, g, loose_seen)
-		if float(g["el_open_at"]) < 0.0 and element != "" and sim.cls == cls and element in sim.class_elements():
+		if float(g["el_open_at"]) < 0.0 and element != "" and sim.cls == cls and element in sim.build_elements():
 			g["el_open_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		if played:
-			played_note(sim, pl, g, pitch0)
+			played_note(sim, pl, g)
 		if checkpoint and sim.room_open("radio") and not sim.on_mission():
 			var cf := FileAccess.open(CHECKPOINT, FileAccess.WRITE)
 			cf.store_string(JSON.stringify({"sim": sim.to_dict(), "hour": snappedf(sim.elapsed / 3600.0, 0.01), "route": bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target"))}))
@@ -714,66 +713,58 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 ## The read's build out for the end's figures, and as played its state there noted (the review: the end's tidy can
 ## close a joint the loop never saw).
 static func end_noted(sim, bot, cls: String, pl: Dictionary, g: Dictionary, played: bool) -> void:
-	var p0: int = sim.pitch_spent()
 	end_as_build(sim, bot, cls)
 	if played:
-		played_note(sim, pl, g, p0)
+		played_note(sim, pl, g)
 
 
-## The as-played read's step noted (BUILD34): for the runner out, when each of its own two elements opened for it, when
-## each joint's class half and element half went in and when the joint closed (and at what level), and the Pitch it
-## spent; the camp's element points at the Quartermaster. Bot hours.
-static func played_note(sim, pl: Dictionary, g: Dictionary, pitch0: int) -> void:
+## The as-played read's step noted (BUILD34; the skill web, 3 Nov): for the runner out, when each of its own two elements
+## first had a node of its flower owned, when each pair's class half and element half went in and when the pair was done
+## (and at what level); each element's flower nodes owned at the Quartermaster. Bot hours.
+static func played_note(sim, pl: Dictionary, g: Dictionary) -> void:
 	var c: String = sim.cls
 	if not pl.has(c):
-		pl[c] = {"opened": {}, "how": {}, "self_opened": {}, "class_half": {}, "element_half": {}, "closed": {}, "closed_lv": {}, "pitch": 0}
+		pl[c] = {"opened": {}, "how": {}, "class_half": {}, "element_half": {}, "closed": {}, "closed_lv": {}}
 	var rec: Dictionary = pl[c]
 	var h: float = snappedf(sim.elapsed / 3600.0, 0.01)
-	# the opens the classes made themselves since the last note (the chronicle's element_open, the runner's class on it;
-	# a free open of the camp's counts): an element first seen open without one was inherited (the camp's two derived)
-	var ci: int = int(g.get("_chron_i", 0))
-	for k in range(mini(ci, sim.chronicle.size()), sim.chronicle.size()):
-		var e: Dictionary = sim.chronicle[k]
-		var oel := ""
-		if str(e.get("k", "")) == "element_open":
-			oel = str(e.get("element", ""))       # a free open: the camp's element, opened for this class
-		elif str(e.get("k", "")) == "train" and sim.is_element_starter(str(e.get("id", ""))):
-			oel = sim.element_of(str(e["id"]))    # a paid open: the starter bought with a Pitch point
-		if oel != "":
-			var oc: String = str(e.get("cls", ""))
-			if not pl.has(oc):
-				pl[oc] = {"opened": {}, "how": {}, "self_opened": {}, "class_half": {}, "element_half": {}, "closed": {}, "closed_lv": {}, "pitch": 0}
-			pl[oc]["self_opened"][oel] = true
-	g["_chron_i"] = sim.chronicle.size()
-	rec["pitch"] = int(rec["pitch"]) + maxi(0, sim.pitch_spent() - pitch0)
-	var open_now: Array = sim.class_elements()
+	var open_now: Array = sim.build_elements()
 	for el in Bot.own_elements(c):
 		if el in open_now and not rec["opened"].has(el):
 			rec["opened"][el] = h
-			rec["how"][el] = "itself" if rec["self_opened"].has(el) else "inherited"
+			rec["how"][el] = "itself"
 		var j: Dictionary = Data.joint_in(c, str(Data.element_tree_of(str(el)).get("name", "")))
 		var halves: Array = Bot.joint_halves(c, str(el))
 		if j.is_empty() or halves.is_empty():
 			continue
 		var key: String = str(j["key"])
-		if not rec["class_half"].has(key) and sim.tree.has(str(halves[0])):
+		if not rec["class_half"].has(key) and sim.web_owned(str(halves[0])):
 			rec["class_half"][key] = h
-		if not rec["element_half"].has(key) and sim.tree.has(str(halves[1])):
+		if not rec["element_half"].has(key) and sim.web_owned(str(halves[1])):
 			rec["element_half"][key] = h
 		if not rec["closed"].has(key) and sim.has_joint(key):
 			rec["closed"][key] = h
 			rec["closed_lv"][key] = sim.level()
 	if float(g.get("qm_at", -1.0)) >= 0.0 and not g.has("_points_at_qm"):
-		g["_points_at_qm"] = sim.element_points.duplicate()
+		g["_points_at_qm"] = flower_counts(sim)
+
+
+## The runner's nodes owned in each element's flower (its "el:" region on the web), by element.
+static func flower_counts(sim) -> Dictionary:
+	var out := {}
+	for id in sim.tree:
+		var el: String = sim.element_of(str(id))
+		if el != "" and Data.web_region(str(id)).begins_with("el:"):
+			out[el] = int(out.get(el, 0)) + 1
+	return out
 
 
 ## The GATES line's `played` (BUILD34): per class played, its two elements (the build's first) - when each opened for it,
-## the camp's points in each at the Quartermaster and at the end - and its two joints: when the class half, the element
-## half and the joint went in (null never), the level it closed at; the Pitch it spent while out. The camp's Pitch.
+## its nodes in each flower at the Quartermaster and at the end - and its two pairs: when the class half, the element
+## half and the pair went in (null never), the level it was done at. The runner's points spent and earned.
 static func played_gates(sim, pl: Dictionary, g: Dictionary) -> Dictionary:
 	var at_qm: Dictionary = g.get("_points_at_qm", {})
 	g.erase("_points_at_qm")
-	g.erase("_chron_i")
+	var now: Dictionary = flower_counts(sim)
 	var classes := {}
 	for c in pl:
 		var rec: Dictionary = pl[c]
@@ -791,17 +782,17 @@ static func played_gates(sim, pl: Dictionary, g: Dictionary) -> Dictionary:
 		var how: Array = []
 		var points: Array = []
 		var points_qm: Array = []
-		var none_at_qm = null                 # no Quartermaster: null; beaten with none earned by then: 0
+		var none_at_qm = null                 # no Quartermaster: null; beaten with none owned by then: 0
 		if float(g.get("qm_at", -1.0)) >= 0.0:
 			none_at_qm = 0
 		for el in els:
 			opened.append(rec["opened"].get(el, null))
 			how.append(rec["how"].get(el, null))
-			points.append(int(sim.element_points.get(el, 0)))
+			points.append(int(now.get(el, 0)) if c == sim.cls else 0)
 			points_qm.append(at_qm.get(el, none_at_qm))
 		var lv: int = sim.level() if c == sim.cls else sim.crew_level(c)
-		classes[c] = {"elements": els, "opened": opened, "opened_how": how, "points": points, "points_at_qm": points_qm, "joints": joints, "pitch": int(rec["pitch"]), "level": lv}
-	return {"classes": classes, "pitch_spent": sim.pitch_spent(), "pitch_points": sim.pitch_points()}
+		classes[c] = {"elements": els, "opened": opened, "opened_how": how, "points": points, "points_at_qm": points_qm, "joints": joints, "level": lv}
+	return {"classes": classes, "spent": sim.points_spent(), "points": sim.training_points}
 
 
 ## The read's build out for the end's figures (the fix round, H3): the odds, the gang clock, the level and the kit are
@@ -1463,8 +1454,9 @@ func _fixture(spec: Dictionary, plain: bool) -> Dictionary:
 	sim.xp = xp0
 	sim.equipped = kit0
 	sim.rig = rig0
-	sim.tree = sim.tree.filter(func(id): return sim.is_camp(str(id)))
+	sim.tree = sim.tree.filter(func(id): return sim.is_ring(str(id)))
 	sim.skill_slots = ["", "", ""]
+	sim._ensure_start()
 	# at level 50 (the build's keystone and capstone want it, as the smoke walks the recipes): the camp the checkpoint's,
 	# the runner the build's whole
 	sim.xp = maxf(float(sim.xp), Data.xp_for_level(50))
@@ -1589,24 +1581,32 @@ func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dic
 	return out
 
 
-## A node trained from nothing as the smoke walks a recipe: each step on its path, its points given if short.
+## A node trained from nothing as the smoke walks a recipe: each step on its path (Sim.web_path), a point given if short;
+## a keystone or capstone short of its points spent (the skill web, 3 Nov) waits while the frontier's plain smalls take them.
 func _walk(sim, id: String) -> bool:
-	for k in range(60):
-		if sim.tree.has(id):
-			return true
-		var nxt: String = id if (sim.touches_trained(id) or Data.web_entry(sim.node(id))) else sim.path_next(id)
-		if nxt == "":
+	if sim.web_owned(id):
+		return true
+	for nxt in sim.web_path(id):
+		var nd: Dictionary = sim.node(str(nxt))
+		var gate: int = Data.CAPSTONE_SPENT if nd.get("capstone", false) else (Data.KEYSTONE_SPENT if nd.get("keystone", false) else 0)
+		for _guard in range(80):
+			if not sim.core_gates or sim.web_spent() >= gate:
+				break
+			var fill := ""
+			for f in sim.web_frontier(true):
+				if sim.node(str(f)).get("filler", false):
+					fill = str(f)
+					break
+			if fill == "":
+				break
+			if sim.points_free() < 1:
+				sim.training_points += 1
+			sim.train_node(fill)
+		if sim.points_free() < sim.node_cost(str(nxt)):
+			sim.training_points += sim.node_cost(str(nxt))
+		if not sim.train_node(str(nxt)):
 			return false
-		if sim.free_for(nxt) < sim.node_cost(nxt):
-			if sim.is_pitch(nxt):
-				sim.best_level += sim.node_cost(nxt)
-			elif sim.element_of(nxt) != "":
-				sim.element_points[sim.element_of(nxt)] = int(sim.element_points.get(sim.element_of(nxt), 0)) + sim.node_cost(nxt)
-			else:
-				sim.training_points += sim.node_cost(nxt)
-		if not sim.train_node(nxt):
-			return false
-	return false
+	return sim.web_owned(id)
 
 
 const PARITY_WALL_MIN := 50      # minutes of wall before a parity read stops and says so (the fix round, H1: balance.bat kills it at 60)
@@ -1637,8 +1637,9 @@ func _parity(hours: float, cls: String, element: String, cap_min := PARITY_WALL_
 	sim.best_level = best0
 	sim.equipped = kit0
 	sim.rig = rig0
-	sim.tree = sim.tree.filter(func(id): return sim.is_camp(str(id)))
+	sim.tree = sim.tree.filter(func(id): return sim.is_ring(str(id)))
 	sim.skill_slots = ["", "", ""]
+	sim._ensure_start()
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp()
 	var p: Dictionary = parity_play(sim, parity_bot(cls, element), hours, cap_min * 60000)

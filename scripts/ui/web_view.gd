@@ -1,14 +1,18 @@
 extends Control
-## The web (22 Oct, docs/design/web.md, the canvas "Fiat – The web"): every tree drawn as a region of one web in
-## the Training room's body - the Pitch at the centre, the elements round it, the classes outside - panned with
-## the right button, zoomed with the wheel, a node picked with the left. Slice 1: the lanes' nodes as they are,
-## laid out along each region's axis; the fillers and the drawn layout come in slice 2.
+## The skill web (3 Nov, docs/design/skill_web.md; the target: the canvas's sw_final6): one web every runner lights its
+## own path on - the centre, six element flowers round it, a class between each two, each class four small flowers -
+## drawn in the Training room's body from the sim's layout (Data.web_ids / web_at / web_links), the paragon ring
+## round the outside. Panned with the right button, zoomed with the wheel, a node picked with the left.
+##
+## A node's three states: owned (lit in its region's colour, a glow), can take (Sim.web_frontier: an amber ring), not
+## yet (dark). The centre is amber, an element and its joins its colour, a class white. The twelve names sit in their
+## regions, on no node.
 ##
 ## Signals: `picked(id)` when a node is clicked ("" for a click on nothing).
 ##
-## Slice 4 (web_map_pitch.md §3): the canvas is a base - the camera, the drawing, the input - with the web it draws
-## behind hooks (node_of, links_all, lay_out, state_for, state_sig, region_words, stack_of, draw_between); Training's
-## web is the default, the Map's (map_web.gd) and the Pitch's (yard_web.gd) override them.
+## The canvas is a base - the camera, the drawing, the input - with the web it draws behind hooks (node_of, links_all,
+## lay_out, state_sig, state_for, region_words, stack_of, draw_between); Training's web is the default (yard_web.gd, the
+## Pitch's old canvas, unused since 28 Oct, overrides them).
 
 signal picked(id: String)
 
@@ -17,69 +21,57 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const Layout := preload("res://scripts/sim/web_layout.gd")     # the layout (its class_name, WebLayout, preloaded)
 
-const STEP := 80.0                 # a column along a region's axis
-const ROW := 26.0                  # a row off the axis
+const STEP := 80.0                 # a column along a lane (yard_web.gd lays out by it)
+const ROW := 26.0
 const ZOOM_MIN := 0.18
-const ZOOM_MAX := 2.2
+const ZOOM_MAX := 3.2
 const ZOOM_STEP := 1.15
-const LABEL_ZOOM := 1.3            # the nodes' names show from here (the cluster zoom); the hovered and the picked always
-const R_FILLER := 6.0
-const R_PLAIN := 9.0
-const R_NOTABLE := 15.0
-const R_KEYSTONE := 18.0
-const R_CAPSTONE := 22.0
+const LABEL_ZOOM := 2.0            # the nodes' names show from here; the hovered and the picked always
+## The nodes' sizes in web units (the layout's 1000 box: a class flower's ring is 34 across its centre, its slots 26
+## apart, a join's nodes 19, two notables on a run 22, a far flower's capstone 26 from its keystone): every pair clears by
+## 4 (the smoke). A diamond's size is its half diagonal, so a keystone at 10 reads as big as a notable's disc and more.
+const R_SMALL := 4.5
+const R_NOTABLE := 8.5
+const R_START := 10.0
+const R_KEYSTONE := 10.0
+const R_CAPSTONE := 11.5
+const R_RING_NODE := 9.0
+const R_PLAIN := R_SMALL           # (yard_web.gd's names for its own sizes)
+const R_FILLER := R_SMALL
 const LINK_W := 2.0
-const LINK_DIM := Color("4a5059")       # a link to nothing reached yet (23 Oct: CARD_LINE was lost on the backdrop and the lit disc)
-const LINK_LIT_DIM := Color("7a8290")   # the same inside the class's lit wheel (Matt: "far too faint and really hard to read")
-## The elements' regions in their colour (23 Oct, Matt: "the coloured boxes for the elements just look cheap - the
-## lines and node outlines should carry the element's colour instead"): no hull; a link between two of its nodes in
-## its colour at ELEMENT_LINK_DIM, lighter where it reaches, whole where both are taken; a ring its colour mixed in
-## at ELEMENT_RING_DIM, whole once reachable or taken.
-const ELEMENT_HULLS := false
-## The Pitch its own (23 Oct, Matt: "square sand + portraits"): the camp's tree built, not grown - square nodes, its
-## links and rings in PITCH_TONE as the elements' in theirs, its emblem the hub on its starting node.
-const PITCH_TONE := Color("d1a65f")       # sand: apart from The cold's blue and softer than the class's amber
-## And the class's portrait faint under its lit wheel, faded out before the rim.
-const PORTRAIT_SHADE := Color(0.75, 0.72, 0.68, 0.16)
-const ELEMENT_LINK_DIM := 0.5
-const ELEMENT_RING_DIM := 0.55
-## The web lies wide, as the canvas is (slice 1): the Pitch across the centre, three elements' lanes out to the left
-## and three to the right, the classes' beyond them. [the entry, the lane's direction].
-## Slice 2 (the drawn layout, the canvas "Fiat – The web"): the Pitch across the centre, the elements' lanes out from
-## R_ELEMENT at an angle each (a class's pair side by side), the classes' two lanes out from R_CLASS between their
-## elements, Data.LANE_OFF rows either side of the angle, their notables hung outward.
-const R_ELEMENT := 280.0
-const R_PITCH := 200.0              # the Pitch's circle, the elements' starters on it (24 Oct)
-const PITCH_CLEAR_DEG := 12.0        # the arc either side of an element's starter the Pitch's nodes leave clear
-const PITCH_END_DEG := 6.0           # and at the entry's and the capstone's ends of its rails
-const R_CLASS := 740.0
-## The wheel (23 Oct, the canvas pass; Data.WHEEL_*): a class's two lanes round one ring whose centre sits WHEEL_OUT
-## past R_CLASS along the class's angle, the starter at the near pole; the first lane runs round one way, the second
-## the other. The class on show has a warm disc under its wheel; each element's region a hull in its colour.
-const WHEEL_OUT := 3.4 * STEP
-const WHEEL_GLOW := 1.3 * STEP     # the disc past the tracks
-const R_NOTABLE_PIC := 17.0        # a notable's disc with a picture in it (the art, 23 Oct: 15 read as a blob)
-const PIC_ZOOM := 0.5              # the pictures draw from here; the glyph before (and where no picture is). 0.8 till 23 Oct (Matt: the glyphs read worse than a small picture)
-const R_SMALL_PIC := 13.0         # a small node with a picture (23 Oct, Matt: art in every node): 9 can't hold a painting
-const R_FILLER_PIC := 10.0        # a filler with one: drawn from FILLER_PIC_ZOOM, a dot before
-const FILLER_PIC_ZOOM := 0.9
-static var assume_pics := false   # the smoke: every node sized as if its picture had landed, so the overlap checks hold before the art does
-const R_ENTRY := 20.0
-const LABEL_SLACK := 1.06          # the words measured a little wide when placed: Windows' shaping runs a few px wider than the cloud's (25 Oct, Knuckles)
-const ENTRY_LABEL_ZOOM := 0.8     # the names move from the rim to the starters from here (23 Oct; 0.6 boxed the cold's name 150 px off its starter)              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
-const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
-const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The Rat Man": 150.0, "The cold": -150.0}     # joints B (24 Oct, Matt): every element between the two classes that join it
-const CLASS_LAY := {"Paramedic": -120.0, "Scrapper": -60.0, "Drifter": 0.0, "Doorman": 60.0, "Recruit": 120.0, "Poacher": 180.0}     # joints B (24 Oct): each class's first lane joins the element at its angle - 30, its bridge the class at - 60
+const LINK_DIM := Color("4a5059")       # a link to nothing reached yet
+const LINK_CLASS_DIM := Color("5a616b")  # a class's: a shade lighter, the class's grey (its nodes are white when lit)
+const ELEMENT_LINK_DIM := 0.45          # an element's (or the centre's) link not lit: its colour at this
+const RING_DIM := 0.35                  # a dark node's ring: the card line with this of its region's colour
+const GLOW := 0.2                       # an owned node's glow, its colour at this
+const GLOW_R := 1.9                     # and its size against the node's
+## The centre in amber (3 Nov, Matt's canvas): the camp's sand, apart from The cold's blue and the frontier's ring.
+const PITCH_TONE := Color("d1a65f")
+const FRONTIER := Pal.ACCENT
+const PIC_ZOOM := 0.5              # a big node's picture from here; its glyph before
+const R_RING := Data.RING_R        # the paragon ring, round the outside (the web's radius is 474 at the far tips)
+const RING_DASH := 10.0
+const RING_LABEL_DEG := -132.0     # the ring's name, outside it at the top left: the Recruit's corner, clear of the tabs
+const NAME_SIZE := 14              # the twelve names on the web, at any zoom
+const BOUNDS_PAD := 44.0           # past the ring: its nodes and its name
+static var assume_pics := false   # the smoke: kept for the old checks (every node's size is its kind's now)
 
 var sim
 var selected := ""
 var hover := ""
 var cam := Vector2.ZERO            # the web point at the view's centre
 var zoom := 1.0
+var zoom_min := ZOOM_MIN           # Training's: the whole web, no further out (its names are placed for that zoom)
 var layout := {}                   # id -> Vector2, web space
-var _trees := {}                   # tree name -> its dictionary
-var _axis := {}                    # tree name -> {"at": Vector2 (the entry), "dir": Vector2, "tone": Color, "label_at": Vector2}
+var _trees := {}                   # (yard_web.gd) tree name -> its dictionary
+var _axis := {}                    # a region's name: key -> {"anchor", "label_at", "label_box", "words", "tone"}
+var _region := {}                  # id -> "centre", "el:<tree>", "join", "class:<Class>" or "ring"
+var _kind := {}                    # id -> small / notable / keystone / capstone / start / ring
+var _tone := {}                    # id -> its region's colour
+var _links := {}                   # id -> ids, both ways
+var _nodes := {}                   # id -> the node's dictionary with its web kind, read once
 var _drag := false
 var _drag_from := Vector2.ZERO
 var _cam_from := Vector2.ZERO
@@ -89,6 +81,8 @@ var _font: Font
 var _font_bold: Font
 var _focused := false              # the first show frames the whole web
 var _bounds := Rect2()
+var slice_restate := false         # (BUILD45's slices: the web's 379 nodes restate whole now, in well under a millisecond)
+var _stale := {}                   # (always empty: kept for the tests' reads)
 
 
 func _init(sz: Vector2) -> void:
@@ -103,55 +97,167 @@ func _init(sz: Vector2) -> void:
 
 # ------------------------------------------------------------------ the layout
 
-## Every tree placed: the Pitch's lane across the centre; an element's lane out along its angle from R_ELEMENT; a
-## class's two lanes out along its angle from R_CLASS, either side of the axis. Column c sits c * STEP along the
-## axis, row 1 ROW across it.
+static var _slot_of := {}          # the layout's slot name -> its dictionary (web_layout.gd), read once
+static var _el_at := {}            # an element's index in the layout ("0".."5") -> its tree's name
+
+
+static func _slots_index() -> void:
+	if not _slot_of.is_empty():
+		return
+	for s in Layout.SLOTS:
+		_slot_of[str(s["slot"])] = s
+		var sn: String = str(s["slot"])
+		if sn.ends_with("_n") and sn.begins_with("e"):
+			_el_at[sn.substr(1, sn.length() - 3)] = str(s["tree"])
+
+
+## The web's links of a node: the sim's (Data.web_links).
+static func web_links_of(id: String) -> Array:
+	return Data.web_links(id)
+
+
+## Every node at the sim's place (web units, the centre at 0,0, 12 o'clock up), its region, kind and colour; the ring's
+## thirty round the outside at their angles; the twelve names placed.
 func lay_out() -> void:
+	_slots_index()
 	layout = {}
+	_pick_cache = {}
 	_trees = {}
 	_axis = {}
-	for t in Data.TREES + Data.ELEMENT_TREES + [Data.RING]:
-		_trees[t["name"]] = t
-	var by_class := {}
-	for t in Data.TREES:
-		if t.get("class", "") != "":
-			if not by_class.has(t["class"]):
-				by_class[t["class"]] = []
-			by_class[t["class"]].append(t)
-	# the Pitch
-	var pitch: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	_lay_pitch_circle(pitch)
-	for nm in ELEMENT_LAY:
-		var t: Dictionary = _trees.get(nm, {})
-		if t.is_empty():
-			continue
-		var d := Vector2.from_angle(deg_to_rad(ELEMENT_LAY[nm]))
-		_lay_tree(t, d * R_ELEMENT, d, Pal.ELEMENT_COLOURS.get(t["element"], Pal.TEXT))
-		for i in range(t["nodes"].size()):
-			if Data.web_entry(t["nodes"][i]):
-				layout["%s/%d" % [nm, i]] = d * R_PITCH          # the starter on the Pitch's circle (24 Oct, Matt)
-	for cls in CLASS_LAY:
-		var mine: Array = by_class.get(cls, [])
-		var d := Vector2.from_angle(deg_to_rad(CLASS_LAY[cls]))
-		for k in range(mine.size()):
-			_lay_wheel(mine[k], cls, d, CLASS_LAY[cls])
-	# the ring: its nodes round the outside at their angles; the name at the top
+	_region = {}
+	_kind = {}
+	_tone = {}
+	_links = {}
+	_nodes = {}
+	for id in Data.web_ids():
+		var sid := str(id)
+		layout[sid] = Data.web_at(sid)
+		_region[sid] = Data.web_region(sid)
+		_kind[sid] = Data.web_kind(sid)
+	for sid in layout:
+		_tone[sid] = region_tone(sid)
+		_links[sid] = web_links_of(str(sid)).duplicate()
+	# the ring (slice 4): its nodes round the outside at their angles, joined round
 	var ring: Dictionary = Data.RING
 	for i in range(ring["nodes"].size()):
-		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
-	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2.from_angle(deg_to_rad(30.0)) * (R_RING + 30.0), "align": 1}     # between the Recruit and the Doorman, where no class sits (24 Oct: the right is the Recruit's now)
+		var rid: String = "%s/%d" % [ring["name"], i]
+		layout[rid] = Data.web_at(rid)              # on Data.RING_R, at its angle
+		_region[rid] = "ring"
+		_kind[rid] = "ring"
+		_tone[rid] = Pal.ACCENT
+		var out: Array = []
+		for j in ring["nodes"][i].get("links", []):
+			out.append("%s/%d" % [ring["name"], int(j)])
+		_links[rid] = out
+	# the names: a class's in the middle of its four flowers, an element's by its flower's centre, the ring's outside it
+	for cd in Data.CLASSES:
+		var key: String = "class:%s" % cd["name"]
+		var mid := Vector2.ZERO
+		var n := 0
+		for id in layout:
+			if _region[id] == key:
+				mid += layout[id]
+				n += 1
+		if n > 0:
+			_axis[key] = {"anchor": mid / n, "words": str(cd["name"]), "tone": Pal.TEXT}
+			_trees[key] = {"name": key, "class": str(cd["name"])}     # what each name is (the tests' reads, as the trees were)
+	for i in range(6):
+		var tn: String = str(_el_at.get(str(i), ""))
+		if tn == "":
+			continue
+		var key: String = "el:" + tn
+		var at := Vector2.ZERO
+		var n := 0
+		for id in layout:
+			if _region[id] == key:
+				at += layout[id]
+				n += 1
+		var flower: Dictionary = _slot_of.get("e%d_n" % i, {})
+		if not flower.is_empty():
+			at = Vector2(float(flower["at"][0]), float(flower["at"][1]))     # by the flower, not out along its run
+		elif n > 0:
+			at /= n
+		_axis[key] = {"anchor": at, "words": plain_name(tn), "tone": element_tone(tn)}
+		_trees[key] = {"name": key, "element": Data.tree_named(tn).get("element", "")}
+	_trees["ring"] = {"name": "ring", "ring": true}
+	_axis["ring"] = {"anchor": Vector2.from_angle(deg_to_rad(RING_LABEL_DEG)) * (R_RING + 24.0), "words": plain_name(Data.RING_TREE), "tone": Pal.ACCENT}
 	_find_bounds()
 	_labels_by_entry()
 
 
-## Every region's name by its first node (23 Oct, Matt: "the naming for every tree class/element/pitch needs to sit by
-## their first node"): the label goes beside the region's one starter - below it, above, right or left, the first of
-## those (and then a step further out) whose words cover no node and no name already placed, at full zoom's size.
+## A region's colour: the centre amber, an element (and its joins) its own, a class white, the ring the accent.
+func region_tone(id: String) -> Color:
+	var rg: String = str(_region.get(id, ""))
+	if rg == "centre":
+		return PITCH_TONE
+	if rg.begins_with("el:"):
+		return element_tone(rg.substr(3))
+	if rg == "join":
+		return element_tone(join_element(id))
+	if rg == "ring":
+		return Pal.ACCENT
+	return Pal.TEXT
+
+
+## An element tree's colour (its damage type's, as the stats and the items carry it).
+static func element_tone(tn: String) -> Color:
+	for t in Data.ELEMENT_TREES:
+		if str(t["name"]) == tn:
+			return Pal.ELEMENT_COLOURS.get(str(t.get("element", "")), Pal.TEXT)
+	return Pal.TEXT
+
+
+## A join's element: the layout's slot "x<element>L/R<n>" (a join is its element's colour, the spec).
+func join_element(id: String) -> String:
+	_slots_index()
+	var sn: String = Data.web_slot(id)
+	if sn.begins_with("x") and sn.length() > 1:
+		return str(_el_at.get(sn.substr(1, 1), ""))
+	for o in _links.get(id, []):
+		if str(_region.get(o, "")).begins_with("el:"):
+			return str(_region[o]).substr(3)
+	return ""
+
+
+## A centre small's stat (the layout's pool: stat:hp, stat:guard, stat:pace) as its letter, L, G or P; else "".
+func stat_letter(id: String) -> String:
+	_slots_index()
+	var pool: String = str(_slot_of.get(Data.web_slot(id), {}).get("pool", ""))
+	return {"stat:hp": "L", "stat:guard": "G", "stat:pace": "P"}.get(pool, "")
+
+
+## A region's name over it: the name alone (28 Oct, Matt: "it should just say 'Rat Man' ... same for the classes, just
+## the class names") - no "The".
+static func plain_name(tn: String) -> String:
+	var n: String = tn.trim_prefix("The ").trim_prefix("the ")
+	return n.left(1).to_upper() + n.substr(1) if n != "" else tn
+
+
+## The twelve names (and the ring's) placed for the whole web's zoom - the furthest out the canvas goes - so closer in
+## each only shrinks about its point: centred on the first place by its region's point, then out a step at a time, whose
+## words cover no node and no name already placed. A name that lands far goes first and the lot again (LABEL_TRIES).
+const LABEL_TRIES := 6
+const LABEL_NEAR := 120.0           # a name within this of its region's point is by it (the smoke's reach)
+const LABEL_STEP := 6.0             # the places tried, a grid this fine out to LABEL_NEAR, nearest first
+static var _label_grid: Array = []
+
+
+## The offsets a name tries, nearest first.
+static func label_grid() -> Array:
+	if _label_grid.is_empty():
+		var n: int = int(LABEL_NEAR / LABEL_STEP)
+		for gx in range(-n, n + 1):
+			for gy in range(-n, n + 1):
+				var d := Vector2(gx, gy) * LABEL_STEP
+				if d.length() <= LABEL_NEAR:
+					_label_grid.append(d)
+		_label_grid.sort_custom(func(a, b): return a.length() < b.length() or (a.length() == b.length() and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+	return _label_grid
+
+
 func _labels_by_entry() -> void:
-	# the order the names are placed in: one that ends up far from its starter goes first and the lot again, so the
-	# crowded ones (Knuckles under the Pitch's rails, 25 Oct) take the near places before a roomier neighbour does
 	var order: Array = _axis.keys()
-	_index_nodes(func(id): return radius_of(node_of(id)) if sim != null else R_PLAIN)     # BUILD45: the nodes by place, their radii once
+	_index_nodes(func(id): return radius_by_kind(str(_kind.get(id, "small"))))
 	for attempt in range(LABEL_TRIES):
 		var far_one: String = _labels_in(order)
 		if far_one == "":
@@ -161,86 +267,59 @@ func _labels_by_entry() -> void:
 	_near = {}
 
 
-const LABEL_TRIES := 6
-const LABEL_NEAR := 80.0            # a name within this of its starter is by it (the smoke's reach)
+## The zoom the names are placed for: the whole web's.
+func fit_zoom() -> float:
+	return clampf(minf(size.x / _bounds.size.x, size.y / _bounds.size.y), ZOOM_MIN, ZOOM_MAX)
 
 
-## One placement in `order`; the first name that landed further than LABEL_NEAR from its starter, or none.
+## A name's box in web units at zoom `z`, centred on `at`.
+func label_box_at(key: String, at: Vector2, z: float) -> Rect2:
+	var w: float = _font_bold.get_string_size(str(_axis[key]["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x * LABEL_SLACK / z
+	var h: float = NAME_SIZE * 1.15 / z
+	return Rect2(at.x - w / 2.0, at.y - h / 2.0, w, h)
+
+
+const LABEL_SLACK := 1.06          # the words measured a little wide: Windows' shaping runs a few px wider than the cloud's (25 Oct)
+
+
+## One placement in `order`; the first name that landed further than LABEL_NEAR from its point, or none.
 func _labels_in(order: Array) -> String:
 	var far_one := ""
 	var placed: Array = []
-	for tn in order:
-		if _axis[tn].get("hide_label", false) or not _trees.has(tn) or _trees[tn].get("ring", false):
-			continue
-		var t: Dictionary = _trees[tn]
-		var entry_id := ""
-		for i in range(t["nodes"].size()):
-			if t["nodes"][i].get("entry", false):
-				entry_id = "%s/%d" % [tn, i]
-				break
-		if entry_id == "" or not layout.has(entry_id):
-			continue
-		var p: Vector2 = layout[entry_id]
-		var r: float = radius_of(node_of(entry_id)) if sim != null else R_ENTRY
-		var words: String = region_words(tn) if sim != null else tn
-		# the words are a fixed screen size, so they're measured at the closest zoom they show at (the review): there a
-		# screen pixel is 1/ENTRY_LABEL_ZOOM of the web's; further in they only take less
-		var k: float = 1.0 / ENTRY_LABEL_ZOOM
-		var es: float = EMBLEM * clampf(ENTRY_LABEL_ZOOM, 0.7, 1.2) if str(_axis[tn].get("class", "")) == "" else 0.0     # the emblem as drawn at that zoom (entry_label_rect's clamp: 0.7 left it 2 px small, 25 Oct)
-		var w: float = (_font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x * LABEL_SLACK + (es + 6.0 if es > 0.0 else 0.0)) * k
-		var top: float = maxf(14.0, es / 2.0 + 8.0) * k        # above the anchor: the cap height, or the emblem's top
-		var foot: float = maxf(10.0, es / 2.0 - 4.0) * k        # below it: the descenders, or the emblem's foot
-		var gap: float = 10.0 * k
+	var z: float = fit_zoom()
+	for key in order:
+		var ax: Dictionary = _axis[key]
+		var p: Vector2 = ax["anchor"]
 		var best: Array = []
-		for far in [0.0, 18.0, 36.0, 60.0, 90.0, 130.0]:
-			var f: float = far * k
-			var d: float = (r + gap + f) * 0.72               # the diagonals: the corner of the words nearest the node
-			for c in [[Vector2(0, r + gap + top + f), 0], [Vector2(0, -r - gap - foot - f), 0], [Vector2(r + gap + f, 0), 1], [Vector2(-r - gap - f, 0), -1],
-					[Vector2(d, d + top), 1], [Vector2(-d, d + top), -1], [Vector2(d, -d - foot), 1], [Vector2(-d, -d - foot), -1]]:
-				var at: Vector2 = p + c[0]
-				var al: int = c[1]
-				var x0: float = at.x - w if al < 0 else (at.x if al > 0 else at.x - w / 2.0)
-				var box := Rect2(x0, at.y - top, w, top + foot)
-				if _label_clear(box, placed):
-					best = [at, al, box]
-					break
-			if not best.is_empty():
+		for d in label_grid():
+			var at: Vector2 = p + d
+			var box: Rect2 = label_box_at(key, at, z)
+			if _bounds.encloses(box) and _label_clear(box, placed):
+				best = [at, box]
 				break
 		if best.is_empty():
-			var at0: Vector2 = p + Vector2(0, r + gap + top)
-			best = [at0, 0, Rect2(at0.x - w / 2.0, at0.y - top, w, top + foot)]
-		if not _axis[tn].has("rim_at"):
-			_axis[tn]["rim_at"] = _axis[tn]["label_at"]           # the rim's place, for the whole web (below)
-			_axis[tn]["rim_align"] = int(_axis[tn].get("align", 0))
-		_axis[tn]["entry_at"] = best[0]
-		_axis[tn]["entry_align"] = best[1]
-		_axis[tn]["label_box"] = best[2]
-		placed.append(best[2])
-		if far_one == "" and not best[2].grow(LABEL_NEAR).has_point(p):
-			far_one = tn
+			best = [p, label_box_at(key, p, z)]       # nowhere clear: the retry puts it first
+			if far_one == "":
+				far_one = key
+		ax["label_at"] = best[0]
+		ax["label_box"] = best[1]
+		placed.append(best[1])
+		if far_one == "" and p.distance_to(best[0]) > LABEL_NEAR - LABEL_STEP:
+			far_one = key
 	return far_one
 
 
-## A region's name on screen as it's drawn at this zoom (for the smoke): the words and the emblem, by the starter -
-## or, `rim`, at its place for the whole web (24 Oct: the ring's sat on the Recruit's).
-func entry_label_rect(tn: String, rim := false) -> Rect2:
-	var ax: Dictionary = _axis.get(tn, {})
-	if not ax.has("entry_at") and not rim:
+## A region's name on screen as drawn at this zoom (for the smoke and the hover).
+func label_rect(key: String) -> Rect2:
+	var ax: Dictionary = _axis.get(key, {})
+	if not ax.has("label_at"):
 		return Rect2()
-	var p: Vector2 = to_screen(ax.get("rim_at", ax.get("label_at", Vector2.ZERO)) if rim else ax["entry_at"])
-	var fs: int = 15 if zoom >= 0.6 else 13
-	var w: float = _font_bold.get_string_size(region_words(tn), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if str(ax.get("class", "")) == "" and tn != Data.COMMON_TREE and emblem_of(tn) != null else 0.0
-	var full: float = w + (es + 6.0 if es > 0.0 else 0.0)
-	var al: int = int(ax.get("rim_align", ax.get("align", 0))) if rim else int(ax.get("entry_align", 0))
-	var x0: float = p.x - full if al < 0 else (p.x if al > 0 else p.x - full / 2.0)
-	var top: float = maxf(fs * 0.8, es / 2.0 + 7.0)
-	var foot: float = maxf(fs * 0.3, es / 2.0 - 5.0)
-	return Rect2(x0, p.y - top, full, top + foot)
+	var p: Vector2 = to_screen(ax["label_at"])
+	var w: float = _font_bold.get_string_size(str(ax["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x
+	return Rect2(p.x - w / 2.0, p.y - NAME_SIZE * 0.55, w, NAME_SIZE * 1.1)
 
 
-## BUILD45 (2 Nov, perf44 3: the names' places and the bends walked every node for every try, 0.6 s on Training's first
-## open): the nodes bucketed by place for one pass, each one's radius read once. A pass only; emptied after it.
+## BUILD45 (2 Nov, perf44 3): the nodes bucketed by place for one pass, each one's radius read once. A pass only.
 const NEAR_CELL := 128.0
 var _near := {}                        # Vector2i bucket -> ids
 var _rad := {}                         # id -> radius, for the pass
@@ -278,52 +357,60 @@ func _label_clear(box: Rect2, placed: Array) -> bool:
 		if box.intersects(b):
 			return false
 	if not _near.is_empty():
-		for id in _ids_in(box.grow(_rad_max + 2.0)):     # BUILD45: only the nodes near the box, as the walk below finds them
+		for id in _ids_in(box.grow(_rad_max + 2.0)):
 			if box.grow(float(_rad[id]) + 2.0).has_point(layout[id]):
 				return false
 		return true
 	for id in layout:
-		var q: Vector2 = layout[id]
-		var rr: float = (radius_of(node_of(id)) if sim != null else R_PLAIN) + 2.0
-		if box.grow(rr).has_point(q):
+		if box.grow(radius_by_kind(str(_kind.get(id, "small"))) + 2.0).has_point(layout[id]):
 			return false
 	return true
 
 
 func _find_bounds() -> void:
-	_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
-	var first := true
-	for id in layout:
-		if first:
-			_bounds = Rect2(layout[id], Vector2.ZERO)
-			first = false
-		else:
-			_bounds = _bounds.expand(layout[id])
-	_bounds = _bounds.grow(90.0)
+	var r: float = R_RING + BOUNDS_PAD
+	_bounds = Rect2(-r, -r, 2.0 * r, 2.0 * r)
+	zoom_min = fit_zoom()
 
 
 # ------------------------------------------------------------------ the hooks (Training's web by default)
 
+## A node: the sim's (sim.node), its web kind beside it, read once.
 func node_of(id: String) -> Dictionary:
-	return sim.node(id)
+	if _nodes.has(id):
+		return _nodes[id]
+	var nd: Dictionary = {}
+	if sim != null:
+		nd = sim.node(id).duplicate()
+	nd["web_kind"] = str(_kind.get(id, "small"))
+	if sim != null:
+		_nodes[id] = nd
+	return nd
 
 
 func links_all() -> Dictionary:
-	return Data.web_links_all()
+	return _links
 
 
-## The signature of what the state reads: a change relays the state.
+## The signature of what the state reads: a change restates the web.
 func state_sig() -> String:
-	return "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points) + str(sim.class_elements_held()) + str(sim.class_elements())]     # the Cap turns every class node active (the review); the elements open and working (31 Oct: the Manual off idles past two)
+	return "%s|%s|%d|%d|%d|%s|%s|%d" % [str(sim.tree), sim.cls, sim.web_points(), sim.web_spent(), sim.web_free(), selected, str(sim.ring), sim.paragon_free()]
 
 
-## A node's state as drawn: taken, active, reach (open to train now, the points aside), theirs (another class's), cost, block.
+## A node's state as drawn: taken (owned), active, reach (Sim.web_frontier: takeable now), theirs (unused now), cost.
 func state_for(id: String) -> Dictionary:
-	var nd: Dictionary = sim.node(id)
-	var taken: bool = sim.tree.has(id)
-	var block: String = sim.train_block(id, true, false) if not taken else ""     # the reach (BUILD45: no path walked for words the web never shows)
-	return {"taken": taken, "active": taken and sim.node_active(id), "reach": not taken and block == "",
-		"theirs": not Data.for_classes(nd, sim.my_classes()), "cost": sim.node_cost(id), "block": block}
+	if _region.get(id, "") == "ring":
+		var on: int = int(sim.ring.get(id, 0))
+		var top: int = int(node_of(id).get("stack", 1))
+		var ring_reach: bool = on < top and sim.paragon_free() > 0 and (node_of(id).get("entry", false) or on > 0 or _links.get(id, []).any(func(o): return int(sim.ring.get(o, 0)) > 0))
+		return {"taken": on > 0, "active": on > 0, "reach": ring_reach, "theirs": false, "cost": 1, "block": ""}
+	var owned: bool = sim.web_owned(id)
+	var reach: bool = (_frontier.has(id) if _frontier_read else sim.web_frontier(true).has(id)) and not owned
+	return {"taken": owned, "active": owned, "reach": reach, "theirs": false, "cost": 1, "block": ""}
+
+
+var _frontier := {}
+var _frontier_read := false
 
 
 ## A node's points on it of its stack, [n, top], or [] for a plain node.
@@ -333,19 +420,8 @@ func stack_of(id: String, nd: Dictionary) -> Array:
 	return []
 
 
-## A region's name over it: the name alone (28 Oct, Matt: "it should just say 'Rat Man' ... same for the classes, just
-## the class names instead of what they do") - no "The", no element, lanes or points (the key carries those).
 func region_words(tn: String) -> String:
-	var t: Dictionary = _trees[tn]
-	if t.get("class", "") != "" and not t.has("element"):
-		return str(t["class"])
-	return plain_name(tn)
-
-
-## A region's name without its "The", capitalised: "The Rat Man" -> "Rat Man", "The cold" -> "Cold".
-static func plain_name(tn: String) -> String:
-	var n: String = tn.trim_prefix("The ").trim_prefix("the ")
-	return n.left(1).to_upper() + n.substr(1) if n != "" else tn
+	return str(_axis.get(tn, {}).get("words", plain_name(tn)))
 
 
 ## A node's glyph key (node_glyphs.gd), or "" for none.
@@ -353,147 +429,31 @@ func glyph_of(nd: Dictionary) -> String:
 	return NodeGlyphs.of(nd)
 
 
-## A node's level tag (Training's keystones and capstones) as [words, met], or [].
-func level_tag(nd: Dictionary) -> Array:
-	if nd.get("keystone", false) or nd.get("capstone", false):
-		var at: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
-		return ["Lv %d" % at, sim.level() >= at]
+## A node's level tag as [words, met], or [] (the web's big nodes open on points spent: the card and the key say it).
+func level_tag(_nd: Dictionary) -> Array:
 	return []
 
 
-## What's drawn between the links and the nodes: Training's joints and bridges.
-func draw_between(view: Rect2) -> void:
-	for j in Data.JOINTS:
-		var ids: Array = [_joint_half(j["tree"], j["key"]), _joint_half(j["element_tree"], j["key"])]
-		if "" in ids:
-			continue
-		var pa: Vector2 = to_screen(layout[ids[0]])
-		var pb: Vector2 = to_screen(layout[ids[1]])
-		if view.has_point(pa) or view.has_point(pb):
-			var closed: bool = sim.has_joint(j["key"])
-			var tone: Color = tone_of(j["element_tree"])     # the element's colour, closed or open (23 Oct: the join lines coloured too)
-			_tally("lines")
-			if not dry:
-				draw_dashed_line(pa, pb, tone if closed else Color(tone, 0.55), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
-	for id in layout:
-		var bn: Dictionary = sim.node(id)
-		if not bn.has("bridge"):
-			continue
-		var to := ""
-		for t in Data.TREES:
-			if t.get("class", "") == bn["bridge"]:
-				to = "%s/0" % t["name"]
-				break
-		if to == "" or not layout.has(to):
-			continue
-		var pa: Vector2 = to_screen(layout[id])
-		var pb: Vector2 = to_screen(layout[to])
-		if view.has_point(pa) or view.has_point(pb):
-			var taken_b: bool = _state.get(id, {}).get("taken", false)
-			_tally("lines")
-			if not dry:
-				draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
+## What's drawn between the links and the nodes: nothing on Training's (a pair's halves face each other across a join).
+func draw_between(_view: Rect2) -> void:
+	pass
 
 
-## A tree's nodes at their built places ("at": columns along the lane, rows across it); the name over the lane's
-## middle, above whatever hangs there.
-func _lay_tree(t: Dictionary, at: Vector2, dir: Vector2, tone: Color) -> void:
-	var side: Vector2 = dir.orthogonal()
-	var top: float = 0.0
-	for i in range(t["nodes"].size()):
-		var nd: Dictionary = t["nodes"][i]
-		var a: Array = nd.get("at", [0, 0])
-		var p: Vector2 = at + dir * (float(a[0]) * STEP) + side * (float(a[1]) * ROW)
-		layout["%s/%d" % [t["name"], i]] = p
-		if not nd.has("xlinks"):
-			top = minf(top, p.y - at.y)
-	# the name: over the Pitch's middle; past the end of a lane that runs out from the centre
-	var label_at: Vector2 = at + dir * (2.5 * STEP) + Vector2(0, top - 24.0) if dir == Vector2.RIGHT and at.x < 0.0 else at + dir * (5.0 * STEP + R_CAPSTONE + 34.0)
-	_axis[t["name"]] = {"at": at, "dir": dir, "tone": tone, "label_at": label_at}
-
-
-## The Pitch as a circle (24 Oct, Matt: "it would make more sense if the pitch was a circle in the middle ... each
-## element's starter node lives on the pitch"): its two rails run round from its entry on the left, the first over
-## the top and the second under, to the capstone on the right; a hung node sits out past the circle. A node near an
-## element's starter is nudged along clear of it.
-func _lay_pitch_circle(t: Dictionary) -> void:
-	var rails := {-1: [], 1: []}                  # each rail's nodes, in their order along it
-	var hung: Array = []
-	for i in range(t["nodes"].size()):
-		var a: Array = t["nodes"][i].get("at", [0, 0])
-		var y: float = float(a[1])
-		if absf(y) > 1.01:
-			hung.append(i)
-		elif absf(y) < 0.01:
-			layout["%s/%d" % [t["name"], i]] = Vector2.from_angle(0.0) * R_PITCH     # alone in its column: the capstone, where both rails meet
-		else:
-			rails[-1 if y < 0.0 else 1].append(i)
-	for side in rails:
-		var ids: Array = rails[side]
-		ids.sort_custom(func(p, q): return float(t["nodes"][p]["at"][0]) < float(t["nodes"][q]["at"][0]))
-		for k in range(ids.size()):
-			var deg: float = _pitch_rail_deg((k + 0.5) / float(ids.size()), side)
-			layout["%s/%d" % [t["name"], ids[k]]] = Vector2.from_angle(deg_to_rad(deg)) * R_PITCH
-	# a hung node: out past the circle, by the rail node at its column
-	for i in hung:
-		var a: Array = t["nodes"][i]["at"]
-		var side2: int = -1 if float(a[1]) < 0.0 else 1
-		var best: Vector2 = Vector2.ZERO
-		var best_d := INF
-		for j in rails[side2]:
-			var d: float = absf(float(t["nodes"][j]["at"][0]) - float(a[0]))
-			if d < best_d:
-				best_d = d
-				best = layout["%s/%d" % [t["name"], j]]
-		layout["%s/%d" % [t["name"], i]] = best.normalized() * (R_PITCH + (absf(float(a[1])) - 1.0) * ROW * 1.4)
-	_axis[t["name"]] = {"at": Vector2(-R_PITCH, 0.0), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(0.0, -R_PITCH * 0.35)}
-
-
-## A place along a rail of the Pitch's circle, 0 to 1 from its entry (the left) to the capstone (the right), over the
-## top for the first rail and under for the second, the arcs by the elements' starters left clear.
-func _pitch_rail_deg(u: float, side: int) -> float:
-	var lo := 180.0 + PITCH_END_DEG
-	var hi := 360.0 - PITCH_END_DEG
-	var clear: Array = []
-	for sd in ELEMENT_LAY.values():
-		var up: float = fposmod(float(sd), 360.0) if side < 0 else fposmod(-float(sd), 360.0)     # the second rail is the first mirrored
-		if up > lo and up < hi:
-			clear.append(up)
-	clear.sort()
-	var free: float = (hi - lo) - clear.size() * 2.0 * PITCH_CLEAR_DEG
-	var want: float = u * free
-	var at := lo
-	for c in clear:
-		var room: float = (float(c) - PITCH_CLEAR_DEG) - at
-		if want <= room:
-			break
-		want -= room
-		at = float(c) + PITCH_CLEAR_DEG
-	var deg: float = at + want
-	return deg if side < 0 else 360.0 - deg
-
-
-## A class lane on its half of the class's wheel: a node's "wheel" [degrees along the half, radius in rows] turned
-## into a point - the half's degrees run from the near pole (facing the centre) round, the first lane one way and
-## the second the other. The class's name past the far pole, once (the first lane's label; the second's hidden).
-func _lay_wheel(t: Dictionary, cls: String, d: Vector2, deg: float) -> void:
-	var centre: Vector2 = d * (R_CLASS + WHEEL_OUT)
-	var sgn: float = -1.0 if int(t.get("lane", 0)) == 0 else 1.0
-	for i in range(t["nodes"].size()):
-		var nd: Dictionary = t["nodes"][i]
-		var w: Array = nd.get("wheel", [0.0, Data.WHEEL_R])
-		var a: float = deg + 180.0 + sgn * float(w[0])
-		layout["%s/%d" % [t["name"], i]] = centre + Vector2.from_angle(deg_to_rad(a)) * (float(w[1]) * ROW)
-	var label_at: Vector2 = centre + d * ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0 + Data.WHEEL_HANG) * ROW + 44.0)
-	_axis[t["name"]] = {"at": centre - d * (Data.WHEEL_R * ROW), "dir": d, "tone": Pal.TEXT, "label_at": label_at, "wheel": centre, "class": cls,
-		"align": (-1 if d.x < -0.3 else (1 if d.x > 0.3 else 0)), "hide_label": int(t.get("lane", 0)) != 0}
-
-
-## A tree's tone: an element's colour, the Pitch's accent, a class's text.
-func tone_of(tree_name: String) -> Color:
-	if tree_name == Data.COMMON_TREE:
+## A tree's tone: an element's colour, the centre's amber, a class's white.
+func tone_of(key: String) -> Color:
+	if _tone.has(key):
+		return _tone[key]
+	if key == "centre":
 		return PITCH_TONE
-	return _axis.get(tree_name, {}).get("tone", Pal.TEXT)
+	if key.begins_with("el:"):
+		return element_tone(key.substr(3))
+	return Pal.TEXT
+
+
+## A region drawn in its own colour (its links and dark rings): the centre's, an element's, a join's.
+func tinted(id: String) -> bool:
+	var rg: String = str(_region.get(id, id))
+	return rg == "centre" or rg.begins_with("el:") or rg == "join"
 
 
 # ------------------------------------------------------------------ the camera
@@ -509,42 +469,61 @@ func to_web(p: Vector2) -> Vector2:
 ## The whole web in the view.
 func focus_all() -> void:
 	cam = _bounds.get_center()
-	zoom = clampf(minf(size.x / _bounds.size.x, size.y / _bounds.size.y), ZOOM_MIN, ZOOM_MAX)
+	zoom = clampf(minf(size.x / _bounds.size.x, size.y / _bounds.size.y), zoom_min, ZOOM_MAX)
 	queue_redraw()
 
 
-## One tree's region filling the view (a class's two trees together).
-func focus_tree(tree_name: String) -> void:
-	var names: Array = [tree_name]
-	var t: Dictionary = _trees.get(tree_name, {})
-	if t.get("class", "") != "":
-		names = []
-		for other in Data.TREES:
-			if other.get("class", "") == t["class"]:
-				names.append(other["name"])
+## The nodes of these regions filling the view.
+func focus_regions(regions: Array) -> void:
 	var box := Rect2()
 	var first := true
 	for id in layout:
-		if str(id).get_slice("/", 0) in names:
+		if str(_region.get(id, "")) in regions:
 			if first:
 				box = Rect2(layout[id], Vector2.ZERO)
 				first = false
 			else:
 				box = box.expand(layout[id])
 	if first:
+		focus_all()
 		return
-	box = box.grow(80.0)
-	cam = box.get_center()
-	zoom = clampf(minf(size.x / box.size.x, size.y / box.size.y), ZOOM_MIN, ZOOM_MAX)
+	box = box.grow(R_CAPSTONE + 6.0)
+	var avail := Vector2(size.x - 2.0 * FRAME_PAD, size.y - FRAME_TOP - FRAME_PAD)     # under the tabs (the review of the corner's first render)
+	zoom = clampf(minf(avail.x / box.size.x, avail.y / box.size.y), zoom_min, ZOOM_MAX)
+	cam = box.get_center() - Vector2(0.0, (FRAME_TOP - FRAME_PAD) / 2.0) / zoom
 	queue_redraw()
 
 
+const FRAME_TOP := 52.0            # a region framed: clear of the tabs over the canvas's top
+const FRAME_PAD := 12.0
+## The canvas under the tabs: where a framed region's nodes all fall (the smoke).
+func framed_rect() -> Rect2:
+	return Rect2(FRAME_PAD, FRAME_TOP, size.x - 2.0 * FRAME_PAD, size.y - FRAME_TOP - FRAME_PAD)
+
+
+## One region filling the view ("centre", "el:<tree>", "class:<Class>"; a tree's name for the old canvases).
+func focus_tree(tree_name: String) -> void:
+	focus_regions([tree_name])
+
+
+## A class's corner (3 Nov): its four flowers and its two elements, the joins between them.
 func focus_class(cls: String) -> void:
-	for t in Data.TREES:
-		if t.get("class", "") == cls:
-			focus_tree(t["name"])
-			return
-	focus_all()
+	focus_regions(corner_regions(cls))
+
+
+## The class's region and the two elements its start's joins run to.
+func corner_regions(cls: String) -> Array:
+	var key: String = "class:" + cls
+	var out: Array = [key]
+	for id in layout:
+		if _region[id] != key:
+			continue
+		for o in _links.get(id, []):
+			if _region.get(o, "") == "join":
+				var el: String = "el:" + join_element(str(o))
+				if not (el in out):
+					out.append(el)
+	return out
 
 
 # ------------------------------------------------------------------ the state
@@ -554,7 +533,6 @@ func show_state(s) -> void:
 	sim = s
 	if not _labels_sim:
 		_labels_sim = true
-		_labels_by_entry()                   # again with the sim: the real radii and the words as drawn
 		_pack_all()
 	if not _focused:
 		_focused = true
@@ -562,99 +540,30 @@ func show_state(s) -> void:
 	var sig := state_sig()
 	if sig != _state_sig:
 		_state_sig = sig
-		if slice_restate and not _state.is_empty() and sim.has_method("held_trees"):
-			sim.held_trees(_restate_touched)     # BUILD45: what a change reaches now, the rest a few a frame
-		else:
-			_state = {}
-			_stale = {}
-			if sim.has_method("held_trees"):
-				sim.held_trees(_restate)         # BUILD45: the runner's trees read once for the lot
-			else:
-				_restate()
-		_tree_was = _tree_set()
+		_state = {}
+		_restate()
 	queue_redraw()
 
 
+## Every node restated: the frontier read once for the lot.
 func _restate() -> void:
+	_frontier = {}
+	if sim != null and sim.has_method("web_frontier"):
+		for id in sim.web_frontier(true):          # joined and gated, points or not: the amber ring says where the next point goes
+			_frontier[str(id)] = true
+	_frontier_read = true
 	for id in layout:
 		_state[id] = state_for(id)
+	_frontier_read = false
 
 
-## BUILD45 (2 Nov, perf44 3: a node trained restated all 630, 25-45 ms of the click): with `slice_restate` (Training's
-## web), a change restates at once the nodes it can reach directly - those trained or let go, their links, and every
-## node a rule of its own gates (the starters, keystones, capstones, bridges, the ring) - and every other node after,
-## SLICE_US of them a frame (_process); state_of reads a node still waiting afresh. The web is the plain restate's within
-## a few frames, whatever the change.
-const SLICE_US := 3000
-var slice_restate := false
-var _stale := {}                       # id -> true: restated after the change, a slice a frame
-var _tree_was := {}
-var _special: Array = []
-
-
-func _tree_set() -> Dictionary:
-	var out := {}
-	if sim != null:
-		for id in sim.tree:
-			out[id] = true
-	return out
-
-
-func _restate_touched() -> void:
-	if _special.is_empty():
-		for id in layout:
-			var nd: Dictionary = node_of(id)
-			if nd.get("entry", false) or nd.get("keystone", false) or nd.get("capstone", false) or nd.has("bridge") or nd.has("ring") or Data.web_entry(nd) or sim.is_element_starter(id):
-				_special.append(id)
-	var now := _tree_set()
-	var moved: Array = []
-	for id in now:
-		if not _tree_was.has(id):
-			moved.append(id)
-	for id in _tree_was:
-		if not now.has(id):
-			moved.append(id)
-	var first := {}
-	var links: Dictionary = links_all()
-	for id in moved:
-		first[id] = true
-		for other in links.get(id, []):
-			first[other] = true
-	for id in _special:
-		first[id] = true
-	_stale = {}
-	for id in layout:
-		if first.has(id):
-			_state[id] = state_for(id)
-		else:
-			_stale[id] = true
-
-
-func _process(_dt: float) -> void:
-	if _stale.is_empty() or sim == null:
-		return
-	sim.held_trees(_restate_slice)
-	if _stale.is_empty():
-		queue_redraw()                       # once, when the last slice is in (a redraw a slice was the web drawn a frame)
-
-
-func _restate_slice() -> void:
-	var t0 := Time.get_ticks_usec()
-	for id in _stale.keys():
-		_state[id] = state_for(id)
-		_stale.erase(id)
-		if Time.get_ticks_usec() - t0 >= SLICE_US:
-			break
-
-
-## The nodes still to restate after a change (the tests).
+## The nodes still to restate after a change (the tests): none - the web restates whole.
 func restates_waiting() -> int:
 	return _stale.size()
 
 
-## BUILD45 (2 Nov, perf44 3: Training's first open laid the names out and packed every picture, 0.45-0.9 s): the same
-## work ahead of it, a step a frame while the game runs (main._warm_rooms) - the names in one step, the pictures a
-## few milliseconds' worth a frame, then the rest of _pack_all. True once done (or the canvas has been shown).
+## BUILD45 (2 Nov, perf44 3): Training's first open packed every picture; the same work ahead of it, a step a frame
+## while the game runs (main._warm_rooms). True once done (or the canvas has been shown).
 var _warm_ids: Array = []
 var _warm_at := 0
 var _warm_phase := 0
@@ -663,38 +572,35 @@ func warm_step(s, budget_us := 4000) -> bool:
 		return true
 	sim = s
 	if _warm_phase == 0:
-		_labels_by_entry()
-		_warm_phase = 1
-		return false
-	if _warm_phase == 1:
 		for kind in ["disc", "diamond", "square"]:         # _pack_all's order, so the atlas packs as it did
 			for n in DISC_SIZES:
 				shape(kind, n / 2.0)
-		for tn in _trees:
-			if _trees[tn].has("class"):
-				atlased(wheel_portrait(str(_trees[tn]["class"])))
 		_warm_ids = layout.keys()
 		_warm_at = 0
-		_warm_phase = 2
+		_warm_phase = 1
 		return false
-	var t0 := Time.get_ticks_usec()
-	while _warm_at < _warm_ids.size() and Time.get_ticks_usec() - t0 < budget_us:
-		var nd: Dictionary = node_of(str(_warm_ids[_warm_at]))
-		_warm_at += 1
-		atlased(picture(picture_slug(nd)))
-		if glyph_of(nd) != "":
-			atlased(NodeGlyphs.texture(glyph_of(nd)))
-	if _warm_at < _warm_ids.size():
+	if _warm_phase == 1:
+		var t0 := Time.get_ticks_usec()
+		while _warm_at < _warm_ids.size() and Time.get_ticks_usec() - t0 < budget_us:
+			var nd: Dictionary = node_of(str(_warm_ids[_warm_at]))
+			_warm_at += 1
+			atlased(picture(picture_slug(nd)))
+			if glyph_of(nd) != "":
+				atlased(NodeGlyphs.texture(glyph_of(nd)))
+		if _warm_at >= _warm_ids.size():
+			_atlas_flush()                       # the pictures sent up, a step of its own
+			_warm_phase = 2
+		return false
+	if _warm_phase == 2:
+		_ensure_bends()                          # the curved links, a step of their own
+		_warm_phase = 3
 		return false
 	_labels_sim = true
-	_pack_all()                              # what's left of it: the emblems, the atlas sent up, the bends
+	_pack_all()                              # what's left of it (the atlas and the bends are in)
 	return true
 
 
 func state_of(id: String) -> Dictionary:
-	if _stale.has(id) and sim != null:
-		_state[id] = state_for(id)           # waiting on a slice: read now (BUILD45)
-		_stale.erase(id)
 	return _state.get(id, {})
 
 
@@ -831,26 +737,6 @@ static func _pack(src: Image) -> AtlasTexture:
 	return a
 
 
-## Everything this canvas can draw packed at once, on its first show (the review): packed lazily, a pan across the
-## web packed a few pictures a frame and sent the whole atlas up on each of them.
-func _pack_all() -> void:
-	for kind in ["disc", "diamond", "square"]:
-		for n in DISC_SIZES:
-			shape(kind, n / 2.0)
-	for tn in _trees:
-		if _trees[tn].has("class"):
-			atlased(wheel_portrait(str(_trees[tn]["class"])))
-	for id in layout:
-		var nd: Dictionary = node_of(id)
-		atlased(picture(picture_slug(nd)))
-		if glyph_of(nd) != "":
-			atlased(NodeGlyphs.texture(glyph_of(nd)))
-	for tn in _axis:
-		atlased(emblem_of(tn))
-	_atlas_flush()
-	_ensure_bends()                        # the curved links worked here too, not on a pan's first frame
-
-
 ## The atlas's new cells sent up, once a frame at most (the pictures land on the first draws, then never again).
 static func _atlas_flush() -> void:
 	if _atlas_dirty and _atlas_tex != null:
@@ -858,91 +744,63 @@ static func _atlas_flush() -> void:
 		_atlas_dirty = false
 
 
+## Everything this canvas can draw packed at once, on its first show (the review): packed lazily, a pan across the
+## web packed a few pictures a frame and sent the whole atlas up on each of them.
+func _pack_all() -> void:
+	for kind in ["disc", "diamond", "square"]:
+		for n in DISC_SIZES:
+			shape(kind, n / 2.0)
+	for id in layout:
+		var nd: Dictionary = node_of(id)
+		atlased(picture(picture_slug(nd)))
+		if glyph_of(nd) != "":
+			atlased(NodeGlyphs.texture(glyph_of(nd)))
+	_atlas_flush()
+	_ensure_bends()                        # the curved links worked here too, not on a pan's first frame
+
+
 ## The canvas's backdrop (23 Oct, the manifest): art/web/backdrop_<slug>.png under everything, covering the view.
-## Training's is "training"; the Map's and the Pitch's name their own.
 func backdrop_slug() -> String:
 	return "training"
 
 
-## The class's portrait for under its lit wheel (23 Oct): art/people/<class>.png, faded to nothing at its
-## rim, made once.
-static var _portraits := {}
-static func wheel_portrait(cls: String) -> Texture2D:
-	if _portraits.has(cls):
-		return _portraits[cls]
-	var tex: Texture2D = art_at("res://art/people_new/%s.png" % cls.to_lower())     # the new face first, as the card's (24 Oct: the Recruit's is only there)
-	if tex == null:
-		tex = art_at("res://art/people/%s.png" % cls.to_lower())
-	var out: Texture2D = null
-	if tex != null:
-		var img: Image = tex.get_image()
-		if img != null and not img.is_empty():
-			img = img.duplicate()
-			if img.is_compressed():
-				img.decompress()
-			img.convert(Image.FORMAT_RGBA8)
-			var n := img.get_width()
-			for y in range(img.get_height()):
-				for x in range(n):
-					var d: float = Vector2(x + 0.5 - n / 2.0, y + 0.5 - img.get_height() / 2.0).length() / (n / 2.0)
-					var c: Color = img.get_pixel(x, y)
-					c.a *= clampf((1.0 - d) / 0.35, 0.0, 1.0)
-					img.set_pixel(x, y, c)
-			out = ImageTexture.create_from_image(img)
-	_portraits[cls] = out
-	return out
-
-
-## Whether a region is the class on show's (its wheel lit).
-## A region drawn in its own colour (its links and rings): an element's, and the Pitch's.
-func tinted(tn: String) -> bool:
-	return _trees.get(tn, {}).has("element") or tn == Data.COMMON_TREE
-
-
-func _lit_wheel(tn: String) -> bool:
-	return str(_trees.get(tn, {}).get("class", "")) != "" and str(_trees[tn]["class"]) == str(sim.cls)
-
-
-## A region's emblem beside its label (23 Oct, the manifest): art/web/region_<slug>.png, drawn EMBLEM tall.
+## A region's emblem (23 Oct, the manifest): art/web/region_<slug>.png.
 const EMBLEM := 26.0
 func emblem_of(tn: String) -> Texture2D:
 	return art_at("res://art/web/region_%s.png" % Items.slug(tn))
 
 
+## A node's radius in web units, by its web kind (or, on the old canvases, its flags).
 func radius_of(nd: Dictionary) -> float:
-	var diamond: bool = nd.get("keystone", false) or nd.get("capstone", false)
-	var pictured: bool = assume_pics or picture(picture_slug(nd)) != null
-	if nd.get("entry", false) and entry_emblem(nd) != null:
-		return R_ENTRY
-	if pictured and not diamond:
-		if nd.get("notable", false):
-			return R_NOTABLE_PIC
-		if nd.get("filler", false):
-			return R_FILLER_PIC if assume_pics or zoom >= FILLER_PIC_ZOOM else R_FILLER     # a dot below its picture's zoom stays a dot's size (the review)
-		return R_SMALL_PIC
-	return _radius_plain(nd)
-
-
-## A class's entry node carries the class's emblem (23 Oct): the first lane's region emblem, moved off the rim label.
-func entry_emblem(nd: Dictionary) -> Texture2D:
-	var tn: String = str(nd.get("region", ""))
-	if tn == Data.COMMON_TREE:
-		return emblem_of(tn)
-	if tn == "" or not _trees.has(tn) or not _trees[tn].has("class"):
-		return null
-	return emblem_of(tn)
-
-
-static func _radius_plain(nd: Dictionary) -> float:
+	if nd.has("web_kind"):
+		return radius_by_kind(str(nd["web_kind"]))
 	if nd.get("capstone", false):
 		return R_CAPSTONE
 	if nd.get("keystone", false):
 		return R_KEYSTONE
 	if nd.get("notable", false):
 		return R_NOTABLE
-	if nd.get("filler", false):
-		return R_FILLER
-	return R_PLAIN
+	return R_SMALL
+
+
+static func radius_by_kind(k: String) -> float:
+	match k:
+		"capstone":
+			return R_CAPSTONE
+		"keystone":
+			return R_KEYSTONE
+		"notable":
+			return R_NOTABLE
+		"start":
+			return R_START
+		"ring":
+			return R_RING_NODE
+	return R_SMALL
+
+
+## Whether a node carries its picture (a notable, keystone, capstone, the start, a ring node); the smalls are dots.
+static func big_kind(k: String) -> bool:
+	return k in ["notable", "keystone", "capstone", "start", "ring"]
 
 
 ## The frame in passes (23 Oct, the fans): the backdrop and the hulls; the links, one call a colour; the joins; every
@@ -951,6 +809,7 @@ static func _radius_plain(nd: Dictionary) -> float:
 const BATCH_MAX := 60
 var batches := 0
 var dry := false                       # the smoke: the frame's passes run and count, nothing drawn (it never draws headless)
+var nodes_drawn := 0                   # the nodes the last frame drew (the smoke: every web node at the whole web)
 var _batch_key := ""
 var _texts := {}                       # "font:size" -> [[font, at, words, size, colour]], the words' pass
 
@@ -989,8 +848,104 @@ func _text(font: Font, at: Vector2, words: String, fs: int, col: Color) -> void:
 	_texts[key].append([font, at, words, fs, col])
 
 
+## The picked and hovered node's name under the label zoom (3 Nov, merge 47: drawn under its node it ran across the
+## nodes beside it): below, above, right, left or a diagonal of it, a step further out each round - the first place
+## whose plate covers no other node and no region's name and stays on the canvas (else the one covering fewest) - on a
+## plate of the canvas's colour, with a lead when it sits further out. Only the nodes within the plate's reach are
+## tried, and the place is kept per node and zoom (a pan or a hover's redraw reads it back; re-placed when it would
+## leave the canvas). pick_label_rects / pick_label_hits: where each went and what it covers (the smoke's).
+var _pick_labels: Array = []
+var pick_label_rects := {}
+var pick_label_hits := {}
+var _pick_cache := {}                  # "id|zoom|size" -> [offset from the node, hits]
+const PICK_PAD := 3.0
+const PICK_OUTS := [4.0, 16.0, 28.0, 40.0, 52.0, 64.0, 76.0, 90.0]
+func _draw_pick_labels() -> void:
+	pick_label_rects = {}
+	pick_label_hits = {}
+	var canvas := Rect2(Vector2.ZERO, size)
+	for pl in _pick_labels:
+		var id: String = pl[0]
+		var p: Vector2 = pl[1]
+		var r: float = pl[2]
+		var words: String = str(node_of(id).get("name", ""))
+		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		var th: float = _font.get_height(12)
+		var sz := Vector2(tw + PICK_PAD * 2.0, th + PICK_PAD * 2.0)
+		var ck := "%s|%.4f|%s" % [id, zoom, str(size)]
+		var best := Rect2()
+		var best_n := -1
+		if _pick_cache.has(ck):
+			var rc0 := Rect2(p + Vector2(_pick_cache[ck][0]), sz)
+			if canvas.encloses(rc0):
+				best = rc0
+				best_n = int(_pick_cache[ck][1])
+		if best_n < 0:
+			var near: Array = _pick_near(id, p, r + float(PICK_OUTS.back()) + sz.length() + 8.0)
+			best_n = 1 << 30
+			for out in PICK_OUTS:
+				for at in [p + Vector2(-sz.x / 2.0, r + out), p + Vector2(-sz.x / 2.0, -r - out - sz.y), p + Vector2(r + out + 2.0, -sz.y / 2.0),
+						p + Vector2(-r - out - 2.0 - sz.x, -sz.y / 2.0), p + Vector2(r * 0.7 + out, r * 0.7 + out * 0.5), p + Vector2(-r * 0.7 - out - sz.x, r * 0.7 + out * 0.5),
+						p + Vector2(r * 0.7 + out, -r * 0.7 - out * 0.5 - sz.y), p + Vector2(-r * 0.7 - out - sz.x, -r * 0.7 - out * 0.5 - sz.y)]:     # below, above, right, left, the four diagonals
+					var rc := Rect2(at, sz)
+					var n: int = _pick_covers(rc, near) + (0 if canvas.encloses(rc) else 1000)
+					if n < best_n:
+						best_n = n
+						best = rc
+					if best_n == 0:
+						break
+				if best_n == 0:
+					break
+			_pick_cache[ck] = [best.position - p, best_n]
+		pick_label_rects[id] = best
+		pick_label_hits[id] = best_n
+		if not dry:
+			var lead := Vector2(clampf(p.x, best.position.x, best.end.x), clampf(p.y, best.position.y, best.end.y))
+			if lead.distance_to(p) > r + 10.0:
+				draw_line(p + (lead - p).normalized() * (r + 2.0), lead, Color(pl[3], 0.7), 1.0, true)     # a lead from a plate set further out
+			draw_rect(best, Color(Pal.BG, 0.88))
+		_text(_font, best.position + Vector2(PICK_PAD, PICK_PAD + _font.get_ascent(12)), words, 12, pl[3])
+	_pick_labels = []
+
+
+## What a picked label could run into from `p` within `reach`: [[centre, radius]] for the nodes but `own`, and the
+## regions' names as [rect].
+func _pick_near(own: String, p: Vector2, reach: float) -> Array:
+	var out: Array = []
+	for oid in layout:
+		if oid == own:
+			continue
+		var q: Vector2 = to_screen(layout[oid])
+		if absf(q.x - p.x) <= reach and absf(q.y - p.y) <= reach:
+			out.append([q, maxf(3.0, radius_of(node_of(oid)) * zoom) + 1.0])
+	for key in _axis:
+		var lr: Rect2 = label_rect(str(key))
+		if lr.size.x > 0.0:
+			out.append([lr])
+	return out
+
+
+func _pick_covers(rc: Rect2, near: Array) -> int:
+	var n := 0
+	for e in near:
+		if e.size() == 1:
+			if Rect2(e[0]).intersects(rc):
+				n += 1
+		else:
+			var q: Vector2 = e[0]
+			if Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y)).distance_to(q) < float(e[1]):
+				n += 1
+	return n
+
+
+## How many nodes other than `own` a rect on the canvas covers, and the regions' names it runs into (every node read).
+func label_covers(rc: Rect2, own: String) -> int:
+	return _pick_covers(rc, _pick_near(own, rc.get_center(), INF))
+
+
 func _draw() -> void:
 	batches = 0
+	nodes_drawn = 0
 	_batch_key = ""
 	_texts = {}
 	_tally("")
@@ -998,7 +953,7 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Pal.BG)
 	var bd: Texture2D = art_at("res://art/web/backdrop_%s.png" % backdrop_slug())
 	if bd != null:
-		# the backdrop covers the canvas whole, its proportions kept (the painting's 744 wide at the API's most)
+		# the backdrop covers the canvas whole, its proportions kept
 		var k: float = maxf(size.x / bd.get_width(), size.y / bd.get_height())
 		var bs: Vector2 = bd.get_size() * k
 		_tally("backdrop")
@@ -1016,6 +971,7 @@ func _draw() -> void:
 		if not view.has_point(p):
 			continue
 		_draw_node(id, p)
+	_draw_pick_labels()
 	_draw_region_names(view)
 	# the words last, a font and size at a time
 	for key in _texts:
@@ -1027,22 +983,22 @@ func _draw() -> void:
 	_atlas_flush()
 
 
-## The links, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise; gathered by colour
-## and width, one draw_multiline each.
+## The links, under the nodes: lit in the region's colour between two owned, amber to one that can be taken, dim
+## otherwise (an element's and the centre's in their colour, faint); gathered by colour and width, one call each.
 func _draw_links(view: Rect2) -> void:
 	var runs := {}                         # [colour, width] -> PackedVector2Array of pairs
 	_ensure_bends()
 	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
-			if str(a) > str(b):
+			if str(a) > str(b) or not layout.has(a) or not layout.has(b):
 				continue              # each pair once (the links run both ways)
 			var pa: Vector2 = to_screen(layout[a])
 			var pb: Vector2 = to_screen(layout[b])
 			if not view.has_point(pa) and not view.has_point(pb):
 				continue
-			var lit: bool = _lit_wheel(str(a).get_slice("/", 0))     # inside the class's lit wheel the dim links read brighter and thicker (23 Oct)
-			var run := [link_colour(str(a), str(b)), LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom)]
+			var lit: bool = _state.get(a, {}).get("taken", false) and _state.get(b, {}).get("taken", false)
+			var run := [link_colour(str(a), str(b)), LINK_W * (1.6 if lit else 1.0) * maxf(0.6, zoom)]
 			if not runs.has(run):
 				runs[run] = PackedVector2Array()
 			var bent: PackedVector2Array = bend_of(str(a), str(b))
@@ -1059,26 +1015,26 @@ func _draw_links(view: Rect2) -> void:
 			draw_multiline(runs[run], run[0], run[1], true)
 
 
-## An element's reachable link and ring: its colour lighter, or darker where the colour's near white already (the
-## review: Knuckles' is Pal.TEXT, and lighter read the same as taken).
+## A reachable link's colour, lighter than the region's (or darker where the colour's near white already).
 static func reach_tone(tone: Color) -> Color:
 	return tone.lerp(Color.WHITE, 0.4) if tone.get_luminance() < 0.7 else tone.darkened(0.35)
 
 
-## A link's colour: lit between two taken, half-lit to a reachable one, dim otherwise; inside an element's region its
-## colour throughout (23 Oct).
+## A link's colour: the region's where both ends are owned (a link between two regions takes the coloured one's: an
+## element's, a join's, the centre's), amber from an owned node to one that can be taken, dim otherwise - in its
+## region's colour, faint, inside the centre, an element or a join.
 func link_colour(a: String, b: String) -> Color:
 	var sa: Dictionary = _state.get(a, {})
 	var sb: Dictionary = _state.get(b, {})
-	var ta: String = a.get_slice("/", 0)
-	var elem: bool = tinted(ta) and ta == b.get_slice("/", 0)
+	var key: String = a if tinted(a) else (b if tinted(b) else a)
+	var tone: Color = tone_of(key)
 	if sa.get("taken", false) and sb.get("taken", false):
-		return tone_of(ta)
+		return tone
 	if (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
-		return reach_tone(tone_of(ta)) if elem else Pal.TEXT
-	if elem:
-		return Color(tone_of(ta), ELEMENT_LINK_DIM)
-	return LINK_LIT_DIM if _lit_wheel(ta) else LINK_DIM
+		return Color(FRONTIER, 0.85)
+	if tinted(a) or tinted(b):
+		return Color(tone, ELEMENT_LINK_DIM)
+	return LINK_CLASS_DIM if str(_region.get(a, "")).begins_with("class:") else LINK_DIM
 
 
 ## A link's path in web space (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so it read as Tough to
@@ -1183,182 +1139,108 @@ func _find_bends_indexed() -> void:
 			_bends[str(a) + "|" + str(b)] = _curve(pa, best, pb)
 
 
-## The regions' names: by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at
-## the whole web, where twelve starters round the centre would put twelve names on each other (23 Oct).
+## The names: each at its placed point, centred, a fixed size on screen; the runner's class in the accent.
 func _draw_region_names(view: Rect2) -> void:
-	for tn in _axis:
-		if _axis[tn].get("hide_label", false):
+	for key in _axis:
+		var ax: Dictionary = _axis[key]
+		if not ax.has("label_at"):
 			continue
-		var by_entry: bool = zoom >= ENTRY_LABEL_ZOOM and _axis[tn].has("entry_at")
-		var p: Vector2 = to_screen(_axis[tn]["entry_at"] if by_entry else _axis[tn].get("rim_at", _axis[tn]["label_at"]))
+		var p: Vector2 = to_screen(ax["label_at"])
 		if not view.has_point(p):
 			continue
-		var words: String = region_words(tn)
-		var fs: int = 15 if zoom >= 0.6 else 13
-		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var align: int = int(_axis[tn]["entry_align"] if by_entry else _axis[tn].get("rim_align", _axis[tn].get("align", 0)))     # -1: the words end at the point; 1: start there; 0: centred
-		var em: Texture2D = emblem_of(tn) if str(_axis[tn].get("class", "")) == "" and tn != Data.COMMON_TREE else null     # a class's emblem is on its entry node, the Pitch's on its hub (23 Oct)
-		var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if em != null else 0.0
-		var full: float = w + (es + 6.0 if em != null else 0.0)     # the emblem leads the words
-		var x0: float = p.x - full if align < 0 else (p.x if align > 0 else p.x - full / 2.0)
-		var tone: Color = Pal.ACCENT if str(_axis[tn].get("class", "")) != "" and str(_axis[tn]["class"]) == str(sim.cls) else tone_of(tn)
-		if em != null:
-			_sprite(atlased(em), Rect2(x0, p.y + 5.0 - fs * 0.78 - (es - fs) / 2.0, es, es))
-			x0 += es + 6.0
-		_text(_font_bold, Vector2(x0, p.y + 5.0), words, fs, tone)
+		var words: String = region_words(key)
+		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x
+		var tone: Color = ax.get("tone", Pal.TEXT)
+		if sim != null and str(key) == "class:" + str(sim.cls):
+			tone = Pal.ACCENT
+		_text(_font_bold, Vector2(p.x - w / 2.0, p.y + NAME_SIZE * 0.36), words, NAME_SIZE, tone)
 
 
-## Under everything (23 Oct, the canvas pass): a warm disc under the wheel of the class on show, so you know where
-## you're starting from; each element's region in a hull of its colour - a faint wash, a line - so it reads at a glance.
+## Under everything: the paragon ring's dashed circle round the outside (the ring's own nodes sit on it).
 func draw_under(view: Rect2) -> void:
-	for tn in _axis:
-		var ax: Dictionary = _axis[tn]
-		if ax.has("wheel") and not ax.get("hide_label", false) and str(ax.get("class", "")) == str(sim.cls):
-			var c: Vector2 = to_screen(ax["wheel"])
-			var r: float = ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0) * ROW + WHEEL_GLOW) * zoom
-			if view.grow(r).has_point(c):
-				for k in range(3):
-					_tally("")                     # two discs and a ring, a call each
-				if not dry:
-					draw_circle(c, r, Color(Pal.BG, 0.55))        # darker than the links, not warmer (23 Oct: the warm wash lost the lines)
-					draw_circle(c, r, Color(Pal.ACCENT, 0.04))
-				var face: Texture2D = atlased(wheel_portrait(str(sim.cls)))
-				if face != null:
-					_sprite(face, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), PORTRAIT_SHADE)
-				if not dry:
-					draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
-	for tn in _trees:
-		var t: Dictionary = _trees[tn]
-		if not ELEMENT_HULLS or not t.has("element"):
-			continue
-		var box := Rect2()
-		var first := true
-		for i in range(t["nodes"].size()):
-			var p: Vector2 = layout["%s/%d" % [tn, i]]
-			box = Rect2(p, Vector2.ZERO) if first else box.expand(p)
-			first = false
-		var d: Vector2 = _axis[tn]["dir"]
-		var tone: Color = tone_of(tn)
-		# the hull: a capsule along the lane's axis, the nodes' extent plus a margin, drawn as a rotated rounded rect
-		var along: float = 0.0
-		var across: float = 0.0
-		var centre: Vector2 = box.get_center()
-		for i in range(t["nodes"].size()):
-			var q: Vector2 = layout["%s/%d" % [tn, i]] - centre
-			along = maxf(along, absf(q.dot(d)))
-			across = maxf(across, absf(q.dot(d.orthogonal())))
-		var sc: Vector2 = to_screen(centre)
-		if not view.grow((along + 60.0) * zoom).has_point(sc):
-			continue
-		var hw: float = (along + 0.6 * STEP) * zoom
-		var hh: float = (across + 0.9 * ROW) * zoom
-		var pts := PackedVector2Array()
-		var rr: float = minf(hh, 18.0 * zoom)
-		for k in range(4):
-			var cx: float = (hw - rr) * (1.0 if k in [0, 1] else -1.0)
-			var cy: float = (hh - rr) * (1.0 if k in [1, 2] else -1.0)
-			var a0: float = [-PI / 2.0, 0.0, PI / 2.0, PI][k]
-			for j in range(7):
-				var a: float = a0 + j * (PI / 2.0) / 6.0
-				pts.append(sc + (Vector2(cx, cy) + Vector2(cos(a), sin(a)) * rr).rotated(d.angle()))
-		_tally("")
-		_tally("")                             # the wash and the line
-		if not dry:
-			draw_colored_polygon(pts, Color(tone, 0.05))
-			pts.append(pts[0])
-			draw_polyline(pts, Color(tone, 0.6), 1.4 * maxf(0.7, zoom), true)
+	var c: Vector2 = to_screen(Vector2.ZERO)
+	var r: float = R_RING * zoom
+	if not view.grow(r).has_point(c):
+		return
+	var dashes := PackedVector2Array()
+	var n: int = maxi(24, int(TAU * r / (2.0 * RING_DASH)))
+	for k in range(n):
+		var a0: float = TAU * k / n
+		var a1: float = a0 + TAU / n * 0.5
+		dashes.append(c + Vector2.from_angle(a0) * r)
+		dashes.append(c + Vector2.from_angle(a1) * r)
+	_tally("lines")
+	if not dry:
+		draw_multiline(dashes, Color(Pal.ACCENT, 0.28), 1.5, true)
 
 
-func _joint_half(tree_name: String, key: String) -> String:
-	var t: Dictionary = _trees.get(tree_name, {})
-	for i in range(t.get("nodes", []).size()):
-		if str(t["nodes"][i].get("joint", "")) == key:
-			return "%s/%d" % [tree_name, i]
-	return ""
-
-
-## A node, all from the atlas: the ring as a disc of the line's colour under the fill's (the arc's width either side of
-## the radius, as draw_arc drew it), the picture or the glyph over; its words go to the words' pass.
+## A node, all from the atlas: owned - a glow, filled and ringed in its colour; can take - an amber ring; not yet - dark,
+## its ring a shade of its region's colour. A keystone a diamond, a capstone a bigger one; the big nodes' pictures over
+## them (their glyph below PIC_ZOOM); a centre small its stat's letter close in. Its words go to the words' pass.
 func _draw_node(id: String, p: Vector2) -> void:
+	nodes_drawn += 1
 	var nd: Dictionary = node_of(id)
 	var st: Dictionary = _state.get(id, {})
-	var tn: String = id.get_slice("/", 0)
-	var tone: Color = tone_of(tn)
+	var k: String = str(_kind.get(id, nd.get("web_kind", "small")))
+	var tone: Color = _tone.get(id, Pal.TEXT)
 	var r: float = radius_of(nd) * zoom
+	var z: float = maxf(0.7, zoom)
 	var taken: bool = st.get("taken", false)
 	var reach: bool = st.get("reach", false)
-	var theirs: bool = st.get("theirs", false)
-	var diamond: bool = nd.get("keystone", false) or nd.get("capstone", false)
+	var diamond: bool = k == "keystone" or k == "capstone"
 	var fill: Color = Pal.BG
-	var line: Color = Pal.CARD_LINE
+	var line: Color = Pal.CARD_LINE.lerp(tone, RING_DIM)
 	var w: float = 1.0
-	var elem: bool = tinted(tn)          # an element's rings carry its colour (23 Oct, Matt: the boxes "look cheap"), the Pitch's too
-	if elem:
-		line = Pal.CARD_LINE.lerp(tone, ELEMENT_RING_DIM)
 	if taken:
-		fill = Pal.CARD.lerp(tone, 0.35) if st.get("active", false) else Pal.CARD
-		line = tone if st.get("active", false) else (Pal.CARD_LINE.lerp(tone, ELEMENT_RING_DIM) if elem else Pal.TEXT_3)     # an element's trained-but-idle node keeps the dim ring (the review: another class's half, a gun not in hand)
+		fill = Pal.CARD.lerp(tone, 0.55)
+		line = tone
 		w = 2.0
+		_shape("diamond" if diamond else "disc", p, r * GLOW_R, Color(tone, GLOW))
 	elif reach:
 		fill = Pal.CARD
-		line = reach_tone(tone) if elem else (tone if nd.get("notable", false) or diamond else Pal.TEXT_2)     # an element's reachable ring apart from its taken ones, as its links
+		line = FRONTIER
 		w = 2.0
-	elif theirs:
-		fill = Pal.BG
-		line = Color(Pal.CARD_LINE, 0.6)
 	if id == selected:
 		line = Pal.TEXT
 		w = 3.0
 	elif id == hover and not taken:
 		line = Pal.TEXT_2
 		w = 2.0
-	w *= maxf(0.7, zoom)
+	w *= z
 	if diamond:
 		var o: float = w / 2.0 * sqrt(2.0)          # the outline's half width, along the diagonal
 		_shape("diamond", p, r + o, line)
-		_shape("diamond", p, r - o, fill)
-	elif tn == Data.COMMON_TREE:
-		_shape("square", p, r * 0.9 + w / 2.0, line)     # the Pitch's nodes built, not grown (23 Oct)
-		_shape("square", p, r * 0.9 - w / 2.0, fill)
+		_shape("diamond", p, maxf(0.5, r - o), fill)
 	else:
-		if nd.has("skill"):
-			# a skill (24 Oct, milestone 8; skills.md §3): its own ring outside the node's, in the energy colour - dim until
-			# it's reached, full once trained
-			var z: float = maxf(0.7, zoom)
-			_shape("disc", p, r + w / 2.0 + 4.0 * z, Pal.ENERGY if taken else (Pal.ENERGY.lerp(Pal.BG, 0.25) if reach else Pal.ENERGY.lerp(Pal.BG, 0.6)))
-			_shape("disc", p, r + w / 2.0 + 2.0 * z, Pal.BG)
 		_shape("disc", p, r + w / 2.0, line)
-		_shape("disc", p, r - w / 2.0, fill)
-	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
-	var pic: Texture2D = picture(picture_slug(nd))          # every node with a picture draws it (23 Oct; notables and diamonds only before)
-	if nd.get("entry", false) and tn == Data.COMMON_TREE:
-		pic = emblem_of(tn)                     # the Pitch's emblem its hub (23 Oct)
-	if pic == null and nd.get("entry", false) and _trees.get(tn, {}).has("class"):
-		pic = emblem_of(tn)                     # the class's emblem on its entry (23 Oct)
-	if pic != null and zoom >= (FILLER_PIC_ZOOM if nd.get("filler", false) else PIC_ZOOM):
-		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
-		g = minf(g, r * 1.7)
-		var shade: Color = Color(1.25, 1.25, 1.25) if taken else (Color(1.1, 1.1, 1.1) if reach else Color(0.85, 0.85, 0.85))     # brighter all round (23 Oct, Matt: "way too dark"): the paintings are dark, so taken lifts past white; untaken 0.5 → 0.85
-		_sprite(atlased(pic), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), shade)
-	elif zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
-		var g: float = r * 1.1
-		_sprite(atlased(NodeGlyphs.texture(glyph_of(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
+		_shape("disc", p, maxf(0.5, r - w / 2.0), fill)
+	if big_kind(k):
+		var pic: Texture2D = picture(picture_slug(nd))
+		if pic != null and zoom >= PIC_ZOOM:
+			var g: float = (r - 1.5 * z) * (1.42 if diamond else 1.7)
+			var shade: Color = Color(1.25, 1.25, 1.25) if taken else (Color(1.05, 1.05, 1.05) if reach else Color(0.7, 0.7, 0.7))
+			_sprite(atlased(pic), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), shade)
+		elif glyph_of(nd) != "" and r >= 4.0:
+			var g: float = r * 1.1
+			_sprite(atlased(NodeGlyphs.texture(glyph_of(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
+	elif _region.get(id, "") == "centre" and r >= 6.0:
+		var letter: String = stat_letter(id)
+		if letter != "":
+			var lw: float = _font_bold.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+			_text(_font_bold, p + Vector2(-lw / 2.0, 3.5), letter, 9, Pal.BG if taken else Pal.TEXT_2)
 	var stack: Array = stack_of(id, nd)
-	if not stack.is_empty() and zoom >= 0.6:
+	if not stack.is_empty() and zoom >= 1.0:
 		var stack_v: String = "%d/%d" % [int(stack[0]), int(stack[1])]
 		var sw: float = _font.get_string_size(stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-		var named: bool = (nd.get("notable", false) or diamond) and (zoom >= LABEL_ZOOM or id == hover or id == selected)
-		_text(_font, p + Vector2(-sw / 2.0, r + 13.0 + (14.0 if named else 0.0)), stack_v, 11, Pal.TEXT if taken else Pal.TEXT_3)
-	# the name under a notable, the keystone's level by it, from the label zoom
-	if (zoom >= LABEL_ZOOM or id == hover or id == selected) and (nd.get("notable", false) or diamond):
-		var fs: int = 12
+		_text(_font, p + Vector2(-sw / 2.0, r + 13.0), stack_v, 11, Pal.TEXT if taken else Pal.TEXT_3)
+	# the name under a big node, from the label zoom (the hovered and the picked always: under the zoom, on a plate of
+	# their own, after the nodes, where it covers the fewest - _draw_pick_labels)
+	if zoom < LABEL_ZOOM and (id == hover or id == selected) and big_kind(k) and str(nd.get("name", "")) != "":
+		_pick_labels.append([id, p, r, Pal.TEXT if taken or reach else Pal.TEXT_3])
+	elif zoom >= LABEL_ZOOM and big_kind(k) and str(nd.get("name", "")) != "":
 		var words: String = str(nd["name"])
-		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		_text(_font, p + Vector2(-tw / 2.0, r + 14.0), words, fs, Pal.TEXT if taken or reach else Pal.TEXT_3)
-	if diamond and not taken and not theirs and zoom >= 0.6:
-		var tag: Array = level_tag(nd)
-		if not tag.is_empty():
-			_text(_font, p + Vector2(r + 6.0, -r + 4.0), str(tag[0]), 11, Pal.GOOD if tag[1] else Pal.TEXT_3)
+		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		_text(_font, p + Vector2(-tw / 2.0, r + 14.0), words, 12, Pal.TEXT if taken or reach else Pal.TEXT_3)
 
 
 # ------------------------------------------------------------------ input
@@ -1368,7 +1250,7 @@ func node_at(screen_p: Vector2) -> String:
 	var best_d := INF
 	for id in layout:
 		var p: Vector2 = to_screen(layout[id])
-		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom * (1.15 if id.get_slice("/", 0) == Data.COMMON_TREE else 1.0)) + 4.0     # the Pitch's square corners reach past r (the review)
+		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom) + 4.0
 		var d: float = p.distance_to(screen_p)
 		if d <= r and d < best_d:
 			best_d = d
@@ -1411,7 +1293,7 @@ func _gui_input(event: InputEvent) -> void:
 ## Zoom about a screen point: the web under the pointer stays under it.
 func zoom_at(screen_p: Vector2, by: float) -> void:
 	var before: Vector2 = to_web(screen_p)
-	zoom = clampf(zoom * by, ZOOM_MIN, ZOOM_MAX)
+	zoom = clampf(zoom * by, zoom_min, ZOOM_MAX)
 	var after: Vector2 = to_web(screen_p)
 	cam += before - after
 	queue_redraw()
@@ -1427,7 +1309,7 @@ func pick(id: String) -> void:
 func centre_on(id: String) -> void:
 	if layout.has(id):
 		cam = layout[id]
-		zoom = maxf(zoom, 1.0)
+		zoom = maxf(zoom, 1.4)
 		queue_redraw()
 
 

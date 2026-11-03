@@ -1,28 +1,26 @@
 extends Control
-## The points key (23 Oct, Matt's playtest: a free Knuckles point showed only as "1 free" in that region's label;
-## "something somewhere needs to tell you all points that are available - a key on the map tree itself would be
-## easiest"). A panel in the canvas's corner: every pool with its points free - the class's, the Pitch's, the ring's -
-## then the six elements, each as a meter in its colour (a point when it fills) with its free points beside. The
-## words came off the regions' labels: this is where the pools and the meters live.
+## The web's key (3 Nov, docs/design/skill_web.md "The screen"; was the points key of 23 Oct, every pool and the
+## elements' meters - one counter now, in the band): in the canvas's foot, what the three states look like (yours, can
+## take, not yet), the big nodes' gates, and the paragon points free (they buy only the ring).
 
-const WebView := preload("res://scripts/ui/web_view.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
-const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 
-const KEY_W := 300.0
-const PAD := 14.0
-const ROW_H := 24.0
-const HEAD_H := 22.0
-const BAR_H := 8.0
-const NAME_W := 96.0
-const FREE_W := 52.0
+const KEY_W := 330.0
+const PAD := 12.0
+const ROW_H := 23.0
+const MARK := 12.0                 # a row's mark: a lit disc, an amber ring, a dark ring, a diamond
+const TEXT_X := PAD + MARK + 10.0
+const SIZE := 14
+const Data := preload("res://scripts/sim/data.gd")
+const KEYSTONE_AT := Data.KEYSTONE_SPENT     # the big nodes' gates: points spent first
+const CAPSTONE_AT := Data.CAPSTONE_SPENT
 
 var sim
 var _font: Font
 var _font_bold: Font
-var _rows: Array = []              # [name, sub, free words, tone, meter (-1 for none)]
+var _rows: Array = []              # [mark, words, tone]; the paragon row's mark is "paragon", its words its count
 var _sig := ""
 
 
@@ -30,30 +28,18 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_font = UI.font("Regular", false)
 	_font_bold = UI.font("SemiBold", false)
-	size = Vector2(KEY_W, height_for(3 + Data.TYPES.size()))
+	size = Vector2(KEY_W, height_for(5))
 
 
 static func height_for(rows: int) -> float:
-	return PAD + HEAD_H + 3 * ROW_H + 10.0 + HEAD_H + (rows - 3) * ROW_H + PAD - 6.0
+	return 2.0 * PAD + rows * ROW_H - 4.0
 
 
 func show_state(s) -> void:
 	sim = s
-	var rows: Array = []
-	var pf: int = sim.points_free()
-	rows.append([str(sim.cls) if sim.cls != "" else "The class", "class", "%d of %d free" % [pf, sim.training_points], Pal.TEXT_2, -1.0])
-	rows.append(["The Pitch", "the Yard", "%d free" % sim.pitch_free(), Pal.TEXT_2, -1.0])     # the glossary: the Pitch's tree is the Yard, never "camp" (the language pass)
-	rows.append(["The ring", "paragon", "%d free" % sim.paragon_free(), Pal.TEXT_2, -1.0])
-	for et in Data.ELEMENT_TREES:
-		var el: String = str(et["element"])
-		var free_v: int = maxi(0, sim.element_free(el))
-		var meter: float = clampf(float(sim.element_xp.get(el, 0.0)) / Data.ELEMENT_METER, 0.0, 1.0)
-		var free_s: String = (("%d free" % free_v) if free_v < 100 else "99+ free") if free_v > 0 else ""
-		if sim.element_idle(el):
-			free_s = Words.ELEMENT_IDLE                # opened, past the class's two with the Manual, the Last Orders and the Cap off (31 Oct)
-		elif not sim.element_opened(el):
-			free_s = Words.ELEMENT_SHUT                # the Pitch circle (24 Oct): the class's own two open free, any other a Pitch point (free too where the camp already has it)
-		rows.append([WebView.plain_name(str(et["name"])), el, free_s, Pal.ELEMENT_COLOURS.get(el, Pal.TEXT), meter])     # an element pool has no top (the review): the figure's room is FREE_W
+	var WS: Dictionary = Words.WEB_SCREEN
+	var rows: Array = [["lit", WS["key_yours"], Pal.GOOD], ["ring", WS["key_take"], Pal.ACCENT], ["dark", WS["key_dark"], Pal.CARD_LINE],
+		["diamond", WS["key_big"] % [KEYSTONE_AT, CAPSTONE_AT], Pal.TEXT_2], ["paragon", WS["key_paragon_free"] % int(sim.paragon_free()), Pal.ACCENT]]
 	var sig := str(rows)
 	if sig == _sig:
 		return
@@ -65,56 +51,46 @@ func show_state(s) -> void:
 ## The words drawn that don't fit their room, for the smoke (the key is drawn, not Labels): [] when all fit.
 func fit_fails() -> Array:
 	var out: Array = []
-	var hw: float = _font_bold.get_string_size("THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-	if _font.get_string_size(Words.ELEMENTS_NOTE, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > KEY_W - 2 * PAD - hw - 10.0:
-		out.append(Words.ELEMENTS_NOTE)       # the note beside the heading (31 Oct: it changed, and nothing held it to its room)
 	for r in _rows:
-		if r[4] < 0.0:
-			var free_w: float = _font_bold.get_string_size(str(r[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-			var nw: float = _font.get_string_size(str(r[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 6.0 + _font.get_string_size(str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-			if nw + 8.0 + free_w > KEY_W - 2 * PAD:
-				out.append("%s %s · %s" % [r[0], r[1], r[2]])
-		else:
-			if _font.get_string_size(str(r[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x > NAME_W - 6.0:
-				out.append(str(r[0]))
-			if _font.get_string_size(str(r[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > FREE_W:
-				out.append(str(r[2]))
+		var w: float = _row_width(r)
+		if TEXT_X + w > KEY_W - PAD:
+			out.append(str(r[1]))
 	return out
+
+
+func _row_width(r: Array) -> float:
+	if str(r[0]) == "paragon":
+		return _font.get_string_size(Words.WEB_SCREEN["key_paragon"], HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE).x + 8.0 + _font_bold.get_string_size(str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE).x
+	return _font.get_string_size(str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE).x
 
 
 func _draw() -> void:
 	draw_style_box(UI.box(Color(Pal.CARD, 0.92), 8, 1, Pal.CARD_LINE), Rect2(Vector2.ZERO, size))
-	if _rows.is_empty():
-		return
-	var x := PAD
-	var y := PAD + 12.0
-	draw_string(_font_bold, Vector2(x, y), "POINTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
-	y += HEAD_H - 6.0
-	for r in _rows.slice(0, 3):
+	var y := PAD
+	for r in _rows:
+		var c := Vector2(PAD + MARK / 2.0, y + ROW_H / 2.0 - 2.0)
+		var tone: Color = r[2]
+		match str(r[0]):
+			"lit":
+				draw_circle(c, MARK / 2.0 + 3.0, Color(tone, 0.2))
+				draw_circle(c, MARK / 2.0, tone)
+			"ring":
+				draw_circle(c, MARK / 2.0, Pal.CARD)
+				draw_arc(c, MARK / 2.0 - 1.0, 0.0, TAU, 24, tone, 2.0, true)
+			"dark":
+				draw_circle(c, MARK / 2.0, Pal.BG)
+				draw_arc(c, MARK / 2.0 - 0.5, 0.0, TAU, 24, Pal.TEXT_3, 1.0, true)
+			"diamond":
+				var h: float = MARK / 2.0 + 1.0
+				draw_colored_polygon(PackedVector2Array([c + Vector2(0, -h), c + Vector2(h, 0), c + Vector2(0, h), c + Vector2(-h, 0)]), Pal.TEXT_3)
+				draw_colored_polygon(PackedVector2Array([c + Vector2(0, -h + 2), c + Vector2(h - 2, 0), c + Vector2(0, h - 2), c + Vector2(-h + 2, 0)]), Pal.BG)
+			"paragon":
+				draw_arc(c, MARK / 2.0 - 1.0, 0.0, TAU, 12, tone, 1.5, true)
+		var base := Vector2(TEXT_X, y + ROW_H / 2.0 + 3.0)
+		if str(r[0]) == "paragon":
+			var lw: float = _font.get_string_size(Words.WEB_SCREEN["key_paragon"], HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE).x
+			draw_string(_font, base, Words.WEB_SCREEN["key_paragon"], HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE, Pal.TEXT_2)
+			draw_string(_font_bold, base + Vector2(lw + 8.0, 0), str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE, Pal.GOOD if not str(r[1]).begins_with("0") else Pal.TEXT_3)
+		else:
+			draw_string(_font, base, str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, SIZE, Pal.TEXT_2)
 		y += ROW_H
-		var free_s: String = str(r[2])
-		var lit: bool = not free_s.begins_with("0")
-		draw_string(_font, Vector2(x, y - 7.0), str(r[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Pal.TEXT_2)
-		var nw: float = _font.get_string_size(str(r[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
-		draw_string(_font, Vector2(x + nw + 6.0, y - 7.0), str(r[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
-		var fw: float = _font_bold.get_string_size(free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		draw_string(_font_bold, Vector2(size.x - PAD - fw, y - 7.0), free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Pal.GOOD if lit else Pal.TEXT_3)
-	y += 10.0
-	draw_line(Vector2(x, y), Vector2(size.x - PAD, y), Pal.CARD_LINE, 1.0)
-	y += HEAD_H - 4.0
-	draw_string(_font_bold, Vector2(x, y), "THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)     # the label in caps, the note after it in sentence case (the language pass: one role a string)
-	var hw: float = _font_bold.get_string_size("THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-	draw_string(_font, Vector2(x + hw + 10.0, y), Words.ELEMENTS_NOTE, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
-	y += 4.0
-	for r in _rows.slice(3):
-		y += ROW_H
-		var tone: Color = r[3]
-		draw_string(_font, Vector2(x, y - 7.0), str(r[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, tone)
-		var bx: float = x + NAME_W
-		var bw: float = size.x - PAD - FREE_W - 8.0 - bx
-		draw_rect(Rect2(bx, y - 12.0 - BAR_H / 2.0, bw, BAR_H), Color("2a2f35"))
-		if float(r[4]) > 0.0:
-			draw_rect(Rect2(bx, y - 12.0 - BAR_H / 2.0, bw * float(r[4]), BAR_H), tone)
-		var free_s: String = str(r[2]) if str(r[2]) != "" else "—"
-		var fw: float = _font.get_string_size(free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-		draw_string(_font, Vector2(size.x - PAD - fw, y - 7.0), free_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Pal.GOOD if (str(r[2]) != "" and str(r[2]) != Words.ELEMENT_SHUT) else Pal.TEXT_3)
