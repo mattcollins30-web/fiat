@@ -51,6 +51,21 @@ const GLOW_R := 1.9                     # and its size against the node's
 const PITCH_TONE := Color("d1a65f")
 const FRONTIER := Pal.ACCENT
 const PIC_ZOOM := 0.5              # a big node's picture from here; its glyph before
+## The small nodes' art (3 Nov, 0.12.1, Matt: "whats with the lack of art?"): from SMALL_ART_ZOOM a small node grows to
+## as much of R_SMALL_ART as its neighbours leave it (_small_cap) and carries its picture (art/nodes/<slug of its name>.png
+## - every "Hardy" the one picture) or else its effect's glyph; further out it stays a dot (0.11.0's FILLER_PIC_ZOOM).
+const SMALL_ART_ZOOM := 1.1
+const R_SMALL_ART := 8.0
+const SMALL_GAP := 4.5            # the room a grown small leaves its neighbours (the smoke's overlap check wants 4)
+## The regions' emblems (0.12.1, as 0.11.0 drew them): an element's and the ring's beside its name; each class tree's by
+## the middle of its nodes in its class's corner; the centre's by the middle - each where it covers no node, no name and
+## no other emblem, EMBLEM_PX at any zoom.
+const EMBLEM_PX := 22.0
+## The runner's class's portrait (0.12.1, 0.11.0's wheel disc): faint under its start's flower, faded to its rim.
+const PORTRAIT_R := 44.0
+const PORTRAIT_SHADE := Color(1, 1, 1, 0.42)
+## A picture not there is looked for again after this (an art drop shows in a running game; Training's open re-looks).
+const ART_RECHECK_MS := 3000
 const R_RING := Data.RING_R        # the paragon ring, round the outside (the web's radius is 474 at the far tips)
 const RING_DASH := 10.0
 const RING_LABEL_DEG := -132.0     # the ring's name, outside it at the top left: the Recruit's corner, clear of the tabs
@@ -83,6 +98,10 @@ var _focused := false              # the first show frames the whole web
 var _bounds := Rect2()
 var slice_restate := false         # (BUILD45's slices: the web's 379 nodes restate whole now, in well under a millisecond)
 var _stale := {}                   # (always empty: kept for the tests' reads)
+var _small_cap := {}               # a small node's slot -> the radius its neighbours leave it (web units), up to R_SMALL_ART
+var _emblems := {}                 # a class tree's or the centre's emblem: key -> {"tex", "anchor", "at", "box"}
+var emblem_rects := {}             # the last frame's emblems on screen, key -> Rect2 (the smoke's): the names' too
+var portrait_rect := Rect2()       # the last frame's portrait, on screen (the smoke's)
 
 
 func _init(sz: Vector2) -> void:
@@ -181,6 +200,21 @@ func lay_out() -> void:
 		_trees[key] = {"name": key, "element": Data.tree_named(tn).get("element", "")}
 	_trees["ring"] = {"name": "ring", "ring": true}
 	_axis["ring"] = {"anchor": Vector2.from_angle(deg_to_rad(RING_LABEL_DEG)) * (R_RING + 24.0), "words": plain_name(Data.RING_TREE), "tone": Pal.ACCENT}
+	# the emblems placed on their own: each class tree's by the middle of its nodes in its class's corner, the centre's
+	_emblems = {}
+	for t in Data.TREES:
+		var cl: String = str(t.get("class", ""))
+		var tn: String = str(t["name"])
+		var mid := Vector2.ZERO
+		var n := 0
+		for sid in layout:
+			if str(sid).get_slice("/", 0) == tn and _region.get(sid, "") == "class:" + cl:
+				mid += layout[sid]
+				n += 1
+		if cl != "" and n > 0:
+			_emblems[tn] = {"tex": emblem_of(tn), "anchor": mid / n}
+	_emblems[Data.COMMON_TREE] = {"tex": emblem_of(Data.COMMON_TREE), "anchor": Vector2.ZERO}
+	_small_caps()
 	_find_bounds()
 	_labels_by_entry()
 
@@ -219,11 +253,20 @@ func join_element(id: String) -> String:
 	return ""
 
 
-## A centre small's stat (the layout's pool: stat:hp, stat:guard, stat:pace) as its letter, L, G or P; else "".
-func stat_letter(id: String) -> String:
-	_slots_index()
-	var pool: String = str(_slot_of.get(Data.web_slot(id), {}).get("pool", ""))
-	return {"stat:hp": "L", "stat:guard": "G", "stat:pace": "P"}.get(pool, "")
+## What a small node carries at this zoom (0.12.1): "picture" (art/nodes/<slug>.png, found by name at draw time),
+## "glyph" (its effect's, node_glyphs.gd), or "" - a dot, further out than SMALL_ART_ZOOM (or a big node: its own pass).
+func small_art_of(id: String) -> String:
+	if big_kind(str(_kind.get(id, "small"))) or zoom < SMALL_ART_ZOOM:
+		return ""
+	var nd: Dictionary = node_of(id)
+	if picture(picture_slug(nd)) != null:
+		return "picture"
+	return "glyph" if glyph_of(nd) != "" else ""
+
+
+## Whether this canvas draws the skill web (Training's), not one of the older canvases built on it.
+func nodes_are_web() -> bool:
+	return not layout.is_empty() and _small_cap.size() > 0
 
 
 ## A region's name over it: the name alone (28 Oct, Matt: "it should just say 'Rat Man' ... same for the classes, just
@@ -264,7 +307,69 @@ func _labels_by_entry() -> void:
 			break
 		order.erase(far_one)
 		order.push_front(far_one)
+	_emblems_in()
 	_near = {}
+
+
+## The placed emblems (after the names): each nearest its point where it covers no node, no name and no emblem placed.
+func _emblems_in() -> void:
+	var placed: Array = []
+	for key in _axis:
+		placed.append(_axis[key].get("label_box", Rect2()))
+	# an element's and the ring's beside its name: tried from the name's own place outward, so it lands against it
+	var named := {}
+	for key in _axis:
+		if str(key).begins_with("el:") or key == "ring":
+			var tn: String = str(key).substr(3) if str(key).begins_with("el:") else Data.RING_TREE
+			named[tn] = {"tex": emblem_of(tn), "anchor": _axis[key]["label_at"], "name": key}
+	named.merge(_emblems)
+	_emblems = named
+	var z: float = fit_zoom()
+	for key in _emblems:
+		var em: Dictionary = _emblems[key]
+		var p: Vector2 = em["anchor"]
+		var s: float = EMBLEM_PX * LABEL_SLACK / z
+		var best := Rect2(p - Vector2(s, s) / 2.0, Vector2(s, s))
+		for d in label_grid():
+			var box := Rect2(p + d - Vector2(s, s) / 2.0, Vector2(s, s))
+			if _bounds.encloses(box) and _label_clear(box, placed):
+				best = box
+				break
+		em["at"] = best.get_center()
+		em["box"] = best
+		placed.append(best)
+
+
+## An emblem placed on its own, on screen as drawn: EMBLEM_PX at the whole web, growing with the zoom to EMBLEM_GROW
+## times that (its placed box's size, no bigger, so it stays clear of what it was placed clear of).
+const EMBLEM_GROW := 1.5
+func emblem_rect(key: String) -> Rect2:
+	var em: Dictionary = _emblems.get(key, {})
+	if not em.has("at"):
+		return Rect2()
+	var s: float = EMBLEM_PX * clampf(zoom / maxf(0.01, zoom_min), 1.0, EMBLEM_GROW)
+	return Rect2(to_screen(em["at"]) - Vector2(s, s) / 2.0, Vector2(s, s))
+
+
+## Each small node's room (web units): up to R_SMALL_ART, SMALL_GAP clear of every neighbour at its own full size (two
+## smalls share what's between them).
+func _small_caps() -> void:
+	_small_cap = {}
+	for a in layout:
+		if _kind.get(a, "") != "small":
+			continue
+		var cap: float = R_SMALL_ART
+		for b in layout:
+			if b == a:
+				continue
+			var d: float = layout[a].distance_to(layout[b])
+			if d > 2.0 * R_SMALL_ART + SMALL_GAP + R_CAPSTONE:
+				continue
+			if _kind.get(b, "") == "small":
+				cap = minf(cap, (d - SMALL_GAP) / 2.0)
+			else:
+				cap = minf(cap, d - radius_by_kind(str(_kind.get(b, "small"))) - SMALL_GAP)
+		_small_cap[Data.web_slot(str(a))] = maxf(R_SMALL, cap)
 
 
 ## The zoom the names are placed for: the whole web's.
@@ -617,17 +722,21 @@ func picture_slug(nd: Dictionary) -> String:
 	return Items.slug(str(nd.get("name", "")))
 
 
+static var node_art_dir := "res://art/nodes"     # where a node's picture is looked for (the smoke points it at user:// to drop one in)
 static func picture(slug: String) -> Texture2D:
 	if slug == "":
 		return null
 	if slug.begins_with("skill/"):
 		return art_at("res://art/skills/%s.png" % slug.substr(6))
-	return art_at("res://art/nodes/%s.png" % slug)
+	return art_at("%s/%s.png" % [node_art_dir, slug])
 
 
-## A picture by path, looked for once (23 Oct): the nodes', the regions' emblems, the canvases' backdrops.
+## A picture by path, looked for once (23 Oct): the nodes', the regions' emblems, the canvases' backdrops. One not there
+## is looked for again after ART_RECHECK_MS (0.12.1: an art drop shows without a restart where the files are loose -
+## a run from the project; an exported build has its art packed) and on art_rescan().
+static var _missed := {}                 # path -> when it was last looked for and not found (msec)
 static func art_at(path: String) -> Texture2D:
-	if _pics.has(path):
+	if _pics.has(path) and (_pics[path] != null or Time.get_ticks_msec() - int(_missed.get(path, 0)) < ART_RECHECK_MS):
 		return _pics[path]
 	var tex: Texture2D = null
 	if ResourceLoader.exists(path, "Texture2D"):
@@ -637,7 +746,16 @@ static func art_at(path: String) -> Texture2D:
 		if img != null:
 			tex = ImageTexture.create_from_image(img)
 	_pics[path] = tex
+	if tex == null:
+		_missed[path] = Time.get_ticks_msec()
 	return tex
+
+
+## Every picture looked for again on its next use, found or not (the smoke's art drop and its taking away).
+static func art_rescan() -> void:
+	_pics = {}
+	_missed = {}
+	_portraits = {}
 
 
 ## The atlas (23 Oct, Matt: the fans spun on the skill tree). The web drew ~2,500 draw calls a frame at the whole
@@ -755,6 +873,10 @@ func _pack_all() -> void:
 		atlased(picture(picture_slug(nd)))
 		if glyph_of(nd) != "":
 			atlased(NodeGlyphs.texture(glyph_of(nd)))
+	for key in _emblems:
+		atlased(_emblems[key]["tex"])
+	if sim != null and str(sim.get("cls")) != "":
+		atlased(wheel_portrait(str(sim.cls)))
 	_atlas_flush()
 	_ensure_bends()                        # the curved links worked here too, not on a pan's first frame
 
@@ -770,9 +892,40 @@ func emblem_of(tn: String) -> Texture2D:
 	return art_at("res://art/web/region_%s.png" % Items.slug(tn))
 
 
+## The class's portrait for under its start (23 Oct's wheel disc, back in 0.12.1): art/people_new/<class>.png (the new
+## face, as the card's), else art/people/, faded to nothing at its rim, made once.
+static var _portraits := {}
+static func wheel_portrait(cls: String) -> Texture2D:
+	if _portraits.has(cls):
+		return _portraits[cls]
+	var tex: Texture2D = art_at("res://art/people_new/%s.png" % cls.to_lower())
+	if tex == null:
+		tex = art_at("res://art/people/%s.png" % cls.to_lower())
+	var out: Texture2D = null
+	if tex != null:
+		var img: Image = tex.get_image()
+		if img != null and not img.is_empty():
+			img = img.duplicate()
+			if img.is_compressed():
+				img.decompress()
+			img.convert(Image.FORMAT_RGBA8)
+			var n := img.get_width()
+			for y in range(img.get_height()):
+				for x in range(n):
+					var d: float = Vector2(x + 0.5 - n / 2.0, y + 0.5 - img.get_height() / 2.0).length() / (n / 2.0)
+					var c: Color = img.get_pixel(x, y)
+					c.a *= clampf((1.0 - d) / 0.35, 0.0, 1.0)
+					img.set_pixel(x, y, c)
+			out = ImageTexture.create_from_image(img)
+	_portraits[cls] = out
+	return out
+
+
 ## A node's radius in web units, by its web kind (or, on the old canvases, its flags).
 func radius_of(nd: Dictionary) -> float:
 	if nd.has("web_kind"):
+		if str(nd["web_kind"]) == "small" and (zoom >= SMALL_ART_ZOOM or assume_pics):
+			return float(_small_cap.get(str(nd.get("slot", "")), R_SMALL))
 		return radius_by_kind(str(nd["web_kind"]))
 	if nd.get("capstone", false):
 		return R_CAPSTONE
@@ -922,6 +1075,10 @@ func _pick_near(own: String, p: Vector2, reach: float) -> Array:
 		var lr: Rect2 = label_rect(str(key))
 		if lr.size.x > 0.0:
 			out.append([lr])
+	for key in _emblems:
+		var er: Rect2 = emblem_rect(str(key))
+		if er.size.x > 0.0:
+			out.append([er])
 	return out
 
 
@@ -946,6 +1103,7 @@ func label_covers(rc: Rect2, own: String) -> int:
 func _draw() -> void:
 	batches = 0
 	nodes_drawn = 0
+	emblem_rects = {}
 	_batch_key = ""
 	_texts = {}
 	_tally("")
@@ -1154,10 +1312,23 @@ func _draw_region_names(view: Rect2) -> void:
 		if sim != null and str(key) == "class:" + str(sim.cls):
 			tone = Pal.ACCENT
 		_text(_font_bold, Vector2(p.x - w / 2.0, p.y + NAME_SIZE * 0.36), words, NAME_SIZE, tone)
+	for key in _emblems:
+		var rc: Rect2 = emblem_rect(key)
+		if rc.size.x > 0.0 and view.intersects(rc) and _emblems[key]["tex"] != null:
+			_sprite(atlased(_emblems[key]["tex"]), rc)
+			emblem_rects[key] = rc
 
 
 ## Under everything: the paragon ring's dashed circle round the outside (the ring's own nodes sit on it).
 func draw_under(view: Rect2) -> void:
+	portrait_rect = Rect2()
+	if sim != null and str(sim.cls) != "" and nodes_are_web():
+		var face: Texture2D = wheel_portrait(str(sim.cls))
+		var fc: Vector2 = to_screen(Data.web_at(Data.web_start(str(sim.cls))))
+		var fr: float = PORTRAIT_R * zoom
+		if face != null and view.grow(fr).has_point(fc):
+			portrait_rect = Rect2(fc - Vector2(fr, fr), Vector2(fr, fr) * 2.0)
+			_sprite(atlased(face), portrait_rect, PORTRAIT_SHADE)
 	var c: Vector2 = to_screen(Vector2.ZERO)
 	var r: float = R_RING * zoom
 	if not view.grow(r).has_point(c):
@@ -1176,7 +1347,8 @@ func draw_under(view: Rect2) -> void:
 
 ## A node, all from the atlas: owned - a glow, filled and ringed in its colour; can take - an amber ring; not yet - dark,
 ## its ring a shade of its region's colour. A keystone a diamond, a capstone a bigger one; the big nodes' pictures over
-## them (their glyph below PIC_ZOOM); a centre small its stat's letter close in. Its words go to the words' pass.
+## them (their glyph below PIC_ZOOM); a small node from SMALL_ART_ZOOM its picture or its glyph (small_art_of). Its words
+## go to the words' pass.
 func _draw_node(id: String, p: Vector2) -> void:
 	nodes_drawn += 1
 	var nd: Dictionary = node_of(id)
@@ -1223,11 +1395,15 @@ func _draw_node(id: String, p: Vector2) -> void:
 		elif glyph_of(nd) != "" and r >= 4.0:
 			var g: float = r * 1.1
 			_sprite(atlased(NodeGlyphs.texture(glyph_of(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
-	elif _region.get(id, "") == "centre" and r >= 6.0:
-		var letter: String = stat_letter(id)
-		if letter != "":
-			var lw: float = _font_bold.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-			_text(_font_bold, p + Vector2(-lw / 2.0, 3.5), letter, 9, Pal.BG if taken else Pal.TEXT_2)
+	else:
+		match small_art_of(id):
+			"picture":
+				var g: float = (r - 1.0 * z) * 1.7
+				var shade: Color = Color(1.25, 1.25, 1.25) if taken else (Color(1.05, 1.05, 1.05) if reach else Color(0.7, 0.7, 0.7))
+				_sprite(atlased(picture(picture_slug(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), shade)
+			"glyph":
+				var g: float = r * 1.15
+				_sprite(atlased(NodeGlyphs.texture(glyph_of(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
 	var stack: Array = stack_of(id, nd)
 	if not stack.is_empty() and zoom >= 1.0:
 		var stack_v: String = "%d/%d" % [int(stack[0]), int(stack[1])]

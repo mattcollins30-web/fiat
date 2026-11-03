@@ -173,6 +173,8 @@ SMALL_MORE = {
     "Hardened": "a dented tin of milk powder, the label gone",
     "Insulated": "a pair of orange rubber electrician's gloves",
     "Clotted": "a roll of brown elastic bandage with a metal clip",
+    # the skill web's centre (3 Nov, 0.12.1): the Guard ring's small, new with the web
+    "Guarded": "a scuffed plain black padded forearm guard, unbranded with no logo or lettering on it, with a worn velcro strap",
 }
 # The Dial's fillers (the Map's web, map_web.gd): ten, drawn as map_f_<slug> so none borrows a Training node's picture
 # ("Light fingers" is also a Training notable).

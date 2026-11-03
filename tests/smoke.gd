@@ -38,6 +38,7 @@ static func _player_saves() -> Dictionary:
 const Sim := preload("res://scripts/sim/sim.gd")
 const RoundsPanel := preload("res://scripts/ui/rounds_panel.gd")     # BUILD46-R
 const RunView := preload("res://scripts/ui/run_view.gd")
+const WebView := preload("res://scripts/ui/web_view.gd")     # 0.12.1: the web's art
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const People := preload("res://scripts/ui/people.gd")
@@ -1890,6 +1891,7 @@ func _class_trees(main) -> void:
 	_rail_order_checks(main)
 	_web47_checks(main)                       # BUILD47 V: the skill web's Training screen
 	_m47_checks(main)                         # merge 47's fix round (the review of build 47)
+	_web_art_checks(main)                     # 0.12.1: the web's art back
 	_place_art_checks(main)
 	# the Yard's upgrades
 	sim.cash += 1000000.0                       # whatever inflation has done by now
@@ -4772,13 +4774,24 @@ func _events_checks(main) -> void:
 		sim.advance(1.0)
 	_check(str(sim.event_now().get("state", "")) == "done" and float(sim.event_now()["at"]) == at0, "a second event came on the run")
 	sim.extract_now()
-	# the Scrap man come naturally (G1): in a dozen runs he's met with scrap in the pack to pay him some of the time
-	sim.rng.seed = 4759                       # its own dice (merge 47): left to the areas before it, 7 of 12 came on one sequence
+	# the Scrap man come naturally (G1): in two dozen runs he's met with scrap in the pack to pay him some of the time
+	# Its own dice and its own site (0.12.1, the flake on Matt's machine: 2 of 12 met): the game's dice and the
+	# material dice seeded here, noon with the weather rolled on them, and the Allotments' crates fresh each run - a site
+	# the runs before had picked over (the crates wait between runs, 27 Oct) gave no first search, so no lull to meet him in
+	sim.rng.seed = 4759
+	sim.material_rng.seed = 4759              # the pack's scrap and materials (their own dice, 18 Oct)
+	var sm_elapsed: float = sim.elapsed
+	var sm_weather: Array = sim.weather.duplicate()
+	var sm_weather_at: int = sim.weather_at
+	var sm_crates: Dictionary = sim.site_crates.duplicate(true)
+	sim.elapsed = (12.0 - Data.CLOCK_START) * 3600.0
+	sim.weather_at = -1                       # rolled afresh, on the seeded dice
 	sim.trader_standing = {}                  # no bandage on the house: "can pay" means a paid row (40-E review 7)
 	var can_pay := 0
 	var met := 0
-	for k in range(12):
+	for k in range(24):
 		sim.hp = sim.max_hp()
+		sim.site_crates.erase("3")            # a fresh site: the first search is there to make
 		sim.deploy(3)
 		m = sim.mission
 		m["event"] = "trader"
@@ -4796,7 +4809,11 @@ func _events_checks(main) -> void:
 				can_pay += 1
 		if sim.on_mission():
 			sim.extract_now()
-	_check(met >= 8 and can_pay > 0, "the Scrap man came naturally %d times of 12 and could be paid %d" % [met, can_pay])
+	sim.elapsed = sm_elapsed
+	sim.weather = sm_weather
+	sim.weather_at = sm_weather_at
+	sim.site_crates = sm_crates
+	_check(met >= 16 and can_pay > 0, "the Scrap man came naturally %d times of 24 and could be paid %d" % [met, can_pay])
 	# the clock stops for a non-threat and goes again after
 	m = _ev_force(sim, "need")
 	var ck: Array = [float(m["clock"]), float(m["patrol_timer"]), float(m["elapsed"]), float(m.get("search", 0.0))]
@@ -5447,8 +5464,17 @@ func _events_more_checks(main) -> void:
 	_check(str(dopt[0]["face"][0]).begins_with("%d s · %d%% clean" % [int(Data.DANGER_S), roundi(sim.event_clean_odds(Data.DANGER_CLEAN) * 100.0)]), "the dangerous place's face doesn't show its odds: %s" % str(dopt[0]["face"]))
 	var tiers_up: Array = []
 	var site_lt: int = int(m["t"]["loot_tier"])
+	var want_up: int = mini(sim.loot_cap(int(m["t"].get("level", sim.lv_at(int(m["t"]["tier"]), int(m["t"]["depth"]))))), site_lt + 1)
 	sim.extract_now()
-	for k in range(16):
+	# its own dice (0.12.1, the flake on Matt's machine: [1, 1, 2, 2, 2] from 16 on the dice the areas before left): seeded
+	# here at noon, and 48 goes - a find is rolled at its tier or under, so a few gear finds can all come in low
+	sim.rng.seed = 5461
+	var tu_elapsed: float = sim.elapsed
+	var tu_weather: Array = sim.weather.duplicate()
+	var tu_weather_at: int = sim.weather_at
+	sim.elapsed = (12.0 - Data.CLOCK_START) * 3600.0
+	sim.weather_at = -1
+	for k in range(48):
 		m = _ev_force(sim, "danger")
 		m["found"] = []
 		sim.event_pick("careful")
@@ -5456,7 +5482,10 @@ func _events_more_checks(main) -> void:
 			if str(it.get("slot", "")) in Data.SLOTS:
 				tiers_up.append(int(it["tier"]))
 		sim.extract_now()
-	_check(not tiers_up.is_empty() and tiers_up.max() > site_lt, "going in found nothing a tier up: %s against %d" % [str(tiers_up), site_lt])
+	sim.elapsed = tu_elapsed
+	sim.weather = tu_weather
+	sim.weather_at = tu_weather_at
+	_check(want_up > site_lt and tiers_up.size() >= 8 and tiers_up.max() > site_lt, "going in found nothing a tier up: %s (%d gear finds of 48) against %d, the cache's %d" % [str(tiers_up), tiers_up.size(), site_lt, want_up])
 	# A stash with a catch: Take it (its 3 s, two finds, the catch at its odds - a trip's HP or the next gang now); Check it
 	# first (20 s, two finds, never the catch)
 	var caught := 0
@@ -22744,6 +22773,124 @@ func _m47_checks(main) -> void:
 	bk._shown = ""
 	main.refresh()
 	print("merge 47's fixes ok: another class's start and skills, paste by the rule in any order, a load made legal, the fixtures, the big nodes' lines, the ring's entries, the picked name clear")
+
+
+## 0.12.1 (3 Nov, Matt: "whats with the lack of art?"): the web's art back on the new layout. Every node a picture or its
+## effect's glyph; a small one a dot at the whole web, its picture or glyph from SMALL_ART_ZOOM; a picture dropped into
+## art/nodes/ found by name with no code change (and gone again, the glyph back); the regions' emblems - six elements,
+## twelve class trees, the centre, the ring - each on no node, no name and no other emblem; the runner's class's
+## portrait under its start, clear of the names and emblems.
+func _web_art_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.on_mission():
+		sim.extract_now()
+	var bk = main._barracks
+	var wv = bk.web()
+	_set_cls(sim, "Poacher")
+	var start: String = Data.web_start("Poacher")
+	sim.tree = [start]
+	sim.training_points = 10
+	sim._caches_out()
+	main.show_room(main.BARRACKS)
+	bk._pick("")
+	main.refresh()
+	# every node a picture or a glyph of its own (not the star every unknown effect falls to)
+	var bare: Array = []
+	for id in Data.web_ids():
+		var nd: Dictionary = wv.node_of(str(id))
+		if WebView.picture(wv.picture_slug(nd)) == null and (wv.glyph_of(nd) == "" or wv.glyph_of(nd) == "star"):
+			bare.append("%s (%s)" % [nd.get("name", id), nd.get("effect", "")])
+	_check(bare.is_empty(), "%d web nodes have neither a picture nor a glyph: %s" % [bare.size(), str(bare.slice(0, 6))])
+	# a dot at the whole web; close in, its picture or its glyph, grown as its neighbours allow
+	bk._web_buttons[0].pressed.emit()
+	main.refresh()
+	wv.focus_all()
+	var smalls: Array = Data.web_ids().filter(func(x): return Data.web_kind(str(x)) == "small")
+	_check(wv.zoom < wv.SMALL_ART_ZOOM and smalls.all(func(x): return wv.small_art_of(str(x)) == "" and is_equal_approx(wv.radius_of(wv.node_of(str(x))), wv.R_SMALL)), "the small nodes aren't dots at the whole web (zoom %.2f)" % wv.zoom)
+	wv.zoom = maxf(wv.SMALL_ART_ZOOM, 1.4)
+	var no_art: Array = smalls.filter(func(x): return wv.small_art_of(str(x)) == "")
+	var grown: int = smalls.filter(func(x): return wv.radius_of(wv.node_of(str(x))) > wv.R_SMALL + 2.0).size()
+	_check(no_art.is_empty() and grown * 2 > smalls.size(), "close in, %d small nodes carry nothing, %d of %d grown" % [no_art.size(), grown, smalls.size()])
+	var centre_l: String = Data.web_of_slot("o0-")
+	_check(wv.small_art_of(centre_l) != "" and wv.glyph_of(wv.node_of(centre_l)) == "hp", "the centre's life small shows '%s', glyph %s" % [wv.small_art_of(centre_l), wv.glyph_of(wv.node_of(centre_l))])
+	# grown close in, no two nodes on each other (the overlap check of _web_checks at this zoom, the smalls grown)
+	var close_over: Array = []
+	var all_ids: Array = wv.layout.keys()
+	for a_i in range(all_ids.size()):
+		var ra: float = wv.radius_of(wv.node_of(all_ids[a_i]))
+		for b_i in range(a_i + 1, all_ids.size()):
+			if wv.layout[all_ids[a_i]].distance_to(wv.layout[all_ids[b_i]]) < ra + wv.radius_of(wv.node_of(all_ids[b_i])) + 4.0:
+				close_over.append("%s-%s" % [all_ids[a_i], all_ids[b_i]])
+	_check(close_over.is_empty(), "at zoom %.2f %d pairs of nodes overlap, the smalls grown: %s" % [wv.zoom, close_over.size(), str(close_over.slice(0, 4))])
+	# an art drop: a picture put where the lookup reads for a small node with none is drawn on the next look, no code
+	# changed; taken away, the glyph again. The lookup pointed at user:// for this (a killed smoke leaves nothing in art/)
+	var art_dir_was: String = WebView.node_art_dir
+	WebView.node_art_dir = "user://smoke_node_art"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(WebView.node_art_dir))
+	WebView.art_rescan()
+	var drop := ""                      # chosen with the lookup pointed away: a machine with every small's picture still has a fixture
+	for x in smalls:
+		if drop == "" and WebView.picture(wv.picture_slug(wv.node_of(str(x)))) == null:
+			drop = str(x)
+	var drop_path: String = "%s/%s.png" % [WebView.node_art_dir, wv.picture_slug(wv.node_of(drop))]
+	_check(drop != "" and not FileAccess.file_exists(drop_path) and wv.small_art_of(drop) == "glyph", "the art-drop fixture: %s at %s shows '%s'" % [drop, drop_path, wv.small_art_of(drop)])
+	if drop != "" and not FileAccess.file_exists(drop_path):
+		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0.8, 0.5, 0.2, 1.0))
+		img.save_png(ProjectSettings.globalize_path(drop_path))
+		# in a running game: the miss looked for again once ART_RECHECK_MS has gone (aged here, not waited for)
+		WebView._missed[drop_path] = Time.get_ticks_msec() - WebView.ART_RECHECK_MS - 1
+		var seen_pic: bool = WebView.picture(wv.picture_slug(wv.node_of(drop))) != null and wv.small_art_of(drop) == "picture"
+		wv.count_batches()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(drop_path))
+		WebView.art_rescan()
+		_check(seen_pic, "a picture dropped in at %s wasn't drawn for %s" % [drop_path, drop])
+		_check(wv.small_art_of(drop) == "glyph" and not FileAccess.file_exists(drop_path), "the dropped picture taken away, %s shows '%s'" % [drop, wv.small_art_of(drop)])
+	WebView.node_art_dir = art_dir_was
+	WebView.art_rescan()
+	# the emblems: six elements, twelve class trees, the centre and the ring, each on no node, no name, no other emblem
+	var want: Array = Data.ELEMENT_TREES.map(func(t): return str(t["name"])) + Data.TREES.filter(func(t): return str(t.get("class", "")) != "").map(func(t): return str(t["name"])) + [Data.COMMON_TREE, Data.RING_TREE]
+	_check(want.size() == 20 and want.all(func(k): return wv._emblems.has(k) and wv._emblems[k]["tex"] != null), "the emblems placed aren't the twenty: %s" % str(want.filter(func(k): return not wv._emblems.has(k) or wv._emblems[k]["tex"] == null)))
+	var canvas := Rect2(Vector2.ZERO, wv.size)
+	for zl in [wv.fit_zoom(), 1.0, 2.0]:
+		wv.focus_all()
+		wv.zoom = zl
+		wv.count_batches()
+		var drawn: Array = wv.emblem_rects.keys()
+		if is_equal_approx(zl, wv.fit_zoom()):
+			_check(want.all(func(k): return drawn.has(k) and canvas.encloses(wv.emblem_rects[k])), "at the whole web the emblems drawn are %s" % str(drawn))
+		for k in drawn:
+			var er: Rect2 = wv.emblem_rects[k]
+			for id in wv.layout:
+				var q: Vector2 = wv.to_screen(wv.layout[id])
+				if er.grow(wv.radius_of(wv.node_of(id)) * zl).has_point(q):
+					_check(false, "at zoom %.2f %s's emblem covers %s" % [zl, k, id])
+			for ak in wv._axis:
+				if wv.label_rect(str(ak)).intersects(er):
+					_check(false, "at zoom %.2f %s's emblem sits on %s's name" % [zl, k, ak])
+			for k2 in drawn:
+				if str(k2) > str(k) and wv.emblem_rects[k2].intersects(er):
+					_check(false, "at zoom %.2f %s's emblem sits on %s's" % [zl, k, k2])
+	# the portrait under the runner's start: there, centred on it, under no name or emblem
+	wv.focus_all()
+	wv.count_batches()
+	var pr: Rect2 = wv.portrait_rect
+	_check(pr.size.x > 0.0 and pr.get_center().distance_to(wv.to_screen(wv.layout[start])) < 1.0 and canvas.encloses(pr), "the Poacher's portrait isn't under his start: %s" % str(pr))
+	for ak in wv._axis:
+		_check(not wv.label_rect(str(ak)).intersects(pr), "the portrait sits under %s's name" % ak)
+	for k in wv.emblem_rects:
+		_check(not wv.emblem_rects[k].intersects(pr), "the portrait sits under %s's emblem" % k)
+	_check(wv.count_batches() < wv.BATCH_MAX, "the web's art takes %d draw calls at the whole web" % wv.count_batches())
+	wv.zoom = 1.4
+	_check(wv.count_batches() < wv.BATCH_MAX, "the web's art takes %d draw calls close in" % wv.count_batches())
+	wv.focus_all()
+	_check_fit(main, "Training (the web's art)")
+	sim.load_dict(saved)
+	bk.selected = ""
+	bk._shown = ""
+	main.refresh()
+	print("the web's art ok: %d nodes a picture or a glyph, the smalls close in, an art drop, %d emblems, the portrait" % [Data.web_ids().size(), want.size()])
 
 
 ## The band's one counter (3 Nov, the skill web): "N points free".

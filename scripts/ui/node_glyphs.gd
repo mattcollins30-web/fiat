@@ -53,6 +53,10 @@ const SVG := {
 	"dog": '<path d="M5 10 L7 5 L10 9 H14 L17 5 L19 10 V15 a5 5 0 0 1 -5 5 H10 a5 5 0 0 1 -5 -5 Z M10 13 V13.5 M14 13 V13.5"/>',
 	"dice": '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 8.5 V9 M15.5 15.5 V16 M12 12 V12.5 M15.5 8.5 V9 M8.5 15.5 V16"/>',
 	"star": '<path d="M12 4 L13.8 10.2 L20 12 L13.8 13.8 L12 20 L10.2 13.8 L4 12 L10.2 10.2 Z"/>',
+	# the skill web's smalls and the Recruit's (3 Nov, 0.12.1): Guard, energy, grenades
+	"guard": '<path d="M12 3 L19 6 V11 C19 16 16 19 12 21 C8 19 5 16 5 11 V6 Z M12 7.5 L15.5 9 V11.5 C15.5 14 14 15.5 12 16.6 C10 15.5 8.5 14 8.5 11.5 V9 Z"/>',
+	"energy": '<rect x="3" y="7" width="16" height="10" rx="1.5"/><path d="M19 10 H21 V14 H19 M7 10 V14 M10.5 10 V14 M14 10 V14"/>',
+	"grenade": '<circle cx="11" cy="14.5" r="6"/><path d="M8.5 8.5 V6.5 H13.5 V8.5 M13.5 7.5 L18 4.5 M16 3.5 L19.5 5.5"/>',
 }
 
 ## A plain effect's glyph.
@@ -79,6 +83,10 @@ const OF_EFFECT := {
 	"word_of_mouth": "cash", "salvage": "wrench", "workbench": "wrench", "breakers_yard": "wrench", "back_pocket": "cash",
 	"clocked": "first", "snare_and_wait": "clock", "twine": "clock", "off_the_canvas": "armour", "bin_lid": "armour", "last_orders": "dmg",
 	"worst_first": "med", "jab": "med", "clocking_off": "search", "b_roads": "clock", "on_a_roll": "dice", "spare_change": "cash",
+	# the skill web (3 Nov, 0.12.1): the centre's Guard ring and the Recruit's lanes, which fell to the star
+	"guard_pct": "guard", "energy_max": "energy", "energy_regen_pct": "energy", "cdr_pct": "clock", "grenade_pct": "grenade", "grenade_extra": "grenade",
+	"blast_burns": "fire", "cover_pct": "armour", "danger_area": "skull", "double_time": "pace", "on_the_double": "pace", "live_firing": "dmg",
+	"cap_passing_out": "quality", "cap_shock_awe": "loud",
 	"backdraught": "fire", "capacitor": "shock", "overload": "shock", "arterial": "bleed", "floored": "phys", "brittle": "frost", "catching": "poison",
 }
 

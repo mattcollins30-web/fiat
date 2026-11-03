@@ -4,15 +4,22 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (3 Nov):** 0.12.0 - the skill web and the rail in the order rooms open (Matt: "I'd like to try and get it in
-  before I playtest"). Fresh save (SAVE_VERSION 23). The spec: docs/design/skill_web.md.
-- **Next:** Matt's playtest of 0.12.0, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
+- **Now (3 Nov):** 0.12.1 - the skill web (0.12.0) with its art back: small nodes' pictures and glyphs, the regions'
+  emblems, the class portrait. Fresh save from 0.12.0 (SAVE_VERSION 23). The spec: docs/design/skill_web.md. Art
+  flagged: one job (Guarded, the centre's Guard small).
+- **Next:** Matt's playtest of 0.12.1, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
   The language redesign (docs/design/language.md) - the rename pass, parked 3 Nov.
 - **Matt's word wanted (the skill web, 3 Nov):** the Quartermaster's Manual has no rule left (its words still promise
   more than 2 elements); 25 hung notables have no slot on the web (data.gd WEB_DROPPED - the three open gates could
   take some); the Headmaster's Cap's words don't say its capstone waits for 40 spent; Second wind reads "at home";
   the six third keystones and the hung skills sit on filler slots (builder's call, so nothing left the game); Training's
   intro line re-records (docs/voice/recording_list.md); the room card's tiles still say "Their trees".
+- **Voice (3 Nov):** Matt regenerates the lot from docs/voice/scripts.md and passes the takes back for wiring and
+  cue-syncing. Today Training's and the Fence's cards play old takes under new text; the five class intros were never
+  recorded (no cues); the Workshop's new line waits for its take. Stale lines suggested there (the Pitch -> home,
+  "camp", "move on", "deeper", "the doctor"). No ElevenLabs voice ids are on record: write them into recording_list.md.
+- **A game gap found by the flake fix (Matt's word):** at a picked-over site a rolled run event never comes - the lull
+  waits for a first search there's nothing to make. Suggested: open the lull when nothing's left to search.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
@@ -6143,6 +6150,23 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 3 Nov (afternoon): 0.12.1 - the web's art back
+
+Matt, on 0.12.0's web: "whats with the lack of art?" - then "Fix it and run the art manifest for the missing nodes - if
+those nodes arent already wired so that art can just drop in when avilable then do that too." 0.12.0's screen drew
+pictures only in the big nodes: the small nodes were bare discs, the regions' emblems and the class portrait gone.
+Back: every small node draws its picture by name (art/nodes/<slug>.png; one picture serves every node of that name),
+else its effect's glyph (new glyphs: Guard, energy, grenades), dots at the whole web and growing as far as their
+neighbours allow closer in; 20 emblems (six elements, twelve class trees, the centre, the ring) placed clear of nodes and
+names; the runner's portrait faint under its start's flower. Art drops in: a picture that appears is found within 3 s
+when the game runs from the project (an export needs re-exporting). Matt's machine already had all 140 small-node
+pictures (the 23 Oct manifests); only Guarded, new with the web, was missing - flagged (tools/pixellab_web_small2_manifest.json,
+one job, $0.08; made, art.done 15:30: a plain black padded forearm guard). Reviewed (fit; its two test findings fixed). The smoke on
+Matt's machine then showed two flaky event checks (the Scrap man, "going in a tier up": they read the Allotments' kept
+crates and dice left by earlier areas) - made deterministic in themselves, reviewed. Smoke green in the cloud and on
+Matt's machine; lint 0. Voice: every voiced script gathered in docs/voice/scripts.md for Matt's regen (Matt: "Provide
+the scripts for all the story opening scenes, room cards and class intros").
 
 ## 3 Nov (afternoon): 0.12.0 - the skill web (SAVE_VERSION 23; BUILD47 W, V and the merge)
 
