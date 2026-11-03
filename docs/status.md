@@ -63,6 +63,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      last read odds for places not selected". Read the odds only for the place picked; the others show their last read
      (to settle in the fix round: how a last read shows once the kit or level has changed since - marked as old, or as
      today's dimmed odds chip).
+  4. Bug or UI, to check: a run at the Pleasure Park ended "Out of time" (slot 1, 21:07) - the clock ran out 11 s after a
+     second Garrison gang came in, during a magazine refill; the pack went, and the derringer and the new Bergen with it
+     (the rule: CLOCK_LOSE_KIT 2 worn pieces). Matt had 66 of 165 HP and had decided to get out; the record shows no
+     Get out taken (the site was cleared, so Get out is instant). To check: whether a Get out pressed while a gang is
+     on or a magazine refills is lost; and whether the clock running low is warned loudly enough.
 
 ## First slice (2026-10-01)
 
