@@ -9,7 +9,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   thing left behind. Fresh save (SAVE_VERSION 22). The event art is flagged (test manifest first, then the set).
 - **Next:** Matt's playtest of 0.11.0, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
   The language redesign (docs/design/language.md: Matt's calls 3 Nov - Home, the shared tree, trade goods, pair,
-  the Paragon board; the rest by the principle, his veto open) - the rename pass next.
+  the Paragon board; the rest by the principle, his veto open) - the rename pass, parked 3 Nov.
+  The skill tree rework (parked 3 Nov, Matt: "we have the grounds of something good but in practice it's just a mess"):
+  the Poacher at 12 o'clock; the class regions redone (PoE as the bar, look and choice); the shared tree at the centre
+  linked to the element trees, the element trees linked to the classes' starts; one logic for how points are got and
+  spent; concentric rings spreading out and interlinking. Several canvas rounds before any build.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
