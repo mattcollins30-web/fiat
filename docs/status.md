@@ -54,6 +54,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   1. UI: the site card's head is two controls - the Gang / Head toggle picks who the card shows, and the foot's "Head"
      button is what takes him on, so toggling Head alone doesn't take him on (Matt: "head selected but doesnt activate
      unless the second button is also selected - there should just be one"). One control for it.
+  2. UI and design: too many skills crowd the class's start - the builder put the hung skills on the start's flower
+     (BUILD47 W's call, so none left the game); Matt: "too many skills around the starting node - one in the middle
+     would suffice". The start keeps the class's one skill; where the other skills go is a design call for the fix
+     round (canvas first). And a skill node's card says "Notable" - it should say "Skill" (Matt: "skills identified
+     as notable when they should be labelled 'skill' instead").
 
 ## First slice (2026-10-01)
 
