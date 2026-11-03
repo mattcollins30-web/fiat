@@ -8,7 +8,8 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   long pass"): rounds and magazines, the rest of the run events and the Vagabond, the site card redesign, a head's
   thing left behind. Fresh save (SAVE_VERSION 22). The event art is flagged (test manifest first, then the set).
 - **Next:** Matt's playtest of 0.11.0, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
-  A language design discussion (the principle for coined vs borrowed words; an inventory of every player-facing name).
+  The language redesign (docs/design/language.md: Matt's calls 3 Nov - Home, the shared tree, trade goods, pair,
+  the Paragon board; the rest by the principle, his veto open) - the rename pass next.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
