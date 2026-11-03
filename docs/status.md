@@ -19,8 +19,6 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   cue-syncing. Today Training's and the Fence's cards play old takes under new text; the five class intros were never
   recorded (no cues); the Workshop's new line waits for its take. Stale lines suggested there (the Pitch -> home,
   "camp", "move on", "deeper", "the doctor"). No ElevenLabs voice ids are on record: write them into recording_list.md.
-- **A game gap found by the flake fix (Matt's word):** at a picked-over site a rolled run event never comes - the lull
-  waits for a first search there's nothing to make. Suggested: open the lull when nothing's left to search.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
@@ -33,6 +31,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   after a pan; rounds_panel.gd's short row line logs a formatting error (16 a smoke, older than 0.12.0); a late-save fight isn't timed by the smoke's speed guard (it prints 0); dogs on a
   repeat run read their odds in one lump (~0.3 s); the Scrapper never ran the Mint (the bot's build); "13 ObjectDB
   instances leaked at exit" at the smoke's end (not in the bar).
+- **Parked (bug, 3 Nov, Matt: "This needs parking and not forgetting"):** at a picked-over site a rolled run event
+  never comes - the lull (`event_lull`) waits for a first search, and a site with no crates left has none to make, so
+  the 30% roll (every run with the Caretaker's Keys) is silently lost. Found by the 0.12.1 smoke flake fix. Suggested
+  fix: open the lull when nothing's left to search (crates done or none). Built with the first fixes after the playtest.
 - **Parked from the playtest:** (none open - the 0.10.6 three are built in 0.11.0)
 
 ## First slice (2026-10-01)
