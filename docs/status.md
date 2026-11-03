@@ -19,6 +19,21 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   cue-syncing. Today Training's and the Fence's cards play old takes under new text; the five class intros were never
   recorded (no cues); the Workshop's new line waits for its take. Stale lines suggested there (the Pitch -> home,
   "camp", "move on", "deeper", "the doctor"). No ElevenLabs voice ids are on record: write them into recording_list.md.
+- **The road to the friends' playtest (3 Nov, Matt: "We need a road to playtest now - I want to give a copy to some
+  close friends so things like tutorial and balance need to be on the list"; the order agreed):**
+  1. Matt's playtest of 0.12.2 to the County and fiat - everything noted is parked.
+  2. The fix round: the parked items, the lost run event, and the calls under "Matt's word wanted" (the Quartermaster's
+     Manual, the 25 hung notables and three open gates, the Headmaster's Cap's words, Second wind's "home").
+  3. Content freeze, the words: the language rename pass (docs/design/language.md) - before the tutorial and voice.
+  4. The tutorial (docs/design/tutorial.md: nine beats and the Poacher's card), mockups on the canvas first.
+  5. Voice: Matt regenerates from docs/voice/scripts.md (plus the tutorial's lines and the class intros); wired and synced.
+  6. The balance pass, once: everything that changes numbers in first (the web's small values, the stepped-down
+     capstones, the waiting list); gates agreed up front; the long reads; Matt's check play.
+  7. Friend-ready: a Windows export tested off Matt's machine (the Deck if a friend uses one), a clean first run, a way
+     for feedback and saves to come back.
+  8. The release candidate: the version, a full smoke, the balance gates green, Matt's final play - to friends.
+  Open (Matt, not urgent): how many friends and on what; how it reaches them (a zip, a private itch.io page, a Steam
+  playtest); a date.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
@@ -35,7 +50,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   never comes - the lull (`event_lull`) waits for a first search, and a site with no crates left has none to make, so
   the 30% roll (every run with the Caretaker's Keys) is silently lost. Found by the 0.12.1 smoke flake fix. Suggested
   fix: open the lull when nothing's left to search (crates done or none). Built with the first fixes after the playtest.
-- **Parked from the playtest:** (none open - the 0.10.6 three are built in 0.11.0)
+- **Parked from the playtest (0.12.2, 3 Nov):**
+  1. UI: the site card's head is two controls - the Gang / Head toggle picks who the card shows, and the foot's "Head"
+     button is what takes him on, so toggling Head alone doesn't take him on (Matt: "head selected but doesnt activate
+     unless the second button is also selected - there should just be one"). One control for it.
 
 ## First slice (2026-10-01)
 
