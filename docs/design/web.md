@@ -1,5 +1,7 @@
 # The web: one skill tree for the camp (22 Oct 2026) — the design spec
 
+**Superseded 3 Nov by docs/design/skill_web.md** (the layout, the points, the camp's ownership); the nodes designed here carry over.
+
 From Matt's playtest of the Scrapper: "the current nodes are just an A to B rush with zero choice other than what
 element to spec into." Path of Exile's passive tree as the model: one web, pan and zoom, a node bought by pathing
 to it, fillers between the notables so every level is a decision. Replaces docs/design/trees.md's lanes (the

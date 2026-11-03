@@ -4,16 +4,17 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (2 Nov, evening):** 0.11.0 - everything queued, built (Matt: "lets just do the lot now ... everything but the
+- **Now (3 Nov):** the skill web designed and written up; the build next (below). Shipped last: 0.11.0 - everything queued, built (Matt: "lets just do the lot now ... everything but the
   long pass"): rounds and magazines, the rest of the run events and the Vagabond, the site card redesign, a head's
   thing left behind. Fresh save (SAVE_VERSION 22). The event art is flagged (test manifest first, then the set).
-- **Next:** Matt's playtest of 0.11.0, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
+- **Next:** the skill web build, then Matt's playtest, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
   The language redesign (docs/design/language.md: Matt's calls 3 Nov - Home, the shared tree, trade goods, pair,
   the Paragon board; the rest by the principle, his veto open) - the rename pass, parked 3 Nov.
-  The skill tree rework (parked 3 Nov, Matt: "we have the grounds of something good but in practice it's just a mess"):
-  the Poacher at 12 o'clock; the class regions redone (PoE as the bar, look and choice); the shared tree at the centre
-  linked to the element trees, the element trees linked to the classes' starts; one logic for how points are got and
-  spent; concentric rings spreading out and interlinking. Several canvas rounds before any build.
+  **The skill web build, before the playtest** (3 Nov, Matt: "I'd like to try and get it in before I playtest - it
+  impacts balance but we're out of whack there anyway"): designed over six canvas rounds, the spec in
+  docs/design/skill_web.md - the petals layout, a runner starts at its class's start, one pool, buy next to what you
+  own, keystones at 15 spent and capstones at 40, each class as four small flowers. With it, the rail in the order the
+  rooms open (Clinic, Workshop, Fence, Home, Radio). Fresh save (SAVE_VERSION 23). Then Matt's playtest.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
@@ -6142,6 +6143,16 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 3 Nov: the skill web designed (docs/design/skill_web.md)
+
+Matt (3 Nov): "the class rings themselves are a bit of a mess and if you compare to poe it's just nowhere close
+aesthetically or choice wise ... the center pitch tree should be the start of concentric circles that spread out and
+interconnect." Six canvas rounds (https://claude.ai/artifact/4iDWcoDcXdut6c8TrQF8ku): two layouts (orbits, petals -
+Matt took the petals), where a runner starts (its class's start), one pool and home no longer owning the centre, longer
+paths and a capstone at 40 spent, today's nodes in the new slots (every keystone kept, one capstone a class stepped
+down, nothing cut), the final screen, then each class as four small flowers (Matt: "Yes much better"). Matt asked for
+the build before his playtest, and the rail in the order the rooms open with it. No code changed in this commit.
 
 ## 2 Nov (night): 0.11.0 - the lot (SAVE_VERSION 22)
 

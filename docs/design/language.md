@@ -17,7 +17,7 @@ cloud scratchpad as lang_inventory.md; the decisions below are the record.
 | Was | Now | Notes |
 |---|---|---|
 | the Pitch / the Yard (home, the rail room, its nine buildings) | **Home** | Rail "Home"; "built at home", "turns up at home"; the deeds are "the deeds to the place". "the Yard" retired. |
-| the Pitch tree / "the Yard" key / Pitch points (Training's common tree) | **the shared tree / shared points** | "Reset the shared tree". |
+| the Pitch tree / "the Yard" key / Pitch points (Training's common tree) | **the centre** (superseded 3 Nov) | The skill web (docs/design/skill_web.md) has no shared tree or shared points: the centre is part of each runner's web. |
 | Guard, pace | **kept** | Each gets its one-line definition where it first shows. |
 | joint | **pair** ("paired", "the pair pays") | The genre reads a pair bonus at once. |
 | the ring | **the Paragon board** | Diablo's name; paragon itself stays. |
