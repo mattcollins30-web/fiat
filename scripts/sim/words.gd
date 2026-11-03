@@ -2115,7 +2115,8 @@ const WEB_SCREEN := {
 	"reset": "Reset the web for %s", "reset_copied": "Web reset: the build code was copied first, to paste back",
 	"key_yours": "Yours", "key_take": "Can take: next to one you own", "key_dark": "Not reachable yet", "key_big": "Keystone: %d spent first · capstone: %d",
 	"key_paragon": "Paragon points", "key_paragon_free": "%d free",
-	"centre": "The centre", "between": "Between the %s and %s", "the_class": "The %s",
+	"centre_name": "The Pitch",     # the centre's name on the web and on the card's where line (0.12.2): the rail's word, the rename parked
+	"centre": "The Pitch", "between": "Between the %s and %s", "the_class": "The %s",
 	"tip": "the tip", "flower": "the flower", "run": "the run",
 	"small": "a small node", "notable": "a notable", "keystone": "a keystone", "capstone": "a capstone", "start": "the start", "ring": "the paragon ring",
 	"no_past": "No past yet", "level": "Level %d", "pick_past": "Pick one above: what the runner was, and how they fight now. Free for a new runner",

@@ -3383,9 +3383,10 @@ func _element_checks(main) -> void:
 	for tn in wv2._axis:
 		_check(not wv2.region_words(tn).contains("meter") and not (wv2._trees[tn].has("element") and wv2.region_words(tn).contains("free")), "a region's label still carries the key's words: '%s'" % wv2.region_words(tn))
 		# the name alone (28 Oct, Matt: "it should just say 'Rat Man' ... just the class names"): no "The", no "·" and what follows
+		# (the centre's is the room's own name, "The Pitch", as the rail - 0.12.2)
 		var rw: String = wv2.region_words(tn)
 		var tt: Dictionary = wv2._trees[tn]
-		_check(not rw.contains("·") and not rw.begins_with("The ") and (rw == str(tt["class"]) if (str(tt.get("class", "")) != "" and not tt.has("element")) else true), "a region's label isn't its name alone: '%s'" % rw)
+		_check(not rw.contains("·") and (not rw.begins_with("The ") or tn == "centre") and (rw == str(tt["class"]) if (str(tt.get("class", "")) != "" and not tt.has("element")) else true), "a region's label isn't its name alone: '%s'" % rw)
 	_check(wv2.region_words("The Rat Man") == "Rat Man" and wv2.plain_name("The cold") == "Cold", "the Rat Man's label reads '%s'" % wv2.region_words("The Rat Man"))
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
@@ -22244,7 +22245,7 @@ func _web_checks(main) -> void:
 	# the twelve names (the six classes', the six elements') and the ring's: placed for the whole web, each on no node and
 	# no other name, near its region's point, and on the canvas there; closer in, still on no node
 	var keys: Array = wv._axis.keys()
-	_check(keys.size() == Data.CLASSES.size() + Data.ELEMENT_TREES.size() + 1, "the web names %d regions, not the six classes, six elements and the ring: %s" % [keys.size(), str(keys)])
+	_check(keys.size() == Data.CLASSES.size() + Data.ELEMENT_TREES.size() + 2 and keys.has("centre") and keys.has("ring"), "the web names %d regions, not the six classes, six elements, the centre and the ring: %s" % [keys.size(), str(keys)])
 	for cd in Data.CLASSES:
 		_check(wv._axis.has("class:" + str(cd["name"])) and wv.region_words("class:" + str(cd["name"])) == str(cd["name"]), "%s's name isn't on the web" % cd["name"])
 	for et in Data.ELEMENT_TREES:
@@ -22253,7 +22254,7 @@ func _web_checks(main) -> void:
 	for k_i in range(keys.size()):
 		var ax: Dictionary = wv._axis[keys[k_i]]
 		var bx: Rect2 = ax.get("label_box", Rect2())
-		_check(ax.has("label_box") and bx.get_center().distance_to(ax["anchor"]) <= wv.LABEL_NEAR, "%s's name isn't by its region: %s from %s" % [keys[k_i], str(bx), str(ax.get("anchor"))])
+		_check(ax.has("label_box") and bx.get_center().distance_to(ax["anchor"]) <= wv.label_near(str(keys[k_i])), "%s's name isn't by its region: %s from %s" % [keys[k_i], str(bx), str(ax.get("anchor"))])
 		for id in wv.layout:
 			if bx.grow(wv.radius_of(wv.node_of(id))).has_point(wv.layout[id]):
 				_check(false, "%s's name covers the node %s" % [keys[k_i], id])
@@ -22727,16 +22728,16 @@ func _m47_checks(main) -> void:
 		var rc: Rect2 = wv.pick_label_rects.get(str(id), Rect2())
 		var me: Vector2 = wv.to_screen(wv.layout[str(id)])
 		var my_r: float = wv.radius_of(wv.node_of(str(id))) * wv.zoom
-		_check(rc.size.x > 0.0 and int(wv.pick_label_hits.get(str(id), 99)) == 0 and Vector2(clampf(me.x, rc.position.x, rc.end.x), clampf(me.y, rc.position.y, rc.end.y)).distance_to(me) >= my_r and Rect2(Vector2.ZERO, wv.size).encloses(rc),
+		_check(rc.size.x > 0.0 and int(wv.pick_label_hits.get(str(id), 999)) == 0 and Vector2(clampf(me.x, rc.position.x, rc.end.x), clampf(me.y, rc.position.y, rc.end.y)).distance_to(me) >= my_r and Rect2(Vector2.ZERO, wv.size).encloses(rc),
 			"the picked %s's name covers nodes: %d, at %s" % [str(wv.node_of(str(id)).get("name", id)), int(wv.pick_label_hits.get(str(id), 99)), str(rc)])
-		# read here too, not on the view's own count: no node's disc and no region's name under the plate
+		# read here too, not on the view's own count: no node's disc and no name's block under the plate
 		var under: Array = []
 		for oid in wv.layout:
 			var q: Vector2 = wv.to_screen(wv.layout[oid])
 			if str(oid) != str(id) and Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y)).distance_to(q) < maxf(3.0, wv.radius_of(wv.node_of(str(oid))) * wv.zoom):
 				under.append(oid)
 		for ak in wv._axis:
-			if wv.label_rect(str(ak)).size.x > 0.0 and wv.label_rect(str(ak)).intersects(rc):
+			if wv.block_rect(str(ak)).size.x > 0.0 and wv.block_rect(str(ak)).intersects(rc):
 				under.append(ak)
 		_check(under.is_empty(), "the picked %s's name runs over %s" % [str(wv.node_of(str(id)).get("name", id)), str(under)])
 	# the speed (merge 47's second round: 38-41 ms a label a redraw before): a redraw at the whole web with a node picked
@@ -22776,10 +22777,10 @@ func _m47_checks(main) -> void:
 
 
 ## 0.12.1 (3 Nov, Matt: "whats with the lack of art?"): the web's art back on the new layout. Every node a picture or its
-## effect's glyph; a small one a dot at the whole web, its picture or glyph from SMALL_ART_ZOOM; a picture dropped into
-## art/nodes/ found by name with no code change (and gone again, the glyph back); the regions' emblems - six elements,
-## twelve class trees, the centre, the ring - each on no node, no name and no other emblem; the runner's class's
-## portrait under its start, clear of the names and emblems.
+## effect's glyph; a small one a dot at the whole web, its picture or glyph from SMALL_ART_ZOOM; a picture dropped where
+## the lookup reads found by name with no code change (and gone again, the glyph back); the regions' emblems centred over
+## their names (0.12.2) - six elements, twelve class trees in their classes' pairs, the centre, the ring - each block on
+## no node and no other; the runner's class's portrait centred on its name, under no other name.
 func _web_art_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -22849,38 +22850,89 @@ func _web_art_checks(main) -> void:
 		_check(wv.small_art_of(drop) == "glyph" and not FileAccess.file_exists(drop_path), "the dropped picture taken away, %s shows '%s'" % [drop, wv.small_art_of(drop)])
 	WebView.node_art_dir = art_dir_was
 	WebView.art_rescan()
-	# the emblems: six elements, twelve class trees, the centre and the ring, each on no node, no name, no other emblem
-	var want: Array = Data.ELEMENT_TREES.map(func(t): return str(t["name"])) + Data.TREES.filter(func(t): return str(t.get("class", "")) != "").map(func(t): return str(t["name"])) + [Data.COMMON_TREE, Data.RING_TREE]
-	_check(want.size() == 20 and want.all(func(k): return wv._emblems.has(k) and wv._emblems[k]["tex"] != null), "the emblems placed aren't the twenty: %s" % str(want.filter(func(k): return not wv._emblems.has(k) or wv._emblems[k]["tex"] == null)))
+	# the emblems over their names (0.12.2, Matt: "centered above their names"): an element's one, a class's two (its
+	# trees') side by side, the centre's over "The Pitch", the ring's over "Ring" - twenty; each block (the name and its
+	# emblems) on no node, no other block, on the canvas; each emblem's middle on its name's, its foot just over the words
+	var want := {}
+	for et in Data.ELEMENT_TREES:
+		want["el:" + str(et["name"])] = 1
+	for cd in Data.CLASSES:
+		want["class:" + str(cd["name"])] = 2
+	want["centre"] = 1
+	want["ring"] = 1
+	var n_em := 0
+	for k in want:
+		n_em += Array(wv._axis.get(k, {}).get("emblems", [])).size()
+		_check(Array(wv._axis.get(k, {}).get("emblems", [])).size() == want[k], "%s has %d emblems over its name, not %d" % [k, Array(wv._axis.get(k, {}).get("emblems", [])).size(), want[k]])
+	_check(n_em == 20 and wv.region_words("centre") == Words.WEB_SCREEN["centre_name"], "the web's emblems are %d, not twenty, or the centre's name reads '%s'" % [n_em, wv.region_words("centre")])
 	var canvas := Rect2(Vector2.ZERO, wv.size)
 	for zl in [wv.fit_zoom(), 1.0, 2.0]:
 		wv.focus_all()
 		wv.zoom = zl
 		wv.count_batches()
-		var drawn: Array = wv.emblem_rects.keys()
 		if is_equal_approx(zl, wv.fit_zoom()):
-			_check(want.all(func(k): return drawn.has(k) and canvas.encloses(wv.emblem_rects[k])), "at the whole web the emblems drawn are %s" % str(drawn))
-		for k in drawn:
-			var er: Rect2 = wv.emblem_rects[k]
-			for id in wv.layout:
-				var q: Vector2 = wv.to_screen(wv.layout[id])
-				if er.grow(wv.radius_of(wv.node_of(id)) * zl).has_point(q):
-					_check(false, "at zoom %.2f %s's emblem covers %s" % [zl, k, id])
-			for ak in wv._axis:
-				if wv.label_rect(str(ak)).intersects(er):
-					_check(false, "at zoom %.2f %s's emblem sits on %s's name" % [zl, k, ak])
-			for k2 in drawn:
-				if str(k2) > str(k) and wv.emblem_rects[k2].intersects(er):
-					_check(false, "at zoom %.2f %s's emblem sits on %s's" % [zl, k, k2])
-	# the portrait under the runner's start: there, centred on it, under no name or emblem
+			_check(wv.emblem_rects.size() == 20, "at the whole web %d emblems drawn, not twenty" % wv.emblem_rects.size())
+		var keys: Array = wv._axis.keys()
+		for k in keys:
+			var words: Rect2 = wv.label_rect(str(k))
+			var ers: Array = wv.emblem_rects_of(str(k))
+			if not ers.is_empty():
+				var row := Rect2(ers[0].position, Vector2.ZERO).merge(ers.back())
+				_check(absf(row.get_center().x - words.get_center().x) <= 1.0 and words.position.y - row.end.y >= 0.0 and words.position.y - row.end.y <= wv.EMBLEM_LIFT + 1.0,
+					"at zoom %.2f %s's emblems aren't centred just over its name: %s over %s" % [zl, k, str(row), str(words)])
+			var blk: Rect2 = wv.block_rect(str(k))
+			if is_equal_approx(zl, wv.fit_zoom()):
+				_check(canvas.encloses(blk), "%s's name and emblems run off the canvas at the whole web: %s" % [k, str(blk)])
+			# a fixed name (0.12.2, the designer's places): its block centred on its point; what it runs into, and how far
+			if wv._axis[k].get("fixed", false):
+				_check(blk.get_center().distance_to(wv.to_screen(wv._axis[k]["anchor"])) <= 2.0, "at zoom %.2f %s's block is %.1f px off its place" % [zl, k, blk.get_center().distance_to(wv.to_screen(wv._axis[k]["anchor"]))])
+			var bdim: Dictionary = wv.block_dims(str(k), zl)
+			var bs: Array = [bdim["ts"], bdim["es"]]
+			_check(bs.size() == 2 and float(bs[0]) >= wv.NAME_MIN and float(bs[0]) <= wv.NAME_SIZE and (Array(wv._axis[k].get("emblems", [])).is_empty() or (float(bs[1]) >= wv.EMBLEM_MIN and float(bs[1]) <= wv.EMBLEM_MAX)),
+				"at zoom %.2f %s's words or emblems are out of their sizes: %s" % [zl, k, str(bs)])
+			var clash: Array = _block_clash(wv, blk)
+			_check(clash.is_empty(), "at zoom %.2f %s's name or emblems run into %s" % [zl, k, ", ".join(clash)])
+			for k2 in keys:
+				if str(k2) > str(k) and wv.block_rect(str(k2)).intersects(blk):
+					_check(false, "at zoom %.2f %s's name and emblems sit on %s's" % [zl, k, k2])
+	# every name fixed, each fitted (none left touching), the elements' out past their capstones and inside the ring
+	# the stored fit (NAME_FIT, CLASS_NAME_AT, ELEMENT_NAME_AT) still clears every node, the words LABEL_SLACK wide, at
+	# the whole web of this canvas and of one 4 px shorter (Windows' margin); else what the fit would take now
+	_check(wv._axis.keys().all(func(k): return wv._axis[k].get("fixed", false)), "a name isn't at a fixed place")
+	for hh in [wv.size.y, wv.size.y - 4.0]:
+		var zf: float = clampf(minf(wv.size.x / wv._bounds.size.x, hh / wv._bounds.size.y), wv.ZOOM_MIN, wv.ZOOM_MAX)
+		var unfit: Dictionary = wv.stored_unfit(zf)
+		_check(unfit.is_empty(), "at the whole web of a %d px canvas the stored names touch nodes: %s (the fit now: %s)" % [int(hh), str(unfit), str(wv.fit_table(zf)) if not unfit.is_empty() else ""])
+	for et in Data.ELEMENT_TREES:
+		var er: float = Vector2(wv._axis["el:" + str(et["name"])]["anchor"]).length()
+		_check(er >= wv.ELEMENT_NAME_R and er <= wv.ELEMENT_NAME_MAX, "%s's name sits at r %.0f" % [et["name"], er])
+	# the picked node's label (Training's default view: the start's notable) clear of every name's block, and the card's
+	# place for a centre node in the web's word for it, "The Pitch" (0.12.2, the review)
+	wv.focus_all()
+	var dpick: String = Data.node_id_named("Stalking/Early doors")
+	bk._pick(dpick)
+	main.refresh()
+	wv.selected = dpick
+	wv.count_batches()
+	var prc: Rect2 = wv.pick_label_rects.get(dpick, Rect2())
+	var on_names: Array = wv._axis.keys().filter(func(ak): return wv.block_rect(str(ak)).intersects(prc))
+	_check(prc.size.x > 0.0 and on_names.is_empty(), "the picked label's plate %s sits on %s" % [str(prc), str(on_names)])
+	bk._pick(Data.web_of_slot("h0"))
+	main.refresh()
+	_check(bk._where.text.begins_with("The Pitch") and bk._where.text.begins_with(Words.WEB_SCREEN["centre_name"]), "a centre node's card says it's in '%s'" % bk._where.text)
+	bk._pick("")
+	wv.selected = ""
+	main.refresh()
+	# the portrait: centred on the runner's class's name, under no other name or emblem
 	wv.focus_all()
 	wv.count_batches()
 	var pr: Rect2 = wv.portrait_rect
-	_check(pr.size.x > 0.0 and pr.get_center().distance_to(wv.to_screen(wv.layout[start])) < 1.0 and canvas.encloses(pr), "the Poacher's portrait isn't under his start: %s" % str(pr))
+	var mine: String = "class:Poacher"
+	_check(pr.size.x > 0.0 and pr.get_center().distance_to(wv.label_rect(mine).get_center()) < 1.0 and canvas.encloses(pr) and pr.encloses(wv.block_rect(mine)),
+		"the Poacher's portrait isn't on his name: %s, the name %s" % [str(pr), str(wv.label_rect(mine))])
 	for ak in wv._axis:
-		_check(not wv.label_rect(str(ak)).intersects(pr), "the portrait sits under %s's name" % ak)
-	for k in wv.emblem_rects:
-		_check(not wv.emblem_rects[k].intersects(pr), "the portrait sits under %s's emblem" % k)
+		if str(ak) != mine:
+			_check(not wv.block_rect(str(ak)).intersects(pr), "the portrait sits under %s's name or emblems" % ak)
 	_check(wv.count_batches() < wv.BATCH_MAX, "the web's art takes %d draw calls at the whole web" % wv.count_batches())
 	wv.zoom = 1.4
 	_check(wv.count_batches() < wv.BATCH_MAX, "the web's art takes %d draw calls close in" % wv.count_batches())
@@ -22890,7 +22942,21 @@ func _web_art_checks(main) -> void:
 	bk.selected = ""
 	bk._shown = ""
 	main.refresh()
-	print("the web's art ok: %d nodes a picture or a glyph, the smalls close in, an art drop, %d emblems, the portrait" % [Data.web_ids().size(), want.size()])
+	print("the web's art ok: %d nodes a picture or a glyph, the smalls close in, an art drop, %d emblems over their names, the portrait on the class's name" % [Data.web_ids().size(), n_em])
+
+
+## What a name's block runs into on screen (0.12.2): each node whose disc reaches into it, how far in (px), deepest
+## first. Links may run under a block (its plate keeps the words read over them).
+func _block_clash(wv, blk: Rect2) -> Array:
+	var hits: Array = []
+	for id in wv.layout:
+		var q: Vector2 = wv.to_screen(wv.layout[id])
+		var r: float = wv.radius_of(wv.node_of(id)) * wv.zoom
+		var d: float = Vector2(clampf(q.x, blk.position.x, blk.end.x), clampf(q.y, blk.position.y, blk.end.y)).distance_to(q)
+		if d < r:
+			hits.append([r - d, "node %s %.1f px" % [id, r - d]])
+	hits.sort_custom(func(x, y): return x[0] > y[0])
+	return hits.map(func(h): return h[1])
 
 
 ## The band's one counter (3 Nov, the skill web): "N points free".

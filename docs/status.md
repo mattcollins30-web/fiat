@@ -4,10 +4,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (3 Nov):** 0.12.1 - the skill web (0.12.0) with its art back: small nodes' pictures and glyphs, the regions'
+- **Now (3 Nov):** 0.12.2 - the skill web (0.12.0) with its art back (0.12.1) and every region's name with its emblem
+  centred above it, the class portrait centred on the class name (0.12.2): small nodes' pictures and glyphs, the regions'
   emblems, the class portrait. Fresh save from 0.12.0 (SAVE_VERSION 23). The spec: docs/design/skill_web.md. Art
   flagged: one job (Guarded, the centre's Guard small).
-- **Next:** Matt's playtest of 0.12.1, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
+- **Next:** Matt's playtest of 0.12.2, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
   The language redesign (docs/design/language.md) - the rename pass, parked 3 Nov.
 - **Matt's word wanted (the skill web, 3 Nov):** the Quartermaster's Manual has no rule left (its words still promise
   more than 2 elements); 25 hung notables have no slot on the web (data.gd WEB_DROPPED - the three open gates could
@@ -6150,6 +6151,18 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 3 Nov (evening): 0.12.2 - names with their emblems
+
+Matt: "The class art needs to be centered to the class name and the icons for each elemnt, pitch and class need to be
+centered above thier names too." Each region's name now sits at a fixed place in its region - a class in the heart of
+its four flowers (the four diagonal classes about 6 degrees round, where the heart is too shallow for an upright name:
+CLASS_NAME_AT), an element past the tip of its run, the centre ("The Pitch", new on the web) below the hub - with its
+emblem (a class's two trees' as a pair) centred above it on a dark plate, sized as data (NAME_FIT) to clear every
+node, Windows' wider text allowed for; the portrait centred on the class name; the picked node's name never covers a
+name; the ring's counts under their names; the node card says "The Pitch" for the hub too. Reviewed twice (fit; its
+findings fixed and guarded). Smoke green in the cloud and on Matt's machine; lint 0. At the whole web the class names
+draw at the 10 px minimum (the elements' about 14): they grow as you zoom.
 
 ## 3 Nov (afternoon): 0.12.1 - the web's art back
 

@@ -1062,7 +1062,7 @@ func _picture_of(id: String) -> Texture2D:
 	return pic
 
 
-## Where a node sits, in words: "The cold · the tip · a notable", "The Poacher · Stalking · a notable", "The centre · a
+## Where a node sits, in words: "The cold · the tip · a notable", "The Poacher · Stalking · a notable", "The Pitch · a
 ## small node", "Between the Poacher and the cold · a small node"; `short` leaves the kind off.
 func where_words(id: String, short := false) -> String:
 	var WS: Dictionary = Words.WEB_SCREEN
