@@ -185,6 +185,19 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      with the wagers taken (no meds, a bigger gang, the clock, harder fire), keyed on them; the run's med buttons say
      "No meds: Kev's wager" when shut. Smoke: a signal's odds fall with No meds on against off; the shut meds' line.
      The level kept at 22 on this death is the rule once the Quartermaster's down (all four heads beaten) - as designed.
+  18. UI: nothing in the game says what a death costs - back to level 1 with a trait before the Quartermaster falls,
+     the level kept after, the worn kit lost unless insured (Matt: "Nothing in the game says this - if anything it should
+     go on the map screen maybe"). On the Map's site card, by Set off: a line on what a death here costs this runner now
+     ("A death: back to level 1 · the kit worn" / "A death: the kit worn, the level kept"), the insured kit excepted.
+     Canvas first, fit-checked; a smoke check the line follows death_keeps_level and the insurance.
+  19. UI (rework): Kev's wagers menu (Matt: "that menu needs a revamp as its pretty bad"). With item 17's fix (the odds
+     with the wager on): a canvas round first - each wager's cost and pay side by side, the odds with and without it,
+     what's on for this run said on the site card and the fight screen.
+- **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
+  (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
+  Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
+  Ingot sack, the Pocket watch); Matt: "Can you fix my save to get the gear I had on the doorman back". The saves before,
+  beside them as *.before_restore_4nov.
 
 ## First slice (2026-10-01)
 
