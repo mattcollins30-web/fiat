@@ -89,6 +89,15 @@ Later, if they still look right:
   Today: three events (convoy, trapped, cache) at EVENT_ODDS 0.3, a log line each, no choice, two of three pure
   upside. To design with Matt (canvas mockups, test art before any manifest); builds on "Materials in the pack".
 
+## Act two: why play past the campaign, and signals worth playing (raised 4 Nov, Matt, the 0.12.2 playtest)
+
+Matt, at level 28 on the Doorman, 5.7 h, after the XP read: "clearing the campaign and just playing the game - why ?
+why state in the story opener that you have a camp/pitch and tins are currency - but why ?" and "radio signals are
+just too weak to sustain play - if they were more fun then I would've been willing to grind, bugs notwithstanding."
+Design, ahead of the numbers plan (XP taper, the order's and the County's levels, repeats, aimed crafting - proposed
+4 Nov, held): the numbers only move the wall if there's a reason to cross it. To talk through with Matt before any
+design: what the camp and the money are for past the campaign; what makes a signal a thing worth running.
+
 ## Leaving a head's thing behind should cost its room (parked 1 Nov, Matt, during the 0.10.3 playtest)
 
 Matt: "we made the vet's bag and other quest items an actual item that drops - what's the penalty for just leaving it on
