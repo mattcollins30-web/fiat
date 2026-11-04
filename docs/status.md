@@ -244,6 +244,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      full name, fitted, falling back to the base; a unique's and a set's in its colour. While there: a melee primary
      reads "No rounds" in the card's corner - say nothing (or "Melee") for a blade. Smoke: a worn unique's card reads its
      unique name; a melee primary's line doesn't say rounds.
+  28. Bug (UI, clipping): the Kit's "Loot rules · 2 on" button sits over the stash bar's Select button (screenshot,
+     the Meds tab with the class tabs Shared / Doorman / Doorman 2 showing; Matt: "loot rules clipping"). armoury.gd
+     places it at a fixed x (GRID_X + rx, RULES_W wide) on the Select button's row, but the bar grew (the class's
+     second tab, "Doorman 2", with the Stash's Dry store) and pushed Select under it. Fix: the button placed after the
+     bar's last button (or the bar lays it out), the words fitted ("Loot rules · 2" short form). Smoke: with every tab
+     the bar can show, the rules button and the bar's buttons don't overlap at 1920x1080 and the smallest window.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
