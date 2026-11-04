@@ -118,5 +118,7 @@ With chains, a signal's XP and drops are a link's, so repeats matter less; the r
 | The Issuer down, the Issue, the County open | about 6-7 h | about 9 h |
 | Level 50 | about 12 h | about 15 h |
 
-Next: the canvas (the flow from the campaign's end to the County; a chain's breaks on the run screen; the town on the
-Map), Matt's picks on it, this note rewritten as the spec, and one build with the fix round and the skill web.
+The canvas (4 Nov): https://claude.ai/artifact/W7fdXUELCWNCKdWidiYU5J - the road by the hour (Main), a night on the
+air's break between links (Night), the town on the Map with its wages (Town). Figures on it are illustrative (the
+wages, the haul, the odds). Next: Matt's word on the boards, this note rewritten as the spec, and one build with the
+fix round and the skill web.
