@@ -112,6 +112,15 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      (NAME_H) the check measures, at his window's size and scale. First: reproduce at his window and scale and make
      the check go red on it; then the fix (the name sized from the font as drawn, or the badge beside the name).
      Top of the fix round.
+  9. Bug: the Map's odds stop reading (screenshot, 4 Nov 10:44 game time, level 13 Doorman on the Pitch, the Bank
+     picked: "A bad idea" over "Reading the odds", every pin grey, "How long you last" unread; Matt: "looks like the
+     odds have given up - no calculations are happening"). The record agrees: since 10:06, 3 of 12 runs set off with
+     the odds unread (odds -1 in fiat.record.jsonl, all at the Shopping Centre, levels 12-13). Not a script error (the
+     log has only the known rounds_panel format line). Suspects, to check against Matt's save: a read that never
+     settles because what it hangs on keeps moving (main._odds_base / sim.odds_state: weather, night, HP tenths) faster
+     than a late save's harder sites read at 5 ms a frame; or a read left half-done (_odds_part) that is never asked
+     again. First: load his save headless, pick the Bank, and count frames to settled; a smoke check that every open
+     site's odds settle within N frames on a late save. Goes with item 3 (read only the picked place's odds).
 
 ## First slice (2026-10-01)
 
