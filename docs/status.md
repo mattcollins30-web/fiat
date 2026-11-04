@@ -96,6 +96,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   7. Bug: the same card says "level 1" while the banner over the runner cards says the new runner "joins at level 8"
      (the crew's floor, 30 Oct); the card's words are fixed text (scripts/ui/barracks.gd, _node_forms) and never read
      the floor. Matt: "the level 1 wording is incorrect there anyway". The card says the level the runner joins at.
+  8. Bug, a fix that didn't hold: the rail's "Away" badge still sits over "The Map" while a runner is away (screenshot,
+     Pleasure Park run 1 of 5; Matt: "you never fixed the rail clipping here when a runner is away"). Parked 30 Oct
+     (item 2), fixed in rail_button.gd (_place: the name up, the badge under it) with a smoke check
+     (_l32_rail_badge_checks) that passes - so the check measures something other than Matt's screen. On his screen
+     every room's name sits low in its row, not only the Map's: the name's text draws taller than the 38 px box
+     (NAME_H) the check measures, at his window's size and scale. First: reproduce at his window and scale and make
+     the check go red on it; then the fix (the name sized from the font as drawn, or the badge beside the name).
+     Top of the fix round.
 
 ## First slice (2026-10-01)
 
