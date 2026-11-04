@@ -57,6 +57,7 @@ to run by hand, the `art.flag` handoff missed for want of reading pixellab_lesso
 | A playtest item | "How work goes in" (parked) | docs/status.md's parked list | built only when Matt says |
 | Anything new Matt raises | "The project manager" (the plan, the creep rule) | docs/design/ideas_backlog.md | say where it went, or "no, because" |
 | A mockup | the style guide's glossary; "How work goes in" (rendered first) | the design canvas | Matt's word before the build |
+| A build in the cloud (builder agents) | docs/process/cloud_builds.md | tools/cloud/ (setup, smoke, lint, merge, snap, canvas_look) | delivery by its section 4 |
 
 ## Running things - on Matt's machine, never the cloud
 
