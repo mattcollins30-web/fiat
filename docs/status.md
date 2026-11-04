@@ -159,6 +159,15 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      gets its picture on its box (a notable's and a keystone's bigger, framed as the web frames them; a filler's small,
      or its picture as the box's mark). Canvas first, fit-checked at 1920x1080 and the smallest window; a smoke check
      that every Dial node's box shows its picture.
+  15. UI (rework): the Expeditions' place card (screenshot, Swansea, level 9; Matt: "this needs a rework too"). What
+     reads wrong, to take to the canvas: no art (the place, the lead's portrait, the cargo's items - all exist
+     elsewhere); the steps not yet built shown as greyed buttons and lines named for Bunkhouse upgrades ("Comes with A
+     hand along", "The quotas come with More bunks"); the cargo as dropdowns over price chips ("643 notes ▾" over
+     "All · 321k tins") with no word on what sending cargo does; the risk said twice the opposite way round ("95% · A
+     bad idea" on the bar, "0% odds" under it) and "Send them" still pressable in red at 95%; a third of the card
+     empty. A canvas round first: the card as it stands against two layouts in the Map's site card's language (its
+     picture header, the party as portraits, the cargo as item cells, one risk figure with the odds' words), fit-
+     checked; Matt picks; then the build with a smoke check on the fit and on one risk figure.
 
 ## First slice (2026-10-01)
 
