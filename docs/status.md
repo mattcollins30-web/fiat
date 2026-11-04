@@ -168,6 +168,23 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      empty. A canvas round first: the card as it stands against two layouts in the Map's site card's language (its
      picture header, the party as portraits, the cargo as item cells, one risk figure with the odds' words), fit-
      checked; Matt picks; then the build with a smoke check on the fit and on one risk figure.
+  16. Design gap: the Vagabond can almost never be paid (screenshot, the Shopping Centre picked over: "Trades: 0 of 3 ·
+     5 tins", a Slick rig at 2,055 and a Hunting revolver at 770, both greyed; Matt: "This event didnt work because i
+     guess it thought i didnt have any tins out with me?"). Right: he takes tins off the run's own take (m["cash"],
+     run_events.md: "tins off the run's"), but fix 46 (E1) priced his gear off its worth (_vag_price: the Fence's price
+     x VAG_SELL_X) so he'd never be a tins pump - a run's take is tens to hundreds of tins, his shelf thousands. Choices
+     for Matt (Claude's pick first): he takes the camp's tins (the home purse, as the Fence does) at today's prices; or
+     his prices back to the run's scale (a few men's tins) with the pump guarded another way. And the card says where
+     the tins come from either way.
+  17. Bug: the odds don't count a wager (slot 1, 4 Nov 13:25: the Doorman, level 22, a level-18 signal at the Parade
+     with Kev's wager "No meds" on; the odds 1.0 at setting off; dead in 15.4 s, 15 of 18 gangs, their fire 12.7, the
+     meds shut). Matt: "my meds wouldnt work or allow me to click + i had paramedics rig + the radio codes odds were
+     100%". The meds were shut by the wager he'd taken (No meds: "the rig's heals and cures stay shut", sim
+     _wagers_on), working as written - but signal_odds and the odds' key never apply a wager's terms, so the Radio read
+     100% for a fight with meds he didn't have; and the fight screen's dimmed meds don't say why. Fix: the odds read
+     with the wagers taken (no meds, a bigger gang, the clock, harder fire), keyed on them; the run's med buttons say
+     "No meds: Kev's wager" when shut. Smoke: a signal's odds fall with No meds on against off; the shut meds' line.
+     The level kept at 22 on this death is the rule once the Quartermaster's down (all four heads beaten) - as designed.
 
 ## First slice (2026-10-01)
 
