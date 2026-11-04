@@ -38,6 +38,9 @@ const FACE := 64                           # the band's face and the wall's: a c
 const PLATE_W := 236
 const PLATE_H := 84
 const TILE_H := 84                          # the record's tiles (96 → 84, Bands-U A)
+const REC_PIC := 48                         # a record tile's picture cell (BUILD49 U, item 12)
+const REC_ICONS := [["res://art/ui_new/kills.png", "res://art/ui/kills.png"], ["res://art/ui/dps.png"], ["res://art/ui/tins.png", "res://art/ui_new/tins.png"]]     # as the fight's tiles (run.gd TILE_ICONS)
+const REC_FIND_SIZES := [Pal.LINE, 22, 18, 16, 14]     # the find's name drops a size before it shortens
 const PLATES := 5
 const KEY_W := 150                          # a chain or bar row's words before its bar
 const VAL_W := 86                           # and its figure after it
@@ -203,16 +206,30 @@ func _build_record() -> void:
 	var y: float = c["y"]
 	var tw: float = (c["w"] - 2 * PAD - GAP) / 2.0
 	c["tiles"] = []
-	var glyphs := ["skull", "dmg", "cash", "gem"]
+	# the game's own pictures, as the fight's tiles (BUILD49 U, item 12, layout A: the picture left); the dearest find
+	# its own picture in a cell edged in its rarity's colour
 	for k in range(4):
 		var tx: float = c["x"] + PAD + (k % 2) * (tw + GAP)
 		@warning_ignore("integer_division")
 		var ty: float = y + 40 + (k / 2) * (TILE_H + GAP)
 		var t := {}
 		t["panel"] = UI.panel(self, Rect2(tx, ty, tw, TILE_H), UI.box(Pal.BG, 6))
-		t["glyph"] = _glyph(Rect2(tx + 12, ty + 8, 20, 20), glyphs[k], Pal.ACCENT)
-		t["value"] = UI.label(self, Rect2(tx + 12, ty + 26, tw - 24, 32), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
-		t["key"] = UI.label(self, Rect2(tx + 12, ty + 56, tw - 24, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var py: float = ty + (TILE_H - REC_PIC) / 2.0
+		t["frame"] = UI.panel(self, Rect2(tx + 8, py, REC_PIC, REC_PIC), UI.box(Pal.CARD, 6, 2 if k == 3 else 0, Pal.CARD_LINE))
+		var pic := TextureRect.new()
+		pic.position = Vector2(4, 4)
+		pic.size = Vector2(REC_PIC - 8, REC_PIC - 8)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if k < 3:
+			pic.texture = _rec_icon(REC_ICONS[k])
+		t["frame"].add_child(pic)
+		t["pic"] = pic
+		var lx: float = tx + 8 + REC_PIC + 8
+		t["value"] = UI.label(self, Rect2(lx, ty + 12, tx + tw - 8 - lx, 34), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
+		t["key"] = UI.label(self, Rect2(lx, ty + 46, tx + tw - 8 - lx, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["tiles"].append(t)
 	c["status"] = _small(c, y + c["h"] - 30)
 	collection_button = UI.button(self, Rect2(c["x"] + c["w"] - PAD - COLL_BTN_W, y + 6, COLL_BTN_W, 30), false)
@@ -472,11 +489,10 @@ func _show_record() -> void:
 	c["headline"].visible = false
 	c["unit"].visible = false
 	var t: Array = c["tiles"]
-	var find: String = str(rec.get("find", ""))
 	_tile(t[0], ["%d" % int(rec.get("kills", 0))], "most kills, a run")
 	_tile(t[1], [Fmt.num(float(rec.get("dealt", 0.0)))], "most damage, a run")
 	_tile(t[2], [Fmt.money(float(rec.get("cash", 0.0)))], "the best take")
-	_tile(t[3], [find, find.get_slice(" ", find.count(" "))] if find != "" else ["nothing yet"], ("dearest find · %s" % Fmt.money(float(rec.get("find_value", 0)))) if find != "" else "the dearest find", Pal.ACCENT if find != "" else Pal.TEXT_3)
+	_show_find(t[3], rec)
 	var seen: int = sim.operators_lost - int(rec.get("deaths_seen", 0))
 	c["status"].text = ("%d lost on their watch" % seen) if seen > 0 else "no one lost on their watch"     # runs and time alive are THE RUNNER's rows (18 Oct, said once)
 
@@ -485,6 +501,48 @@ func _tile(t: Dictionary, values: Array, key: String, tone := Pal.TEXT) -> void:
 	UI.fit(t["value"], values)
 	t["value"].add_theme_color_override("font_color", tone)
 	UI.fit(t["key"], [key, key.get_slice(" · ", 0)])
+
+
+## A record tile's picture: the first of its paths that's there (as run.gd's icon_tex).
+static func _rec_icon(paths: Array) -> Texture2D:
+	for path in paths:
+		if ResourceLoader.exists(path):
+			return load(path)
+	return null
+
+
+## The dearest find (BUILD49 U, item 12; Matt: "this needs redoing with our art"): its own picture in a cell edged in
+## its rarity's colour, its whole name in that colour, fitted - a size down before it shortens (it was cut to its last
+## word, "Coat"). A record from before kept only the name: the name alone, no picture.
+func _show_find(t: Dictionary, rec: Dictionary) -> void:
+	var find: String = str(rec.get("find", ""))
+	var it: Dictionary = rec.get("find_item", {}) if rec.get("find_item", {}) is Dictionary else {}
+	var tone: Color = Pal.TEXT_3
+	if find != "":
+		tone = Pal.tone_color(Pal.item_tone(it)) if not it.is_empty() else Pal.ACCENT
+		if not it.is_empty() and Pal.item_tone(it) == "":
+			tone = Pal.TEXT                       # a common: plain
+	t["pic"].texture = Items.art(it) if not it.is_empty() and it.has("base") else null
+	(t["frame"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if find != "" else Pal.CARD_LINE
+	t["value"].add_theme_color_override("font_color", tone)
+	t["value"].add_theme_font_size_override("font_size", Pal.LINE)
+	var key: String = ("dearest find · %s" % Fmt.money(float(rec.get("find_value", 0)))) if find != "" else "the dearest find"
+	t["key"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	for fs in [Pal.CELL_TEXT, 14, 13]:          # the worth kept: a size down before it goes
+		t["key"].add_theme_font_size_override("font_size", fs)
+		if UI.text_width(t["key"], key) <= t["key"].size.x:
+			break
+	UI.fit(t["key"], [key, "dearest find"])
+	if find == "":
+		t["value"].text = "nothing yet"
+		return
+	for nm in [find, find.trim_prefix("The ")]:     # the longest ("The Quartermaster's Ledger") drops its "The" at the smallest
+		for fs in REC_FIND_SIZES:
+			t["value"].add_theme_font_size_override("font_size", fs)
+			if UI.text_width(t["value"], nm) <= t["value"].size.x:
+				t["value"].text = nm
+				return
+	UI.fit(t["value"], [find])                 # the last size, shortened with dots
 
 
 func _show_last() -> void:

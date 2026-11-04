@@ -12,6 +12,7 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const SwapCard := preload("res://scripts/ui/swap_card.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
@@ -68,6 +69,7 @@ const LINE_H := 25
 const PAIR_TEXT := 15
 const PAIR_LINE := 20
 const KEY_TABS := 6                                            # (the web's tabs' gap)
+const TABS_W := 780.0                                          # the tabs and the find box at their widest (the Paramedic's corner): the smoke holds it
 # the sum ("Add up to") in the band, under the class's line (Bands-U A: the strip's 54 px pay for the band)
 const SUM_Y := 76                                              # under the points; the class's line goes right, over the classes
 const SUM_H := 3 * Chips.CHIP_H + 2 * Chips.ROW_GAP
@@ -98,6 +100,7 @@ var head_band := {}                # the heading's painted place (10 Oct, Rooms-
 var _kicker: Label
 var _points: Label
 var _unit: Label
+var _unit2: Label                  # under it (BUILD49 V): where the points come from, the rewards' sources on its hover
 var _class_line: Label
 var _notice: Label                 # under the classes: the trait's line, or the armed change's price
 var _line_pills: Array = []        # a glass pill a line, behind the class's line and the notice (12 Oct, Matt: option B, the text brighter)
@@ -134,6 +137,7 @@ var _big_lines: Array = []
 var _big_bar: Panel
 var _big_fill: Panel
 var _big_tick: Panel
+var _swap_card                       # the class swap's card (BUILD49 U, item 6)
 var _node_forms: Array = []          # a node's sentence in its forms, fitted once the buttons have their places
 var _past: Label
 var _train: Button
@@ -189,7 +193,9 @@ func _build_head() -> void:
 	var left_w: float = _words_w()
 	_kicker = UI.label(head, Rect2(x0, 8, left_w, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_points = UI.label(head, Rect2(x0, 30, left_w, 40), "", "SemiBold", Pal.HEADLINE - 6, Pal.ACCENT)
-	_unit = UI.label(head, Rect2(x0, 34, left_w, 34), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_unit = UI.label(head, Rect2(x0, 31, left_w, 24), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_unit2 = UI.label(head, Rect2(x0, 54, left_w, 20), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_unit2.mouse_filter = Control.MOUSE_FILTER_PASS     # the rewards' sources on its hover
 	for k in range(2):
 		var pill := UI.panel(head, Rect2(0, 0, 10, PILL_H), UI.box(PILL_GLASS, 10))
 		pill.visible = false
@@ -246,7 +252,7 @@ func _build_web() -> void:
 	_web.picked.connect(_pick_web)
 	add_child(_web)
 	var x: float = 12.0
-	for k in range(2):
+	for k in range(3):                         # the whole web, the class's corner, the Paragon board (BUILD49 V)
 		var b := UI.button(self, Rect2(x, LANES_Y + 10, 120, 32), false)
 		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
 		b.pressed.connect(_web_jump.bind(k))
@@ -266,6 +272,7 @@ func _build_web() -> void:
 	_find.text_changed.connect(_find_perk)
 	add_child(_find)
 	_lay_tabs()
+	_web.keep_clear = [Rect2(0, 0, TABS_W, WebView.FRAME_TOP), Rect2(_key.position - _web.position, _key.size).grow(4.0)]     # the tabs and the key: no name under them (BUILD49 V)
 
 
 ## The tabs' words and places: "Whole web", "The <Class>'s corner", then the find box after them.
@@ -274,7 +281,7 @@ func _lay_tabs() -> void:
 	var x: float = 12.0
 	for k in range(_web_buttons.size()):
 		var b: Button = _web_buttons[k]
-		var words: String = Words.WEB_SCREEN["whole"] if k == 0 else (Words.WEB_SCREEN["corner"] % cls if cls != "" else Words.WEB_SCREEN["corner_short"])
+		var words: String = Words.WEB_SCREEN["whole"] if k == 0 else (Words.WEB_SCREEN2["paragon"] if k == 2 else (Words.WEB_SCREEN["corner"] % cls if cls != "" else Words.WEB_SCREEN["corner_short"]))
 		b.text = words
 		b.size.x = ceilf(UI.text_width(b, words)) + 40.0
 		b.position.x = x
@@ -293,10 +300,13 @@ func _find_perk(words: String) -> void:
 	_web.pick(id)
 
 
-## A tab: the whole web, or the runner's corner (its class's four flowers and its two elements).
+## A tab: the whole web, the runner's corner (its class and its two elements' columns), or the Paragon board (the
+## ring's arc by its class).
 func _web_jump(k: int) -> void:
 	if k == 1 and sim != null and sim.cls != "":
 		_web.focus_class(sim.cls)
+	elif k == 2 and sim != null:
+		_web.focus_ring(str(sim.cls))
 	else:
 		_web.focus_all()
 
@@ -373,6 +383,10 @@ func _build_panel() -> void:
 	_train = UI.button(_panel, Rect2(CP, CARD_H - CP - 52, iw, 52), true)
 	_train.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 2)
 	_train.pressed.connect(_on_train)
+	_swap_card = SwapCard.new()                # BUILD49 U item 6: a class not yet run, over the node card
+	_swap_card.position = Vector2(SIDE_X, LANES_Y)
+	add_child(_swap_card)
+	_swap_card.swap.pressed.connect(_on_train)
 	# the pairs: two rows, a dot (lit when done) and three lines each
 	_pairs_panel = UI.panel(self, Rect2(SIDE_X, PAIRS_Y, SIDE_W, PAIRS_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_pairs_head = UI.head(_pairs_panel, Rect2(CP, 6, iw, 26), Words.WEB_SCREEN["pairs"])
@@ -468,7 +482,7 @@ static func _sentence(nd: Dictionary) -> String:
 ## The panel's chip: a notable with a figure shows the figure; a keystone or capstone its kind; a plain node its figure;
 ## a skill node "Skill" (BUILD48 item 2, Matt: "skills identified as notable when they should be labelled 'skill'").
 static func _chip_words(nd: Dictionary) -> String:
-	if nd.has("skill"):
+	if nd.has("skill") or str(nd.get("web_kind", "")) == "skill":
 		return Words.WEB_SCREEN["skill_chip"]
 	if nd.get("capstone", false):
 		return "Capstone"
@@ -566,8 +580,13 @@ func _show_head() -> void:
 	_points.add_theme_color_override("font_color", Pal.ACCENT if free > 0 else Pal.TEXT_2)
 	_unit.position.x = _points.position.x + ceilf(UI.text_width(_points, _points.text)) + 14
 	_unit.size.x = _kicker.position.x + _kicker.size.x - _unit.position.x
+	_unit2.position.x = _unit.position.x
+	_unit2.size.x = _unit.size.x
 	var cls_n: String = str(sim.cls) if sim.cls != "" else "class"
-	UI.fit(_unit, [WS["spent"] % [sim.web_spent(), sim.web_points(), cls_n], WS["spent_mid"] % [sim.web_spent(), sim.web_points()], WS["spent_short"] % [sim.web_spent(), sim.web_points()], ""])
+	var W2: Dictionary = Words.WEB_SCREEN2      # version two (BUILD49 V): two a level, and rewards; the rewards' sources on the hover
+	UI.fit(_unit, [W2["spent"] % [sim.web_spent(), sim.web_points()], ""])
+	UI.fit(_unit2, [W2["from"] % cls_n, W2["from_mid"], W2["from_short"], ""])
+	_unit2.tooltip_text = rewards_words()
 	_class_line.text = ""                  # the class's sentence is its card's tooltip now (14 Oct); the notice is the line
 	_class_line.visible = false
 	for k in range(Data.CLASSES.size()):
@@ -594,6 +613,39 @@ func _show_head() -> void:
 	else:
 		_notice.text = ""
 	_lay_lines()
+
+
+## The reward points' sources (sim.web_rewards), a line each, for the band's hover: "Reward points: 3 of 22", then
+## "+1 the Gamekeeper's first fall" and the rest; none yet, how they come.
+func rewards_words() -> String:
+	var W2: Dictionary = Words.WEB_SCREEN2
+	var rw: Dictionary = sim.web_rewards()
+	var from: Array = rw.get("from", [])
+	if from.is_empty():
+		return "%s\n%s" % [W2["rewards_none"], W2["rewards_how"]]
+	var lines: Array = [W2["rewards"] % [int(rw.get("points", 0)), int(rw.get("of", REWARDS_ALL))]]
+	for r in from:
+		lines.append(reward_line(r))
+	return "\n".join(lines)
+
+
+const REWARDS_ALL := 22                    # skill_web.md: 11 heads, 9 chapters, 2 for the Issue
+
+
+## One source's line (sim.web_rewards' {"key", "points", "why"}): "+1 the Gamekeeper's first fall", "+1 Kev's story:
+## <the paper>", "+2 the Issue".
+static func reward_line(r: Dictionary) -> String:
+	var W2: Dictionary = Words.WEB_SCREEN2
+	var key: String = str(r.get("key", ""))
+	var pts: int = int(r.get("points", 1))
+	var why: String = str(r.get("why", ""))
+	if key.begins_with("head:"):
+		return W2["reward_head"] % [pts, ("the " + why.substr(4)) if why.begins_with("The ") else why]
+	if key.begins_with("kev:"):
+		return W2["reward_kev"] % [pts, why]
+	if key == "issue":
+		return W2["reward_issue"] % pts
+	return W2["reward"] % [pts, why]
 
 
 ## A past's card: lit and ticked when it's the runner's, "press again" when armed, dimmed beside a picked one,
@@ -951,6 +1003,7 @@ const CAPSTONE_AT := Data.CAPSTONE_SPENT
 ## a swap armed - in the card; the runner's two pairs; the gates; the reset's price.
 func _show_panel() -> void:
 	var WS: Dictionary = Words.WEB_SCREEN
+	_swap_card.visible = false
 	_train.visible = false
 	_chips.visible = false
 	_past.visible = false
@@ -988,6 +1041,8 @@ func _show_panel() -> void:
 		_train.text = "Swap to the %s" % _armed
 		_train.disabled = sim.runner_busy()
 		ring_tone = Pal.ACCENT
+		if lv <= 0:
+			_show_swap_card(jl)                    # BUILD49 U item 6: what the class does
 	elif selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
@@ -1057,6 +1112,17 @@ func _show_panel() -> void:
 	_show_reset()
 
 
+## The class swap's card over the node card (BUILD49 U, item 6): the class not yet run - its line, its skill, its trees
+## and elements, Swap; the node card's own words cleared under it.
+func _show_swap_card(jl: int) -> void:
+	_swap_card.show_class(_armed, jl, sim.runner_busy())
+	_title.text = ""
+	_where.text = ""
+	_icon.texture = null
+	_train.visible = false
+	_node_forms = []
+
+
 ## A node's picture for the card: its painting (or its skill's), else its glyph.
 func _picture_of(id: String) -> Texture2D:
 	var nd: Dictionary = _web.node_of(id)
@@ -1078,13 +1144,12 @@ func where_words(id: String, short := false) -> String:
 	if rg == "centre":
 		parts.append(WS["centre"])
 	elif rg.begins_with("el:"):
-		parts.append(rg.substr(3))
-		var sn: String = Data.web_slot(id)
-		var tail: String = sn.get_slice("_", 1)
-		parts.append(WS["tip"] if tail == "4" else (WS["run"] if tail.begins_with("r") or tail in ["ks", "cap"] else WS["flower"]))
+		parts.append(rg.substr(3))             # version two (BUILD49 V): an element's column, its node's kind after
 	elif rg.begins_with("class:"):
 		parts.append(WS["the_class"] % rg.substr(6))
-		parts.append(id.get_slice("/", 0))
+		var tn: String = id.get_slice("/", 0)
+		if Data.tree_named(tn).has("class"):
+			parts.append(tn)                   # a class tree's node kept from version one: its tree
 	elif rg == "join":
 		var el: String = _web.join_element(id)
 		parts.append(WS["between"] % [_join_class(id), Words.mid(el)])
@@ -1397,12 +1462,12 @@ func _on_respec() -> void:
 ## For the tests: the labels that share a line and must not run into each other - a tile's name and its cost,
 ## and the points and their unit.
 func line_pairs() -> Array:
-	return [[_points, _unit]]
+	return [[_points, _unit], [_points, _unit2]]
 
 
 ## For the tests: every label with text on show.
 func text_nodes() -> Array:
-	var out: Array = [_title, _where, _words, _words2, _words3, _past, _no_use, _respec, _sum_head, _kicker, _points, _unit, _class_line, _notice, _also_head, _pairs_head, _big_head]
+	var out: Array = [_title, _where, _words, _words2, _words3, _past, _no_use, _respec, _sum_head, _kicker, _points, _unit, _unit2, _class_line, _notice, _also_head, _pairs_head, _big_head]
 	out.append_array(_big_lines)
 	for r in _pair_rows:
 		out.append_array(r["lines"])
@@ -1412,6 +1477,7 @@ func text_nodes() -> Array:
 	for b in [_train, code_copy, code_paste]:
 		if b.visible:
 			out.append(b)
+	out.append_array(_swap_card.text_nodes())     # BUILD49 U item 6 (none while it's hidden)
 	for c in _class_cards:
 		out.append_array([c["name"], c["tag"]])
 	for b in _web_buttons:

@@ -848,6 +848,15 @@ func _init() -> void:
 	_b48a_topup_checks(main)                  # BUILD48 A: item 24 - the gate fills what the last run used
 	_b48a_get_out_checks(main)                # BUILD48 A: item 4's open check - Get out mid-refill
 	_b48a_clock_start_checks(main)            # BUILD48 A (the review): item 4's warnings skip a mark passed before the run
+	_u49_record_checks(main)                  # BUILD49 U (4 Nov): item 12 - the record card in the game's art
+	_u49_swap_card_checks(main)               # BUILD49 U: item 6 - the class swap's card says what the class does
+	_u49_dial_checks(main)                    # BUILD49 U: item 14 - the Dial's boxes with their pictures
+	_u49_death_line_checks(main)              # BUILD49 U: items 18 and 13 - what a death costs by Set off, the odds' hover
+	_u49_wagers_checks(main)                  # BUILD49 U: item 19 - Kev's wagers, cost for pay with the odds with each
+	_u49_signal_card_checks(main)             # BUILD49 U: item 25 - the Radio's signal card, layout A
+	_u49_order_card_checks(main)              # BUILD49 U: item 23 - the order's places drawn by the site card
+	_u49_exp_card_checks(main)                # BUILD49 U: item 15 - the Expeditions' place card, layout B
+	_u49_next_step_checks(main)               # BUILD49 U: item 21 - after Kev's story, the next step
 	_finish()
 
 
@@ -1870,8 +1879,10 @@ func _class_trees(main) -> void:
 	sim.equipped["Primary"] = gun
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (Doorman)")
-	# the fixture's class change drops the old class's corner and keeps the rest of the web (a join here)
-	var join_id: String = str(Data.web_links(Data.web_start("Doorman")).filter(func(id): return Data.web_region(str(id)) == "join")[0])
+	# the fixture's class change drops the old class's corner and keeps the rest of the web (the outer ring's cluster under
+	# the Doorman's start here: the web's version two has no "join" region, its roads are the centre's)
+	var join_id: String = Data.web_of_slot("o4")
+	_check(Data.web_region(join_id) == "centre", "the outer ring's cluster under the Doorman isn't the centre's: %s" % Data.web_region(join_id))
 	sim.training_points += 1
 	_walk(sim, join_id)
 	_set_cls(sim, "Drifter")
@@ -1899,6 +1910,7 @@ func _class_trees(main) -> void:
 	_panel_words_checks(main)
 	_rail_order_checks(main)
 	_web47_checks(main)                       # BUILD47 V: the skill web's Training screen
+	_web49_checks(main)                       # BUILD49 V: Training's web at version two's size
 	_m47_checks(main)                         # merge 47's fix round (the review of build 47)
 	_web_art_checks(main)                     # 0.12.1: the web's art back
 	_place_art_checks(main)
@@ -2393,7 +2405,7 @@ func _tree_rules_checks(main) -> void:
 	main.refresh()
 	bk._pick_class("Doorman")
 	_check(sim.cls == "Poacher" and bk._armed == "Doorman" and bk._notice.text.contains("press again"), "the first press swapped, or said nothing: '%s'" % bk._notice.text)
-	_check(bk._title.text.begins_with("Doorman"), "the armed swap's panel does not show the Doorman: '%s'" % bk._title.text)
+	_check(bk._title.text.begins_with("Doorman") or (bk._swap_card.visible and bk._swap_card.title.text.begins_with("Doorman")), "the armed swap's panel does not show the Doorman: '%s'" % bk._title.text)     # a class not yet run: the swap card (BUILD49 U, item 6)
 	_check_fit(main, "Caravan (a swap armed)")
 	bk._pick_class("Doorman")
 	_check(sim.cls == "Doorman" and sim.level() == 12 - Data.CREW_FLOOR_UNDER and is_equal_approx(sim.cash, cash0) and sim.tree == [Data.web_start("Doorman")] and sim.web_spent() == 0 and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
@@ -2434,7 +2446,7 @@ func _tree_rules_checks(main) -> void:
 	before = sim.level()
 	sim.xp = Data.xp_for_level(12)
 	sim._earn_points(before)
-	_check(sim.training_points == pts0 + 2 and sim.best_level == 12, "past the camp's best a level did not earn a point: %d, best %d" % [sim.training_points - pts0, sim.best_level])
+	_check(sim.training_points == pts0 + 2 * Data.POINTS_A_LEVEL and sim.best_level == 12, "past the camp's best a level did not earn two points (the web's version two): %d, best %d" % [sim.training_points - pts0, sim.best_level])
 	# saves: the tree and the best level go in
 	sim.load_dict(saved)
 	var next_to: String = str(Data.web_links(Data.web_start(sim.cls))[0])     # one the rule takes: a load makes a tree legal (merge 47)
@@ -2654,7 +2666,7 @@ func _webs_traits(main) -> void:
 	_check(clocked != "" and snare != "" and sim.node(clocked).get("notable", false) and Data.web_kind(snare) == "keystone", "the hung nodes are not on the web")
 	_check(_walk(sim, clocked) and sim.has_node("clocked"), "Clocked did not train: '%s'" % sim.train_block(clocked))
 	_check(_walk(sim, snare) and sim.has_node("snare_and_wait") and sim.has_node("one_shot"), "taking a second keystone let the first go: '%s'" % sim.train_block(snare))
-	# the fillers: one stat each, a small node with its place and links; the web's 379
+	# the fillers: one stat each, a small node with its place and links; the web's 1,549 (version two, 4 Nov)
 	var fillers := 0
 	var stats := {}
 	for id in Data.web_ids():
@@ -2664,7 +2676,7 @@ func _webs_traits(main) -> void:
 			stats[nd["effect"]] = true
 			_check(nd.has("value") and nd.has("at") and nd.has("slot") and not Data.web_links(str(id)).is_empty() and Data.web_kind(str(id)) == "small", "filler %s is malformed" % id)
 	_check(fillers >= 95 and stats.size() >= 8, "the web has %d fillers of %d stats" % [fillers, stats.size()])     # 98 since merge 47 put Word of mouth, Long walks and Circuits on three
-	_check(Data.web_ids().size() == 379, "the web has %d nodes, not the layout's 379" % Data.web_ids().size())
+	_check(Data.web_ids().size() == 1549, "the web has %d nodes, not the layout's 1,549" % Data.web_ids().size())
 	# the fillers' stats read: a regen filler heals; a resist filler counts
 	var mending: String = ""
 	for i in range(Data.tree_named("Petrol")["nodes"].size()):
@@ -3439,14 +3451,14 @@ func _capstone_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	# the skill web (3 Nov): twelve capstones - one at each class's far flower's tip, one at each element's run's end - each
+	# the skill web (3 Nov; version two 4 Nov): twelve capstones - one at each class's far end, one at each element's column's end - each
 	# a rule of its own ("cap_"), a point like any node; the class's old second capstone stepped down to a notable
 	var caps: Array = Data.web_ids().filter(func(id): return Data.web_kind(str(id)) == "capstone")
 	_check(caps.size() == 12, "the web has %d capstones, not 12" % caps.size())
 	for id in caps:
 		var nd: Dictionary = sim.node(str(id))
 		_check(nd.has("words") and str(nd["effect"]).begins_with("cap_") and nd.get("capstone", false), "%s isn't a capstone with a rule of its own" % id)
-		_check(Data.web_slot(str(id)).ends_with("_F4") or Data.web_slot(str(id)).ends_with("_cap"), "%s isn't at a far flower's tip or a run's end: %s" % [id, Data.web_slot(str(id))])
+		_check(Data.web_slot(str(id)).ends_with(":deadquiet") or Data.web_slot(str(id)).ends_with(":cap"), "%s isn't at a class's far end or a column's end: %s" % [id, Data.web_slot(str(id))])     # the web's version two: the class's capstone place, an element's
 	for c in Data.CLASSES:
 		_check(caps.filter(func(id): return Data.web_region(str(id)) == "class:" + str(c["name"])).size() == 1, "the %s hasn't one capstone" % c["name"])
 	var poached := Data.node_id_named("Snares/Poached")
@@ -10102,6 +10114,7 @@ func _loot_roll_checks(main) -> void:
 	_training_gate_checks(main)
 	_web_layout_checks(main)                  # BUILD47-W (3 Nov): the skill web's layout
 	_web_bot_checks()                         # BUILD47-W: the bot on the web, every class
+	_web_rewards_checks(main)                 # BUILD49-W: the web's version two - the reward points
 	_paper_crypt_checks(main)
 	_kev_checks(main)
 	_signal_checks(main)
@@ -11851,17 +11864,17 @@ func _crew_floor_checks(main) -> void:
 	f.training_points = 14
 	f.hp = f.max_hp()
 	_check(f.join_level("Doorman") == 15 - u and f.crew_level("Doorman") == 0, "a new class would join at %d, not %d" % [f.join_level("Doorman"), 15 - u])
-	_check(f.set_class("Doorman") and f.level() == 15 - u and is_equal_approx(f.xp, Data.xp_for_level(15 - u)) and f.training_points == 15 - u - 1 and f.best_level == 15 - u and is_equal_approx(f.hp, f.max_hp()),
+	_check(f.set_class("Doorman") and f.level() == 15 - u and is_equal_approx(f.xp, Data.xp_for_level(15 - u)) and f.training_points == (15 - u - 1) * Data.POINTS_A_LEVEL and f.best_level == 15 - u and is_equal_approx(f.hp, f.max_hp()),
 		"a new class swapped in under the floor: level %d, XP %.0f, %d points, best %d, HP %.0f of %.0f" % [f.level(), f.xp, f.training_points, f.best_level, f.hp, f.max_hp()])
 	var said: Array = _said(f)
-	_check(said.has(Words.CREW["floor"] % ["Doorman", 15 - u, u]) and said.any(func(t): return t.begins_with("Level %d: %d training points" % [15 - u, 15 - u - 1])), "the floor's lift went unsaid: %s" % str(said.slice(-4)))
+	_check(said.has(Words.CREW["floor"] % ["Doorman", 15 - u, u]) and said.any(func(t): return t.begins_with("Level %d: %d training points" % [15 - u, (15 - u - 1) * Data.POINTS_A_LEVEL])), "the floor's lift went unsaid: %s" % str(said.slice(-4)))
 	_check(f.set_class("Poacher") and f.level() == 15 and f.crew_level("Doorman") == 15 - u and f.join_level("Doorman") == 15 - u, "the swap back moved the Poacher, or the Doorman's stored level: %d, Doorman %d" % [f.level(), f.crew_level("Doorman")])
 	# the benched class keeps its stored level; join_level is the floor's, a swap takes it
 	f.xp = Data.xp_for_level(25)
 	f.best_level = 25
 	var tp_d: int = int(f.roster["Doorman"]["training_points"])
 	_check(f.crew_level("Doorman") == 15 - u and f.join_level("Doorman") == 25 - u, "the bench: stored %d (want %d), joins at %d (want %d)" % [f.crew_level("Doorman"), 15 - u, f.join_level("Doorman"), 25 - u])
-	_check(f.set_class("Doorman") and f.level() == 25 - u and f.training_points == tp_d + 10, "a benched class swapped in: level %d, %d points (had %d)" % [f.level(), f.training_points, tp_d])
+	_check(f.set_class("Doorman") and f.level() == 25 - u and f.training_points == tp_d + 10 * Data.POINTS_A_LEVEL, "a benched class swapped in: level %d, %d points (had %d)" % [f.level(), f.training_points, tp_d])
 	# a death: back to level 1 while the crew carries on; not lifted while out; lifted when it next comes in, no points twice
 	f.hp = f.max_hp()
 	f.deploy(0)
@@ -11986,8 +11999,8 @@ func _exp_lead_xp_checks(_main) -> void:
 	e["t0"] = s.elapsed - float(e["dur"])
 	s._exp_tick()
 	var r: Dictionary = s.roster[lead]     # the roster's dict as it is now (a read puts a new one back)
-	_check(s.crew_level(lead) == 23 and int(r["training_points"]) == 22 and int(r["best_level"]) == 23, "a lead's three levels on an expedition: level %d, %d points, best %d" % [s.crew_level(lead), int(r["training_points"]), int(r["best_level"])])
-	_check(_said(s).has(Words.CREW["lead_level"] % [lead, 23, 3, "s"]), "the lead's levels went unsaid: %s" % str(_said(s).slice(-3)))
+	_check(s.crew_level(lead) == 23 and int(r["training_points"]) == 19 + 3 * Data.POINTS_A_LEVEL and int(r["best_level"]) == 23, "a lead's three levels on an expedition: level %d, %d points, best %d" % [s.crew_level(lead), int(r["training_points"]), int(r["best_level"])])
+	_check(_said(s).has(Words.CREW["lead_level"] % [lead, 23, 3 * Data.POINTS_A_LEVEL, "s"]), "the lead's levels went unsaid: %s" % str(_said(s).slice(-3)))
 	_check(s.cls == "Poacher" and s.training_points == 0, "the lead's points went to the runner out: %d" % s.training_points)
 	s.exp_take(int(e["id"]))
 	s.expeditions = []
@@ -15401,8 +15414,8 @@ func _signal_checks(main) -> void:
 		main._radio.selected = sim.signals.size() - 1
 		main._radio._shown = ""
 		main.refresh()
-		var chip_text: String = " ".join(main._radio._card_codes.text_nodes().map(func(l): return str(l.text)))
-		_check(chip_text.contains("Brings") or chip_text.contains("a run"), "the signal card doesn't say what it brings: %s" % chip_text)
+		var chip_text: String = " ".join(main._radio._card_drops.filter(func(d): return d["panel"].visible).map(func(d): return str(d["text"].text))) + " " + main._radio._card_drops_run.text     # its drops as pictures now (BUILD49 U, item 25)
+		_check(main._radio._card_drops_head.visible and (chip_text.contains("%") or chip_text.contains("a run")), "the signal card doesn't say what it brings: %s" % chip_text)
 		_check(main._radio._crew_buttons.size() == 4 and main._radio._crew_buttons[0].text.begins_with("Any"), "the decoder's crew row: %s" % str(main._radio._crew_buttons.map(func(b): return b.text)))
 		_check_fit(main, "the Radio, a signal's materials and the crew row")
 		# the crew's odds on the card (21 Oct, Matt: "switch to your bleed paramedic and steam roll it"): a second class
@@ -15425,7 +15438,7 @@ func _signal_checks(main) -> void:
 		main._radio._shown = ""
 		main.refresh()
 		var crew_b: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible)
-		_check(crew_b.size() >= 2 and crew_b[0]["cls"] == cls0 and crew_b[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other).size() == 1 and not crew_b.filter(func(t): return t["cls"] == other)[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other)[0]["odds"].text.ends_with("%"), "the card's crew row: %s" % str(crew_b.map(func(t): return [t["cls"], t["odds"].text])))
+		_check(crew_b.size() >= 1 and crew_b.all(func(t): return t["cls"] != cls0) and crew_b.filter(func(t): return t["cls"] == other).size() == 1 and not crew_b.filter(func(t): return t["cls"] == other)[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other)[0]["odds"].text.ends_with("%"), "the card's crew row: %s" % str(crew_b.map(func(t): return [t["cls"], t["odds"].text])))
 		_check_fit(main, "the Radio, the crew's odds")
 		# every class played: a button each, fitting (24 Oct: the Radio held five, the Recruit made six)
 		_check(main._radio.CREW_MAX >= Data.CLASSES.size(), "the Radio's crew row holds %d of %d classes" % [main._radio.CREW_MAX, Data.CLASSES.size()])
@@ -15435,7 +15448,7 @@ func _signal_checks(main) -> void:
 		main._radio._shown = ""
 		main.refresh()
 		var crew_all: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible)
-		_check(sim.crew_played().size() == Data.CLASSES.size() and crew_all.size() == sim.crew_played().size(), "%d classes played, %d crew buttons" % [sim.crew_played().size(), crew_all.size()])
+		_check(sim.crew_played().size() == Data.CLASSES.size() and crew_all.size() == sim.crew_played().size() - 1, "%d classes played, %d crew buttons (the others)" % [sim.crew_played().size(), crew_all.size()])
 		_check_fit(main, "the Radio, every class in the crew")
 		main._radio._on_crew(crew_b.find(crew_b.filter(func(t): return t["cls"] == other)[0]))
 		_check(sim.cls == other and bool(sim.signal_odds_now(k_sel)[1]) and is_equal_approx(float(sim.signal_odds_now(k_sel)[0]), float(od_o[0])), "the crew's button did not swap to the %s with their odds read: %s" % [other, str(sim.signal_odds_now(k_sel))])
@@ -16450,20 +16463,18 @@ func _kev_checks(main) -> void:
 	print("Kev's pile ok: %d papers at %d notes, plain only, read, logged; the button and its price" % [bought, price])
 
 
-## The skill web's layout (3 Nov, scripts/sim/web_layout.gd): every node reachable from every class's start; every slot
-## holds one node and every named slot the node of its name; today's notables, keystones, capstones and skills all on
-## the web but the plain-figure hangs BUILD47 dropped (WEB_DROPPED: a change to the list goes red); the ids the same
-## across a save and a load; a pair done only with both halves owned; the centre's Guard ring read by the Guard cap.
-const WEB_DROPPED := ["The Pitch/Home ground", "The Pitch/Good boots", "The Pitch/Well stocked", "The Pitch/Market day",
-	"The Pitch/The kettle", "Stalking/Still hands", "Muscle/Heavy hands", "Triage/Steady pulse", "Stripping/Nose for parts", "Moving on/Light feet",
-	"Ordnance/Sandbags", "Ordnance/Pull the pin", "Drill/Brasso", "Drill/Spit and polish", "Petrol/Accelerant", "Petrol/Flashpoint", "The cold/Chilblains", "The cold/Sleet",
-	"The Rat Man/Strychnine", "The Rat Man/Tainted", "Live/Live rail", "Live/Stripped wire", "Blades/Honed", "Blades/Whetstone", "Knuckles/Knuckleduster",
-	"Knuckles/Shin pads", "Knuckles/Low blow"]
+## The skill web's layout (version two, 4 Nov: scripts/sim/web_layout.gd from docs/design/skill_web_layout.json): 1,549
+## nodes, every one reachable from every class's start (and bought by the rule from it); every slot holds one node and every
+## named slot the node of its name, each name once; today's notables, keystones, capstones, skills and hung notables all on
+## the web, none dropped; the 18 new names placed with figures of their kind; the ids the same across a save and a load; a
+## pair done only with both halves owned; the centre's Guard ring read by the Guard cap.
+const WEB_NEW_NAMES := ["Black ice", "Brass monkeys", "Crossed wires", "Fuse box", "Forecourt", "Bonfire night", "Paper cuts", "Shiv", "Sucker punch",
+	"Bare-knuckle", "Nest", "Rat run", "Bulled boots", "Fuse cut short", "By the numbers", "Chin down", "Elbows in", "Shortcuts"]
 func _web_layout_checks(main) -> void:
 	var sim = main.sim
 	var WL = load("res://scripts/sim/web_layout.gd")
 	var ids: Array = Data.web_ids()
-	_check(ids.size() == WL.SLOTS.size() and ids.size() == 379, "the web holds %d nodes for %d slots" % [ids.size(), WL.SLOTS.size()])
+	_check(ids.size() == WL.SLOTS.size() and ids.size() == 1549, "the web holds %d nodes for %d slots" % [ids.size(), WL.SLOTS.size()])
 	var seen := {}
 	var names := {}
 	for k in range(WL.SLOTS.size()):
@@ -16472,7 +16483,8 @@ func _web_layout_checks(main) -> void:
 		var nd: Dictionary = sim.node(id)
 		_check(not seen.has(id) and Data.web_slot(id) == str(sl["slot"]) and Data.web_of_slot(str(sl["slot"])) == id and Data.web_kind(id) == str(sl["kind"]) and Data.web_region(id) == str(sl["region"]),
 			"slot %s doesn't hold one node of its own: %s" % [sl["slot"], id])
-		_check(Data.web_at(id).is_equal_approx(Vector2(float(sl["at"][0]), float(sl["at"][1]))) and id.get_slice("/", 0) == str(sl["tree"]), "%s isn't at its slot's place in its tree: %s" % [id, str(Data.web_at(id))])
+		var in_tree: bool = id.get_slice("/", 0) == str(sl["tree"]) if str(sl["tree"]) != "" else Data.node_id_named("%s/%s" % [id.get_slice("/", 0), sl["name"]]) == id     # a named node in its own tree
+		_check(Data.web_at(id).is_equal_approx(Vector2(float(sl["at"][0]), float(sl["at"][1]))) and in_tree and Data.web_theme(id) == str(sl["theme"]), "%s isn't at its slot's place in its tree: %s" % [id, str(Data.web_at(id))])
 		if str(sl["name"]) != "":
 			_check(str(nd.get("name", "")) == str(sl["name"]) and not names.has(str(sl["name"])), "slot %s doesn't hold %s once: %s" % [sl["slot"], sl["name"], nd.get("name", "")])
 			names[str(sl["name"])] = true
@@ -16508,22 +16520,35 @@ func _web_layout_checks(main) -> void:
 				if buy.web_take(str(fid)):
 					took = true
 		_check(buy.web_spent() == ids.size() - 1 and Data.web_ids().all(func(x): return buy.web_owned(str(x))), "bought by the rule from the %s's start, %d of %d nodes come" % [c["name"], buy.web_spent() + 1, ids.size()])
-	# today's big nodes and skills all placed, the plain-figure hangs alone dropped
+	# today's big nodes, skills and hung notables all placed, none dropped (version one dropped WEB_EXTRA's plain-figure hangs)
 	var lost: Array = []
 	for t in Data.TREES_SRC + Data.ELEMENT_TREES_SRC:
 		for nd in t["nodes"] + Data.WEB_EXTRA.get(t["name"], []):
 			var big: bool = nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false) or nd.has("skill")
 			if big and not nd.has("bridge") and not names.has(str(nd["name"])):
 				lost.append("%s/%s" % [t["name"], nd["name"]])
-	_check(lost.all(func(x): return x in WEB_DROPPED) and Data.web_dropped() == WEB_DROPPED, "today's nodes off the web aren't the dropped list: lost %s, dropped %s" % [str(lost.filter(func(x): return not (x in WEB_DROPPED))), str(Data.web_dropped())])
-	# the centre's three placed by the review of build 47 (3 Nov): Word of mouth on gate g3, its rule read; Long walks and
-	# Circuits the inner ring's life smalls, their own figures
-	var wom: String = Data.web_of_slot("g3")
-	var lw: Dictionary = sim.node(Data.web_of_slot("h0"))
-	var ci: Dictionary = sim.node(Data.web_of_slot("h3"))
-	_check(str(sim.node(wom).get("effect", "")) == "word_of_mouth" and Data.web_kind(wom) == "notable", "gate g3 isn't Word of mouth: %s" % str(sim.node(wom)))
+	_check(lost.is_empty() and Data.web_dropped().is_empty(), "today's nodes off the web: lost %s, dropped %s" % [str(lost), str(Data.web_dropped())])
+	# the 18 new names (skill_web.md "The places filled"): each placed once, a figure or a rule of its own, its kind's
+	for nm in WEB_NEW_NAMES:
+		var hit: Array = ids.filter(func(x): return str(sim.node(str(x)).get("name", "")) == nm)
+		var nn: Dictionary = sim.node(str(hit[0])) if hit.size() == 1 else {}
+		_check(hit.size() == 1 and Data.web_kind(str(hit[0])) == "notable" and str(nn.get("effect", "")) != "" and float(nn.get("value", 0.0)) > 0.0, "the new name %s isn't one notable with a figure: %s" % [nm, str(nn)])
+	# the stepped-down nodes (the starters, the third far notables, the kettle): named lesser nodes, their words kept
+	for nm in ["Still hands", "Steady pulse", "Nose for parts", "Light feet", "Heavy hands", "Pull the pin", "Hoarder", "Stand and fight", "The kettle", "Long walks"]:
+		var hit2: Array = ids.filter(func(x): return str(sim.node(str(x)).get("name", "")) == nm)
+		_check(hit2.size() == 1 and Data.web_kind(str(hit2[0])) == "small", "%s isn't one named lesser node: %s" % [nm, str(hit2)])
+	# each class's starter steps down onto its start's wheel: the first thing its runner can take
+	for c in Data.CLASSES:
+		var wheel: Array = Data.web_links(Data.web_start(str(c["name"])))
+		_check(wheel.any(func(x): return str(sim.node(str(x)).get("name", "")) in ["Still hands", "Steady pulse", "Nose for parts", "Light feet", "Heavy hands", "Pull the pin"]), "the %s's old starter isn't on its start's wheel" % c["name"])
+	# the centre (version two): Word of mouth on the outer ring, its rule read; Circuits an inner life cluster's notable;
+	# Long walks a named lesser node in a life cluster, its own figure
+	var wom: String = Data.web_of_slot("o3")
+	var lw: Dictionary = sim.node(Data.web_of_slot("h3.0"))
+	var ci: Dictionary = sim.node(Data.web_of_slot("h0"))
+	_check(str(sim.node(wom).get("effect", "")) == "word_of_mouth" and Data.web_kind(wom) == "notable", "the outer ring's o3 isn't Word of mouth: %s" % str(sim.node(wom)))
 	_check(str(lw.get("name", "")) == "Long walks" and str(lw.get("effect", "")) == "hp" and int(lw.get("value", 0)) == 4 and str(ci.get("name", "")) == "Circuits" and str(ci.get("effect", "")) == "hp" and int(ci.get("value", 0)) == 9,
-		"the inner life ring doesn't hold Long walks (4 HP) and Circuits (9 HP): %s / %s" % [str(lw), str(ci)])
+		"the inner life clusters don't hold Long walks (4 HP) and Circuits (9 HP): %s / %s" % [str(lw), str(ci)])
 	var wm = Sim.new()
 	wm.start()
 	if wm.cls != "Poacher":
@@ -16553,7 +16578,7 @@ func _web_layout_checks(main) -> void:
 	back.core_gates = false                   # the fixture's gates off, as it was walked (a load makes a tree legal)
 	back.load_dict(JSON.parse_string(JSON.stringify(w.to_dict())))
 	var after: Array = back.tree.map(func(id): return "%s@%s" % [back.node(str(id))["name"], Data.web_slot(str(id))])
-	_check(before.size() >= 10 and before == after and back.web_spent() == w.web_spent(), "the web's ids moved across a save and a load: %s / %s" % [str(before), str(after)])
+	_check(before.size() >= 10 and before == after and back.tree == w.tree and back.web_spent() == w.web_spent(), "the web's ids moved across a save and a load: %s / %s" % [str(before), str(after)])
 	# a pair: one half alone isn't done, both are
 	w = Sim.new()
 	w.start()
@@ -16568,15 +16593,118 @@ func _web_layout_checks(main) -> void:
 	# the centre's Guard ring: 3% of the Guard cap a node
 	var gid := ""
 	for id in ids:
-		if str(sim.node(str(id)).get("effect", "")) == "guard_pct" and gid == "":
+		if str(sim.node(str(id)).get("effect", "")) == "guard_pct" and gid == "" and Data.web_region(str(id)) == "centre":
 			gid = str(id)
 	var cap0: float = w.guard_cap()
 	_check(gid != "" and Data.web_region(gid) == "centre" and _walk(w, gid) and w.guard_cap() >= cap0 * 1.03 - 0.001, "a Guard node on the centre's ring didn't raise the Guard cap: %.1f to %.1f" % [cap0, w.guard_cap()])
-	print("the web's layout ok: %d nodes, every start reaches all, %d named, the ids across a load, the pairs, the Guard ring" % [ids.size(), names.size()])
+	print("the web's layout ok: %d nodes, every start reaches all, %d named once, none dropped, the new names, the ids across a load, the pairs, the Guard ring" % [ids.size(), names.size()])
 
 
-## The bot on the skill web (3 Nov): each class from a fresh camp, its build's targets bought as the levels come - a
-## keystone by about level 20 (KEYSTONE_SPENT points spent first), 40 spent by its forties, the capstone only past 40 spent.
+## The reward points (BUILD49-W, skill_web.md version two "The rule for spending"): +1 a head's first fall - a crew's, the
+## order's, the County's (a remix's head - one of the Issuer's people on a signal - gives none) - +1 each of Kev's story papers
+## decrypted, +2 the Issue; each counted once however often it comes again; the camp's, so every runner has them - the
+## one out, one benched, one made after; said in the log; kept across a save and a load. `-- only web_rewards`.
+func _web_rewards_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.core_gates = true
+	sim.rewards_earned = {}
+	_set_cls(sim, "Poacher")
+	var lv_pts: int = sim.training_points
+	_check(sim.reward_points() == 0 and sim.web_points() == lv_pts and sim.web_rewards()["from"].is_empty(), "the fixture: rewards before any: %s" % str(sim.web_rewards()))
+	# a crew's head: the first fall pays one, a second fall nothing
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	_check(sim.on_mission(), "the fixture: no run out")
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		sim.bosses_beaten[0] = false
+		m["boss"] = {"name": "The Gamekeeper", "zone": 0, "alive": true, "hp": 1.0, "started": true}
+		sim._boss_down(m, sim.effective(2))
+		_check(sim.reward_points() == Data.REWARD_HEAD and sim.web_points() == sim.training_points + 1 and str(sim.web_rewards()["from"][0]["key"]) == "head:The Gamekeeper",
+			"the Gamekeeper's first fall didn't pay a point: %s" % str(sim.web_rewards()))
+		_check(_said(sim).has(Words.WEB_REWARD["log"] % ["The Gamekeeper", 1, ""]), "the head's point went unsaid: %s" % str(_said(sim).slice(-3)))
+		sim.bosses_beaten[0] = false          # down again, as a first fall would read: counted once all the same
+		m["boss"] = {"name": "The Gamekeeper", "zone": 0, "alive": true, "hp": 1.0, "started": true}
+		sim._boss_down(m, sim.effective(2))
+		_check(sim.reward_points() == 1, "the Gamekeeper paid twice: %d" % sim.reward_points())
+		# the order's head and the County's: their first falls; a County place without its head, a remix's head, none
+		sim.order_beaten["grid"] = 0
+		sim._order_down(m, m["t"], {"order": "grid", "name": Data.pinnacle("grid")["who"]})
+		sim._order_down(m, m["t"], {"order": "grid", "name": Data.pinnacle("grid")["who"]})
+		_check(sim.reward_points() == 2 and sim.rewards_earned.has("head:The Lineman"), "the Lineman's first fall: %s" % str(sim.rewards_earned.keys()))
+		sim._order_down(m, m["t"], {"order": "manor", "name": "The Collector", "remix": true})
+		_check(sim.reward_points() == 2, "a remix's County head paid: %s" % str(sim.rewards_earned.keys()))
+		sim._order_down(m, m["t"], {"order": "truck_stop", "name": "The Bailiff"})
+		_check(sim.reward_points() == 3 and sim.rewards_earned.has("head:The Bailiff"), "the Bailiff's first fall: %s" % str(sim.rewards_earned.keys()))
+		m["remaining"] = 0
+		m["cleared"] = true
+		sim.extract_now()
+	# Kev's story: a point each paper of a beat decrypted, once
+	if not ("radio" in sim.unlocked):
+		sim.unlocked.append("radio")
+	_finish_campaign(sim)
+	sim.signals = []
+	sim.story_beat = 0
+	for it in sim.signal_papers():
+		sim.stash.erase(it)
+	sim.papers = sim.papers.filter(func(x): return sim.story_of(x) < 0)     # the camp's own story papers out of the pile
+	var ids: Array = []
+	for nm in sim.story_papers(0):
+		var sp: Dictionary = sim._plain(Data.PAPER, nm)
+		sim.papers.append(sp)                 # straight to the Radio's pile (the bot's camp can have a full stash)
+		ids.append(int(sp["id"]))
+	sim.signal_papers()                       # swept to the Radio's pile, as the screen reads it
+	_check(ids.size() == 3 and sim.decrypt_block(ids) == "", "the fixture: the beat's three: '%s'" % sim.decrypt_block(ids))
+	sim.decrypt(ids)
+	_check(sim.reward_points() == 3 + 3 * Data.REWARD_KEV and sim.story_papers(0).all(func(nm): return sim.rewards_earned.has("kev:" + str(nm))), "the first beat's papers didn't pay a point each: %s" % str(sim.rewards_earned.keys()))
+	sim.signals = []
+	var again: Array = []
+	for nm in sim.story_papers(0):
+		var sp2: Dictionary = sim._plain(Data.PAPER, nm)
+		sim.papers.append(sp2)                # the beat's papers again (its signal lost): no second time
+		again.append(int(sp2["id"]))
+	sim.signal_papers()
+	_check(sim.decrypt_block(again) == "", "the fixture: the beat's three again: '%s'" % sim.decrypt_block(again))
+	sim.decrypt(again)
+	_check(sim.reward_points() == 6, "the beat's papers paid twice: %d" % sim.reward_points())
+	# the Issue: two
+	sim.issued = false
+	sim.issue()
+	_check(sim.issued and sim.reward_points() == 6 + Data.REWARD_ISSUE and sim.rewards_earned.has("issue") and _said(sim).has(Words.WEB_REWARD["log"] % [Words.WEB_REWARD["issue"], 2, "s"]), "the Issue didn't pay two: %s" % str(sim.web_rewards()))
+	var got: int = sim.reward_points()
+	# every runner's: the one out, a class made after, and the first back from the bench - each spends them as its own
+	_check(sim.web_points() == sim.training_points + got and sim.web_free() == sim.web_points() - sim.web_spent(), "the runner out hasn't the rewards: %d of %d" % [sim.web_points(), sim.training_points + got])
+	var later = Sim.new()
+	later.start()
+	later.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	_check(later.reward_points() == got and later.web_rewards()["from"].size() == sim.web_rewards()["from"].size(), "the rewards didn't survive a save and a load: %d of %d" % [later.reward_points(), got])
+	var fresh_cls := ""
+	for c in Data.CLASSES:
+		if fresh_cls == "" and later.crew_runner(str(c["name"])).is_empty() and later.class_open(str(c["name"])):
+			fresh_cls = str(c["name"])
+	if fresh_cls != "":
+		later.mythics_on = false
+		later.set_class(fresh_cls)
+		_check(later.cls == fresh_cls and later.web_points() == later.training_points + got and later.web_free() == later.web_points() - later.web_spent(),
+			"a %s made after the rewards hasn't them: %d points, %d its own" % [fresh_cls, later.web_points(), later.training_points])
+		later.core_gates = true
+		var nb: String = str(Data.web_links(Data.web_start(fresh_cls))[0])
+		later.training_points = 0
+		later.tree = [Data.web_start(fresh_cls)]
+		_check(later.web_free() == got and later.web_take(nb) and later.web_free() == got - 1, "the %s couldn't spend a reward point: %d free" % [fresh_cls, later.web_free()])
+	else:
+		_check(false, "the fixture: every class played already")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the web's reward points ok: a head's first fall (crews, the order, the County), Kev's papers, the Issue, each once, every runner's, said, the save")
+
+
+## The bot on the skill web (3 Nov; version two 4 Nov): each class from a fresh camp, its build's targets bought as the levels
+## come, two a level - a keystone by about level 17 (KEYSTONE_SPENT, 30, spent first), 80 spent by level 41, the capstone
+## only past 80 spent, nothing with a cost bought on the way.
 func _web_bot_checks() -> void:
 	for c in Data.CLASSES:
 		var name: String = str(c["name"])
@@ -16594,7 +16722,7 @@ func _web_bot_checks() -> void:
 		for lv in range(2, 61):
 			w.xp = Data.xp_for_level(lv)
 			w.best_level = maxi(w.best_level, lv)
-			w.training_points = lv - 1
+			w.training_points = (lv - 1) * Data.POINTS_A_LEVEL     # two a level (the web's version two), no rewards
 			b._train_tree(w)
 			for id in w.tree:
 				var k: String = Data.web_kind(str(id))
@@ -16602,13 +16730,17 @@ func _web_bot_checks() -> void:
 					key_lv = lv
 				if k == "capstone" and cap_lv < 0:
 					cap_lv = lv
-					cap_ok = w.web_spent() > Data.CAPSTONE_SPENT     # the capstone's own point came after 40 others
+					cap_ok = w.web_spent() > Data.CAPSTONE_SPENT     # the capstone's own point came after 80 others
 			if w.web_spent() >= Data.CAPSTONE_SPENT and forty_lv < 0:
 				forty_lv = lv
-		_check(key_lv > 0 and key_lv <= 22, "the %s bot took no keystone by level 22 (first at %d)" % [name, key_lv])
-		_check(forty_lv > 0 and forty_lv <= 45 and w.web_spent() >= 59 - 1, "the %s bot didn't reach 40 spent by 45 or spend its points (at %d, %d spent of %d)" % [name, forty_lv, w.web_spent(), w.training_points])
-		_check(cap_lv > 0 and cap_ok and cap_lv >= Data.CAPSTONE_SPENT + 1, "the %s bot's capstone came at level %d, under 40 spent or never" % [name, cap_lv])
-		print("web bot: the %s as %s - a keystone at level %d, 40 spent at %d, a capstone at %d" % [name, b.element, key_lv, forty_lv, cap_lv])
+		# the web's version two: 30 spent at level 16, 80 at level 41 with no rewards (skill_web.md "Pacing")
+		_check(key_lv > 0 and key_lv <= 20, "the %s bot took no keystone by level 20 (first at %d)" % [name, key_lv])
+		_check(forty_lv > 0 and forty_lv <= 42 and w.web_spent() >= (60 - 1) * Data.POINTS_A_LEVEL - 1, "the %s bot didn't reach 80 spent by 42 or spend its points (at %d, %d spent of %d)" % [name, forty_lv, w.web_spent(), w.training_points])
+		_check(cap_lv > 0 and cap_ok and cap_lv >= 41, "the %s bot's capstone came at level %d, under 80 spent or never" % [name, cap_lv])
+		var planned: Array = Bot.web_targets(name, b.element)     # a target with a cost is the plan's (the Drifter's Ghost); one on the way isn't
+		var by_the_way: Array = w.tree.filter(func(id): return w.node(str(id)).get("cost", false) and not planned.has(id))
+		_check(by_the_way.is_empty(), "the %s bot bought a node with a cost on its way: %s" % [name, str(by_the_way)])
+		print("web bot: the %s as %s - a keystone at level %d, 80 spent at %d, a capstone at %d" % [name, b.element, key_lv, forty_lv, cap_lv])
 
 
 ## The skill web's one rule (3 Nov, docs/design/skill_web.md): a runner starts with its class's start owned, free; a node
@@ -16641,23 +16773,23 @@ func _training_gate_checks(main) -> void:
 	var fr: Array = fresh.web_frontier()
 	_check(not fr.is_empty() and fr.all(func(id): return fresh.can_train(str(id)) and not fresh.web_owned(str(id))) and Data.web_ids().filter(func(id): return fresh.can_train(str(id))).size() == fr.size(),
 		"the frontier isn't the nodes takeable now: %s" % str(fr))
-	# a keystone: refused under 15 spent, taken at 15
+	# a keystone: refused under 30 spent, taken at 30 (the web's version two; 15 before)
 	var ks: String = Data.node_id_named("Stalking/One shot")
 	_walk_to_touch(fresh, ks)
 	_check(fresh.web_spent() < Data.KEYSTONE_SPENT and fresh.web_can_take(ks) == Words.WEB_BLOCK["keystone"] % Data.KEYSTONE_SPENT and not fresh.web_take(ks), "a keystone was taken under %d spent (%d): '%s'" % [Data.KEYSTONE_SPENT, fresh.web_spent(), fresh.web_can_take(ks)])
-	_check(Words.WEB_BLOCK["keystone"] % Data.KEYSTONE_SPENT == "Keystones open at 15 points spent", "the keystone's words are off")
+	_check(Words.WEB_BLOCK["keystone"] % Data.KEYSTONE_SPENT == "Keystones open at 30 points spent" and Words.WEB_BLOCK["capstone"] % Data.CAPSTONE_SPENT == "Capstones open at 80 points spent", "the gates' words are off (the web's version two: 30 and 80)")
 	_spend_off(fresh, Data.KEYSTONE_SPENT - 1, ks)
 	_check(fresh.web_spent() == Data.KEYSTONE_SPENT - 1 and fresh.web_can_take(ks) != "", "a keystone opened at %d spent" % fresh.web_spent())
 	_spend_off(fresh, Data.KEYSTONE_SPENT, ks)
-	_check(fresh.web_spent() == Data.KEYSTONE_SPENT and fresh.web_can_take(ks) == "" and fresh.web_take(ks) and fresh.has_node("one_shot"), "a keystone at 15 spent wasn't taken: '%s'" % fresh.web_can_take(ks))
-	# a capstone: refused under 40, taken at 40
+	_check(fresh.web_spent() == Data.KEYSTONE_SPENT and fresh.web_can_take(ks) == "" and fresh.web_take(ks) and fresh.has_node("one_shot"), "a keystone at %d spent wasn't taken: '%s'" % [Data.KEYSTONE_SPENT, fresh.web_can_take(ks)])
+	# a capstone: refused under 80, taken at 80 (40 before)
 	var cap: String = Data.node_id_named("Snares/Dead quiet")
 	_walk_to_touch(fresh, cap)
 	_check(fresh.web_spent() < Data.CAPSTONE_SPENT and fresh.web_can_take(cap) == Words.WEB_BLOCK["capstone"] % Data.CAPSTONE_SPENT and not fresh.web_take(cap), "a capstone was taken under %d spent (%d): '%s'" % [Data.CAPSTONE_SPENT, fresh.web_spent(), fresh.web_can_take(cap)])
 	_spend_off(fresh, Data.CAPSTONE_SPENT - 1, cap)
 	_check(fresh.web_spent() == Data.CAPSTONE_SPENT - 1 and fresh.web_can_take(cap) != "", "a capstone opened at %d spent" % fresh.web_spent())
 	_spend_off(fresh, Data.CAPSTONE_SPENT, cap)
-	_check(fresh.web_can_take(cap) == "" and fresh.web_take(cap) and fresh.has_node("cap_dead_quiet"), "a capstone at 40 spent wasn't taken: '%s'" % fresh.web_can_take(cap))
+	_check(fresh.web_can_take(cap) == "" and fresh.web_take(cap) and fresh.has_node("cap_dead_quiet"), "a capstone at %d spent wasn't taken: '%s'" % [Data.CAPSTONE_SPENT, fresh.web_can_take(cap)])
 	# the mechanics areas' switch lifts the two gates alone
 	var ks2: String = Data.node_id_named("Snares/Trapline")
 	fresh.web_reset()
@@ -16679,7 +16811,7 @@ func _training_gate_checks(main) -> void:
 	sim.load_dict(saved)
 	main.show_room(main.OVERVIEW)
 	main.refresh()
-	print("training's rule ok: the start free at level 1, joined to one owned, keystones at 15 spent and capstones at 40, no points, the reset")
+	print("training's rule ok: the start free at level 1, joined to one owned, keystones at 30 spent and capstones at 80, no points, the reset")
 
 
 ## Points spent on the frontier, away from `keep`, anything gated and any node whose effect is in `avoid`, until `n`
@@ -18550,8 +18682,8 @@ func _yard_wide_checks(main) -> void:
 	# its other side (24 Oct, Matt: option B - nothing locks): open at 2.5 times, both built after, the strip saying so
 	yt._press("kennel", 0, "b")
 	main.refresh()
-	var c2: int = sim.yard_pick_cost("kennel", 0)
-	_check(yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(c2)) and absi(c2 - int(round(c1 * Data.YARD_SECOND))) <= 100 and yt._other.text.to_lower().contains("is built · this one costs ×2.5"), "the other side isn't offered at 2.5 times: '%s', '%s', %d from %d" % [yt._build.text, yt._other.text, c2, c1])
+	var c2: int = sim.yard_pick_cost("kennel", 0)     # both rounded to the 100 (_round_price): c1's rounding times 2.5 and c2's own, 175 at most (BUILD49-W: the camp at 2,700 read 6,600)
+	_check(yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(c2)) and absi(c2 - int(round(c1 * Data.YARD_SECOND))) <= 200 and yt._other.text.to_lower().contains("is built · this one costs ×2.5"), "the other side isn't offered at 2.5 times: '%s', '%s', %d from %d" % [yt._build.text, yt._other.text, c2, c1])
 	_check_fit(main, "Yard (a column's other side)")
 	sim.cash = maxf(sim.cash, float(c2) + 10.0)
 	var cash2: float = sim.cash
@@ -19986,7 +20118,7 @@ func _map_screen_checks(main) -> void:
 	_check(at._words.position.y >= at._chips.position.y + Chips.CHIP_H, "the map panel's sentence sits on its chips")
 	at._on_take()
 	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.to_lower().begins_with("quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
-	_check(wv.state_of(Data.map_id("quiet_roads"))["taken"] and wv._tiles[Data.map_id("quiet_roads")]["line"].text.contains("%d of 3" % (rank0 + 1)), "the ranked tile doesn't say its rank: '%s'" % wv._tiles[Data.map_id("quiet_roads")]["line"].text)
+	_check(wv.state_of(Data.map_id("quiet_roads"))["taken"] and wv._tiles[Data.map_id("quiet_roads")]["rank"].text == "%d/3" % (rank0 + 1), "the ranked tile doesn't say its rank: '%s'" % wv._tiles[Data.map_id("quiet_roads")]["rank"].text)     # its badge on the picture (BUILD49 U, item 14)
 	_check_fit(main, "Runs (the map, picked)")
 	sim.atlas_points -= 1                 # the point lent above goes back: the save check after counts them
 
@@ -22237,25 +22369,18 @@ func _web_checks(main) -> void:
 	# every node at the sim's place, the ring's thirty round the outside, no two on each other
 	var ids: Array = Data.web_ids()
 	var off_place: Array = ids.filter(func(id): return not wv.layout.has(id) or wv.layout[id].distance_to(Data.web_at(str(id))) > 0.01)
-	_check(ids.size() > 300 and off_place.is_empty() and wv.layout.size() == ids.size() + Data.RING["nodes"].size(), "the web's nodes aren't at the sim's places: %d of %d off, %d laid" % [off_place.size(), ids.size(), wv.layout.size()])
-	var overlaps := 0
-	var all_ids: Array = wv.layout.keys()
-	for a_i in range(all_ids.size()):
-		for b_i in range(a_i + 1, all_ids.size()):
-			var ra: float = wv.radius_of(wv.node_of(all_ids[a_i]))
-			var rb: float = wv.radius_of(wv.node_of(all_ids[b_i]))
-			if wv.layout[all_ids[a_i]].distance_to(wv.layout[all_ids[b_i]]) < ra + rb + 4.0:
-				overlaps += 1
-				if overlaps <= 3:
-					_check(false, "%s and %s sit on each other" % [all_ids[a_i], all_ids[b_i]])
-	_check(overlaps == 0, "%d pairs of nodes overlap on the web" % overlaps)
+	_check(ids.size() > 1500 and off_place.is_empty() and wv.layout.size() == ids.size() + Data.RING["nodes"].size(), "the web's nodes aren't at the sim's places: %d of %d off, %d laid" % [off_place.size(), ids.size(), wv.layout.size()])
+	var overlaps: Array = _web_overlaps(wv)      # bucketed (BUILD49 V: 1,579 nodes)
+	for ov in overlaps.slice(0, 3):
+		_check(false, "%s sit on each other" % ov)
+	_check(overlaps.is_empty(), "%d pairs of nodes overlap on the web" % overlaps.size())
 	# the links: every web link drawn (the sim's, both ways), none through a node not its own
 	var n_links := 0
 	for id in ids:
 		for o in Data.web_links(str(id)):
 			n_links += 1
 			_check(wv.links_all().get(id, []).has(o), "the web doesn't draw the link %s-%s" % [id, o])
-	_check(n_links > 400, "only %d link ends on the web" % n_links)
+	_check(n_links > 4000, "only %d link ends on the web" % n_links)
 	var through := 0
 	var cv_links: Dictionary = wv.links_all()
 	for la in cv_links:
@@ -22314,7 +22439,8 @@ func _web_checks(main) -> void:
 	_check(wv.atlas_misses == 0, "%d of the web's pictures didn't pack into the atlas" % wv.atlas_misses)
 	wv.zoom = zoom_held
 	wv.cam = cam_held
-	# the colours: a dark element link in its colour, faint; a dark class link grey; the regions' tones
+	# the colours: a dark element link in its colour, faint; a dark class link in its track's colour, faint, where both
+	# ends share a track, else grey; a class node its track's colour (BUILD49 V), an element's its own, the centre amber
 	var el_links := 0
 	var cl_links := 0
 	for la in cv_links:
@@ -22328,11 +22454,13 @@ func _web_checks(main) -> void:
 				_check(lc.is_equal_approx(Color(wv.element_tone(ra.substr(3)), wv.ELEMENT_LINK_DIM)), "%s-%s in %s isn't in its colour: %s" % [la, lb, ra, lc])
 			elif ra.begins_with("class:") and wv._region.get(lb, "") == ra:
 				cl_links += 1
-				_check(lc == wv.LINK_CLASS_DIM, "the class link %s-%s took a colour: %s" % [la, lb, lc])
+				var ta: String = Data.web_theme(str(la))
+				var want_l: Color = Color(wv.TRACK_TONES[ta], wv.TRACK_LINK_DIM) if ta == Data.web_theme(str(lb)) and wv.TRACK_TONES.has(ta) else wv.LINK_CLASS_DIM
+				_check(lc.is_equal_approx(want_l), "the class link %s-%s (%s-%s) isn't in its track's colour: %s" % [la, lb, ta, Data.web_theme(str(lb)), lc])
 	_check(el_links > 20 and cl_links > 20, "the link colours checked too few links: %d element, %d class" % [el_links, cl_links])
 	for id in ids:
 		var rg: String = str(wv._region.get(id, ""))
-		var want: Color = wv.PITCH_TONE if rg == "centre" else (wv.element_tone(rg.substr(3)) if rg.begins_with("el:") else (wv.element_tone(wv.join_element(str(id))) if rg == "join" else Pal.TEXT))
+		var want: Color = wv.PITCH_TONE if rg == "centre" else (wv.element_tone(rg.substr(3)) if rg.begins_with("el:") else (wv.element_tone(wv.join_element(str(id))) if rg == "join" else wv.TRACK_TONES.get(Data.web_theme(str(id)), Pal.TEXT)))
 		_check(wv.tone_of(str(id)) == want and (rg != "join" or wv.join_element(str(id)) != ""), "%s (%s) isn't in its region's colour" % [id, rg])
 	# the camera: a zoom about a point keeps the web under it; a right-drag pans by the drag; a drag let go off the canvas
 	# stops
@@ -22387,8 +22515,8 @@ func _web_checks(main) -> void:
 			wv._gui_input(click)
 			main.refresh()
 			_check(bk.selected == "", "a click on nothing did not clear the pick")
-	# the tabs: the whole web, the runner's corner; no Pitch tab
-	_check(bk._web_buttons.size() == 2 and bk._web_buttons[0].text == Words.WEB_SCREEN["whole"] and not bk._web_buttons.any(func(b): return b.text.contains("Pitch")), "the web's tabs read %s" % str(bk._web_buttons.map(func(b): return b.text)))
+	# the tabs: the whole web, the runner's corner, the Paragon board (BUILD49 V); no Pitch tab
+	_check(bk._web_buttons.size() == 3 and bk._web_buttons[0].text == Words.WEB_SCREEN["whole"] and bk._web_buttons[2].text == Words.WEB_SCREEN2["paragon"] and not bk._web_buttons.any(func(b): return b.text.contains("Pitch")), "the web's tabs read %s" % str(bk._web_buttons.map(func(b): return b.text)))
 	_check_fit(main, "Training (the web)")
 
 
@@ -22444,10 +22572,11 @@ func _web47_checks(main) -> void:
 		for b in Data.web_links(str(a)):
 			if sim.web_owned(str(b)):
 				lit_link = true
-				_check(wv.link_colour(str(a), str(b)) == wv.tone_of(str(a) if wv.tinted(str(a)) else str(b)), "the owned link %s-%s isn't lit in its region's colour" % [a, b])
+				_check(wv.link_colour(str(a), str(b)) == wv.tone_of(wv.link_key(str(a), str(b))) and wv.link_key(str(a), str(b)) == (str(a) if wv.tinted(str(a)) else (str(b) if wv.tinted(str(b)) else (str(b) if Data.web_theme(str(a)) == "start" else str(a)))),
+					"the owned link %s-%s isn't lit in its region's or its track's colour" % [a, b])
 	_check(lit_link, "the fixture lit no link")
 	# the band's one counter: no points free, four of four spent
-	_check(bk._points.text == WS["free"] % 0 and bk._unit.text == UI.dots(WS["spent"] % [4, 4, "Poacher"]), "the band reads '%s' '%s'" % [bk._points.text, bk._unit.text])
+	_check(bk._points.text == WS["free"] % 0 and bk._unit.text == UI.dots(Words.WEB_SCREEN2["spent"] % [4, sim.web_points()]) and bk._unit2.text == UI.dots(Words.WEB_SCREEN2["from"] % "Poacher"), "the band reads '%s' '%s' '%s'" % [bk._points.text, bk._unit.text, bk._unit2.text])
 	# the card: a frontier node with none free says why; with a point it's live and takes; an owned one is Yours; a dark
 	# one says why
 	var fr_id: String = str(frontier.filter(func(x): return not sim.web_owned(str(x)))[0]) if n_reach > 0 else ""
@@ -22631,7 +22760,7 @@ func _m47_checks(main) -> void:
 			key = str(id)
 			key_n = c.web_steps(str(id))
 	var to_key: Array = c.web_path(key)
-	var far: String = Data.web_of_slot("e3_r2")
+	var far: String = Data.web_of_slot("e3:res")     # Blades' resist notable: far from the Poacher (the web's version two)
 	_check(key != "" and key_n <= Data.KEYSTONE_SPENT and c.web_steps(far) > 3, "the paste fixture: keystone %s %d steps, far node %d steps" % [key, key_n, c.web_steps(far)])
 	c.tree = [start] + to_key + [far]
 	var code: String = c.build_code()
@@ -22650,8 +22779,9 @@ func _m47_checks(main) -> void:
 	g.start()
 	g.set_class("Poacher")
 	g.core_gates = true
-	g.training_points = 30
-	for _k in range(60):
+	g.training_points = Data.KEYSTONE_SPENT + 6     # past the keystones' gate (30 since the web's version two), a keystone in it
+	_walk_gated(g, key)                         # the nearest keystone, its gate opened on the frontier as a player would
+	for _k in range(90):
 		if g.web_free() <= 0:
 			break
 		var fr: Array = g.web_frontier()
@@ -22663,7 +22793,7 @@ func _m47_checks(main) -> void:
 				pick = str(f)
 		g.web_take(pick)
 	var legal: Array = g.tree.filter(func(id): return str(id) != start and not g.is_ring(str(id)))
-	_check(g.web_spent() == 30 and legal.any(func(id): return Data.web_kind(str(id)) == "keystone"), "the reversed paste's build: %d spent, a keystone %s" % [g.web_spent(), str(legal.any(func(id): return Data.web_kind(str(id)) == "keystone"))])
+	_check(g.web_spent() == Data.KEYSTONE_SPENT + 6 and legal.any(func(id): return Data.web_kind(str(id)) == "keystone"), "the reversed paste's build: %d spent, a keystone %s" % [g.web_spent(), str(legal.any(func(id): return Data.web_kind(str(id)) == "keystone"))])
 	var rev: Array = legal.duplicate()
 	rev.reverse()
 	c.tree = [start] + rev
@@ -22671,7 +22801,7 @@ func _m47_checks(main) -> void:
 	r.start()
 	r.set_class("Poacher")
 	r.core_gates = true
-	r.training_points = 30
+	r.training_points = Data.KEYSTONE_SPENT + 6
 	var got2: Dictionary = r.build_apply(r.build_read(c.build_code()))
 	var mine: Array = r.tree.filter(func(id): return str(id) != start)
 	mine.sort()
@@ -22698,7 +22828,7 @@ func _m47_checks(main) -> void:
 		if line.size() < 12 and Data.web_kind(str(id)) != "keystone" and Data.web_kind(str(id)) != "capstone":
 			if walk.web_take(str(id)):
 				line.append(str(id))
-	var crew_far: String = Data.web_of_slot("e0_r2")
+	var crew_far: String = Data.web_of_slot("e0:res")     # the cold's resist notable, far from the Doorman (version two)
 	b.tree = [start] + line + [cap, far]
 	b.training_points = 8
 	var bd: Dictionary = JSON.parse_string(JSON.stringify(b.to_dict()))
@@ -22727,12 +22857,12 @@ func _m47_checks(main) -> void:
 			_check(Array(fs.roster[k].get("tree", [])).size() == rt.size(), "%s's %s cut on load: %d of %d" % [path, k, Array(fs.roster[k].get("tree", [])).size(), rt.size()])
 	# the big nodes' two lines read alike: "<Kind>s open at N points spent: open / M to go"
 	_set_cls(sim, "Poacher")
-	sim.tree = [start] + legal.slice(0, 25)
-	sim.training_points = 29
+	sim.tree = [start] + legal.slice(0, Data.KEYSTONE_SPENT + 5)     # past the keystones' gate, short of the capstones' (30 and 80, version two)
+	sim.training_points = Data.KEYSTONE_SPENT + 9
 	sim._caches_out()
 	bk._pick("")
 	main.refresh()
-	_check(bk._big_lines[0].text == "Keystones open at %d points spent: open" % Data.KEYSTONE_SPENT and bk._big_lines[1].text == "Capstones open at %d points spent: %d to go" % [Data.CAPSTONE_SPENT, Data.CAPSTONE_SPENT - 25],
+	_check(bk._big_lines[0].text == "Keystones open at %d points spent: open" % Data.KEYSTONE_SPENT and bk._big_lines[1].text == "Capstones open at %d points spent: %d to go" % [Data.CAPSTONE_SPENT, Data.CAPSTONE_SPENT - Data.KEYSTONE_SPENT - 5],
 		"the big nodes' lines don't read alike: '%s' / '%s'" % [bk._big_lines[0].text, bk._big_lines[1].text])
 	# the ring's entries at the classes' angles
 	for cl in Data.CLASSES:
@@ -22838,16 +22968,10 @@ func _web_art_checks(main) -> void:
 	var no_art: Array = smalls.filter(func(x): return wv.small_art_of(str(x)) == "")
 	var grown: int = smalls.filter(func(x): return wv.radius_of(wv.node_of(str(x))) > wv.R_SMALL + 2.0).size()
 	_check(no_art.is_empty() and grown * 2 > smalls.size(), "close in, %d small nodes carry nothing, %d of %d grown" % [no_art.size(), grown, smalls.size()])
-	var centre_l: String = Data.web_of_slot("o0-")
+	var centre_l: String = Data.web_of_slot("h0.1")     # a lesser node of the inner ring's life cluster (the web's version two)
 	_check(wv.small_art_of(centre_l) != "" and wv.glyph_of(wv.node_of(centre_l)) == "hp", "the centre's life small shows '%s', glyph %s" % [wv.small_art_of(centre_l), wv.glyph_of(wv.node_of(centre_l))])
 	# grown close in, no two nodes on each other (the overlap check of _web_checks at this zoom, the smalls grown)
-	var close_over: Array = []
-	var all_ids: Array = wv.layout.keys()
-	for a_i in range(all_ids.size()):
-		var ra: float = wv.radius_of(wv.node_of(all_ids[a_i]))
-		for b_i in range(a_i + 1, all_ids.size()):
-			if wv.layout[all_ids[a_i]].distance_to(wv.layout[all_ids[b_i]]) < ra + wv.radius_of(wv.node_of(all_ids[b_i])) + 4.0:
-				close_over.append("%s-%s" % [all_ids[a_i], all_ids[b_i]])
+	var close_over: Array = _web_overlaps(wv)
 	_check(close_over.is_empty(), "at zoom %.2f %d pairs of nodes overlap, the smalls grown: %s" % [wv.zoom, close_over.size(), str(close_over.slice(0, 4))])
 	# an art drop: a picture put where the lookup reads for a small node with none is drawn on the next look, no code
 	# changed; taken away, the glyph again. The lookup pointed at user:// for this (a killed smoke leaves nothing in art/)
@@ -22876,41 +23000,45 @@ func _web_art_checks(main) -> void:
 	WebView.node_art_dir = art_dir_was
 	WebView.art_rescan()
 	# the emblems over their names (0.12.2, Matt: "centered above their names"): an element's one, a class's two (its
-	# trees') side by side, the centre's over "The Pitch", the ring's over "Ring" - twenty; each block (the name and its
-	# emblems) on no node, no other block, on the canvas; each emblem's middle on its name's, its foot just over the words
+	# trees') side by side, the ring's over "Ring"; the centre's dropped (BUILD49 V: no place near the hub holds it on
+	# version two's web) - nineteen; over the words, or beside them at their left where over doesn't fit (NAME_AT's 2);
+	# each block (the name and its emblems) on no node, no other block, on the canvas
 	var want := {}
 	for et in Data.ELEMENT_TREES:
 		want["el:" + str(et["name"])] = 1
 	for cd in Data.CLASSES:
 		want["class:" + str(cd["name"])] = 2
-	want["centre"] = 1
+	want["centre"] = 0
 	want["ring"] = 1
 	var n_em := 0
 	for k in want:
 		n_em += Array(wv._axis.get(k, {}).get("emblems", [])).size()
 		_check(Array(wv._axis.get(k, {}).get("emblems", [])).size() == want[k], "%s has %d emblems over its name, not %d" % [k, Array(wv._axis.get(k, {}).get("emblems", [])).size(), want[k]])
-	_check(n_em == 20 and wv.region_words("centre") == Words.WEB_SCREEN["centre_name"], "the web's emblems are %d, not twenty, or the centre's name reads '%s'" % [n_em, wv.region_words("centre")])
+	_check(n_em == 19 and wv.region_words("centre") == Words.WEB_SCREEN["centre_name"], "the web's emblems are %d, not nineteen, or the centre's name reads '%s'" % [n_em, wv.region_words("centre")])
 	var canvas := Rect2(Vector2.ZERO, wv.size)
 	for zl in [wv.fit_zoom(), 1.0, 2.0]:
 		wv.focus_all()
 		wv.zoom = zl
 		wv.count_batches()
 		if is_equal_approx(zl, wv.fit_zoom()):
-			_check(wv.emblem_rects.size() == 20, "at the whole web %d emblems drawn, not twenty" % wv.emblem_rects.size())
+			_check(wv.emblem_rects.size() == 19, "at the whole web %d emblems drawn, not nineteen" % wv.emblem_rects.size())
 		var keys: Array = wv._axis.keys()
 		for k in keys:
 			var words: Rect2 = wv.label_rect(str(k))
 			var ers: Array = wv.emblem_rects_of(str(k))
-			if not ers.is_empty():
+			if not ers.is_empty() and not wv._axis[k].get("inline", false):
 				var row := Rect2(ers[0].position, Vector2.ZERO).merge(ers.back())
 				_check(absf(row.get_center().x - words.get_center().x) <= 1.0 and words.position.y - row.end.y >= 0.0 and words.position.y - row.end.y <= wv.EMBLEM_LIFT + 1.0,
 					"at zoom %.2f %s's emblems aren't centred just over its name: %s over %s" % [zl, k, str(row), str(words)])
+			elif not ers.is_empty():
+				var row2 := Rect2(ers[0].position, Vector2.ZERO).merge(ers.back())
+				_check(row2.end.x <= words.position.x and words.position.x - row2.end.x <= wv.INLINE_GAP + 1.0 and absf(row2.get_center().y - words.get_center().y) <= 1.5,
+					"at zoom %.2f %s's emblems aren't just left of its name, its middle: %s by %s" % [zl, k, str(row2), str(words)])
 			var blk: Rect2 = wv.block_rect(str(k))
 			if is_equal_approx(zl, wv.fit_zoom()):
 				_check(canvas.encloses(blk), "%s's name and emblems run off the canvas at the whole web: %s" % [k, str(blk)])
-			# a fixed name (0.12.2, the designer's places): its block centred on its point; what it runs into, and how far
-			if wv._axis[k].get("fixed", false):
-				_check(blk.get_center().distance_to(wv.to_screen(wv._axis[k]["anchor"])) <= 2.0, "at zoom %.2f %s's block is %.1f px off its place" % [zl, k, blk.get_center().distance_to(wv.to_screen(wv._axis[k]["anchor"]))])
+			# a stored name (BUILD49 V, NAME_AT): its block centred on its place at every zoom
+			_check(blk.get_center().distance_to(wv.to_screen(wv._axis[k]["label_at"])) <= 2.0, "at zoom %.2f %s's block is %.1f px off its place" % [zl, k, blk.get_center().distance_to(wv.to_screen(wv._axis[k]["label_at"]))])
 			var bdim: Dictionary = wv.block_dims(str(k), zl)
 			var bs: Array = [bdim["ts"], bdim["es"]]
 			_check(bs.size() == 2 and float(bs[0]) >= wv.NAME_MIN and float(bs[0]) <= wv.NAME_SIZE and (Array(wv._axis[k].get("emblems", [])).is_empty() or (float(bs[1]) >= wv.EMBLEM_MIN and float(bs[1]) <= wv.EMBLEM_MAX)),
@@ -22920,21 +23048,24 @@ func _web_art_checks(main) -> void:
 			for k2 in keys:
 				if str(k2) > str(k) and wv.block_rect(str(k2)).intersects(blk):
 					_check(false, "at zoom %.2f %s's name and emblems sit on %s's" % [zl, k, k2])
-	# every name fixed, each fitted (none left touching), the elements' out past their capstones and inside the ring
-	# the stored fit (NAME_FIT, CLASS_NAME_AT, ELEMENT_NAME_AT) still clears every node, the words LABEL_SLACK wide, at
-	# the whole web of this canvas and of one 4 px shorter (Windows' margin); else what the fit would take now
-	_check(wv._axis.keys().all(func(k): return wv._axis[k].get("fixed", false)), "a name isn't at a fixed place")
+	# every name at its stored place (NAME_AT, BUILD49 V), each clear (none touching a node, none on the ring, none under
+	# the tabs or the key), the words LABEL_SLACK wide, at the whole web of this canvas and of one 4 px shorter (Windows'
+	# margin); each by its own line (a class's start, an element's column), within NAME_SPAN degrees
+	_check(wv._axis.keys().all(func(k): return wv.NAME_AT.has(k) and Vector2(wv._axis[k]["label_at"]).distance_to(Vector2(float(wv.NAME_AT[k][0]), float(wv.NAME_AT[k][1]))) < 0.01), "a name isn't at its stored place")
 	for hh in [wv.size.y, wv.size.y - 4.0]:
-		var zf: float = clampf(minf(wv.size.x / wv._bounds.size.x, hh / wv._bounds.size.y), wv.ZOOM_MIN, wv.ZOOM_MAX)
-		var unfit: Dictionary = wv.stored_unfit(zf)
-		_check(unfit.is_empty(), "at the whole web of a %d px canvas the stored names touch nodes: %s (the fit now: %s)" % [int(hh), str(unfit), str(wv.fit_table(zf)) if not unfit.is_empty() else ""])
-	for et in Data.ELEMENT_TREES:
-		var er: float = Vector2(wv._axis["el:" + str(et["name"])]["anchor"]).length()
-		_check(er >= wv.ELEMENT_NAME_R and er <= wv.ELEMENT_NAME_MAX, "%s's name sits at r %.0f" % [et["name"], er])
+		var zf: float = clampf(minf(wv.size.x / wv._bounds.size.x, (hh - wv.FRAME_TOP) / wv._bounds.size.y), wv.ZOOM_MIN, wv.ZOOM_MAX)
+		var unfit: Dictionary = wv.stored_unfit(zf, hh)
+		_check(unfit.is_empty(), "at the whole web of a %d px canvas the stored names touch nodes or sit where they mustn't: %s" % [int(hh), str(unfit)])
+	for k in wv._axis:
+		if str(k) in ["centre", "ring"]:
+			continue
+		var line: float = Vector2(wv._axis[k]["anchor"]).angle()
+		var off: float = rad_to_deg(absf(angle_difference(line, Vector2(wv._axis[k]["label_at"]).angle())))
+		_check(off <= wv.NAME_SPAN + 0.5, "%s's name sits %.1f degrees off its line" % [k, off])
 	# the picked node's label (Training's default view: the start's notable) clear of every name's block, and the card's
 	# place for a centre node in the web's word for it, "The Pitch" (0.12.2, the review)
 	wv.focus_all()
-	var dpick: String = Data.node_id_named("Stalking/Early doors")
+	var dpick: String = wv.find_named("Early doors")
 	bk._pick(dpick)
 	main.refresh()
 	wv.selected = dpick
@@ -22953,7 +23084,7 @@ func _web_art_checks(main) -> void:
 	wv.count_batches()
 	var pr: Rect2 = wv.portrait_rect
 	var mine: String = "class:Poacher"
-	_check(pr.size.x > 0.0 and pr.get_center().distance_to(wv.label_rect(mine).get_center()) < 1.0 and canvas.encloses(pr) and pr.encloses(wv.block_rect(mine)),
+	_check(pr.size.x > 0.0 and pr.get_center().distance_to(wv.block_rect(mine).get_center()) < 1.0 and canvas.encloses(pr) and pr.encloses(wv.block_rect(mine)),
 		"the Poacher's portrait isn't on his name: %s, the name %s" % [str(pr), str(wv.label_rect(mine))])
 	for ak in wv._axis:
 		if str(ak) != mine:
@@ -22982,6 +23113,285 @@ func _block_clash(wv, blk: Rect2) -> Array:
 			hits.append([r - d, "node %s %.1f px" % [id, r - d]])
 	hits.sort_custom(func(x, y): return x[0] > y[0])
 	return hits.map(func(h): return h[1])
+
+
+## BUILD49 V (4 Nov, docs/design/skill_web.md "The screen (Training)"): Training's web at version two's size - every
+## node at its place and drawn; the three states as the sim's for a fixture runner; the tracks' colours; lesser nodes
+## dots at the whole web; the fourteen names clear; the card's button live only when web_can_take is "", "Skill" on a
+## skill node, the two gates' words; the band's counter and its reward line's sources; the three tabs (the corner
+## framing the class and its two elements, the Paragon board its ring's arc); one atlas under BATCH_MAX and a frame
+## under today's at 379 nodes x 1.5; every label fitting at 1920x1080 and 1920x1200.
+const B49_WEB_FRAME_MS := 8.9      # today's (b49, 379 nodes): a restated frame at the whole web, dry, the cloud quiet
+func _web49_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.on_mission():
+		sim.extract_now()
+	var bk = main._barracks
+	var wv = bk.web()
+	var WS: Dictionary = Words.WEB_SCREEN
+	var W2: Dictionary = Words.WEB_SCREEN2
+	var gates_were: bool = sim.core_gates
+	sim.core_gates = true
+	_set_cls(sim, "Poacher")
+	var start: String = Data.web_start("Poacher")
+	sim.tree = [start]
+	sim.ring = {}
+	sim.rewards_earned = {}
+	sim.training_points = 6
+	sim._caches_out()
+	main.show_room(main.BARRACKS)
+	bk._pick("")
+	bk._shown = ""
+	main.refresh()
+	bk._web_buttons[0].pressed.emit()
+	# every node at its place, the ring past the furthest (skill_web.md: 1,120), and drawn at the whole web
+	var ids: Array = Data.web_ids()
+	var far := 0.0
+	for id in ids:
+		far = maxf(far, Data.web_at(str(id)).length())
+	_check(ids.size() == 1549 and ids.all(func(id): return wv.layout.has(id) and wv.layout[id] == Data.web_at(str(id))), "the web has %d nodes, or one isn't at its place" % ids.size())
+	_check(wv.ring_r() > far + 20.0 and wv.ring_r() <= 1125.0 and wv.layout.keys().filter(func(id): return wv._region[id] == "ring").all(func(id): return absf(wv.layout[id].length() - wv.ring_r()) < 0.01), "the ring sits at %.0f, the web's furthest node at %.0f" % [wv.ring_r(), far])
+	wv.count_batches()
+	_check(wv.nodes_drawn == ids.size() + Data.RING["nodes"].size(), "the whole web drew %d nodes of %d" % [wv.nodes_drawn, ids.size() + Data.RING["nodes"].size()])
+	# the fixture: six nodes out from the start; the three states as the sim's, in the view's states and its packed reads
+	for _k in range(6):
+		var fr0: Array = sim.web_frontier()
+		if not fr0.is_empty():
+			sim.web_take(str(fr0[0]))
+	bk._shown = ""
+	main.refresh()
+	var fr: Array = sim.web_frontier(true)
+	var wrong: Array = []
+	var n_own := 0
+	var n_reach := 0
+	for i in range(wv._ids.size()):
+		var id: String = wv._ids[i]
+		if wv._region[id] == "ring":
+			continue
+		var own: bool = sim.web_owned(id)
+		var reach: bool = fr.has(id) and not own
+		n_own += 1 if own else 0
+		n_reach += 1 if reach else 0
+		var st: Dictionary = wv.state_of(id)
+		if bool(st.get("taken", false)) != own or bool(st.get("reach", false)) != reach or int(wv._st[i]) != (2 if own else (1 if reach else 0)):
+			wrong.append(id)
+	_check(n_own == 7 and n_reach >= 3 and wrong.is_empty(), "the web's states aren't the sim's: %d owned, %d can take, wrong on %s" % [n_own, n_reach, str(wrong.slice(0, 4))])
+	# the tracks' colours: a class node its track's, an element node its element's, the centre's amber; a lesser node a
+	# dot at the whole web (DOT_MIN at least), its glyph or picture from SMALL_ART_ZOOM
+	var off_tone: Array = []
+	var themes := {}
+	for id in ids:
+		var rg: String = str(wv._region[id])
+		var th: String = Data.web_theme(str(id))
+		var want: Color = wv.PITCH_TONE if rg == "centre" else (wv.element_tone(rg.substr(3)) if rg.begins_with("el:") else wv.TRACK_TONES.get(th, Color.BLACK))
+		if rg.begins_with("class:"):
+			themes[th] = true
+		if wv.tone_of(str(id)) != want:
+			off_tone.append(id)
+	_check(off_tone.is_empty() and themes.has("dmg") and themes.has("ctl") and themes.has("def") and themes.has("loot") and themes.has("skill"), "%d nodes aren't in their track's or region's colour (tracks %s)" % [off_tone.size(), str(themes.keys())])
+	_check(wv.TRACK_TONES["dmg"].r > wv.TRACK_TONES["dmg"].b and wv.TRACK_TONES["ctl"].g > wv.TRACK_TONES["ctl"].r and wv.TRACK_TONES["def"].b > wv.TRACK_TONES["def"].r and wv.TRACK_TONES["skill"].b > wv.TRACK_TONES["skill"].g,
+		"the tracks aren't red, teal, blue and purple: %s" % str(wv.TRACK_TONES))
+	_check(wv.zoom < wv.SMALL_ART_ZOOM and maxf(wv.DOT_MIN, wv.R_SMALL * wv.zoom) <= 2.0, "the whole web's lesser nodes aren't dots: zoom %.2f" % wv.zoom)
+	# the names: fourteen, placed clear (the stored fit, _web_art_checks), none under the tabs or the key
+	_check(wv._axis.size() == 14 and wv.keep_clear.size() == 2, "the web names %d places, keeps %d clear" % [wv._axis.size(), wv.keep_clear.size()])
+	var tabs_end: float = bk._find.position.x + bk._find.size.x
+	for cl in ["Paramedic", "Poacher"]:
+		_set_cls(sim, cl)
+		bk._lay_tabs()
+		tabs_end = maxf(tabs_end, bk._find.position.x + bk._find.size.x)
+	_set_cls(sim, "Poacher")
+	bk._lay_tabs()
+	_check(tabs_end <= bk.TABS_W, "the tabs and the find box run to %.0f, past the names' keep-clear %.0f" % [tabs_end, bk.TABS_W])
+	for k in wv._axis:
+		var br: Rect2 = wv.block_rect(str(k))
+		for kc in wv.keep_clear:
+			_check(not Rect2(kc).intersects(br), "%s's name sits under the tabs or the key: %s" % [k, str(br)])
+	# zoomed in: a named node's name on hover (its plate) under LABEL_ZOOM, under it from LABEL_ZOOM; and on the card
+	var named: String = wv.find_named("Rifleman")
+	wv.centre_on(named)
+	wv.zoom = 1.2
+	wv.hover = named
+	wv.count_batches()
+	_check(named != "" and wv.pick_label_rects.has(named) and int(wv.pick_label_hits.get(named, 99)) == 0, "the hovered Rifleman's name isn't shown clear at zoom 1.2: %s" % str(wv.pick_label_rects.get(named)))
+	var lesser := ""                       # a named lesser node (a stepped-down notable): its name on hover too, close in
+	for id in ids:
+		if lesser == "" and Data.web_kind(str(id)) == "small" and Data.web_region(str(id)) == "class:Poacher" and not wv.node_of(str(id)).get("filler", false) and str(wv.node_of(str(id)).get("name", "")) != "":
+			lesser = str(id)
+	wv.centre_on(lesser)
+	wv.zoom = 2.4
+	wv.hover = lesser
+	wv.count_batches()
+	_check(lesser != "" and wv.pick_label_rects.has(lesser), "the hovered lesser node %s's name isn't shown at zoom 2.4" % str(wv.node_of(lesser).get("name", lesser)))
+	wv.hover = ""
+	bk._pick(named)
+	main.refresh()
+	_check(bk._title.text == "Rifleman", "the card doesn't name the picked node: '%s'" % bk._title.text)
+	# the card's button: live only when web_can_take is "" - a frontier node with a point, without, a dark node, an owned
+	# one, a keystone under 30 spent, a capstone under 80; a skill node says "Skill"
+	var cases: Array = []
+	var fr_id: String = str(sim.web_frontier()[0]) if not sim.web_frontier().is_empty() else ""
+	cases.append(fr_id)
+	var dark := ""
+	for id in ids:
+		if dark == "" and not sim.web_owned(str(id)) and not fr.has(id) and Data.web_kind(str(id)) == "notable":
+			dark = str(id)
+	cases.append(dark)
+	cases.append(start)
+	var ks := ""
+	var cap := ""
+	for id in ids:
+		if Data.web_region(str(id)) == "class:Poacher" and Data.web_kind(str(id)) == "keystone" and (ks == "" or sim.web_steps(str(id)) < sim.web_steps(ks)):
+			ks = str(id)
+		if Data.web_region(str(id)) == "class:Poacher" and Data.web_kind(str(id)) == "capstone":
+			cap = str(id)
+	for pts in [0, 1]:
+		sim.training_points = sim.web_spent() + pts
+		bk._shown = ""
+		for id in cases:
+			bk._pick(str(id))
+			main.refresh()
+			var why: String = sim.web_can_take(str(id))
+			_check(bk._train.visible and bk._train.disabled == (why != "") and (bk._train.text == WS["take"] if why == "" else (bk._train.text == why or bk._train.text == WS["yours"])),
+				"the card's button on %s with %d free: '%s' disabled %s, the sim says '%s'" % [id, pts, bk._train.text, str(bk._train.disabled), why])
+	_check(sim.web_can_take(fr_id) == "" and sim.web_can_take(dark) != "", "the button fixture: '%s' / '%s'" % [sim.web_can_take(fr_id), sim.web_can_take(dark)])
+	var ks_path: Array = sim.web_path(ks)
+	sim.training_points = 200
+	for q in ks_path.slice(0, ks_path.size() - 1):
+		sim.web_take(str(q))
+	bk._pick(ks)
+	main.refresh()
+	_check(sim.web_spent() < Data.KEYSTONE_SPENT and Data.KEYSTONE_SPENT == 30 and bk._train.disabled and bk._train.text == "Keystones open at 30 points spent", "a keystone under 30 spent: '%s' at %d spent" % [bk._train.text, sim.web_spent()])
+	sim.core_gates = false
+	var cap_path: Array = sim.web_path(cap)
+	for q in cap_path.slice(0, cap_path.size() - 1):
+		sim.web_take(str(q))
+	sim.core_gates = true
+	bk._pick(cap)
+	main.refresh()
+	_check(sim.web_spent() < Data.CAPSTONE_SPENT and Data.CAPSTONE_SPENT == 80 and sim.web_frontier(true).has(cap) == false and bk._train.disabled and bk._train.text == "Capstones open at 80 points spent", "a capstone under 80 spent: '%s' at %d spent" % [bk._train.text, sim.web_spent()])
+	_check(bk._big_lines[1].text.begins_with("Capstones open at 80 points spent"), "the big nodes' capstone line reads '%s'" % bk._big_lines[1].text)
+	var skill := ""
+	for id in ids:
+		if skill == "" and Data.web_kind(str(id)) == "skill" and Data.web_region(str(id)) == "class:Poacher":
+			skill = str(id)
+	bk._pick(skill)
+	main.refresh()
+	_check(skill != "" and bk._chips.visible and _chip_texts(bk._chips).has(WS["skill_chip"]) and not _chip_texts(bk._chips).has("Notable") and bk._where.text.ends_with(UI.dots(" · " + WS["skill"])), "a skill node's card: chips %s, where '%s'" % [str(_chip_texts(bk._chips)), bk._where.text])
+	# the band: the counter is web_free; spent of all; where points come from; the rewards' sources on the hover
+	sim.tree = [start]
+	sim.training_points = 6
+	sim._caches_out()
+	bk._pick("")
+	bk._shown = ""
+	main.refresh()
+	_check(bk._points.text == WS["free"] % sim.web_free() and bk._unit.text == W2["spent"] % [0, sim.web_points()] and bk._unit2.text == W2["from"] % "Poacher", "the band reads '%s' '%s' '%s'" % [bk._points.text, bk._unit.text, bk._unit2.text])
+	_check(bk._unit2.tooltip_text == "%s\n%s" % [W2["rewards_none"], W2["rewards_how"]], "with no rewards the hover reads '%s'" % bk._unit2.tooltip_text)
+	sim._web_reward("head:The Gamekeeper", 1, "The Gamekeeper")
+	sim._web_reward("issue", 2, "The Issue")
+	bk._shown = ""
+	main.refresh()
+	var rw: Dictionary = sim.web_rewards()
+	var lines: Array = bk._unit2.tooltip_text.split("\n")
+	_check(rw["from"].size() == 2 and sim.web_free() == 9 and bk._points.text == WS["free"] % 9 and lines.size() == 3 and lines[0] == W2["rewards"] % [3, 22] and lines[1] == "+1 for the Gamekeeper's first fall" and lines[2] == "+2 from the Issue",
+		"the rewards: %d free, the band '%s', the hover %s" % [sim.web_free(), bk._points.text, str(lines)])
+	_check(bk.reward_line({"key": "kev:The first paper", "points": 1, "why": "The first paper"}) == "+1 for Kev's story: The first paper", "a chapter's line reads '%s'" % bk.reward_line({"key": "kev:The first paper", "points": 1, "why": "The first paper"}))
+	# the tabs: the corner frames the class and its two elements' columns, each class; the Paragon board its ring's arc
+	var cols := {}
+	for id in ids:
+		var rg: String = str(wv._region[id])
+		if rg.begins_with("el:"):
+			cols[rg] = Vector2(cols.get(rg, Vector2.ZERO)) + Data.web_at(str(id))
+	for cd in Data.CLASSES:
+		var cl: String = str(cd["name"])
+		_set_cls(sim, cl)
+		sim._caches_out()
+		bk._shown = ""
+		main.refresh()
+		var a: float = Data.web_at(Data.web_start(cl)).angle()
+		var near: Array = cols.keys()
+		near.sort_custom(func(x, y): return absf(angle_difference(a, Vector2(cols[x]).angle())) < absf(angle_difference(a, Vector2(cols[y]).angle())))
+		var regs: Array = wv.corner_regions(cl)
+		_check(regs.size() == 3 and regs[0] == "class:" + cl and regs.has(near[0]) and regs.has(near[1]) and rad_to_deg(absf(angle_difference(a, Vector2(cols[near[1]]).angle()))) < 40.0, "the %s's corner is %s, its columns %s" % [cl, str(regs), str(near.slice(0, 2))])
+		bk._web_buttons[1].pressed.emit()
+		var outside := 0
+		for id in ids:
+			if str(wv._region[id]) in regs and not wv.framed_rect().grow(0.5).has_point(wv.to_screen(wv.layout[id])):
+				outside += 1
+		_check(bk._web_buttons[1].text == WS["corner"] % cl and outside == 0 and wv.zoom > wv.fit_zoom() * 1.5, "the %s's corner tab leaves %d nodes off, zoom %.2f" % [cl, outside, wv.zoom])
+		for rk in regs:
+			_check(wv.framed_rect().grow(1.0).encloses(wv.block_rect(str(rk))), "the %s's corner leaves %s's name off the canvas or under the tabs: %s" % [cl, rk, str(wv.block_rect(str(rk)))])
+		bk._web_buttons[2].pressed.emit()
+		var arc: Array = wv.ring_arc(a)
+		_check(arc.size() == 2 * wv.RING_ARC + 1 and arc.all(func(id): return wv.framed_rect().has_point(wv.to_screen(wv.layout[id]))) and Data.web_entry(sim.node(str(arc[0]))) and wv.zoom > wv.fit_zoom() * 1.5,
+			"the %s's Paragon board frames %d ring nodes, its entry first %s, zoom %.2f" % [cl, arc.size(), str(Data.web_entry(sim.node(str(arc[0])))), wv.zoom])
+		for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+			main.layout(sz)
+			main.refresh()
+			_check_fit(main, "Training, the %s (%dx%d)" % [cl, int(sz.x), int(sz.y)])
+	_set_cls(sim, "Poacher")
+	bk._web_buttons[0].pressed.emit()
+	_check(is_equal_approx(wv.zoom, wv.fit_zoom()), "Whole web didn't go back to the whole web")
+	# the speed: one atlas under BATCH_MAX at the whole web and at full zoom; a restated frame at the whole web under
+	# today's at 379 nodes x 1.5 (B49_WEB_FRAME_MS, the cloud quiet): each try's time over the machine's pace read beside
+	# it (the cloud's two CPUs shared with other builds), the least of seven
+	var calls := []
+	var ms := []
+	for z in [wv.fit_zoom(), wv.ZOOM_MAX]:
+		wv.focus_all()
+		wv.zoom = z
+		var best := INF
+		for _r in range(7):
+			var pace: float = _b45_pace_now()
+			wv._state_sig = ""
+			wv.show_state(sim)
+			var t0 := Time.get_ticks_usec()
+			wv.count_batches()
+			best = minf(best, (Time.get_ticks_usec() - t0) / 1000.0 / pace)
+		calls.append(wv.batches)
+		ms.append(best)
+	print("the web's frame (BUILD49 V): %d calls %.1f ms at the whole web, %d calls %.1f ms at full zoom, at the quiet pace (budget %.1f ms)" % [calls[0], ms[0], calls[1], ms[1], B49_WEB_FRAME_MS * 1.5])
+	_check(int(calls[0]) <= wv.BATCH_MAX and int(calls[1]) <= wv.BATCH_MAX and float(ms[0]) < B49_WEB_FRAME_MS * 1.5 and float(ms[1]) < B49_WEB_FRAME_MS * 1.5,
+		"the web's frame: %s calls, %s ms at the quiet pace (BATCH_MAX %d, %.1f ms)" % [str(calls), str(ms), wv.BATCH_MAX, B49_WEB_FRAME_MS * 1.5])
+	wv.focus_all()
+	# the art manifest's list: the named nodes with no picture of their own (their glyph drawn)
+	var no_pic: Array = []
+	for id in ids:
+		var nd: Dictionary = wv.node_of(str(id))
+		if Data.web_kind(str(id)) != "small" and WebView.picture(wv.picture_slug(nd)) == null:
+			no_pic.append(str(nd.get("name", id)))
+			_check(wv.glyph_of(nd) != "", "%s has neither a picture nor a glyph" % nd.get("name", id))
+	print("the web's named nodes with no picture (their glyph drawn; for the art manifest): %d: %s" % [no_pic.size(), ", ".join(no_pic)])
+	sim.load_dict(saved)
+	sim.core_gates = gates_were
+	bk.selected = ""
+	bk._shown = ""
+	main.layout(Vector2(1920, 1080))           # as the other areas leave it (merge 49: root.size misfitted every check after)
+	main.refresh()
+	print("the web's screen at version two ok: %d nodes, the states, the tracks, the names, the card, the band's rewards, the three tabs, %s calls %s ms" % [ids.size(), str(calls), str(ms)])
+
+
+## The nodes on each other (BUILD49 V: bucketed, version two's 1,579): "a and b" for each pair whose discs, at the
+## canvas's zoom, come within 4 web units.
+func _web_overlaps(wv) -> Array:
+	var cell := 48.0
+	var grid := {}
+	var rad := {}
+	for id in wv.layout:
+		rad[id] = wv.radius_of(wv.node_of(id))
+		var c := Vector2i(floori(wv.layout[id].x / cell), floori(wv.layout[id].y / cell))
+		if not grid.has(c):
+			grid[c] = []
+		grid[c].append(id)
+	var out: Array = []
+	for id in wv.layout:
+		var c := Vector2i(floori(wv.layout[id].x / cell), floori(wv.layout[id].y / cell))
+		for dx in [-1, 0, 1]:
+			for dy in [-1, 0, 1]:
+				for o in grid.get(c + Vector2i(dx, dy), []):
+					if str(o) > str(id) and wv.layout[id].distance_to(wv.layout[o]) < float(rad[id]) + float(rad[o]) + 4.0:
+						out.append("%s and %s" % [id, o])
+	return out
 
 
 ## The band's one counter (3 Nov, the skill web): "N points free".
@@ -24106,8 +24516,10 @@ func _rebuild_checks(main) -> void:
 	_check(mv._order_labels["grid"].visible and not mv._order_labels["mint"].visible, "the Map's order pins: the Grid's %s, the Mint's %s (shut till its rebuild)" % [str(mv._order_labels["grid"].visible), str(mv._order_labels["mint"].visible)])
 	main._missions.select_order("grid")
 	main.refresh()
-	_check(main._missions.order_key == "grid" and od.visible and od.col("grid")["panel"].visible and not od.col("archive")["panel"].visible and is_equal_approx(od.col("grid")["panel"].position.x, main._missions.CARD_X), "the Grid's pin did not show its card at the right")
-	_check(od.col("grid")["button"].visible, "the Grid's card has no Go")
+	_check(main._missions.order_key == "grid" and main._missions._cols[0]["panel"].visible and main._missions._cols[0]["card"].order == "grid" and is_equal_approx(main._missions._cols[0]["panel"].position.x, main._missions.CARD_X), "the Grid's pin did not show its card at the right")     # the site card now (BUILD49 U, item 23)
+	_check(main._missions._cols[0]["deploy"].visible, "the Grid's card has no Set off")
+	od._shown = ""
+	od.show_state(sim)                        # the old card's own checks below read it directly
 	# the order's places their own pictures (19 Oct): the card shows it, and its head's face and poses are there
 	var UIv := load("res://scripts/ui/ui.gd")
 	var PeopleV := load("res://scripts/ui/people.gd")
@@ -24176,7 +24588,7 @@ func _rebuild_checks(main) -> void:
 	_check(main._missions.order_key == "grid", "a shut place's pin took the card")
 	main._missions.select(0)
 	main.refresh()
-	_check(not od.visible and main._missions._cols[0]["panel"].visible and main._missions.order_key == "", "a site's pin did not take the card back from the order's")
+	_check(not od.visible and main._missions._cols[0]["panel"].visible and main._missions.order_key == "" and main._missions._cols[0]["card"].order == "", "a site's pin did not take the card back from the order's")
 	sim.load_dict(saved)
 	main.show_room(was)
 	main.refresh()
@@ -25187,7 +25599,7 @@ func _map_checks(main) -> void:
 	_check(mv._order_labels.values().all(func(l): return l.visible), "an opened order's place has no pin on the Map")
 	click.call(mv.order_pin_at("archive"))
 	main.refresh()
-	_check(M.order_key == "archive" and M._order.visible, "the Archive's pin didn't show its card")
+	_check(M.order_key == "archive" and M._cols[0]["card"].order == "archive", "the Archive's pin didn't show its card")     # the site card (BUILD49 U, item 23)
 	_check_fit(main, "the Map (all open, an order's place picked)")
 	M.select(11)
 	sim.load_dict(saved)
@@ -29749,7 +30161,7 @@ func _repeat_checks(main) -> void:
 		main._radio._shown = ""
 		main.refresh()
 		var rd = main._radio
-		_check(rd._wager_btn.visible and rd._set_off.position.x + rd._set_off.size.x <= rd._wager_btn.position.x and rd._wager_btn.position.x + rd._wager_btn.size.x <= rd._bin.position.x, "the Radio's Wagers: shown %s, between Set off and Bin it" % str(rd._wager_btn.visible))
+		_check(rd._wager_btn.visible and rd._set_off.position.y + rd._set_off.size.y <= rd._wager_btn.position.y and rd._wager_btn.position.x + rd._wager_btn.size.x <= rd._bin.position.x and is_equal_approx(rd._wager_btn.position.y, rd._bin.position.y), "the Radio's Wagers: shown %s, under Set off beside Bin it" % str(rd._wager_btn.visible))     # Set off first, then the wagers and Bin it (BUILD49 U, item 25)
 		rd._wager_btn.pressed.emit()
 		main.refresh()
 		var sk: String = sim.wager_signal_key(0)
@@ -31139,7 +31551,7 @@ func _expeditions_checks(main) -> void:
 	sim.exp_odds(5, lead_cls)                       # the card's own read (the tools review's B5: not the bot's leftover)
 	main.refresh()
 	var shown_risk: String = E["risk"] % int(round(sim.exp_risk(5, lead_cls, [int(porter["id"])], sim.cargo_worth(ep2._cargo_now()), sim.exp_crew_odds(5, lead_cls, [int(porter["id"])])) * 100.0))
-	_check(ep2._risk_label.text.begins_with(shown_risk + " · ") and ep2._risk_label.text.ends_with(ep2.risk_word) and ep2.risk_word != "" and ep2._slot_btn.visible and not ep2.send.disabled, "the send card's risk '%s' isn't the sim's '%s', or London's slot or Send is off: '%s'" % [ep2._risk_label.text, shown_risk, ep2.note.text])
+	_check(ep2._risk_label.text.begins_with(shown_risk + " ") and ep2._verdict.text == ep2.risk_word and ep2.risk_word != "" and ep2._slot_btn.visible and not ep2.send.disabled, "the send card's risk '%s' isn't the sim's '%s', or London's slot or Send is off: '%s'" % [ep2._risk_label.text, shown_risk, ep2.note.text])     # one figure under the verdict (BUILD49 U, item 15)
 	_check_fit(main, "the Map, Expeditions")
 	ep2._send()
 	main.refresh()
@@ -31863,21 +32275,21 @@ func _expeditions_fix_checks(main) -> void:
 	main.refresh()
 	var slot_texts: Array = []
 	for sd in ep._slots:
-		if sd["kind"].visible and not sd["kind"].text.begins_with(E["cargo_empty"].left(5)):
-			slot_texts.append(sd["kind"].text)
+		if sd["kind"].visible and sd["icon"].texture != null:
+			slot_texts.append(sd["name"].text)     # the cell's count and name (BUILD49 U, item 15)
 	_check(slot_texts.size() == 3 and slot_texts.all(func(t): return t.left(1) >= "0" and t.left(1) <= "9") and slot_texts[2].begins_with("1 cable drum") and not slot_texts[2].contains("drums"), "the cargo buttons don't lead with their count: %s" % str(slot_texts))
 	_check(ep._stakes.text != "" and ep._stakes.visible, "the send card doesn't say what the hands risk")
 	_check_fit(main, "the Map, Expeditions, the fix round")
 	ep.set_pick(2, lead, [], [{"kind": "scrap", "share": 1.0}])
 	main.refresh()
 	var rk: float = sim.exp_risk(2, lead, [], sim.cargo_worth(ep._cargo_now()), sim.exp_crew_odds(2, lead, []))
-	_check(ep._stakes.text == "" and ((rk >= 0.5) == (ep.risk_word == E["risk_bad"])) and ((rk >= 0.5) == (str(ep.send.get_meta("ui_style", "")) == "true|bad")), "the verdict at %.2f: '%s', style %s" % [rk, ep.risk_word, str(ep.send.get_meta("ui_style", ""))])
+	_check(ep._stakes.text == "" and ((rk >= 0.5) == (ep.risk_word == E["risk_bad"])) and ((rk >= 0.5) == (str(ep.send.get_meta("ui_style", "")) == "false|")), "the verdict at %.2f: '%s', style %s" % [rk, ep.risk_word, str(ep.send.get_meta("ui_style", ""))])
 	var weak: Dictionary = sim.roster[lead]["equipped"].duplicate()
 	for sl in Data.SLOTS:
 		sim.roster[lead]["equipped"][sl] = null
 	sim.exp_odds(2, lead)
 	main.refresh()
-	_check(ep.risk_word == E["risk_bad"] and str(ep.send.get_meta("ui_style", "")) == "true|bad" and not ep.send.disabled, "a bad idea isn't styled as a warning: '%s' %s" % [ep.risk_word, str(ep.send.get_meta("ui_style", ""))])
+	_check(ep.risk_word == E["risk_bad"] and str(ep.send.get_meta("ui_style", "")) == "false|" and not ep.send.disabled and ep.note.text != "" and ep.note.get_theme_color("font_color") == Pal.BAD, "a bad idea isn't greyed with its reason beside: '%s' %s" % [ep.risk_word, str(ep.send.get_meta("ui_style", ""))])
 	sim.roster[lead]["equipped"] = weak
 	# the report: the lead alone, a fuse, grouped scrap; the tab's count when one's back
 	var ef := {"id": 4242, "place": 3, "lead": lead, "hands": [], "cargo": [], "worth": 5000.0, "odds": 1.0, "risk": 0.0, "hold": 0.0, "t0": 0.0, "dur": 60.0, "state": "back", "seen": false, "quota": false,
@@ -33446,21 +33858,22 @@ func _b45_ui_checks(main) -> void:
 	_check(not cell._lock.visible and cell.dress() == fresh.dress(), "a padlocked cell shown again kept its padlock or lost its dressing")
 	cell.queue_free()
 	fresh.queue_free()
-	# 4. the web: the names' places and the bends worked through the buckets are the full walk's
+	# 4. the web: the names' clearance and the bends worked through the buckets are the full walk's (BUILD49 V: the
+	# names' places are stored, NAME_AT; what the buckets read of a block's clearance is what every node gives, to 2 px clear)
 	var wv = main._barracks.web()
 	main.show_room(main.BARRACKS)
 	main.refresh()
-	var axis_was: String = str(wv._axis)
 	var bends_was: String = str(wv._bends)
+	var zf: float = wv.fit_zoom()
+	wv._index_nodes(wv._name_r)
+	for k in wv._axis:
+		var rc: Rect2 = wv._block_at(str(k), wv._axis[k]["label_at"], zf)
+		var full := -INF
+		for id in wv.layout:
+			var q: Vector2 = wv.layout[id]
+			full = maxf(full, (wv._name_r(str(id)) - Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y)).distance_to(q)) * zf + wv.BLOCK_CLEAR)
+		_check(is_equal_approx(maxf(wv._block_depth(rc, zf), -2.0), maxf(full, -2.0)), "%s's clearance through the buckets (%.2f) isn't the full walk's (%.2f)" % [k, wv._block_depth(rc, zf), full])
 	wv._near = {}
-	var order: Array = wv._axis.keys()
-	for attempt in range(wv.LABEL_TRIES):
-		var far_one: String = wv._labels_in(order)      # the old walk: no buckets
-		if far_one == "":
-			break
-		order.erase(far_one)
-		order.push_front(far_one)
-	_check(str(wv._axis) == axis_was, "the names placed through the buckets aren't where the full walk puts them")
 	wv._bends = {}
 	wv._bends_for = wv._layout_sig()
 	wv._find_bends_indexed()                             # _near empty: _blockers walks every node, as before
@@ -35170,7 +35583,7 @@ func _b48b_swap_level_checks(main) -> void:
 	bk._pick_class(fresh)                     # the first press: the swap armed, its card shown
 	main.refresh()
 	_check(bk._armed == fresh, "the fixture: the swap to the %s didn't arm" % fresh)
-	var said: String = " ".join([bk._words.text, bk._words2.text, bk._words3.text]).strip_edges()
+	var said: String = " ".join([bk._words.text, bk._words2.text, bk._words3.text, bk._swap_card.sub.text if bk._swap_card.visible else ""]).strip_edges().to_lower()     # the swap card's own line (BUILD49 U, item 6)
 	_check(said.contains("level 8") and not said.contains("level 1,") and not said.contains("level 1."), "the swap's card for the %s (joins at %d): '%s'" % [fresh, jl, said])
 	_check_fit(main, "Training, a new runner's swap card")
 	bk._armed = ""
@@ -35610,14 +36023,14 @@ func _b48a_wager_odds_checks(main) -> void:
 	var dep := -1
 	var key_moved := false
 	var seen: Array = []
-	for lv in [40, 36, 44, 32, 48]:
+	for lv in [40, 41, 42, 43, 44, 39, 38, 45, 36, 46]:          # level by level (merge 49: two points a level moved the edge between 40 and 44)
 		sg["depth"] = sim.depth_for_level(site, int(lv))
 		sg.erase("words")
 		sim.wagers[key]["taken"] = []
 		sim._sig_odds.erase(int(sg["id"]))
 		var o0: Array = sim.signal_odds(0)
 		seen.append("%d:%.2f" % [lv, float(o0[0])])
-		if float(o0[0]) < 0.1 or float(o0[0]) > 0.97:
+		if float(o0[0]) < 0.1 or float(o0[0]) > 0.9:
 			continue
 		sim._sig_on(sg)
 		var k0: Array = sim._odds_key(site)
@@ -36000,3 +36413,673 @@ func _b48a_clock_start_checks(main) -> void:
 	_check(said.call() == [Words.RUN_CLOCK["warn"] % "0:30"], "a run set off with 0:45 left didn't say 0:30 once: %s" % str(said.call()))
 	sim.extract_now()
 	print("b48a clock start ok: a passed mark unsaid, the next said")
+
+
+## BUILD49 U (4 Nov), item 12: Stats' record card in the game's art - each tile its picture (kills, damage, the take as
+## the fight's tiles), the dearest find its own picture edged in its rarity's colour and its whole name, fitted.
+func _u49_record_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.record.duplicate(true)
+	var longest: Dictionary = {}
+	for u in Data.UNIQUES:
+		if longest.is_empty() or str(u["name"]).length() > str(longest["name"]).length():
+			longest = u
+	var it: Dictionary = Items.roll_unique(longest, sim.rng)
+	sim.record["find"] = Items.full_name(it)
+	sim.record["find_value"] = 21400
+	sim.record["find_item"] = it.duplicate(true)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.RUNNER)
+		main.refresh()
+		var c: Dictionary = main._stats.cards["record"]
+		var tiles: Array = c["tiles"]
+		for k in range(3):
+			_check(tiles[k].has("pic") and tiles[k]["pic"].texture != null and tiles[k]["pic"].visible, "the record's tile %d shows no picture (%dx%d)" % [k, int(sz.x), int(sz.y)])
+		var t: Dictionary = tiles[3]
+		var v: Label = t["value"]
+		_check(t["pic"].texture != null and t["pic"].texture == Items.art(it), "the dearest find's tile doesn't show its own picture")
+		_check(v.text in [Items.full_name(it), Items.full_name(it).trim_prefix("The ")] and load("res://scripts/ui/ui.gd").text_width(v, v.text) <= v.size.x, "the dearest find's name '%s' isn't the whole '%s', fitted (%.0f px)" % [v.text, Items.full_name(it), v.size.x])
+		_check(v.get_theme_color("font_color") == Pal.UNIQUE, "the dearest find's name isn't in its rarity's colour: %s" % str(v.get_theme_color("font_color")))
+		var edge: StyleBoxFlat = t["frame"].get_theme_stylebox("panel")
+		_check(edge.border_color == Pal.UNIQUE and edge.border_width_left > 0, "the dearest find's cell isn't edged in its rarity's colour")
+		var fr := Rect2(t["frame"].position, t["frame"].size)
+		_check(Rect2(t["panel"].position, t["panel"].size).encloses(fr) and not fr.intersects(Rect2(v.position, v.size)), "the find's picture leaves its tile or sits under its name")
+		_check_fit(main, "Stats, the record with the longest unique (%dx%d)" % [int(sz.x), int(sz.y)])
+	# the board's own case (Item12): the Registrar's Satchel, whole, at the card's size
+	var sat: Dictionary = Items.roll_unique(sim._unique_named("The Registrar's Satchel"), sim.rng)
+	sim.record["find"] = Items.full_name(sat)
+	sim.record["find_item"] = sat.duplicate(true)
+	main.refresh()
+	var sv: Label = main._stats.cards["record"]["tiles"][3]["value"]
+	_check(sv.text == "The Registrar's Satchel" and load("res://scripts/ui/ui.gd").text_width(sv, sv.text) <= sv.size.x, "the Registrar's Satchel reads '%s'" % sv.text)
+	# a record from before the picture (the name alone): no picture, the name still whole
+	sim.record.erase("find_item")
+	main.refresh()
+	_check(main._stats.cards["record"]["tiles"][3]["pic"].texture == null and sv.text == "The Registrar's Satchel", "a record with no find_item: '%s'" % sv.text)
+	sim.record = saved
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("u49 record ok: the four pictures, the find's whole name '%s' in its colour" % Items.full_name(it))
+
+
+## BUILD49 U (4 Nov), item 6: the class swap's card says what the class does - the class and the level it joins at,
+## its line as chips (a cost in red), its one skill and its words, its two trees and two elements as pictures, Swap.
+func _u49_swap_card_checks(main) -> void:
+	var sim = main.sim
+	var bk = main._barracks
+	var other := ""
+	for c in Data.CLASSES:
+		if str(c["name"]) != str(sim.cls) and sim.crew_level(str(c["name"])) <= 0:
+			other = str(c["name"])
+			if other == "Paramedic":
+				break                                 # the board's longest words, when she's free
+	_check(other != "", "no class left unrun for the swap card")
+	if other == "":
+		return
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.BARRACKS)
+		bk._armed = ""
+		bk.selected = ""
+		bk._pick_class(other)                     # the first press arms the swap
+		var card = bk._swap_card
+		_check(bk._armed == other and card.visible, "arming the %s doesn't show the swap card" % other)
+		var jl: int = sim.join_level(other)
+		_check(card.title.text == Words.U49_SWAP["title"] % other and card.sub.text.begins_with("Joins at level %d" % jl), "the swap card's head reads '%s' / '%s' (joins at %d)" % [card.title.text, card.sub.text, jl])
+		var cd: Dictionary = {}
+		for c in Data.CLASSES:
+			if str(c["name"]) == other:
+				cd = c
+		var shown: Array = card.chips.text_nodes().filter(func(n): return n.text != "" and _showing(n))
+		_check(shown.size() == cd["short"].size() and card.chips.asked == cd["short"].size(), "the swap card shows %d of the class's %d chips" % [shown.size(), cd["short"].size()])
+		for k in range(mini(shown.size(), cd["short"].size())):
+			_check(shown[k].text == str(cd["short"][k][0]), "chip %d reads '%s', not '%s'" % [k, shown[k].text, str(cd["short"][k][0])])
+		var sk: Dictionary = card.skill_of(other)
+		_check(not sk.is_empty() and card.skill_name.text == sk["name"] and card.skill_words.text != "" and card.skill_pic.texture != null, "the swap card's skill: '%s' '%s' (start's %s)" % [card.skill_name.text, card.skill_words.text, str(sk)])
+		var parts: Array = card.parts_of(other)
+		_check(parts.size() == 4, "the %s has %d trees and elements, not 4" % [other, parts.size()])
+		for k in range(parts.size()):
+			var t: Dictionary = card.tiles[k]
+			_check(t["panel"].visible and t["name"].text == parts[k]["name"] and t["pic"].texture != null, "the swap card's tile %d: '%s' (picture %s)" % [k, t["name"].text, str(t["pic"].texture)])
+		_check(parts[2]["element"] != "" and card.tiles[2]["kind"].get_theme_color("font_color") == Pal.ELEMENT_COLOURS.get(parts[2]["element"], Pal.TEXT), "the element tile isn't in its colour")
+		_check(card.swap.visible and card.swap.text == Words.U49_SWAP["button"] % other and not bk._train.visible, "the swap button: '%s' (the node card's own %s)" % [card.swap.text, str(bk._train.visible)])
+		_check(Rect2(Vector2.ZERO, card.size).encloses(Rect2(card.tiles[3]["panel"].position, card.tiles[3]["panel"].size)) and card.tiles[3]["panel"].position.y + card.TILE_H < card.swap.position.y, "the swap card's tiles run into its button")
+		_check_fit(main, "Training, the swap card for the %s (%dx%d)" % [other, int(sz.x), int(sz.y)])
+		bk._armed = ""
+		bk.show_state(sim)
+		_check(not card.visible, "the swap card stays up after the arm's gone")
+	# every class's card fits (the longest words)
+	for c in Data.CLASSES:
+		bk._swap_card.show_class(str(c["name"]), 8, false)
+		_check(_check_nodes(bk._swap_card.text_nodes(), [], "the swap card for the %s" % c["name"]) == 0 and bk._swap_card.chips.text_nodes().filter(func(n): return n.text != "" and _showing(n)).size() == c["short"].size(), "the %s's swap card doesn't fit" % c["name"])
+	bk._swap_card.visible = false
+	main.layout(Vector2(1920, 1080))
+	print("u49 swap card ok: the %s's line, skill, trees and elements" % other)
+
+
+## BUILD49 U (4 Nov), item 14: the Dial with its pictures - every node's box shows its picture at its left (a filler's
+## as its pill's mark), the ranks a badge on it, notables framed amber and a size up, keystones gold and bigger; inside
+## its column, nothing overlapping, at 1920x1080 and 1920x1200.
+func _u49_dial_checks(main) -> void:
+	var sim = main.sim
+	var saved_atlas: Dictionary = sim.atlas.duplicate()
+	var saved_pts: int = sim.atlas_points
+	sim.atlas_points = maxi(sim.atlas_points, 3)
+	sim.rank_atlas("picked_over")
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		_open_map(main)
+		var wv = main._radio._atlas.web()
+		wv._shown = ""
+		wv.show_state(sim)
+		var n := 0
+		var kinds := {}
+		for id in wv._tiles:
+			var t: Dictionary = wv._tiles[id]
+			var key: String = str(t["key"])
+			var a: Dictionary = Data.atlas_of(key)
+			n += 1
+			kinds[t["kind"]] = int(kinds.get(t["kind"], 0)) + 1
+			_check(t["pic"].texture != null and t["pic"].texture == wv.picture_of(key), "the Dial's %s box shows no picture (%s)" % [a.get("name", key), id])
+			var br := Rect2(Vector2.ZERO, t["button"].size)
+			var pr := Rect2(t["pic"].get_parent().position + t["pic"].position, t["pic"].size) if not t["filler"] else Rect2(t["pic"].position, t["pic"].size)
+			_check(br.encloses(pr), "the %s picture leaves its box" % a.get("name", key))
+			var nr := Rect2(t["name"].position, Vector2(load("res://scripts/ui/ui.gd").text_width(t["name"], t["name"].text), t["name"].size.y))
+			_check(not nr.intersects(pr), "the %s name sits on its picture" % a.get("name", key))
+			if t["filler"]:
+				continue
+			_check(is_equal_approx(t["pic"].size.x, float(wv.PIC[t["kind"]])) and absf(t["button"].size.y - float(wv.BOX_H[t["kind"]])) < 0.01, "the %s %s box is %s with a %s picture" % [a.get("name", key), t["kind"], str(t["button"].size), str(t["pic"].size)])
+			var st: Dictionary = wv.state_of(id)
+			_check(t["badge"].visible == (int(st["max"]) > 1) and (int(st["max"]) <= 1 or t["rank"].text == "%d/%d" % [int(st["rank"]), int(st["max"])]), "the %s rank badge reads '%s' (%d of %d)" % [a.get("name", key), t["rank"].text, int(st["rank"]), int(st["max"])])
+			var edge: Color = (t["button"].get_theme_stylebox("normal") as StyleBoxFlat).border_color
+			if t["kind"] == "keystone":
+				_check(Color(edge, 1.0) == wv.GOLD, "the %s keystone isn't framed gold" % a.get("name", key))
+			elif t["kind"] == "notable" and id != wv.selected:
+				_check(Color(edge, 1.0) == Pal.ACCENT, "the %s notable isn't framed amber" % a.get("name", key))
+			var txt: String = t["name"].text + (" " + t["name2"].text if t["name2"].text != "" else "")
+			_check(txt == str(a.get("name", "")) or txt == str(a.get("name", "")).trim_prefix("The "), "the %s box's name reads '%s'" % [a.get("name", key), txt])
+		_check(n == Data.ATLAS_ALL.size() and int(kinds.get("keystone", 0)) == 3 and int(kinds.get("notable", 0)) > 0 and int(kinds.get("filler", 0)) > 0, "the Dial drew %d boxes of %d: %s" % [n, Data.ATLAS_ALL.size(), str(kinds)])
+		# no two boxes overlap in a column
+		var ids: Array = wv.layout.keys()
+		for i in range(ids.size()):
+			for j in range(i + 1, ids.size()):
+				if (wv.layout[ids[i]] as Rect2).grow(-1).intersects(wv.layout[ids[j]]):
+					_check(false, "the Dial's boxes %s and %s overlap" % [ids[i], ids[j]])
+		for c in range(wv.col_rects.size()):
+			for id in ids:
+				if str(id).get_slice("/", 0) == str(Data.MAP_WEB[c]["name"]):
+					_check(Rect2(wv.col_rects[c]).encloses(wv.layout[id]), "the Dial's %s leaves its column" % id)
+		_check_fit(main, "Radio, the Dial with its pictures (%dx%d)" % [int(sz.x), int(sz.y)])
+	sim.atlas = saved_atlas
+	sim.atlas_points = saved_pts
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("u49 dial ok: every box its picture, badges, frames")
+
+
+## BUILD49 U (4 Nov), items 18 and 13: the site card says what a death here costs by Set off - back to level 1 before the
+## Quartermaster falls, the level kept after, the worn kit unless insured - and the odds' hover says how they're read.
+func _u49_death_line_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved_beaten: Array = sim.bosses_beaten.duplicate()
+	var saved_ins: bool = sim.insure_next
+	var saved_cash: float = sim.cash
+	var i: int = 0
+	for k in range(Data.TIERS.size()):
+		if sim.tier_open(k):
+			i = k
+	var c: Dictionary = main._missions._cols[0]
+	var cases := []
+	var xp0: float = sim.xp
+	sim.xp = Data.xp_for_level(15)              # under the cap: a death there keeps the level whatever the Quartermaster
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		main._missions.select(i)
+		for qm in [false, true]:
+			for ins in [false, true]:
+				for z in range(sim.bosses_beaten.size()):
+					sim.bosses_beaten[z] = qm if z >= 3 else true
+				sim.cash = 1.0e9
+				sim.set_insure(ins)
+				main._missions._shown = ""
+				main.refresh()
+				var kept: bool = sim.death_keeps_level() or sim.level() >= Data.MAX_LEVEL
+				var txt: String = c["death"].text
+				var want_lv: String = "the level kept" if kept else "back to level 1"
+				var want_kit: String = "no kit lost" if (ins and sim.can_insure(i)) else "the kit worn lost"
+				cases.append([qm, ins, kept, txt])
+				_check(c["death"].visible and _showing(c["death"]) and txt.to_lower().contains(want_lv) and txt.to_lower().contains(want_kit), "the death line with the Quartermaster %s, insured %s reads '%s' (%s, %s)" % ["down" if qm else "up", str(ins), txt, want_lv, want_kit])
+				var dr := _text_rect_local(c["death"], UI)
+				c["note"].text = "Run it ×5 · not cleared yet"
+				var nr := _text_rect_local(c["note"], UI)
+				_check(dr.end.y <= c["deploy"].position.y + 1.0 and nr.end.y <= dr.position.y + 1.0 and nr.position.y >= main._missions.SiteCard.BOTTOM - 4.0, "the death line isn't between the note and Set off: %s, the note %s, Set off at %.0f" % [str(dr), str(nr), c["deploy"].position.y])
+				c["note"].text = ""
+				_check_fit(main, "the Map's card, the death line (%s, %s, %dx%d)" % [str(qm), str(ins), int(sz.x), int(sz.y)])
+		# item 13: the odds' hover
+		var card = c["card"]
+		_check(card.odds_line.tooltip_text == Words.U49_DEATH["odds_tip"] and card.odds_line.mouse_filter != Control.MOUSE_FILTER_IGNORE, "the odds line doesn't say how it's read on its hover: '%s'" % card.odds_line.tooltip_text)
+	_check(cases.any(func(x): return x[2]) and cases.any(func(x): return not x[2]), "the death line never met both rules: %s" % str(cases))
+	sim.bosses_beaten = saved_beaten
+	sim.set_insure(saved_ins)
+	sim.cash = saved_cash
+	sim.xp = xp0
+	main.layout(Vector2(1920, 1080))
+	main._missions._shown = ""
+	main.refresh()
+	print("u49 death line ok: %s" % str(cases.slice(0, 4).map(func(x): return x[3])))
+
+
+## BUILD49 U (4 Nov), item 19: Kev's wagers as drawn - each row what it costs for what it pays with the odds with it
+## ("42% → 18%"), the odds as you stand and with what's taken at the top (each the Map's own read of that fight), the
+## foot saying the odds count them; what's on said by Set off on the Map's card and over the rig in the fight.
+func _u49_wagers_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var nsite := -1
+	var saved_bd: int = 0
+	for k in range(1, Data.TIERS.size()):
+		if sim.tier_open(k) and nsite < 0:
+			saved_bd = int(sim.best_depth[k])
+			sim.best_depth[k] = 0
+			if sim.tier_open(k) and sim.wager_site_open(k):
+				nsite = k
+			else:
+				sim.best_depth[k] = saved_bd
+	_check(nsite >= 0, "no site with Kev's offer for the wagers' checks")
+	if nsite < 0:
+		return
+	var key: String = sim.wager_site_key(nsite)
+	sim.wagers.erase(key)
+	var offer: Array = sim.wager_offer(key)
+	var WO = load("res://scripts/ui/wager_odds.gd")
+	# the review: the reads stepped in the shell's frames at its 24-run budget, settled only at their whole count - with
+	# the Glasses' sixty, so a read cut at 24 can't pass for one
+	var picks0: Dictionary = sim.yard_picks.duplicate(true)
+	var budget0: int = sim.odds_budget
+	_yard_ids(sim, ["spotter", "glasses"], "glasses")
+	sim.odds_budget = 24
+	_check(sim.odds_runs() == 60, "the fixture: the Glasses' sixty runs")
+	var base_read: float = _u49_full_read(sim, nsite)    # the Map's own read, nothing taken
+	var home = sim._surv_cache.get(nsite)
+	var cols: Dictionary = main._missions._cols[0]
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		main._missions.select(nsite)
+		main._missions._shown = ""
+		main.refresh()
+		_u49_full_read(sim, nsite)
+		home = sim._surv_cache.get(nsite)
+		cols["wager"].pressed.emit()
+		main.refresh()
+		var wp = main._missions._wagers
+		_check(wp.rows[0]["odds"].text.begins_with("Reading") and wp.boxes[0]["value"].text == "…", "the wagers' odds were read in the frame that opened the panel: '%s'" % wp.rows[0]["odds"].text)
+		var fr: Array = _u49_settle_wagers(main, WO)
+		_check(int(fr[1]) > 0 and int(fr[0]) > 1, "the wagers' reads ran whole in a frame: parked in %d of %d frames" % [fr[1], fr[0]])
+		_check(not WO.pending() and WO._jobs.values().all(func(j): return j["c"] is Array and int(j["c"][2]) >= sim.odds_runs()), "a wager read settled short of the Glasses' %d runs: %s" % [sim.odds_runs(), str(WO._jobs.values().map(func(j): return j["c"][2] if j["c"] is Array else -1))])
+		var b0: Array = WO.now(sim, key, [])
+		_check(wp.visible and bool(b0[1]) and is_equal_approx(float(b0[0]), base_read) and wp.boxes[0]["value"].text == Fmt.pct(base_read) and wp.boxes[1]["value"].text == "—", "the wagers' top: as you stand '%s' (the Map's %s), with what's taken '%s'" % [wp.boxes[0]["value"].text, Fmt.pct(base_read), wp.boxes[1]["value"].text])
+		# a rest with the panel open doesn't start the reads again (the review: keyed on the HP's tenths)
+		var ep0: int = WO.epoch
+		sim.hp = sim.max_hp() * 0.55
+		main.refresh()
+		_check(WO.epoch == ep0 and not WO.pending(), "a tenth of HP started the wagers' reads again")
+		sim.hp = sim.max_hp()
+		main.refresh()
+		_check(sim._surv_cache.get(nsite) == home, "reading the wagers' odds moved the Map's own read")
+		for k in range(offer.size()):
+			var r: Dictionary = wp.rows[k]
+			var w: Dictionary = offer[k]
+			_check(r["cost"]["label"].text == Sim.wager_cond_chip(w) and r["pay"]["label"].text == Sim.wager_pay_chip(w) and r["cost_words"].text != "" and r["pay_words"].text != "" and r["for"].text == "for", "wager row %d: '%s' / '%s' for '%s' / '%s'" % [k, r["cost"]["label"].text, r["cost_words"].text, r["pay"]["label"].text, r["pay_words"].text])
+			_check(r["odds"].text.begins_with(Fmt.pct(base_read) + " → "), "wager row %d's odds don't start as you stand: '%s'" % [k, r["odds"].text])
+			_check(r["cost"]["panel"].position.x + r["cost"]["panel"].size.x < r["for"].position.x + r["for"].size.x / 2.0 and r["pay"]["panel"].position.x + r["pay"]["panel"].size.x < r["odds"].position.x + r["odds"].size.x - load("res://scripts/ui/ui.gd").text_width(r["odds"], r["odds"].text), "wager row %d's chips run into what's beside them" % k)
+		_check(wp.foot.text.contains("The odds count them"), "the wagers' foot still says the odds don't count them: '%s'" % wp.foot.text)
+		_check_fit(main, "the Map, Kev's wagers, the revamp (%dx%d)" % [int(sz.x), int(sz.y)])
+		# one taken: its row's figure is the Map's own read with it on, and the top's second box says the same
+		var pick := 0
+		for k in range(offer.size()):
+			if str(offer[k]["cond"]) != "no_meds":
+				pick = k
+		wp.rows[pick]["take"].pressed.emit()
+		main.refresh()
+		_u49_settle_wagers(main, WO)
+		var with_read: float = _u49_full_read(sim, nsite)       # the Map's read, the wager on (item 17)
+		_check(wp.rows[pick]["odds"].text == "%s → %s" % [Fmt.pct(base_read), Fmt.pct(with_read)] and wp.boxes[1]["value"].text == Fmt.pct(with_read), "the taken wager's figures: '%s', with what's taken '%s', the Map's read %s" % [wp.rows[pick]["odds"].text, wp.boxes[1]["value"].text, Fmt.pct(with_read)])
+		_check(with_read <= base_read + 0.0001 or offer.size() == 0, "a wager made the fight easier: %s against %s" % [Fmt.pct(with_read), Fmt.pct(base_read)])
+		_check_fit(main, "the Map, Kev's wagers, one taken (%dx%d)" % [int(sz.x), int(sz.y)])
+		wp.done.pressed.emit()
+		main._missions._shown = ""
+		main.refresh()
+		var note: Label = cols["note"]
+		_check(note.text.contains(Sim.wager_words(offer[pick])) and note.text.begins_with("Kev's wager") and note.get_theme_color("font_color") == Pal.WARN, "the Map's card doesn't say what's on by Set off: '%s'" % note.text)
+		_check_fit(main, "the Map's card, a wager on (%dx%d)" % [int(sz.x), int(sz.y)])
+		if sz.y < 1100.0:
+			# set off: the strip over the rig in the fight
+			sim.deploy(nsite)
+			main.refresh()
+			main.refresh()
+			var head: Label = main._run._rig_head
+			_check(sim.mission != null and head.text.begins_with("KEV'S WAGER") and head.text.contains(Sim.wager_cond_chip(offer[pick]).to_upper()), "the fight's rig head doesn't say the wager: '%s'" % head.text)
+			_check_fit(main, "the run, Kev's wager on")
+			sim.extract_now()
+			sim.wagers.erase(key)
+			sim.hp = sim.max_hp()
+			main.refresh()
+		else:
+			wp.rows[pick]["take"].pressed.emit()
+	sim.wagers.erase(key)
+	sim.best_depth[nsite] = saved_bd
+	sim.yard_picks = picks0
+	sim.odds_budget = budget0
+	main.layout(Vector2(1920, 1080))
+	main._missions._shown = ""
+	main.refresh()
+	print("u49 wagers ok: %d rows, as you stand %s" % [offer.size(), Fmt.pct(base_read)])
+
+
+## BUILD49 U (4 Nov), item 25: the Radio's signal card, layout A - the place's picture as its header, one odds figure
+## (the one out's: not again in the others' row), every figure whole and every price shown (no dots), the codes as plain
+## chips, the drops as pictures, Set off first and the card's tallest inside the column, at 1920x1080 and 1920x1200.
+func _u49_signal_card_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var cls0: String = sim.cls
+	for c in Data.CLASSES:
+		sim.set_class(str(c["name"]))           # every class played: the others' row at its longest
+	sim.set_class(cls0)
+	var site: int = 0
+	for k in range(Data.TIERS.size()):
+		if sim.tier_open(k) and not Data.SITE_MATERIAL.is_empty() and k < Data.SITE_MATERIAL.size():
+			site = k
+	var notes0: int = sim.notes
+	sim.notes = 100000
+	sim.signal_seq += 1
+	sim.signals.append({"id": sim.signal_seq, "site": site, "zone": int(Data.TIERS[site]["zone"]), "depth": sim.depth_for_level(site, maxi(Data.REACH_START, sim.reach) + 2), "codes": [],
+		"words": [{"w": "Pawned", "t": 3}, {"w": "Numbers", "t": 3}, {"w": "Bailiffs", "t": 3}], "papers": [], "head": true, "convoy": true, "line": 0, "grade": 3})
+	var k_sel: int = sim.signals.size() - 1
+	for i in range(400):
+		if bool(sim.signal_odds(k_sel)[1]):
+			break
+	var rd = main._radio
+	var UI_v = load("res://scripts/ui/ui.gd")
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.COMMS)
+		rd._pick_view("air")
+		rd.selected = k_sel
+		rd._shown = ""
+		main.refresh()
+		var od: Array = sim.signal_odds_now(k_sel)
+		_check(rd._card.visible and rd._card_art.texture != null and rd._card_art.texture == UI_v.place_texture(sim.signal_place(sim.signal_at(k_sel))), "the signal card's header isn't the place's picture")
+		_check(bool(od[1]) and rd._card_odds_sub.text.begins_with(Fmt.pct(float(od[0]))) and rd._card_odds.text == Words.odds_words(float(od[0])), "the card's one odds figure: '%s' / '%s' against %s" % [rd._card_odds.text, rd._card_odds_sub.text, str(od)])
+		var others: Array = rd._crew_btns.filter(func(t): return t["button"].visible)
+		_check(others.size() == sim.crew_played().size() - 1 and others.all(func(t): return str(t["cls"]) != sim.cls and t["odds"].text != "" and Rect2(Vector2.ZERO, rd._card.size).encloses(Rect2(t["button"].position, t["button"].size))), "the others' row: %s" % str(others.map(func(t): return [t["cls"], t["odds"].text])))
+		# every figure whole, every price shown
+		var e: Dictionary = sim.signal_read(k_sel)
+		_check(rd._card_tiles[0]["value"].text.begins_with("%d × " % int(e["pool"])) and not rd._card_tiles[0]["value"].text.contains("…") and rd._card_tiles[1]["value"].text.contains("%.1f" % float(e["dps"])), "the gang's figures aren't whole: '%s' '%s'" % [rd._card_tiles[0]["value"].text, rd._card_tiles[1]["value"].text])
+		for c in rd._crafts:
+			var cost: String = Fmt.notes(sim.signal_craft_cost(k_sel, c["key"]))
+			_check(c["name"].text.ends_with(cost) and not c["name"].text.contains("…") and UI_v.text_width(c["name"], c["name"].text) <= c["name"].size.x, "%s doesn't show its price whole: '%s' (%s)" % [c["key"], c["name"].text, cost])
+		# the codes plain, the drops pictures
+		for l in rd._card_codes.text_nodes():
+			if str(l.text).begins_with("Pawned") or str(l.text).begins_with("Numbers") or str(l.text).begins_with("Bailiffs"):
+				_check(l.get_theme_color("font_color") == Pal.TEXT_2, "the code chip '%s' isn't plain" % l.text)
+		var mats: Array = sim.signal_materials(k_sel)
+		var shown_d: Array = rd._card_drops.filter(func(d): return d["panel"].visible)
+		_check(shown_d.size() == (mats[0] as Dictionary).size() and shown_d.all(func(d): return d["icon"].texture != null and str(d["text"].text).ends_with("%")), "the drops aren't pictures with their share: %s" % str(shown_d.map(func(d): return d["text"].text)))
+		# Set off first: over the tuning, and the card inside its column with the places under it
+		_check(rd._set_off.position.y < rd._crafts[0]["button"].position.y and rd._set_off.position.y < rd._bin.position.y and rd._set_off.size.x >= rd._card.size.x - 40, "Set off isn't the card's first, full-width button")
+		_check(rd._card.size.y <= rd.CARD_H + 0.5, "the card is %.0f tall, over its %d (codes %.0f, set off %.0f, others %.0f)" % [rd._card.size.y, rd.CARD_H, rd._card_codes.size.y, rd._set_off.position.y, rd._card_others.position.y])
+		var bottom: float = rd._card.position.y + rd._card.size.y
+		for o in rd._others + rd._places.map(func(p): return {"button": p["box"]}):
+			if o["button"].visible:
+				bottom = maxf(bottom, o["button"].position.y + o["button"].size.y)
+		_check(bottom <= rd._signals_box.size.y + 0.5, "the signals column runs out of its box: %.0f of %.0f" % [bottom, rd._signals_box.size.y])
+		_check_fit(main, "the Radio, the signal card (%dx%d)" % [int(sz.x), int(sz.y)])
+		# three held: the others' rows under the card
+		for j in range(2):
+			sim.signal_seq += 1
+			sim.signals.append({"id": sim.signal_seq, "site": 0, "zone": 0, "depth": sim.depth_for_level(0, maxi(Data.REACH_START, sim.reach)), "codes": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 1})
+		rd._shown = ""
+		main.refresh()
+		bottom = rd._card.position.y + rd._card.size.y
+		for o in rd._others:
+			if o["button"].visible:
+				bottom = maxf(bottom, o["button"].position.y + o["button"].size.y)
+		_check(bottom <= rd._signals_box.size.y + 0.5, "three held: the column runs out of its box: %.0f of %.0f" % [bottom, rd._signals_box.size.y])
+		_check_fit(main, "the Radio, the signal card, three held (%dx%d)" % [int(sz.x), int(sz.y)])
+		sim.signals.pop_back()
+		sim.signals.pop_back()
+	# item 19 on the signal card: a wager taken says so in Kev's second line, the figure read with it and the one without
+	var wk: String = sim.wager_signal_key(k_sel)
+	_check(sim.wager_signal_open(k_sel) and sim.take_wager(wk, 0), "the fixture: no wager taken on the signal")
+	for i in range(400):
+		if bool(sim.signal_odds(k_sel)[1]):
+			break
+	rd._shown = ""
+	main.refresh()
+	_u49_settle_wagers(main, load("res://scripts/ui/wager_odds.gd"))
+	rd._shown = ""
+	main.refresh()
+	var w0: Dictionary = sim.wager_offer(wk)[0]
+	_check(rd._card_kev2.text.contains(Sim.wager_words(w0)) and rd._card_kev2.get_theme_color("font_color") == Pal.WARN and rd._card_odds_sub.text.ends_with("without") and rd._wager_btn.text.contains("1"), "the signal card doesn't say Kev's wager is on: '%s' / '%s' / '%s'" % [rd._card_kev2.text, rd._card_odds_sub.text, rd._wager_btn.text])
+	_check_fit(main, "the Radio, the signal card, a wager on")
+	sim.wagers.erase(wk)
+	sim.signals.pop_back()
+	sim.notes = notes0
+	rd.selected = 0
+	rd._shown = ""
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("u49 signal card ok")
+
+
+## BUILD49 U (4 Nov), item 23: the order's places drawn by the site card - the head's fight as a site's head is (his
+## face against yours, his own row with his level and line, no Gang / Head toggle), the figures, what comes home with his
+## drop and his unique, Set off for the place; a shut place Locked with its rebuild, the town's button in Set off's place.
+func _u49_order_card_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var saved_rb: Dictionary = sim.rebuilt.duplicate()
+	var saved_beaten: Array = sim.bosses_beaten.duplicate()
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	var M = main._missions
+	var c: Dictionary = M._cols[0]
+	var card = c["card"]
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		for p in Data.PINNACLES:
+			var k: String = str(p["key"])
+			for open in [true, false]:
+				if open:
+					sim.rebuilt[str(p["opened_by"])] = maxi(1, int(saved_rb.get(str(p["opened_by"]), 0)))
+				else:
+					sim.rebuilt.erase(str(p["opened_by"]))
+				if open:
+					for n in range(400):
+						if bool(sim.order_odds(k)[1]):
+							break
+					M.select_order(k)
+					main.refresh()
+					_check(M.order_key == k and card.order == k and c["panel"].visible and not M._order.visible, "%s's pin didn't draw the site card: '%s'" % [k, card.order])
+				else:
+					M.order_key = k
+					M._show_order_card(k)        # a shut place, drawn as its card would be (its pin stays shut: Matt's 20 Oct rule)
+				var where: String = "%s %s (%dx%d)" % [k, "open" if open else "shut", int(sz.x), int(sz.y)]
+				_check(card.head_name.text.begins_with(str(p["who"])) and card.head_name.text.to_lower().contains("level %d" % sim.order_level(k)) and card.head_sub.text != "" and str(Words.PINNACLE_WORDS[k]).begins_with(card.head_sub.text.trim_suffix(".")), "%s: the head's row reads '%s' / '%s'" % [where, card.head_name.text, card.head_sub.text])
+				_check(not card.gang_btn.visible and not card.head_btn.visible, "%s: the Gang / Head toggle shows on an order's place" % where)
+				_check(card.title.text == str(p["place"]) and card._art.texture == load("res://scripts/ui/ui.gd").place_texture(str(p["art"])) and card.them_name.text in [str(p["who"]), str(p["who"]).trim_prefix("The ")], "%s: the picture and the head: '%s' '%s'" % [where, card.title.text, card.them_name.text])
+				_check(card.tiles[1]["text"].text == Words.U49_ORDER["unique"] and card.tiles[0]["icon"].texture != null and card.tiles[0]["text"].text != "", "%s: what comes home: %s" % [where, str(card.tiles.map(func(t): return t["text"].text))])
+				if open:
+					var od: Array = sim.order_odds_now(k)
+					_check(bool(od[1]) and card.verdict.text == Words.odds_words(float(od[0])) and card.odds_line.text == "%s to clear" % Fmt.pct(float(od[0])), "%s: the verdict '%s' / '%s' against %s" % [where, card.verdict.text, card.odds_line.text, str(od)])
+					_check(card.vals[1].text != "" and card.vals[1].text != "—" and card.keys[0].visible, "%s: the figures aren't read on the place: '%s'" % [where, card.vals[1].text])
+					_check(c["deploy"].visible and c["deploy"].text.contains(str(p["place"]).trim_prefix("The ")) and not c["town"].visible and not c["repeat"].visible and not c["wager"].visible and c["death"].visible, "%s: the foot: Set off '%s', town %s" % [where, c["deploy"].text, str(c["town"].visible)])
+				else:
+					_check(card.verdict.text == Words.SITE_CARD["locked"] and card.odds_line.text.begins_with("After the") and card.vals[0].text == Words.U49_ORDER["opens"] and card.vals[2].text == "—", "%s: the locked card reads '%s' / '%s' / '%s'" % [where, card.verdict.text, card.odds_line.text, card.vals[0].text])
+					_check(not c["deploy"].visible and c["town"].visible and c["town"].text == Words.U49_ORDER["town"] and c["note"].text.begins_with("The town: rebuild"), "%s: a shut place's foot: town %s '%s', note '%s'" % [where, str(c["town"].visible), c["town"].text, c["note"].text])
+				_check_fit(main, "the Map, the order's %s" % where)
+				# its fight is the place's: the site card's figures read on it (the host site laid on as a run would be)
+				sim.rebuilt[str(p["opened_by"])] = maxi(1, int(saved_rb.get(str(p["opened_by"]), 0)))
+	# Set off runs the place; the shut place's button goes to the town
+	var gp: Dictionary = Data.pinnacle("grid")
+	sim.rebuilt[str(gp["opened_by"])] = 1
+	main.layout(Vector2(1920, 1080))
+	M.select_order("grid")
+	main.refresh()
+	c["deploy"].pressed.emit()
+	_check(sim.mission != null and str(sim.mission.get("signal", {}).get("order", "")) == "grid", "Set off on the Grid's card didn't run the Grid: %s" % str(sim.mission.get("signal", {}) if sim.mission != null else null))
+	if sim.mission != null:
+		sim.extract_now()
+	var went: Array = []
+	var on_town := func() -> void: went.append(true)
+	M.to_town.connect(on_town)
+	c["town"].pressed.emit()
+	M.to_town.disconnect(on_town)
+	_check(went.size() == 1, "the town's button on a shut place didn't ask for the Town")
+	sim.rebuilt = saved_rb
+	sim.bosses_beaten = saved_beaten
+	sim.hp = sim.max_hp()
+	M.order_key = ""
+	M.select(0)
+	main.refresh()
+	_check(card.order == "" and card.gang_btn.visible, "the card stayed the order's back on a site")
+	print("u49 order card ok")
+
+
+## BUILD49 U (4 Nov), item 15: the Expeditions' place card, layout B - the place's picture as its header; the party, the
+## verdict and what comes back in one row; the cargo as item cells with − / + steppers; one risk figure in the odds'
+## words; Send greyed at A bad idea with its reason; steps not built not shown as buttons.
+func _u49_exp_card_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var cls0: String = sim.cls
+	var other: String = "Poacher" if cls0 != "Poacher" else "Doorman"
+	sim.set_class(other)
+	sim.set_class(cls0)
+	sim.notes = maxi(sim.notes, 643)
+	sim.scrap = maxi(sim.scrap, 5000)
+	var E: Dictionary = Words.EXPEDITIONS
+	var M = main._missions
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		M.set_expeditions(true)
+		var ep = M._exp_panel
+		var p: int = 1
+		var kinds: Array = sim.cargo_kinds()
+		var k0: String = str(kinds[0]) if kinds[0] != "scrap" or kinds.size() < 2 else str(kinds[1])
+		ep.set_pick(p, other, [], [{"kind": k0, "share": 1.0}, {"kind": "scrap", "share": 0.5}])
+		for i in range(400):
+			if bool(sim.exp_odds(p, other)[1]):
+				break
+		main.refresh()
+		var where: String = "(%dx%d)" % [int(sz.x), int(sz.y)]
+		var UI_v = load("res://scripts/ui/ui.gd")
+		_check(ep.visible and ep._pic.texture != null and ep._pic.texture == UI_v.place_texture("far " + str(Data.EXP_PLACES[p]["key"])), "the place card's header isn't its picture %s" % where)
+		_check(ep._lead_face.visible and ep._lead_name.text.contains(other), "the party's lead: '%s' %s" % [ep._lead_name.text, where])
+		# steps not built aren't buttons: the hands' places are dashed and wordless, the quota row says nothing
+		var most: int = sim.exp_hands_max()
+		for k in range(2):
+			if k >= most:
+				_check(ep._hands[k].text == "" and ep._hands[k].disabled and ep._hands[k].get_meta("dash").visible, "a hand's place not built reads '%s' %s" % [ep._hands[k].text, where])
+		var words_all: String = " | ".join(ep.text_nodes().map(func(n): return str(n.text)))
+		_check(not words_all.contains("Comes with") and not words_all.contains("come with More bunks"), "the card still names a step not built: %s" % words_all)
+		# one risk figure, in the odds' words; no "odds" figure beside it
+		var risk: float = sim.exp_risk(p, other, [], sim.cargo_worth(ep._cargo_now()), sim.exp_crew_odds(p, other, []))
+		var fig: String = "%d%%" % int(round(risk * 100.0))
+		_check(ep._verdict.text == ep.risk_word and ep.risk_word != "" and ep._risk_label.text.begins_with(fig) and not words_all.contains("% odds"), "the risk said twice or not once: '%s' / '%s' (%s)" % [ep._verdict.text, ep._risk_label.text, fig])
+		var pct_nodes: Array = ep.text_nodes().filter(func(n): return str(n.text).contains(fig + " ") or str(n.text).ends_with(fig))
+		_check(pct_nodes.size() <= 2, "the risk figure shows %d times: %s" % [pct_nodes.size(), str(pct_nodes.map(func(n): return n.text))])     # the line under the verdict, and the Send reason at A bad idea
+		# the cargo cells: picture, count first, worth; the stepper a quarter at a time
+		var sd: Dictionary = ep._slots[1]
+		_check(ep._slots[0]["icon"].texture != null and ep._slots[0]["name"].text.begins_with(Fmt.group(sim.cargo_held(k0)).get_slice(",", 0)) and ep._slots[0]["worth"].text != "", "the %s cell: '%s' '%s'" % [k0, ep._slots[0]["name"].text, ep._slots[0]["worth"].text])
+		_check(sd["amt"].text == "50%" and not sd["minus"].disabled and not sd["plus"].disabled, "the scrap's stepper at half: '%s'" % sd["amt"].text)
+		sd["plus"].pressed.emit()
+		main.refresh()
+		_check(is_equal_approx(float(ep.cargo[1]["share"]), 0.75) and sd["amt"].text == "75%", "+ didn't add a quarter: %s '%s'" % [str(ep.cargo[1]["share"]), sd["amt"].text])
+		sd["minus"].pressed.emit()
+		sd["minus"].pressed.emit()
+		main.refresh()
+		_check(is_equal_approx(float(ep.cargo[1]["share"]), 0.25) and sd["minus"].disabled, "− didn't take a quarter, or went under one: %s" % str(ep.cargo[1]["share"]))
+		_check(Rect2(Vector2.ZERO, ep._cargo_box.size).encloses(Rect2(ep._slots[sim.exp_slots([]) - 1]["kind"].position, ep._slots[0]["kind"].size)), "the cargo's last cell leaves its strip %s" % where)
+		_check_fit(main, "the Map, Expeditions, the place card %s" % where)
+		# a bad idea: Send greyed, still pressable, the reason beside
+		var weak: Dictionary = sim.roster[other]["equipped"].duplicate()
+		for sl in Data.SLOTS:
+			sim.roster[other]["equipped"][sl] = null
+		sim.exp_odds(p, other)
+		main.refresh()
+		if ep.risk_word == E["risk_bad"]:
+			_check(str(ep.send.get_meta("ui_style", "")) == "false|" and not ep.send.disabled and ep.note.text.contains("%d%%" % int(round(sim.exp_risk(p, other, [], sim.cargo_worth(ep._cargo_now()), sim.exp_crew_odds(p, other, [])) * 100.0))), "A bad idea: Send '%s' %s, '%s'" % [ep.send.get_meta("ui_style", ""), str(ep.send.disabled), ep.note.text])
+			_check_fit(main, "the Map, Expeditions, a bad idea %s" % where)
+		sim.roster[other]["equipped"] = weak
+		M.set_expeditions(false)
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("u49 expeditions card ok")
+
+
+## BUILD49 U (4 Nov), item 21: after Kev's story - his last line names the substation, the Next strip under it with
+## what it wants and the button to the Town tab; the Map's goal line, "The town: N of 6 running", the next step and
+## what it wants, "Signals that bring them" to the Radio.
+func _u49_next_step_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var beat0: int = sim.story_beat
+	var rb0: Dictionary = sim.rebuilt.duplicate()
+	var mats0: Dictionary = sim.materials.duplicate()
+	sim.story_beat = Data.STORY_BEATS.size()
+	sim.rebuilt = {}
+	sim.materials["copper_wire"] = 6
+	sim.materials["cable_drums"] = 9
+	var st = main._radio._story
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.COMMS)
+		main._radio._pick_view("story")
+		st._shown = ""
+		main.refresh()
+		var last: Dictionary = st._beats[st._beats.size() - 1]
+		var said: String = " ".join(last["won"].map(func(l): return str(l.text)))
+		_check(said.contains("substation"), "Kev's last line doesn't name the next step: '%s'" % said)
+		var cost: Dictionary = sim.rebuild_cost("substation")
+		var want_a: String = "6 of %d" % int(cost.get("copper_wire", 0))
+		var want_b: String = "9 of %d" % int(cost.get("cable_drums", 0))
+		_check(st._next.visible and st._next_what.text.to_lower().contains("substation") and st._next_wants.text.to_lower().contains(want_a) and st._next_wants.text.to_lower().contains(want_b), "the Next strip: '%s' / '%s' (%s, %s)" % [st._next_what.text, st._next_wants.text, want_a, want_b])
+		var lw: Label = last["won"][last["won"].size() - 1]
+		_check(lw.position.y + lw.size.y <= st._next.position.y + 1.0 and st._next.position.y + st._next.size.y <= last["panel"].size.y, "the Next strip sits on Kev's line or leaves the beat's card")
+		_check_fit(main, "the Radio, the story told, the Next strip (%dx%d)" % [int(sz.x), int(sz.y)])
+		st._next_btn.pressed.emit()
+		main.refresh()
+		_check(main._radio.view == "town", "the Next strip's button didn't open the Town tab: '%s'" % main._radio.view)
+		# the Map's goal line
+		main.show_room(main.MISSIONS)
+		main._missions._shown = ""
+		main.refresh()
+		var M = main._missions
+		_check(M._goal.visible and M._goal_text.text == Words.U49_NEXT["goal"] % [0, Data.REBUILDS.size()] and M._goal_next.text.to_lower().contains("substation") and M._goal_next.text.to_lower().contains(want_a) and M._goal_btn.visible, "the Map's goal line: '%s' / '%s'" % [M._goal_text.text, M._goal_next.text])
+		_check(M._goal_pips.size() == 6 and M._goal_pips.filter(func(pp): return (pp.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Pal.ACCENT).is_empty(), "the goal's pips light with nothing running")
+		var gr := Rect2(M._goal.position, M._goal.size)
+		var pins_hit: Array = []
+		for i in range(Data.TIERS.size()):
+			if gr.has_point(M._map.position + M._map.pin_at(i)):
+				pins_hit.append(i)
+		_check(pins_hit.is_empty() and Rect2(M._map.position, M._map.size).encloses(gr), "the goal line sits on the Map's pins %s or leaves it" % str(pins_hit))
+		_check_fit(main, "the Map, the town's goal line (%dx%d)" % [int(sz.x), int(sz.y)])
+		sim.rebuilt = {"substation": 1}
+		M._shown = ""
+		main.refresh()
+		_check(M._goal_text.text == Words.U49_NEXT["goal"] % [1, Data.REBUILDS.size()] and M._goal_next.text.to_lower().contains("pumping"), "one running: '%s' / '%s'" % [M._goal_text.text, M._goal_next.text])
+		M._goal_btn.pressed.emit()
+		main.refresh()
+		_check(main.room == main.COMMS and main._radio.view == "air", "Signals that bring them didn't open the Radio: %s, %s" % [main.room, main._radio.view])
+		sim.rebuilt = {}
+	sim.story_beat = beat0
+	sim.rebuilt = rb0
+	sim.materials = mats0
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("u49 next step ok")
+
+
+
+## A site's read run to its whole count, as the shell's budget leaves it (BUILD49 U, the review).
+func _u49_full_read(sim, i: int) -> float:
+	var o: float = sim.survival(i)
+	for n in range(100):
+		if sim.odds_settled(i):
+			break
+		o = sim.survival(i)
+	return o
+
+
+## Kev's wagers' reads stepped by the shell as its frames would: three frames at a sliver of time (each must park a dry
+## run), then at 5 ms till they settle. [frames, frames that ended parked].
+func _u49_settle_wagers(main, WO) -> Array:
+	var n := 0
+	var parked := 0
+	while WO.pending() and n < 4000:
+		main._read_odds(0.01 if n < 3 else 5.0)
+		for j in WO._jobs.values():
+			if j["c"] is Array and j["c"].size() > 6 and j["c"][6] != null:
+				parked += 1
+				break
+		n += 1
+	main._missions._shown = ""
+	main.refresh()
+	return [n, parked]

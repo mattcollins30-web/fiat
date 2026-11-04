@@ -14,6 +14,8 @@ signal picked(id: String)
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const WebView := preload("res://scripts/ui/web_view.gd")
+const Items := preload("res://scripts/sim/items.gd")
 
 const COL_GAP := 12
 const CP := 10                      # a column's padding
@@ -25,6 +27,14 @@ const FILLER_INSET := 14            # a filler narrower than a node, either side
 const NAME_SIZES := [15, 14, 13]    # a long name steps down before it's cut (28 Oct: "The lie of the land" in a third of a column)
 const LINK := Color("4a5059")       # the web's dim link (23 Oct: CARD_LINE was lost)
 const LINK_W := 2.0
+## Each node's picture on its box (BUILD49 U, item 14, layout A; Matt: "this reads as a placeholder - ... i thought we
+## had art for these"): the picture at the box's left, the ranks a small badge on it; a notable's box a size up framed
+## amber, a keystone's bigger again in gold, as the web frames them; a filler's picture its pill's mark.
+const PIC := {"node": 40, "notable": 48, "keystone": 56}
+const BOX_H := {"node": 48, "notable": 56, "keystone": 64}
+const FILLER_PIC := 18
+const GOLD := Pal.LEGENDARY
+const BADGE_H := 15
 
 var sim
 var selected := ""                  # the picked tile's Map id
@@ -86,21 +96,22 @@ func _lay_column(c: int, t: Dictionary, r: Rect2) -> void:
 	_lay_run(t, c, spine, xs[0], sw, top, bottom)
 	# a branch's run starts and ends level with the entry's and the keystone's middles
 	var inset: float = (NODE_H - FILLER_H) / 2.0
+	var drop: float = (BOX_H["keystone"] - NODE_H) / 2.0     # the keystone's middle, a size up from a node's (item 14)
 	for side in [-1, 1]:
-		_lay_run(t, c, sides[side], xs[side], sw, top + inset, bottom - inset)
+		_lay_run(t, c, sides[side], xs[side], sw, top + inset, bottom - inset - drop)
 
 
 ## `ids` (indices into the tree's nodes) down from `y0` to `y1` at `x`, spread evenly.
 func _lay_run(t: Dictionary, c: int, ids: Array, x: float, w: float, y0: float, y1: float) -> void:
 	var total := 0.0
 	for i in ids:
-		total += FILLER_H if t["nodes"][i].get("filler", false) else NODE_H
+		total += _box_h(t["nodes"][i])
 	var gap: float = (y1 - y0 - total) / maxf(1.0, ids.size() - 1)
 	var y: float = y0
 	for i in ids:
 		var nd: Dictionary = t["nodes"][i]
 		var filler: bool = nd.get("filler", false)
-		var h: float = FILLER_H if filler else NODE_H
+		var h: float = _box_h(nd)
 		var inset: float = float(FILLER_INSET) if filler else 0.0
 		var rect := Rect2(x + inset, y, w - 2.0 * inset, h)
 		_make_tile("%s/%d" % [t["name"], i], nd, c, rect)
@@ -117,13 +128,60 @@ func _make_tile(id: String, nd: Dictionary, c: int, rect: Rect2) -> void:
 	p.add_child(b)
 	var filler: bool = nd.get("filler", false)
 	var t := {"button": b, "filler": filler, "key": str(nd["key"])}
+	var kind: String = kind_of(nd)
+	t["kind"] = kind
 	if filler:
-		t["name"] = UI.label(b, Rect2(8, 0, rect.size.x - 16, rect.size.y), "", "Medium", Pal.CELL_TEXT - 4, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+		t["pic"] = _pic_rect(b, Rect2(8, (rect.size.y - FILLER_PIC) / 2.0, FILLER_PIC, FILLER_PIC))
+		var fx: float = 8 + FILLER_PIC + 6
+		t["name"] = UI.label(b, Rect2(fx, 0, rect.size.x - fx - 8, rect.size.y), "", "Medium", Pal.CELL_TEXT - 4, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	else:
-		t["name"] = UI.label(b, Rect2(10, 4, rect.size.x - 20, 22), "", "SemiBold", NAME_SIZES[0], Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		t["line"] = UI.label(b, Rect2(10, 25, rect.size.x - 20, 18), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var ps: float = PIC[kind]
+		var pf := UI.panel(b, Rect2(4, (rect.size.y - ps) / 2.0, ps, ps), UI.box(Pal.BG, 4))
+		pf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		t["pic"] = _pic_rect(pf, Rect2(0, 0, ps, ps))
+		t["badge"] = UI.panel(pf, Rect2(ps - 30, ps - BADGE_H, 30, BADGE_H), UI.box(Color(Pal.BG, 0.85), 3))
+		t["badge"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+		t["rank"] = UI.label(t["badge"], Rect2(0, 0, 30, BADGE_H), "", "SemiBold", 11, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		var tx: float = 4 + ps + 8
+		var tw: float = rect.size.x - tx - 6
+		t["name"] = UI.label(b, Rect2(tx, 4, tw, 20), "", "SemiBold", NAME_SIZES[0], Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["name2"] = UI.label(b, Rect2(tx, 22, tw, 18), "", "SemiBold", NAME_SIZES[0], Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["line"] = UI.label(b, Rect2(tx, 25, tw, 18), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_tiles[id] = t
 	layout[id] = Rect2(p.position + rect.position, rect.size)
+
+
+## A box's kind: "filler", "keystone", "notable" or "node".
+static func kind_of(nd: Dictionary) -> String:
+	if nd.get("filler", false):
+		return "filler"
+	var a: Dictionary = Data.atlas_of(str(nd.get("key", "")))
+	return "keystone" if a.get("keystone", false) else ("notable" if a.get("notable", false) else "node")
+
+
+static func _box_h(nd: Dictionary) -> float:
+	var k: String = kind_of(nd)
+	return float(FILLER_H) if k == "filler" else float(BOX_H[k])
+
+
+## A node's picture (art/nodes/map_<key>.png; a filler's map_f_<name>), as the Dial's panel finds it.
+static func picture_of(key: String) -> Texture2D:
+	var a: Dictionary = Data.atlas_of(key)
+	if a.is_empty():
+		return null
+	return WebView.picture(("map_f_" + Items.slug(str(a.get("name", "")))) if a.get("filler", false) else ("map_" + key))
+
+
+func _pic_rect(parent: Control, r: Rect2) -> TextureRect:
+	var pic := TextureRect.new()
+	pic.position = r.position
+	pic.size = r.size
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(pic)
+	return pic
 
 
 func _press(id: String) -> void:
@@ -181,10 +239,13 @@ func _show_tile(id: String, st: Dictionary) -> void:
 	var taken: bool = st["taken"]
 	var reach: bool = st["reach"]
 	var on: bool = id == selected
-	var big: bool = a.get("notable", false) or a.get("keystone", false)
-	var edge: Color = Pal.TEXT if on else (Pal.ACCENT if taken else (Color(Pal.ACCENT, 0.55) if big else (Pal.TEXT_3 if reach else Pal.CARD_LINE)))
+	var kind: String = str(t["kind"])
+	var frame: Color = GOLD if kind == "keystone" else (Pal.ACCENT if kind == "notable" else Color.TRANSPARENT)
+	var edge: Color = Pal.TEXT if on else (frame if frame.a > 0.0 else (Pal.ACCENT if taken else (Pal.TEXT_3 if reach else Pal.CARD_LINE)))
+	if frame.a > 0.0 and not on and not taken and not reach:
+		edge = Color(frame, 0.6)                 # a big node shut: its frame dimmed, still its colour
 	var ground: Color = Pal.CARD.blend(Color(Pal.ACCENT, 0.12)) if taken else (Pal.CARD if reach else Pal.BG)
-	var bw: int = 2 if (on or taken) else 1
+	var bw: int = 2 if (on or taken or frame.a > 0.0) else 1
 	var b: Button = t["button"]
 	b.add_theme_stylebox_override("normal", UI.box(ground, 6, bw, edge))
 	b.add_theme_stylebox_override("hover", UI.box(Pal.BUTTON, 6, bw, edge))
@@ -193,23 +254,61 @@ func _show_tile(id: String, st: Dictionary) -> void:
 	b.tooltip_text = str(a.get("words", ""))
 	var nm: String = str(a.get("name", ""))
 	var lit: Color = Pal.TEXT if (taken or reach) else Pal.TEXT_2
+	t["pic"].texture = picture_of(str(t["key"]))
+	t["pic"].modulate = Color.WHITE if (taken or reach) else Color(1, 1, 1, 0.55)
 	if t["filler"]:
 		_fit_name(t["name"], nm, [Pal.CELL_TEXT - 4, Pal.CELL_TEXT - 5])
 		t["name"].add_theme_color_override("font_color", Pal.ACCENT if taken else lit)
 		return
-	_fit_name(t["name"], nm, NAME_SIZES)
+	var top: int = int(st["max"])
+	t["badge"].visible = top > 1
+	t["rank"].text = "%d/%d" % [int(st["rank"]), top] if top > 1 else ""
+	t["rank"].add_theme_color_override("font_color", Pal.ACCENT if taken else Pal.TEXT)
+	var line: Array = []
+	if kind == "keystone":
+		line = ["keystone · %d in" % Data.MAP_KEYSTONE_POINTS, "keystone"]
+	elif kind == "notable":
+		line = ["notable"]
+	var bh: float = b.size.y
+	var two: bool = _fit_name2(t["name"], t["name2"], nm, NAME_SIZES)
+	var rows: int = (2 if two else 1) + (1 if not line.is_empty() else 0)
+	var y: float = (bh - rows * 17.0) / 2.0 - 1.0
+	t["name"].position.y = y
+	t["name"].size.y = 18
+	t["name2"].position.y = y + 16
+	t["name2"].size.y = 18
+	t["line"].position.y = y + (32 if two else 16)
+	t["line"].visible = not line.is_empty()
+	if not line.is_empty():
+		UI.fit(t["line"], line)
 	t["name"].add_theme_color_override("font_color", lit)
-	var line: Array
-	if taken:
-		line = ["rank %d of %d" % [st["rank"], st["max"]], "%d of %d" % [st["rank"], st["max"]]] if int(st["max"]) > 1 else ["taken"]
-	elif a.get("keystone", false):
-		line = ["keystone · %d points in" % Data.MAP_KEYSTONE_POINTS, "keystone · %d in" % Data.MAP_KEYSTONE_POINTS, "keystone"]
-	elif a.get("notable", false):
-		line = ["notable" + (" · %d ranks" % int(st["max"]) if int(st["max"]) > 1 else ""), "notable"]
-	else:
-		line = ["a node · %d ranks" % int(st["max"]) if int(st["max"]) > 1 else "a node", "a node"]
-	UI.fit(t["line"], line)
-	t["line"].add_theme_color_override("font_color", Pal.ACCENT if (taken or big) else Pal.TEXT_3)
+	t["name2"].add_theme_color_override("font_color", lit)
+	t["line"].add_theme_color_override("font_color", GOLD if kind == "keystone" else Pal.ACCENT)
+
+
+## A name on one line at the first of `sizes` it fits at, else over two lines (split at a word) at the first size both
+## halves fit; past that, one line shortened. Returns whether it took two lines.
+func _fit_name2(l: Label, l2: Label, nm: String, sizes: Array) -> bool:
+	for sz in sizes:
+		l.add_theme_font_size_override("font_size", int(sz))
+		if UI.text_width(l, nm) <= l.size.x:
+			l.text = nm
+			l2.text = ""
+			return false
+	var words: PackedStringArray = nm.split(" ")
+	for sz in sizes:
+		l.add_theme_font_size_override("font_size", int(sz))
+		l2.add_theme_font_size_override("font_size", int(sz))
+		for cut in range(words.size() - 1, 0, -1):
+			var a: String = " ".join(words.slice(0, cut))
+			var b2: String = " ".join(words.slice(cut))
+			if UI.text_width(l, a) <= l.size.x and UI.text_width(l2, b2) <= l2.size.x:
+				l.text = a
+				l2.text = b2
+				return true
+	l2.text = ""
+	UI.fit(l, [nm, nm.trim_prefix("The ")])
+	return false
 
 
 ## A name at the first of `sizes` it fits at; past the last, its shorter forms.
@@ -248,6 +347,7 @@ func text_nodes() -> Array:
 		out.append_array([col["name"], col["pts"]])
 	for id in _tiles:
 		out.append(_tiles[id]["name"])
-		if _tiles[id].has("line"):
-			out.append(_tiles[id]["line"])
+		for k in ["name2", "line", "rank"]:
+			if _tiles[id].has(k) and _tiles[id][k].visible:
+				out.append(_tiles[id][k])
 	return out

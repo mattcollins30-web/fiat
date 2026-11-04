@@ -30,6 +30,10 @@ const Town := preload("res://scripts/ui/town.gd")
 const KevStory := preload("res://scripts/ui/kev_story.gd")
 const Dashed := preload("res://scripts/ui/dashed.gd")
 const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
+const People := preload("res://scripts/ui/people.gd")
+const RunScreen := preload("res://scripts/ui/run.gd")
+const Items := preload("res://scripts/sim/items.gd")
+const WagerOdds := preload("res://scripts/ui/wager_odds.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -88,7 +92,21 @@ const CREW_ROW_Y := 408              # the crew's odds (21 Oct): a button a clas
 const CREW_MAX := 6                 # every class played (24 Oct: the sixth, the Recruit, had no button); Data.CLASSES.size(), held by the smoke
 const CREW_COLS := 3                # the card's narrower now: three a row, a second row for the rest (28 Oct)
 const CREW_BH := 50
-const CARD_H := CREW_ROW_Y + 2 * (CREW_BH + 6) + 4     # the picked signal at its tallest: every class in two rows
+const CARD_H := 556                 # the picked signal at its tallest: two rows of codes and of the others (BUILD49 U, item 25)
+# the card's rows (BUILD49 U, item 25, layout A): the picture, you against them, the figures, then laid down by content
+const SC_PIC_H := 92
+const SC_FACE := 48
+const SC_MATCH_Y := 98
+const SC_TILES_Y := 170
+const SC_TILE_H := 50
+const SC_TILE_SHARE := [0.38, 0.38, 0.24]
+const SC_DROPS := 3
+const SC_SET_H := 44
+const SC_CRAFT_H := 32
+const SC_ROW_H := 30
+const SC_OTHER_H := 24
+const SC_GAP := 6
+const SC_HEAD_W := 80               # ITS CODES and DROPS at the left of their rows
 const CRAFT_H := 48
 const OTHER_H := 56
 const OTHER_GAP := 8
@@ -192,7 +210,17 @@ var _card_kev: Label
 var _card_kev2: Label
 var _crafts: Array = []             # {button, name, words, key}
 var _set_off: Button
-var _crew_btns: Array = []           # [{button, name, odds, cls}]
+var _crew_btns: Array = []           # [{button, face, name, odds, cls}]: the others' odds (item 25: the one out's is the card's own)
+var _card_pic: Control
+var _card_art: TextureRect
+var _card_faces: Array = []          # you, the gang: {frame, face, name}
+var _card_count_box: Panel
+var _card_count: Label
+var _card_codes_head: Label
+var _card_drops_head: Label
+var _card_drops: Array = []          # {panel, icon, text}
+var _card_drops_run: Label
+var _card_others: Label
 var _bin: Button
 var _wager_btn: Button              # Kev's wagers on the signal's run (29 Oct), between Set off and Bin it
 var _wagers_ov                      # their panel (wagers_panel.gd), over the papers and the decoder while open
@@ -259,6 +287,7 @@ func _init() -> void:
 	_town.acted.connect(func(): acted.emit())
 	add_child(_town)
 	_story = KevStory.new()
+	_story.to_town.connect(_pick_view.bind("town"))     # the Next strip (BUILD49 U, item 21)
 	_story.visible = false
 	add_child(_story)
 	_wagers_ov = WagersPanel.new()
@@ -491,58 +520,7 @@ func _build_signals() -> void:
 	_signals_title = UI.label(_signals_box, Rect2(BP, 10, iw, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_card = UI.panel(_signals_box, Rect2(BP, CARD_TOP, iw, CARD_H), UI.box(Pal.CARD, 8, 2, Pal.ACCENT))
 	var cw: float = iw - 2 * 16
-	_card_kicker = UI.label(_card, Rect2(16, 8, cw - 130, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_title = UI.label(_card, Rect2(16, 28, cw - 130, 38), "", "SemiBold", Pal.TITLE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_line = UI.label(_card, Rect2(16, 66, cw, 24), "", "Regular", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_odds = UI.label(_card, Rect2(16 + cw - 130, 22, 130, 40), "", "SemiBold", Pal.TITLE, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT)
-	_card_odds_sub = UI.label(_card, Rect2(16 + cw - 130, 8, 130, 18), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_card_tiles = UI.tile_row(_card, 16, 94, cw, 3)
-	_card_codes = Chips.new(cw, 8)
-	_card_codes.position = Vector2(16, 162)
-	_card.add_child(_card_codes)
-	_card_kev = UI.label(_card, Rect2(16, 250, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_card_kev2 = UI.label(_card, Rect2(16, 272, cw, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var n: int = SIM_CRAFTS.size()
-	var crw: float = (cw - (n - 1) * 8) / n
-	for k in range(n):
-		var b := Button.new()
-		b.position = Vector2(16 + k * (crw + 8), 302)
-		b.size = Vector2(crw, CRAFT_H)
-		b.focus_mode = Control.FOCUS_ALL
-		b.pressed.connect(_craft.bind(SIM_CRAFTS[k]))
-		_card.add_child(b)
-		UI.style_button(b, false)
-		var t := {"button": b, "key": SIM_CRAFTS[k]}
-		t["name"] = UI.label(b, Rect2(10, 2, crw - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		t["words"] = UI.label(b, Rect2(10, 24, crw - 20, 22), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_crafts.append(t)
-	var bw: float = (cw - 8) / 3.0
-	_set_off = UI.button(_card, Rect2(16, 356, bw * 2, 46), true)
-	_set_off.text = "Set off"
-	_set_off.pressed.connect(_on_set_off)
-	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 356, bw, 46), false)
-	_bin.text = "Bin it"
-	_bin.pressed.connect(_on_bin)
-	_wager_btn = UI.button(_card, Rect2(16 + bw + 8, 356, bw - 8, 46), false)
-	_wager_btn.pressed.connect(_on_wagers)
-	_wager_btn.visible = false
-	var cbw: float = (cw - (CREW_COLS - 1) * 6) / CREW_COLS
-	for k in range(CREW_MAX):
-		var cb := Button.new()
-		@warning_ignore("integer_division")
-		cb.position = Vector2(16 + (k % CREW_COLS) * (cbw + 6), CREW_ROW_Y + (k / CREW_COLS) * (CREW_BH + 6))
-		cb.size = Vector2(cbw, CREW_BH)
-		cb.focus_mode = Control.FOCUS_ALL
-		cb.pressed.connect(_on_crew.bind(k))
-		_card.add_child(cb)
-		UI.style_button(cb, false)
-		var t := {"button": cb, "cls": ""}
-		t["name"] = UI.label(cb, Rect2(10, 2, cbw - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		t["odds"] = UI.label(cb, Rect2(10, 24, cbw - 20, 22), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		for n2 in [t["name"], t["odds"]]:
-			n2.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cb.visible = false
-		_crew_btns.append(t)
+	_build_card(cw)
 	_build_dec(cw)
 	for k in range(OTHERS_MAX):
 		var b := Button.new()
@@ -564,6 +542,137 @@ func _build_signals() -> void:
 		_places.append(e)
 	_empty = UI.label(_signals_box, Rect2(BP + 2, 0, iw - 4, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_empty2 = UI.label(_signals_box, Rect2(BP + 2, 0, iw - 4, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+
+
+## The signal's card (BUILD49 U, item 25, layout A; Matt: "this interface could probably use a pass"): in the site
+## card's language - the place's picture as its header with the signal, its name and its level; you against the gang with
+## the one odds figure between; the gang's figures whole; its codes as plain chips; its drops as pictures; Kev; Set off
+## first (the row has room for act two's "Start a night" beside it); the tuning with every price; Kev's wagers and Bin
+## it; the others' odds as a small row of faces. Laid top to bottom by what it holds (a second row of codes or of the
+## others only when there are that many).
+func _build_card(cw: float) -> void:
+	var cardw: float = cw + 32
+	_card_pic = Control.new()
+	_card_pic.size = Vector2(cardw - 4, SC_PIC_H - 2)
+	_card_pic.position = Vector2(2, 2)                   # inside the card's amber edge
+	_card_pic.clip_contents = true
+	_card_pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card.add_child(_card_pic)
+	_card_art = TextureRect.new()
+	_card_art.size = _card_pic.size
+	_card_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_card_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_card_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_pic.add_child(_card_art)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	g.colors = PackedColorArray([Color(0, 0, 0, 0.55), Color(0, 0, 0, 0.25), Color(Pal.CARD, 0.95)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill_to = Vector2(0, 1)
+	gt.width = 4
+	gt.height = 64
+	var fade := TextureRect.new()
+	fade.texture = gt
+	fade.size = _card_pic.size
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_pic.add_child(fade)
+	_card_kicker = UI.label(_card, Rect2(16, 8, cw, 20), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_title = UI.label(_card, Rect2(16, 28, cw, 34), "", "SemiBold", Pal.TITLE - 4, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_line = UI.label(_card, Rect2(16, 64, cw, 22), "", "Regular", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for l in [_card_kicker, _card_title, _card_line]:
+		UI.shadow(l)
+	# you against the gang, the verdict between
+	var side: float = 110.0
+	for k in range(2):
+		var x: float = 16 + (side - SC_FACE) / 2.0 + (0.0 if k == 0 else cw - side)
+		var fr := UI.panel(_card, Rect2(x - 2, SC_MATCH_Y - 2, SC_FACE + 4, SC_FACE + 4), UI.box(Pal.BG, 6, 2, Pal.GOOD if k == 0 else Pal.CARD_LINE))
+		var face := People.rect(fr, Vector2(2, 2), SC_FACE / 128.0)
+		var nm := UI.label(_card, Rect2(16 + (0.0 if k == 0 else cw - side), SC_MATCH_Y + SC_FACE + 2, side, 18), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		_card_faces.append({"frame": fr, "face": face, "name": nm})
+	_card_count_box = UI.panel(_card_faces[1]["frame"], Rect2(SC_FACE - 20, SC_FACE - 16, 38, 20), UI.box(Pal.ACCENT, 10))
+	_card_count = UI.label(_card_count_box, Rect2(0, 0, 38, 20), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.ACCENT_TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_card_odds = UI.label(_card, Rect2(16 + side, SC_MATCH_Y + 2, cw - 2 * side, 34), "", "SemiBold", Pal.TITLE - 4, Pal.GOOD, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_card_odds_sub = UI.label(_card, Rect2(16 + side, SC_MATCH_Y + 36, cw - 2 * side, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+	for l in [_card_odds, _card_odds_sub]:
+		l.tooltip_text = Words.U49_DEATH["odds_tip"]     # how they're read, said once (item 13)
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+	# the gang's figures, whole
+	var x0: float = 16
+	for k in range(3):
+		var tw: float = cw * SC_TILE_SHARE[k] - (8.0 if k < 2 else 0.0)
+		var t := {"panel": UI.panel(_card, Rect2(x0, SC_TILES_Y, tw, SC_TILE_H), UI.box(Pal.BG, 6))}
+		t["key"] = UI.label(t["panel"], Rect2(10, 4, tw - 20, 16), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["value"] = UI.label(t["panel"], Rect2(10, 20, tw - 20, 26), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
+		_card_tiles.append(t)
+		x0 += tw + 8
+	_card_codes_head = UI.label(_card, Rect2(16, 0, SC_HEAD_W - 4, Chips.CHIP_H), Words.U49_SIGNAL["codes"], "Medium", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	UI.track(_card_codes_head, 1)
+	_card_codes = Chips.new(cw - SC_HEAD_W, 8)
+	_card.add_child(_card_codes)
+	for l in _card_codes._labels:
+		l.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+	_card_drops_head = UI.label(_card, Rect2(16, 0, SC_HEAD_W - 4, Chips.CHIP_H), Words.U49_SIGNAL["drops"], "Medium", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	UI.track(_card_drops_head, 1)
+	for k in range(SC_DROPS):
+		var dp := UI.panel(_card, Rect2(0, 0, 100, Chips.CHIP_H), UI.box(Pal.BUTTON, 6))
+		var ic := TextureRect.new()
+		ic.position = Vector2(4, 2)
+		ic.size = Vector2(Chips.CHIP_H - 4, Chips.CHIP_H - 4)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dp.add_child(ic)
+		var dl := UI.label(dp, Rect2(Chips.CHIP_H + 2, 0, 80, Chips.CHIP_H), "", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_card_drops.append({"panel": dp, "icon": ic, "text": dl})
+	_card_drops_run = UI.label(_card, Rect2(0, 0, 120, Chips.CHIP_H), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_kev = UI.label(_card, Rect2(16, 0, cw, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_kev2 = UI.label(_card, Rect2(16, 0, cw, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_set_off = UI.button(_card, Rect2(16, 0, cw, SC_SET_H), true)
+	_set_off.text = "Set off"
+	_set_off.pressed.connect(_on_set_off)
+	var n: int = SIM_CRAFTS.size()
+	var crw: float = (cw - (n - 1) * 8) / n
+	for k in range(n):
+		var b := Button.new()
+		b.position = Vector2(16 + k * (crw + 8), 0)
+		b.size = Vector2(crw, SC_CRAFT_H)
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_craft.bind(SIM_CRAFTS[k]))
+		_card.add_child(b)
+		UI.style_button(b, false)
+		var t := {"button": b, "key": SIM_CRAFTS[k]}
+		t["name"] = UI.label(b, Rect2(10, 0, crw - 20, SC_CRAFT_H), "", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		t["words"] = UI.label(b, Rect2(10, SC_CRAFT_H, crw - 20, 1), "", "Regular", Pal.CELL_TEXT - 4, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)     # its words on the hover now (the name has the price)
+		t["words"].visible = false
+		_crafts.append(t)
+	var bw: float = (cw - 8) / 3.0
+	_wager_btn = UI.button(_card, Rect2(16, 0, bw * 2, SC_ROW_H), false)
+	_wager_btn.pressed.connect(_on_wagers)
+	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 0, bw, SC_ROW_H), false)
+	_bin.text = "Bin it"
+	_bin.pressed.connect(_on_bin)
+	for b in [_wager_btn, _bin]:
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	_card_others = UI.label(_card, Rect2(16, 0, 74, SC_OTHER_H), Words.U49_SIGNAL["others"], "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(CREW_MAX):
+		var cb := Button.new()
+		cb.size = Vector2(120, SC_OTHER_H)
+		cb.focus_mode = Control.FOCUS_ALL
+		cb.flat = true
+		cb.pressed.connect(_on_crew.bind(k))
+		_card.add_child(cb)
+		var t := {"button": cb, "cls": ""}
+		t["face"] = People.rect(cb, Vector2(0, 2), (SC_OTHER_H - 4) / 128.0)
+		t["name"] = UI.label(cb, Rect2(SC_OTHER_H, 0, 80, SC_OTHER_H), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["odds"] = UI.label(cb, Rect2(SC_OTHER_H + 80, 0, 40, SC_OTHER_H), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		for n2 in [t["name"], t["odds"]]:
+			n2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cb.visible = false
+		_crew_btns.append(t)
 
 
 const SIM_CRAFTS := ["tune", "retune", "twist"]
@@ -744,7 +853,7 @@ func show_state(s) -> void:
 		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas) + book_kind + str(book_page) + str(sim.words_known().size()) + str(sim.candidates.size())]
 	if _wagers_ov.visible:
 		_wagers_ov.show_state(sim)
-	sig += "|%s|%s" % [str(sim.wagers), str(_wagers_ov.visible)]     # Kev's wagers (29 Oct)
+	sig += "|%s|%s|%s" % [str(sim.wagers), str(_wagers_ov.visible), WagerOdds.state()]     # Kev's wagers (29 Oct); their reads as they settle (BUILD49 U)
 	sig += "|%d|%s|%s|%s" % [crew_pick, str(sim.materials), sim.cls, str(sim.crew_played().map(func(c): return sim.signal_odds_class(selected, str(c), true)) if not sim.signals.is_empty() else [])]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
@@ -1044,76 +1153,7 @@ func _show_signals(od: Array) -> void:
 		_empty2.position.y = y_end + 34
 		UI.wrap([_empty, _empty2], "No signals held. One to three papers in the decoder make one: a fix on a site, a crew from anywhere, run once.")     # 20 Oct: one to three; "campaign" a banned word on screen
 		return
-	var sg: Dictionary = sim.signal_at(selected)
-	var e: Dictionary = sim.signal_read(selected)
-	var site: String = sim.signal_place(sg)
-	var beat: int = int(sg.get("story", -1))
-	if beat >= 0:
-		UI.fit(_card_kicker, ["Kev's story · %s · a fix on %s" % [Data.STORY_BEATS[beat]["name"], Words.mid(site)], "Kev's story · %s" % Data.STORY_BEATS[beat]["name"]])
-	else:
-		UI.fit(_card_kicker, ["Signal %02d · a fix on %s" % [int(sg["id"]), Words.mid(site)], "Signal %02d" % int(sg["id"])])
-	UI.fit(_card_title, [site])
-	var lv: int = sim.signal_level(sg)
-	var rel: String = "at your reach" if lv == sim.reach else (("%d over your reach" % (lv - sim.reach)) if lv > sim.reach else ("%d under your reach" % (sim.reach - lv)))
-	var crew: String = "the %s crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
-	UI.fit(_card_line, ["Level %d · %s · %s" % [lv, rel, crew], "Level %d · %s" % [lv, crew], "Level %d" % lv])
-	_card_odds.text = Fmt.pct(float(od[0]))
-	var tone: String = "good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad")
-	_card_odds.add_theme_color_override("font_color", Pal.tone_color(tone) if od[1] else Pal.TEXT_3)
-	UI.fit(_card_odds_sub, ["to clear, events counted" if od[1] else "reading the odds", "to clear"])
-	UI.set_tile(_card_tiles[0], "Gang", ["%d × %s HP" % [int(e["pool"]), Fmt.num(float(e["hp"]))], "%d × %s" % [int(e["pool"]), Fmt.num(float(e["hp"]))]])
-	UI.set_tile(_card_tiles[1], "Their fire", ["%.1f dmg/s each" % float(e["dps"]), "%.1f/s" % float(e["dps"])])
-	UI.set_tile(_card_tiles[2], "Item level", sim.finds_words(int(e["level"])))
-	var chips: Array = []
-	for wd in sim.signal_words(sg):
-		var parts: Array = sim.word_words(str(wd["w"]), int(wd["t"]))     # [the bite, the pay]
-		chips.append({"forms": ["%s: %s" % [wd["w"], parts[0]] if str(parts[0]) != "" else str(wd["w"]), str(wd["w"])], "colour": BITE})
-		if str(parts[1]) != "":
-			chips.append({"forms": [str(parts[1]), str(parts[1]).get_slice(", ", 0)], "colour": PAY})
-	if bool(sg.get("head", false)):
-		chips.append({"forms": ["Extra: %s at full strength" % sim.signal_head_name(sg), "Extra: a head"], "colour": Pal.WARN})
-	if bool(sg.get("convoy_fight", false)):
-		chips.append({"forms": ["The convoy: three heads, one after another, and the load", "The convoy"], "colour": Pal.WARN})
-	if bool(sg.get("convoy", false)):
-		chips.append({"forms": ["Extra: a convoy may come", "Extra: a convoy"], "colour": Pal.WARN})
-	if bool(sg.get("sealed", false)):
-		chips.append({"forms": ["Sealed", "Sealed"], "colour": Pal.TEXT_3})
-	# what it brings for the rebuild (20 Oct, Matt: "never clear when said material drops"): its crew's area's two, the
-	# one held fewer of the likelier, and the chance a run brings any
-	var mats: Array = sim.signal_materials(selected)
-	if not (mats[0] as Dictionary).is_empty():
-		var parts_m: Array = []
-		for mk in mats[0]:
-			parts_m.append("%s %d%%" % [sim.thing_name(str(mk)).to_lower(), int(round(float(mats[0][mk]) * 100.0))])
-		chips.append({"forms": ["Brings %s · %d%% a run" % [" · ".join(parts_m), int(round(float(mats[1]) * 100.0))], "Brings %s" % " · ".join(parts_m), "%d%% a run" % int(round(float(mats[1]) * 100.0))], "colour": MATERIAL})
-	if chips.is_empty():
-		chips.append({"forms": ["No codes: a plain fix", "No codes"], "colour": Pal.TEXT_3})
-	if beat >= 0:
-		chips.push_front({"forms": ["Kev's story: %s" % Data.STORY_BEATS[beat]["name"], "Kev's story"], "colour": STORY})
-	_card_codes.show_chips(chips, 3, true)
-	if beat >= 0:
-		UI.wrap([_card_kev, _card_kev2], str(Words.STORY[beat]["made"]).replace("Kev: ", "KEV ·"))
-	else:
-		UI.wrap([_card_kev, _card_kev2], "KEV · \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()]))
-	for c in _crafts:
-		var cd: Dictionary = Data.craft_of(c["key"])
-		var why: String = sim.signal_craft_block(selected, c["key"])
-		c["button"].disabled = why != ""
-		UI.fit(c["name"], ["%s · %s" % [cd["name"], Fmt.notes(sim.signal_craft_cost(selected, c["key"]))], str(cd["name"])])
-		UI.fit(c["words"], [str(cd["words"]).replace("the site", "it"), ""] if why == "" else [why, ""])
-	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
-	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
-	var wager_on: bool = sim.wager_signal_open(selected) and not picking     # Kev's wagers on the signal's run (29 Oct)
-	_wager_btn.visible = wager_on
-	_set_off.size.x = (_bin.position.x - 8 - 16) / 2.0 if wager_on else _bin.position.x - 8 - 16
-	if wager_on:
-		var on_n: int = sim.wagers.get(sim.wager_signal_key(selected), {}).get("taken", []).size()
-		UI.fit_button(_wager_btn, [Words.WAGERS["button_on"] % on_n, Words.WAGERS["button_n"] % on_n, "%d" % on_n] if on_n > 0 else [Words.WAGERS["button"]])
-	if sim.away() and not picking:
-		UI.fit_button(_set_off, ["Set off · " + Words.REPEAT["shut_away"].to_lower(), Words.REPEAT["shut_away"]])     # why it's shut (29 Oct)
-	else:
-		UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
-	_show_crew()
+	_show_card(od)
 	# the column's other places under the card (28 Oct, RadioAir): the signals held as rows that pick, then the empty
 	var y: float = CARD_TOP + _card.size.y + OTHER_GAP
 	var k := 0
@@ -1137,6 +1177,212 @@ func _show_signals(od: Array) -> void:
 		_others[k]["k"] = -1
 		k += 1
 	_lay_places(y, n)
+
+
+## The signal's card, top to bottom (BUILD49 U, item 25, layout A).
+func _show_card(od: Array) -> void:
+	var sg: Dictionary = sim.signal_at(selected)
+	var e: Dictionary = sim.signal_read(selected)
+	var site: String = sim.signal_place(sg)
+	var beat: int = int(sg.get("story", -1))
+	var cw: float = SIG_IW - 32
+	_card_art.texture = UI.place_texture(site)
+	if beat >= 0:
+		UI.fit(_card_kicker, ["Kev's story · %s · a fix on %s" % [Data.STORY_BEATS[beat]["name"], Words.mid(site)], "Kev's story · %s" % Data.STORY_BEATS[beat]["name"]])
+	else:
+		UI.fit(_card_kicker, ["Signal %02d · a fix on %s" % [int(sg["id"]), Words.mid(site)], "Signal %02d" % int(sg["id"])])
+	UI.fit(_card_title, [site])
+	var lv: int = sim.signal_level(sg)
+	var rel: String = "at your reach" if lv == sim.reach else (("%d over your reach" % (lv - sim.reach)) if lv > sim.reach else ("%d under your reach" % (sim.reach - lv)))
+	var crew: String = "the %s crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
+	UI.fit(_card_line, ["Level %d · %s · %s" % [lv, rel, crew], "Level %d · %s" % [lv, crew], "Level %d" % lv])
+	# you against them: one odds figure, the verdict over it
+	var o: float = float(od[0])
+	var tone: Color = Pal.tone_color("good" if o >= 0.9 else ("warn" if o >= 0.6 else "bad"))
+	People.show(_card_faces[0]["face"], sim.cls)
+	UI.fit(_card_faces[0]["name"], ["The %s" % sim.cls, sim.cls] if sim.cls != "" else ["The runner"])
+	People.show(_card_faces[1]["face"], RunScreen.gang_face(int(sg["zone"])))
+	UI.fit(_card_faces[1]["name"], [Words.SITE_CARD["the_gang"]])
+	_card_count.text = "×%d" % int(e["pool"])
+	(_card_faces[1]["frame"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if od[1] else Pal.CARD_LINE
+	UI.fit(_card_odds, [Words.odds_words(o)] if od[1] else [Words.SITE_CARD["reading"]])
+	_card_odds.add_theme_color_override("font_color", tone if od[1] else Pal.TEXT_3)
+	var wkey: String = sim.wager_signal_key(selected)
+	var w_on: Array = WagerOdds.strip_forms(sim, wkey) if bool(od[1]) else []
+	if od[1]:
+		var forms: Array = ["%s to clear" % Fmt.pct(o)]
+		if not w_on.is_empty():
+			var w0: Array = WagerOdds.now(sim, wkey, [])
+			if bool(w0[1]):
+				forms = [Words.U49_SIGNAL["with_wager"] % [Fmt.pct(o), Fmt.pct(float(w0[0]))], "%s to clear" % Fmt.pct(o)]     # the figure with the wager, the one without beside (item 19)
+		UI.fit(_card_odds_sub, forms)
+	else:
+		_card_odds_sub.text = ""
+	# the gang's figures, every one whole
+	_tile_fit(_card_tiles[0], "Gang", ["%d × %s HP" % [int(e["pool"]), Words.group(int(round(float(e["hp"]))))], "%d × %s HP" % [int(e["pool"]), Fmt.num(float(e["hp"]))], "%d × %s" % [int(e["pool"]), Fmt.num(float(e["hp"]))]])
+	_tile_fit(_card_tiles[1], "Their fire", ["%.1f dmg/s each" % float(e["dps"]), "%.1f dmg/s" % float(e["dps"])])
+	_tile_fit(_card_tiles[2], "Item level", sim.finds_words(int(e["level"])))
+	var y: float = SC_TILES_Y + SC_TILE_H + 8
+	# its codes: plain chips, the figure in the words
+	var chips: Array = []
+	for wd in sim.signal_words(sg):
+		var parts: Array = sim.word_words(str(wd["w"]), int(wd["t"]))     # [the bite, the pay]
+		chips.append({"forms": ["%s: %s" % [wd["w"], parts[0]] if str(parts[0]) != "" else str(wd["w"]), str(wd["w"])], "colour": Pal.TEXT_2})
+		if str(parts[1]) != "":
+			chips.append({"forms": [_cap1(str(parts[1])), _cap1(str(parts[1]).get_slice(", ", 0))], "colour": Pal.TEXT_2})
+	if bool(sg.get("head", false)):
+		chips.append({"forms": ["Extra: %s at full strength" % sim.signal_head_name(sg), "Extra: a head"], "colour": Pal.WARN})
+	if bool(sg.get("convoy_fight", false)):
+		chips.append({"forms": ["The convoy: three heads, one after another, and the load", "The convoy"], "colour": Pal.WARN})
+	if bool(sg.get("convoy", false)):
+		chips.append({"forms": ["Extra: a convoy may come", "Extra: a convoy"], "colour": Pal.WARN})
+	if bool(sg.get("sealed", false)):
+		chips.append({"forms": ["Sealed", "Sealed"], "colour": Pal.TEXT_3})
+	if chips.is_empty():
+		chips.append({"forms": ["No codes: a plain fix", "No codes"], "colour": Pal.TEXT_3})
+	if beat >= 0:
+		chips.push_front({"forms": ["Kev's story: %s" % Data.STORY_BEATS[beat]["name"], "Kev's story"], "colour": STORY})
+	_card_codes_head.position.y = y
+	_card_codes.position = Vector2(16 + SC_HEAD_W, y)
+	_card_codes.show_chips(chips, 2, true)
+	y += _card_codes.size.y + 8
+	# its drops: the materials as pictures with their share, and the chance a run brings any
+	var mats: Array = sim.signal_materials(selected)
+	var keys: Array = (mats[0] as Dictionary).keys()
+	_card_drops_head.position.y = y
+	_card_drops_head.visible = not keys.is_empty()
+	var x: float = 16 + SC_HEAD_W
+	for k in range(_card_drops.size()):
+		var d: Dictionary = _card_drops[k]
+		d["panel"].visible = k < keys.size()
+		if k >= keys.size():
+			continue
+		var mk: String = str(keys[k])
+		d["icon"].texture = RunScreen.icon_tex(["res://art/items/%s.png" % mk])
+		d["text"].text = "%s %d%%" % [sim.thing_name(mk), int(round(float(mats[0][mk]) * 100.0))]
+		d["text"].size.x = ceilf(UI.text_width(d["text"], d["text"].text)) + 2
+		d["panel"].size.x = Chips.CHIP_H + 2 + d["text"].size.x + 8
+		d["panel"].position = Vector2(x, y)
+		x += d["panel"].size.x + 6
+	_card_drops_run.visible = not keys.is_empty()
+	if _card_drops_run.visible:
+		_card_drops_run.position = Vector2(x + 2, y)
+		_card_drops_run.size.x = maxf(1.0, 16 + cw - x - 2)
+		UI.fit(_card_drops_run, [Words.U49_SIGNAL["a_run"] % int(round(float(mats[1]) * 100.0)), "%d%%" % int(round(float(mats[1]) * 100.0)), ""])
+		y += Chips.CHIP_H + 8
+	# Kev, then what's on (Kev's wagers taken) in his second line's place
+	_card_kev.position.y = y
+	_card_kev2.position.y = y + 20
+	var kev_line: String = str(Words.STORY[beat]["made"]).replace("Kev: ", "KEV ·") if beat >= 0 else "KEV · \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()])
+	_card_kev2.add_theme_color_override("font_color", Pal.TEXT_2)
+	if w_on.is_empty():
+		UI.wrap([_card_kev, _card_kev2], kev_line)
+	else:
+		var first: String = kev_line.get_slice(". ", 0)
+		UI.fit(_card_kev, [kev_line, (first + ".\"") if first != kev_line else kev_line, ""])     # Kev's line gives the wager its row
+		UI.fit(_card_kev2, w_on.slice(1))     # the figure without is the verdict's (said once)
+		_card_kev2.add_theme_color_override("font_color", Pal.WARN)
+	y += 44 if _card_kev2.text != "" else 24
+	# Set off first (the row keeps room for act two's "Start a night" beside it)
+	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
+	_set_off.position.y = y
+	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
+	if sim.away() and not picking:
+		UI.fit_button(_set_off, ["Set off · " + Words.REPEAT["shut_away"].to_lower(), Words.REPEAT["shut_away"]])     # why it's shut (29 Oct)
+	else:
+		UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
+	y += SC_SET_H + SC_GAP
+	# the tuning, every price shown
+	for c in _crafts:
+		var cd: Dictionary = Data.craft_of(c["key"])
+		var why: String = sim.signal_craft_block(selected, c["key"])
+		c["button"].position.y = y
+		c["button"].disabled = why != ""
+		c["button"].tooltip_text = why if why != "" else str(cd["words"]).replace("the site", "it")
+		_fit_sized(c["name"], ["%s · %s" % [cd["name"], Fmt.notes(sim.signal_craft_cost(selected, c["key"]))]], [Pal.CELL_TEXT - 1, Pal.CELL_TEXT - 2, Pal.CELL_TEXT - 3])
+		c["name"].add_theme_color_override("font_color", Pal.TEXT if why == "" else Pal.TEXT_3)
+		c["words"].text = ""
+	y += SC_CRAFT_H + SC_GAP
+	# Kev's wagers and Bin it
+	var wager_on: bool = sim.wager_signal_open(selected) and not picking     # Kev's wagers on the signal's run (29 Oct)
+	_wager_btn.visible = wager_on
+	_wager_btn.position.y = y
+	_bin.position.y = y
+	if wager_on:
+		var on_n: int = sim.wagers.get(wkey, {}).get("taken", []).size()
+		UI.fit_button(_wager_btn, [Words.WAGERS["button_on"] % on_n, Words.WAGERS["button_n"] % on_n] if on_n > 0 else [Words.U49_SIGNAL["wagers_none"], Words.WAGERS["button"]])
+		UI.style_button(_wager_btn, false, "warn" if on_n > 0 else "")
+	y += SC_ROW_H + SC_GAP
+	y = _show_others(y)
+	var h: float = y + 6
+	if not is_equal_approx(_card.size.y, h):
+		_card.size.y = h
+		_dec.size.y = h
+
+
+## The others' odds (21 Oct, Matt: "switch to your bleed paramedic and steam roll it"): every other class played, a face,
+## its level and its odds, a press swapping to it; a second row past three. The one out's odds are the card's verdict.
+func _show_others(y: float) -> float:
+	var played: Array = sim.crew_played().filter(func(nm): return str(nm) != sim.cls)
+	_card_others.visible = not played.is_empty()
+	_card_others.position.y = y
+	var x0: float = 16 + 74
+	var x: float = x0
+	var row := 0
+	var cw: float = SIG_IW - 32
+	for k in range(CREW_MAX):
+		var t: Dictionary = _crew_btns[k]
+		t["button"].visible = k < played.size()
+		if not t["button"].visible:
+			continue
+		var nm: String = str(played[k])
+		t["cls"] = nm
+		People.show(t["face"], nm)
+		var lv: int = sim.crew_level(nm)
+		var jl: int = sim.join_level(nm)         # the crew's floor (30 Oct): a press would bring them out at this
+		var o: Array = sim.signal_odds_class(selected, nm, true)
+		t["name"].text = "%s · %d" % [nm, maxi(lv, jl)]     # the level a press brings them out at (the crew's floor, 30 Oct)
+		t["button"].tooltip_text = (Words.U49_SIGNAL["joins"] % [nm, jl]) if jl > lv else ""
+		t["name"].size.x = ceilf(UI.text_width(t["name"], t["name"].text)) + 2
+		if sim.on_mission():
+			t["odds"].text = "—"
+		else:
+			t["odds"].text = Fmt.pct(float(o[0])) if bool(o[1]) else "…"
+		t["odds"].position.x = t["name"].position.x + t["name"].size.x + 6
+		t["odds"].size.x = ceilf(UI.text_width(t["odds"], t["odds"].text)) + 2
+		var tone: String = "good" if float(o[0]) >= 0.9 else ("warn" if float(o[0]) >= 0.6 else "bad")
+		t["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if bool(o[1]) else Pal.TEXT_3)
+		var bw: float = t["odds"].position.x + t["odds"].size.x + 4
+		if x + bw > 16 + cw and x > 16:
+			row += 1
+			x = 16                                 # a second row from the card's edge, under "The others:"
+		t["button"].size.x = bw
+		t["button"].position = Vector2(x, y + row * (SC_OTHER_H + 2))
+		t["button"].disabled = sim.on_mission()
+		x += bw + 12
+	if played.is_empty():
+		return y
+	return y + (row + 1) * (SC_OTHER_H + 2)
+
+
+## A tile's figure whole: the first form at the first size it fits at.
+func _tile_fit(t: Dictionary, key: String, forms: Array) -> void:
+	t["key"].text = key
+	_fit_sized(t["value"], forms, [Pal.CELL_TEXT_BIG + 2, Pal.CELL_TEXT_BIG, Pal.CELL_TEXT])
+
+
+func _fit_sized(l: Label, forms: Array, sizes: Array) -> void:
+	for f in forms:
+		for fs in sizes:
+			l.add_theme_font_size_override("font_size", int(fs))
+			if UI.text_width(l, UI.dots(str(f))) <= l.size.x:
+				l.text = UI.dots(str(f))
+				return
+	UI.fit(l, [forms.back()])
+
+
+static func _cap1(t: String) -> String:
+	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else t
 
 
 ## The empty places from `y` down, dashed: as many as the column has left after `held`. Returns the y under them.
@@ -1207,44 +1453,7 @@ func _on_kev() -> void:
 ## The crew's row (21 Oct): each class played, its odds on this signal as read for its own runner, the best lit; a press
 ## swaps that class out (at camp), so the card's odds and Set off are theirs.
 func _show_crew() -> void:
-	var played: Array = sim.crew_played()
-	var on_show: bool = played.size() > 1
-	var reads: Array = []
-	for nm in played:
-		reads.append(sim.signal_odds_class(selected, str(nm), true))
-	var best := -1
-	for k in range(reads.size()):
-		if bool(reads[k][1]) and (best < 0 or float(reads[k][0]) > float(reads[best][0])):
-			best = k
-	for k in range(CREW_MAX):
-		var t: Dictionary = _crew_btns[k]
-		t["button"].visible = on_show and k < played.size()
-		if not t["button"].visible:
-			continue
-		var nm: String = str(played[k])
-		t["cls"] = nm
-		var lv: int = sim.crew_level(nm)
-		var jl: int = sim.join_level(nm)         # the crew's floor (30 Oct): a press would bring them out at this
-		if jl > lv:
-			UI.fit(t["name"], ["%s · L%d, joins at %d" % [nm, lv, jl], "%s · joins at %d" % [nm, jl], "%s · L%d" % [nm, jl]])
-		else:
-			UI.fit(t["name"], ["%s · L%d" % [nm, lv], nm])
-		var o: Array = reads[k]
-		var out_now: bool = nm == sim.cls
-		if sim.on_mission() and not out_now:
-			UI.fit(t["odds"], ["—"])               # read at camp, not while a run's out
-		else:
-			UI.fit(t["odds"], [("%s%s" % [Fmt.pct(float(o[0])), " · out" if out_now else ""]) if bool(o[1]) else "reading…", Fmt.pct(float(o[0])) if bool(o[1]) else "…"])
-		var tone: String = "good" if float(o[0]) >= 0.9 else ("warn" if float(o[0]) >= 0.6 else "bad")
-		t["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if bool(o[1]) else Pal.TEXT_3)
-		UI.style_button(t["button"], k == best and not out_now)
-		t["button"].disabled = out_now or sim.on_mission()
-	# the card as tall as its crew rows (28 Oct: three a row on the narrower card), the decrypt's panel with it
-	var rows: int = ceili(float(mini(played.size(), CREW_MAX)) / CREW_COLS) if on_show else 0
-	var h: float = CREW_ROW_Y + rows * (CREW_BH + 6) + 4 if rows > 0 else CREW_ROW_Y + 2
-	if not is_equal_approx(_card.size.y, h):
-		_card.size.y = h
-		_dec.size.y = h
+	pass                                  # the others' odds are the card's last row now (BUILD49 U, item 25): _show_card lays them
 
 
 func _on_crew(k: int) -> void:
@@ -1361,14 +1570,21 @@ func _text_nodes_base() -> Array:
 		out.append_array([sl["n"], sl["name"], sl["code"]])
 	out.append(_signals_title)
 	if _card.visible:
-		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin])
+		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin, _card_codes_head, _card_faces[0]["name"], _card_faces[1]["name"], _card_count])
 		if _wager_btn.visible:
 			out.append(_wager_btn)
 		for t in _card_tiles:
 			out.append_array([t["key"], t["value"]])
 		out.append_array(_card_codes.text_nodes())
+		if _card_drops_head.visible:
+			out.append_array([_card_drops_head, _card_drops_run])
+		for d in _card_drops:
+			if d["panel"].visible:
+				out.append(d["text"])
 		for c in _crafts:
-			out.append_array([c["name"], c["words"]])
+			out.append(c["name"])
+		if _card_others.visible:
+			out.append(_card_others)
 		for t in _crew_btns:
 			if t["button"].visible:
 				out.append_array([t["name"], t["odds"]])

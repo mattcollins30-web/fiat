@@ -176,7 +176,7 @@ centre notable (version one), its keystone the third keystone.
 | Scrapper | Breaker's yard | Workbench | Sheet metal | Everything must go | Quiet hands, The lot |
 | Drifter | On a roll | Light fingers | Breather | Jackpot | Hit and run, Loaded dice |
 | Doorman | Bin lid | Through the lot | Squared up | Chucking-out time | Loud, Iron |
-| Recruit | Firing blanks | Square-bashing (new) | Double time | Fire and manoeuvre | Blast burns, Passing-out parade |
+| Recruit | Firing blanks | Bulled boots (new) | Double time | Fire and manoeuvre | Blast burns, Passing-out parade |
 
 - The Recruit's two empty second notables (new): Fuse cut short (Ordnance, the left), By the numbers (Drill, the right).
 - Each class's old starter notable (Still hands, Steady pulse, Nose for parts, Light feet, Heavy hands, Pull the pin)
@@ -196,3 +196,50 @@ replacement runner doesn't re-earn levels the class has had), and every reward p
 ## Open (the balance pass, after Matt's playtest)
 - The new names' effects (the 18 above) and the stepped-down nodes' numbers.
 - The lesser nodes' values; the stepped-down capstones' numbers; the corners' keystones' numbers.
+
+## As built (BUILD49-W, 4 Nov)
+The generator (tools/make_skill_web.py) reads skill_web_layout.json and fills each place by these tables; the slots
+are the layout's ids (the Poacher's names stand for the template's places in every class: "c3:rifleman" is the
+Drifter's left track's first cluster).
+
+**The classes' places**, as filled (a class's left track is the one anticlockwise of its line, toward its left element):
+
+| Class | Start | Left track: first, pair, second, keystone | Right track: first, pair, second, keystone | Left skills | Right skills | Middle: staying up, skill, finds, capstone | Corner: keystone, notable | Stepped down |
+|---|---|---|---|---|---|---|---|---|
+| Poacher | Clean shot | Rifleman, Rat bait, Clocked, One shot | Quiet feet, Cold snap, Twine, Trapline | Flush them out, Go to ground, One for the pot | Collared, Gin trap, Decoy | In the hide, Net every hole, Night work, Poached, Dead quiet | Snare and wait, Early doors | Still hands |
+| Paramedic | Tourniquet | Fast work, Ice pack, Worst first, Field surgery | Walk it off, Defib, Clocking off, Not today | Antidote, Adrenaline, Major incident | Two sugars, Sedative dart, Strapped up | Double shift, Code blue, Walking wounded, Transfusion, Clean hands | Jab, Second shift | Steady pulse |
+| Scrapper | Ring main | Bodger, Live wire, Salvage, Nothing wasted | Magpie, Blowtorch, Back pocket, Buyer's market | Hot work, Breakdown, Short circuit | Bung, Knock-off kit, Back of the van | Sheet metal, Everything must go, Quiet hands, The lot, Jerry-rigged | Breaker's yard, Workbench | Nose for parts, Hoarder |
+| Drifter | Duck and weave | Spray, Bottle and rag, B-roads, Never there | Dead man's shoes, Cut-throat, Spare change, All or nothing | Look lively, Elbow room, Gone | Coin toss, Close shave, Chancer | Breather, Jackpot, Hit and run, Loaded dice, Ghost | On a roll, Light fingers | Light feet |
+| Doorman | Shoulder charge | Shotgunner, Glassing, Off the canvas, Bodyline | Chokepoints, Hands on, Last orders, One at a time | Headbutt, Brace, Barred | Not on the list, Shutters down, Pat down | Squared up, Chucking-out time, Loud, Iron, Held | Bin lid, Through the lot | Heavy hands, Stand and fight |
+| Recruit | Lob one in | Cook it off, Brute force, Fuse cut short, Grenadier | Cover me, Tear gas, By the numbers, Quick march | Flashbang, Smoke, Danger close | Suppressing fire, Make ready, Stand to | Double time, Fire and manoeuvre, Blast burns, Passing-out parade, Ringing ears | Firing blanks, Bulled boots | Pull the pin |
+
+**Ids.** A named node keeps "Tree/<n>", its own tree's index, so its id is its source's; the 19 nodes version one moved
+into the other tree of its class (its far flower and its corner: Dead quiet, Night work, Early doors and the rest) stay in
+version one's tree, so "Snares/Dead quiet" still names it. Lesser nodes follow in the layout's order. Build codes carry
+a node by its place in the layout's order (two bytes).
+
+**Lesser nodes, first figures** (the balance pass sets them): a class's attack track takes its left tree's own smalls
+in order, then Keen (+3% damage); its other track its right tree's, then the FILLERS cycle; skills Practised (2%
+cooldowns); staying up Hardy, Guarded, Tough; finds Lucky, Nimble; an element's column the FILLERS cycle with its own
+resist; the centre's clusters their ring's stat (life 4 HP, Guard 3%, pace 2%).
+
+**The 18 new names, first figures** (a notable's typical for its track; for the balance pass):
+
+| Name | Where | Figure |
+|---|---|---|
+| Black ice / Brass monkeys | The cold, before the keystone | +15% frost damage / +15% frost resist |
+| Crossed wires / Fuse box | Live | +15% shock damage / +15% shock resist |
+| Forecourt / Bonfire night | Petrol | +15% fire resist / +15% fire damage |
+| Paper cuts / Shiv | Blades | +15% damage over time / +15% bleed damage |
+| Sucker punch / Bare-knuckle | Knuckles | +15% physical damage / +8% armour |
+| Nest / Rat run | The Rat Man | +15% poison resist / +15% poison damage |
+| Fuse cut short | the Recruit's left track, second notable | +25% grenade damage |
+| By the numbers | the Recruit's right track, second notable | 10% shorter cooldowns |
+| Bulled boots | the Recruit's corner notable | +25% energy refill |
+| Chin down / Elbows in | the centre's inner ring, Guard | +6% Guard each |
+| Shortcuts | the centre's inner ring, pace | +4% pace |
+
+**The rewards' keys** (Sim.rewards_earned, saved as web_rewards): "head:<name>" a head's first fall - the four crews' in
+_boss_down, the order's three in _order_down, the County's four in _county_down (not a remix's); "kev:<paper>" each of
+a story beat's three papers as they're decrypted (decrypt); "issue" in issue(). Each once; every runner reads them
+(web_points: its own two a level plus the camp's rewards).

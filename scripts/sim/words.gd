@@ -2134,3 +2134,84 @@ const WEB_SCREEN := {
 	"skill": "a skill", "skill_chip": "Skill",     # a skill node's where line and chip (BUILD48 item 2: not "Notable")
 	"no_past": "No past yet", "level": "Level %d", "pick_past": "Pick one above: what the runner was, and how they fight now. Free for a new runner",
 }
+
+## The skill web's reward points (BUILD49-W, version two): a head's first fall, each of Kev's story papers decrypted, the
+## Issue - every runner's, each once.
+const WEB_REWARD := {"log": "%s: +%d point%s for every runner", "issue": "The Issue"}
+## The skill web version two's screen (BUILD49 V, docs/design/skill_web.md "The screen (Training)"): the band's line
+## (two a level, and rewards), a reward point's source on its hover, the Paragon board's tab.
+const WEB_SCREEN2 := {
+	"spent": "%d of %d spent", "from": "2 a level past the %s's best, and rewards", "from_mid": "2 a level past the best, and rewards",
+	"from_short": "2 a level, and rewards",     # the band's two lines under nothing else: spent of all, then where points come from
+	"rewards": "Reward points: %d of %d", "reward": "+%d %s", "rewards_none": "No reward points yet",
+	"reward_head": "+%d for %s's first fall", "reward_kev": "+%d for Kev's story: %s", "reward_issue": "+%d from the Issue",
+	"rewards_how": "+1 for a head's first fall, +1 for a chapter of Kev's story, +2 for the Issue",
+	"paragon": "Paragon board",
+}
+
+# --- BUILD49 U (4 Nov): the fix round's UI reworks (items 6, 12, 14, 15, 18, 19, 21, 23, 25) ---
+
+## The class swap's card on Training (item 6).
+const U49_SWAP := {
+	"title": "%s · New", "joins": "Joins at level %d · their own points from here", "joins_short": "Joins at level %d",
+	"skill": "SKILL", "tree": "Tree", "button": "Swap to the %s",
+}
+
+## What a death costs, by Set off on the site card (item 18); the odds' hover (item 13).
+const U49_DEATH := {
+	"back": "A death: back to level 1, %s", "kept": "A death: %s, the level kept",
+	"back_short": "Death: level 1, %s", "kept_short": "Death: %s, level kept",
+	"kit": "the kit worn lost", "insured": "no kit lost",
+	"hardcore": "A death ends the game",
+	"odds_tip": "Odds assume meds used under 40% HP",
+}
+
+## Kev's wagers, the revamp (item 19): the panel's tops and rows, its foot, the strip by Set off and in the fight.
+const U49_WAGERS := {
+	"stand": "As you stand", "with_taken": "With what's taken", "costs": "WHAT IT COSTS", "pays": "WHAT IT PAYS", "for": "for",
+	"odds_with": "the odds with it",
+	"pay_notes": "Notes this run count ×1.5", "pay_slot": "%s drops 3 times as often", "pay_quality": "On every find this run",
+	"foot": "They go on the next run there, never a repeat run. The odds count them.",
+	"foot_sig": "They go on this signal's run, never a repeat run. The odds count them.",
+	"strip": "Kev's wager: %s", "strip_n": "Kev's wagers: %s", "strip_short": "Kev's wager on · %d", "without": "%s without",
+	"fight": "Kev's wager: %s", "fight_short": "Kev's wager on", "reading": "Reading the odds", "reading_short": "Reading…",
+}
+
+## The Radio's signal card, the pass (item 25).
+const U49_SIGNAL := {
+	"codes": "ITS CODES", "drops": "DROPS", "a_run": "%d%% a run", "others": "The others:", "wagers_none": "Kev's wagers: none on",
+	"with_wager": "%s to clear · %s without", "joins": "The %s joins at level %d",
+}
+
+## The order's places on the site card (item 23).
+const U49_ORDER := {
+	"kicker": "The order · %s of 3", "kicker_short": "The order", "nth": ["1", "2", "3"],
+	"alone": "The head alone in his own place: no gang to clear first", "alone_short": "The head alone, no gang",
+	"after": "After the %s's rebuild", "after_mid": "After the %s", "after_short": "After a rebuild", "opens": "Opens with the place",
+	"unique": "A unique of his", "beaten": "Beaten %s",
+	"set_off": "Set off: %s", "town": "The town ›", "town_line": "The town: rebuild the %s",
+}
+
+## After Kev's story (item 21): his last line naming the next step (a draft; Matt's new take wanted: recording_list.md),
+## the Next strip under it, and the Map's goal line (act_two.md §1).
+const U49_NEXT := {
+	"kev_last": "Kev: \"So that's the load. All of it, all this time. And it's lit at night – they've got the power. Get the substation going and we'll see who comes for the switch.\"",
+	"head": "NEXT · THE TOWN", "rebuild": "Rebuild %s", "town": "The town ›",
+	"goal": "The town: %d of %d running", "goal_pre": "The town: the Radio first", "goal_next": "Next: %s", "goal_done": "Every place running",
+	"signals": "Signals that bring them", "have": "%s %d of %d",
+}
+## The town's road (act_two.md §1): the substation, the three that run the town, the library, the mint.
+const U49_TOWN_ROAD := ["substation", "pumping", "bus_depot", "market_hall", "library", "mint"]
+
+## The Expeditions' place card, layout B (item 15). Drafts for the language pass.
+const U49_EXP := {
+	"kicker": "Expeditions · a far place", "level": "Level %d · %s out", "lead": "The %s · level %d", "lead_tip": "The lead: press for the next",
+	"hands_later": "2 hands with the Bunkhouse", "hands_none": "No hand along", "hands_n": "Hands along: %d",
+	"cargo_words": "Cargo comes back worth about ×1.2. The more it's worth, the more there is to lose.",
+	"empty": "Empty", "empty_tip": "Press for something to send", "cell_tip": "Press for the next kind",
+	"back": "About %s", "back_none": "Nothing: no cargo", "back_time": "Back in %s · %s in wages", "back_time_free": "Back in %s · no wages",
+	"risk": "%d%% risk of a bad roll", "why_cargo": "the cargo's worth against the lead's kit", "why_odds": "the lead can't clear their gang",
+	"why_fine": "The lead's kit holds it", "held": "A hold-up %d%% of the time",
+	"bad_note": "At %d%% risk: send less, or a lead with better kit", "bad_note_short": "Send less, or a lead with better kit",
+	"out_small": "Out · %d of %d",
+}

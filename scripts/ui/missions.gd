@@ -9,6 +9,8 @@ signal to_issuer                       # the County card's links (the canvas 'Th
 signal to_bench
 signal to_kit                          # the site card's fix chips (2 Nov, BUILD46-S): armour, HP, damage, resist
 signal to_clinic                       # and a wound or HP under half
+signal to_radio                        # the Map's goal line: "Signals that bring them" (BUILD49 U, item 21)
+signal to_town                         # an order's shut place: its rebuild, the Radio's Town tab (BUILD49 U, item 23)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -30,6 +32,8 @@ const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")
 const ExpeditionsPanel := preload("res://scripts/ui/expeditions_panel.gd")
 const ExpeditionReport := preload("res://scripts/ui/expedition_report.gd")
 const SiteCard := preload("res://scripts/ui/site_card.gd")
+const WagerOdds := preload("res://scripts/ui/wager_odds.gd")
+const KevStory := preload("res://scripts/ui/kev_story.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
@@ -39,6 +43,8 @@ const PAD := 20
 const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
 const REPEAT_W := 170              # "Run it ×5" beside Set off (29 Oct, docs/design/trips.md 1); Kev's wagers in its place before a first clear or a head
+const NOTE_UP := 42                # the note's row over Set off, and the death line's under it (BUILD49 U, item 18)
+const DEATH_UP := 23.5
 const FOOT_H := 48                 # the insurance's row, the rig's top-up beside it (23 Oct, parked item 4)
 
 var sim
@@ -90,6 +96,7 @@ func _init() -> void:
 	_map.picked.connect(select)
 	_map.picked_order.connect(select_order)
 	add_child(_map)
+	_goal_build()
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
 	# row's right while there's a tally, the card dropping under it when pressed
 	_came_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W - COL_GAP - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
@@ -139,11 +146,18 @@ func _init() -> void:
 			sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			c["skills"].add_child(sp)
 			c["skill_pics"].append(sp)
-		fy -= Pal.BUTTON_H + 12
+		fy -= Pal.BUTTON_H + 6                 # 12 → 6: the room for the death line's row (BUILD49 U, item 18)
 		c["deploy"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
 		c["deploy"].text = "Set off"
 		c["deploy"].pressed.connect(_deploy.bind(col))
-		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["town"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), false)     # an order's shut place: its rebuild (item 23)
+		c["town"].pressed.connect(func(): to_town.emit())
+		c["town"].visible = false
+		c["note"] = UI.label(panel, Rect2(PAD, fy - NOTE_UP, INNER, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)     # 24 → 15 px for the death line's row (BUILD49 U, item 18)
+		# what a death here costs this runner now (BUILD49 U, item 18; Matt: "Nothing in the game says this"): a dot and a
+		# line in the bad tone straight over Set off
+		c["death_dot"] = UI.panel(panel, Rect2(PAD + 1, fy - DEATH_UP + 7.5, 7, 7), UI.box(Pal.BAD, 4))
+		c["death"] = UI.label(panel, Rect2(PAD + 14, fy - DEATH_UP, INNER - 14, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.BAD, HORIZONTAL_ALIGNMENT_LEFT, false)
 		# the repeat runs (29 Oct): "Run it ×5" beside Set off, shut with its reason on the note; Kev's wagers in its place
 		# on a run he bets on (a first clear, a head armed)
 		c["repeat"] = UI.button(panel, Rect2(PAD + INNER - REPEAT_W, fy, REPEAT_W, Pal.BUTTON_H), false)
@@ -345,9 +359,11 @@ func show_state(s) -> void:
 	UI.fit_button(_county_btn, ["Back to the map", "The map"] if county_on else ["The County", "County"])
 	UI.style_button(_county_btn, county_on, "good")
 	if _exp_state(picking):
+		_goal.visible = false                  # the Expeditions over the Map: the goal line under them goes (item 21)
 		return                                   # the Expeditions over the map and the card (29 Oct)
 	_county.visible = county_on and not picking
 	_map.visible = not _county.visible
+	_goal_show()                               # the town's goal line over the Map (BUILD49 U, item 21)
 	if _county.visible:
 		UI.fit(_title, [Words.COUNTY["title"] + " · " + Words.COUNTY["progress"] % sim.county_taken_count(), Words.COUNTY["title"]])
 		_county.show_state(sim)
@@ -372,17 +388,17 @@ func show_state(s) -> void:
 		_guide.move_to_front()
 		return
 	var on_order: bool = order_key != ""
-	_order.visible = on_order
+	_order.visible = false                     # the order's places are drawn by the site card now (BUILD49 U, item 23)
 	for c in _cols:
-		c["panel"].visible = not on_order
-		c["edge"].visible = c["edge"].visible and not on_order
+		c["panel"].visible = true
 	if on_order:
-		_order.set_only(order_key)
-		_order.show_state(sim)
+		_show_order_card(order_key)
 		_shown = ""
 		_came.move_to_front()
 		_guide.move_to_front()
 		return
+	for c in _cols:
+		c["town"].visible = false
 	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
 	for i in range(Data.TIERS.size()):
@@ -390,7 +406,7 @@ func show_state(s) -> void:
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(sim.wager_site_open(selected)), str(sim.wagers.get(sim.wager_site_key(selected), {})), sim.repeat_count()] \
-			+ "|%s|%s|%s|%d|%d|%d|%s" % [str(sim.site_runs.get(str(selected), {})), str(sim.left_behind), sim.cls, sim.rig.size(), sim.stash.size(), sim.stat_v, str(_cols[0]["card"].head_view)]     # the site card's (BUILD46-S)
+			+ "|%s|%s|%s|%d|%d|%d|%s" % [str(sim.site_runs.get(str(selected), {})), str(sim.left_behind), sim.cls, sim.rig.size(), sim.stash.size(), sim.stat_v, str(_cols[0]["card"].head_view)] + "|" + WagerOdds.state()     # the site card's (BUILD46-S); Kev's wagers' reads (BUILD49 U)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -420,7 +436,10 @@ func show_state(s) -> void:
 		c["rig"].disabled = sim.on_mission()
 		UI.fit_button(c["rig"], [Words.ROUNDS["button"], Words.ROUNDS["button_short"]])
 		UI.style_button(c["rig"], false, "bad" if not sim.rounds_short(i).is_empty() else "")     # red while the plan's short (BUILD46-R; the merge: the old chips' read went with _show_chips)
+		_death_lay(c, i, is_open)
 		var rep_why: String = sim.repeat_block(i) if c["repeat"].visible else ""
+		var wstrip: Array = WagerOdds.strip_forms(sim, sim.wager_site_key(i)) if is_open and sim.wager_site_open(i) else []     # what's on (BUILD49 U, item 19)
+		c["note"].add_theme_color_override("font_color", Pal.WARN if not wstrip.is_empty() and rep_why == "" and not sim.away() and sim.hp >= sim.max_hp() * 0.5 else Pal.TEXT_2)
 		if not is_open:
 			c["note"].text = ""
 		elif sim.away():
@@ -430,8 +449,52 @@ func show_state(s) -> void:
 		elif rep_why != "":
 			var cnt: int = sim.repeat_count()
 			UI.fit(c["note"], [(Words.REPEAT["note"] % [cnt, rep_why]) if cnt > 0 else Words.REPEAT["note_full"] % rep_why, rep_why])     # why "Run it ×5" is shut, on the card (29 Oct)
+		elif not wstrip.is_empty():
+			UI.fit(c["note"], wstrip)
 		else:
 			c["note"].text = ""
+
+
+## An order's place on the card (BUILD49 U, item 23): the site card drawn for it, Set off for it (or, shut, the town's
+## rebuild that opens it), Insure, Rounds and the skills for its host site, the death line; no repeat, no wagers.
+func _show_order_card(k: String) -> void:
+	var c: Dictionary = _cols[0]
+	var p: Dictionary = Data.pinnacle(k)
+	var i: int = int(p["site"])
+	var open: bool = sim.order_open(k)
+	var why: Array = []
+	var od: Array = sim.order_odds_now(k) if open else [0.0, false]
+	if open and bool(od[1]) and float(od[0]) < WHY_UNDER:
+		why = odds_reasons(sim, i)
+	c["card"].show_order(sim, k, why)
+	c["edge"].visible = open
+	(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color("good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad")) if bool(od[1]) else Pal.CARD_LINE
+	c["repeat"].visible = false
+	c["wager"].visible = false
+	var block: String = sim.order_block(k)
+	c["deploy"].visible = open
+	c["deploy"].size.x = INNER
+	c["deploy"].disabled = block != ""
+	UI.fit_button(c["deploy"], [Words.U49_ORDER["set_off"] % Words.mid(str(p["place"])), "Set off"])
+	c["town"].visible = not open
+	UI.fit_button(c["town"], [Words.U49_ORDER["town"]])
+	c["insure"].visible = open
+	c["rig"].visible = open
+	_foot_lay(c, open)
+	UI.fit_button(c["insure"], ["Insured ✓"] if sim.insure_next else ["Insure kit · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)), "Insure"])
+	c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
+	UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
+	c["rig"].disabled = sim.on_mission()
+	UI.fit_button(c["rig"], [Words.ROUNDS["button"], Words.ROUNDS["button_short"]])
+	_death_lay(c, i, open)
+	c["note"].add_theme_color_override("font_color", Pal.TEXT_2)
+	if not open:
+		var rb: String = str(Data.rebuild(str(p["opened_by"])).get("name", "")).trim_prefix("The ").to_lower()
+		UI.fit(c["note"], [Words.U49_ORDER["town_line"] % rb])
+	elif block != "" and not sim.on_mission():
+		UI.fit(c["note"], [block])
+	else:
+		c["note"].text = ""
 
 
 ## The ladder's stations ahead on a site (the endgame, 7 Oct): the crew's head at full strength at PINNACLE_DEPTH
@@ -569,6 +632,12 @@ func _insure(_k: int) -> void:
 
 
 func _deploy(k: int) -> void:
+	if order_key != "":
+		if sim.deploy_order(order_key):        # an order's place, laid on its host site (item 23)
+			_skill_pick.visible = false
+			rounds_panel.visible = false
+			acted.emit()
+		return
 	sim.deploy(_tier(k))
 	_skill_pick.visible = false                # set off: the three are locked
 	rounds_panel.visible = false               # and the rounds have gone out (BUILD46-R)
@@ -594,6 +663,26 @@ func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
 		var key: String = sim.wager_site_key(i)
 		var on: int = sim.wagers.get(key, {}).get("taken", []).size()
 		UI.fit_button(c["wager"], [Words.WAGERS["button_on"] % on, Words.WAGERS["button_n"] % on, "%d" % on] if on > 0 else [Words.WAGERS["button"]])     # the count, never a second gold button (the review)
+
+
+## The death line by Set off (BUILD49 U, item 18): what a death here costs the runner now - back to level 1 before the
+## Quartermaster falls (the level kept after, and at the cap), the worn kit lost unless the run's insured.
+static func death_forms(s, i: int) -> Array:
+	var D: Dictionary = Words.U49_DEATH
+	if bool(s.get("hardcore")):
+		return [D["hardcore"]]
+	var kept: bool = s.death_keeps_level() or s.level() >= Data.MAX_LEVEL
+	var insured: bool = s.insure_next and s.can_insure(i)
+	var kit: String = D["insured"] if insured else D["kit"]
+	return [(D["kept"] if kept else D["back"]) % kit, (D["kept_short"] if kept else D["back_short"]) % kit]
+
+
+func _death_lay(c: Dictionary, i: int, is_open: bool) -> void:
+	var on: bool = is_open and not sim.away()
+	c["death"].visible = on
+	c["death_dot"].visible = on
+	if on:
+		UI.fit(c["death"], death_forms(sim, i))
 
 
 func _repeat(k: int) -> void:
@@ -779,6 +868,8 @@ func _text_nodes_under() -> Array:
 	out.append(_title)
 	if not _skill_pick.visible and not rounds_panel.visible:
 		out.append_array(_map.text_nodes())     # the picker covers the map; the rounds picker too (BUILD46-R)
+		if _goal.visible:
+			out.append_array([_goal_text, _goal_next] + ([_goal_btn] if _goal_btn.visible else []))
 	if _pick.visible:
 		out.append_array([_pick_kicker, _pick_title, _pick_line, _pick_line2, _pick_head, _pick_go])
 		for c in _pick_cards:
@@ -797,12 +888,17 @@ func _text_nodes_under() -> Array:
 		return out
 	if _exp_panel.visible:
 		out.append_array(_exp_panel.text_nodes())     # the Expeditions over the map (29 Oct)
+		if _came.visible:
+			var er: Rect2 = _came.get_global_rect()     # under the came-back card is out of sight (BUILD49 U: the place card reaches under it)
+			out = out.filter(func(n): return _came.is_ancestor_of(n) or not er.intersects(n.get_global_rect()))
 		return out
 	out.append_array(_skill_pick.text_nodes())
 	out.append_array(rounds_panel.text_nodes())
 	for c in _cols:
 		out.append_array(c["card"].text_nodes())
 		out.append(c["note"])
+		if c["death"].visible:
+			out.append(c["death"])
 		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
 			if b.visible:
 				out.append(b)
@@ -894,3 +990,84 @@ func _exp_state(picking: bool) -> bool:
 	_exp_report.move_to_front()
 	_guide.move_to_front()
 	return true
+
+# ------------------------------------------------------------------ the town's goal line (BUILD49 U, item 21)
+
+## Over the drawn Map, always on from the Radio's opening (docs/design/act_two.md §1; Matt: "Where is the county unlock
+## after this ?"): "The town: N of 6 running" with six pips, the next step and what it still wants, and "Signals that
+## bring them" to the Radio. Before the Radio: "The town: the Radio first".
+const GOAL_H := 44
+const GOAL_BTN_W := 232
+const GOAL_PIP := 12
+const GOAL_PIP_R := 6
+var _goal: Panel
+var _goal_text: Label
+var _goal_pips: Array = []
+var _goal_next: Label
+var _goal_btn: Button
+
+
+func _goal_build() -> void:
+	_goal = UI.panel(self, Rect2(8, TOP + 8, MAP_W - 16, GOAL_H), UI.box(Color(Pal.BG, 0.88), 8, 1, Pal.CARD_LINE))
+	_goal_text = UI.label(_goal, Rect2(14, 0, 240, GOAL_H), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(Data.REBUILDS.size()):
+		var pp := UI.panel(_goal, Rect2(0, (GOAL_H - GOAL_PIP) / 2.0, GOAL_PIP, GOAL_PIP), UI.box(Color(0, 0, 0, 0), GOAL_PIP_R, 2, Pal.ACCENT))
+		_goal_pips.append(pp)
+	_goal_next = UI.label(_goal, Rect2(0, 0, 100, GOAL_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_goal_btn = UI.button(_goal, Rect2(MAP_W - 16 - 6 - GOAL_BTN_W, 5, GOAL_BTN_W, GOAL_H - 10), false)
+	_goal_btn.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	_goal_btn.text = Words.U49_NEXT["signals"]
+	_goal_btn.pressed.connect(func(): to_radio.emit())
+
+
+## The places running: built at their first rank (the goal line counts a place at its first rank, act two §1).
+static func town_running(s) -> int:
+	var n := 0
+	for r in Data.REBUILDS:
+		if int(s.rebuild_rank(str(r["key"]))) > 0:
+			n += 1
+	return n
+
+
+var _goal_sig := ""
+func _goal_show() -> void:
+	if _goal.visible != _map.visible:
+		_goal.visible = _map.visible
+	if not _goal.visible:
+		return
+	var radio: bool = sim.room_open("radio")
+	var run: int = town_running(sim)
+	var gs: String = "%s|%d|%s|%s|%s" % [str(radio), run, str(sim.rebuilt), str(sim.materials), str(sim.key_items)]
+	if gs == _goal_sig:
+		return                                 # laid out once a change (the Map's frame budget: BUILD43)
+	_goal_sig = gs
+	var x: float = 14.0
+	if not radio:
+		UI.fit(_goal_text, [Words.U49_NEXT["goal_pre"]])
+	else:
+		UI.fit(_goal_text, [Words.U49_NEXT["goal"] % [run, Data.REBUILDS.size()]])
+	_goal_text.size.x = ceilf(UI.text_width(_goal_text, _goal_text.text)) + 2
+	x += _goal_text.size.x + 12
+	for k in range(_goal_pips.size()):
+		var pp: Panel = _goal_pips[k]
+		pp.visible = radio
+		pp.position.x = x
+		x += GOAL_PIP + 5
+		pp.add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < run else Color(0, 0, 0, 0), GOAL_PIP_R, 0 if k < run else 2, Pal.ACCENT))
+	var nk: String = KevStory.town_next(sim) if radio else ""
+	_goal_btn.visible = radio and nk != ""
+	_goal_next.visible = radio
+	if not radio:
+		return
+	x += 10
+	_goal_next.position.x = x
+	_goal_next.size.x = (_goal_btn.position.x - 12.0 if _goal_btn.visible else _goal.size.x - 14.0) - x
+	if nk == "":
+		UI.fit(_goal_next, [Words.U49_NEXT["goal_done"]])
+		return
+	var what: String = Words.mid(str(Data.rebuild(nk)["name"]))
+	var forms: Array = []
+	for w in KevStory.wants_forms(sim, nk):
+		forms.append((Words.U49_NEXT["goal_next"] % what) + (" · " + str(w) if str(w) != "" else ""))
+	forms.append(Words.U49_NEXT["goal_next"] % what)
+	UI.fit(_goal_next, forms)

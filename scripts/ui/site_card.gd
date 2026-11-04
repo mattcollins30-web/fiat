@@ -279,6 +279,20 @@ func show_state(s, i: int, why: Array = []) -> void:
 	sim = s
 	site = i
 	_why = why
+	if order != "":
+		order = ""                              # back to a site from an order's place (BUILD49 U, item 23)
+		gang_btn.visible = true
+		head_btn.visible = true
+		_art.modulate = Color.WHITE
+		foot.tooltip_text = ""
+		foot.add_theme_color_override("font_color", Pal.TEXT_2)
+		for f in _figs:
+			f.modulate = Color.WHITE
+		for kk in range(keys.size()):
+			keys[kk].add_theme_color_override("font_color", Pal.TEXT_2)
+		var tw: float = INNER - 2 * TOGGLE_W - 4 - 12
+		head_name.size.x = tw - 54
+		head_sub.size.x = tw - 54
 	var z: int = int(Data.TIERS[i]["zone"])
 	var tiers: Array = Data.ZONES[z]["tiers"]
 	var is_open: bool = sim.tier_open(i)
@@ -373,6 +387,8 @@ func _show_match(i: int, z: int, is_open: bool, b: Dictionary, convoy: bool, sho
 	for fr in [you_frame, them_frame]:
 		(fr.get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if read_in else Pal.CARD_LINE
 	(you_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD
+	for l in [verdict, odds_line]:
+		l.tooltip_text = ""
 	if not is_open:
 		UI.fit(verdict, [Words.SITE_CARD["locked"]])
 		verdict.add_theme_color_override("font_color", Pal.TEXT_3)
@@ -384,6 +400,11 @@ func _show_match(i: int, z: int, is_open: bool, b: Dictionary, convoy: bool, sho
 	UI.fit(verdict, [Words.odds_words(odds)])
 	verdict.add_theme_color_override("font_color", tone if read_in else Pal.TEXT_3)
 	UI.fit(odds_line, ["%s to clear" % Fmt.pct(odds)] if read_in else [Words.SITE_CARD["reading"]])
+	# how the odds are read, said once on their hover (BUILD49 U, item 13: Matt's death at 100% - the read uses meds
+	# under 40% HP, as the bot does)
+	for l in [verdict, odds_line]:
+		l.tooltip_text = Words.U49_DEATH["odds_tip"]
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
 
 
 func _show_head(i: int, b: Dictionary, convoy: bool, is_open: bool, showing_head: bool) -> void:
@@ -706,7 +727,10 @@ func _show_here(i: int) -> void:
 
 ## Every label and button with words, for the fit checks.
 func text_nodes() -> Array:
-	var out: Array = [kicker, title, sky, foot, you_name, them_name, verdict, odds_line, head_name, head_sub, gang_btn, head_btn, no_fix, home_head, here, here_right, last]
+	var out: Array = [kicker, title, sky, foot, you_name, them_name, verdict, odds_line, head_name, head_sub, no_fix, home_head, here, here_right, last]
+	for b in [gang_btn, head_btn]:
+		if b.visible:
+			out.append(b)
 	if count_box.visible:
 		out.append(count)
 	out.append_array(keys + vals)
@@ -725,3 +749,181 @@ func line_pairs() -> Array:
 		out.append([keys[k], vals[k]])
 	out.append([here, here_right])
 	return out
+
+
+# ------------------------------------------------------------------ the order's places (BUILD49 U, item 23)
+
+var _order_od: Array = [0.0, false]
+var order := ""                         # the order's place shown ("grid", "archive", "mint"), "" for a site
+
+
+## The order's places drawn by the site card (BUILD49 U, item 23; Matt: "these need updating with the rest of the site
+## overhaul we did"): the head's fight as a site's head is - his portrait against yours with the verdict between, his own
+## row (name, level, his line) with no Gang / Head toggle (the head's fight alone), how long you last, their fire and
+## yours, meds and rounds, what you'll bring home with his drop and his unique, the fix chips. Read on the place laid on
+## its host site, as a run there is (sim.order_sig), its odds the place's own (sim.order_odds_now). A shut place keeps its
+## card and picture, the figures greyed, the verdict "Locked" and the rebuild that opens it.
+func show_order(s, k: String, why: Array = []) -> void:
+	sim = s
+	order = k
+	_why = why
+	var p: Dictionary = Data.pinnacle(k)
+	var i: int = int(p["site"])
+	site = i
+	var open: bool = sim.order_open(k)
+	has_head = true
+	var sg: Dictionary = sim.order_sig(k)
+	_order_od = sim.order_odds_now(k) if open else [0.0, false]     # read before the place is laid on (it reads nothing while one is)
+	var swapped := false
+	var home = null
+	if open and sim._sig.is_empty():
+		sim._sig_on(sg)
+		home = sim._surv_cache.get(i, null)
+		var key: String = "order/%s/%d" % [k, int(sg["depth"])]
+		if sim._sig_odds.has(key):
+			sim._surv_cache[i] = sim._sig_odds[key]
+		else:
+			sim._surv_cache.erase(i)
+		swapped = true
+	_order_picture(k, p, open)
+	_order_match(k, p, open)
+	_order_head(k, p, open)
+	_show_takes(i, open)
+	_order_takes_shut(open)
+	_show_fix(i, open)
+	_order_home(k, p, open)
+	_order_here(k, open)
+	if swapped:
+		if home != null:
+			sim._surv_cache[i] = home
+		else:
+			sim._surv_cache.erase(i)
+		sim._sig_off()
+
+
+func _order_picture(k: String, p: Dictionary, open: bool) -> void:
+	var n: int = Data.PINNACLES.map(func(x): return str(x["key"])).find(k)
+	_art.texture = UI.place_texture(str(p.get("art", p["place"])))
+	_art.modulate = Color.WHITE if open else Color(0.55, 0.55, 0.58)
+	UI.fit(kicker, [Words.U49_ORDER["kicker"] % Words.U49_ORDER["nth"][clampi(n, 0, 2)], Words.U49_ORDER["kicker_short"]])
+	UI.fit(title, [str(p["place"])])
+	title.add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
+	UI.fit(sky, [sim.clock_words() + " · " + (Words.SKY["night"] if sim.is_night() else Words.SKY["day"]), sim.clock_words()])
+	var head_key: String = Items.slug(str(p["who"]))
+	var t: Texture2D = RunView.tex("head_%s_stand" % head_key)
+	for kk in range(_figs.size()):
+		_figs[kk].visible = false
+	if t != null:
+		var f: TextureRect = _figs[0]
+		var u: Rect2 = RunView.used_of(t)
+		if u.size.y <= 0.0:
+			u = Rect2(Vector2.ZERO, t.get_size())
+		var sc: float = HEAD_FIG_H / u.size.y
+		f.texture = t
+		f.size = t.get_size() * sc
+		f.position = Vector2(W * FIG_X[1] - (u.position.x + u.size.x / 2.0) * sc, PIC_H - 30 - u.end.y * sc)
+		f.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
+		f.visible = true
+	if k == "mint" and not sim.issued:
+		var pv: Dictionary = sim.issue_preview()
+		var fx: String = Fmt.group(int(round(float(pv["fiat"]))))
+		UI.fit(foot, Words.MINT_WARN["forms"].map(func(fm): return fm % fx))     # the Issue converts everything (the third review's A1(a)): said on the picture's foot
+		foot.tooltip_text = Words.MINT_WARN["tip"] % [fx, float(pv["kit_k"])]
+		foot.mouse_filter = Control.MOUSE_FILTER_PASS
+		foot.add_theme_color_override("font_color", Pal.WARN)
+	else:
+		UI.fit(foot, [Words.U49_ORDER["alone"], Words.U49_ORDER["alone_short"]])
+		foot.tooltip_text = ""
+		foot.add_theme_color_override("font_color", Pal.TEXT_2)
+
+
+func _order_match(_k: String, p: Dictionary, open: bool) -> void:
+	People.show(you_face, sim.cls)
+	UI.fit(you_name, ["The %s" % sim.cls, sim.cls] if sim.cls != "" else ["The runner"])
+	People.show(them_face, str(p["who"]))
+	UI.fit(them_name, [str(p["who"]), str(p["who"]).trim_prefix("The ")])
+	count_box.visible = false
+	(you_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD
+	for l in [verdict, odds_line]:
+		l.tooltip_text = ""
+	if not open:
+		UI.fit(verdict, [Words.SITE_CARD["locked"]])
+		verdict.add_theme_color_override("font_color", Pal.TEXT_3)
+		(them_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.CARD_LINE
+		var rb: String = str(Data.rebuild(str(p["opened_by"])).get("name", "")).trim_prefix("The ").to_lower()
+		UI.fit(odds_line, [Words.U49_ORDER["after"] % rb, Words.U49_ORDER["after_mid"] % rb, Words.U49_ORDER["after_short"]])
+		return
+	var od: Array = _order_od
+	var o: float = float(od[0])
+	var tone: Color = Pal.tone_color("good" if o >= 0.9 else ("warn" if o >= 0.6 else "bad"))
+	(them_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if od[1] else Pal.CARD_LINE
+	UI.fit(verdict, [Words.odds_words(o)] if od[1] else [Words.SITE_CARD["reading"]])
+	verdict.add_theme_color_override("font_color", tone if od[1] else Pal.TEXT_3)
+	UI.fit(odds_line, ["%s to clear" % Fmt.pct(o)] if od[1] else [""])
+	for l in [verdict, odds_line]:
+		l.tooltip_text = Words.U49_DEATH["odds_tip"]
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+## His own row where a site's head row sits: his face, "The Lineman · level 30", his line; no toggle (his fight alone).
+func _order_head(k: String, p: Dictionary, open: bool) -> void:
+	head_face.get_parent().visible = true
+	People.show(head_face, str(p["who"]))
+	head_face.modulate = Color.WHITE if open else Color(0.6, 0.6, 0.6)
+	gang_btn.visible = false
+	head_btn.visible = false
+	head_name.size.x = INNER - 54 - 8
+	head_sub.size.x = INNER - 54 - 8
+	head_name.add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
+	UI.fit(head_name, ["%s · level %d" % [p["who"], sim.order_level(k)], str(p["who"])])
+	var line: String = str(Words.PINNACLE_WORDS.get(k, ""))
+	UI.fit(head_sub, [line, line.get_slice(". ", 0).trim_suffix(".") + ".", ""])
+
+
+## A shut place's rows: their keys greyed, a dash for each figure, "Opens with the place" on the first.
+func _order_takes_shut(open: bool) -> void:
+	if open:
+		return
+	for k in range(keys.size()):
+		keys[k].visible = true
+		keys[k].add_theme_color_override("font_color", Pal.TEXT_3)
+		vals[k].visible = true
+		vals[k].text = Words.U49_ORDER["opens"] if k == 0 else "—"
+		vals[k].add_theme_color_override("font_color", Pal.TEXT_3)
+
+
+## What you'll bring home: his drop (the first win's own first), a unique of his, the item level, the drop or the host
+## site's material.
+func _order_home(k: String, p: Dictionary, open: bool) -> void:
+	var beaten: int = int(sim.order_beaten.get(k, 0))
+	var rows: Array = []
+	var first_due: bool = p.has("first") and beaten == 0
+	var lead: String = str(p["first"]) if first_due else str(p.get("drop", ""))
+	var lw: String = sim.thing_label(lead)
+	rows.append({"icon": "res://art/items/%s.png" % lead, "forms": [lw, sim.thing_name(lead), lw.get_slice(" ", lw.get_slice_count(" ") - 2) + " " + lw.get_slice(" ", lw.get_slice_count(" ") - 1) if lw.get_slice_count(" ") > 1 else lw], "colour": Pal.WARN})
+	rows.append({"icon": "res://art/items/%s.png" % Items.slug(str(p["unique"])), "forms": [Words.U49_ORDER["unique"]], "colour": Pal.UNIQUE, "tip": "%s or %s" % [p["unique"], p.get("unique2", p["unique"])]})
+	var lv: int = sim.order_level(k)
+	rows.append({"icon": "res://art/crates/cardboard.png", "forms": [Words.SITE_CARD["gear"] % int(sim.wear_of(lv)), "Level %d" % int(sim.wear_of(lv))], "colour": Pal.TEXT})
+	var i: int = int(p["site"])
+	var mk: String = str(p.get("drop", "")) if first_due else (str(Data.SITE_MATERIAL[i]) if i < Data.SITE_MATERIAL.size() else "")
+	rows.append({"icon": "res://art/items/%s.png" % mk if mk != "" else "", "forms": [sim.thing_name(mk)] if mk != "" else [""], "colour": MATERIAL_TONE})
+	for kk in range(tiles.size()):
+		var tl: Dictionary = tiles[kk]
+		var r: Dictionary = rows[kk]
+		tl["panel"].modulate = Color.WHITE if open else Color(1, 1, 1, 0.5)
+		var path: String = str(r["icon"])
+		tl["icon"].texture = Run.icon_tex([path]) if path != "" else null
+		if tl["icon"].texture == null and path != "":
+			tl["icon"].texture = Run.icon_tex(["res://art/ui/scrap.png"])
+		UI.fit(tl["text"], r["forms"])
+		tl["text"].add_theme_color_override("font_color", r["colour"])
+		tl["edge"].visible = kk == 0
+		tl["panel"].tooltip_text = str(r.get("tip", ""))
+		tl["panel"].mouse_filter = Control.MOUSE_FILTER_PASS if str(r.get("tip", "")) != "" else Control.MOUSE_FILTER_IGNORE
+
+
+func _order_here(k: String, _open: bool) -> void:
+	var beaten: int = int(sim.order_beaten.get(k, 0))
+	here_right.text = ""
+	UI.fit(here, [Words.U49_ORDER["beaten"] % Words.count_of(beaten, "time") if beaten > 0 else Words.SITE_CARD["here_never"]])
+	last.text = ""

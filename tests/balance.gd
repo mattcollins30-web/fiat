@@ -792,7 +792,7 @@ static func played_gates(sim, pl: Dictionary, g: Dictionary) -> Dictionary:
 			points_qm.append(at_qm.get(el, none_at_qm))
 		var lv: int = sim.level() if c == sim.cls else sim.crew_level(c)
 		classes[c] = {"elements": els, "opened": opened, "opened_how": how, "points": points, "points_at_qm": points_qm, "joints": joints, "level": lv}
-	return {"classes": classes, "spent": sim.points_spent(), "points": sim.training_points}
+	return {"classes": classes, "spent": sim.points_spent(), "points": sim.web_points()}     # its level points and the camp's rewards (version two)
 
 
 ## The read's build out for the end's figures (the fix round, H3): the odds, the gang clock, the level and the kit are
@@ -1589,7 +1589,7 @@ func _walk(sim, id: String) -> bool:
 	for nxt in sim.web_path(id):
 		var nd: Dictionary = sim.node(str(nxt))
 		var gate: int = Data.CAPSTONE_SPENT if nd.get("capstone", false) else (Data.KEYSTONE_SPENT if nd.get("keystone", false) else 0)
-		for _guard in range(80):
+		for _guard in range(Data.CAPSTONE_SPENT * 2):     # the web's version two: gates at 30 and 80
 			if not sim.core_gates or sim.web_spent() >= gate:
 				break
 			var fill := ""

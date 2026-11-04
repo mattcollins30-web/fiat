@@ -1,12 +1,17 @@
 extends Control
-## The skill web (3 Nov, docs/design/skill_web.md; the target: the canvas's sw_final6): one web every runner lights its
-## own path on - the centre, six element flowers round it, a class between each two, each class four small flowers -
-## drawn in the Training room's body from the sim's layout (Data.web_ids / web_at / web_links), the paragon ring
+## The skill web, version two (4 Nov, docs/design/skill_web.md; the canvas's round six): one web of 1,549 nodes every
+## runner lights its own path on - the centre's clusters, six element columns, a class between each two (its attack
+## track left, its other track right, staying up, finds and skills up the middle, its own corner at the top) - drawn
+## in the Training room's body from the sim's layout (Data.web_ids / web_at / web_links / web_theme), the paragon ring
 ## round the outside. Panned with the right button, zoomed with the wheel, a node picked with the left.
 ##
-## A node's three states: owned (lit in its region's colour, a glow), can take (Sim.web_frontier: an amber ring), not
-## yet (dark). The centre is amber, an element and its joins its colour, a class white. The twelve names sit in their
-## regions, on no node.
+## A node's three states: owned (lit in its colour, a glow), can take (Sim.web_frontier: an amber ring), not yet
+## (dark). A class's nodes take their track's colour (TRACK_TONES: the attack track red, the other teal, staying up
+## blue, finds gold, skills purple), an element's its own, the centre's amber. Lesser nodes are dots at the whole web.
+## The fourteen names (six classes, six elements, the centre, the ring) are placed clear of every node (_place_names).
+##
+## Speed (BUILD49 V): the links are kept in web space, gathered by colour, and drawn under one transform (no per-link
+## work a frame); the nodes are read from packed arrays, culled to the view and drawn from the one atlas.
 ##
 ## Signals: `picked(id)` when a node is clicked ("" for a click on nothing).
 ##
@@ -45,11 +50,18 @@ const LINK_W := 2.0
 const LINK_DIM := Color("4a5059")       # a link to nothing reached yet
 const LINK_CLASS_DIM := Color("5a616b")  # a class's: a shade lighter, the class's grey (its nodes are white when lit)
 const ELEMENT_LINK_DIM := 0.45          # an element's (or the centre's) link not lit: its colour at this
+const TRACK_LINK_DIM := 0.4             # a class track's link not lit: its colour at this (BUILD49 V)
 const RING_DIM := 0.35                  # a dark node's ring: the card line with this of its region's colour
 const GLOW := 0.2                       # an owned node's glow, its colour at this
 const GLOW_R := 1.9                     # and its size against the node's
 ## The centre in amber (3 Nov, Matt's canvas): the camp's sand, apart from The cold's blue and the frontier's ring.
 const PITCH_TONE := Color("d1a65f")
+## The class's tracks (round six's canvas, BUILD49 V): the node's track (Data.web_theme) gives its colour.
+const TRACK_TONES := {"dmg": Color("e0705a"), "ctl": Color("5fb3a8"), "def": Color("8fb4e0"), "loot": Color("d9b25a"), "skill": Color("b49ad6"), "start": Color("e3a33b")}
+const DOT_MIN := 1.6               # a lesser node's dot at the whole web, px at least
+const BIG_MIN := 2.8               # a big node's disc at the whole web, px at least
+const DARK_DOT := 0.7              # a dark lesser node's dot: its colour at this over the canvas
+const RING_GAP := 45.0             # the paragon ring past the web's furthest node (web units; skill_web.md: the ring at 1,120)
 const FRONTIER := Pal.ACCENT
 const PIC_ZOOM := 0.5              # a big node's picture from here; its glyph before
 ## The small nodes' art (3 Nov, 0.12.1, Matt: "whats with the lack of art?"): from SMALL_ART_ZOOM a small node grows to
@@ -67,7 +79,7 @@ const PORTRAIT_R := 44.0
 const PORTRAIT_SHADE := Color(1, 1, 1, 0.42)
 ## A picture not there is looked for again after this (an art drop shows in a running game; Training's open re-looks).
 const ART_RECHECK_MS := 3000
-const R_RING := Data.RING_R        # the paragon ring, round the outside (the web's radius is 474 at the far tips)
+const R_RING := Data.RING_R        # (the sim's ring radius; the canvas draws it at ring_r(), past the web's furthest node)
 const RING_DASH := 10.0
 const RING_LABEL_DEG := -132.0     # the ring's name, outside it at the top left: the Recruit's corner, clear of the tabs
 const NAME_SIZE := 14              # the twelve names on the web, at any zoom
@@ -84,6 +96,17 @@ var layout := {}                   # id -> Vector2, web space
 var _trees := {}                   # (yard_web.gd) tree name -> its dictionary
 var _axis := {}                    # a region's name: key -> {"anchor", "label_at", "label_box", "words", "tone"}
 var _region := {}                  # id -> "centre", "el:<tree>", "join", "class:<Class>" or "ring"
+var _track := {}                   # id -> its track (Data.web_theme): dmg / ctl / def / loot / skill / start, "" for none
+var _ring_r := R_RING              # the ring's radius on the canvas (ring_r)
+var _ids: Array = []               # every id in layout order, for the packed reads below
+var _pos := PackedVector2Array()   # their places (web units)
+var _kidx := PackedByteArray()     # their kinds: KINDS' index
+var _st := PackedByteArray()       # their states as last restated: 0 dark, 1 can take, 2 owned
+var _named: Array = []             # the ids with a name to show close in (the big nodes')
+var _ix := {}                      # id -> its index in the packed reads
+var _tones := PackedColorArray()   # their colours
+var _dark := PackedColorArray()    # a dark lesser node's dot (DARK_DOT over the canvas)
+const KINDS := ["small", "notable", "skill", "start", "keystone", "capstone", "ring"]
 var _kind := {}                    # id -> small / notable / keystone / capstone / start / ring
 var _tone := {}                    # id -> its region's colour
 var _links := {}                   # id -> ids, both ways
@@ -103,6 +126,7 @@ var _small_cap := {}               # a small node's slot -> the radius its neigh
 var block_sizes := {}              # the last frame's names: key -> [the words' px, the emblems' px] (the smoke's)
 var emblem_rects := {}             # the last frame's emblems on screen, "<name's key>#<n>" -> Rect2 (the smoke's)
 var portrait_rect := Rect2()       # the last frame's portrait, on screen (the smoke's)
+var keep_clear: Array = []         # the canvas's rects the screen lays over it (Training's tabs and key): no name there at the whole web
 
 
 func _init(sz: Vector2) -> void:
@@ -136,8 +160,8 @@ static func web_links_of(id: String) -> Array:
 	return Data.web_links(id)
 
 
-## Every node at the sim's place (web units, the centre at 0,0, 12 o'clock up), its region, kind and colour; the ring's
-## thirty round the outside at their angles; the twelve names placed.
+## Every node at the sim's place (web units, the centre at 0,0, 12 o'clock up), its region, kind, track and colour; the
+## ring's thirty round the outside at their angles (ring_r); the fourteen names placed clear of the nodes.
 func lay_out() -> void:
 	_slots_index()
 	layout = {}
@@ -149,19 +173,30 @@ func lay_out() -> void:
 	_tone = {}
 	_links = {}
 	_nodes = {}
+	_track = {}
+	var cls_names := {}
+	for cd in Data.CLASSES:
+		cls_names[str(cd["name"])] = true
+	var el_names := {}
+	for t in Data.ELEMENT_TREES:
+		el_names[str(t["name"])] = true
+	var far := 0.0
 	for id in Data.web_ids():
 		var sid := str(id)
 		layout[sid] = Data.web_at(sid)
-		_region[sid] = Data.web_region(sid)
+		_region[sid] = norm_region(Data.web_region(sid), cls_names, el_names)
 		_kind[sid] = Data.web_kind(sid)
+		_track[sid] = Data.web_theme(sid)
+		far = maxf(far, Vector2(layout[sid]).length())
 	for sid in layout:
 		_tone[sid] = region_tone(sid)
 		_links[sid] = web_links_of(str(sid)).duplicate()
-	# the ring (slice 4): its nodes round the outside at their angles, joined round
+	# the ring (slice 4): its nodes round the outside at their angles, joined round, RING_GAP past the furthest node
+	_ring_r = maxf(R_RING, far + RING_GAP) if not layout.is_empty() else R_RING
 	var ring: Dictionary = Data.RING
 	for i in range(ring["nodes"].size()):
 		var rid: String = "%s/%d" % [ring["name"], i]
-		layout[rid] = Data.web_at(rid)              # on Data.RING_R, at its angle
+		layout[rid] = Data.web_at(rid).normalized() * _ring_r      # at its angle, on the canvas's ring
 		_region[rid] = "ring"
 		_kind[rid] = "ring"
 		_tone[rid] = Pal.ACCENT
@@ -169,23 +204,17 @@ func lay_out() -> void:
 		for j in ring["nodes"][i].get("links", []):
 			out.append("%s/%d" % [ring["name"], int(j)])
 		_links[rid] = out
-	# the names (0.12.2, the designer's fixed places - the block, name and emblems, centred on each): a class's in the
-	# empty heart of its four flowers, an element's just past its run's tip, the centre's below the hub between the
-	# Petrol and Blades gates; the ring's alone is placed by the search, outside it
+	_pack_ids()
+	# the names (round six: "the class names clear of the nodes"): a class's out along its line past its tracks, an
+	# element's on its column, the centre's under the hub, the ring's outside it - each placed by _place_names
 	for cd in Data.CLASSES:
 		var key: String = "class:%s" % cd["name"]
-		var n := 0
-		for id in layout:
-			if _region[id] == key:
-				n += 1
-		if n > 0:
-			var at: Array = CLASS_NAME_AT.get(str(cd["name"]), [CLASS_NAME_R, rad_to_deg(Data.web_at(Data.web_start(str(cd["name"]))).angle())])
-			_axis[key] = {"anchor": Vector2.from_angle(deg_to_rad(float(at[1]))) * float(at[0]), "fixed": true, "words": str(cd["name"]), "tone": Pal.TEXT}
+		var st: String = Data.web_start(str(cd["name"]))
+		if layout.has(st):
+			_axis[key] = {"anchor": Vector2.from_angle(Vector2(layout[st]).angle()) * CLASS_NAME_R, "span": NAME_SPAN, "words": str(cd["name"]), "tone": Pal.TEXT}
 			_trees[key] = {"name": key, "class": str(cd["name"])}     # what each name is (the tests' reads, as the trees were)
-	for i in range(6):
-		var tn: String = str(_el_at.get(str(i), ""))
-		if tn == "":
-			continue
+	for t in Data.ELEMENT_TREES:
+		var tn: String = str(t["name"])
 		var key: String = "el:" + tn
 		var at := Vector2.ZERO
 		var n := 0
@@ -193,17 +222,14 @@ func lay_out() -> void:
 			if _region[id] == key:
 				at += layout[id]
 				n += 1
-		var flower: Dictionary = _slot_of.get("e%d_n" % i, {})
-		if not flower.is_empty():
-			at = Vector2(float(flower["at"][0]), float(flower["at"][1]))
-		elif n > 0:
-			at /= n
-		_axis[key] = {"anchor": Vector2.from_angle(at.angle()) * float(ELEMENT_NAME_AT.get(tn, ELEMENT_NAME_R)), "fixed": true, "words": plain_name(tn), "tone": element_tone(tn)}     # past its run's tip
-		_trees[key] = {"name": key, "element": Data.tree_named(tn).get("element", "")}
+		if n == 0:
+			continue
+		_axis[key] = {"anchor": Vector2.from_angle(at.angle()) * ELEMENT_NAME_R, "span": NAME_SPAN, "words": plain_name(tn), "tone": element_tone(tn)}
+		_trees[key] = {"name": key, "element": t.get("element", "")}
 	_trees["ring"] = {"name": "ring", "ring": true}
-	_axis["ring"] = {"anchor": Vector2.from_angle(deg_to_rad(RING_LABEL_DEG)) * (R_RING + 24.0), "words": plain_name(Data.RING_TREE), "tone": Pal.ACCENT, "fixed": true}     # fixed too (0.12.2): outside the ring at the top left
+	_axis["ring"] = {"anchor": Vector2.from_angle(deg_to_rad(RING_LABEL_DEG)) * (_ring_r + 60.0), "span": 30.0, "words": plain_name(Data.RING_TREE), "tone": Pal.ACCENT}
 	# the centre's name (0.12.2, Matt: the icons "centered above their names"): the room's word on the rail, the rename parked
-	_axis["centre"] = {"anchor": Vector2.from_angle(deg_to_rad(CENTRE_NAME_DEG)) * CENTRE_NAME_R, "fixed": true, "words": Words.WEB_SCREEN["centre_name"], "tone": PITCH_TONE}
+	_axis["centre"] = {"anchor": Vector2.from_angle(deg_to_rad(CENTRE_NAME_DEG)) * CENTRE_NAME_R, "span": 0.0, "words": Words.WEB_SCREEN["centre_name"], "tone": PITCH_TONE}
 	_trees["centre"] = {"name": "centre"}
 	# each name's emblems over it: an element's, a class's two trees' (its left lane's and its right's), the centre's, the ring's
 	for key in _axis:
@@ -218,16 +244,57 @@ func lay_out() -> void:
 			ems = [emblem_of(Data.COMMON_TREE)]
 		elif key == "ring":
 			ems = [emblem_of(Data.RING_TREE)]
-		_axis[key]["emblems"] = ems.filter(func(e): return e != null)
-		var fit: Array = NAME_FIT.get(key, [1.0, 1.0])
-		_axis[key]["k"] = float(fit[0])
-		_axis[key]["gap"] = float(fit[1])
+		_axis[key]["emblems_all"] = ems.filter(func(e): return e != null)
+		_axis[key]["emblems"] = _axis[key]["emblems_all"]
+		_axis[key]["k"] = 1.0
+		_axis[key]["gap"] = 1.0
 	_small_caps()
 	_find_bounds()
 	_labels_by_entry()
 
 
-## A region's colour: the centre amber, an element (and its joins) its own, a class white, the ring the accent.
+## The layout's region as the canvas names it: "class:<Class>", "el:<element tree>", "centre", "ring" (the sim's
+## version one said so already; version two's layout says "Poacher", "The cold").
+static func norm_region(rg: String, cls_names: Dictionary, el_names: Dictionary) -> String:
+	if rg.begins_with("class:") or rg.begins_with("el:") or rg in ["centre", "ring", "join", ""]:
+		return rg
+	if cls_names.has(rg):
+		return "class:" + rg
+	if el_names.has(rg):
+		return "el:" + rg
+	return rg
+
+
+## The packed reads (BUILD49 V: the frame reads arrays, not a dictionary a node).
+func _pack_ids() -> void:
+	_ids = layout.keys()
+	_pos = PackedVector2Array()
+	_kidx = PackedByteArray()
+	_named = []
+	_ix = {}
+	_tones = PackedColorArray()
+	_dark = PackedColorArray()
+	for id in _ids:
+		_ix[id] = _pos.size()
+		var tone: Color = _tone.get(id, Pal.TEXT)
+		_tones.append(tone)
+		_dark.append(Pal.BG.lerp(tone, DARK_DOT))
+		_pos.append(layout[id])
+		var k: int = KINDS.find(str(_kind.get(id, "small")))
+		_kidx.append(maxi(0, k))
+		if k > 0 and k < 6:
+			_named.append(id)
+	_st = PackedByteArray()
+	_st.resize(_ids.size())
+
+
+## The ring's radius on the canvas: the sim's, or RING_GAP past the web's furthest node (version two's 1,120).
+func ring_r() -> float:
+	return _ring_r
+
+
+## A node's colour: a class's by its track (TRACK_TONES), the centre amber, an element (and its joins) its own, the
+## ring the accent; a class node with no track white.
 func region_tone(id: String) -> Color:
 	var rg: String = str(_region.get(id, ""))
 	if rg == "centre":
@@ -238,7 +305,7 @@ func region_tone(id: String) -> Color:
 		return element_tone(join_element(id))
 	if rg == "ring":
 		return Pal.ACCENT
-	return Pal.TEXT
+	return TRACK_TONES.get(str(_track.get(id, "")), Pal.TEXT)
 
 
 ## An element tree's colour (its damage type's, as the stats and the items carry it).
@@ -284,78 +351,197 @@ static func plain_name(tn: String) -> String:
 	return n.left(1).to_upper() + n.substr(1) if n != "" else tn
 
 
-## The twelve names (and the ring's) placed for the whole web's zoom - the furthest out the canvas goes - so closer in
-## each only shrinks about its point: centred on the first place by its region's point, then out a step at a time, whose
-## words cover no node and no name already placed. A name that lands far goes first and the lot again (LABEL_TRIES).
-const LABEL_TRIES := 6
-const LABEL_NEAR := 120.0           # a name within this of its region's point is by it (the smoke's reach)
-const LABEL_STEP := 6.0             # the places tried, a grid this fine out to LABEL_NEAR, nearest first
-static var _label_grid: Array = []
-static var _wide_grid: Array = []
-const CENTRE_NEAR := 260.0          # (kept for the grid's reads; every name but the ring's is fixed now)
-const CLASS_NAME_R := 372.0         # a class's name: P(372, its angle), between its start's flower (r300) and its far one (r440)
-## Each class's name, [r, degrees] (0.12.2, the designer's places). The Poacher (-90) and the Drifter (90) sit at
-## P(372, a), the empty heart of their four flowers. The four diagonal classes sit ~6 degrees round from theirs: at
-## +-30 and +-150 the upright block's width runs along the radial, and the heart there (~72 web units deep) can't hold
-## it at any size without touching the flowers' inner nodes (Triage/14, Muscle/14, Stripping/9, Ordnance/13 at the whole
-## web), so each takes the nearest place round from its heart where its block fits (fit_table's search), to one
-## decimal; the Paramedic a step further round, so its fit holds with the words LABEL_SLACK wide (Windows).
-const CLASS_NAME_AT := {
-	"Poacher": [372.0, -90.0], "Paramedic": [382.6, -23.8], "Scrapper": [377.1, 23.9],
-	"Drifter": [372.0, 90.0], "Doorman": [377.1, 156.1], "Recruit": [371.7, 215.4],
-}
-## Each element's name, its radius out along its flower's angle (past its capstone, inside the ring), and every name's
-## fitted [k, gap] (fit_table at the whole web of the 1040 x 684 canvas and a 4 px shorter one, the smaller taken).
-const ELEMENT_NAME_AT := {"The cold": 445.0, "Live": 440.0, "Petrol": 445.0, "Blades": 445.0, "Knuckles": 450.0, "The Rat Man": 445.0}
-const NAME_FIT := {
-	"class:Poacher": [0.6, 1.0], "class:Paramedic": [0.55, 1.0], "class:Scrapper": [0.65, 1.0],
-	"class:Drifter": [0.6, 1.0], "class:Doorman": [0.65, 1.0], "class:Recruit": [0.5, 1.0],
-	"el:The cold": [1.0, 1.0], "el:Live": [1.0, 1.0], "el:Petrol": [1.0, 1.0], "el:Blades": [1.0, 1.0], "el:Knuckles": [0.8, 1.0],
-	"el:The Rat Man": [0.95, 1.0], "centre": [0.8, 1.0], "ring": [1.0, 1.0],
-}
-const ELEMENT_NAME_R := 440.0       # an element's: from P(440, its angle) out, clear of its capstone (r388)
-const CENTRE_NAME_R := 165.0        # the centre's: P(165, 90)
+## The fourteen names placed for the whole web's zoom - the furthest out the canvas goes - so closer in each only
+## shrinks about its point (BUILD49 V, round six: "the class names clear of the nodes"). Each from its preferred point
+## (a class's out along its line, an element's on its column, the centre's under the hub, the ring's outside it), the
+## places tried nearest first on a NAME_STEP grid out to NAME_REACH, within NAME_SPAN degrees of its line: the first
+## where the block, words LABEL_SLACK wide, keeps BLOCK_CLEAR off every node's disc (a lesser one as grown close in) and
+## every name placed before it, inside the ring (the ring's: outside it) and on the canvas. The largest size that finds
+## a place, its emblems over it where they fit (NAME_KS), without them where they don't. Worked once a layout (static).
+const LABEL_NEAR := 560.0           # a name within this of its preferred point is by it (the smoke's reach: NAME_REACH)
+const LABEL_STEP := 10.0
+const NAME_STEP := 10.0
+const NAME_REACH := 560.0
+const NAME_SPAN := 12.0             # degrees either side of its line (a neighbour's line is 30 off)
+const CLASS_NAME_R := 900.0         # a class's preferred point: past its tracks, under its corner
+const ELEMENT_NAME_R := 520.0       # an element's: on its column (the canvas's P(520))
+const CENTRE_NAME_R := 60.0         # the centre's: under the hub
 const CENTRE_NAME_DEG := 90.0
+const NAME_KS := [1.0, 0.93, 0.86, 0.79, 0.72, 0.65, 0.58]     # 14 px down to NAME_MIN (past 0.72 the words stay at 10, the emblems shrink)
+## The places found (BUILD49 V, the search below run offline on the version-two layout at Training's 1040 x 684 canvas:
+## tests/web_names_tool.gd, never at runtime - it takes seconds): key -> [x, y, k, its emblems: 0 none, 1 over the words, 2 beside
+## them, at their left (where over doesn't fit)]. The smoke holds each clear of
+## every node (stored_unfit) at that canvas and a 4 px shorter one; a canvas of another size, or a key not here, searches.
+const NAME_AT := {
+	"class:Poacher": [20.0, -1040.0, 0.72, 2], "class:Paramedic": [1109.4, -680.0, 1.00, 1], "class:Scrapper": [1099.4, 670.0, 1.00, 1],
+	"class:Drifter": [-100.0, 1010.0, 0.86, 1], "class:Doorman": [-1179.4, 510.0, 1.00, 1], "class:Recruit": [-919.4, -400.0, 0.79, 1],
+	"el:The cold": [290.0, -890.3, 0.93, 1], "el:Live": [900.0, -190.0, 0.86, 1], "el:Petrol": [280.0, 850.3, 0.72, 2],
+	"el:Blades": [-290.0, 880.3, 0.72, 1], "el:Knuckles": [-940.0, -190.0, 0.72, 2], "el:The Rat Man": [-300.0, -850.3, 0.58, 2],
+	"ring": [-809.6, -936.9, 1.00, 1], "centre": [240.0, 220.0, 0.72, 0],
+}
+const NAME_CANVAS := Vector2(1040, 684)
+static var _name_grid: Array = []
+static var _names_cache := {}       # "sig" -> {key: [label_at, k, gap, with emblems]}
 
 
-## The offsets a name tries, nearest first (`wide`: out to CENTRE_NEAR).
-static func label_grid(wide := false) -> Array:
-	var g: Array = _wide_grid if wide else _label_grid
-	if g.is_empty():
-		var reach: float = CENTRE_NEAR if wide else LABEL_NEAR
-		var n: int = int(reach / LABEL_STEP)
+## The offsets a name tries, nearest first.
+static func label_grid(_wide := false) -> Array:
+	if _name_grid.is_empty():
+		var n: int = int(NAME_REACH / NAME_STEP)
 		for gx in range(-n, n + 1):
 			for gy in range(-n, n + 1):
-				var d := Vector2(gx, gy) * LABEL_STEP
-				if d.length() <= reach:
-					g.append(d)
-		g.sort_custom(func(a, b): return a.length() < b.length() or (a.length() == b.length() and (a.y < b.y or (a.y == b.y and a.x < b.x))))
-	return g
+				var d := Vector2(gx, gy) * NAME_STEP
+				if d.length() <= NAME_REACH:
+					_name_grid.append(d)
+		_name_grid.sort_custom(func(a, b): return a.length() < b.length() or (a.length() == b.length() and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+	return _name_grid
 
 
 ## How far a name may go from its point.
-func label_near(key: String) -> float:
-	return CENTRE_NEAR if key == "centre" else LABEL_NEAR
+func label_near(_key: String) -> float:
+	return LABEL_NEAR
 
 
 func _labels_by_entry() -> void:
-	var order: Array = _axis.keys()
-	_index_nodes(func(id): return radius_by_kind(str(_kind.get(id, "small"))))
-	for attempt in range(LABEL_TRIES):
-		var far_one: String = _labels_in(order)
-		if far_one == "":
-			break
-		order.erase(far_one)
-		order.push_front(far_one)
-	_near = {}
+	_place_names()
 
 
-## A name and its emblems as one block (0.12.2, Matt: the icons "centered above their names"; the designer's fixed places):
+## The names placed (or read back from the last placing of this layout at this size).
+func _place_names() -> void:
+	var zf: float = fit_zoom()
+	var sig := "%d|%.1f|%s|%.2f" % [layout.size(), _ring_r, str(size), _pos_sum()]
+	var keep: Dictionary = _names_cache.get(sig, {})
+	if keep.is_empty() and size == NAME_CANVAS and _axis.keys().all(func(k): return NAME_AT.has(k)):
+		for key in _axis:
+			var n: Array = NAME_AT[key]
+			keep[key] = [Vector2(float(n[0]), float(n[1])), float(n[2]), 1.0, int(n[3])]
+		_names_cache[sig] = keep
+	if keep.is_empty():
+		_index_nodes(_name_r)
+		var placed: Array = []
+		var order: Array = _axis.keys()
+		order.sort_custom(func(a, b): return _name_rank(str(a)) < _name_rank(str(b)))
+		for key in order:
+			keep[key] = _place_one(str(key), zf, placed)
+			placed.append(label_box_at(str(key), keep[key][0], zf))
+			if str(key).begins_with("class:"):
+				placed.append(_portrait_box(str(key), keep[key][0], zf))     # the runner's face goes under its class's name
+		_near = {}
+		_names_cache[sig] = keep
+	for key in _axis:
+		var got: Array = keep.get(key, [])
+		if got.is_empty():
+			continue
+		var ax: Dictionary = _axis[key]
+		ax["label_at"] = got[0]
+		ax["k"] = got[1]
+		ax["gap"] = got[2]
+		ax["emblems"] = ax["emblems_all"] if int(got[3]) > 0 else []
+		ax["inline"] = int(got[3]) == 2
+		ax["label_box"] = label_box_at(str(key), got[0], zf)
+
+
+static func _name_rank(key: String) -> int:
+	return 0 if key == "ring" else (1 if key == "centre" else (3 if key.begins_with("class:") else 2))     # the classes last: their faces keep off the rest
+
+
+func _pos_sum() -> float:
+	var t := 0.0
+	for p in _pos:
+		t += p.x * 0.37 + p.y
+	return t
+
+
+## A node's room for the names: a lesser one as grown close in (the most it takes), a big one its kind's.
+func _name_r(id: String) -> float:
+	if _kind.get(id, "") == "small":
+		return float(_small_cap.get(Data.web_slot(str(id)), R_SMALL))
+	return radius_by_kind(str(_kind.get(id, "small")))
+
+
+## One name's place: [label_at, k, gap, emblems shown]; the preferred point at the smallest size where none clears.
+func _place_one(key: String, zf: float, placed: Array) -> Array:
+	var ax: Dictionary = _axis[key]
+	var pref: Vector2 = ax["anchor"]
+	var span: float = float(ax.get("span", 0.0))
+	var seen := Rect2(whole_cam(zf) - size / zf / 2.0, size / zf)     # the canvas at the whole web, web units
+	var zf_s: float = clampf(minf(size.x / _bounds.size.x, (size.y - 4.0 - FRAME_TOP) / _bounds.size.y), ZOOM_MIN, ZOOM_MAX)     # and one 4 px shorter (Windows' margin)
+	for pass_ in [[1, false], [2, false], [1, true], [0, false]]:     # over, beside, over past the ring, none
+		var mode: int = pass_[0]
+		var outside: bool = pass_[1] or key == "ring"
+		var with_em: bool = mode > 0
+		if with_em and Array(ax["emblems_all"]).is_empty():
+			continue
+		ax["emblems"] = ax["emblems_all"] if with_em else []
+		ax["inline"] = mode == 2
+		for k in (NAME_KS if with_em else NAME_KS.slice(0, 5)):
+			ax["k"] = k
+			ax["gap"] = 1.0
+			var d: Dictionary = block_dims(key, zf, zf, LABEL_SLACK)
+			var wh := Vector2(d["w"], d["h"]) / zf
+			for off in label_grid():
+				var at: Vector2 = pref + off
+				if span > 0.0 and absf(angle_difference(at.angle(), pref.angle())) > deg_to_rad(span):
+					continue
+				var rc := Rect2(at - wh / 2.0, wh)
+				if not seen.encloses(rc):
+					continue
+				if outside:
+					if _rect_near(rc) < _ring_r + R_RING_NODE + BLOCK_CLEAR / zf:
+						continue
+				elif not _inside_ring(rc):
+					continue
+				if placed.any(func(b): return Rect2(b).intersects(rc)):
+					continue
+				if key.begins_with("class:") and placed.any(func(b): return Rect2(b).intersects(_portrait_box(key, at, zf))):
+					continue
+				var rc_s: Rect2 = _block_at(key, at, zf_s)
+				if _over_kept(rc, zf) or _over_kept(rc_s, zf_s, size - Vector2(0, 4)) or not (_inside_ring(rc_s) or _rect_near(rc_s) >= _ring_r + R_RING_NODE):
+					continue
+				if _block_depth(rc, zf) <= 0.0 and _block_depth(rc_s, zf_s) <= 0.0:
+					return [at, k, 1.0, mode]
+	ax["inline"] = false
+	return [pref, NAME_KS[-1], 1.0, 0]
+
+
+## Whether a web-unit rect, at the whole web of zoom `zf`, lies under one of the screen's own rects (keep_clear).
+func _over_kept(rc: Rect2, zf: float, sz := Vector2.ZERO) -> bool:
+	var c: Vector2 = size if sz == Vector2.ZERO else sz
+	var on := Rect2((rc.position - whole_cam(zf)) * zf + c / 2.0, rc.size * zf)
+	var dy: float = c.y - size.y                 # the key sits at the canvas's foot: it moves with a shorter one
+	for k in keep_clear:
+		var kr := Rect2(k)
+		if kr.position.y > FRAME_TOP:
+			kr.position.y += dy
+		if kr.intersects(on):
+			return true
+	return false
+
+
+## The square round a class's portrait (draw_under: on its name, its block's half width and 10 px) in web units.
+func _portrait_box(key: String, at: Vector2, zf: float) -> Rect2:
+	var d: Dictionary = block_dims(key, zf, zf, LABEL_SLACK)
+	var r: float = maxf(PORTRAIT_R * zf, d["w"] / 2.0 + 10.0) / zf
+	return Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
+## A name's block in web units at `at`, drawn as at the whole web of zoom `zf`, its words LABEL_SLACK wide.
+func _block_at(key: String, at: Vector2, zf: float) -> Rect2:
+	var d: Dictionary = block_dims(key, zf, zf, LABEL_SLACK)
+	var wh := Vector2(d["w"], d["h"]) / zf
+	return Rect2(at - wh / 2.0, wh)
+
+
+## A rect's nearest point to the centre, its distance.
+static func _rect_near(rc: Rect2) -> float:
+	return Vector2(clampf(0.0, rc.position.x, rc.end.x), clampf(0.0, rc.position.y, rc.end.y)).length()
+
+
+## A name and its emblems as one block (0.12.2, Matt: the icons "centered above their names"):
 ## the emblems side by side over the words, centred on the words' middle, a lift above them, on a dark plate so a link
-## under it doesn't cut the words. Each block has its size in web units (NAME_FIT, from fit_table: the largest that keeps its place
-## clear of every node, the four diagonal classes the tightest) and is drawn at that size times the zoom, the words
-## clamped to NAME_MIN..NAME_SIZE px and the emblems to EMBLEM_MIN..EMBLEM_MAX; where the clamps would still touch a
-## node at the whole web, the lift and the pair's spacing go first ("gap" 0).
+## under it doesn't cut the words. Each block has its size in web units (k, from _place_names: the largest that finds a
+## place clear of every node) and is drawn at that size times the zoom, the words clamped to NAME_MIN..NAME_SIZE px and
+## the emblems to EMBLEM_MIN..EMBLEM_MAX.
 const NAME_MIN := 10.0
 const EMBLEM_MIN := 12.0
 const EMBLEM_MAX := 24.0
@@ -379,8 +565,12 @@ func block_dims(key: String, z: float, zf := -1.0, slack := 1.0) -> Dictionary:
 	var ww: float = _font_bold.get_string_size(str(ax["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(round(ts))).x * slack
 	var n: int = Array(ax.get("emblems", [])).size()
 	var row: float = n * es + maxf(0.0, n - 1.0) * sep
+	if n > 0 and ax.get("inline", false):     # the emblems beside the words, at their left (BUILD49 V)
+		return {"ts": ts, "es": es, "lift": lift, "sep": sep, "ww": ww, "w": row + INLINE_GAP + ww + 2.0 * PLATE_PAD,
+			"h": maxf(ts * 1.1, es) + 2.0 * PLATE_PAD, "row": row}
 	return {"ts": ts, "es": es, "lift": lift, "sep": sep, "ww": ww, "w": maxf(ww, row) + 2.0 * PLATE_PAD,
 		"h": ts * 1.1 + (es + lift if n > 0 else 0.0) + 2.0 * PLATE_PAD}
+const INLINE_GAP := 5.0            # between the emblems beside a name and its words (px)
 
 
 ## A name's whole block on screen as drawn (its plate: the emblems and the words).
@@ -403,117 +593,90 @@ func emblem_rects_of(key: String) -> Array:
 	var d: Dictionary = block_dims(key, zoom)
 	var e: float = d["es"]
 	var row: float = ems.size() * e + (ems.size() - 1) * float(d["sep"])
-	var x0: float = words.get_center().x - row / 2.0
 	var out: Array = []
+	if d.has("row"):
+		var br: Rect2 = block_rect(key)
+		for i in range(ems.size()):
+			out.append(Rect2(br.position.x + PLATE_PAD + i * (e + float(d["sep"])), br.get_center().y - e / 2.0, e, e))
+		return out
+	var x0: float = words.get_center().x - row / 2.0
 	for i in range(ems.size()):
 		out.append(Rect2(x0 + i * (e + float(d["sep"])), words.position.y - float(d["lift"]) - e, e, e))
 	return out
 
 
-## The fit (0.12.2), worked out offline and kept as data (NAME_FIT, CLASS_NAME_AT, ELEMENT_NAME_AT): never at runtime. A
-## block fits where, drawn as at the whole web (zoom `zf`) with its words LABEL_SLACK wide (Windows' shaping), it keeps
-## BLOCK_CLEAR off every node's disc (a small one as grown close in, the most it takes) and stays inside the ring.
-## fit_table(zf): the largest k (in 0.05 steps) and gap for each name at its stored place - an element's radius the first
-## from ELEMENT_NAME_R out that holds its full block; stored_unfit(zf): each name whose stored size doesn't clear, how
-## far in (px). The smoke runs both for the canvas and a 4 px shorter one.
-const ELEMENT_NAME_MAX := 470.0
-func fit_table(zf: float) -> Dictionary:
+## Each name whose placed block, drawn as at the whole web of zoom `zf` with its words LABEL_SLACK wide, comes within
+## BLOCK_CLEAR of a node's disc or leaves its side of the ring: how far in (px). The smoke's (empty when every name clears).
+func stored_unfit(zf: float, canvas_h := -1.0) -> Dictionary:
 	var out := {}
+	var sz := Vector2(size.x, canvas_h if canvas_h > 0.0 else size.y)
+	_index_nodes(_name_r)
 	for key in _axis:
-		var ax: Dictionary = _axis[key]
-		var held := [ax.get("k", 1.0), ax.get("gap", 1.0)]
-		var tries: Array = [ax["anchor"]]
-		if str(key).begins_with("el:"):
-			tries = []
-			var dir: Vector2 = Vector2(ax["anchor"]).normalized()
-			var r: float = ELEMENT_NAME_R
-			while r <= ELEMENT_NAME_MAX:
-				tries.append(dir * r)
-				r += 5.0
-		var best := [-1.0, 1.0, Vector2.ZERO, INF]
-		for at in tries:
-			var got: Array = _fit_at(key, at, zf)
-			if float(got[0]) > float(best[0]) or (float(best[0]) < 0.0 and float(got[2]) < float(best[3])):
-				best = [got[0], got[1], at, got[2]]
-			if float(best[0]) >= 1.0:
-				break
-		ax["k"] = held[0]
-		ax["gap"] = held[1]
-		out[key] = {"k": best[0], "gap": best[1], "r": Vector2(best[2]).length(), "deep": best[3]}
-	return out
-
-
-func stored_unfit(zf: float) -> Dictionary:
-	var out := {}
-	for key in _axis:
+		if not _axis[key].has("label_at"):
+			out[key] = INF
+			continue
 		var d: Dictionary = block_dims(str(key), zf, zf, LABEL_SLACK)
-		var at: Vector2 = _axis[key]["anchor"]
+		var at: Vector2 = _axis[key]["label_at"]
 		var rc := Rect2(at - Vector2(d["w"], d["h"]) / zf / 2.0, Vector2(d["w"], d["h"]) / zf)
 		var deep: float = _block_depth(rc, zf)
-		if deep > 0.0 or not (key == "ring" or _inside_ring(rc)):
-			out[key] = deep
+		var side: bool = _inside_ring(rc) or _rect_near(rc) >= _ring_r + R_RING_NODE     # inside the ring or past it, never on it
+		if deep > 0.0 or not side or _over_kept(rc, zf, sz):
+			out[key] = maxf(deep, 0.0)
+	_near = {}
 	return out
 
 
-static func _inside_ring(rc: Rect2) -> bool:
-	return rc.end.length() <= R_RING and rc.position.length() <= R_RING and Vector2(rc.position.x, rc.end.y).length() <= R_RING and Vector2(rc.end.x, rc.position.y).length() <= R_RING
-
-
-## [k, gap, deepest] for a block at `at`: the largest k in steps that clears, the gap kept if it can be; k -1 if none.
-func _fit_at(key: String, at: Vector2, zf: float) -> Array:
-	var ax: Dictionary = _axis[key]
-	var deepest := INF
-	for g in [1.0, 0.0]:
-		ax["gap"] = g
-		var k := 1.0
-		while k >= 0.2:
-			ax["k"] = k
-			var d: Dictionary = block_dims(key, zf, zf, LABEL_SLACK)
-			var rc := Rect2(at - Vector2(d["w"], d["h"]) / zf / 2.0, Vector2(d["w"], d["h"]) / zf)
-			var deep: float = _block_depth(rc, zf)
-			var inside: bool = key == "ring" or _inside_ring(rc)
-			if deep <= 0.0 and inside:
-				return [k, g, 0.0]
-			deepest = minf(deepest, deep)
-			k -= 0.05
-	return [-1.0, 1.0, deepest]
+func _inside_ring(rc: Rect2) -> bool:
+	var lim: float = _ring_r - R_RING_NODE - 4.0
+	return rc.end.length() <= lim and rc.position.length() <= lim and Vector2(rc.position.x, rc.end.y).length() <= lim and Vector2(rc.end.x, rc.position.y).length() <= lim
 
 
 ## How far (px at zoom `zf`) the nearest node's disc, plus BLOCK_CLEAR, reaches into a web-unit rect; <= 0 when clear.
+## Bucketed: _index_nodes(_name_r) first.
 func _block_depth(rc: Rect2, zf: float) -> float:
 	var deep := -INF
-	for id in layout:
+	for id in _ids_in(rc.grow(_rad_max + (BLOCK_CLEAR + 2.0) / zf)):     # every node that could come within BLOCK_CLEAR px (the b45 check)
 		var q: Vector2 = layout[id]
-		var r: float = float(_small_cap.get(Data.web_slot(str(id)), R_SMALL)) if _kind.get(id, "") == "small" else radius_by_kind(str(_kind.get(id, "small")))
+		var r: float = float(_rad[id])
 		var d: float = Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y)).distance_to(q)
 		deep = maxf(deep, (r - d) * zf + BLOCK_CLEAR)
 	return deep
 
 
 ## Each small node's room (web units): up to R_SMALL_ART, SMALL_GAP clear of every neighbour at its own full size (two
-## smalls share what's between them).
+## smalls share what's between them). Bucketed (version two's 1,549 nodes).
 func _small_caps() -> void:
 	_small_cap = {}
+	_index_nodes(func(id): return radius_by_kind(str(_kind.get(id, "small"))))
+	var reach: float = 2.0 * R_SMALL_ART + SMALL_GAP + R_CAPSTONE
 	for a in layout:
 		if _kind.get(a, "") != "small":
 			continue
 		var cap: float = R_SMALL_ART
-		for b in layout:
+		var pa: Vector2 = layout[a]
+		for b in _ids_in(Rect2(pa, Vector2.ZERO).grow(reach)):
 			if b == a:
 				continue
-			var d: float = layout[a].distance_to(layout[b])
-			if d > 2.0 * R_SMALL_ART + SMALL_GAP + R_CAPSTONE:
+			var d: float = pa.distance_to(layout[b])
+			if d > reach:
 				continue
 			if _kind.get(b, "") == "small":
 				cap = minf(cap, (d - SMALL_GAP) / 2.0)
 			else:
 				cap = minf(cap, d - radius_by_kind(str(_kind.get(b, "small"))) - SMALL_GAP)
 		_small_cap[Data.web_slot(str(a))] = maxf(R_SMALL, cap)
+	_near = {}
 
 
 ## The zoom the names are placed for: the whole web's.
+## The whole web sits under the tabs (BUILD49 V: version two's top ran under them): the canvas less FRAME_TOP high.
 func fit_zoom() -> float:
-	return clampf(minf(size.x / _bounds.size.x, size.y / _bounds.size.y), ZOOM_MIN, ZOOM_MAX)
+	return clampf(minf(size.x / _bounds.size.x, (size.y - FRAME_TOP) / _bounds.size.y), ZOOM_MIN, ZOOM_MAX)
+
+
+## The whole web's camera at zoom `z`: the web's middle in the canvas under the tabs.
+func whole_cam(z: float) -> Vector2:
+	return _bounds.get_center() - Vector2(0.0, FRAME_TOP / 2.0) / z
 
 
 ## A name's box in web units at zoom `z`, centred on `at`.
@@ -527,38 +690,6 @@ func label_box_at(key: String, at: Vector2, z: float) -> Rect2:
 const LABEL_SLACK := 1.06          # the words measured a little wide: Windows' shaping runs a few px wider than the cloud's (25 Oct)
 
 
-## One placement in `order`; the first name that landed further than LABEL_NEAR from its point, or none.
-func _labels_in(order: Array) -> String:
-	var far_one := ""
-	var placed: Array = []
-	var z: float = fit_zoom()
-	for key in order:
-		var ax: Dictionary = _axis[key]
-		var p: Vector2 = ax["anchor"]
-		var best: Array = []
-		if ax.get("fixed", false):
-			ax["label_at"] = p                        # a fixed name: its block centred on its point, never moved
-			ax["label_box"] = label_box_at(key, p, z)
-			placed.append(ax["label_box"])
-			continue
-		for d in label_grid(key == "centre"):
-			var at: Vector2 = p + d
-			var box: Rect2 = label_box_at(key, at, z)
-			if _bounds.encloses(box) and _label_clear(box, placed):
-				best = [at, box]
-				break
-		if best.is_empty():
-			best = [p, label_box_at(key, p, z)]       # nowhere clear: the retry puts it first
-			if far_one == "":
-				far_one = key
-		ax["label_at"] = best[0]
-		ax["label_box"] = best[1]
-		placed.append(best[1])
-		if far_one == "" and p.distance_to(best[0]) > label_near(str(key)) - LABEL_STEP:
-			far_one = key
-	return far_one
-
-
 ## A region's name on screen as drawn at this zoom (for the smoke and the hover).
 func label_rect(key: String) -> Rect2:
 	var ax: Dictionary = _axis.get(key, {})
@@ -566,6 +697,8 @@ func label_rect(key: String) -> Rect2:
 		return Rect2()
 	var p: Vector2 = to_screen(ax["label_at"])
 	var d: Dictionary = block_dims(key, zoom)
+	if d.has("row"):                          # beside its emblems: the words at the block's right, centred down it
+		return Rect2(p.x + d["w"] / 2.0 - PLATE_PAD - d["ww"], p.y - d["ts"] * 0.55, d["ww"], d["ts"] * 1.1)
 	return Rect2(p.x - d["ww"] / 2.0, p.y + d["h"] / 2.0 - PLATE_PAD - d["ts"] * 1.1, d["ww"], d["ts"] * 1.1)     # the words at the block's foot
 
 
@@ -618,7 +751,7 @@ func _label_clear(box: Rect2, placed: Array) -> bool:
 
 
 func _find_bounds() -> void:
-	var r: float = R_RING + BOUNDS_PAD
+	var r: float = _ring_r + BOUNDS_PAD
 	_bounds = Rect2(-r, -r, 2.0 * r, 2.0 * r)
 	zoom_min = fit_zoom()
 
@@ -718,8 +851,8 @@ func to_web(p: Vector2) -> Vector2:
 
 ## The whole web in the view.
 func focus_all() -> void:
-	cam = _bounds.get_center()
-	zoom = clampf(minf(size.x / _bounds.size.x, size.y / _bounds.size.y), zoom_min, ZOOM_MAX)
+	zoom = clampf(fit_zoom(), zoom_min, ZOOM_MAX)
+	cam = whole_cam(zoom)
 	queue_redraw()
 
 
@@ -738,6 +871,17 @@ func focus_regions(regions: Array) -> void:
 		focus_all()
 		return
 	box = box.grow(R_CAPSTONE + 6.0)
+	_frame(box)
+	for _pass in range(2):                 # the regions' names in the frame too, at the zoom it comes to (BUILD49 V)
+		var named_box := box
+		for k in regions:
+			if _axis.has(k) and _axis[k].has("label_at"):
+				named_box = named_box.merge(label_box_at(str(k), _axis[k]["label_at"], zoom).grow(4.0 / zoom))
+		_frame(named_box)
+
+
+## A web-unit box filling the canvas under the tabs.
+func _frame(box: Rect2) -> void:
 	var avail := Vector2(size.x - 2.0 * FRAME_PAD, size.y - FRAME_TOP - FRAME_PAD)     # under the tabs (the review of the corner's first render)
 	zoom = clampf(minf(avail.x / box.size.x, avail.y / box.size.y), zoom_min, ZOOM_MAX)
 	cam = box.get_center() - Vector2(0.0, (FRAME_TOP - FRAME_PAD) / 2.0) / zoom
@@ -756,23 +900,66 @@ func focus_tree(tree_name: String) -> void:
 	focus_regions([tree_name])
 
 
-## A class's corner (3 Nov): its four flowers and its two elements, the joins between them.
+## A class's corner (3 Nov; version two, BUILD49 V): the class's nodes and its two elements' columns, framed.
 func focus_class(cls: String) -> void:
 	focus_regions(corner_regions(cls))
 
 
-## The class's region and the two elements its start's joins run to.
+## The class's region and the two elements beside it: the two element columns nearest its line (its left one
+## anticlockwise of it, its right one clockwise), the left first.
 func corner_regions(cls: String) -> Array:
 	var key: String = "class:" + cls
-	var out: Array = [key]
+	var st: String = Data.web_start(cls)
+	if not layout.has(st):
+		return [key]
+	var a: float = Vector2(layout[st]).angle()
+	var sums := {}
 	for id in layout:
-		if _region[id] != key:
-			continue
-		for o in _links.get(id, []):
-			if _region.get(o, "") == "join":
-				var el: String = "el:" + join_element(str(o))
-				if not (el in out):
-					out.append(el)
+		var rg: String = str(_region[id])
+		if rg.begins_with("el:"):
+			sums[rg] = Vector2(sums.get(rg, Vector2.ZERO)) + Vector2(layout[id])
+	var left := ""
+	var right := ""
+	var dl := INF
+	var dr := INF
+	for rg in sums:
+		var d: float = angle_difference(a, Vector2(sums[rg]).angle())     # > 0: clockwise of the class (y down)
+		if d > 0.0 and d < dr:
+			dr = d
+			right = rg
+		elif d <= 0.0 and -d < dl:
+			dl = -d
+			left = rg
+	return [key] + ([left] if left != "" else []) + ([right] if right != "" else [])
+
+
+## The Paragon board (BUILD49 V, the third tab): the ring's arc by the runner's class - its entry and the two either
+## side - framed.
+const RING_ARC := 2
+func focus_ring(cls: String) -> void:
+	var st: String = Data.web_start(cls) if cls != "" else ""
+	var a: float = Vector2(layout[st]).angle() if layout.has(st) else -PI / 2.0
+	var box := Rect2()
+	var first := true
+	for id in ring_arc(a):
+		if first:
+			box = Rect2(layout[id], Vector2.ZERO)
+			first = false
+		else:
+			box = box.expand(layout[id])
+	if first:
+		focus_all()
+		return
+	_frame(box.grow(R_RING_NODE + 40.0))
+
+
+## The ring's nodes within RING_ARC steps of an angle (radians), nearest first.
+func ring_arc(a: float) -> Array:
+	var out: Array = []
+	for id in layout:
+		if _region[id] == "ring" and absf(angle_difference(a, Vector2(layout[id]).angle())) <= deg_to_rad(Data.RING_STEP * (RING_ARC + 0.5)):
+			out.append(id)
+	out.sort_custom(func(x, y): return absf(angle_difference(a, Vector2(layout[x]).angle())) < absf(angle_difference(a, Vector2(layout[y]).angle())))
 	return out
 
 
@@ -797,14 +984,19 @@ func show_state(s) -> void:
 
 ## Every node restated: the frontier read once for the lot.
 func _restate() -> void:
+	if _ids.size() != layout.size():
+		_pack_ids()
 	_frontier = {}
 	if sim != null and sim.has_method("web_frontier"):
 		for id in sim.web_frontier(true):          # joined and gated, points or not: the amber ring says where the next point goes
 			_frontier[str(id)] = true
 	_frontier_read = true
-	for id in layout:
-		_state[id] = state_for(id)
+	for i in range(_ids.size()):
+		var st: Dictionary = state_for(_ids[i])
+		_state[_ids[i]] = st
+		_st[i] = 2 if st.get("taken", false) else (1 if st.get("reach", false) else 0)
 	_frontier_read = false
+	_link_runs_sig = ""                      # the links regathered by colour on the next frame
 
 
 ## The nodes still to restate after a change (the tests): none - the web restates whole.
@@ -825,6 +1017,7 @@ func warm_step(s, budget_us := 4000) -> bool:
 		for kind in ["disc", "diamond", "square"]:         # _pack_all's order, so the atlas packs as it did
 			for n in DISC_SIZES:
 				shape(kind, n / 2.0)
+		solid()
 		_warm_ids = layout.keys()
 		_warm_at = 0
 		_warm_phase = 1
@@ -940,14 +1133,23 @@ static func atlased(tex: Texture2D) -> Texture2D:
 
 ## A disc or a diamond ("disc" / "diamond"), white, anti-aliased, for a radius on screen: the smallest of
 ## DISC_SIZES that holds it, so it's never shrunk past half.
+static var _shape_fast := {}            # kind -> [the four sizes' textures] (BUILD49 V: no key made a node)
 static func shape(kind: String, radius: float) -> Texture2D:
-	var n: int = DISC_SIZES[-1]
-	for s in DISC_SIZES:
-		if s >= radius * 2.0:
-			n = s
+	var si: int = DISC_SIZES.size() - 1
+	for j in range(DISC_SIZES.size()):
+		if DISC_SIZES[j] >= radius * 2.0:
+			si = j
 			break
+	var fast: Array = _shape_fast.get(kind, [])
+	if not fast.is_empty() and fast[si] != null:
+		return fast[si]
+	var n: int = DISC_SIZES[si]
 	var key := "%s:%d" % [kind, n]
 	if _atlas_of.has(key):
+		if fast.is_empty():
+			fast = [null, null, null, null]
+			_shape_fast[kind] = fast
+		fast[si] = _atlas_of[key]
 		return _atlas_of[key]
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
 	var h: float = n / 2.0
@@ -965,6 +1167,20 @@ static func shape(kind: String, radius: float) -> Texture2D:
 		atlas_misses += 1
 		out = ImageTexture.create_from_image(img)
 	_atlas_of[key] = out
+	return out
+
+
+## A white cell of the atlas: the names' plates (BUILD49 V: each was a call of its own).
+static func solid() -> Texture2D:
+	if _atlas_of.has("solid"):
+		return _atlas_of["solid"]
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.WHITE)
+	var out: Texture2D = _pack(img)
+	if out == null:
+		atlas_misses += 1
+		out = ImageTexture.create_from_image(img)
+	_atlas_of["solid"] = out
 	return out
 
 
@@ -1013,6 +1229,7 @@ func _pack_all() -> void:
 	for kind in ["disc", "diamond", "square"]:
 		for n in DISC_SIZES:
 			shape(kind, n / 2.0)
+	solid()
 	for id in layout:
 		var nd: Dictionary = node_of(id)
 		atlased(picture(picture_slug(nd)))
@@ -1088,7 +1305,7 @@ static func radius_by_kind(k: String) -> float:
 			return R_CAPSTONE
 		"keystone":
 			return R_KEYSTONE
-		"notable":
+		"notable", "skill":
 			return R_NOTABLE
 		"start":
 			return R_START
@@ -1099,7 +1316,7 @@ static func radius_by_kind(k: String) -> float:
 
 ## Whether a node carries its picture (a notable, keystone, capstone, the start, a ring node); the smalls are dots.
 static func big_kind(k: String) -> bool:
-	return k in ["notable", "keystone", "capstone", "start", "ring"]
+	return k in ["notable", "skill", "keystone", "capstone", "start", "ring"]
 
 
 ## The frame in passes (23 Oct, the fans): the backdrop and the hulls; the links, one call a colour; the joins; every
@@ -1163,6 +1380,7 @@ func _draw_pick_labels() -> void:
 	pick_label_rects = {}
 	pick_label_hits = {}
 	var canvas := Rect2(Vector2.ZERO, size)
+	var names_r: Array = []                # the names' blocks this frame, read once (BUILD49 V)
 	for pl in _pick_labels:
 		var id: String = pl[0]
 		var p: Vector2 = pl[1]
@@ -1180,7 +1398,8 @@ func _draw_pick_labels() -> void:
 				best = rc0
 				best_n = int(_pick_cache[ck][1])
 		if best_n < 0:
-			var near: Array = _pick_near(id, p, r + float(PICK_OUTS.back()) + sz.length() + 8.0)
+			if names_r.is_empty():
+				names_r = _axis.keys().map(func(ak): return block_rect(str(ak))).filter(func(br): return Rect2(br).size.x > 0.0)
 			best_n = 1 << 30
 			for out in PICK_OUTS:
 				for at in [p + Vector2(-sz.x / 2.0, r + out), p + Vector2(-sz.x / 2.0, -r - out - sz.y), p + Vector2(r + out + 2.0, -sz.y / 2.0),
@@ -1189,7 +1408,7 @@ func _draw_pick_labels() -> void:
 					var rc := Rect2(at, sz)
 					var n: int = (0 if canvas.encloses(rc) else 1000)
 					if n < best_n:
-						n += _pick_covers(rc, near, (at - p).length() + sz.length() + 2.0, best_n - n)
+						n += _covers_at(rc, id, names_r, best_n - n)
 					if n < best_n:
 						best_n = n
 						best = rc
@@ -1255,6 +1474,33 @@ func label_covers(rc: Rect2, own: String) -> int:
 	return _pick_covers(rc, _pick_near(own, rc.get_center(), INF))
 
 
+## What a plate on the canvas covers (PICK_NODE_COST a node or a name), the nodes read from the hit grid under it alone
+## (BUILD49 V: version two's 1,579 nodes, the near list sorted for each label cost 15-20 ms), stopping at `stop`.
+func _covers_at(rc: Rect2, own: String, names_r: Array, stop := 1 << 30) -> int:
+	var n := 0
+	for br in names_r:
+		if Rect2(br).intersects(rc):
+			n += PICK_NODE_COST
+			if n >= stop:
+				return n
+	_ensure_hit()
+	var g: float = (maxf(3.0, R_CAPSTONE * zoom) + 1.0) / zoom
+	var w0: Vector2 = to_web(rc.position) - Vector2(g, g)
+	var w1: Vector2 = to_web(rc.end) + Vector2(g, g)
+	for cx in range(floori(w0.x / HIT_CELL), floori(w1.x / HIT_CELL) + 1):
+		for cy in range(floori(w0.y / HIT_CELL), floori(w1.y / HIT_CELL) + 1):
+			for oid in _hit.get(Vector2i(cx, cy), []):
+				if oid == own:
+					continue
+				var q: Vector2 = to_screen(layout[oid])
+				var rr: float = maxf(3.0, radius_of(node_of(oid)) * zoom) + 1.0
+				if Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y)).distance_to(q) < rr:
+					n += PICK_NODE_COST
+					if n >= stop:
+						return n
+	return n
+
+
 ## The words queued so far, drawn now (the names before the picked label's plate goes over them).
 func _flush_texts() -> void:
 	for key in _texts:
@@ -1265,7 +1511,11 @@ func _flush_texts() -> void:
 	_texts = {}
 
 
+var last_draw_us := 0                  # the last frame's time in _draw (µs; the smoke's and the probe's)
+
+
 func _draw() -> void:
+	var t0 := Time.get_ticks_usec()
 	batches = 0
 	nodes_drawn = 0
 	emblem_rects = {}
@@ -1284,17 +1534,13 @@ func _draw() -> void:
 		if not dry:
 			draw_texture_rect(bd, Rect2((size - bs) / 2.0, bs), false, Color(1, 1, 1, 0.9))
 	if sim == null:
+		last_draw_us = Time.get_ticks_usec() - t0
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
 	draw_under(view)
 	_draw_links(view)
 	draw_between(view)
-	# the nodes
-	for id in layout:
-		var p: Vector2 = to_screen(layout[id])
-		if not view.has_point(p):
-			continue
-		_draw_node(id, p)
+	_draw_nodes(view)
 	_draw_region_names(view)
 	_flush_texts()                         # the names' words under the picked label's plate (it may sit over a name)
 	_draw_pick_labels()
@@ -1306,38 +1552,169 @@ func _draw() -> void:
 				draw_string(t[0], t[1], t[2], HORIZONTAL_ALIGNMENT_LEFT, -1, t[3], t[4])
 	_texts = {}
 	_atlas_flush()
+	last_draw_us = Time.get_ticks_usec() - t0
 
 
-## The links, under the nodes: lit in the region's colour between two owned, amber to one that can be taken, dim
-## otherwise (an element's and the centre's in their colour, faint); gathered by colour and width, one call each.
-func _draw_links(view: Rect2) -> void:
-	var runs := {}                         # [colour, width] -> PackedVector2Array of pairs
+## The nodes (BUILD49 V): read from the packed arrays, culled to the view. Below SMALL_ART_ZOOM a lesser node is a dot in
+## its colour (_draw_dot, one or two cells of the atlas); the rest, and every node closer in, _draw_node.
+func _draw_nodes(view: Rect2) -> void:
+	if _ids.size() != layout.size():
+		_pack_ids()
+	var half: Vector2 = size / 2.0
+	var dots: bool = zoom < SMALL_ART_ZOOM and nodes_are_web()
+	var r_dot: float = maxf(DOT_MIN, R_SMALL * zoom)
+	var disc: Texture2D = shape("disc", r_dot + 1.0)
+	var hi: int = _ix.get(hover, -1)
+	var si: int = _ix.get(selected, -1)
+	var vx0: float = view.position.x
+	var vy0: float = view.position.y
+	var vx1: float = view.end.x
+	var vy1: float = view.end.y
+	if dots and _batch_key != "atlas":
+		_tally("atlas")
+	for i in range(_ids.size()):
+		var p: Vector2 = (_pos[i] - cam) * zoom + half
+		if p.x < vx0 or p.y < vy0 or p.x > vx1 or p.y > vy1:
+			continue
+		if dots and _kidx[i] == 0 and i != hi and i != si:
+			nodes_drawn += 1
+			var st: int = _st[i]
+			if st == 0:                        # dark: a dot of its colour over the canvas (DARK_DOT)
+				if not dry:
+					draw_texture_rect(disc, Rect2(p.x - r_dot, p.y - r_dot, 2.0 * r_dot, 2.0 * r_dot), false, _dark[i])
+			else:
+				_draw_dot(i, st, p, r_dot, disc)
+		else:
+			_draw_node(_ids[i], p)
+
+
+## A lesser node at the whole web: owned, lit in its colour with a glow; can take, ringed amber.
+func _draw_dot(i: int, st: int, p: Vector2, r: float, disc: Texture2D) -> void:
+	var tone: Color = _tones[i]
+	if st == 2:
+		_shape("disc", p, r * GLOW_R, Color(tone, GLOW))
+		_dot(disc, p, r, tone)
+	else:
+		_dot(disc, p, r + 1.0, FRONTIER)
+		_dot(disc, p, maxf(0.6, r - 0.6), Pal.CARD)
+
+
+func _dot(tex: Texture2D, p: Vector2, r: float, col: Color) -> void:
+	if _batch_key != "atlas":
+		_tally("atlas")
+	if not dry:
+		draw_texture_rect(tex, Rect2(p.x - r, p.y - r, 2.0 * r, 2.0 * r), false, col)
+
+
+## The links, under the nodes: lit in the node's colour between two owned, amber to one that can be taken, dim
+## otherwise (a track's, an element's and the centre's in their colour, faint). Gathered by colour and width in web
+## space once a state (_gather_links), moved to the screen a run at a time (one transform each, no per-link work).
+var _link_runs := {}                   # [colour, lit] -> PackedVector2Array of pairs, web space
+var _link_runs_sig := ""
+## Every link is drawn dark, gathered once a layout (_dim_runs); the lit and the frontier ones go over them, gathered
+## once a state from the owned nodes' links alone (_link_runs).
+var _dim_runs := {}                    # colour -> PackedVector2Array of pairs, web space
+var _by_node: Array = []               # node index -> the pair indices on it
+func _draw_links(_view: Rect2) -> void:
 	_ensure_bends()
+	if _pair_n != _links_sig():
+		_pair_list()
+	var sig := "%s|%s" % [_state_sig, _pair_n]
+	if sig != _link_runs_sig:
+		_gather_links()
+		_link_runs_sig = sig
+	var xf := Transform2D(0.0, Vector2(zoom, zoom), 0.0, size / 2.0 - cam * zoom)
+	var w: float = LINK_W * maxf(0.6, zoom)
+	for col in _dim_runs:
+		_tally("lines")
+		if not dry:
+			draw_multiline(xf * PackedVector2Array(_dim_runs[col]), col, w, true)
+	for run in _link_runs:
+		_tally("lines")
+		if not dry:
+			draw_multiline(xf * PackedVector2Array(_link_runs[run]), run[0], w * (1.6 if run[1] else 1.0), true)
+
+
+func _gather_links() -> void:
+	_link_runs = {}
+	var seen := {}
+	for i in range(_st.size()):
+		if _st[i] != 2:
+			continue
+		for j in _by_node[i]:
+			if seen.has(j):
+				continue
+			seen[j] = true
+			var sa: int = _st[_pa[j]]
+			var sb: int = _st[_pb[j]]
+			var lit: bool = sa == 2 and sb == 2
+			if not lit and sa + sb != 3:
+				continue                  # owned to a dark one: its dark line stands
+			var run := [_ptone[j] if lit else Color(FRONTIER, 0.85), lit]
+			if not _link_runs.has(run):
+				_link_runs[run] = PackedVector2Array()
+			_link_runs[run].append_array(_pair_pts(j))
+
+
+## A link's segments in web space: its two ends, or its bend's.
+func _pair_pts(j: int) -> PackedVector2Array:
+	var bent: PackedVector2Array = _pbend[j]
+	if bent.is_empty():
+		return PackedVector2Array([_pos[_pa[j]], _pos[_pb[j]]])
+	var out := PackedVector2Array()
+	for q in range(bent.size() - 1):
+		out.append(bent[q])
+		out.append(bent[q + 1])
+	return out
+
+
+## Every link once, as indices into the packed arrays, with its lit colour, its dark colour and its bend (link_colour's
+## rule, worked once a layout and its bends).
+var _pa := PackedInt32Array()
+var _pb := PackedInt32Array()
+var _ptone := PackedColorArray()
+var _pdim := PackedColorArray()
+var _pbend: Array = []
+var _pair_n := ""
+func _links_sig() -> String:
+	return "%d|%d|%d" % [_ids.size(), links_all().size(), _bends.size()]
+
+
+func _pair_list() -> void:
+	_pa = PackedInt32Array()
+	_pb = PackedInt32Array()
+	_ptone = PackedColorArray()
+	_pdim = PackedColorArray()
+	_pbend = []
+	var at := {}
+	for i in range(_ids.size()):
+		at[_ids[i]] = i
+	var keep: Dictionary = _state
+	_state = {}                            # link_colour's dark rule: neither end owned nor takeable
 	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
-			if str(a) > str(b) or not layout.has(a) or not layout.has(b):
-				continue              # each pair once (the links run both ways)
-			var pa: Vector2 = to_screen(layout[a])
-			var pb: Vector2 = to_screen(layout[b])
-			if not view.has_point(pa) and not view.has_point(pb):
+			if str(a) > str(b) or not at.has(a) or not at.has(b):
 				continue
-			var lit: bool = _state.get(a, {}).get("taken", false) and _state.get(b, {}).get("taken", false)
-			var run := [link_colour(str(a), str(b)), LINK_W * (1.6 if lit else 1.0) * maxf(0.6, zoom)]
-			if not runs.has(run):
-				runs[run] = PackedVector2Array()
-			var bent: PackedVector2Array = bend_of(str(a), str(b))
-			if bent.is_empty():
-				runs[run].append(pa)
-				runs[run].append(pb)
-			else:
-				for k in range(bent.size() - 1):
-					runs[run].append(to_screen(bent[k]))
-					runs[run].append(to_screen(bent[k + 1]))
-	for run in runs:
-		_tally("lines")
-		if not dry:
-			draw_multiline(runs[run], run[0], run[1], true)
+			_pa.append(at[a])
+			_pb.append(at[b])
+			_ptone.append(tone_of(link_key(str(a), str(b))))
+			_pdim.append(link_colour(str(a), str(b)))
+			_pbend.append(bend_of(str(a), str(b)))
+	_state = keep
+	_by_node = []
+	_by_node.resize(_ids.size())
+	for i in range(_ids.size()):
+		_by_node[i] = []
+	_dim_runs = {}
+	for j in range(_pa.size()):
+		_by_node[_pa[j]].append(j)
+		_by_node[_pb[j]].append(j)
+		var col: Color = _pdim[j]
+		if not _dim_runs.has(col):
+			_dim_runs[col] = PackedVector2Array()
+		_dim_runs[col].append_array(_pair_pts(j))
+	_pair_n = _links_sig()
 
 
 ## A reachable link's colour, lighter than the region's (or darker where the colour's near white already).
@@ -1351,15 +1728,26 @@ static func reach_tone(tone: Color) -> Color:
 func link_colour(a: String, b: String) -> Color:
 	var sa: Dictionary = _state.get(a, {})
 	var sb: Dictionary = _state.get(b, {})
-	var key: String = a if tinted(a) else (b if tinted(b) else a)
-	var tone: Color = tone_of(key)
+	var tone: Color = tone_of(link_key(a, b))
 	if sa.get("taken", false) and sb.get("taken", false):
 		return tone
 	if (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
 		return Color(FRONTIER, 0.85)
 	if tinted(a) or tinted(b):
 		return Color(tone, ELEMENT_LINK_DIM)
+	if str(_region.get(a, "")).begins_with("class:") and _track.get(a, "") != "" and _track.get(a, "") == _track.get(b, ""):
+		return Color(tone_of(a), TRACK_LINK_DIM)     # a track's own links in its colour, faint (round six)
 	return LINK_CLASS_DIM if str(_region.get(a, "")).begins_with("class:") else LINK_DIM
+
+
+## Whose colour a link takes: the coloured end's (an element's, a join's, the centre's), else the end that isn't the
+## start (BUILD49 V: a class's link lit in its track's colour, not the start's amber).
+func link_key(a: String, b: String) -> String:
+	if tinted(a):
+		return a
+	if tinted(b):
+		return b
+	return b if _track.get(a, "") == "start" else a
 
 
 ## A link's path in web space (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so it read as Tough to
@@ -1379,9 +1767,27 @@ func _layout_sig() -> Vector3:
 	return Vector3(layout.size(), sum.x, sum.y)
 
 
-## The bends worked for the layout as it stands: once a frame at most (the sum walks every node).
+## The layout's signature, kept (merge 49's review: the sum walked all ~1,580 nodes every frame, a hover's redraw
+## too): worked again only when the layout is a new one (lay_out), changes size, or layout_moved() says a place moved.
+var _sig_cache := Vector3.ZERO
+var _sig_of: Dictionary = {}           # the layout dictionary the signature was worked for
+var _sig_n := -1
+func layout_sig() -> Vector3:
+	if not is_same(_sig_of, layout) or _sig_n != layout.size():
+		_sig_cache = _layout_sig()
+		_sig_of = layout
+		_sig_n = layout.size()
+	return _sig_cache
+
+
+## A node's place changed in the layout as it stands: the kept signature (and so the bends) worked again.
+func layout_moved() -> void:
+	_sig_n = -1
+
+
+## The bends worked for the layout as it stands: once a layout (the signature kept, layout_sig).
 func _ensure_bends() -> void:
-	if _bends_for != _layout_sig():
+	if _bends_for != layout_sig():
 		_find_bends()
 
 
@@ -1432,7 +1838,7 @@ func _bend_r(id: String) -> float:
 
 func _find_bends() -> void:
 	_bends = {}
-	_bends_for = _layout_sig()
+	_bends_for = layout_sig()
 	_index_nodes(_bend_r)
 	_find_bends_indexed()
 	_near = {}
@@ -1479,9 +1885,7 @@ func _draw_region_names(view: Rect2) -> void:
 			tone = Pal.ACCENT
 		var dims: Dictionary = block_dims(key, zoom)
 		var br: Rect2 = block_rect(key)
-		_tally("")
-		if not dry:
-			draw_rect(br, Color(Pal.BG, 0.78))          # the plate: a link under the name doesn't cut it (0.12.2)
+		_sprite(solid(), br, Color(Pal.BG, 0.78))     # the plate: a link under the name doesn't cut it (0.12.2); from the atlas (BUILD49 V)
 		block_sizes[key] = [dims["ts"], dims["es"]]
 		var wr: Rect2 = label_rect(key)
 		var fs: int = int(round(dims["ts"]))
@@ -1497,13 +1901,13 @@ func draw_under(view: Rect2) -> void:
 	portrait_rect = Rect2()
 	if sim != null and str(sim.cls) != "" and nodes_are_web() and _axis.has("class:" + str(sim.cls)):
 		var face: Texture2D = wheel_portrait(str(sim.cls))
-		var fc: Vector2 = label_rect("class:" + str(sim.cls)).get_center()     # on the class's name (0.12.2, Matt)
+		var fc: Vector2 = block_rect("class:" + str(sim.cls)).get_center()     # on the class's name and its emblems (0.12.2, Matt; BUILD49 V: the block's middle)
 		var fr: float = maxf(PORTRAIT_R * zoom, block_rect("class:" + str(sim.cls)).size.x / 2.0 + 10.0)
 		if face != null and view.grow(fr).has_point(fc):
 			portrait_rect = Rect2(fc - Vector2(fr, fr), Vector2(fr, fr) * 2.0)
 			_sprite(atlased(face), portrait_rect, PORTRAIT_SHADE)
 	var c: Vector2 = to_screen(Vector2.ZERO)
-	var r: float = R_RING * zoom
+	var r: float = _ring_r * zoom
 	if not view.grow(r).has_point(c):
 		return
 	var dashes := PackedVector2Array()
@@ -1529,10 +1933,15 @@ func _draw_node(id: String, p: Vector2) -> void:
 	var k: String = str(_kind.get(id, nd.get("web_kind", "small")))
 	var tone: Color = _tone.get(id, Pal.TEXT)
 	var r: float = radius_of(nd) * zoom
+	if big_kind(k) and k != "ring":
+		r = maxf(r, BIG_MIN)               # a big node reads at the whole web (BUILD49 V)
+	elif k == "small":
+		r = maxf(r, DOT_MIN)
 	var z: float = maxf(0.7, zoom)
 	var taken: bool = st.get("taken", false)
 	var reach: bool = st.get("reach", false)
 	var diamond: bool = k == "keystone" or k == "capstone"
+	var sq: String = "square" if k == "skill" else "disc"     # a skill a rounded square (round six)
 	var fill: Color = Pal.BG
 	var line: Color = Pal.CARD_LINE.lerp(tone, RING_DIM)
 	var w: float = 1.0
@@ -1540,7 +1949,7 @@ func _draw_node(id: String, p: Vector2) -> void:
 		fill = Pal.CARD.lerp(tone, 0.55)
 		line = tone
 		w = 2.0
-		_shape("diamond" if diamond else "disc", p, r * GLOW_R, Color(tone, GLOW))
+		_shape("diamond" if diamond else sq, p, r * GLOW_R, Color(tone, GLOW))
 	elif reach:
 		fill = Pal.CARD
 		line = FRONTIER
@@ -1557,8 +1966,8 @@ func _draw_node(id: String, p: Vector2) -> void:
 		_shape("diamond", p, r + o, line)
 		_shape("diamond", p, maxf(0.5, r - o), fill)
 	else:
-		_shape("disc", p, r + w / 2.0, line)
-		_shape("disc", p, maxf(0.5, r - w / 2.0), fill)
+		_shape(sq, p, r + w / 2.0, line)
+		_shape(sq, p, maxf(0.5, r - w / 2.0), fill)
 	if big_kind(k):
 		var pic: Texture2D = picture(picture_slug(nd))
 		if pic != null and zoom >= PIC_ZOOM:
@@ -1585,7 +1994,7 @@ func _draw_node(id: String, p: Vector2) -> void:
 		_text(_font, p + Vector2(-sw / 2.0, r + (28.0 if named else 13.0)), stack_v, 11, Pal.TEXT if taken else Pal.TEXT_3)     # under the name when it shows (0.12.2)
 	# the name under a big node, from the label zoom (the hovered and the picked always: under the zoom, on a plate of
 	# their own, after the nodes, where it covers the fewest - _draw_pick_labels)
-	if zoom < LABEL_ZOOM and (id == hover or id == selected) and big_kind(k) and str(nd.get("name", "")) != "":
+	if (id == hover or id == selected) and (zoom < LABEL_ZOOM or not big_kind(k)) and k != "ring" and str(nd.get("name", "")) != "":     # every named node on hover, a lesser one too (BUILD49 V)
 		_pick_labels.append([id, p, r, Pal.TEXT if taken or reach else Pal.TEXT_3])
 	elif zoom >= LABEL_ZOOM and big_kind(k) and str(nd.get("name", "")) != "":
 		var words: String = str(nd["name"])
@@ -1595,10 +2004,36 @@ func _draw_node(id: String, p: Vector2) -> void:
 
 # ------------------------------------------------------------------ input
 
+## The node under a point on the canvas (BUILD49 V: the nodes within reach only, from the hit grid).
+const HIT_CELL := 64.0
+var _hit := {}                         # Vector2i cell -> ids, web space, built with the layout
+var _hit_n := -1
 func node_at(screen_p: Vector2) -> String:
+	_ensure_hit()
+	var w: Vector2 = to_web(screen_p)
+	var reach: float = (maxf(12.0, R_CAPSTONE * zoom) + 4.0) / zoom
+	var cand: Array = []
+	for cx in range(floori((w.x - reach) / HIT_CELL), floori((w.x + reach) / HIT_CELL) + 1):
+		for cy in range(floori((w.y - reach) / HIT_CELL), floori((w.y + reach) / HIT_CELL) + 1):
+			cand.append_array(_hit.get(Vector2i(cx, cy), []))
+	return _nearest_hit(screen_p, cand)
+
+
+func _ensure_hit() -> void:
+	if _hit_n != layout.size():
+		_hit = {}
+		for id in layout:
+			var c := Vector2i(floori(layout[id].x / HIT_CELL), floori(layout[id].y / HIT_CELL))
+			if not _hit.has(c):
+				_hit[c] = []
+			_hit[c].append(id)
+		_hit_n = layout.size()
+
+
+func _nearest_hit(screen_p: Vector2, cand: Array) -> String:
 	var best := ""
 	var best_d := INF
-	for id in layout:
+	for id in cand:
 		var p: Vector2 = to_screen(layout[id])
 		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom) + 4.0
 		var d: float = p.distance_to(screen_p)

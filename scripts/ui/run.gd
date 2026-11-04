@@ -1423,6 +1423,7 @@ static func rig_places(widths: Array, cap: int, per_row: int, widest_first: bool
 
 
 const RIG_HEAD := "The rig · click an item to use it"
+var _rig_head_key := ""                   # the rig's head as last set: "", "meds" (Kev's No meds) or "wager:<n>" (BUILD49 U, item 19)
 var _rig_no_meds := false                 # the rig's head as last styled: the meds shut by Kev's wager (BUILD48 A, item 17)
 
 
@@ -1432,10 +1433,19 @@ func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
 	# the meds shut by Kev's wager say why (BUILD48 A, parked item 17; Matt: "my meds wouldnt work or allow me to click")
 	var no_meds: bool = bool(sim.mission["t"].get("no_meds", false))
-	if no_meds != _rig_no_meds:                # restyled only when it moves (the review), not every paint
+	var on: Array = sim.mission.get("wagers", [])     # what Kev's wagers put on this run, over the rig (BUILD49 U, item 19)
+	var head_key: String = "meds" if no_meds else ("wager:%d" % on.size() if not on.is_empty() else "")
+	if head_key != _rig_head_key:                # restyled only when it moves (the review), not every paint
+		_rig_head_key = head_key
 		_rig_no_meds = no_meds
-		UI.fit(_rig_head, [str(Words.RIG_NO_MEDS["head"]).to_upper(), str(Words.RIG_NO_MEDS["med"]).to_upper()] if no_meds else [RIG_HEAD.to_upper()])
-		_rig_head.add_theme_color_override("font_color", Pal.BAD if no_meds else Pal.TEXT_3)
+		if no_meds:
+			UI.fit(_rig_head, [str(Words.RIG_NO_MEDS["head"]).to_upper(), str(Words.RIG_NO_MEDS["med"]).to_upper()])
+		elif not on.is_empty():
+			var what: String = " · ".join(on.map(func(w): return sim.wager_words(w)))
+			UI.fit(_rig_head, [(Words.U49_WAGERS["fight"] % what).to_upper(), (Words.U49_WAGERS["fight"] % sim.wager_words(on[0])).to_upper(), str(Words.U49_WAGERS["fight_short"]).to_upper()])
+		else:
+			UI.fit(_rig_head, [RIG_HEAD.to_upper()])
+		_rig_head.add_theme_color_override("font_color", Pal.BAD if no_meds else (Pal.WARN if not on.is_empty() else Pal.TEXT_3))
 	# laid out again only when what it shows has moved (BUILD43, perf43's cause 3: 1.6-2.4 ms of every paint): the
 	# rig's pieces by value (the rounds in), which are lit, the pick, the runner's figures the hovers read
 	var lits: Array = []

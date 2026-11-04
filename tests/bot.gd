@@ -1884,8 +1884,8 @@ func _climb(_sim) -> void:
 	return
 
 
-## The skill web (3 Nov): the bot buys toward an ordered list of target nodes (web_targets) by the shortest path
-## (Sim.web_path), one point at a time; a target behind a gate (a keystone's 15 spent, a capstone's 40) waits while
+## The skill web (version two, 4 Nov): the bot buys toward an ordered list of target nodes (web_targets) by the shortest
+## path (Sim.web_path), one point at a time; a target behind a gate (a keystone's 30 spent, a capstone's 80) waits while
 ## the points go to the next target, and comes back when the gate opens. With every target owned or shut, a free point
 ## goes on the nearest node it can take that costs the runner nothing (no drawback, no gun it hasn't got).
 func _train_tree(sim) -> void:
@@ -1907,7 +1907,7 @@ func _train_tree(sim) -> void:
 		for t in targets:
 			if sim.web_owned(str(t)):
 				continue
-			var path: Array = sim.web_path(str(t))
+			var path: Array = _path_clear(sim, str(t))
 			if path.is_empty():
 				continue
 			if sim.can_train(str(path[0])):
@@ -1916,6 +1916,40 @@ func _train_tree(sim) -> void:
 				break
 		if not took and not _spare_point(sim):
 			return
+
+
+## The fewest nodes to buy to a target, as Sim.web_path, but round the nodes that ask something back on the way - one
+## with a cost (Night work's kind), a keystone or capstone not the target, another class's start or skill (BUILD49-W:
+## the finds up the middle sit on the shortest road to the capstone); the plain shortest when there's no way round.
+func _path_clear(sim, id: String) -> Array:
+	if sim.web_owned(id):
+		return []
+	var parent := {}
+	var queue: Array = []
+	for o in sim.tree + [Data.web_start(sim.cls)]:
+		if not sim.is_ring(str(o)) and not parent.has(str(o)):
+			parent[str(o)] = ""
+			queue.append(str(o))
+	var head := 0
+	while head < queue.size():
+		var cur: String = queue[head]
+		head += 1
+		if cur == id:
+			var out: Array = []
+			var at: String = id
+			while at != "" and not sim.web_owned(at):
+				out.push_front(at)
+				at = str(parent[at])
+			return out
+		for nb in Data.web_links(cur):
+			if parent.has(nb):
+				continue
+			var nd: Dictionary = sim.node(str(nb))
+			if str(nb) != id and (nd.get("cost", false) or nd.get("keystone", false) or nd.get("capstone", false) or sim.web_class_only(str(nb)) != ""):
+				continue
+			parent[nb] = cur
+			queue.append(nb)
+	return sim.web_path(id)
 
 
 ## A free point with every target owned or behind its gate: the frontier's best node that asks nothing back - a notable
@@ -1940,74 +1974,78 @@ func _spare_point(sim) -> bool:
 	return best != "" and sim.train_node(best)
 
 
-## A class's build as targets on the web, in order (BUILD47-W): its element's flower (the pair's half there, its
-## conversions, the centre notable) and that element's keystone; the class's pair half on that side and that flower's keystone; the centre's
-## inner ring's life and Guard; the second element's flower - its pair half and centre notable (the class's other of
-## AFFINITY; not its conversions, which thin the first's, nor its keystone, which can undo it - Bust them up ends every
-## conversion); the class's capstone; then the first element's capstone. A plain build (no element) takes the first of the class's own two.
+## A class's build as targets on the web, in order (BUILD49-W, the web's version two): the class's pair half on its
+## element's side and the element's column - its half of the pair, its conversions, its centre notable - then that
+## side's track keystone (30 spent); the inner ring's two clusters beside the class (life, Guard or pace); the class's
+## other element's pair (both halves) and centre notable (not its conversions, which would thin the first's, nor its
+## keystone, which can undo it - Bust them up ends every conversion); the element's tip; the class's capstone (80 spent);
+## then the first element's keystone and capstone. A plain build (no element) takes the first of the class's own two.
 static func web_targets(c: String, el: String) -> Array:
 	var two: Array = own_elements(c, el)
 	if two.is_empty():
 		return []
 	var first: String = el if el != "" else str(two[0])
+	var j: int = _class_index(c)
 	var out: Array = []
-	var firsts: Array = _element_targets(c, first)
-	out.append_array(firsts.slice(0, firsts.size() - 1))      # the flower and its keystone; its capstone at the end
 	var halves: Array = joint_halves(c, first)
+	var firsts: Array = _element_targets(c, first)
 	if not halves.is_empty():
 		out.append(str(halves[0]))
-		out.append(_flower_keystone(str(halves[0])))
-	for id in Data.web_ids():
-		if Data.web_slot(str(id)).begins_with("h") and str(_node_of(str(id)).get("effect", "")) in ["hp", "guard_pct"]:     # the inner ring's
-			out.append(str(id))
+	out.append_array(firsts)
+	var left: bool = not halves.is_empty() and Data.web_slot(str(halves[0])).ends_with(":ratbait")
+	out.append(Data.web_of_slot("c%d:%s" % [j, "oneshot" if left else "trapline"]))     # that side's track keystone
+	for k in [(j + 5) % 6, j]:                                    # the inner ring's clusters on the class's two element lines
+		out.append(Data.web_of_slot("h%d" % k))
 	for e in two:
 		if str(e) != first and first in two:                         # the class's other of its pair (an off-pair build has none)
-			var second: Array = _element_targets(c, str(e))
-			out.append(second[0])                                     # its flower: the pair's half and the centre notable - not its
-			out.append(second[second.size() - 3])                    # conversions (they'd thin the first's), nor its keystone (Bust them up ends every conversion)
 			var h2: Array = joint_halves(c, str(e))
 			if not h2.is_empty():
 				out.append(str(h2[0]))
-	for id in Data.web_ids():
-		if Data.web_kind(str(id)) == "capstone" and Data.web_region(str(id)) == "class:" + c:
-			out.append(str(id))
-	out.append(firsts[firsts.size() - 1])
+				out.append(str(h2[1]))
+			out.append(Data.web_of_slot("%s:n" % _element_prefix(str(e))))
+	var pre: String = _element_prefix(first)
+	if pre != "":
+		out.append(Data.web_of_slot(pre + ":tip"))
+	out.append(Data.web_of_slot("c%d:deadquiet" % j))               # the class's capstone
+	if pre != "":
+		out.append(Data.web_of_slot(pre + ":ks"))
+		out.append(Data.web_of_slot(pre + ":cap"))
 	return out.filter(func(x): return str(x) != "")
 
 
-## An element's targets for a class: the class's half there, the flower's conversions, its centre notable, its keystone,
-## its capstone (last: web_targets puts it at the end).
+## An element's targets for a class: the element's half of the class's pair, the column's conversions (the conversion
+## cluster in from the centre first, then the rest), its centre notable.
 static func _element_targets(c: String, el: String) -> Array:
-	var et: Dictionary = Data.element_tree_of(el)
-	var k := -1
-	for i in range(Data.ELEMENT_TREES.size()):
-		if Data.ELEMENT_TREES[i] == et:
-			k = i
-	if k < 0:
+	var pre: String = _element_prefix(el)
+	if pre == "":
 		return []
-	var tn: String = str(et["name"])
-	var slots: Array = []
-	for id in Data.web_ids():
-		if str(id).get_slice("/", 0) == tn:
-			slots.append(Data.web_slot(str(id)))
-	var pre: String = str(slots[0]).get_slice("_", 0)        # "e0"
 	var halves: Array = joint_halves(c, el)
 	var out: Array = [str(halves[1]) if not halves.is_empty() else ""]
-	for i in range(8):                                        # the flower's conversions: what makes the build its element
-		var o: String = Data.web_of_slot("%s_%d" % [pre, i])
-		if str(_node_of(o).get("effect", "")).begins_with("conv_"):
-			out.append(o)
-	return out + [Data.web_of_slot(pre + "_n"), Data.web_of_slot(pre + "_ks"), Data.web_of_slot(pre + "_cap")]
+	var conv: Array = []
+	for id in Data.web_ids():
+		var sl: String = Data.web_slot(str(id))
+		if sl.begins_with(pre + ":") and str(_node_of(str(id)).get("effect", "")).begins_with("conv_"):
+			if sl == pre + ":conv":
+				conv.push_front(str(id))
+			else:
+				conv.append(str(id))
+	out.append_array(conv)
+	out.append(Data.web_of_slot(pre + ":n"))
+	return out
 
 
-## The keystone in the flower a node sits in ("k0_R6" -> the keystone among "k0_R*"), or "".
-static func _flower_keystone(id: String) -> String:
-	var sl: String = Data.web_slot(id)
-	for i in range(8):
-		var o: String = Data.web_of_slot(sl.substr(0, 4) + str(i))
-		if o != "" and Data.web_kind(o) == "keystone":
-			return o
+## An element's slot prefix ("e5" for the Rat Man, by its tree's place in the layout), or "".
+static func _element_prefix(el: String) -> String:
+	var tn: String = str(Data.element_tree_of(el).get("name", ""))
+	for id in Data.web_ids():
+		if str(id).get_slice("/", 0) == tn:
+			return Data.web_slot(str(id)).get_slice(":", 0)
 	return ""
+
+
+## A class's place in the layout's order ("c<j>:"): its start's slot.
+static func _class_index(c: String) -> int:
+	return int(Data.web_slot(Data.web_start(c)).get_slice(":", 0).substr(1))
 
 
 static func _node_of(id: String) -> Dictionary:

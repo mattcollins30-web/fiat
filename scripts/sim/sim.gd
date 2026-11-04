@@ -51,7 +51,8 @@ var standing: Array = []           # the map's Relay and the whole band: words o
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
 var clear_level: Dictionary = {}   # tier -> the runner's level at its first clear (21 Oct): the campaign's fight hardens from there
-var training_points := 0           # earned, one a level, across operators
+var training_points := 0           # the runner's own: two a level past its class's best (skill web version two)
+var rewards_earned := {}              # the camp's reward points (skill web version two, 4 Nov): key -> [points, why]; every runner's, each counted once
 var best_level := 1                # the camp's best level (9 Oct): a level earns a point only past it, so a new runner re-levels for nothing
 var last_craft := {}               # the Bench's last job: {id, kind, words}, for the toast and the craft panel
 var best_tier := 0                 # highest tier extracted from
@@ -1373,6 +1374,7 @@ func issue() -> void:
 	fiat_rate = 1.0
 	log_event(Words.ISSUE["log"] % fiat_words(fiat))
 	chron("issue", issue_moment.duplicate())
+	_web_reward("issue", Data.REWARD_ISSUE, Words.WEB_REWARD["issue"])     # the Issue: two points for every runner
 
 
 ## Scrap, salvage and materials held, at their exchange worth today (28 Oct, Matt, the review's A2): what joins the
@@ -3541,7 +3543,7 @@ func points_spent() -> int:
 
 
 func points_free() -> int:
-	return training_points - points_spent()
+	return training_points + reward_points() - points_spent()
 
 
 ## The centre's tree (the old Pitch's name): a node of it is the runner's like any other now.
@@ -3830,7 +3832,35 @@ func web_frontier(ignore_points := false) -> Array:
 
 
 func web_points() -> int:
-	return training_points
+	return training_points + reward_points()
+
+
+## The camp's reward points (skill web version two, "The rule for spending"): {"points": the total, "from": [{"key",
+## "points", "why"}, ...] in the order earned} - "why" a head's name, a story paper's name, or "the Issue".
+func web_rewards() -> Dictionary:
+	var out: Array = []
+	for k in rewards_earned:
+		out.append({"key": str(k), "points": int(rewards_earned[k][0]), "why": str(rewards_earned[k][1])})
+	return {"points": reward_points(), "from": out}
+
+
+## Every reward point the camp has earned: each runner's, past and future.
+func reward_points() -> int:
+	var n := 0
+	for k in rewards_earned:
+		n += int(rewards_earned[k][0])
+	return n
+
+
+## A reward earned, once: a head's first fall ("head:<name>"), a story paper decrypted ("kev:<paper>"), the Issue
+## ("issue"). Logged and chronicled; a second time does nothing. True when it was new.
+func _web_reward(key: String, pts: int, why: String) -> bool:
+	if rewards_earned.has(key) or pts <= 0:
+		return false
+	rewards_earned[key] = [pts, why]
+	log_event(Words.WEB_REWARD["log"] % [why, pts, "" if pts == 1 else "s"])
+	chron("reward", {"key": key, "points": pts, "total": reward_points()})
+	return true
 
 
 func web_spent() -> int:
@@ -3885,7 +3915,7 @@ func _earn_points(before: int) -> void:
 ## points only for the levels past that class's best. [the best now, the points gained]; said in the log and chronicled.
 func _points_up(before: int, after: int, best: int, who: String) -> Array:
 	if after > best:
-		var gained: int = after - maxi(before, best)
+		var gained: int = (after - maxi(before, best)) * Data.POINTS_A_LEVEL     # two a level (skill web version two)
 		if who == "":
 			log_event(Words.LOG["level_points"] % [after, gained, "" if gained == 1 else "s"])
 			chron("level", {"to": after, "gained": gained, "best": true})
@@ -7895,6 +7925,7 @@ func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 		return
 	var p: Dictionary = Data.pinnacle(k)
 	var first: bool = int(order_beaten.get(k, 0)) == 0
+	_web_reward("head:" + str(p["who"]), Data.REWARD_HEAD, str(p["who"]))     # the order's heads: their first fall
 	chron("order_down", {"key": k, "first": first, "level": int(t.get("level", 0))})
 	_head_materials(m)
 	if first or rng.randf() < Data.PINNACLE_UNIQUE:
@@ -8027,6 +8058,8 @@ func county_taken_count() -> int:
 func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	var k: String = str(b["order"])
 	var c: Dictionary = Data.county(k)
+	if not bool(b.get("remix", false)) and c.has("who"):
+		_web_reward("head:" + str(c["who"]), Data.REWARD_HEAD, str(c["who"]))     # the County's four heads: their first fall
 	if not bool(b.get("remix", false)):
 		chron("county_head", {"key": k, "first": int(order_beaten.get(k, 0)) == 0, "level": int(t.get("level", 0))})
 	_head_materials(m)
@@ -8268,6 +8301,8 @@ func decrypt(ids: Array, crew := -1) -> Dictionary:
 		beat = story_of(it)
 	papers = left                          # spent off the Radio's pile
 	if beat >= 0:
+		for nm in names:
+			_web_reward("kev:" + str(nm), Data.REWARD_KEV, str(nm))     # a chapter of Kev's story: a point each paper, once
 		return _story_signal(beat, names)
 	var grade: Dictionary = signal_grade(ids.size())
 	var roll: Array = grade["roll"]
@@ -12989,6 +13024,8 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
 		log_event(Words.MAP["head_start"] % b["name"])
 	var first: bool = not bosses_beaten[int(b["zone"])]
+	if first:
+		_web_reward("head:" + str(b["name"]), Data.REWARD_HEAD, str(b["name"]))     # a head's first fall: a point for every runner
 	chron("boss", {"name": str(b["name"]), "zone": int(b["zone"]), "tier": int(m["tier"]), "depth": int(t.get("depth", 1)), "first": first,
 		"pinnacle": bool(b.get("pinnacle", false)), "convoy": bool(m.get("convoy", false))})
 	var opened_before: Array = Data.CLASSES.map(func(c): return class_open(str(c["name"])))
@@ -14084,6 +14121,7 @@ func _record_run(m: Dictionary) -> void:
 		if int(it.get("value", 0)) > int(record.get("find_value", 0)):
 			record["find_value"] = int(it["value"])
 			record["find"] = Items.full_name(it)
+			record["find_item"] = it.duplicate(true)     # its picture and rarity on Stats' record (BUILD49 U, item 12)
 
 
 ## A run's end in the playtest record: where, how deep, how it ended, what the runner was, and the run's own figures.
@@ -17934,7 +17972,7 @@ func snap_line() -> Dictionary:
 	for d in best_depth:
 		deepest_v = maxi(deepest_v, int(d))
 	return {"cash": int(cash), "cash_in": int(cash_in), "notes": notes, "scrap": scrap, "salvage": salvage.duplicate(), "xp": int(xp),
-		"best_tier": best_tier, "best_depth": best_depth.duplicate(), "deepest": deepest_v, "points": training_points, "spent": points_spent(),
+		"best_tier": best_tier, "best_depth": best_depth.duplicate(), "deepest": deepest_v, "points": web_points(), "spent": points_spent(),
 		"yard_built": yard_built(), "atlas": atlas_spent(), "stash": stash.size(), "dps": snappedf(dps(), 0.1), "max_hp": int(max_hp()),
 		"mit": snappedf(mitigation(), 0.001), "runs": runs_total, "lost": operators_lost, "kit": loadout_value()}
 
@@ -17959,7 +17997,7 @@ func _state() -> Dictionary:
 		"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
-		"next_id": Items._next_id, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "training_points": training_points, "best_level": best_level,
+		"next_id": Items._next_id, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "training_points": training_points, "best_level": best_level, "web_rewards": rewards_earned,
 		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls, "crew": roster,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
@@ -18100,6 +18138,10 @@ func load_dict(d: Dictionary) -> void:
 		standing.append(str(sw))
 	training_points = int(d.get("training_points", maxi(0, level() - 1)))
 	best_level = int(d.get("best_level", level()))
+	rewards_earned = {}
+	var wr: Dictionary = d.get("web_rewards", {})
+	for rk in wr:
+		rewards_earned[str(rk)] = [int(wr[rk][0]), str(wr[rk][1])]
 	_web_legal_all()                         # a tree the rule can't make loads as one it can (3 Nov, the review of build 47)
 	depot_cleared = bool(d.get("depot_cleared", false))
 	past = d.get("past", [])
@@ -18464,14 +18506,8 @@ func loadout_wear(i: int) -> bool:
 
 
 ## A build as a code: the class, the web's nodes in the order taken, the three skills. "FIAT1-" and the bytes as
-## url-safe base64: [class][skills n][skill...][tree, node]... by index into the sorted lists, so it's short.
-static func _build_trees() -> Array:
-	var names: Array = []
-	for t in Data.TREES + Data.ELEMENT_TREES:
-		names.append(str(t["name"]))
-	return names
-
-
+## url-safe base64: [class][skills n][skill...][node high, node low]... - a node by its place in the layout's order
+## (Data.web_ids; two bytes, the web's version two has 1,549), a skill by its index in the sorted list, so it's short.
 static func _build_skills() -> Array:
 	var ids: Array = Data.SKILLS.keys()
 	ids.sort()
@@ -18490,8 +18526,17 @@ static func _build_version() -> int:
 	return hash(",".join(bits)) & 0xff
 
 
+## A web node's place in the layout's order (the code's two bytes), built once.
+static var _build_at := {}
+static func _build_index() -> Dictionary:
+	if _build_at.is_empty():
+		var ids: Array = Data.web_ids()
+		for i in range(ids.size()):
+			_build_at[str(ids[i])] = i
+	return _build_at
+
+
 func build_code() -> String:
-	var tree_names := _build_trees()
 	var skills := _build_skills()
 	var b := PackedByteArray()
 	b.append(_build_version())
@@ -18500,12 +18545,12 @@ func build_code() -> String:
 	b.append(sk.size())
 	for id in sk:
 		b.append(skills.find(str(id)))
+	var at := _build_index()
 	for id in tree:
-		var t: int = tree_names.find(str(id).get_slice("/", 0))
-		if t < 0 or is_ring(str(id)):
+		if not at.has(str(id)) or is_ring(str(id)):
 			continue                          # the runner's web; the ring is the crew's (the review)
-		b.append(t)
-		b.append(int(str(id).get_slice("/", 1)))
+		b.append(int(at[str(id)]) >> 8)
+		b.append(int(at[str(id)]) & 0xff)
 	return Data.BUILD_PREFIX + Marshalls.raw_to_base64(b).replace("+", "-").replace("/", "_").replace("=", "")
 
 
@@ -18529,7 +18574,7 @@ func build_read(code: String) -> Dictionary:
 	b = b.slice(1)
 	if int(b[0]) >= Data.CLASSES.size():
 		return {}
-	var tree_names := _build_trees()
+	var ids: Array = Data.web_ids()
 	var skills := _build_skills()
 	var n: int = int(b[1])
 	if b.size() < 2 + n or (b.size() - 2 - n) % 2 != 0:
@@ -18541,11 +18586,10 @@ func build_read(code: String) -> Dictionary:
 		out["skills"].append(str(skills[int(b[2 + k])]))
 	var k2: int = 2 + n
 	while k2 < b.size():
-		if int(b[k2]) >= tree_names.size():
+		var i: int = (int(b[k2]) << 8) | int(b[k2 + 1])
+		if i >= ids.size():
 			return {}
-		var id: String = "%s/%d" % [tree_names[int(b[k2])], int(b[k2 + 1])]
-		if node(id).is_empty():
-			return {}
+		var id: String = str(ids[i])
 		out["nodes"].append(id)
 		k2 += 2
 	return out

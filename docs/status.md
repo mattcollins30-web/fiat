@@ -70,6 +70,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   frames (p90 16 ms at a level-40 signal, 9 ms with the crew, from 19-27 ms whole dry runs); live_guard's ~2 ms a frame
   is a further speed fix. The UI reworks (6, 12, 14, 15, 18, 19, 21, 23, 25) are on the canvas "Fiat – Fix round UI"
   (https://claude.ai/artifact/STAWLDppiNCUqZ5rL5kMs4) for Matt's picks. The SMG flash points: a contact sheet for Matt.
+- **0.13.0 phase 1 done (4-5 Nov, build 49, not yet played):** the skill web version two (1,549 nodes from
+  docs/design/skill_web_layout.json; two points a level past the class's best plus 22 reward points; gates at 30 and
+  80; SAVE_VERSION 24; the bot by shortest path - every class a keystone at 17-18, 80 spent at 41, its capstone at 42),
+  Training drawn at the new size (10 draw calls, ~5 ms at the whole web), and the nine UI reworks as picked. New on the
+  web, glyphs till their art: the 18 new names ("Square-bashing" renamed "Bulled boots" by the language pass: it
+  clashed with the Ordnance node "Square bashing") - an art manifest due. Kev's new last line (the substation) shows on
+  the Story tab only till Matt records it. Next: phase 2, act two (docs/design/act_two.md).
 - **The UI reworks' picks (4 Nov, Matt: "take your picks across the board and build it"):** 6 as drawn; 12 A (the
   picture left); 14 A (today's boxes with their pictures); 15 B (the site card's row, steppers); 18 as drawn, with
   item 13's line (the odds assume a med used under 40% HP, said on the card); 19 as drawn (the night's break with act
@@ -6390,6 +6397,17 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 5 Nov (night): 0.13.0 phase 1 - the skill web version two, its screen, the UI reworks (build 49)
+
+Matt: "take your picks across the board and build it". Three builders side by side (W the web's rules, V Training, U the
+reworks), merged; the reviewer's seven findings fixed (the wager odds read stepped across frames and keyed without HP,
+only settled reads kept; the web's layout signature cached; the balance snapshot's points with the rewards; Kev's Next
+strip on key items; two smoke fixtures); the language pass (two reviewers; the editor's calls: figures for "Two a
+level", "of 3", "3 times"; "the kit worn lost" / "no kit lost"; "Odds assume meds used under 40% HP"; "+1 for the
+Gamekeeper's first fall"; "Bulled boots" for the new Recruit notable). Smoke green in the cloud and on Matt's machine;
+lint 0. Also tonight (Matt: "The tooling for repeatable game dev, did you put it into a document?"): the cloud build
+kit, docs/process/cloud_builds.md and tools/cloud/ (5ac5233).
 
 ## 4 Nov (night): the fix round, part 1 (build 48: 18 of the playtest's 28 items)
 

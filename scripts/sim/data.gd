@@ -2394,22 +2394,40 @@ const FILLERS := [
 const RES_NAMES := {"fire": "Singed", "frost": "Wrapped up", "poison": "Hardened", "shock": "Insulated", "bleed": "Clotted"}
 const STAT_SMALLS := {"stat:hp": {"name": "Hardy", "effect": "hp", "value": 4}, "stat:guard": {"name": "Guarded", "effect": "guard_pct", "value": 3},
 	"stat:pace": {"name": "Brisk", "effect": "pace_pct", "value": 2}}     # the centre's two rings (skill_web.md "The centre"): 4 HP, 3% Guard, 2% pace
-## The one rule's two gates (skill_web.md): a keystone wants this many points spent first, a capstone this many.
-const KEYSTONE_SPENT := 15
-const CAPSTONE_SPENT := 40
+## The one rule's two gates (skill_web.md version two, 4 Nov: 15/40 to 30/80): a keystone wants this many points spent
+## first, a capstone this many.
+const KEYSTONE_SPENT := 30
+const CAPSTONE_SPENT := 80
+## The points (skill_web.md version two, "The rule for spending"): two a level past the class's best, and the camp's
+## reward points, every runner's, past and future - each reward counted once: a head's first fall (the campaign's four
+## crews, the order's three, the County's four: 11), each of Kev's story papers decrypted (three a beat: 9), the Issue (2).
+const POINTS_A_LEVEL := 2
+const REWARD_HEAD := 1
+const REWARD_KEV := 1
+const REWARD_ISSUE := 2
+## A lesser node's track once its pool is dry (skill_web.md version two, "Lesser nodes": each takes its track's value -
+## the class's smalls first, then these; the balance pass sets them). "el" and "ctl" cycle FILLERS as version one did.
+const TRACK_FILLERS := {
+	"dmg": [{"name": "Keen", "effect": "damage_pct", "value": 3}],
+	"skill": [{"name": "Practised", "effect": "cdr_pct", "value": 2}],
+	"def": [{"name": "Hardy", "effect": "hp", "value": 4}, {"name": "Guarded", "effect": "guard_pct", "value": 3}, {"name": "Tough", "effect": "armour_pct", "value": 4}],
+	"loot": [{"name": "Lucky", "effect": "loot_pct", "value": 2}, {"name": "Nimble", "effect": "search_pct", "value": 5}],
+}
 const WL := preload("res://scripts/sim/web_layout.gd")
 ## The physical floor (31 Oct, the designer: the Recruit's camp poison and his own Tear gas converted every hit, and
 ## Knuckles' meter - the unconverted share - never moved): a hit's element conversion caps at this in all, shared out as
 ## before past it, so a tenth of every hit stays physical. Bust them up, the Weed Burner and the Last Orders keep their own.
 const CONV_CAP := 0.9
 ## The hung notables (the lanes' "hang" and the keystones' "at" are the old wheel's, kept as the nodes' history): each
-## that the layout names is placed by its slot, the rest stay off the web (BUILD47-W: the plain figures' hangs).
+## placed by the slot that names it - every one since the web's version two (4 Nov: the elements' low pairs, the old
+## starters stepped down to their start's wheel), with the 18 new names of "The places filled" beside them.
 const WEB_EXTRA := {
 	"Ordnance": [
 		{"name": "Pull the pin", "hang": [1.5, -1], "effect": "grenade_pct", "value": 10, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
 		{"name": "Flashbang", "hang": [2.5, -1], "effect": "skill_flashbang", "skill": "flashbang", "notable": true, "words": "Stuns everyone on you for 1.5 seconds; they do 50% less damage to you for 4 seconds"},
 		{"name": "Smoke", "hang": [3.5, -1], "effect": "skill_smoke", "skill": "smoke", "notable": true, "words": "Half their shots at you miss for 6 seconds"},
 		{"name": "Danger close", "hang": [4.5, -1], "effect": "skill_danger_close", "skill": "danger_close", "notable": true, "words": "×4 blast damage to everyone on you; you lose 10% of max HP"},
+		{"name": "Fuse cut short", "effect": "grenade_pct", "value": 25, "notable": true},     # new (4 Nov, skill web version two): the Ordnance track's second notable
 		{"name": "Firing blanks", "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Tear gas"],
 		 "words": "Skills cost 25% less; you do 15% less damage"},
 	],
@@ -2417,6 +2435,8 @@ const WEB_EXTRA := {
 		{"name": "Suppressing fire", "hang": [1.5, 1], "effect": "skill_suppressing_fire", "skill": "suppressing_fire", "notable": true, "words": "Everyone on you fires 35% slower for 8 seconds"},
 		{"name": "Make ready", "hang": [2.5, 1], "effect": "skill_make_ready", "skill": "make_ready", "notable": true, "words": "+25% damage for your next 10 shots"},
 		{"name": "Stand to", "hang": [3.5, 1], "effect": "skill_stand_to", "skill": "stand_to", "notable": true, "words": "Gives 30 energy and takes 2 seconds off every cooldown"},
+		{"name": "By the numbers", "effect": "cdr_pct", "value": 10, "notable": true},     # new (4 Nov, skill web version two): the Drill track's second notable
+		{"name": "Bulled boots", "effect": "energy_regen_pct", "value": 25, "notable": true},     # new (4 Nov, skill web version two): the Recruit's corner notable
 		{"name": "Fire and manoeuvre", "hang": [4.5, 1], "effect": "skill_fire_and_manoeuvre", "skill": "fire_and_manoeuvre", "notable": true, "words": "For 10 seconds, skills cost half and cooldowns pass twice as quickly"},
 	],
 	"The Pitch": [
@@ -2426,6 +2446,9 @@ const WEB_EXTRA := {
 		{"name": "Market day", "hang": [1.5, 1], "effect": "sell_pct", "value": 10, "notable": true},
 		{"name": "The kettle", "hang": [3.5, 1], "effect": "rest_pct", "value": 15, "notable": true},     # a wound is the Clinic's alone, so the kettle is the rest
 		{"name": "Word of mouth", "hang": [4.5, 1], "effect": "word_of_mouth", "notable": true, "words": "A note on each site's first clear"},
+		{"name": "Chin down", "effect": "guard_pct", "value": 6, "notable": true},     # new (4 Nov, skill web version two): the inner ring's Guard clusters
+		{"name": "Elbows in", "effect": "guard_pct", "value": 6, "notable": true},
+		{"name": "Shortcuts", "effect": "pace_pct", "value": 4, "notable": true},      # new: the inner ring's second pace cluster, as Good boots
 	],
 	"Stripping": [
 		{"name": "Nose for parts", "hang": [1.5, -1], "effect": "att_share", "value": 15, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
@@ -2502,36 +2525,48 @@ const WEB_EXTRA := {
 		{"name": "Oil drum", "hang": [2, 1], "effect": "fire_last_pct", "value": 25, "notable": true, "words": "Burns last 25% longer"},
 		{"name": "Flashpoint", "hang": [4.5, -1], "effect": "conv_fire_pct", "value": 10, "notable": true},
 		{"name": "Backdraught", "hang": [4, 1], "effect": "backdraught", "notable": true, "words": "A burning one that dies lights the next"},
+		{"name": "Forecourt", "effect": "fire_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Bonfire night", "effect": "fire_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 	"Live": [
 		{"name": "Live rail", "hang": [1.5, -1], "effect": "shock_pct", "value": 15, "notable": true},
 		{"name": "Capacitor", "hang": [2, 1], "effect": "capacitor", "notable": true, "words": "The first of each gang is shocked"},
 		{"name": "Stripped wire", "hang": [4.5, -1], "effect": "conv_shock_pct", "value": 10, "notable": true},
 		{"name": "Overload", "hang": [4, 1], "effect": "overload", "notable": true, "words": "A shocked one dies under 20% HP"},
+		{"name": "Crossed wires", "effect": "shock_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Fuse box", "effect": "shock_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 	"Blades": [
 		{"name": "Honed", "hang": [1.5, -1], "effect": "bleed_pct", "value": 15, "notable": true},
 		{"name": "Serrated", "hang": [2, 1], "effect": "bleed_last_pct", "value": 25, "notable": true, "words": "Bleeds last 25% longer"},
 		{"name": "Whetstone", "hang": [4.5, -1], "effect": "conv_bleed_pct", "value": 10, "notable": true},
 		{"name": "Arterial", "hang": [4, 1], "effect": "arterial", "notable": true, "words": "Bleed does ×2 for its first second"},
+		{"name": "Paper cuts", "effect": "dot_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Shiv", "effect": "bleed_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 	"Knuckles": [
 		{"name": "Knuckleduster", "hang": [1.5, -1], "effect": "physical_pct", "value": 15, "notable": true},
 		{"name": "Shin pads", "hang": [2, 1], "effect": "armour_pct", "value": 8, "notable": true},
 		{"name": "Low blow", "hang": [4.5, -1], "effect": "first_pct", "value": 15, "notable": true},
 		{"name": "Floored", "hang": [4, 1], "effect": "floored", "notable": true, "words": "A staggered one loses a second of fire"},
+		{"name": "Sucker punch", "effect": "physical_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Bare-knuckle", "effect": "armour_pct", "value": 8, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 	"The cold": [
 		{"name": "Chilblains", "hang": [1.5, -1], "effect": "frost_pct", "value": 15, "notable": true},
 		{"name": "Deep freeze", "hang": [2, 1], "effect": "frost_last_pct", "value": 25, "notable": true, "words": "Chills last 25% longer"},
 		{"name": "Sleet", "hang": [4.5, -1], "effect": "conv_frost_pct", "value": 10, "notable": true},
 		{"name": "Brittle", "hang": [4, 1], "effect": "brittle", "notable": true, "words": "+30% physical to a frozen one"},
+		{"name": "Black ice", "effect": "frost_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Brass monkeys", "effect": "frost_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 	"The Rat Man": [
 		{"name": "Strychnine", "hang": [1.5, -1], "effect": "poison_pct", "value": 15, "notable": true},
 		{"name": "Takes its time", "hang": [2, 1], "effect": "poison_last_pct", "value": 25, "notable": true, "words": "Poison lasts 25% longer"},
 		{"name": "Tainted", "hang": [4.5, -1], "effect": "conv_poison_pct", "value": 10, "notable": true},
 		{"name": "Catching", "hang": [4, 1], "effect": "catching", "notable": true, "words": "A poisoned one that dies doses the next"},
+		{"name": "Nest", "effect": "poison_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
+		{"name": "Rat run", "effect": "poison_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
 }
 static var _WEB: Dictionary = _web_build_all()
@@ -2545,7 +2580,7 @@ const RING_NODES := 30
 const RING_STEP := 12.0
 const RING_STACK := 10
 const RING_ENTRY_ANGLES := [-90.0, -30.0, 30.0, 90.0, 150.0, -150.0]     # the classes' angles on the skill web (tools/make_skill_web.py CLASSES; 3 Nov, merge 47: were the wheel's)
-const RING_R := 500.0              # the ring's radius in web units (the skill web, 3 Nov): outside the web's ~480
+const RING_R := 1120.0             # the ring's radius in web units (the skill web version two, 4 Nov: the layout's Paragon ring; was 500)
 static var RING: Dictionary = _ring_build()
 
 
@@ -2593,19 +2628,28 @@ static func _web_build_all() -> Dictionary:
 	var fill_at := {}                                      # tree -> the fillers made, for the cycle
 	var got := {}                                          # slot -> [tree, node]
 	var dropped: Array = []
+	var track_at := {}                                     # track -> the track fillers made, for the cycle
 	for s in WL.SLOTS:
 		var tn: String = str(s["tree"])
 		var nd: Dictionary
 		var pool: String = str(s["pool"])
+		var track: String = str(s.get("track", ""))
 		if str(s["name"]) != "":
 			assert(src_of.has(str(s["name"])), "a web slot names a node that isn't there: " + str(s["name"]))
 			nd = Dictionary(src_of[str(s["name"])][1]).duplicate(true)
+			if tn == "":
+				tn = str(src_of[str(s["name"])][0])        # version two: a named node stays in its own tree, so its id is its source's
 		elif pool.begins_with("class:") and int(pool_at.get(pool.substr(6), 0)) < smalls[pool.substr(6)].size():
 			var own: String = pool.substr(6)
 			nd = Dictionary(smalls[own][int(pool_at.get(own, 0))]).duplicate(true)
 			pool_at[own] = int(pool_at.get(own, 0)) + 1
 		elif STAT_SMALLS.has(pool):
 			nd = Dictionary(STAT_SMALLS[pool]).duplicate()
+			nd["filler"] = true
+		elif TRACK_FILLERS.has(track):
+			var tf: Array = TRACK_FILLERS[track]
+			nd = Dictionary(tf[int(track_at.get(track, 0)) % tf.size()]).duplicate()
+			track_at[track] = int(track_at.get(track, 0)) + 1
 			nd["filler"] = true
 		else:
 			var k: int = order.find(tn) % 6
@@ -2619,7 +2663,7 @@ static func _web_build_all() -> Dictionary:
 		for k in ["links", "xlinks", "hang", "link_at", "entry", "wheel", "beside", "notable", "keystone", "capstone"]:
 			nd.erase(k)
 		var kind: String = str(s["kind"])
-		if kind == "notable" or kind == "start":
+		if kind == "notable" or kind == "start" or kind == "skill":
 			nd["notable"] = true
 		elif kind == "keystone":
 			nd["keystone"] = true
@@ -2631,6 +2675,7 @@ static func _web_build_all() -> Dictionary:
 		nd["slot"] = str(s["slot"])
 		nd["kind"] = kind
 		nd["web_region"] = str(s["region"])
+		nd["theme"] = str(s.get("theme", ""))
 		nd["region"] = tn
 		got[str(s["slot"])] = [tn, nd]
 	# each tree's nodes: its own source nodes kept in it, in source order, then the rest in slot order
@@ -2737,12 +2782,18 @@ static func web_links(id: String) -> Array:
 	return _WEB["links"].get(id, [])
 
 
-## The layout's region: "centre", "el:<element tree>", "class:<Class>" or "join".
+## The layout's region: "centre", "el:<element tree>" or "class:<Class>".
 static func web_region(id: String) -> String:
 	return str(_web_node(id).get("web_region", ""))
 
 
-## The layout's slot name ("k0_S0").
+## The node's track (version two): "dmg" (the class's attack track), "ctl" (its other), "skill", "def" (staying up),
+## "loot" (finds), "start", "el" (an element's column), "centre"; "" off the web.
+static func web_theme(id: String) -> String:
+	return str(_web_node(id).get("theme", ""))
+
+
+## The layout's slot name ("c0:rifleman", "e5:tip", "h0.2").
 static func web_slot(id: String) -> String:
 	return str(_web_node(id).get("slot", ""))
 

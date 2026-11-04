@@ -1,19 +1,14 @@
-"""The skill web's layout (docs/design/skill_web.md, 3 Nov): writes scripts/sim/web_layout.gd.
-Run: python3 tools/make_skill_web.py (from the repo root). The canvas rounds used the same geometry."""
-import math, json, os, sys
-C = 500
-def P(r, a): return (C + r * math.cos(math.radians(a)), C + r * math.sin(math.radians(a)))
-def Q(c, r, a): return (c[0] + r * math.cos(math.radians(a)), c[1] + r * math.sin(math.radians(a)))
-def ang(p, q): return math.degrees(math.atan2(q[1] - p[1], q[0] - p[0]))
+"""The skill web's layout, version two (docs/design/skill_web.md, 4 Nov): writes scripts/sim/web_layout.gd.
+Run: python3 tools/make_skill_web.py (from the repo root). The places and the joins are the agreed layout's
+(docs/design/skill_web_layout.json, the canvas's round six); this fills each place with its node ("The places
+filled") and gives every lesser node its track's pool. Version one (3 Nov, the petals) is in git history."""
+import math, json, sys
+SRC = "docs/design/skill_web_layout.json"
 CLASSES = [("Poacher", -90, "Stalking", "Snares"), ("Paramedic", -30, "Triage", "Shifts"), ("Scrapper", 30, "Stripping", "Fencing"),
            ("Drifter", 90, "Moving on", "Luck"), ("Doorman", 150, "Muscle", "The door"), ("Recruit", 210, "Ordnance", "Drill")]
 ELEMS = [("The cold", -60), ("Live", 0), ("Petrol", 60), ("Blades", 120), ("Knuckles", 180), ("The Rat Man", 240)]
 PITCH = "The Pitch"
-N, L = {}, []
-def add(slot, p, kind, tree, name="", pool="", region=""):
-    N[slot] = {"slot": slot, "at": [round(p[0] - C, 1), round(p[1] - C, 1)], "kind": kind, "tree": tree, "name": name, "pool": pool, "region": region}
-def link(a, b): L.append([a, b])
-SKILLS = {   # a class tree's hung skills, in today's order (data.gd WEB_EXTRA)
+SKILLS = {   # a class tree's skills, in today's order (data.gd WEB_EXTRA)
  "Stalking": ["Flush them out", "Go to ground", "One for the pot"], "Snares": ["Collared", "Gin trap", "Decoy", "Net every hole"],
  "Triage": ["Antidote", "Adrenaline", "Major incident"], "Shifts": ["Two sugars", "Sedative dart", "Strapped up", "Code blue"],
  "Stripping": ["Hot work", "Breakdown", "Short circuit"], "Fencing": ["Bung", "Knock-off kit", "Back of the van", "Everything must go"],
@@ -21,145 +16,130 @@ SKILLS = {   # a class tree's hung skills, in today's order (data.gd WEB_EXTRA)
  "Muscle": ["Headbutt", "Brace", "Barred"], "The door": ["Not on the list", "Shutters down", "Pat down", "Chucking-out time"],
  "Ordnance": ["Flashbang", "Smoke", "Danger close"], "Drill": ["Suppressing fire", "Make ready", "Stand to", "Fire and manoeuvre"],
 }
-KEY3 = {"Poacher": "Snare and wait", "Paramedic": "Jab", "Scrapper": "Breaker's yard", "Drifter": "On a roll", "Doorman": "Bin lid", "Recruit": "Firing blanks"}
-# an element's two hung notables with a rule of their own (the plain figures' hangs go): on the run's first and last smalls
-EL_HANGS = {"The cold": ["Deep freeze", "Brittle"], "Live": ["Capacitor", "Overload"], "Petrol": ["Oil drum", "Backdraught"],
-            "Blades": ["Serrated", "Arterial"], "Knuckles": [None, "Floored"], "The Rat Man": ["Takes its time", "Catching"]}
-def place(slot, name, kind, tree):
-    s = N[slot]; assert not s["name"], (slot, s["name"], name)
-    s["name"] = name; s["kind"] = kind; s["tree"] = tree; s["pool"] = ""
-# the centre
-add("C", (C, C), "notable", PITCH, "The dog's share", region="centre")
-STAT = {"L": "stat:hp", "G": "stat:guard", "P": "stat:pace"}
-GATES = {0: "Double tap", 1: "Second wind", 2: "Pack horse", 3: "Word of mouth"}     # Word of mouth on g3 (3 Nov, the review of build 47: its rule was off the web)
-for k, (nm, a) in enumerate(ELEMS):
-    add(f"h{k}", P(50, a), "small", PITCH, pool=STAT["LGP"[k % 3]], region="centre")
-    add(f"o{k}-", P(92, a - 15), "small", PITCH, pool=STAT["LGP"[(2 * k) % 3]], region="centre")
-    add(f"o{k}+", P(92, a + 15), "small", PITCH, pool=STAT["LGP"[(2 * k + 1) % 3]], region="centre")
-    if k in GATES: add(f"g{k}", P(128, a), "notable", PITCH, GATES[k], region="centre")
-    else: add(f"g{k}", P(128, a), "small", PITCH, pool="filler", region="centre")     # an open gate: a small until it's designed
-# Long walks and Circuits fold into the life nodes (the spec): the inner ring's two life smalls, their own values
-place("h0", "Long walks", "small", PITCH); place("h3", "Circuits", "small", PITCH)
-for k in range(6):
-    n = (k + 1) % 6
-    for a, b in [("C", f"h{k}"), (f"h{k}", f"h{n}"), (f"h{k}", f"o{k}-"), (f"h{k}", f"o{k}+"), (f"o{k}-", f"o{k}+"), (f"o{k}+", f"o{n}-"), (f"o{k}-", f"g{k}"), (f"o{k}+", f"g{k}")]: link(a, b)
-# the element flowers
-ENAMES = {
- "The cold": {"0": "De-icer", "1": "Frost", "3": "A hard winter", "5": "Numb", "7": "Wind chill", "n": "Chill", "2": "Poacher's snare", "6": "Paramedic's ice", "4": "Cold hands", "rN": "Thermals", "ks": "Frozen solid", "cap": "Shatter"},
- "Live": {"0": "Sparks", "1": "Charge", "3": "Off the mains", "5": "Amps", "7": "Volts", "n": "Current", "2": "Paramedic's paddles", "6": "Scrapper's mains", "4": "Earthed", "rN": "Rubber soles", "ks": "Daisy chain", "cap": "Arc"},
- "Petrol": {"0": "A can of it", "1": "Rags", "3": "Siphoned", "5": "Wick", "7": "Fumes", "n": "Lit", "2": "Scrapper's torch", "6": "Drifter's can", "4": "On your hands", "rN": "Fireproof", "ks": "Spreads", "cap": "Wildfire"},
- "Blades": {"0": "Stanley knife", "1": "An edge", "3": "Sharpened", "5": "Deep", "7": "Nicked", "n": "Opened up", "2": "Drifter's razor", "6": "Doorman's glass", "4": "Blood up", "rN": "Scar tissue", "ks": "Won't stop", "cap": "Bleed out"},
- "Knuckles": {"0": "Bare hands", "1": "Wraps", "3": "Half a brick", "5": "Thick skull", "7": "Weight behind it", "n": "Stagger", "2": "Doorman's knuckles", "6": "Recruit's boots", "4": "Heavy", "rN": "Thick-skinned", "ks": "Bust them up", "cap": "Flattened"},
- "The Rat Man": {"0": "Under the sink", "1": "Bait", "3": "Council issue", "5": "Cumulative", "7": "Slow acting", "n": "Dosed", "2": "Recruit's gas", "6": "Poacher's bait", "4": "Rat's share", "rN": "Immune", "ks": "Builds", "cap": "Lingers"},
+# the template's places (the Poacher's slot names in the layout) and each class's node for them (skill_web.md "The places filled")
+CNAMES = {   # start, corner notable, staying up, Ln, Lpair, L2, Lkey, Rn, Rpair, R2, Rkey, finds 1, finds 2, capstone, corner keystone
+ "Poacher": ["Clean shot", "Early doors", "In the hide", "Rifleman", "Rat bait", "Clocked", "One shot", "Quiet feet", "Cold snap", "Twine", "Trapline", "Night work", "Poached", "Dead quiet", "Snare and wait"],
+ "Paramedic": ["Tourniquet", "Second shift", "Double shift", "Fast work", "Ice pack", "Worst first", "Field surgery", "Walk it off", "Defib", "Clocking off", "Not today", "Walking wounded", "Transfusion", "Clean hands", "Jab"],
+ "Scrapper": ["Ring main", "Workbench", "Sheet metal", "Bodger", "Live wire", "Salvage", "Nothing wasted", "Magpie", "Blowtorch", "Back pocket", "Buyer's market", "Quiet hands", "The lot", "Jerry-rigged", "Breaker's yard"],
+ "Drifter": ["Duck and weave", "Light fingers", "Breather", "Spray", "Bottle and rag", "B-roads", "Never there", "Dead man's shoes", "Cut-throat", "Spare change", "All or nothing", "Hit and run", "Loaded dice", "Ghost", "On a roll"],
+ "Doorman": ["Shoulder charge", "Through the lot", "Squared up", "Shotgunner", "Glassing", "Off the canvas", "Bodyline", "Chokepoints", "Hands on", "Last orders", "One at a time", "Loud", "Iron", "Held", "Bin lid"],
+ "Recruit": ["Lob one in", "Bulled boots", "Double time", "Cook it off", "Brute force", "Fuse cut short", "Grenadier", "Cover me", "Tear gas", "By the numbers", "Quick march", "Blast burns", "Passing-out parade", "Ringing ears", "Firing blanks"],
 }
-for k, (nm, a) in enumerate(ELEMS):
-    c = P(200, a); E = ENAMES[nm]; reg = "el:" + nm
-    for i in range(8):
-        kind = "notable" if i in (2, 4, 6) else "small"
-        add(f"e{k}_{i}", Q(c, 44, a + 180 + i * 45), kind, nm, E[str(i)], region=reg)
-    add(f"e{k}_n", c, "notable", nm, E["n"], region=reg)
-    for i in range(8): link(f"e{k}_{i}", f"e{k}_{(i + 1) % 8}")
-    link(f"g{k}", f"e{k}_0"); link(f"e{k}_0", f"e{k}_n")
-    prev = f"e{k}_4"
-    for s, r, kind in [("r1", 266, "small"), ("r2", 288, "small"), ("rN", 310, "notable"), ("r3", 332, "small"), ("ks", 356, "keystone"), ("cap", 388, "capstone")]:
-        add(f"e{k}_{s}", P(r, a), kind, nm, E.get(s, ""), pool="" if s in E else "filler", region=reg); link(prev, f"e{k}_{s}"); prev = f"e{k}_{s}"
-    for s, h in zip(("r1", "r3"), EL_HANGS[nm]):
-        if h: place(f"e{k}_{s}", h, "notable", nm)
-# the classes: four flowers each
-CNAMES = {   # start, Sn, S4, Ln, Lpair, L2, Lkey, Rn, Rpair, R2, Rkey, Fn, F2, F3, cap
- "Poacher": ["Clean shot", "Early doors", "In the hide", "Rifleman", "Rat bait", "Clocked", "One shot", "Quiet feet", "Cold snap", "Twine", "Trapline", "Night work", "Poached", None, "Dead quiet"],
- "Paramedic": ["Tourniquet", "Second shift", "Double shift", "Fast work", "Ice pack", "Worst first", "Field surgery", "Walk it off", "Defib", "Clocking off", "Not today", "Walking wounded", "Transfusion", None, "Clean hands"],
- "Scrapper": ["Ring main", "Workbench", "Sheet metal", "Bodger", "Live wire", "Salvage", "Nothing wasted", "Magpie", "Blowtorch", "Back pocket", "Buyer's market", "Quiet hands", "The lot", "Hoarder", "Jerry-rigged"],
- "Drifter": ["Duck and weave", "Light fingers", "Breather", "Spray", "Bottle and rag", "B-roads", "Never there", "Dead man's shoes", "Cut-throat", "Spare change", "All or nothing", "Hit and run", "Loaded dice", None, "Ghost"],
- "Doorman": ["Shoulder charge", "Through the lot", "Squared up", "Shotgunner", "Glassing", "Off the canvas", "Bodyline", "Chokepoints", "Hands on", "Last orders", "One at a time", "Loud", "Iron", "Stand and fight", "Held"],
- "Recruit": ["Lob one in", None, "Double time", "Cook it off", "Brute force", None, "Grenadier", "Cover me", "Tear gas", None, "Quick march", "Blast burns", "Passing-out parade", None, "Ringing ears"],
+PLACES = ["start", "N", "hide", "rifleman", "ratbait", "clocked", "oneshot", "quiet", "coldsnap", "twine", "trapline", "nightwork", "poached", "deadquiet", "K"]
+STARTER = {"Poacher": "Still hands", "Paramedic": "Steady pulse", "Scrapper": "Nose for parts", "Drifter": "Light feet", "Doorman": "Heavy hands", "Recruit": "Pull the pin"}
+FINDS_LESSER = {"Scrapper": "Hoarder", "Doorman": "Stand and fight"}     # version one's third far notable, stepped down in a finds cluster
+# the elements' columns: the cluster's node (skill_web.md's element table and "The places filled")
+ENAMES = {   # conv, n, tip, res, ks, cap; the low pair (fL, fR), beside the tip (eL, eR), before the keystone (hL, hR); four smalls (fL, fR, eL, hL clusters)
+ "The cold": ["De-icer", "Chill", "Cold hands", "Thermals", "Frozen solid", "Shatter", "Chilblains", "Sleet", "Deep freeze", "Brittle", "Black ice", "Brass monkeys", "Frost", "A hard winter", "Numb", "Wind chill"],
+ "Live": ["Sparks", "Current", "Earthed", "Rubber soles", "Daisy chain", "Arc", "Live rail", "Stripped wire", "Capacitor", "Overload", "Crossed wires", "Fuse box", "Charge", "Off the mains", "Amps", "Volts"],
+ "Petrol": ["A can of it", "Lit", "On your hands", "Fireproof", "Spreads", "Wildfire", "Accelerant", "Flashpoint", "Oil drum", "Backdraught", "Forecourt", "Bonfire night", "Rags", "Siphoned", "Wick", "Fumes"],
+ "Blades": ["Stanley knife", "Opened up", "Blood up", "Scar tissue", "Won't stop", "Bleed out", "Honed", "Whetstone", "Serrated", "Arterial", "Paper cuts", "Shiv", "An edge", "Sharpened", "Deep", "Nicked"],
+ "Knuckles": ["Bare hands", "Stagger", "Heavy", "Thick-skinned", "Bust them up", "Flattened", "Knuckleduster", "Shin pads", "Low blow", "Floored", "Sucker punch", "Bare-knuckle", "Wraps", "Half a brick", "Thick skull", "Weight behind it"],
+ "The Rat Man": ["Under the sink", "Dosed", "Rat's share", "Immune", "Builds", "Lingers", "Strychnine", "Tainted", "Takes its time", "Catching", "Nest", "Rat run", "Bait", "Council issue", "Cumulative", "Slow acting"],
 }
-KEYS = ["start", "Sn", "S4", "Ln", "Lpair", "L2", "Lkey", "Rn", "Rpair", "R2", "Rkey", "Fn", "F2", "F3", "cap"]
-def nearest(c, o, toward):
-    t = ang(c, toward); return min(range(8), key=lambda i: abs(((o + 180 + i * 45) - t + 180) % 360 - 180))
-START = {}
-for j, (nm, a, lt, rt) in enumerate(CLASSES):
-    cen = {"S": P(300, a), "L": P(372, a - 17), "R": P(372, a + 17), "F": P(440, a)}
-    tree_of = {"S": lt, "L": lt, "R": rt, "F": rt}
-    o = {c: ang((C, C), p) for c, p in cen.items()}
-    for c, p in cen.items():
-        for i in range(8): add(f"k{j}_{c}{i}", Q(p, 34, o[c] + 180 + i * 45), "small", tree_of[c], pool=("class:" + tree_of[c]) if c in "LR" else "filler", region="class:" + nm)
-        add(f"k{j}_{c}n", p, "notable", tree_of[c], region="class:" + nm)
-        for i in range(8): link(f"k{j}_{c}{i}", f"k{j}_{c}{(i + 1) % 8}")
-        link(f"k{j}_{c}0", f"k{j}_{c}n")
-    sl = nearest(cen["S"], o["S"], cen["L"]); sr = nearest(cen["S"], o["S"], cen["R"])
-    ls = nearest(cen["L"], o["L"], cen["S"]); rs = nearest(cen["R"], o["R"], cen["S"])
-    lf = nearest(cen["L"], o["L"], cen["F"]); rf = nearest(cen["R"], o["R"], cen["F"])
-    fl = nearest(cen["F"], o["F"], cen["L"]); fr = nearest(cen["F"], o["F"], cen["R"])
-    link(f"k{j}_S{sl}", f"k{j}_L{ls}"); link(f"k{j}_S{sr}", f"k{j}_R{rs}")
-    link(f"k{j}_L{lf}", f"k{j}_F{fl}"); link(f"k{j}_R{rf}", f"k{j}_F{fr}")
-    lp = nearest(cen["L"], o["L"], Q(cen["L"], 50, a - 100)); rp = nearest(cen["R"], o["R"], Q(cen["R"], 50, a + 100))
-    lk = rk = 4
-    ul = {0, ls, lf, lp}; ur = {0, rs, rf, rp}
-    if lk in ul: lk = next(i for i in (3, 5) if i not in ul)
-    if rk in ur: rk = next(i for i in (5, 3) if i not in ur)
-    l2 = next(i for i in (6, 2, 7, 1) if i not in ul | {lk}); r2 = next(i for i in (2, 6, 1, 7) if i not in ur | {rk})
-    f2 = next(i for i in (2, 6, 3, 5) if i not in {0, 4, fl, fr}); f3 = next(i for i in (6, 2, 5, 3) if i not in {0, 4, fl, fr, f2})
-    slot = dict(start="S0", Sn="Sn", S4="S4", Ln="Ln", Lpair=f"L{lp}", L2=f"L{l2}", Lkey=f"L{lk}", Rn="Rn", Rpair=f"R{rp}", R2=f"R{r2}", Rkey=f"R{rk}", Fn="Fn", F2=f"F{f2}", F3=f"F{f3}", cap="F4")
-    kind = dict(start="start", Lkey="keystone", Rkey="keystone", cap="capstone")
-    for key, name in zip(KEYS, CNAMES[nm]):
-        s = N[f"k{j}_{slot[key]}"]
-        if name:
-            s["name"] = name; s["kind"] = kind.get(key, "notable"); s["pool"] = ""
-            if key == "Lpair": s["pair"] = "left"
-            if key == "Rpair": s["pair"] = "right"
+EPLACES = ["conv", "n", "tip", "res", "ks", "cap", "fL", "fR", "eL", "eR", "hL", "hR", "fL.0", "fR.0", "eL.0", "hL.0"]
+# the pair halves in a column, by the class each faces: pairL the class anticlockwise of the element, pairR the clockwise one
+EPAIRS = {"The cold": ["Poacher's snare", "Paramedic's ice"], "Live": ["Paramedic's paddles", "Scrapper's mains"], "Petrol": ["Scrapper's torch", "Drifter's can"],
+          "Blades": ["Drifter's razor", "Doorman's glass"], "Knuckles": ["Doorman's knuckles", "Recruit's boots"], "The Rat Man": ["Recruit's gas", "Poacher's bait"]}
+# the centre: the dog's share, the inner ring (life, Guard, pace, twice, on the elements' lines), the outer ring under the starts
+CENTRE = {"C": "The dog's share", "h0": "Circuits", "h1": "Chin down", "h2": "Good boots", "h3": "Home ground", "h4": "Elbows in", "h5": "Shortcuts",
+          "o0": "Double tap", "o1": "Second wind", "o2": "Pack horse", "o3": "Word of mouth", "o4": "Market day", "o5": "Well stocked",
+          # the Pitch's named lesser nodes: Long walks in a life cluster, the kettle in Second wind's, the rest one an outer cluster
+          "h3.0": "Long walks", "o1.0": "The kettle", "o0.0": "Dry fire", "o2.0": "Zeroing", "o3.0": "Knowing the streets", "o4.0": "Stashing", "o5.0": "Keen eyes"}
+RING_STAT = {0: "stat:hp", 1: "stat:guard", 2: "stat:pace"}
+# the nodes version one moved out of their own tree (its far flower and its corner were the other tree's): they stay in
+# version one's, so their ids go on as "Tree/<n>" (BUILD49-W: "ids keep Tree/Node where today's node goes on")
+V1_TREE = {"Early doors": "Stalking", "Dead quiet": "Snares", "Night work": "Snares", "Double shift": "Triage", "Second shift": "Triage",
+           "Clean hands": "Shifts", "Walking wounded": "Shifts", "Jerry-rigged": "Fencing", "Quiet hands": "Fencing", "Light fingers": "Moving on",
+           "Ghost": "Luck", "Hit and run": "Luck", "Squared up": "Muscle", "Through the lot": "Muscle", "Iron": "The door", "Loud": "The door",
+           "Double time": "Ordnance", "Ringing ears": "Drill", "Blast burns": "Drill"}
+
+
+def main(out):
+    lay = json.load(open(SRC, encoding="utf-8"))
+    nodes, links = lay["nodes"], lay["links"]
+    names = {}                                        # layout id -> name
+    for j, (c, a, lt, rt) in enumerate(CLASSES):
+        for p, nm in zip(PLACES, CNAMES[c]):
+            names[f"c{j}:{p}"] = nm
+        for p, nm in zip(["flush", "ground", "pot"], SKILLS[lt]):
+            names[f"c{j}:{p}"] = nm
+        for p, nm in zip(["collared", "gin", "decoy", "net"], SKILLS[rt]):
+            names[f"c{j}:{p}"] = nm
+        names[f"c{j}:s.0"] = STARTER[c]
+        if c in FINDS_LESSER:
+            names[f"c{j}:nightwork.0"] = FINDS_LESSER[c]
+    for k, (e, a) in enumerate(ELEMS):
+        for p, nm in zip(EPLACES, ENAMES[e]):
+            names[f"e{k}:{p}"] = nm
+        names[f"e{k}:pairL"], names[f"e{k}:pairR"] = EPAIRS[e]
+    names.update(CENTRE)
+    slots = []
+    for sid, n in nodes.items():
+        assert sid in names or n["kind"] == "small", ("a big place with no node", sid)
+        nm = names.get(sid, "")
+        base = sid.split(".")[0]
+        reg, th = n["region"], n["theme"]
+        s = {"slot": sid, "at": [round(n["at"][0], 1), round(n["at"][1], 1)], "kind": n["kind"], "tree": "", "name": nm, "pool": "", "track": "",
+             "region": "", "theme": th}
+        if reg == "centre":
+            s["region"], s["tree"] = "centre", PITCH
+            s["theme"] = "centre"
+            if not nm:
+                s["pool"] = RING_STAT[int(base[1]) % 3] if base[0] == "h" else RING_STAT[(len(slots)) % 3]     # a life / Guard / pace cluster's own; the roads and the outer ring in turn
+        elif reg in dict(ELEMS):
+            s["region"], s["tree"], s["theme"] = "el:" + reg, reg, "el"
+            if not nm:
+                s["track"] = "el"
         else:
-            s["kind"] = "small"; s["pool"] = "filler"     # an open slot (the Recruit's, the far flowers' third): a small for now
-    START[nm] = f"k{j}_S0"
-    # the skills that hang off notables (BUILD47-W, the builder's call: the spec keeps them, its table had no slot for
-    # them): the left tree's three on the start's flower's left side, the right tree's first three on its right side,
-    # its fourth and the class's third keystone on the far flower's two free sides (the keystone toward the left tree)
-    ls_, rs_ = SKILLS[lt], SKILLS[rt]
-    for i, nmx in zip((1, 2, 3), ls_[:3]): place(f"k{j}_S{i}", nmx, "notable", lt)
-    for i, nmx in zip((5, 6, 7), rs_[:3]): place(f"k{j}_S{i}", nmx, "notable", rt)
-    free = [i for i in range(1, 8) if i not in {4, fl, fr, f2, f3}]
-    assert len(free) == 2, (nm, free)
-    free.sort(key=lambda i: math.dist(Q(cen["F"], 34, o["F"] + 180 + i * 45), cen["L"]))
-    place(f"k{j}_F{free[0]}", KEY3[nm], "keystone", lt)
-    place(f"k{j}_F{free[1]}", rs_[3], "notable", rt)
-# the joins: four steps from a class's start to the facing side of each of its elements; the Pitch's smalls go on the second step
-PITCH_SMALLS = ["Dry fire", "Zeroing", "Knowing the streets", "Keen eyes", "Stashing"]
-pi = 0
-for k, (nm, a) in enumerate(ELEMS):
-    for s, i, j in [("L", 2, k), ("R", 6, (k + 1) % 6)]:
-        p = N[f"e{k}_{i}"]["at"]; q = N[f"k{j}_S0"]["at"]; prev = f"k{j}_S0"
-        for n in range(1, 5):
-            pos = (C + q[0] + (p[0] - q[0]) * n / 5, C + q[1] + (p[1] - q[1]) * n / 5)
-            nmx, pool = "", "filler"
-            if n == 2 and pi < len(PITCH_SMALLS): nmx, pool = PITCH_SMALLS[pi], ""; pi += 1
-            add(f"x{k}{s}{n}", pos, "small", PITCH if nmx else nm, nmx, pool, region="join")
-            link(prev, f"x{k}{s}{n}"); prev = f"x{k}{s}{n}"
-        link(prev, f"e{k}_{i}")
-# the empty notables (a flower centre with no name): small fillers
-for s in N.values():
-    if s["kind"] == "notable" and not s["name"]: s["kind"] = "small"; s["pool"] = s["pool"] or "filler"
-# checks
-adj = {}
-for a, b in L: adj.setdefault(a, set()).add(b); adj.setdefault(b, set()).add(a)
-for st in START.values():
-    seen = {st}; todo = [st]
-    while todo:
-        x = todo.pop()
-        for y in adj[x]:
-            if y not in seen: seen.add(y); todo.append(y)
-    assert len(seen) == len(N), (st, len(seen), len(N))
-names = [s["name"] for s in N.values() if s["name"]]
-assert len(names) == len(set(names)), [n for n in names if names.count(n) > 1]
-if __name__ == "__main__":
-    out = sys.argv[1] if len(sys.argv) > 1 else "scripts/sim/web_layout.gd"
-    lines = ["## The skill web's layout (docs/design/skill_web.md, 3 Nov). Generated by tools/make_skill_web.py - don't edit by hand.",
-             "## A slot: its place (web units, the centre at 0,0, 12 o'clock up), its kind, the tree its node belongs to, the node's",
-             "## name (today's node, found by name) or a pool for an unnamed small (class:<tree> - that tree's smalls in order;",
-             "## stat:hp / stat:guard / stat:pace - the centre's rings; filler - FILLERS), its region, and a pair's side.",
+            j = [c for c, *_ in CLASSES].index(reg)
+            c, a, lt, rt = CLASSES[j]
+            s["region"] = "class:" + c
+            d = (math.cos(math.radians(a)), math.sin(math.radians(a)))
+            left = d[0] * n["at"][1] - d[1] * n["at"][0] < 0                  # the class's left side: anticlockwise of its line
+            s["tree"] = lt if left else rt
+            if not nm:
+                s["track"] = th if th in ("dmg", "ctl", "skill", "def", "loot") else ("dmg" if left else "ctl")
+                if s["track"] == "dmg":
+                    s["pool"] = "class:" + lt                                 # the attack track: the left tree's own smalls first
+                elif s["track"] == "ctl":
+                    s["pool"] = "class:" + rt                                 # the other track: the right tree's
+        if nm:
+            s["tree"] = V1_TREE.get(nm, "")                                   # a named node stays in its own tree (data.gd finds it by name), or version one's
+            if nm in EPAIRS.get(reg, []) or sid.endswith(":ratbait") or sid.endswith(":coldsnap"):
+                s["pair"] = "left" if (sid.endswith("pairL") or sid.endswith(":ratbait")) else "right"
+        slots.append(s)
+    starts = {c: f"c{j}:start" for j, (c, *_) in enumerate(CLASSES)}
+    # checks: every place named once, every node reachable from every start, every join between two nodes
+    adj = {}
+    for a, b in links:
+        assert a in nodes and b in nodes, (a, b)
+        adj.setdefault(a, set()).add(b); adj.setdefault(b, set()).add(a)
+    for st in starts.values():
+        seen = {st}; todo = [st]
+        while todo:
+            x = todo.pop()
+            for y in adj.get(x, ()):
+                if y not in seen: seen.add(y); todo.append(y)
+        assert len(seen) == len(nodes), (st, len(seen), len(nodes))
+    nl = [s["name"] for s in slots if s["name"]]
+    assert len(nl) == len(set(nl)), [n for n in nl if nl.count(n) > 1]
+    lines = ["## The skill web's layout, version two (docs/design/skill_web.md, 4 Nov). Generated by tools/make_skill_web.py from",
+             "## docs/design/skill_web_layout.json - don't edit by hand. A slot: its place (web units, the centre at 0,0, y down), its",
+             "## kind, its node's name (today's node, found by name, in its own tree or version one's) or for a lesser node the tree it goes in and its",
+             "## pool (class:<tree> - that tree's own smalls in order; stat:hp / stat:guard / stat:pace - the centre's) and track",
+             "## (dmg / ctl / skill / def / loot / el - data.gd TRACK_FILLERS once the pool's dry), its region, its theme (the track",
+             "## the screen colours it by) and a pair half's side.",
              "class_name WebLayout", "", "const SLOTS := ["]
-    for s in N.values(): lines.append("\t" + json.dumps(s, ensure_ascii=False) + ",")
+    for s in slots:
+        lines.append("\t" + json.dumps(s, ensure_ascii=False) + ",")
     lines += ["]", "", "const LINKS := ["]
-    for a, b in L: lines.append("\t[%s, %s]," % (json.dumps(a), json.dumps(b)))
-    lines += ["]", "", "const STARTS := " + json.dumps(START), ""]
+    for a, b in links:
+        lines.append("\t[%s, %s]," % (json.dumps(a), json.dumps(b)))
+    lines += ["]", "", "const STARTS := " + json.dumps(starts), ""]
     open(out, "w", encoding="utf-8").write("\n".join(lines))
-    print(len(N), "slots", len(L), "links", len(names), "named", "pitch smalls placed", pi)
+    print(len(slots), "slots", len(links), "links", len(nl), "named")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else "scripts/sim/web_layout.gd")

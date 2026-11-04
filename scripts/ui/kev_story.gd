@@ -13,12 +13,15 @@ const Words := preload("res://scripts/sim/words.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Dashed := preload("res://scripts/ui/dashed.gd")
 
+signal to_town                       # the Next strip's button (BUILD49 U, item 21): the Radio's Town tab
+
 const PAD := 20
 const HEAD_H := Pal.BAND_H
 const BODY_Y := HEAD_H + 8
 const BODY_H := Pal.ROOM_H - BODY_Y
 const GAP := 12
-const SIDE_H := 316                 # what's on now, under the row: the beats as tall as their slots and his six lines
+const SIDE_H := 260                 # what's on now, under the row (316 → 260 for the last beat's Next strip, BUILD49 U item 21)
+const NEXT_H := 70                  # the Next strip under the last beat's line
 @warning_ignore("integer_division")
 const BEAT_W := (Pal.GRID_W - 2 * GAP) / 3
 const BEAT_H := BODY_H - SIDE_H - GAP
@@ -41,6 +44,11 @@ var _side: Panel
 var _side_head: Label
 var _side_lines: Array = []
 var _shown := ""
+var _next: Panel                    # the Next strip (item 21)
+var _next_head: Label
+var _next_what: Label
+var _next_wants: Label
+var _next_btn: Button
 
 
 func _init() -> void:
@@ -75,6 +83,19 @@ func _init() -> void:
 		for i in range(QUOTE_LINES):
 			c["won"].append(UI.label(p, Rect2(CP, QUOTE_TOP + (QUOTE_LINES + i) * LINE_H + 14, iw, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_beats.append(c)
+	# the story told (BUILD49 U, item 21; Matt: "Where is the county unlock after this ?"): under Kev's last line, the
+	# town's next step - what it wants, and the button to the Town tab
+	var lp: Panel = _beats[_beats.size() - 1]["panel"]
+	_next = UI.panel(lp, Rect2(CP, BEAT_H - CP - NEXT_H, iw, NEXT_H), UI.box(Pal.CARD.blend(Color(Pal.ACCENT, 0.08)), 7, 1, Color(Pal.ACCENT, 0.6)))
+	_next_head = UI.label(_next, Rect2(14, 6, iw - 170, 16), Words.U49_NEXT["head"], "Medium", Pal.CELL_TEXT - 3, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	UI.track(_next_head, 1)
+	_next_what = UI.label(_next, Rect2(14, 22, iw - 170, 24), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_next_wants = UI.label(_next, Rect2(14, 46, iw - 170, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_next_btn = UI.button(_next, Rect2(iw - 12 - 140, (NEXT_H - 42) / 2.0, 140, 42), true)
+	_next_btn.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+	_next_btn.text = Words.U49_NEXT["town"]
+	_next_btn.pressed.connect(func(): to_town.emit())
+	_next.visible = false
 	_side = UI.panel(self, Rect2(0, BODY_Y + BEAT_H + GAP, Pal.GRID_W, SIDE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_side_head = UI.head(_side, Rect2(CP, 14, Pal.GRID_W - 2 * CP, UI.HEAD_H), "")
 	for i in range(7):
@@ -84,7 +105,7 @@ func _init() -> void:
 func show_state(s) -> void:
 	sim = s
 	var held: Array = sim.story_held()
-	var sig := "%d|%s|%s|%s" % [sim.story_beat, str(sim.story_at), str(held), str(sim.signals.map(func(x): return int(x.get("story", -1))))]
+	var sig := "%d|%s|%s|%s|%s|%s" % [sim.story_beat, str(sim.story_at), str(held), str(sim.signals.map(func(x): return int(x.get("story", -1)))), str(sim.rebuilt), str(sim.materials) + str(sim.key_items)]     # the Next strip's wants (item 21)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -117,11 +138,15 @@ func show_state(s) -> void:
 		var w: Dictionary = Words.STORY[k]
 		var said_made: bool = beaten or (k in made_on)
 		UI.wrap(c["made"], str(w["made"]) if said_made else "")
-		UI.wrap(c["won"], str(w["won"]) if beaten else "")
+		var won_line: String = str(w["won"])
+		if k == n - 1 and beaten:
+			won_line = Words.U49_NEXT["kev_last"]     # his last line names the next step (item 21; the text waits for Matt's take)
+		UI.wrap(c["won"], won_line if beaten else "")
 		for l in c["made"] + c["won"]:
 			l.add_theme_color_override("font_color", KEV)
 		(c["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = STORY if on_now else Pal.CARD_LINE
 		_show_slots(c, k, beaten, on_now, held)
+	_show_next(n)
 	# what's on now: the beat's papers, or the depot again past the third
 	var lines: Array = []
 	var beat: int = sim.story_now()
@@ -143,6 +168,37 @@ func show_state(s) -> void:
 		else:
 			l.text = ""
 		l.add_theme_color_override("font_color", Pal.TEXT if i >= lines.size() - 2 else Pal.TEXT_2)
+
+
+## The town's next step as the story ends (item 21): the first place on the road not yet built, what it wants and what's
+## held of it. "" when every place runs.
+static func town_next(s) -> String:
+	for k in Words.U49_TOWN_ROAD:
+		if int(s.rebuild_rank(str(k))) <= 0:
+			return str(k)
+	return ""
+
+
+## What the next place wants, as "copper wire 6 of 20 · cable drums 9 of 10" (long to short).
+static func wants_forms(s, key: String) -> Array:
+	var cost: Dictionary = s.rebuild_cost(key)
+	var parts: Array = []
+	for m in cost:
+		var nm: String = str(s.thing_label(str(m)))
+		parts.append(Words.U49_NEXT["have"] % [nm.to_lower() if not Data.KEY_ITEMS.has(str(m)) else nm, int(s.held_of(str(m))), int(cost[m])])
+	var out: Array = []
+	for n in range(parts.size(), 0, -1):
+		out.append(" · ".join(parts.slice(0, n)))
+	return out if not out.is_empty() else [""]
+
+
+func _show_next(n: int) -> void:
+	var nk: String = town_next(sim)
+	_next.visible = sim.story_beat >= n and nk != ""
+	if not _next.visible:
+		return
+	UI.fit(_next_what, [Words.U49_NEXT["rebuild"] % Words.mid(str(Data.rebuild(nk)["name"])), str(Data.rebuild(nk)["name"])])
+	UI.fit(_next_wants, wants_forms(sim, nk))
 
 
 ## A beat's three paper slots (28 Oct): the one on now its papers held in the story blue and the wanted dashed; a beaten
@@ -210,6 +266,8 @@ func text_nodes() -> Array:
 	for l in _side_lines:
 		if l.text != "":
 			out.append(l)
+	if _next.visible:
+		out.append_array([_next_head, _next_what, _next_wants, _next_btn])
 	return out
 
 
