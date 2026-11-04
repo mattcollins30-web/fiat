@@ -140,7 +140,7 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      edge's middle), shown on a contact sheet for Matt.
   12. UI (art): Stats' "The record" card draws its four tiles with line glyphs (a skull, a sword, a note, a gem), not
      the game's art (Matt: "this needs redoing with our art"). The art's there for three, as the fight's own tiles
-     use it (run.gd TILE_ICONS): kills - art/ui/kills.png, damage - art/ui/dps.png, the best take - art/ui/tins.png; the dearest
+     use it (run.gd TILE_ICONS): kills - art/ui_new/kills.png, damage - art/ui/dps.png, the best take - art/ui/tins.png; the dearest
      find shows the item's own picture, drawn as the stash and the came-back card draw it. While there: the dearest
      find's name is cut to its last word ("Coat"); the tile shows the whole name (fitted) with its rarity's colour.
      Canvas first (the card as it stands against the redo), fit-checked; a smoke check that each tile shows its picture
