@@ -203,6 +203,15 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      Lineman (a grid key) - rebuild the mint (30 ledgers, 20 army kit; the first time 5 fuses and the grid key) - the
      Mint on the Map - beat the Issuer (a level-45 fight): the Issue, fiat, and the Map's "The County" button. The story's
      end (and the Town tab) should point at the next step; Kev's last line could say it.
+  22. Bug / UI: the same piece reads two ways on and off a run (screenshots: the Bomb suit against the worn Arctic smock -
+     in the pack on a run "▲ Upgrade · ▲ 2% odds", in the stash at home "Sidegrade · ▼ 10% odds"; Matt: "why the
+     disparity here between being in a fight and out ?"). The "% odds" there isn't the run's odds: it's the body's figure
+     (sim.survival_gain / survival_value) against "the fight in front" - front_tier(), the hardest open site - and on a
+     signal run that site is read at the signal's level with its codes (effective / depth_figures with _sig on), off a
+     run as it stands; the Bomb suit's fire and shock against the smock's 45% frost swing with whose fire it is. Likely
+     the cause; to confirm on Matt's save. Fix: one stated yardstick ("against the Barracks" at home, "against this run"
+     on a run), never called odds; the same piece the same verdict for the same fight. Smoke: a piece's verdict on and
+     off a run against the same fight matches.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
