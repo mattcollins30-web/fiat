@@ -212,6 +212,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      the cause; to confirm on Matt's save. Fix: one stated yardstick ("against the Barracks" at home, "against this run"
      on a run), never called odds; the same piece the same verdict for the same fight. Smoke: a piece's verdict on and
      off a run against the same fight matches.
+  23. UI: the order's places (the Grid, the Archive, the Mint) still use the old card (scripts/ui/order.gd: a picture,
+     the head's name and line, the level, "0% to clear", the drops, "Go: the Grid"), not the Map's site card as
+     overhauled (site_card.gd: the two portraits, how long you last, their fire and yours, meds and rounds with the
+     Rounds plan, what you'll bring home, Insure, Set off). Matt: "these need updating with the rest of the site overhaul
+     we did". Fix: the order's places (and the County's, which share the plumbing) drawn by the site card, the head's
+     fight as a site's head is; canvas first; the site card's own smoke checks run over an order place too.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
