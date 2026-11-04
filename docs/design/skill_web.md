@@ -1,152 +1,156 @@
-# The skill web (3 Nov 2026) - the design spec
+# The skill web, version two (4 Nov 2026) - the design spec
 
-Replaces the layout and the points of docs/design/web.md (22 Oct) and the lanes of docs/design/trees.md. What those
-designed and still holds: the nodes themselves (names, effects, words), the pairs (JOINTS), the keystones and
-capstones, the skills that hang off notables. What goes: the wheel layout, the four pools, the element use meter,
-the camp owning the centre and the elements, the column gates, the affinity price (double for an off-class element),
-the bridge.
+Replaces version one of this file (3 Nov, built as 0.12.0-0.12.2): the petals layout of 379 nodes, one point a level,
+the 15/40 gates. What version one settled and still holds: one web with each runner its own lit path on it; a runner
+starts lit at its class's start; buy any node joined to one you own, one point a node; keystones and capstones gated by
+points spent; the pairs (JOINTS); every node's name, effect and words; the rail's order (built in 0.12.0).
 
-Asked for by Matt (3 Nov): "the poacher the first class should be rotated to the 12 o'clock position"; "the class
-rings themselves are a bit of a mess and if you compare to poe it's just nowhere close aesthetically or choice wise";
-"the pitch's loop at the center needs to have a connection to the element trees which in turn need a connection to
-the class starting nodes"; "everything needs to be logical in how points are selected and spent"; "the center pitch
-tree should be the start of concentric circles that spread out and interconnect". Settled over six canvas rounds the
-same day: https://claude.ai/artifact/4iDWcoDcXdut6c8TrQF8ku (the last row is the agreed design: "Classes as four
-flowers each").
+Asked for by Matt during his playtest of 0.12.2 (status.md, parked item 5): "I think we can afford to go bigger.
+Skills surrounded by lesser nodes - we already have the art so there's no harm repeating the weaker ones. Poe doesn't
+by one track covering energy or shield and another covering hp or damage ... I'd advise you to directly compare poe
+when designing ours." Then: "let's aim for some symmetry"; "two points a level ... plus X amount as rewards"; "lets
+keep the 50 cap ... the key here will be to make sure the elemental trees merge with the class trees". Settled over
+six canvas rounds on 4 Nov: https://claude.ai/artifact/4iDWcoDcXdut6c8TrQF8ku (the rows "The web, round two" to
+"Round six"; the agreed web is the board "Round six", Matt: "ok sounds good").
 
 ## Matt's calls
-- Layout B, the petals (round 1): the centre, six element flowers round it, a class between each two elements.
-- A runner starts at its own class's start, lit for free (round 2, option 1).
-- One web, each runner its own lit path on it; home no longer owns the centre or the elements (round 2: "yes ok it
-  can go").
-- Longer paths, a centre worth reaching, the capstone gated at 40 points spent (round 3).
-- Today's nodes in the new slots, every keystone kept, one capstone a class stepped down (round 4: "I'll take your
-  suggestions").
-- Each class as four small flowers, not one ring (round 6, Matt: "much better").
+- Bigger: every skill and notable a cluster, its own lesser nodes round it (round two).
+- Themed tracks, not mixed smalls: a class's attack track, its other track, staying up, finds, skills (round two).
+- PoE's layout as the comparison, not a copy (round two, the board "PoE's layout as the comparison").
+- Symmetry: every class on one template, mirrored about the class's line (round two: "aim for some symmetry").
+- Two points a level, the level cap staying at 50, plus reward points (round two and three).
+- The elements merged into the classes, not beside them (round three).
+- Round four's takes (denser element columns, a tighter centre, the classes' tops varied) and round five's (each
+  class's top corner its own shape): taken (Matt: "lets see it with your takes", "ok lets see round 6 with your takes").
+- Round six: the Recruit's corner a ladder, each corner's notable a full cluster, the class names clear of the nodes,
+  each element's middle cluster dropped (it crowded the two classes' pair clusters).
 
-## The one rule for spending
-1. Each runner has its own points: one a level past its class's best (today's rule, `_points_up`). Paragon points
-   stay apart and buy only the Paragon board.
+## The rule for spending
+1. Each runner has its own points: **two a level** (today's rule, `_points_up`, doubled: two for each level past the
+   class's best), **plus reward points**, the same for every runner of the camp:
+   - +1 the first time each head falls (11 heads: 11);
+   - +1 each chapter of Kev's story (9);
+   - +2 the Issue, fiat (2).
+   22 in all. A runner at level 50 with every reward has 2 x 49 + 22 = **120 points** (PoE at 99: 122-123).
+   Paragon points stay apart and buy only the Paragon board.
 2. A runner starts with one node lit: its class's start, which carries the class's skill.
 3. Buy any node joined to one you own. Every node costs one point.
-4. Big nodes also need points spent first: a keystone 15, a capstone 40.
+4. Big nodes also need points spent first: **a keystone 30, a capstone 80**.
 5. A reset gives every point back (the reset's price as today).
 
-Two counters on screen: points and paragon points. The element meter, element points and the shared points go.
+Two counters on screen, as today: points and paragon points. The header's line changes to say where points come from
+("two a level past the Poacher's best, and rewards").
 
-## The shape (geometry for the build; the canvas generator is the reference)
-Coordinates in a 1000 box, the centre at (500, 500), angles in degrees, 0 to the right, clockwise.
+## The shape
+1,549 nodes: 918 in the classes (153 a class), 444 in the elements (74 an element), 187 at the centre and on the
+roads between. 120 points buys about 8% of the web (PoE: about 9%). The layout as data, the reference for the build:
+**docs/design/skill_web_layout.json** (every node's id, place, kind, track, region and name; every join). Web units,
+the centre at 0,0; the web's radius ~1,080, the Paragon ring at 1,120.
 
-- **The classes**, at -90 Poacher (12 o'clock), -30 Paramedic, 30 Scrapper, 90 Drifter, 150 Doorman, 210 Recruit.
-- **The elements**, each between its two classes: -60 The cold, 0 Live, 60 Petrol, 120 Blades, 180 Knuckles,
-  240 The Rat Man. A class's left element is the one anticlockwise of it (the Poacher's is the Rat Man), its right
-  the one clockwise (the cold). The pairs follow AFFINITY unchanged.
-- **The centre** (25 nodes): the centre node; an inner ring of 6 stat nodes (r 50, one at each element's angle);
-  an outer ring of 12 (r 92, at each element's angle ±15); a gate notable at r 128 on each element's angle, joined
-  to the two outer-ring nodes beside it. Rings joined round; the inner to the centre and to the outer.
-- **An element flower** (14 nodes): a ring of 8 (radius 44) centred at r 200 on the element's angle; slot 0 faces
-  the centre and joins the gate; slot 2 faces the class anticlockwise, slot 6 the class clockwise; slot 4 is the tip.
-  A notable at the flower's centre, joined to slot 0. From the tip a run out along the element's angle: small (r 266),
-  small (288), notable (310), small (332), the keystone (356), the capstone (388).
-- **A join** (4 small nodes, the element's colour): from a class's start to the facing side of each of its two
-  elements (slot 2 or slot 6), evenly spaced.
-- **A class** (36 nodes), four flowers of 8 round a centre notable (radius 34), each flower's slot 0 facing the web's
-  centre:
-  - the start's flower at r 300 on the class's angle; its slot 0 is the start;
-  - the left tree's flower at r 372, class angle -17; the right tree's at r 372, +17;
-  - the far flower at r 440 on the class's angle; its slot 4 (the outer tip) is the capstone.
-  - Joins: the start's flower to each tree's flower, and each tree's flower to the far flower, nearest slot to
-    nearest slot. The far flower is reached through either tree.
-- **The Paragon board**: its own view, a tab beside the web (as today), drawn as a dashed ring round the web.
+- **The classes**, on the same angles as version one: Poacher at 12 o'clock, then clockwise Paramedic, Scrapper,
+  Drifter, Doorman, Recruit, 60 degrees apart. The start at r ~480; the capstone at r ~980.
+- **The elements**, each on the line between its two classes, as version one: The cold, Live, Petrol, Blades,
+  Knuckles, The Rat Man. A class's left element is the one anticlockwise of it (the Poacher's is the Rat Man).
+- **The centre**: the centre node; an inner ring of six clusters on the elements' lines (life, Guard, pace, round
+  twice), one step out from the centre and joined round; an outer ring of six clusters, one under each class's start,
+  joined to the inner ring on both sides and one step to the start. A start reaches the centre in about ten nodes.
 
-379 nodes in all: 25 at the centre, 84 in the elements, 48 in the joins, 216 in the classes. A runner at level 50
-has 49 points, about an eighth of the web.
+### A class (153 nodes, the template)
+Mirrored about the class's line: the class's attack track on the left, its other track on the right (the Poacher's:
+the gangs), three skills a side, staying up and finds up the middle, the capstone at the far end. Every skill and
+notable is a cluster: the node with five lesser nodes of its track round it. Tracks run out from the start.
 
-## What sits where
-### A class's four flowers
-| Slot | Poacher | Paramedic | Scrapper | Drifter | Doorman | Recruit |
-|---|---|---|---|---|---|---|
-| Start (the skill) | Clean shot | Tourniquet | Ring main | Duck and weave | Shoulder charge | Lob one in |
-| Start's flower, centre | Early doors | Second shift | Workbench | Light fingers | Through the lot | (small) |
-| Start's flower, outer slot | In the hide | Double shift | Sheet metal | Breather | Squared up | Double time |
-| Left tree | Stalking | Triage | Stripping | Moving on | Muscle | Ordnance |
-| Left flower, centre | Rifleman | Fast work | Bodger | Spray | Shotgunner | Cook it off |
-| Left pair (faces the left element) | Rat bait | Ice pack | Live wire | Bottle and rag | Glassing | Brute force |
-| Left flower, second notable | Clocked | Worst first | Salvage | B-roads | Off the canvas | (small) |
-| Left keystone (outer tip) | One shot | Field surgery | Nothing wasted | Never there | Bodyline | Grenadier |
-| Right tree | Snares | Shifts | Fencing | Luck | The door | Drill |
-| Right flower, centre | Quiet feet | Walk it off | Magpie | Dead man's shoes | Chokepoints | Cover me |
-| Right pair (faces the right element) | Cold snap | Defib | Blowtorch | Cut-throat | Hands on | Tear gas |
-| Right flower, second notable | Twine | Clocking off | Back pocket | Spare change | Last orders | (small) |
-| Right keystone (outer tip) | Trapline | Not today | Buyer's market | All or nothing | One at a time | Quick march |
-| Far flower, centre (the cost notable) | Night work | Walking wounded | Quiet hands | Hit and run | Loud | Blast burns |
-| Far flower, a notable | Poached | Transfusion | The lot | Loaded dice | Iron | Passing-out parade |
-| Far flower, a second notable | (small) | (small) | Hoarder | (small) | Stand and fight | (small) |
-| Capstone (far flower's tip) | Dead quiet | Clean hands | Jerry-rigged | Ghost | Held | Ringing ears |
+| Place | The Poacher (the worked example) |
+|---|---|
+| The start, alone with its own wheel of six lesser nodes | Clean shot |
+| Left track: the first cluster, the pair, the second notable, the keystone | Rifleman, Rat bait, Clocked, One shot |
+| Right track, the same, mirrored | Quiet feet, Cold snap, Twine, Trapline |
+| Left skills, from the start out | Flush them out, Go to ground, One for the pot |
+| Right skills, the same | Collared, Gin trap, Decoy |
+| Up the middle: staying up, a skill, finds, finds | In the hide, Net every hole, Night work, Poached |
+| The capstone, the far end | Dead quiet |
+| The corner (its own shape, below): the third keystone and a notable | Snare and wait, Early doors |
 
-"Far flower, a notable" is the class's second capstone today, stepped down; its words keep, its numbers go to the
-balance pass. Every keystone is kept. Nothing is cut. The Recruit's four (small) slots are open for new notables.
+The other five classes fill the same places from their trees as today: the left tree's notables down the left
+track, the right tree's down the right, the pair halves (AFFINITY unchanged) in the pair places, today's keystones at
+the tracks' ends, today's capstone at the far end, the stepped-down second capstone as the last finds notable, the
+third keystone in the corner. The builder lists each class's table here before the build (the slots and today's names
+for them); where a class has fewer skills or notables than places, the place goes on the open list below.
 
-### An element's flower
-| Slot | The cold | Live | Petrol | Blades | Knuckles | The Rat Man |
-|---|---|---|---|---|---|---|
-| Slot 0, in from the centre | De-icer | Sparks | A can of it | Stanley knife | Bare hands | Under the sink |
-| Slots 1, 3, 5, 7 (small) | Frost, A hard winter, Numb, Wind chill | Charge, Off the mains, Amps, Volts | Rags, Siphoned, Wick, Fumes | An edge, Sharpened, Deep, Nicked | Wraps, Half a brick, Thick skull, Weight behind it | Bait, Council issue, Cumulative, Slow acting |
-| Centre notable | Chill | Current | Lit | Opened up | Stagger | Dosed |
-| Slot 2, the anticlockwise class's pair half | Poacher's snare | Paramedic's paddles | Scrapper's torch | Drifter's razor | Doorman's knuckles | Recruit's gas |
-| Slot 6, the clockwise class's pair half | Paramedic's ice | Scrapper's mains | Drifter's can | Doorman's glass | Recruit's boots | Poacher's bait |
-| Slot 4, the tip (the cost notable) | Cold hands | Earthed | On your hands | Blood up | Heavy | Rat's share |
-| The run's notable (resist) | Thermals | Rubber soles | Fireproof | Scar tissue | Thick-skinned | Immune |
-| Keystone | Frozen solid | Daisy chain | Spreads | Won't stop | Bust them up | Builds |
-| Capstone | Shatter | Arc | Wildfire | Bleed out | Flattened | Lingers |
+**The corner.** Above the side skills, either side of the finds and the capstone: 17 nodes in every class (one
+keystone, one notable with four of its own round it, the roads). Each class's corner is its own shape:
 
-A pair is the class's half and the element's half facing each other across one join (Rat bait and Poacher's bait);
-owning both lights the pair, as JOINTS does today.
+| Class | The corner |
+|---|---|
+| Poacher | the long walk: out to the keystone and nothing comes back |
+| Paramedic | the ward round: a loop, the keystone on its far side |
+| Scrapper | the scrapheap: two tight lattices, take them in any order |
+| Drifter | the fork: one road that splits, a keystone one way, the notable the other |
+| Doorman | the wall: a bar across the top, the keystone at one end, the notable at the other |
+| Recruit | the ladder: the keystone up a short march, the notable at the top of two rails and their rungs |
 
-### The centre
-- The centre node: The dog's share (today the Pitch's capstone; now a notable, no gate).
-- The six gates: Double tap, Second wind (its words: resting at home), Pack horse; three open.
-- The two rings: life, Guard and pace (the inner node at each element's angle, then round in that order). Long walks
-  and Circuits fold into the life nodes.
-- The Pitch's damage, loot and search smalls (Dry fire, Zeroing, Knowing the streets, Keen eyes, Stashing) and the
-  fillers (FILLERS) go on the joins and the runs, 3 a node as today's small values.
+### An element (74 nodes, a column)
+A column of clusters along the element's line, between its two classes, coloured the element's. From the centre out:
 
-### Small nodes
-Every unnamed node takes a small value: today's class smalls on their own class's flowers, the fillers elsewhere.
-About 20 a class are fillers for now; the balance pass gives them real values.
+| Place | The Rat Man (the worked example) |
+|---|---|
+| In from the centre (version one's slot 0) | Under the sink |
+| A pair low down, either side | Bait, Council issue |
+| The centre notable | Dosed |
+| The two pair halves, facing each class's pair | Recruit's gas, Poacher's bait |
+| The tip (the cost notable) | Rat's share |
+| A pair either side of the tip | Cumulative, (new) |
+| The run's notable (resist) | Immune |
+| A pair either side of it | Slow acting, (new) |
+| The keystone, the capstone | Builds, Lingers |
 
-## Pacing (the canvas's Poacher, by the rule)
-Out to the Rat Man's keystone (Builds) with its 16th point, level 17; up the Stalking flower to One shot with its 25th;
-1 point free at level 34. A beeline to an element's keystone is 13 nodes; to a class keystone about 7, so the 15-spent
-rule is what holds it back. The capstone opens at 40 spent, level 41 at the soonest.
+Every other element the same, its names from version one's table (its four smalls' names on the new clusters; two
+new names an element, 12 in all, on the open list).
+
+### The merge (how the elements join the classes)
+- A class's start runs into both its elements low down (its wheel's outer nodes to each element's first clusters).
+- An element's centre notable runs out into both its classes' pair clusters; a class's pair cluster runs up into the
+  element's pair half facing it, and on to the element's tip. A pair is lit when both halves are owned, as today.
+- Wherever a class's cluster and an element's come within a short step, a join links them. An element is walked
+  through its classes, not beside them.
+
+### Lesser nodes
+Every lesser node takes its track's value: a few % of what the track is about (damage on the attack track, Guard and
+HP on staying up, loot and search on finds, cooldown and energy on skills, the element's own on its column; life,
+Guard and pace at the centre). Today's class smalls and the fillers (FILLERS) seed them; the balance pass sets them.
+
+## Pacing (the Poacher, by the rule, fewest nodes from the start)
+The centre 10; Rat Man's centre notable (Dosed) 6; One shot or Trapline 14, so the 30-spent gate holds them (level 16
+with no rewards, about 15 with a reward or two); Dead quiet 18 and Builds 20, then the 80-spent gate (level 41 with no rewards,
+level 30-35 with most); Snare and wait 21; Lingers 22. At 50 a runner has a class's two tracks and one element in
+depth, or a class and a taste of both elements; not the lot.
 
 ## The screen (Training)
-- The header: the class portrait, "N points free", "M of T spent · one a level past the class's best", the chips,
-  the six runner cards.
-- The web: whole web, the class's corner, and the Paragon board as tabs; find a perk. Owned nodes lit in their colour;
-  nodes you can take (next to one you own, gates met) ringed amber; the rest dark. Notables, keystones and capstones
-  show their icon (art/nodes, art/skills).
-- The node card on the right: icon, name, where it sits, its words, why it can or can't be taken, "Take it · 1 point".
-- Pairs (done / how many steps away), big nodes (keystones open at 15, capstones at 40, a bar), Copy build, Paste
-  build, Reset.
+As built in 0.12.0, with:
+- The web at the new size: whole web, the class's corner, and the Paragon board as tabs; zoom and pan as today. At
+  the whole-web zoom, clusters read as their node; lesser nodes as dots.
+- The header's line: "two a level past the <Class>'s best, and rewards"; a reward's point says where it came from
+  (the node card's "points" line or a tooltip, the builder's call, fit-checked).
+- The node card: "Skill" for a skill node, not "Notable" (playtest item 2). Gates: "Keystones open at 30 points
+  spent", "Capstones open at 80".
+- The class's start carries its one skill; the others sit in their own clusters on the tracks (playtest item 2:
+  "too many skills around the starting node").
 
-## The rail, in the order rooms open (Matt, 3 Nov; goes in with the web)
-Stats, The Kit, The Map, Training, then the rooms the heads open: The Clinic (the Gamekeeper), The Workshop (the
-Carpet Man), The Fence and Home (the Manager, both at once), The Radio (the Quartermaster). `Main.ROOMS` today has
-the Fence before the Workshop. The rail reorders only; the shortcuts keep their keys.
-
-## The build
-- Data: the web generated from the geometry above into data (each node: id, position, kind, the effect it carries,
-  its joins). Node ids keep today's "Tree/Node" form where the node exists, so effects, the smoke's ids and the
-  save's names carry over; new nodes get new ids.
-- Sim: one pool per runner; the buy rule (joined to one owned, 15/40 gates); the reset; the pairs from owned halves.
-  Remove the meter, element points, shared points, camp ownership, the bridge, column gates, the affinity price.
-- Save: SAVE_VERSION 23, a fresh save (old slots show the incompatible-save warning).
-- The screen: the Training web redrawn to the new positions with the frontier, the node card, the one counter.
-- The bot: buys toward a list of target nodes by the shortest path (its class's build plan rewritten as targets).
-- The smoke: the rule (an unjoined node refused, a keystone refused under 15 spent, a capstone under 40), every node
-  reachable from every start, every named node placed once, the rail's order, and the screen's labels fit.
+## The build (after Matt's playtest; not before)
+- Data: the web from skill_web_layout.json (or its generator, ported into tools/make_skill_web.py); node ids keep
+  "Tree/Node" where today's node goes on; new nodes new ids.
+- Sim: two points a level; the reward points (+1 a head's first fall, +1 a Kev chapter, +2 the Issue) for every
+  runner, past and future; the gates at 30 and 80.
+- Save: SAVE_VERSION up, a fresh save (the incompatible-save warning, house rule).
+- The screen as above; the bot's targets rewritten for the new places (shortest path, waiting for 30/80).
+- The smoke: every node reachable from every start; every named node placed once; a keystone refused under 30
+  spent and a capstone under 80; reward points counted once each; the labels fit at 1920x1080 and the smallest window.
 - No balance pass with it (CLAUDE.md, 2 Nov); the bot's builds only need to run.
 
-## Open (the balance pass, after Matt's playtest)
-The small nodes' values; the stepped-down capstones' numbers; the open slots (the Recruit's four, three gates).
+## Open (Matt's word, then the balance pass)
+- The names: 12 new element notables (two an element); the corners' notables for the five classes past the Poacher
+  where today has no spare; whatever places a class can't fill from today's nodes (the builder's tables). The 25 hung
+  notables (data.gd WEB_DROPPED) and the three open gates are the first candidates.
+- Two points a level "past the class's best": unchanged from today's rule, doubled - say if a fresh runner of a class
+  should earn differently.
+- The lesser nodes' values; the stepped-down capstones' numbers; the corners' keystones' numbers (the balance pass).

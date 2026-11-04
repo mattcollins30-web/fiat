@@ -83,7 +83,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      cap"); reward points - +1 a head's first fall, +1 a chapter of Kev's story, +2 the Issue (22) - for every runner;
      120 points at 50, as PoE's 122-123; the keystone and capstone gates to move to about 30 and 80 spent; the elements
      merged into the classes (Matt: "the key here will be to make sure the elemental trees merge with the class trees").
-     The whole web drawn at ~1,350 nodes; the round's calls next, then the spec rewritten (skill_web.md) - no build yet.
+     Rounds four to six (4 Nov): denser element columns, a tighter centre, each class's top corner its own shape, the
+     element's middle cluster dropped; Matt: "ok sounds good". The spec is rewritten as version two
+     (docs/design/skill_web.md, the layout as data in docs/design/skill_web_layout.json: 1,549 nodes). Built with the
+     fix round after the playtest (goes with item 2); names wanted first (the spec's "Open").
 
 ## First slice (2026-10-01)
 
@@ -6201,6 +6204,19 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 4 Nov: the skill web, version two designed (docs/design/skill_web.md)
+
+Matt, during his playtest of 0.12.2 (parked item 5): "I think we can afford to go bigger ... I'd advise you to directly
+compare poe when designing ours"; "let's aim for some symmetry"; "two points a level ... plus X amount as rewards";
+"lets keep the 50 cap ... make sure the elemental trees merge with the class trees"; then rounds four to six with
+Claude's takes, and "ok sounds good". Six canvas rounds (the rows "The web, round two" to "Round six"). The spec
+rewritten as version two: 1,549 nodes (153 a class on one mirrored template, every skill and notable a cluster of its
+track; 74 an element as a column merged into its two classes; a two-ring centre); two points a level plus 22 reward
+points (a head's first fall, a Kev chapter, the Issue): 120 at 50; gates at 30 and 80 spent; each class's corner its
+own shape (the long walk, the ward round, the scrapheap, the fork, the wall, the ladder). The layout as data:
+docs/design/skill_web_layout.json. No build until the playtest is done; names wanted first (the spec's "Open": 12
+element notables, the corners past the Poacher's, what a class can't fill from today's nodes).
 
 ## 3 Nov (evening): 0.12.2 - names with their emblems
 
