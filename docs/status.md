@@ -8,8 +8,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   centred above it, the class portrait centred on the class name (0.12.2): small nodes' pictures and glyphs, the regions'
   emblems, the class portrait. Fresh save from 0.12.0 (SAVE_VERSION 23). The spec: docs/design/skill_web.md. Art
   flagged: one job (Guarded, the centre's Guard small).
-- **Next:** Matt's playtest of 0.12.2, through to the County and fiat. No balance pass until then (CLAUDE.md, 2 Nov).
-  The language redesign (docs/design/language.md) - the rename pass, parked 3 Nov.
+- **Next (4 Nov, Matt: "ok go for it"):** 0.13.0 for a fresh save - Matt's playtest of 0.12.2 ended at the act-two wall
+  (the Doorman, level 28, 5.7 h). In order: (1) the fix round, playtest items 1-28 below; (2) the skill web version two
+  (docs/design/skill_web.md); (3) act two (docs/design/act_two.md: the town as the goal with tins paying its wages, a
+  night on the air - chained signals, every fifth link special - signals that say what they drop, aimed resists, the
+  order's heads at 30/34/38 and the County from 40, XP_TAPER_END 4.5, REPEAT_XP back); (4) the town's art by
+  art.flag. Then Matt plays fresh; his play sets the figures (no bot pass, Matt 4 Nov). The language redesign
+  (docs/design/language.md) - the rename pass, parked 3 Nov.
 - **Matt's word wanted (the skill web, 3 Nov):** the Quartermaster's Manual has no rule left (its words still promise
   more than 2 elements); 25 hung notables have no slot on the web (data.gd WEB_DROPPED - the three open gates could
   take some); the Headmaster's Cap's words don't say its capstone waits for 40 spent; Second wind reads "at home";
@@ -6372,6 +6377,17 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 4 Nov (evening): act two designed (docs/design/act_two.md)
+
+Matt, at the wall (the Doorman, level 28, 5.7 h): "clearing the campaign and just playing the game - why ?", "radio
+signals are just too weak to sustain play", "we need to be able to chain them together", "the gap between radios
+opening, rebuilding the town and then getting the county open is too great". His save read (the XP taper, the
+order's levels, repeats at 50 XP a run, random crafting), a numbers plan held, then act two: the town as the goal and
+the Issue as the turn, tins paying the town's wages, a night on the air (chained signals, option C), the targets a bit
+longer (the Radio 4 h, the Lineman 6 h, the Issue and the County 9 h, level 50 15 h). Canvas "Fiat – Act two"
+(https://claude.ai/artifact/W7fdXUELCWNCKdWidiYU5J): the road, a night's break, the town on the Map. Matt: "ok go for
+it" - the spec written; 0.13.0 planned (the board's Next).
 
 ## 4 Nov: the skill web, version two designed (docs/design/skill_web.md)
 
