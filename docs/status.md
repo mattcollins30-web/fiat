@@ -193,6 +193,16 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   19. UI (rework): Kev's wagers menu (Matt: "that menu needs a revamp as its pretty bad"). With item 17's fix (the odds
      with the wager on): a canvas round first - each wager's cost and pay side by side, the odds with and without it,
      what's on for this run said on the site card and the fight screen.
+  20. Bug (UI): Kev's story, beat 3 "The depot" beaten, yet its three papers read "wanted" in dashed boxes (screenshot;
+     Matt: "story beat but still states wanted papers ?"). Beats 1 and 2 show theirs "decrypted"; beat 3's cards draw
+     the depot-again round's state (the same three papers, "0 of 3 found" in the panel below) instead of the beat's.
+     Fix: a beaten beat's papers read "decrypted"; only the "Depot again" panel shows what's wanted. Smoke: each
+     beaten beat's cards read decrypted.
+  21. UI: after Kev's story nothing says what's next (Matt: "Where is the county unlock after this ?"). The road: the
+     Radio's "The town" - rebuild the substation (20 copper wire, 10 cable drums) - the Grid on the Map - beat the
+     Lineman (a grid key) - rebuild the mint (30 ledgers, 20 army kit; the first time 5 fuses and the grid key) - the
+     Mint on the Map - beat the Issuer (a level-45 fight): the Issue, fiat, and the Map's "The County" button. The story's
+     end (and the Town tab) should point at the next step; Kev's last line could say it.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
