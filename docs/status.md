@@ -77,6 +77,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      layout as a comparison." So: a bigger web; each skill (and notable) a cluster with its own smalls round it,
      repeating the small nodes' art; themed tracks (a defence track, a life/damage track and so on) rather than mixed
      smalls; canvas rounds with PoE's layout set beside ours as the reference, before any build.
+     Agreed on the canvas (4 Nov, rounds two and three, the rows "The web, round two/three"): each class corner on one
+     symmetric template (attack track left, the class's other track right, three skills a side, staying up and finds up
+     the middle, the start alone with its own wheel); two points a level, the cap staying at 50 (Matt: "lets keep the 50
+     cap"); reward points - +1 a head's first fall, +1 a chapter of Kev's story, +2 the Issue (22) - for every runner;
+     120 points at 50, as PoE's 122-123; the keystone and capstone gates to move to about 30 and 80 spent; the elements
+     merged into the classes (Matt: "the key here will be to make sure the elemental trees merge with the class trees").
+     The whole web drawn at ~1,350 nodes; the round's calls next, then the spec rewritten (skill_web.md) - no build yet.
 
 ## First slice (2026-10-01)
 
