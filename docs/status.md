@@ -238,6 +238,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      the decrypt panel's animation (set_process) running over it; a retune pressed again mid-read starts it all over.
      First: time a retune's reads headless (frames and ms to settled) and the frame time while the decrypt runs; then
      cap it (read the picked class first, the crew's only when asked, the animation off the odds' frames).
+  27. Bug (UI): the Workshop's worn-gun and worn-gear cards show the base, not the piece's name - the Butcher's Steel
+     reads "Machete" (Matt: "butchers steel displays as machete in workshop"). workshop.gd sets the card's name from
+     gun["base"] / gear["base"] (the Primary card, the gear card), where the pick panel uses Items.full_name. Fix: the
+     full name, fitted, falling back to the base; a unique's and a set's in its colour. While there: a melee primary
+     reads "No rounds" in the card's corner - say nothing (or "Melee") for a blade. Smoke: a worn unique's card reads its
+     unique name; a melee primary's line doesn't say rounds.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
