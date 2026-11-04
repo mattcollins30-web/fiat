@@ -200,6 +200,24 @@ func _en_for(key: String) -> Callable:
 	return func(t: String) -> String: return t if known else Fmt.scramble(t)
 
 
+## A building's line k (0 the first, "a"; 1 the second, "b"): as its building reads, but the Bunkhouse's Expeditions line
+## scrambled, its name and its steps' names and words, till the Quartermaster falls (BUILD48 item 10, Matt: "bunkhouse
+## needs to be encrypted like the radio"): it serves no room, so _en_for leaves it plain. The Repeat line, buildable from
+## the start, and the building's name stay plain.
+func _en_line(key: String, k: int) -> Callable:
+	if key == "bunkhouse" and k == 1 and not sim.expeditions_open():
+		return func(t: String) -> String: return Fmt.scramble(t)
+	return _en_for(key)
+
+
+## Fitted as UI.fit does; a scrambled line's glyphs run wider than its letters, so past the last form it's cut to the box
+## (as the rail cuts a shut room's name).
+static func _fit_cut(l: Label, forms: Array) -> void:
+	UI.fit(l, forms)
+	while l.text.length() > 3 and UI.text_width(l, l.text) > l.size.x:
+		l.text = l.text.substr(0, l.text.length() - 1)
+
+
 ## Steps built on a line: the count from its first, in order.
 func _line_built(key: String, side: String) -> int:
 	var n := 0
@@ -223,7 +241,7 @@ func _show_cards() -> void:
 		c["built"].add_theme_color_override("font_color", Pal.ACCENT if n > 0 else Pal.TEXT_2)
 		for k in range(2):
 			var side: String = "a" if k == 0 else "b"
-			UI.fit(c["lines"][k]["label"], [en.call(str(b["lines"][k]))])
+			_fit_cut(c["lines"][k]["label"], [_en_line(key, k).call(str(b["lines"][k]))])
 			for sx in range(STEPS):
 				var on: bool = sim.yard_built_side(key, sx, side)
 				var shut: bool = sx >= sim.yard_cols()
@@ -239,7 +257,7 @@ func _show_gives() -> void:
 		for c in range(b["picks"].size()):
 			for k in range(2):
 				if sim.yard_built_side(str(b["key"]), c, "a" if k == 0 else "b"):
-					got.append(en.call(str(b["picks"][c][k]["short"])))
+					got.append(_en_line(str(b["key"]), k).call(str(b["picks"][c][k]["short"])))
 		if str(b["key"]) == "bunkhouse" and not got.is_empty():
 			got = [sim.repeat_gives()]           # the share now, once (the review: every step's share listed)
 		if sim.yard_rank(str(b["key"])) > 0:
@@ -273,20 +291,21 @@ func _show_detail() -> void:
 	var b := Data.yard_building(key)
 	var en := _en_for(key)
 	UI.fit(_b_title, [en.call(str(b["name"]))])
-	var subs := ["%s %d of %d · %s %d of %d · rank %d" % [en.call(str(b["lines"][0])), _line_built(key, "a"), STEPS, en.call(str(b["lines"][1])), _line_built(key, "b"), STEPS, sim.yard_rank(key)],
+	var subs := ["%s %d of %d · %s %d of %d · rank %d" % [_en_line(key, 0).call(str(b["lines"][0])), _line_built(key, "a"), STEPS, _en_line(key, 1).call(str(b["lines"][1])), _line_built(key, "b"), STEPS, sim.yard_rank(key)],
 		"%d and %d of %d · rank %d" % [_line_built(key, "a"), _line_built(key, "b"), STEPS, sim.yard_rank(key)]]
 	UI.fit(_b_sub, subs)
 	var kind: String = str(Data.SALVAGE_NAMES[b["salvage"]]).to_lower()
 	for k in range(2):
 		var side: String = "a" if k == 0 else "b"
-		UI.fit(_line_heads[k], [en.call(str(b["lines"][k])).to_upper()])
+		var enl := _en_line(key, k)
+		_fit_cut(_line_heads[k], [enl.call(str(b["lines"][k])).to_upper()])
 		for sx in range(STEPS):
 			var d: Dictionary = _tiles[k][sx]
 			var pk: Dictionary = b["picks"][sx][k]
 			var look := step_look(key, sx, side)
 			var picked_now: bool = not selected.get("rank", false) and str(selected.get("key", "")) == key and int(selected.get("col", -1)) == sx and str(selected.get("side", "")) == side
-			UI.fit(d["name"], ["%d · %s" % [sx + 1, en.call(str(pk["name"]))], en.call(str(pk["name"]))])
-			UI.fit(d["short"], [en.call(str(pk["short"]))])
+			_fit_cut(d["name"], ["%d · %s" % [sx + 1, enl.call(str(pk["name"]))], enl.call(str(pk["name"]))])
+			_fit_cut(d["short"], [enl.call(str(pk["short"]))])
 			var price: String = Fmt.money(sim.yard_pick_cost(key, sx)) + ("" if sim.yard_pick_salvage(key, sx) == 0 else ", %d %s" % [sim.yard_pick_salvage(key, sx), kind])
 			var colour: Color = Pal.TEXT_3
 			var edge: Color = Pal.CARD_LINE
@@ -345,8 +364,10 @@ func _show_picked(key: String, b: Dictionary, en: Callable, kind: String) -> voi
 	var k: int = 0 if side == "a" else 1
 	var pk: Dictionary = b["picks"][c][k]
 	var ot: Dictionary = b["picks"][c][1 - k]
-	UI.fit(_title, ["%s · %s, step %d" % [en.call(str(pk["name"])), en.call(str(b["lines"][k])), c + 1], en.call(str(pk["name"]))])
-	UI.fit(_words, [en.call(str(pk["words"])) + ".", en.call(str(pk["short"]))])
+	var enl := _en_line(key, k)
+	var eno := _en_line(key, 1 - k)
+	_fit_cut(_title, ["%s · %s, step %d" % [enl.call(str(pk["name"])), enl.call(str(b["lines"][k])), c + 1], enl.call(str(pk["name"]))])
+	_fit_cut(_words, [enl.call(str(pk["words"])) + ".", enl.call(str(pk["short"]))])
 	if sim.yard_built_side(key, c, side):
 		_other.text = "Built"
 		_build.text = "Built"
@@ -360,10 +381,10 @@ func _show_picked(key: String, b: Dictionary, en: Callable, kind: String) -> voi
 	var why: String = sim.yard_pick_block(key, c, side)
 	var tail: String = "" if why == "" else " · " + why
 	if sim.yard_side(key, c) != "":
-		var second: String = "%s is built · this one costs ×%s" % [en.call(str(ot["name"])), str(Data.YARD_SECOND)]
+		var second: String = "%s is built · this one costs ×%s" % [eno.call(str(ot["name"])), str(Data.YARD_SECOND)]
 		UI.fit(_other, ["%s%s" % [second, tail], second])
 	else:
-		UI.fit(_other, [why if why != "" else "Its twin on %s costs ×%s once this is built" % [en.call(str(b["lines"][1 - k])), str(Data.YARD_SECOND)], why])
+		UI.fit(_other, [why if why != "" else "Its twin on %s costs ×%s once this is built" % [eno.call(str(b["lines"][1 - k])), str(Data.YARD_SECOND)], why])
 	var pick_money: String = Fmt.money(sim.yard_pick_cost(key, c))
 	var pick_salv: int = sim.yard_pick_salvage(key, c)
 	UI.fit_button(_build, (["Build (%s, %d %s)" % [pick_money, pick_salv, kind]] if pick_salv > 0 else []) + ["Build (%s)" % pick_money, "Build (%s)" % Fmt.money_k(sim.yard_pick_cost(key, c))])

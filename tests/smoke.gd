@@ -835,10 +835,19 @@ func _init() -> void:
 	_b46s_half_checks(main)                   # BUILD46 S: a head's thing left behind, the room at half till it's home
 	_m46_join_checks(main)                    # merge 46: R's rounds picker and plan read in S's site card
 	_fix46s_checks(main)                      # fix 46: the site card's locked head, its words, the deeds' is/are
+	_b48b_checks(main)                        # BUILD48 B (4 Nov): the playtest's UI fixes, items 1, 2, 4, 7, 8, 10, 11, 20, 27, 28
 	_b43_memo_checks(main)                    # BUILD43: the live stat memo moves with each change (last: it loads a save)
 	_b45_ui_checks(main)                      # BUILD45: each cheaper read against the old way
 	_b45_budget_checks(main)                  # BUILD45: the UI's speed on a mid and a late camp (its own fixtures, then the camp back)
 	_m45_fix_checks(main)                     # BUILD45's reviews (2 Nov): the settled odds by room and by Sim, the all-dead settle, the idle log, the boot
+	_b48a_map_odds_checks(main)               # BUILD48 A (4 Nov): items 9 and 3 - the Map's odds on Matt's save, the picked place read alone
+	_b48a_wager_odds_checks(main)             # BUILD48 A: item 17 - Kev's wagers in the odds, the shut meds say why
+	_b48a_yardstick_checks(main)              # BUILD48 A: item 22 - the body's figure against a named fight, the same on and off a run
+	_b48a_retune_checks(main)                 # BUILD48 A: item 26 - a Retune's reads capped
+	_b48a_vagabond_checks(main)               # BUILD48 A: item 16 - the Vagabond paid from home
+	_b48a_topup_checks(main)                  # BUILD48 A: item 24 - the gate fills what the last run used
+	_b48a_get_out_checks(main)                # BUILD48 A: item 4's open check - Get out mid-refill
+	_b48a_clock_start_checks(main)            # BUILD48 A (the review): item 4's warnings skip a mark passed before the run
 	_finish()
 
 
@@ -5159,11 +5168,14 @@ func _events_checks(main) -> void:
 	_check(str(sim.event_now().get("outcome", "")) == "free", "a hurt one with a med to hand wasn't helped by the default order")
 	sim.extract_now()
 	var rig_keep: Array = sim.rig.duplicate()
+	var plans_keep: Dictionary = sim.rounds_plans.duplicate(true)
 	sim.rig = sim.rig.filter(func(it): return not Items.is_medical(it))
+	sim.rounds_plans = {"camp": {"top": false}}     # no med packed at the gate (BUILD48 A, item 24: the magazines left their pouches to the meds)
 	m = _ev_force(sim, "need", {}, 1.0, {"pin": false, "what": "a bad cut to the leg"})
 	_check(str(sim.event_now().get("outcome", "")) == "leave", "a hurt one with no med was helped")
 	sim.extract_now()
 	sim.rig = rig_keep
+	sim.rounds_plans = plans_keep
 	m = _ev_force(sim, "locked")
 	_check(str(sim.event_now().get("outcome", "")) == "force", "Force it as the default didn't force it")
 	sim.extract_now()
@@ -5775,7 +5787,7 @@ func _events_more_checks(main) -> void:
 	sim.event_threads = {}
 	# The Vagabond: tins and materials; gear off his shelf into the pack, a rumour a tip; his standing's steps
 	m = _ev_at(sim, 3, "trader", "vagabond")
-	m["cash"] = 1e6
+	sim.cash = 1e6                         # his tins are the camp's (BUILD48 A, item 16)
 	var vev: Dictionary = sim.event_now()
 	var shelf: Array = sim.trader_shelf()
 	var gear: Array = shelf.filter(func(r): return str(r["key"]).begins_with("gear"))
@@ -5783,7 +5795,7 @@ func _events_more_checks(main) -> void:
 	var g0: Dictionary = gear[0]
 	var it0: Dictionary = vev["shelf"][0]["it"]
 	var found0: int = m["found"].size()
-	_check(sim.trader_buy(str(g0["key"])) and is_equal_approx(float(m["cash"]), 1e6 - int(g0["price"])) and m["found"].any(func(it): return int(it["id"]) == int(it0["id"])) and not sim.trader_buy(str(g0["key"])), "his gear: tins %.0f, in the pack %s, sold twice?" % [float(m["cash"]), str(m["found"].size() > found0)])
+	_check(sim.trader_buy(str(g0["key"])) and is_equal_approx(sim.cash, 1e6 - int(g0["price"])) and m["found"].any(func(it): return int(it["id"]) == int(it0["id"])) and not sim.trader_buy(str(g0["key"])), "his gear: tins at home %.0f, in the pack %s, sold twice?" % [sim.cash, str(m["found"].size() > found0)])
 	_check(str(it0["slot"]) in Sim.VAG_SLOTS and int(it0["tier"]) >= int(m["t"]["loot_tier"]) - 1, "his gear isn't gear at the site's tier: %s tier %d" % [str(it0["slot"]), int(it0["tier"])])
 	# his price off the piece's worth, over what the Fence pays (fix 46, E1)
 	var sp0: int = sim.sell_price(it0)
@@ -5801,9 +5813,9 @@ func _events_more_checks(main) -> void:
 		sim._pack_put(m, fill, fspot)
 		fguard += 1
 	var g1: Array = sim.trader_shelf().filter(func(r): return str(r["key"]) == "gear1")
-	var cash_full: float = float(m["cash"])
+	var cash_full: float = sim.cash
 	var left_full: int = int(m["left"])
-	_check(not g1.is_empty() and not bool(g1[0]["ok"]) and str(g1[0]["why"]) == Words.EV["vag_no_room"] and not sim.trader_buy("gear1") and is_equal_approx(float(m["cash"]), cash_full) and int(m["left"]) == left_full, "a full pack still sells his gear: %s, tins %.0f -> %.0f, left %d -> %d" % [str(g1), cash_full, float(m["cash"]), left_full, int(m["left"])])
+	_check(not g1.is_empty() and not bool(g1[0]["ok"]) and str(g1[0]["why"]) == Words.EV["vag_no_room"] and not sim.trader_buy("gear1") and is_equal_approx(sim.cash, cash_full) and int(m["left"]) == left_full, "a full pack still sells his gear: %s, tins %.0f -> %.0f, left %d -> %d" % [str(g1), cash_full, float(m["cash"]), left_full, int(m["left"])])
 	sim.loot_by_hand = true
 	var g1b: Array = sim.trader_shelf().filter(func(r): return str(r["key"]) == "gear1")
 	var it1: Dictionary = vev["shelf"][1]["it"]
@@ -5824,7 +5836,7 @@ func _events_more_checks(main) -> void:
 	sim.extract_now()
 	# no materials: the rumour for tins
 	m = _ev_at(sim, 3, "trader", "vagabond")
-	m["cash"] = 1e6
+	sim.cash = 1e6                         # (BUILD48 A, item 16)
 	sim.event_now()["rumour"] = true
 	var rr2: Array = sim.trader_shelf().filter(func(r): return r["key"] == "rumour")
 	_check(str(rr2[0]["pay"]) == "tins" and int(rr2[0]["price"]) > 0, "with no materials his rumour isn't for tins: %s" % str(rr2))
@@ -8248,15 +8260,15 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main._missions.select(5)                 # the Retail Park: the Carpet Man's
 	main.refresh()
-	main._missions._boss(0)
+	main._missions._cols[0]["card"].head_btn.pressed.emit()     # the card's Head (BUILD48 item 1: the foot's button went)
 	for k in range(4):
 		main._missions._shown = ""
 		main.refresh()
 	var boss_toasts: int = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
 	_check(boss_toasts == 1, "the boss toggle toasted %d times" % boss_toasts)
-	main._missions._boss(0)
+	main._missions._cols[0]["card"].gang_btn.pressed.emit()
 	main.refresh()
-	main._missions._boss(0)
+	main._missions._cols[0]["card"].head_btn.pressed.emit()
 	main.refresh()
 	boss_toasts = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
 	_check(boss_toasts == 1, "toggling off and on again toasted again while the first still showed: %d" % boss_toasts)
@@ -8298,6 +8310,10 @@ func _playtest_checks(main) -> void:
 	for i in range(Data.TIERS.size()):
 		keys0[i] = str(sim._odds_key(i))
 	while frames < 6000:                        # 2000 flaked on the Barracks' long dry runs with the machine still loaded (15 Oct)
+		for i in range(Data.TIERS.size()):
+			if sim.tier_open(i) and not sim.odds_settled(i):
+				main._missions.selected = i     # each picked in turn: the Map reads the place picked alone (BUILD48 A, item 3)
+				break
 		main._read_odds()
 		frames += 1
 		for i in range(Data.TIERS.size()):
@@ -8812,7 +8828,7 @@ func _ammo_checks(sim) -> void:
 	var rig_after: int = sim.rounds_for(sim.equipped["Primary"])
 	_check(sim.on_mission() and rig_after > rig_before, "the gate didn't top the rig up: %d rounds before, %d after, %d in the stash" % [rig_before, rig_after, in_stash])
 	_check(sim.rig.any(func(x): return str(x["base"]) == "Bandage"), "the top-up pushed the meds out of the rig")
-	_check(sim.rig.any(func(x): return str(x.get("ammo", "")) == "Slugs"), "the top-up left the better grade in the stash")
+	_check(sim.rig.filter(func(x): return Items.is_mag(x)).size() == 1, "the gate packed a magazine past the one that went out: %s" % str(sim.rig.map(func(x): return str(x["base"]))))     # BUILD48 A (item 24, Matt's pick): was the better grade's magazine packed
 	_check(sim.rig.any(func(x): return str(x.get("ammo", "")) == "Shells" and int(x["rounds"]) == 8), "the gate didn't fill the magazine of shells with its own grade: %s" % str(sim.rig.map(func(x): return [x.get("ammo", ""), x.get("rounds", 0)])))
 	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:")) and sim.events.any(func(e): return str(e[1]).begins_with("Filled:")), "the top-up wasn't logged")
 	sim.extract_now()
@@ -8830,10 +8846,11 @@ func _ammo_checks(sim) -> void:
 		sim.stash.append(sim._plain(Data.MAGAZINE, "Shotgun magazine"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
-	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure; 30 Oct, the magazines' share before spare heals): the
-	# primary's magazines go in to their share, the bandages the rest - the gate no longer sends the gun out short to keep them
-	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return Items.is_mag(x)).size() == ceili(sim.med_capacity() * Data.RIG_MAG_SHARE)
-		and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - ceili(sim.med_capacity() * Data.RIG_MAG_SHARE),
+	# a rig full of bandages (29 Oct, the stall: heal, magazine, cure): the primary's first magazine goes in, a bandage out
+	# for it - the gate never sends the gun out dry; no more magazines than that (BUILD48 A, item 24, Matt's pick: was the
+	# magazines to their share, the bandages the rest)
+	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) > 0 and sim.rig.filter(func(x): return Items.is_mag(x)).size() == 1
+		and sim.rig.filter(func(x): return str(x["base"]) == "Bandage").size() == sim.med_capacity() - 1,
 		"a full rig of bandages went out without the primary's magazines: %s" % str(sim.rig.map(func(x): return str(x["base"]))))
 	sim.extract_now()
 	sim.stash = stash0
@@ -12402,7 +12419,7 @@ func _magazine_checks(main) -> void:
 	for x in s.rig:
 		if Items.is_mag(x):
 			mag_cells += Items.size(x)
-	_check(mag_cells == ceili(s.med_capacity() * Data.RIG_MAG_SHARE), "the gate's magazines: %d pouches of %d" % [mag_cells, s.med_capacity()])
+	_check(mag_cells == 1, "the gate's magazines: %d pouches of %d (one went out, one comes back filled: BUILD48 A, item 24)" % [mag_cells, s.med_capacity()])
 	_check(s.rig.all(func(x): return not Items.is_mag(x) or (int(x["rounds"]) == 30 and str(x["ammo"]) == "SMG rounds")), "a packed magazine isn't full of the stash's rounds: %s" % str(s.rig.map(func(x): return x.get("rounds", -1))))
 	_check(not s.rig.any(func(x): return Items.is_ammo(x)), "a box went in the rig")
 	# the stall (29 Oct): the rig full from before - cures and a heal, or a magazine for a gun not carried - still gets
@@ -18967,14 +18984,22 @@ func _rarity_tone_checks(sim) -> void:
 ## The shell's odds, settled: frames of main._read_odds until every open tier has read (the Runs and Radio
 ## screens show "reading the odds" until then).
 func _settle_odds(main) -> void:
+	var sel: int = main._missions.selected
 	for k in range(4000):
+		if main.room == main.MISSIONS:
+			for i in range(Data.TIERS.size()):
+				if main.sim.tier_open(i) and not main.sim.odds_settled(i):
+					main._missions.selected = i     # each picked in turn: the Map reads the place picked alone (BUILD48 A, item 3)
+					break
 		main._read_odds()
 		var done := true
 		for i in range(Data.TIERS.size()):
 			if main.sim.tier_open(i) and not main.sim.odds_settled(i):
 				done = false
 		if done:
+			main._missions.selected = sel
 			return
+	main._missions.selected = sel
 
 
 ## A site's level (the endgame, 7 Oct): tier plus depth drives the curve, the bases and the item level, so the
@@ -21777,7 +21802,7 @@ func _try_on_checks(main) -> void:
 	else:
 		_check(is_equal_approx(with_rule, plain_v), "the Jacket's rule counted with under three on you: %.3f against %.3f" % [with_rule, plain_v])
 	var hd: Array = PickPanel.deltas_for(sim, regen_hat, hat)
-	_check(not hd.is_empty() and float(hd[0][0]) > 0.0 and str(hd[0][1]).ends_with("odds"), "the helmet's deltas don't lead with the survival: %s" % str(hd))
+	_check(not hd.is_empty() and float(hd[0][0]) > 0.0 and str(hd[0][1]).ends_with(sim.surv_against()), "the helmet's deltas don't lead with the survival: %s" % str(hd))     # its yardstick named (BUILD48 A, item 22)
 	sim.equipped["Helmet"] = regen_hat
 	var comp: Dictionary = sim._plain("Helmet", "Composite helmet")
 	var sg: float = sim.survival_gain(comp)
@@ -21903,7 +21928,7 @@ func _came_back_checks(main) -> void:
 	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
 	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)) and card.position.y >= main._missions.ZONE_H, "the card leaves the Runs screen or sits on the zone row")
 	var c3: Dictionary = main._missions._cols[0]                 # the card, the right third (the drawn Map)
-	for db in [c3["deploy"], c3["insure"], c3["boss"]]:
+	for db in [c3["deploy"], c3["insure"]]:     # (the foot's Head button went: the card's own toggle takes him on, BUILD48 item 1)
 		_check(not card.get_global_rect().intersects(db.get_global_rect()), "the card would cover the right-hand column's '%s' when it shows" % db.text)
 	_check_fit(main, "Runs (what came back)")
 	_came_back_buttons_clear(main, "the run from tier 1")
@@ -21939,7 +21964,7 @@ func _came_back_buttons_clear(main, where: String) -> void:
 	var card = main._missions._came
 	var cr: Rect2 = card.get_global_rect()
 	for c in main._missions._cols:
-		for b in [c["deploy"], c["boss"], c["insure"]]:
+		for b in [c["deploy"], c["insure"]]:     # (the foot's Head button went, BUILD48 item 1)
 			if _shown(b):                         # not is_visible_in_tree: the smoke's main is never in the tree (20 Oct)
 				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
 		if c["note"].text != "":
@@ -25061,7 +25086,7 @@ func _map_checks(main) -> void:
 					var cov: float = mv.cloud_cover_bound(csoft, mv.pin_at(i), mv.size)
 					_check(cov < 0.1, "%s's pin can sit under %.2f of cloud with zones %s open" % [Data.TIERS[i]["name"], cov, ckey])
 		_check(mv._clouds_open == "1000" or mv._clouds_open.length() == Data.ZONES.size(), "the cloud wasn't cut for the zones open: '%s'" % mv._clouds_open)
-	_check(mv._key_rect.size.x <= 340.0 and mv._key_rect.size.y <= 32.0 and mv._legend.all(func(e): return mv._key_rect.encloses(Rect2(e[0].position, e[0].size))), "the Map's key is %s, or a word leaves it" % str(mv._key_rect))
+	_check(mv._key_rect.size.x <= 420.0 and mv._key_rect.size.y <= 32.0 and mv._legend.all(func(e): return mv._key_rect.encloses(Rect2(e[0].position, e[0].size))), "the Map's key is %s, or a word leaves it" % str(mv._key_rect))
 	# a pad or the keys step the pins, round the open zones' sites (the review: the tabs were buttons; the Deck's d-pad)
 	var kev := InputEventAction.new()
 	kev.action = "ui_right"
@@ -30439,9 +30464,9 @@ func _cleanup31_checks() -> void:
 		s.stash.append(s._plain(Data.MAGAZINE, "SMG magazine"))
 	s.set_top_up("fill")
 	s._top_up()
-	var share: int = ceili(cap * Data.RIG_MAG_SHARE)
+	var share: int = 1                        # BUILD48 A (item 24, Matt's pick): the one that went out, the heals left alone (was the magazines' share)
 	var pouches: int = s.rig.filter(func(x): return Items.is_mag(x)).size()
-	_check(cap >= 4 and pouches == share and s.rig.any(func(x): return Items.is_heal(x)) and s.rig_used() <= cap,
+	_check(cap >= 4 and pouches == share and s.rig.filter(func(x): return Items.is_heal(x)).size() == cap - 1 and s.rig_used() <= cap,
 		"a rig full of heals kept the gun at %d pouches of its %d: %s" % [pouches, share, str(s.rig.map(func(x): return str(x["base"])))])
 	# the bot on a save set to "Leave it"
 	var b = Sim.new()
@@ -33860,9 +33885,10 @@ func _b45a_reads_checks(main) -> void:
 		return int(sim.prof.get("key_common", 0)) + int(sim.prof["surv_calls"])
 	var settle := func(what: String) -> int:
 		var n := 0
-		while not main._odds_done.has(what) and n < 4000:
-			sim.advance(0.0)
+		sim.advance(0.0)
+		while main._odds_done.get(what, []) != main._odds_sig(what, main._odds_base()) and n < 4000:     # settled as things stand now (BUILD48 A: a pick moved since read again)
 			main._read_odds(5.0)
+			sim.advance(0.0)
 			n += 1
 		return n
 	var idle := func() -> int:
@@ -33875,8 +33901,11 @@ func _b45a_reads_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	var n_map: int = settle.call("map")
+	var surv0: int = int(sim.prof["surv_calls"])
 	var map_idle: int = idle.call()
-	_check(main._odds_done.has("map") and map_idle == 0, "the Map's settled odds were asked %d times in 30 frames (settled in %d)" % [map_idle, n_map])
+	var map_surv: int = int(sim.prof["surv_calls"]) - surv0
+	# the Map's signature holds the picked site's own key, one a frame (BUILD48 A, the review of item 9): no read asked
+	_check(main._odds_done.has("map") and map_surv == 0 and map_idle <= 30, "the Map's settled odds were asked %d times in 30 frames, %d reads (settled in %d)" % [map_idle, map_surv, n_map])
 	var gun = sim.equipped["Primary"]
 	sim.unequip("Primary")
 	sim.advance(0.0)
@@ -33885,9 +33914,9 @@ func _b45a_reads_checks(main) -> void:
 	settle.call("map")
 	var all_read := true
 	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i) and not sim.odds_settled(i):
-			all_read = false
-	_check(moved and all_read, "after the gun came off the Map read again %s, every open site to its count %s" % [str(moved), str(all_read)])
+		if sim.tier_open(i) and i == main._missions.selected and not sim.odds_settled(i):
+			all_read = false                      # the picked site alone (BUILD48 A, item 3: the Map reads the place picked)
+	_check(moved and all_read, "after the gun came off the Map read again %s, the picked site to its count %s" % [str(moved), str(all_read)])
 	sim.equip_item(int(gun["id"]))
 	sim.hp = sim.max_hp() * 0.5
 	sim.advance(0.0)
@@ -33971,6 +34000,7 @@ func _m45_fix_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main._missions.county_on = false
 	main._missions.exp_on = false
+	main._missions.order_key = str(pin["key"])     # the pin picked: the Map reads the place picked alone (BUILD48 A, item 3)
 	main.refresh()
 	settle.call("map")
 	var pin_read0: bool = bool(sim.order_odds_now(str(pin["key"]))[1])
@@ -33988,6 +34018,7 @@ func _m45_fix_checks(main) -> void:
 		sim.equip_item(int(gun["id"]))
 	_check(sim.order_open(str(pin["key"])) and pin_read0 and not map_marked and pin_read,
 		"the Radio with no signal (%s, %d frames) marked the Map's reads done %s; the Map then read %s's pin %s (%d frames; read before the move %s)" % [radio_key, n_r, str(map_marked), str(pin["key"]), str(pin_read), n_m, str(pin_read0)])
+	main._missions.order_key = ""
 	# 1b. a read asked straight after a change, no frame between (review45a 8): the signature is this moment's
 	settle.call("map")
 	var sig_was: Array = main._odds_done.get("map", [])
@@ -34569,7 +34600,7 @@ func _b46s_card_checks(main) -> void:
 			continue
 		M.select(i)
 		for view in [false, true]:
-			card.head_view = view
+			sim.arm_boss(i, view)                # the card shows the head when he's taken on (BUILD48 item 1)
 			M._shown = ""
 			main.refresh()
 			# one layout: every block where it was on the first site, whatever this one shows
@@ -34598,16 +34629,18 @@ func _b46s_card_checks(main) -> void:
 				card.head_view = false
 				card._toggle(true)
 				_check(not card.head_view, "the Head side took a press on a site with no head")
+		sim.arm_boss(i, false)
 	_check(heads >= 4, "only %d heads shown standing in their interiors" % heads)
-	# the Head button on the card's foot takes him on and the card shows him; off, the gang again
+	# the card's Head takes him on and the card shows him; Gang, the gang again (BUILD48 item 1: the foot's button went)
 	var hs: int = int(Data.BOSSES[0]["tier"])
 	M.select(hs)
-	card.head_view = false
 	sim.boss_armed.erase(hs)
-	M._boss(0)
+	M._shown = ""
+	main.refresh()
+	card.head_btn.pressed.emit()
 	main.refresh()
 	_check(sim.boss_armed.get(hs, false) and card.head_view and card.head_sub.text.begins_with(Words.SITE_CARD["armed_short"]), "taking the head on didn't show him: armed %s, view %s, '%s'" % [str(sim.boss_armed.get(hs, false)), str(card.head_view), card.head_sub.text])
-	M._boss(0)
+	card.gang_btn.pressed.emit()
 	main.refresh()
 	_check(not sim.boss_armed.get(hs, false) and not card.head_view, "letting the head be didn't show the gang again")
 	# the fix chips act: no meds and near dead on a site with one before it - the green chip picks that site, the meds'
@@ -34931,3 +34964,1039 @@ func _fix46s_checks(main) -> void:
 	M._shown = ""
 	main.refresh()
 	print("fix46 site card ok: a locked site's head, the share words, the price once, sentence case, the deeds are home")
+
+
+# ------------------------------------------------------------------ BUILD48 B (4 Nov): the playtest's UI fixes
+
+## Every BUILD48-B check, in the whole smoke's list; each is its own area for `-- only` (b48b_head and so on).
+func _b48b_checks(main) -> void:
+	_b48b_head_checks(main)                   # item 1: the site card's Head takes him on, one control
+	_b48b_skill_card_checks(main)             # item 2: a skill node's card says Skill
+	_b48b_clock_checks(main)                  # item 4: the run clock's warnings and its last ten seconds
+	_b48b_swap_level_checks(main)             # item 7: the class swap's card says the level they join at
+	_b48b_rail_checks(main)                   # item 8: the rail's names as drawn, clear of the badge
+	_b48b_bunk_checks(main)                   # item 10: the Bunkhouse's Expeditions line scrambled till the Quartermaster
+	_b48b_smg_checks()                        # item 11: the SMGs' flash at the barrel's end
+	_b48b_kev_checks(main)                    # item 20: a beaten beat's papers read decrypted
+	_b48b_workshop_checks(main)               # item 27: the Workshop names a worn unique, a blade says no rounds
+	_b48b_rules_button_checks(main)           # item 28: the Kit's Loot rules button after the bar's last button
+
+
+## Item 1 (Matt: "head selected but doesnt activate unless the second button is also selected - there should just be
+## one"): the card's Head takes him on and Set off sets off at the head; Gang lets him be; no Head button by Set off;
+## the Head greyed when he can't be taken on.
+func _b48b_head_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_finish_campaign(sim)
+	sim.notes = 100000
+	sim.hp = sim.max_hp()
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	var hs: int = int(Data.BOSSES[0]["tier"])
+	sim.boss_armed.erase(hs)
+	M.select(hs)
+	M._shown = ""
+	main.refresh()
+	_check(sim.tier_open(hs) and card.has_head and not card.head_btn.disabled and not card.head_view, "the fixture: %s's head can't be picked: open %s, head %s, Head disabled %s" % [Data.TIERS[hs]["name"], str(sim.tier_open(hs)), str(card.has_head), str(card.head_btn.disabled)])
+	# no second Head control: nothing under the card's panel but the card's own toggle reads Head or Take him on
+	var c: Dictionary = M._cols[0]
+	var foot: Array = []
+	_buttons_under(c["panel"], foot)
+	foot = foot.filter(func(b): return not card.is_ancestor_of(b) and (b.text.begins_with(Words.SITE_CARD["head"]) or b.text.begins_with(Words.SITE_CARD["take_on"]) or b.text.begins_with(Words.SITE_CARD["taken_on"]) or b.text.begins_with("Convoy")))
+	_check(not c.has("boss") and foot.is_empty(), "a second Head button by Set off: %s" % str(foot.map(func(b): return b.text)))
+	# Head picked: he's taken on and the card shows him
+	card.head_btn.pressed.emit()
+	main.refresh()
+	_check(bool(sim.boss_armed.get(hs, false)) and card.head_view, "the card's Head didn't take him on: armed %s, view %s" % [str(sim.boss_armed.get(hs, false)), str(card.head_view)])
+	_check_fit(main, "the site card, the head picked")
+	# Set off sets off at the head
+	M._deploy(0)
+	_check(sim.on_mission() and int(sim.mission["tier"]) == hs and sim.mission.has("boss") and str(sim.mission["boss"].get("name", "")) == str(sim.boss_of(hs).get("name", "-")),
+		"Head picked then Set off didn't set off at the head: %s" % (str(sim.mission.get("boss", {}).get("name", "no head")) if sim.on_mission() else "no run"))
+	if sim.on_mission():
+		sim.extract_now()
+	main.show_room(main.MISSIONS)
+	M._shown = ""
+	main.refresh()
+	_check(not card.head_view or bool(sim.boss_armed.get(hs, false)), "the card still shows the head after the run took him off")
+	# Gang lets him be
+	card.head_btn.pressed.emit()
+	main.refresh()
+	card.gang_btn.pressed.emit()
+	main.refresh()
+	_check(not bool(sim.boss_armed.get(hs, false)) and not card.head_view, "the card's Gang didn't let him be")
+	# short of his notes: Head greyed, the row says the price
+	if sim.boss_cost(hs) > 0:
+		sim.notes = 0
+		M._shown = ""
+		main.refresh()
+		_check(card.head_btn.disabled and card.head_sub.text.contains(Fmt.notes(sim.boss_cost(hs))), "short of notes the Head isn't greyed with his price: disabled %s, '%s'" % [str(card.head_btn.disabled), card.head_sub.text])
+		card.head_btn.pressed.emit()
+		_check(not bool(sim.boss_armed.get(hs, false)), "the Head took him on with no notes")
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("b48b head ok: one control, Head picked sets off at the head, Gang lets him be")
+
+
+## Item 2 (Matt: "skills identified as notable when they should be labelled 'skill' instead"): a skill node's card on
+## Training says Skill - its chip, and its where line "a skill"; a class's start, its skill on it, keeps "the start".
+func _b48b_skill_card_checks(main) -> void:
+	var sim = main.sim
+	var picks := {}                           # one skill node, one start with a skill
+	for id in Data.web_ids():
+		var nd: Dictionary = sim.node(str(id))
+		if nd.has("skill"):
+			picks["start" if bool(nd.get("start", false)) else "skill"] = picks.get("start" if bool(nd.get("start", false)) else "skill", str(id))
+	_check(picks.has("skill") and picks.has("start"), "the fixture: skill nodes %s" % str(picks))
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk._armed = ""
+	for k in picks:
+		var sid: String = picks[k]
+		bk.web().pick(sid)
+		bk._shown = ""
+		main.refresh()
+		var chips: Array = bk._chips.text_nodes().map(func(l): return str(l.text))
+		var where: String = bk._where.text.to_lower()
+		var said_ok: bool = where.ends_with(Words.WEB_SCREEN["skill"]) if k == "skill" else where.ends_with(Words.WEB_SCREEN["start"])
+		_check(bk.selected == sid and chips.has(Words.WEB_SCREEN["skill_chip"]) and not chips.has("Notable") and said_ok and not where.contains(Words.WEB_SCREEN["notable"]),
+			"a skill node's card (%s, %s): chips %s, where '%s'" % [sid, k, str(chips), bk._where.text])
+		_check_fit(main, "Training, a skill node picked (%s)" % k)
+	bk.selected = ""
+	print("b48b skill card ok: %s read Skill" % str(picks.values()))
+
+
+## Item 4 (Matt: "a big timer on the fight screen that counts down from 10 seconds. Maybe a warning at one minute and 30
+## seconds"): a toast at 1:00 and 0:30 left, once each; the last ten seconds big over the frame, reading the seconds;
+## it fits at 1920 x 1080 and at the Deck's canvas.
+func _b48b_clock_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission(), "the fixture: no run at the Allotments")
+	if not sim.on_mission():
+		sim.load_dict(saved)
+		return
+	main.show_room(main.MISSIONS)
+	var run = main._run
+	var cd = run.get("_countdown")
+	_check(cd is Label, "the run screen has no countdown")
+	main._juice._toasts = []
+	var said := func(): return main._juice.lines().filter(func(l): return str(l).ends_with(Words.RUN_CLOCK["warn"].get_slice("%s", 1)))
+	sim.mission["clock"] = 75.0
+	main.refresh()
+	_check(said.call().is_empty() and (cd == null or not cd.visible), "at 1:15 left: %s, countdown %s" % [str(said.call()), str(cd.visible if cd != null else null)])
+	sim.mission["clock"] = 59.0
+	main.refresh()
+	main.refresh()
+	_check(said.call() == [Words.RUN_CLOCK["warn"] % "1:00"], "at 0:59 left the warning didn't show once: %s" % str(said.call()))
+	sim.mission["clock"] = 29.0
+	main.refresh()
+	main.refresh()
+	_check(said.call().size() == 2 and str(said.call()[0]) == Words.RUN_CLOCK["warn"] % "0:30", "at 0:29 left the second warning didn't show once: %s" % str(said.call()))
+	_check(cd == null or not cd.visible, "the countdown shows at 0:29")
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		sim.mission["clock"] = 9.0
+		main.refresh()
+		_check(cd != null and cd.visible and cd.text == "9", "at 0:09 left the countdown reads '%s' (shown %s)" % [cd.text if cd != null else "-", str(cd.visible if cd != null else null)])
+		if cd != null:
+			var UI_v = load("res://scripts/ui/ui.gd")
+			var fr := Rect2(run.VIEW_X, run.FIGHT_BOX_Y, run.VIEW_W, run.VIEW_H)
+			var f: Font = cd.get_theme_font("font")
+			var th: float = f.get_height(cd.get_theme_font_size("font_size"))
+			_check(fr.encloses(Rect2(cd.position, Vector2(cd.size.x, maxf(cd.size.y, th)))) and UI_v.text_width(cd, "10") <= cd.size.x and cd.get_theme_font_size("font_size") >= 96,
+				"the countdown at %s isn't big inside the frame: %s in %s" % [str(sz), str(Rect2(cd.position, cd.size)), str(fr)])
+		_check_fit(main, "the run screen, the clock's last ten seconds (%dx%d)" % [int(sz.x), int(sz.y)])
+		# with the skills up and the longest skill's name across the frame (the bot's run found 'Headbutt' on the first place)
+		if run._skills != null and cd != null:
+			var longest := ""
+			for k in Data.SKILLS:
+				if str(Data.SKILLS[k].get("name", "")).length() > longest.length():
+					longest = str(Data.SKILLS[k]["name"])
+			run._skills.visible = true
+			run._skills.word.text = longest
+			run._skills.word.visible = true
+			var UI_w = load("res://scripts/ui/ui.gd")
+			var wr: Rect2 = _text_rect(run._skills.word, UI_w)
+			var cr: Rect2 = _text_rect(cd, UI_w)
+			var btns: Array = run._skills.buttons.map(func(x): return x["btn"].get_global_rect())
+			_check(not wr.intersects(cr) and btns.all(func(r): return not r.intersects(cr)), "the countdown sits on the skill's name '%s' %s or its buttons: %s" % [longest, str(wr), str(cr)])
+			run._skills.word.visible = false
+	sim.mission["clock"] = 0.4
+	main.refresh()
+	_check(cd != null and cd.text == "1", "at 0:00.4 the countdown reads '%s'" % (cd.text if cd != null else "-"))
+	main.layout(Vector2(1920, 1080))
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("b48b clock ok: 1:00 and 0:30 said once each, the last ten big in the frame")
+
+
+## Item 7 (Matt: "the level 1 wording is incorrect there anyway"): the class swap's card says the level the runner joins
+## at - with the crew's floor at 8, 8.
+func _b48b_swap_level_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var fresh := ""
+	for c in Data.CLASSES:
+		if str(c["name"]) != sim.cls and not sim.roster.has(str(c["name"])):
+			fresh = str(c["name"])
+			break
+	_check(fresh != "", "the fixture: no class still to run")
+	if fresh == "":
+		return
+	for k in sim.roster:
+		sim.roster[k]["xp"] = 0.0
+	sim.xp = Data.xp_for_level(8 + Data.CREW_FLOOR_UNDER)
+	var jl: int = sim.join_level(fresh)
+	_check(jl == 8 and sim.crew_level(fresh) == 0, "the fixture: the crew's floor for the %s is %d" % [fresh, jl])
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk.selected = ""
+	bk._armed = ""
+	bk._shown = ""
+	main.refresh()
+	bk._pick_class(fresh)                     # the first press: the swap armed, its card shown
+	main.refresh()
+	_check(bk._armed == fresh, "the fixture: the swap to the %s didn't arm" % fresh)
+	var said: String = " ".join([bk._words.text, bk._words2.text, bk._words3.text]).strip_edges()
+	_check(said.contains("level 8") and not said.contains("level 1,") and not said.contains("level 1."), "the swap's card for the %s (joins at %d): '%s'" % [fresh, jl, said])
+	_check_fit(main, "Training, a new runner's swap card")
+	bk._armed = ""
+	sim.load_dict(saved)
+	main.refresh()
+	print("b48b swap level ok: '%s'" % said)
+
+
+## Item 8 (Matt: "you never fixed the rail clipping here when a runner is away"): the 30 Oct check set each row's height
+## growing (72, 77, 101) and measured against the height asked; the game shrinks them - the away card comes in and the
+## rows go from 101 to 77 at 1920 x 1080 - and a Control's size under its old minimum doesn't take, so each row stayed
+## 101 inside its 77 slot: its name and badge placed for 101 (every name low, the badge down over the next row) while its
+## stamp, its hairline and the next row went at 77. Here the rows are laid as the game lays them, the away card off then
+## on, and every row measured as drawn: its real height the slot's, the name's text (the font's height, centred in the
+## box as tall as the font at least) inside the row and clear of the badge, centred with no badge; at 1920 x 1080 and the
+## Deck's canvas, and down to the least row.
+func _b48b_rail_checks(main) -> void:
+	if main.room == main.MISSIONS:
+		main.show_room(main.OVERVIEW)        # the run folds the rail: names show on any other room
+	var tried := 0
+	var away_was: bool = main._away.visible
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for laid in ["no away card", "the away card", "the least row", "no away card"]:
+			main._away.visible = laid != "no away card"
+			main._lay_rail_rows()                 # as the shell lays them: shrinking when the card comes in, growing when it goes
+			var slot: float = main._rail_buttons[main.ROOMS[1]].position.y - main._rail_buttons[main.ROOMS[0]].position.y
+			if laid == "the least row":
+				slot = main.RAIL_ROW_MIN
+				for nm in main.ROOMS:
+					main._rail_buttons[nm].set_row_height(slot)
+			if laid == "the away card":
+				_check(slot < 101.0 and slot >= main.RAIL_ROW_MIN, "the fixture: the rows with the away card at %s are %.0f" % [str(sz), slot])
+			for nm in main.ROOMS:
+				var b = main._rail_buttons[nm]
+				for bd in [[Words.REPEAT["badge_away"], "warn"], ["", ""]]:
+					b.show_status({"badge": bd[0], "badge_tone": bd[1]})
+					tried += 1
+					var h: float = slot
+					_check(is_equal_approx(b.size.y, h) and is_equal_approx(b._rule.position.y, h - 1.0), "rail %s (%s, %s): the row is %.0f tall in a %.0f slot, its hairline at %.0f" % [nm, laid, str(sz), b.size.y, h, b._rule.position.y])
+					var n: Label = b._name
+					var f: Font = n.get_theme_font("font")
+					var fh: float = f.get_height(n.get_theme_font_size("font_size"))
+					var drawn_h: float = maxf(n.size.y, fh)          # a Label draws no shorter than its font
+					var top: float = n.position.y + (drawn_h - fh) / 2.0
+					var bottom: float = top + fh
+					if bd[0] == "":
+						_check(top >= 0.0 and bottom <= h - 1.0 and absf((top + bottom) / 2.0 - h / 2.0) <= 1.0, "rail %s (%s, %s): the name's text drawn %.0f-%.0f in a %.0f px row, off its middle" % [nm, laid, str(sz), top, bottom, h])
+						continue
+					_check(top >= 0.0 and bottom <= b._badge.position.y and b._badge.position.y + b._badge.size.y <= h - 1.0,
+						"rail %s (%s, %s): the name drawn %.0f-%.0f, the '%s' badge %.0f-%.0f, the row %.0f" % [nm, laid, str(sz), top, bottom, bd[0], b._badge.position.y, b._badge.position.y + b._badge.size.y, h])
+	_check(tried == 2 * 4 * main.ROOMS.size() * 2, "the rail's names tried %d" % tried)
+	# the smoke draws no frame, so a row's old minimum never holds it here as it does in the game: tests/rail_rows_check.gd
+	# lays the rows in a tree that runs frames, the away card off then on, and says each row as drawn. A child Godot,
+	# headless, as the boot check's: Linux only (its own XDG data home, so nothing of the player's is touched)
+	if OS.get_name() != "Linux":
+		print("rail rows check: cloud only")
+	else:
+		var rr_home: String = ProjectSettings.globalize_path("user://rail_rows_home")
+		var rr_out: String = ProjectSettings.globalize_path("user://rail_rows_check.json")
+		DirAccess.make_dir_recursive_absolute(rr_home)
+		DirAccess.remove_absolute(rr_out)
+		var pid: int = OS.create_process("/usr/bin/env", ["XDG_DATA_HOME=" + rr_home, OS.get_executable_path(), "--headless", "--audio-driver", "Dummy",
+			"--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/rail_rows_check.gd", "--", "out", rr_out])
+		var t_rr := Time.get_ticks_msec()
+		while pid > 0 and OS.is_process_running(pid) and Time.get_ticks_msec() - t_rr < 60000:
+			OS.delay_msec(100)
+		var rr_late: bool = pid > 0 and OS.is_process_running(pid)
+		if rr_late:
+			OS.kill(pid)
+		var rr: Dictionary = {}
+		if FileAccess.file_exists(rr_out):
+			var parsed = JSON.parse_string(FileAccess.get_file_as_string(rr_out))
+			if parsed is Dictionary:
+				rr = parsed
+		_check(pid > 0 and not rr_late and int(rr.get("tried", 0)) == 2 * 3 * main.ROOMS.size(), "tests/rail_rows_check.gd: started %s, killed at a minute %s, rows said %s" % [str(pid > 0), str(rr_late), str(rr.get("tried", "none"))])
+		_check(rr.get("bad", ["no answer"]).is_empty(), "the rail's rows as the game draws them: %s" % "; ".join(rr.get("bad", ["no answer"])))
+		DirAccess.remove_absolute(rr_out)
+	main._away.visible = away_was
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("b48b rail ok: every room's row its slot's height and its name clear of the Away badge, the away card coming and going, at 1920x1080 and the Deck's canvas")
+
+
+## Item 10 (Matt: "bunkhouse needs to be encrypted like the radio"): the Expeditions line's name and its steps' names and
+## words scrambled till the Quartermaster falls, plain after; the Repeat line and the building's name plain throughout.
+func _b48b_bunk_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var qz := -1
+	for b in Data.BOSSES:
+		if str(b["name"]) == "The Quartermaster":
+			qz = int(b["zone"])
+	_check(qz >= 0, "the fixture: no Quartermaster")
+	if qz < 0:
+		return
+	var bd: Dictionary = Data.yard_building("bunkhouse")
+	main.show_room(main.OVERVIEW)
+	var yt = main._yard_tree
+	var card: Dictionary = {}
+	for c in yt.cards:
+		if str(c["key"]) == "bunkhouse":
+			card = c
+	for down in [false, true]:
+		sim.bosses_beaten[qz] = down
+		_check(sim.expeditions_open() == down, "the fixture: the Expeditions line open %s with the Quartermaster down %s" % [str(sim.expeditions_open()), str(down)])
+		yt._pick_building("bunkhouse")
+		yt._shown = ""
+		main.refresh()
+		var en := func(t: String) -> String: return t if down else Fmt.scramble(t)
+		var plain_ok: bool = yt._b_title.text == str(bd["name"]) and yt._line_heads[0].text == str(bd["lines"][0]).to_upper() and str(card["name"].text) == str(bd["name"]) and str(card["lines"][0]["label"].text) == str(bd["lines"][0])
+		var b_ok: bool = yt._line_heads[1].text == en.call(str(bd["lines"][1])).to_upper() and en.call(str(bd["lines"][1])).begins_with(str(card["lines"][1]["label"].text)) and str(card["lines"][1]["label"].text).length() >= 3 and (yt._b_sub.text.contains(en.call(str(bd["lines"][1]))) or not yt._b_sub.text.contains(str(bd["lines"][1])))
+		var steps_a: Array = []
+		var steps_b: Array = []
+		for sx in range(yt.STEPS):
+			steps_a.append(yt._tiles[0][sx]["name"].text.ends_with(str(bd["picks"][sx][0]["name"])) and yt._tiles[0][sx]["short"].text == UI.dots(str(bd["picks"][sx][0]["short"])))
+			var bn: String = str(bd["picks"][sx][1]["name"])
+			var bs: String = str(bd["picks"][sx][1]["short"])
+			if down:
+				steps_b.append(yt._tiles[1][sx]["name"].text.ends_with(bn) and yt._tiles[1][sx]["short"].text == UI.dots(bs))
+			else:                                  # scrambled (cut to its box if it must be), no plain word of it left
+				var nt: String = yt._tiles[1][sx]["name"].text
+				var tail: String = nt.get_slice(" · ", 1) if nt.contains(" · ") else nt
+				var st: String = yt._tiles[1][sx]["short"].text
+				steps_b.append(tail.length() >= 3 and Fmt.scramble(bn).begins_with(tail) and st.length() >= 3 and Fmt.scramble(bs).begins_with(st))
+		_check(plain_ok and steps_a.all(func(x): return x), "the Bunkhouse's name or Repeat line not plain (Quartermaster down %s): '%s' / '%s' / %s" % [str(down), yt._b_title.text, yt._line_heads[0].text, str(steps_a)])
+		_check(b_ok and steps_b.all(func(x): return x), "the Expeditions line with the Quartermaster down %s: '%s' / '%s' / %s" % [str(down), yt._line_heads[1].text, yt._tiles[1][0]["name"].text, str(steps_b)])
+		# a step of it picked: its card's name and words as the line reads
+		yt._press("bunkhouse", 0, "b")
+		main.refresh()
+		_check(yt._title.text.begins_with(en.call(str(bd["picks"][0][1]["name"]))) and (down or not yt._words.text.contains(str(bd["picks"][0][1]["words"]).get_slice(" ", 1))), "a picked Expeditions step reads '%s' / '%s' with the Quartermaster down %s" % [yt._title.text, yt._words.text, str(down)])
+		yt._press("bunkhouse", 0, "a")
+		main.refresh()
+		_check(yt._title.text.begins_with(str(bd["picks"][0][0]["name"])), "a picked Repeat step reads '%s'" % yt._title.text)
+		_check_fit(main, "the Pitch, the Bunkhouse (the Quartermaster down %s)" % str(down))
+	yt.selected = {}
+	sim.load_dict(saved)
+	main.refresh()
+	print("b48b Bunkhouse ok: the Expeditions line scrambled till the Quartermaster, the Repeat line and the name plain")
+
+
+## Item 11 (Matt: "the flash comes out of the sights not the muzzle"): every SMG picture's flash at its barrel's end - in
+## the picture's top-left part (left of and above its gun's middle), not its topmost pixel (the sight, the old rule);
+## those the rule still misses read by eye (RunView.MUZZLE_AT). The existing kit-hands check holds each on a drawn pixel
+## with open air ahead.
+func _b48b_smg_checks() -> void:
+	var sim = Sim.new()
+	sim.start()
+	var bad: Array = []
+	var seen := 0
+	for slot in ["Primary", "Secondary"]:
+		for b in Data.BASES[slot]:
+			var gun: Dictionary = sim._plain(slot, str(b["name"]))
+			if Items.is_melee(gun) or RunView._hands_kind(gun) != "smg":
+				continue
+			var slug: String = Items.slug(Items.art_name(str(b["name"])))
+			var own: Texture2D = RunView.tex("hands/" + slug)
+			if own == null:
+				continue
+			seen += 1
+			var at: Vector2 = RunView.muzzle_of(own, "smg", slug)["at"]
+			if RunView.MUZZLE_AT.has(slug):
+				continue                           # read by eye off the contact sheet
+			var img: Image = own.get_image()
+			if img.is_compressed():
+				img = img.duplicate()
+				img.decompress()
+			var sum := Vector2.ZERO
+			var n := 0
+			var reach := -INF                      # the gun's furthest toward the top left (the arms come up from the foot)
+			var tl: Vector2 = Vector2(-1, -0.35).normalized()
+			for y in range(int(img.get_height() * 0.62)):
+				for x in range(img.get_width()):
+					if img.get_pixel(x, y).a > 0.5:
+						sum += Vector2(x, y)
+						n += 1
+						reach = maxf(reach, Vector2(x, y).dot(tl))
+			var mid: Vector2 = sum / maxf(1.0, float(n))
+			if at.dot(tl) < reach - 3.0 or at.x >= mid.x or at.y >= mid.y:
+				bad.append("%s at %s (%.0f px short of the gun's top-left end, its middle %s)" % [b["name"], str(at), reach - at.dot(tl), str(mid.round())])
+	_check(seen >= 30, "only %d SMG pictures" % seen)
+	_check(bad.is_empty(), "SMGs whose flash isn't at the barrel's end: %s" % ", ".join(bad))
+	print("b48b SMGs ok: %d pictures, the flash at the barrel's end, %d read by eye" % [seen, RunView.MUZZLE_AT.size()])
+
+
+## Item 20 (Matt: "story beat but still states wanted papers ?"): the story told, every beaten beat's three papers read
+## "decrypted"; only the Depot again panel says what's wanted.
+func _b48b_kev_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_finish_campaign(sim)
+	var n: int = Data.STORY_BEATS.size()
+	sim.story_beat = n
+	sim.stash_put(sim._plain(Data.PAPER, str(sim.story_papers(n - 1)[0])))     # one of the depot's papers held: the round on
+	main.show_room(main.COMMS)
+	main._radio._pick_view("story")
+	main._radio._shown = ""
+	main.refresh()
+	var ks = main._radio._story
+	_check(ks.visible, "the fixture: Kev's story isn't showing")
+	var states: Array = []
+	for k in range(n):
+		states.append(ks._beats[k]["slots"].map(func(sl): return str(sl["state"].text)))
+	_check(states.all(func(s3): return s3.size() == 3 and s3.all(func(t): return t == "decrypted")), "the story told, the beaten beats' papers read %s" % str(states))
+	var side: Array = ks._side_lines.map(func(l): return str(l.text))
+	_check(ks._side_head.text.begins_with("THE DEPOT AGAIN") and side.any(func(t): return t.begins_with("Wanted: ") and t != "Wanted: none: decrypt them together"), "the Depot again panel doesn't say what's wanted: '%s' %s" % [ks._side_head.text, str(side)])
+	_check_fit(main, "the Radio, Kev's story told with a depot paper held")
+	sim.load_dict(saved)
+	main._radio._pick_view("air")
+	main.refresh()
+	print("b48b Kev ok: the beaten beats' papers decrypted, the depot again's wanted in its panel")
+
+
+## Item 27 (Matt: "butchers steel displays as machete in workshop"): the worn gun's and gear's cards show the piece's own
+## name in its colour; a melee primary's line says nothing of rounds.
+func _b48b_workshop_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var steel: Dictionary = Items.roll_unique(sim._unique_named("The Butcher's Steel"), sim.rng)
+	var jacket: Dictionary = Items.roll_unique(sim._unique_named("The Doorman's Jacket"), sim.rng)
+	_check(not steel.is_empty() and Items.is_melee(steel) and not jacket.is_empty(), "the fixture: the Butcher's Steel or the Doorman's Jacket")
+	sim.equipped["Primary"] = steel
+	sim.equipped["Armour"] = jacket
+	main.show_room(main.WORKSHOP)
+	var ws = main._workshop
+	for v in ["guns", "sockets"]:
+		ws.view = v
+		ws._shown = ""
+		main.refresh()
+		var g: Dictionary = ws._guns["Primary"]
+		var a: Dictionary = ws._socks["Armour"]
+		_check(g["name"].text == "The Butcher's Steel" and g["name"].get_theme_color("font_color") == Pal.UNIQUE, "the worn unique gun's card reads '%s' (%s)" % [g["name"].text, str(g["name"].get_theme_color("font_color"))])
+		_check(not g["figure"].text.to_lower().contains("rounds"), "a melee primary's line says rounds: '%s'" % g["figure"].text)
+		_check(a["name"].text.begins_with("The Doorman's Jacket") and a["name"].get_theme_color("font_color") == Pal.UNIQUE, "the worn unique gear's card reads '%s'" % a["name"].text)
+		_check_fit(main, "the Workshop, a worn unique (%s)" % v)
+	sim.load_dict(saved)
+	main.refresh()
+	print("b48b Workshop ok: the worn uniques by name, the blade's line without rounds")
+
+
+## Item 28 (Matt: "loot rules clipping"): with every tab the bar can show - the class's second tab, every class's names -
+## the Loot rules button sits after the bar's last button, clear of every one, its words whole; at 1920 x 1080 and the
+## Deck's canvas.
+func _b48b_rules_button_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.loot_rules_on = true
+	sim.loot_rules = [{"on": true}, {"on": true}]
+	_yard_ids(sim, ["dry_store", "annex"], "dry_store")
+	_check(sim.yard_has("dry_store"), "the fixture: no Dry store")
+	var UI_v = load("res://scripts/ui/ui.gd")
+	var tried := 0
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for c in Data.CLASSES:
+			_set_cls(sim, str(c["name"]))
+			main.show_room(main.ARMOURY)
+			var arm = main._armoury
+			var inv = arm._inv
+			inv._shown = ""
+			arm._shown = ""
+			main.refresh()
+			var rb: Button = arm.rules_button
+			var rr := Rect2(rb.position - inv.position, rb.size)     # in the grid's space
+			var bar: Array = [inv._rarity_button, inv._many_button, inv._sell_button, inv._all_button, inv._page_prev, inv._page_next] + inv._tab_buttons
+			var hit: Array = bar.filter(func(x): return x.visible and rr.intersects(Rect2(x.position, x.size))).map(func(x): return x.text)
+			if inv._page_label.visible and rr.intersects(Rect2(inv._page_label.position, inv._page_label.size)):
+				hit.append(inv._page_label.text)
+			tried += 1
+			_check(rb.visible and inv._tab_buttons.filter(func(t): return t.visible).size() == 3 and hit.is_empty() and rr.position.x >= inv._many_button.position.x + inv._many_button.size.x,
+				"the %s's Kit at %s: the Loot rules button %s sits on %s" % [c["name"], str(sz), str(rr), str(hit)])
+			_check(rb.text.begins_with(Words.LOOT_RULES["button_none"]) and rb.text.contains("2") and UI_v.text_width(rb, rb.text) + 32.0 <= rb.size.x and rr.end.x <= load("res://scripts/ui/inventory.gd").WIDTH,
+				"the %s's Loot rules button reads '%s' in %.0f px" % [c["name"], rb.text, rb.size.x])
+			_check_fit(main, "the Kit, the %s's tabs and Loot rules" % c["name"])
+	_check(tried == 2 * Data.CLASSES.size(), "the rules button tried %d" % tried)
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	main.refresh()
+	print("b48b Loot rules ok: after Select with every class's tabs, its words whole")
+# ------------------------------------------------------------------ BUILD48 A (4 Nov): the odds and the sim's fixes
+
+## Matt's saves as fixtures (4 Nov): the level-13 Doorman whose Map stopped reading (parked item 9; saved 48 s into the
+## Shopping Centre run that set off with the odds unread), and his latest (level 28, three classes, two signals).
+const B48_STALL := "res://tests/fixtures/b48_stall.savez"
+const B48_LATE := "res://tests/fixtures/b48_late.savez"
+## A picked site's read to settled, frames at 5 ms (measured on the stall fixture, the cloud: the slowest, the Shopping
+## Centre at full HP, 300-450 frames; a stalled read never settles).
+const B48_SITE_FRAMES := 3000
+
+
+## Frames of the shell's odds (main._read_odds at 5 ms, the clock held) until `until` holds or `cap`; the frames taken.
+func _b48a_frames(main, until: Callable, cap: int) -> int:
+	var n := 0
+	while n < cap and not bool(until.call()):
+		main.sim.advance(0.0)
+		main._read_odds(5.0)
+		n += 1
+	return n
+
+
+## A fixture loaded as the game loads a save, home from its run, on the Map. False when it won't load.
+func _b48a_load(main, path: String) -> bool:
+	if not _b45_load(main, path):
+		_check(false, "the fixture %s won't load at SAVE_VERSION %d" % [path, main.SAVE_VERSION])
+		return false
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	_b43_unhold(main)
+	main.show_room(main.MISSIONS)
+	main._missions.county_on = false
+	main._missions.exp_on = false
+	return true
+
+
+## Items 9 and 3 (parked, 4 Nov): the Map's odds stopped reading on Matt's save - resting across half his HP moved the
+## damage's memo and the odds key but not the shell's base, so the read the key threw away was never asked again; and the
+## Map reads the picked place alone, every other pin its last read (dimmed once the runner's moved).
+func _b48a_map_odds_checks(main) -> void:
+	var keep := "user://smoke_b48a_keep.save"
+	main.save_game(keep)
+	if not _b48a_load(main, B48_STALL):
+		main.load_game(keep)
+		return
+	var sim = main.sim
+	var bank: int = Data.BANK
+	var mx: float = sim.max_hp()
+	# 1. item 9 on his save: the Bank picked, the runner hurt; HP from under half to over it inside one tenth
+	main._missions.select(bank)
+	sim.hp = mx * 0.48
+	main.refresh()
+	var n0: int = _b48a_frames(main, func(): return sim.odds_settled(bank), B48_SITE_FRAMES)
+	var k_lo: Array = sim._odds_key(bank)
+	sim.hp = mx * 0.52
+	var k_hi: Array = sim._odds_key(bank)
+	var n1: int = _b48a_frames(main, func(): return sim.odds_settled(bank), B48_SITE_FRAMES)
+	_check(k_lo != k_hi, "the fixture: HP across half didn't move the Bank's odds key (it must, to test item 9)")
+	_check(n0 < B48_SITE_FRAMES and n1 < B48_SITE_FRAMES and sim.odds_settled(bank), "item 9: the Bank's odds stopped reading on Matt's save (%d frames under half, %d across it)" % [n0, n1])
+	# 2. at full HP every open site, picked in turn, settles within B48_SITE_FRAMES
+	sim.hp = mx
+	var slow: Array = []
+	var most := 0
+	var open_n := 0
+	for i in range(Data.TIERS.size()):
+		if not sim.tier_open(i):
+			continue
+		open_n += 1
+		main._missions.select(i)
+		var n: int = _b48a_frames(main, func(): return sim.odds_settled(i), B48_SITE_FRAMES)
+		most = maxi(most, n)
+		if not sim.odds_settled(i):
+			slow.append(str(Data.TIERS[i]["name"]))
+	_check(open_n >= 6 and slow.is_empty(), "picked, %s never settled in %d frames (%d sites open)" % [str(slow), B48_SITE_FRAMES, open_n])
+	# 3. item 3: a pin not picked isn't read; it shows its last read, dimmed once the HP's moved; picked, it reads fresh
+	var a := 3
+	var b := 5
+	main._missions.select(a)
+	_b48a_frames(main, func(): return sim.odds_settled(a), B48_SITE_FRAMES)
+	var oa: float = sim.odds_now(a)
+	main._missions.select(b)
+	_b48a_frames(main, func(): return sim.odds_settled(b), B48_SITE_FRAMES)
+	sim.hp = mx * 0.75                          # a tenth moved: every site's key with it
+	var nb: int = _b48a_frames(main, func(): return sim.odds_settled(b), B48_SITE_FRAMES)
+	_b48a_frames(main, func(): return false, 600)      # and frames on: the Map would read the rest in them, were it to
+	var a_read: bool = sim._surv_cache.has(a) and sim._surv_cache[a][0] == sim._odds_key(a)
+	main._missions._shown = ""
+	main.refresh()
+	var mv = main._missions._map
+	var la: Array = sim.odds_last(a)
+	_check(not a_read and la.size() == 2 and is_equal_approx(float(la[0]), oa) and not bool(la[1]) and mv.tones[a] == mv.old_tone(oa),
+		"item 3: the unpicked %s was read again (%s) or doesn't show its last read dimmed: %s, tone %s against %s" % [Data.TIERS[a]["name"], str(a_read), str(la), mv.tones[a].to_html(), mv.old_tone(oa).to_html()])
+	_check(nb < B48_SITE_FRAMES and mv.tones[b] == mv.odds_tone(sim.odds_now(b)), "item 3: the picked %s didn't read fresh in its colour" % Data.TIERS[b]["name"])
+	_check_fit(main, "the Map (b48: the old reads' key)")
+	var key_words: Array = mv._legend.map(func(e): return e[0].text)
+	_check(key_words.has(Words.MAP_OLD_READ), "the Map's key doesn't say what a dimmed pin is: %s" % str(key_words))
+	main._missions.select(a)
+	var na: int = _b48a_frames(main, func(): return sim.odds_settled(a), B48_SITE_FRAMES)
+	main.refresh()
+	_check(na < B48_SITE_FRAMES and sim.odds_settled(a) and bool(sim.odds_last(a)[1]) and mv.tones[a] == mv.odds_tone(sim.odds_now(a)), "item 3: %s picked again didn't read fresh: %s" % [Data.TIERS[a]["name"], str(sim.odds_last(a))])
+	# the review's guard: the Map's signature holds the picked site's own key, so a move its base misses still reads it again -
+	# the armour off moves the key's armour bucket; the signature on the old base must move with it
+	sim.advance(0.0)
+	var base0: Array = main._odds_base()
+	var sig0: Array = main._odds_sig("map", base0)
+	var arm = sim.equipped["Armour"]
+	_check(arm != null, "the fixture: no armour worn")
+	if arm != null:
+		var k0: Array = sim._odds_key(a)
+		sim.equipped["Armour"] = null             # set straight in: the kit's ids and its armour bucket move
+		sim._stats_dirty()
+		sim.advance(0.0)
+		_check(sim._odds_key(a) != k0, "the fixture: the armour off didn't move %s's odds key" % Data.TIERS[a]["name"])
+		var sig1: Array = main._odds_sig("map", base0)
+		var nk: int = _b48a_frames(main, func(): return sim.odds_settled(a), B48_SITE_FRAMES)
+		_check(sig1 != sig0 and nk < B48_SITE_FRAMES and sim.odds_settled(a), "item 9: the picked site's key moved and the Map's signature on the same base didn't (%s), or it never read again (%d frames)" % [str(sig1 != sig0), nk])
+		sim.equipped["Armour"] = arm
+		sim._stats_dirty()
+	main.load_game(keep)
+	DirAccess.remove_absolute(keep)
+	DirAccess.remove_absolute("user://smoke_b45.save")
+	print("b48a map odds ok: item 9's stall on Matt's save reads (%d, %d frames), every site picked settles (slowest %d frames), a pin's last read kept and dimmed" % [n0, n1, most])
+
+
+## Item 17 (parked, 4 Nov): the odds count Kev's wagers - a signal's odds fall with No meds on against off (keyed on it),
+## a dry run under it has its meds shut; and the run's shut meds say why. On BUILD45's late camp (level 50, its signal at a
+## level where the fight is in doubt: the odds must have room to fall).
+func _b48a_wager_odds_checks(main) -> void:
+	var keep := "user://smoke_b48a_keep.save"
+	main.save_game(keep)
+	if not _b48a_load(main, B45_FIXTURES[1]):
+		main.load_game(keep)
+		return
+	var sim = main.sim
+	sim.hp = sim.max_hp()
+	var sg: Dictionary = sim.signals[0]
+	var site: int = int(sg["site"])
+	var key: String = sim.wager_signal_key(0)
+	var at := -1
+	for sq in range(200):
+		sim.wagers[key] = {"seq": sq, "taken": []}
+		var of: Array = sim.wager_offer(key)
+		for k in range(of.size()):
+			if str(of[k]["cond"]) == "no_meds":
+				at = k
+				break
+		if at >= 0:
+			break
+	_check(at >= 0, "the fixture: no offer with No meds in 200")
+	var ob_was: int = sim.odds_budget
+	sim.odds_budget = 0
+	var off_o := -1.0
+	var on_o := -1.0
+	var dep := -1
+	var key_moved := false
+	var seen: Array = []
+	for lv in [40, 36, 44, 32, 48]:
+		sg["depth"] = sim.depth_for_level(site, int(lv))
+		sg.erase("words")
+		sim.wagers[key]["taken"] = []
+		sim._sig_odds.erase(int(sg["id"]))
+		var o0: Array = sim.signal_odds(0)
+		seen.append("%d:%.2f" % [lv, float(o0[0])])
+		if float(o0[0]) < 0.1 or float(o0[0]) > 0.97:
+			continue
+		sim._sig_on(sg)
+		var k0: Array = sim._odds_key(site)
+		sim.wagers[key]["taken"] = [at]
+		key_moved = sim._odds_key(site) != k0
+		var job: Dictionary = sim._dry_begin(site, RandomNumberGenerator.new())
+		var shut: bool = bool(job["m"]["t"].get("no_meds", false))
+		sim._dry_steps(job, -1)
+		sim._dry_finish(job)
+		sim._sig_off()
+		_check(shut, "item 17: a dry run under No meds had the meds open")
+		var o1: Array = sim.signal_odds(0)
+		off_o = float(o0[0])
+		on_o = float(o1[0])
+		dep = int(lv)
+		break
+	sim.odds_budget = ob_was
+	_check(dep >= 0 and key_moved and on_o < off_o, "item 17: a signal's odds with No meds taken read %.2f against %.2f without (level %d, the key moved %s; read %s)" % [on_o, off_o, dep, str(key_moved), str(seen)])
+	# the run's shut meds say why: on the run, the rig's head and a med's hover
+	sim.wagers[key] = {"seq": int(sim.wagers[key]["seq"]), "taken": [at]}
+	var went: bool = sim.deploy_signal(0)
+	_check(went and sim.on_mission() and bool(sim.mission["t"].get("no_meds", false)), "the fixture: the signal didn't set off with No meds")
+	if sim.on_mission():
+		_b43_unhold(main)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		var rh: Label = main._run._rig_head
+		_check(rh.visible and (rh.text == str(Words.RIG_NO_MEDS["head"]).to_upper() or rh.text == str(Words.RIG_NO_MEDS["med"]).to_upper()), "item 17: the shut meds don't say why: '%s'" % rh.text)
+		_check_fit(main, "the run (b48: No meds, Kev's wager)")
+		var meds: Array = main._run._rig_cells.filter(func(c): return c.visible and str(c.tooltip_text).contains(Words.RIG_NO_MEDS["med"]))
+		_check(not meds.is_empty(), "item 17: a shut med's hover doesn't say why")
+		sim.extract_now()
+	main.load_game(keep)
+	DirAccess.remove_absolute(keep)
+	DirAccess.remove_absolute("user://smoke_b45.save")
+	print("b48a wagers ok: No meds %.2f against %.2f at level %d, the rig says why" % [on_o, off_o, dep])
+
+
+## Item 22 (parked, 4 Nov): the body's figure names its fight and is never called odds; the same piece against the same
+## fight reads the same on a run and at home.
+func _b48a_yardstick_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var hat_was = sim.equipped["Helmet"]
+	var hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim.equipped["Helmet"] = hat
+	sim._caches_out()
+	var rg: float = maxf(5.0, 0.2 * sim.max_hp() / sim.front_fight())
+	var regen_hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	regen_hat["affixes"] = [{"stat": "regen", "value": rg, "tier": 4}]
+	var f: int = sim.front_tier()
+	var g_home: float = sim.survival_gain(regen_hat)
+	var v_home: int = sim.compare(regen_hat)
+	var d_home: Array = PickPanel.deltas_for(sim, regen_hat, hat)
+	var want_home: String = Words.YARDSTICK["home"] % Words.mid(str(Data.TIERS[f]["name"]))
+	_check(not d_home.is_empty() and str(d_home[0][1]).ends_with(want_home) and not str(d_home[0][1]).contains("odds"), "item 22: at home the body's figure reads '%s', not '... %s'" % [str(d_home[0][1]) if not d_home.is_empty() else "", want_home])
+	# the figure stays on the pick panel's foot with the longest site name, the Kit's buttons beside it (the review of item
+	# 22): its short form when the whole won't fit, the whole on its hover
+	main.show_room(main.ARMOURY)
+	var pk = main._armoury._pick
+	var longest := ""
+	for tt in Data.TIERS:
+		var nm: String = Words.mid(str(tt["name"]))
+		if UI.text_width(pk._deltas[0], nm) > UI.text_width(pk._deltas[0], longest):
+			longest = nm
+	var full: String = "%.0f%% %s" % [9999.0, Words.YARDSTICK["home"] % longest]
+	pk.set_buttons([{"text": "Equip", "action": func(): pass, "enabled": true, "primary": true}, {"text": "Sell · 99,999 tins", "action": func(): pass, "enabled": true},
+		{"text": "Ditch", "action": func(): pass, "enabled": true}])
+	pk.set_verdict("Sidegrade", "warn", [[99.99, full, "9999%"]] + d_home.slice(1))
+	var l0: Label = pk._deltas[0]
+	_check(l0.visible and (l0.text == "▲ " + full or (l0.text == "▲ 9999%" and l0.tooltip_text == full)), "item 22: the survival figure with %s didn't show on the pick panel: '%s' (shown %s)" % [longest, l0.text, str(l0.visible)])
+	sim.deploy(f)
+	_check(sim.on_mission(), "the fixture: no run at %s" % Data.TIERS[f]["name"])
+	if sim.on_mission():
+		var g_run: float = sim.survival_gain(regen_hat)
+		var v_run: int = sim.compare(regen_hat)
+		var d_run: Array = PickPanel.deltas_for(sim, regen_hat, hat)
+		_check(absf(g_run - g_home) <= 0.0005 + absf(g_home) * 0.001 and v_run == v_home, "item 22: against the same fight (%s) the piece reads %+.4f / %d on the run, %+.4f / %d at home" % [Data.TIERS[f]["name"], g_run, v_run, g_home, v_home])
+		_check(not d_run.is_empty() and str(d_run[0][1]).ends_with(Words.YARDSTICK["run"]) and not str(d_run[0][1]).contains("odds"), "item 22: on a run the body's figure reads '%s'" % (str(d_run[0][1]) if not d_run.is_empty() else ""))
+		sim.extract_now()
+	sim.equipped["Helmet"] = hat_was
+	sim._caches_out()
+	print("b48a yardstick ok: %+.3f against %s, the same on the run" % [g_home, Data.TIERS[f]["name"]])
+
+
+## Item 26 (parked, 4 Nov): a Retune's reads step across frames as the Map's do (a dry run parked at the frame's end)
+## and settle within B48_RETUNE_FRAMES; the 90th-percentile frame runs the odds over its 5 ms by no more than B48_RETUNE_OVER,
+## the worst by no more than B48_RETUNE_WORST (both stretched by the
+## machine's pace, as BUILD45's budgets); the crew's read only with their row up, not under the decrypt's animation.
+## Measured on the cloud (4 Nov, BUILD45's late camp, its signal at level 40): unstepped a dry run was 17-55 ms whole in
+## one frame; stepped, 5-8 ms a frame quiet, spikes to 19-24 ms with the other builder's smoke on the two CPUs (one begin
+## or one tick, the runner's key worked each frame); on Matt's latest the crew's frames 5-13 ms. A single frame's ceiling
+## flaked at the merge (26.5 ms, nothing else running): the p90 holds the cap, the worst only a hitch's.
+const B48_RETUNE_FRAMES := 600
+const B48_RETUNE_OVER := 15.0          # the 90th-percentile frame over the 5 ms budget (merge 48: one frame of 26.5 ms on a quiet machine; the p90 measured 11-17 ms)
+const B48_RETUNE_WORST := 60.0         # the worst single frame over it: a hitch's ceiling only (unstepped a whole dry run, 17-55 ms)
+
+
+## The 90th-percentile of `v` (ms).
+func _b48a_p90(v: Array) -> float:
+	if v.is_empty():
+		return 0.0
+	var s: Array = v.duplicate()
+	s.sort()
+	return float(s[mini(s.size() - 1, int(floor(s.size() * 0.9)))])
+func _b48a_retune_checks(main) -> void:
+	var keep := "user://smoke_b48a_keep.save"
+	main.save_game(keep)
+	# 1. the frames: BUILD45's late camp, its signal at level 40, where the fight's in doubt and a dry run is long (55 ms a
+	# run unstepped on the cloud, 4 Nov)
+	if _b48a_load(main, B45_FIXTURES[1]):
+		var s1 = main.sim
+		_b45_pace = _b45_pace_now()
+		s1.hp = s1.max_hp()
+		s1.notes = 1000000
+		for mk in s1.materials:
+			s1.materials[mk] = 999
+		var sk := 0
+		for k in range(s1.signals.size()):
+			if s1.signal_craft_block(k, "retune") == "":
+				sk = k                            # a signal with codes to retune
+				break
+		s1.signals[sk]["depth"] = s1.depth_for_level(int(s1.signals[sk]["site"]), 40)
+		main.show_room(main.COMMS)
+		main._radio.view = "air"
+		main._radio.selected = sk
+		main.refresh()
+		var done1 := func() -> bool: return main._odds_done.get("radio", []) == main._odds_sig("radio", main._odds_base())
+		_b48a_frames(main, done1, B48_RETUNE_FRAMES * 10)
+		var why1: String = s1.signal_craft_block(sk, "retune")
+		var ok1: bool = s1.signal_craft(sk, "retune")
+		main._radio._shown = ""
+		main.refresh()
+		var worst1 := 0.0
+		var ms1: Array = []
+		var n1 := 0
+		var parked := 0                           # frames that ended with a dry run parked for the next: the read stepped
+		var sid1: int = int(s1.signals[sk]["id"])
+		while n1 < B48_RETUNE_FRAMES * 10 and not bool(done1.call()):
+			s1.advance(0.0)
+			var t1 := Time.get_ticks_usec()
+			main._read_odds(5.0)
+			ms1.append((Time.get_ticks_usec() - t1) / 1000.0)
+			worst1 = maxf(worst1, float(ms1.back()))
+			var c1: Array = s1._sig_odds.get(sid1, [])
+			if c1.size() > 6 and c1[6] != null:
+				parked += 1
+			n1 += 1
+		_check(ok1 and bool(done1.call()), "item 26: a retune's read at level 40 didn't settle in %d frames (retuned %s: '%s')" % [n1, str(ok1), why1])
+		_check(parked > 0, "item 26: a retune's reads at level 40 ran whole dry runs in a frame (parked in %d of %d frames)" % [parked, n1])
+		_check(_b48a_p90(ms1) <= _b45_b(5.0 + B48_RETUNE_OVER) and worst1 <= _b45_b(5.0 + B48_RETUNE_WORST), "item 26: a retune's frames at level 40 ran the odds %.1f ms at the 90th percentile, %.1f at the worst (budget 5 + %.0f / + %.0f, pace %.2f)" % [_b48a_p90(ms1), worst1, B48_RETUNE_OVER, B48_RETUNE_WORST, _b45_pace])
+		print("b48a retune at level 40: %d frames, %d parked, p90 %.1f ms, the worst %.1f ms" % [n1, parked, _b48a_p90(ms1), worst1])
+	# 2. the crew: Matt's latest, three classes, the row up
+	if not _b48a_load(main, B48_LATE):
+		main.load_game(keep)
+		return
+	var sim = main.sim
+	_b45_pace = _b45_pace_now()
+	sim.hp = sim.max_hp()
+	main.show_room(main.COMMS)
+	main._radio.view = "air"
+	main._radio.selected = 0
+	main.refresh()
+	_check(sim.signals.size() > 0 and main._radio.crew_shown(), "the fixture: no signal or no crew row on the Radio")
+	var settled := func() -> bool: return main._odds_done.get("radio", []) == main._odds_sig("radio", main._odds_base())
+	_b48a_frames(main, settled, B48_RETUNE_FRAMES)
+	sim.notes = 1000000
+	for mk in sim.materials:
+		sim.materials[mk] = 999
+	var ok: bool = sim.signal_craft(0, "retune")
+	main._radio._shown = ""
+	main.refresh()
+	var worst := 0.0
+	var ms2: Array = []
+	var n := 0
+	while n < B48_RETUNE_FRAMES and not bool(settled.call()):
+		sim.advance(0.0)
+		var t0 := Time.get_ticks_usec()
+		main._read_odds(5.0)
+		ms2.append((Time.get_ticks_usec() - t0) / 1000.0)
+		worst = maxf(worst, float(ms2.back()))
+		n += 1
+	var crew_read: bool = sim.crew_played().all(func(c): return bool(sim.signal_odds_class(0, str(c), true)[1]))
+	_check(ok and n < B48_RETUNE_FRAMES and crew_read, "item 26: a retune's reads didn't settle in %d frames (crew read %s, retuned %s)" % [n, str(crew_read), str(ok)])
+	_check(_b48a_p90(ms2) <= _b45_b(5.0 + B48_RETUNE_OVER) and worst <= _b45_b(5.0 + B48_RETUNE_WORST), "item 26: a retune's frames with the crew ran the odds %.1f ms at the 90th percentile, %.1f at the worst (budget 5 + %.0f / + %.0f, pace %.2f)" % [_b48a_p90(ms2), worst, B48_RETUNE_OVER, B48_RETUNE_WORST, _b45_pace])
+	# a retune under the decrypt's animation: the runner's own read whole, the crew's untouched till it's done
+	sim.signal_craft(0, "retune")
+	main._radio.start_decrypt(sim.signal_at(0))
+	var sid: int = int(sim.signals[0]["id"])
+	var own_n: int = _b48a_frames(main, func(): return bool(sim.signal_odds_now(0)[1]) and int(sim._sig_odds[sid][2]) >= sim.odds_runs(), B48_RETUNE_FRAMES)
+	var crew_at := func() -> Array: return sim.crew_played().filter(func(c): return str(c) != sim.cls).map(func(c): return [int(sim._crew_odds.get(c, {}).get(sid, [0, 0, 0])[2]), sim._crew_odds.get(c, {}).has(sid)])
+	var crew0: Array = crew_at.call()
+	for k in range(40):
+		sim.advance(0.0)
+		main._read_odds(5.0)
+	var crew_during: Array = [] if crew_at.call() == crew0 else [crew0, crew_at.call()]
+	main._radio.end_decrypt()
+	var after_n: int = _b48a_frames(main, settled, B48_RETUNE_FRAMES)
+	_check(own_n < B48_RETUNE_FRAMES and crew_during.is_empty() and after_n < B48_RETUNE_FRAMES, "item 26: under the decrypt the crew's reads ran (%s), or the reads didn't settle (%d, %d frames)" % [str(crew_during), own_n, after_n])
+	main.load_game(keep)
+	DirAccess.remove_absolute(keep)
+	DirAccess.remove_absolute("user://smoke_b45.save")
+	print("b48a retune ok: settled in %d frames, p90 %.1f ms, the worst %.1f ms (pace %.2f)" % [n, _b48a_p90(ms2), worst, _b45_pace])
+
+
+## Item 16 (parked, 4 Nov, Matt's pick): the Vagabond takes the camp's tins - with tins at home and none on the run a
+## trade goes through and home's tins fall by the price; his card says the tins at home.
+func _b48a_vagabond_checks(main) -> void:
+	var sim = main.sim
+	var cash_was: float = sim.cash
+	var asks_was: bool = Sim.asks
+	Sim.asks = true                                # the game's own: a watched run's event asks
+	var m: Dictionary = _ev_at(sim, 3, "trader", "vagabond")
+	m["cash"] = 0.0
+	sim.cash = 1000000.0
+	var gear: Array = sim.trader_shelf().filter(func(r): return str(r["key"]).begins_with("gear"))
+	_check(not gear.is_empty(), "the fixture: the Vagabond has no gear")
+	if not gear.is_empty():
+		var price: int = int(gear[0]["price"])
+		var ok0: bool = bool(gear[0]["ok"])
+		var bought: bool = sim.trader_buy(str(gear[0]["key"]))
+		_check(ok0 and bought and is_equal_approx(sim.cash, 1000000.0 - price) and is_zero_approx(float(m["cash"])), "item 16: none on the run, 1,000,000 at home: the trade %s, home %.0f (price %d), the run's %.0f" % [str(bought), sim.cash, price, float(m["cash"])])
+	_ev_ui(main, "trader")
+	_check_fit(main, "the Vagabond's card (b48: tins at home)")
+	var vep = main._run._event_panel
+	_check(vep._known.text.to_lower().contains((Words.VAG_HOME % sim._cash_words(floorf(sim.cash))).to_lower()), "item 16: his card doesn't say the tins at home: '%s'" % vep._known.text)
+	sim.cash = 0.0
+	var poor: Array = sim.trader_shelf().filter(func(r): return str(r["key"]).begins_with("gear") and not bool(r["bought"]))
+	_check(not poor.is_empty() and not bool(poor[0]["ok"]), "item 16: with no tins at home his gear still sells")
+	sim.trader_done()
+	sim.extract_now()
+	sim.cash = cash_was
+	Sim.asks = asks_was
+	print("b48a vagabond ok: paid from home, the card says so")
+
+
+## Item 24 (parked, 4 Nov, Matt's pick): the gate fills only the magazines the last run used - a run that used two comes
+## home to two filled and no more, the meds left alone; a run that used none fills none and logs nothing.
+func _b48a_topup_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var gun_was = sim.equipped["Primary"]
+	var rig_was: Array = sim.rig.duplicate(true)
+	var stash_was: Array = sim.stash.duplicate(true)
+	var plans_was: Dictionary = sim.rounds_plans.duplicate(true)
+	sim.rounds_plans = {}
+	var base: String = _base_of_type("smg")
+	var gun: Dictionary = sim._plain("Primary", base)
+	sim.equipped["Primary"] = gun
+	var ty: String = Items.ammo_type(gun)
+	var grade: String = str(sim.ammo_box(ty)["name"])
+	var rigp_was = sim.equipped["Rig"]
+	sim.equipped["Rig"] = sim._plain("Rig", "Medic's harness")     # nine pouches: room for the old gate's magazines' share
+	sim.rig = []
+	var med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	sim.rig.append(med)
+	var mags: Array = _rmags(sim, grade, 2)
+	for mg in mags:
+		sim.rig.append(mg)
+	sim.stash = sim.stash.filter(func(x): return not Items.is_medical(x) and not Items.is_mag(x) and not Items.is_ammo(x))
+	var bx: Dictionary = sim._plain(Data.AMMO, grade)
+	Items.set_stack(bx, 2000)
+	sim.stash.append(bx)
+	for k in range(4):
+		sim.stash.append(_rmag(sim, grade, 0))     # spare magazines the old gate packed to the rig's share
+	sim._caches_out()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.extract_now()
+	var rig_mags := func() -> Array: return sim.rig.filter(func(x): return Items.is_mag(x))
+	var n_out: int = rig_mags.call().size()
+	var meds0: Array = sim.rig.filter(func(x): return Items.is_medical(x)).map(func(x): return int(x["id"]))
+	for mg in rig_mags.call():
+		mg["rounds"] = 0                          # both used on the run
+	var e0: int = sim.events_total
+	sim._top_up(-1, 0)
+	var lines: Array = _said(sim).slice(-(sim.events_total - e0)) if sim.events_total > e0 else []
+	var full: Array = rig_mags.call().filter(func(x): return int(x["rounds"]) >= Items.mag_cap(x, sim.mag_gun(x)))
+	var meds1: Array = sim.rig.filter(func(x): return Items.is_medical(x)).map(func(x): return int(x["id"]))
+	_check(n_out == 2 and rig_mags.call().size() == 2 and full.size() == 2 and meds1 == meds0 and lines.has(Words.filled_mags(2, [grade])),
+		"item 24: a run that used 2 magazines came home to %d in the rig (%d full), the meds %s -> %s, the lines %s" % [rig_mags.call().size(), full.size(), str(meds0), str(meds1), str(lines)])
+	# a run that used none: nothing filled, nothing said - from the gate it set off from to the next
+	var e1: int = sim.events_total
+	sim.deploy(0)
+	sim.extract_now()
+	sim._top_up(-1, 0)
+	var lines2: Array = _said(sim).slice(-(sim.events_total - e1)) if sim.events_total > e1 else []
+	_check(rig_mags.call().size() == 2 and not lines2.any(func(l): return str(l).begins_with("Filled:") or str(l).contains("magazine")), "item 24: a run that used none: %d magazines in the rig, the lines %s" % [rig_mags.call().size(), str(lines2)])
+	# a repeat's gate the same (the review): its own packing puts no magazine past those in the rig
+	var rep_was: Dictionary = sim.repeat.duplicate(true)
+	sim.repeat = {"site": 0, "phase": "rest", "first": true}
+	sim._repeat_go()
+	var rep_mags: int = rig_mags.call().size()
+	sim.repeat = rep_was                      # the repeat's own end isn't under test: the run comes home plain
+	if sim.on_mission():
+		sim.extract_now()
+	_check(rep_mags == 2, "item 24: a repeat run's gate packed the rig to %d magazines (2 went out before)" % rep_mags)
+	sim.equipped["Primary"] = gun_was
+	sim.equipped["Rig"] = rigp_was
+	sim.rig = rig_was
+	sim.stash = stash_was
+	sim.rounds_plans = plans_was
+	sim._caches_out()
+	print("b48a top-up ok: two used, two filled, the meds alone; none used, nothing said")
+
+
+## Item 4's open check (parked, 4 Nov): a Get out pressed during a gang fight or a magazine refill isn't lost - before the
+## clear it starts the way out, after it the run's home at once.
+func _b48a_get_out_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var gun = sim.equipped["Primary"]
+	var ty: String = Items.ammo_type(gun) if gun != null else ""
+	sim.deploy(0)
+	var m = sim.mission
+	_check(m != null, "the fixture: no run")
+	if m == null:
+		return
+	m["refill"] = {ty if ty != "" else "x": {"t": 5.0, "id": -1, "slot": "Primary"}}     # a magazine refill under way, a gang on
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var b: Button = main._run._button
+	_check(sim.can_extract(), "the fixture: the runner can't get out (a Stand node?)")
+	var pressable: bool = b.visible and not b.disabled
+	b.pressed.emit()
+	var way: bool = sim.mission != null and bool(sim.mission.get("way_out", false))
+	_check(pressable and way, "item 4: Get out pressed in a gang fight mid-refill was lost (pressable %s, the way out %s)" % [str(pressable), str(way)])
+	if sim.on_mission():
+		sim.extract_now()
+	# after the clear: a gang in and a refill under way, Get out goes at once
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	var g := 0
+	while sim.on_mission() and not bool(sim.mission.get("cleared", false)) and g < 4000:
+		sim.hp = sim.max_hp()
+		sim.advance(0.5)
+		g += 1
+	_check(sim.on_mission() and bool(sim.mission.get("cleared", false)), "the fixture: the first site wasn't cleared")
+	if sim.on_mission():
+		m = sim.mission
+		m["remaining"] = int(m["remaining"]) + 2   # a gang come in after the clear
+		m["refill"] = {ty if ty != "" else "x": {"t": 5.0, "id": -1, "slot": "Primary"}}
+		main.refresh()
+		var pressable2: bool = b.visible and not b.disabled
+		b.pressed.emit()
+		_check(pressable2 and not sim.on_mission(), "item 4: Get out pressed after the clear, a gang in and a refill under way, was lost (pressable %s)" % str(pressable2))
+	if sim.on_mission():
+		sim.extract_now()
+	print("b48a get out ok: mid-refill, before and after the clear")
+
+
+## Item 4's warnings (the review, merge 48): a run that starts under a mark doesn't say it - one set off with 0:45 on the
+## clock toasts no "1:00 left", then "0:30 left" as it passes.
+func _b48a_clock_start_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission(), "the fixture: no run at the Allotments")
+	if not sim.on_mission():
+		return
+	sim.mission["clock"] = 45.0
+	sim.mission["clock_max"] = 45.0
+	main._juice._toasts = []
+	main.show_room(main.MISSIONS)
+	var said := func(): return main._juice.lines().filter(func(l): return str(l).ends_with(Words.RUN_CLOCK["warn"].get_slice("%s", 1)))
+	main.refresh()
+	main.refresh()
+	_check(said.call().is_empty(), "a run set off with 0:45 left said a passed mark: %s" % str(said.call()))
+	sim.mission["clock"] = 29.0
+	main.refresh()
+	main.refresh()
+	_check(said.call() == [Words.RUN_CLOCK["warn"] % "0:30"], "a run set off with 0:45 left didn't say 0:30 once: %s" % str(said.call()))
+	sim.extract_now()
+	print("b48a clock start ok: a passed mark unsaid, the next said")

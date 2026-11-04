@@ -127,7 +127,7 @@ func show_event(sim) -> bool:
 	# the dogs' countdown and the odds aren't in it (the fix round, U1: a redraw a second lost a held click): they move in
 	# place below; the family and its line are (U7: two events alike in their options)
 	var sig: String = str([fam, ev.get("line", ""), ev["state"], ev.get("bought", []), sim.event_options(), sim.trader_shelf(), out_text]
-		+ ([sim.pack_scrap(sim.mission), sim.can_extract(), sim.pack_materials(sim.mission), int(sim.mission["cash"])] if fam == "trader" else []))     # the scrap the trader's alone (40-E review 1: a find in the dogs' 10 s lost a click)
+		+ ([sim.pack_scrap(sim.mission), sim.can_extract(), sim.pack_materials(sim.mission), int(sim.mission["cash"]), int(sim.cash)] if fam == "trader" else []))     # the scrap the trader's alone (40-E review 1: a find in the dogs' 10 s lost a click)
 	if fam == "threat":
 		_threat_live(sim, ev)
 	if sig == _sig:
@@ -251,7 +251,7 @@ func _show_trader(sim, ev: Dictionary) -> void:
 	var scrap: int = sim.pack_scrap(sim.mission)
 	var nx: Array = sim.trader_next_step()
 	if str(ev["who"]) == "vagabond":
-		var tins: String = sim._cash_words(floorf(float(sim.mission["cash"])))     # BUILD46-E: tins and materials, his trade
+		var tins: String = Words.VAG_HOME % sim._cash_words(floorf(sim.cash))     # his tins are the camp's at home (BUILD48 A, item 16), and the card says so
 		var mats: int = sim.pack_materials(sim.mission)
 		if nx.is_empty():
 			UI.fit(_known, [Words.EV["vag_known_top"][0] % [n, tins, mats], Words.EV["vag_known_top"][1] % [n, tins]])

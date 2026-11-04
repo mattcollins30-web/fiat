@@ -685,6 +685,12 @@ func decrypting() -> bool:
 	return _dec_t >= 0.0
 
 
+## Whether the crew's row is on show for the odds to read (BUILD48 A, parked item 26: Retune spun Matt's fans): the air's
+## card up with a signal, more than one class played, and no decrypt running over it.
+func crew_shown() -> bool:
+	return sim != null and view == "air" and not sim.signals.is_empty() and sim.crew_played().size() > 1 and not decrypting()
+
+
 func _process(delta: float) -> void:
 	if _dec_t < 0.0:
 		return

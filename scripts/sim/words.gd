@@ -221,6 +221,15 @@ const TOPPED_UP := "Topped up: %s from the stash into the rig"     # the rig at 
 const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
 const BOX_FOUND := [["A box: it fills your magazines at home", "Fills magazines at home"], ["Or refill one by hand, slowly, when they're spent", "Or refill one by hand, slowly"]]     # a box found on a run (28 Oct; 30 Oct: the refill)
 const FILLED_MAGS := "Filled: %s from the %s in the stash"     # the rig's magazines at the gate (30 Oct, the language pass)
+## BUILD48 A (4 Nov, the playtest's fix round, part 1) - for the language pass:
+## the body's figure against what (parked item 22): "+2% against the Barracks" at camp, "+2% against this run" on one
+const YARDSTICK := {"home": "against %s", "run": "against this run"}
+## the rig's head with the meds shut by Kev's wager (parked item 17), and a med's hover then
+const RIG_NO_MEDS := {"head": "The rig · no meds: Kev's wager", "med": "No meds: Kev's wager"}
+## the Map's key: a pin's last read, kept since the kit, the level or the HP moved (parked item 3)
+const MAP_OLD_READ := "Old read"
+## the Vagabond's card: where his tins come from (parked item 16) - the number leads, as a chip line's does: "5,200 tins at home"
+const VAG_HOME := "%s at home"
 const PACKED_BOX := "Packed: a box of %s for the refills"     # the gate's box in the pack (30 Oct, the designer's call A)
 const BOX_CARRIED := [["Packed at the gate for the refills: it comes home", "Packed at the gate for the refills"], ["Yours: it can't be ditched or put down", "Yours: it comes home"]]     # the gate's box picked on a run (the second review)
 const RIG_OFF := "Rig off: %s back in the stash"     # the rig taken off (the second review)
@@ -1486,6 +1495,9 @@ const EVENTS := {
 	"convoy_notes": "They're carrying notes. For now.",
 }
 
+## The run's clock near its end (4 Nov, BUILD48 item 4): a toast at 1:00 and at 0:30 left.
+const RUN_CLOCK := {"warn": "%s left on the clock"}
+
 ## Run events in the fight (1 Nov, docs/design/run_events.md): each family's lines a zone (the Outskirts, the Estate, the
 ## Town, the City), with slots - {who} {what} {it} {he} {him} {his} {n} - filled from Data.EVENT_POOLS; the panel's
 ## options, the faces' costs and odds, the outcomes in the log, the scene's captions, the standing orders. Drafts for
@@ -2005,7 +2017,7 @@ const PATTERNS := {"not_unique": "Only a unique has a pattern; a mythic has none
 ## The loot filter (24 Oct, the endgame chase).
 const LOOT_RULES := {"scrapped": "Loot rules scrapped %d find%s on the way in: +%d scrap", "special": "Uniques, set pieces, mythics",
 	"any_rarity": "Any rarity", "or_better": "%s or better", "upto": "Up to %s", "any_slot": "any slot", "tier": "a T%d+ affix", "tier_top": "a T%d affix",
-	"button": "Loot rules · %d on", "button_none": "Loot rules", "title": "Loot rules", "sub": "Checked top down when a run comes home · the first that fits wins",
+	"button": "Loot rules · %d on", "button_short": "Loot rules · %d", "button_none": "Loot rules", "title": "Loot rules", "sub": "Checked top down when a run comes home · the first that fits wins",
 	"add": "Add a rule", "on": "Rules: on", "off": "Rules: off", "close": "Close",
 	"note": "Keep: never sold or binned. Highlight: an amber edge, kept too. Scrap: scrapped on the way in. No rule fits: as before.",
 	"keep": "Keep", "highlight": "Highlight", "scrap": "Scrap", "delete": "Delete", "delete_sure": "Delete it", "edit_head": "Rule",
@@ -2018,7 +2030,7 @@ const LOOT_RULES := {"scrapped": "Loot rules scrapped %d find%s on the way in: +
 ## the log, the report card when they're back. Drafts for the language pass.
 const REPEAT := {"button": "Run it ×%d", "button_short": "×%d", "button_full": "Run till the stash is full", "button_full_short": "Till stash full", "button_full_tiny": "Till full",
 	"shut_site": "Site not open yet", "shut_away": "The runner is away", "shut_out": "The runner is out", "shut_trait": "Pick a trait first",
-	"shut_new": "Not cleared yet", "shut_head": "Untick Head first", "shut_convoy": "Untick Convoy first", "shut_full": "The stash is full", "shut_reading": "Reading the odds",
+	"shut_new": "Not cleared yet", "shut_head": "Turn Head off first", "shut_convoy": "Turn Head off first", "shut_full": "The stash is full", "shut_reading": "Reading the odds",
 	"shut_odds": "Odds %d%% at full HP, needs 90%%", "note": "Run it ×%d · %s", "note_full": "Run till full · %s",
 	"set_off": "Away to %s: %s, nobody watching", "times": "%d runs", "till_full": "till the stash is full",
 	"calling": "Bringing them back after this run",
@@ -2119,5 +2131,6 @@ const WEB_SCREEN := {
 	"centre": "The Pitch", "between": "Between the %s and %s", "the_class": "The %s",
 	"tip": "the tip", "flower": "the flower", "run": "the run",
 	"small": "a small node", "notable": "a notable", "keystone": "a keystone", "capstone": "a capstone", "start": "the start", "ring": "the paragon ring",
+	"skill": "a skill", "skill_chip": "Skill",     # a skill node's where line and chip (BUILD48 item 2: not "Notable")
 	"no_past": "No past yet", "level": "Level %d", "pick_past": "Pick one above: what the runner was, and how they fight now. Free for a new runner",
 }

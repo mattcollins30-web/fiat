@@ -6,7 +6,7 @@ extends Control
 ## act, what you'll bring home, and you here. The buttons under it are missions.gd's, as before.
 
 signal fix(act: String)                 # a fix chip pressed: "kit", "clinic", "meds", "rounds" or "site:<tier>"
-signal view_changed                     # Gang / Head pressed
+signal view_changed                     # Gang / Head pressed: the Map takes the head on or lets him be (BUILD48 item 1)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -53,7 +53,7 @@ var W := 501.0
 var INNER := 461.0
 var sim
 var site := -1
-var head_view := false                  # the toggle: the head in his interior, else the gang in the site's picture
+var head_view := false                  # the toggle: the head taken on and in his interior, else the gang in the site's picture
 var has_head := false
 
 # the picture
@@ -390,7 +390,7 @@ func _show_head(i: int, b: Dictionary, convoy: bool, is_open: bool, showing_head
 	var armed: bool = bool(sim.boss_armed.get(i, false))
 	head_face.get_parent().visible = has_head
 	gang_btn.disabled = false
-	head_btn.disabled = not has_head or not is_open
+	head_btn.disabled = not has_head or not is_open or (not armed and not sim.can_arm_boss(i))     # pressing it takes him on (BUILD48 item 1): shut when he can't be
 	UI.style_button(gang_btn, not showing_head)
 	UI.style_button(head_btn, showing_head)
 	head_btn.tooltip_text = "" if has_head else Words.SITE_CARD["no_head"]

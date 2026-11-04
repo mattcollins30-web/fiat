@@ -203,9 +203,9 @@ func show_state(s) -> void:
 	if orders_panel.visible and _inv.many:
 		orders_panel.visible = false
 	var n_on: int = sim.loot_rules.filter(func(r): return bool(r.get("on", true))).size() if sim.loot_rules_on else 0
-	var rw: String = Words.LOOT_RULES["button"] % n_on if n_on > 0 else Words.LOOT_RULES["button_none"]
-	if rules_button.text != rw:
-		rules_button.text = rw
+	_lay_rules_button(n_on)                    # laid out with the bar every show (BUILD48 item 28)
+	if int(rules_button.get_meta("rules_on", -1)) != n_on:
+		rules_button.set_meta("rules_on", n_on)     # styled once a change, as the words were
 		UI.style_button(rules_button, false, "warn" if n_on > 0 else "")
 	# main.gd refreshes ten times a second; rebuilding the buttons that often
 	# hides and shows them under the mouse, which drops presses. Redraw only
@@ -847,3 +847,15 @@ static func _hint_forms(hints: Array) -> Array:
 	out.append(" · ".join(hints))
 	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
 	return out
+
+
+## The Loot rules button laid out with the stash's second bar (4 Nov, BUILD48 item 28, Matt: "loot rules clipping"): after
+## the bar's last button - Select, wherever the tabs leave it - up to the page buttons, its words fitted (the short form
+## when the class's second tab takes the room), never at a fixed x over Select.
+func _lay_rules_button(n_on: int) -> void:
+	var rx: float = _inv._many_button.position.x + Inventory.MANY_W + 6
+	var end: float = (_inv._page_prev.position.x - 6.0) if _inv._page_prev.visible else float(Inventory.WIDTH)
+	rules_button.position = Vector2(GRID_X + rx, _inv._many_button.position.y)
+	rules_button.size.x = clampf(end - rx, 0.0, RULES_W)
+	var LR: Dictionary = Words.LOOT_RULES
+	UI.fit_button(rules_button, [LR["button"] % n_on, LR["button_short"] % n_on] if n_on > 0 else [LR["button_none"]])

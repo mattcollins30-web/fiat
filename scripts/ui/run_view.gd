@@ -1349,6 +1349,10 @@ const MUZZLE_AT := {
 	"army_smg": [Vector2(77, 79), Vector2(-1, -0.2)],     # the suppressor's end
 	"riot_squad_s_smg": [Vector2(131, 84), Vector2(-1, -0.35)],
 	"close_protection_smg": [Vector2(103, 84), Vector2(-1, -0.15)],     # the suppressor's end, not the receiver's top (17 Oct, the reroll)
+	# BUILD48 item 11 (4 Nov): the SMGs the top-left rule still misses, read off the contact sheet by eye
+	"courier_s_smg": [Vector2(127, 78), Vector2(-1, -0.3)],     # the barrel's end; its topmost is the ring sight, its top-left the left glove
+	"consular_pdw": [Vector2(112, 76), Vector2(-1, -0.45)],     # the rail's front; the top-left rule finds the foregrip's glove
+	"broomhandle_pistol": [Vector2(140, 57), Vector2(0, -1)],     # held straight up: the muzzle is its top; the top-left rule finds the glove
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:
@@ -1372,8 +1376,10 @@ static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:
 
 
 ## A kit picture's muzzle and the way it fires, in its pixels: in its upper part (the arms come up from the foot), a
-## pistol's or an SMG's topmost drawn pixel, else the long gun's furthest toward the top left; the way it points from
-## the gun's middle (the upper part's drawn pixels averaged) out through the muzzle. [at, dir].
+## pistol's topmost drawn pixel, else - a long gun's or an SMG's - the furthest toward the top left; the way it points
+## from the gun's middle (the upper part's drawn pixels averaged) out through the muzzle. [at, dir]. (4 Nov, BUILD48
+## item 11, Matt: "the flash comes out of the sights not the muzzle": on the kit's hands the gun's raised to the top
+## left, so an SMG's topmost pixel was its rear sight; it takes the long guns' rule now.)
 static func find_muzzle(t: Texture2D, kind: String) -> Array:
 	var img := t.get_image()
 	if img == null:
@@ -1383,7 +1389,7 @@ static func find_muzzle(t: Texture2D, kind: String) -> Array:
 		img.decompress()
 	var w: int = img.get_width()
 	var h: int = img.get_height()
-	var probe: Vector2 = Vector2(0, -1) if kind in ["pistol", "smg"] else Vector2(-1, -0.35).normalized()
+	var probe: Vector2 = Vector2(0, -1) if kind == "pistol" else Vector2(-1, -0.35).normalized()
 	var best := -INF
 	var at := Vector2.ZERO
 	var sum := Vector2.ZERO

@@ -2127,7 +2127,7 @@ func _pack(sim) -> void:
 	if sim.on_mission():
 		return
 	sim._fill_mags()
-	sim.pack_rig("fill")
+	sim.pack_rig("fill", -1, false)           # the gate's own packing (BUILD48 A, item 24: no magazines past each gun's first)
 	sim._fill_mags()                          # the newly packed magazines filled, as the gate does (30 Oct)
 	sim.gate_box_always = true                # and its box for the refills at the gate, as "fill" packs it (the fix round, the designer's A)
 
@@ -2183,7 +2183,7 @@ func _stock_cures(sim) -> void:
 ## The cures stocked and packed, as the gate packs them (the smoke's fixture reads it alone).
 func _pack_cures(sim) -> void:
 	_stock_cures(sim)
-	sim.pack_rig()
+	sim.pack_rig("fill", -1, false)           # as the gate packs (BUILD48 A, item 24)
 
 
 ## Rounds for both guns into the stash: two runs' worth for the primary, one for the secondary; bought by the box when

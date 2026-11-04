@@ -158,7 +158,7 @@ func _init(rect: Rect2) -> void:
 		_order_labels[k] = _pin_label(_px(ORDER_AT[k]), int(ORDER_LABEL[k]), Pal.ACCENT)
 	# the key, bottom right: what a pin's colour says - a dot and its word, packed tight (19 Oct, Matt: "too big ... too
 	# spread out")
-	var items := [["Safe", Pal.GOOD, false], ["Risky", Pal.WARN, false], ["A bad idea", Pal.BAD, false], ["Locked", Pal.TEXT_3, true]]
+	var items := [["Safe", Pal.GOOD, false], ["Risky", Pal.WARN, false], ["A bad idea", Pal.BAD, false], [Words.MAP_OLD_READ, old_tone(1.0), false], ["Locked", Pal.TEXT_3, true]]     # a last read since moved (BUILD48 A, item 3)
 	var widths: Array = []
 	var total := KEY_PAD
 	for e in items:
@@ -308,14 +308,32 @@ func _px(p: Vector2) -> Vector2:
 	return Vector2(p.x * size.x / W0, p.y * size.y / H0)
 
 
-## The pin's tone: the odds as read, grey while they're read, hollow when shut.
+## The pin's tone: the odds as read, grey while they're read, hollow when shut. A pin not read now shows its last read
+## (BUILD48 A, parked item 3: the Map reads the picked place alone) - in its colour while it's current, dimmed (OLD_DIM of
+## the way to the grey) once the kit, the level or the HP has moved since; grey with none.
+const OLD_DIM := 0.6
 func _tone(i: int) -> Color:
 	if not sim.tier_open(i):
 		return Pal.CARD_LINE
-	if not sim.odds_ready(i):
+	if sim.odds_ready(i):
+		return odds_tone(sim.odds_now(i))
+	var last: Array = sim.odds_last(i)
+	if last.is_empty():
 		return Pal.TEXT_3
-	var o: float = sim.odds_now(i)
+	return odds_tone(float(last[0])) if bool(last[1]) else old_tone(float(last[0]))
+
+
+static func odds_tone(o: float) -> Color:
 	return Pal.GOOD if o >= 0.9 else (Pal.WARN if o >= 0.6 else Pal.BAD)
+
+
+## A last read kept since the runner moved: its colour, dimmed toward the grey.
+static func old_tone(o: float) -> Color:
+	return odds_tone(o).lerp(Pal.TEXT_3, OLD_DIM)
+
+
+## The pins' tones as drawn (the smoke reads them): worked in show_state, where the paint's odds scope holds the key.
+var tones: Array = []
 
 
 func show_state(s, sel: int, okey: String) -> void:
@@ -323,8 +341,10 @@ func show_state(s, sel: int, okey: String) -> void:
 	selected = sel
 	order_key = okey
 	var settled := ""
+	tones = []
 	for i in range(Data.TIERS.size()):
-		settled += "%d%d%d" % [int(sim.tier_open(i)), int(sim.odds_ready(i)), roundi(sim.odds_now(i) * 100.0)]
+		tones.append(_tone(i))
+		settled += "%d%d%d%s" % [int(sim.tier_open(i)), int(sim.odds_ready(i)), roundi(sim.odds_now(i) * 100.0), tones[i].to_html()]
 	var opens := ""
 	for p in Data.PINNACLES:
 		opens += "1" if sim.order_open(p["key"]) else "0"
@@ -411,7 +431,7 @@ func _draw_pins() -> void:
 			_pins.draw_circle(c, r + 5.0, Pal.ACCENT)
 		_pins.draw_circle(c, r + 3.0, Pal.BG)
 		if open:
-			_pins.draw_circle(c, r, _tone(i))
+			_pins.draw_circle(c, r, tones[i] if i < tones.size() else _tone(i))
 		else:
 			_pins.draw_circle(c, r, Pal.BUTTON)
 			_pins.draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if zone_open else Color("5a6068"), 2.0)

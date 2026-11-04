@@ -145,20 +145,21 @@ func show_state(s) -> void:
 		l.add_theme_color_override("font_color", Pal.TEXT if i >= lines.size() - 2 else Pal.TEXT_2)
 
 
-## A beat's three paper slots (28 Oct): the one on now (or the depot again) its papers held in the story blue and the
-## wanted dashed; a beaten one its three, decrypted; one to come, three dashed, unread.
+## A beat's three paper slots (28 Oct): the one on now its papers held in the story blue and the wanted dashed; a beaten
+## one its three, decrypted - the last beat too, once the story's told (4 Nov, BUILD48 item 20, Matt: "story beat but
+## still states wanted papers ?": its cards drew the depot again's round); only the "Depot again" panel says what's
+## wanted then. One to come, three dashed, unread.
 func _show_slots(c: Dictionary, k: int, beaten: bool, on_now: bool, held: Array) -> void:
 	var names: Array = sim.story_papers(k)
-	var again: bool = beaten and k == sim.story_now() and sim.story_beat >= Data.STORY_BEATS.size()     # the depot again
 	for i in range(c["slots"].size()):
 		var sl: Dictionary = c["slots"][i]
 		var nm: String = str(names[i]) if i < names.size() else ""
 		var known: bool = beaten or on_now
-		var is_held: bool = (on_now or again) and nm in held
-		var used: bool = beaten and not again
+		var is_held: bool = on_now and nm in held
+		var used: bool = beaten
 		var dashed: bool = not (is_held or used)
 		sl["dash"].visible = dashed
-		sl["dash"].set_colour(Color(STORY, 0.55) if (on_now or again) else Dashed.LINE)
+		sl["dash"].set_colour(Color(STORY, 0.55) if on_now else Dashed.LINE)
 		sl["box"].add_theme_stylebox_override("panel", UI.box(Pal.CARD.blend(Color(STORY, 0.1)), 7, 2, STORY) if is_held else (UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE) if used else UI.box(Color(0, 0, 0, 0), 7)))
 		_fit_name(sl["name"], nm if known else "?")
 		sl["name"].add_theme_color_override("font_color", STORY if is_held else (Pal.TEXT if used else Pal.TEXT_3))

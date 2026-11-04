@@ -574,14 +574,23 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 	sim.odds_frame_start()
 	var done := true                              # every read this frame asked has settled, none cut short by the time
 	if room == COMMS and not sim.signals.is_empty():
+		# stepped as the Map's are (BUILD48 A, parked item 26: Retune spun Matt's fans): a dry run stops at the frame's few ms
+		# and goes on in the next - unstepped, a late signal's one dry run ran 10-13 ms a frame, a crew read's frames too
+		sim.odds_step = true
+		var ticks0: int = int(sim.prof.get("dry_ticks", 0))
 		var o: Array = sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
 		done = bool(o[1])
-		if done:
-			for nm in sim.crew_played():             # then the crew's, one class a frame until each has settled (21 Oct)
+		# then the crew's, one class a frame until each has settled (21 Oct) - only while their row shows, never in a frame
+		# whose dry runs went to the runner's own, and not under the decrypt's animation (BUILD48 A, item 26)
+		if done and _radio.crew_shown() and not sim._odds_time_up() and int(sim.prof.get("dry_ticks", 0)) == ticks0:
+			for nm in sim.crew_played():
 				if str(nm) != sim.cls and not bool(sim.signal_odds_class(_radio.selected, str(nm), true)[1]):
 					sim.signal_odds_class(_radio.selected, str(nm))
 					done = false
 					break
+		elif done and _radio.crew_shown():
+			done = sim.crew_played().all(func(nm): return str(nm) == sim.cls or bool(sim.signal_odds_class(_radio.selected, str(nm), true)[1]))
+		sim.odds_step = false
 		_odds_settle(what, done, sig)
 		return
 	if room == MISSIONS and _missions.exp_on:
@@ -613,17 +622,21 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 		return
 	if room == MISSIONS and _missions.order_key != "" and sim.order_open(_missions.order_key):
 		done = bool(sim.order_odds(_missions.order_key)[1])       # read on to the whole count: its card's figure
+	# the Map reads the place picked alone (BUILD48 A, parked item 3; Matt: "just calculate odds when a place is clicked on
+	# and keep the last read odds for places not selected"): every other pin shows its last read (sim.odds_last); the
+	# Radio with no signal held reads every site, as before
 	var order: Array = [_missions.selected] if _missions.selected >= 0 else []
-	for i in range(Data.TIERS.size()):
-		if not (i in order):
-			order.append(i)
+	if room != MISSIONS:
+		for i in range(Data.TIERS.size()):
+			if not (i in order):
+				order.append(i)
 	# hurt, the picked site's repeat gate reads the runner whole (29 Oct, the designer), right after the site's own read
 	# (BUILD45: behind every site's read it took twice the frames at the 1 s dry step)
 	var gate: bool = room == MISSIONS and _missions.selected >= 0 and sim.tier_open(_missions.selected) and int(sim.best_depth[_missions.selected]) > 0 and sim.hp < sim.max_hp() - 0.01
 	sim.odds_step = true                          # a dry run stops at the frame's few ms and goes on in the next (BUILD43)
 	for i in order:
 		var tk: String = "site/%d" % i
-		if _odds_part.get(tk, []) != base:
+		if _odds_part.get(tk, []) != base or (room == MISSIONS and i == _missions.selected):     # the picked site asked on its own key, never passed over on the base (BUILD48 A)
 			if sim._odds_time_up():
 				done = false
 				break
@@ -631,6 +644,7 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 			if sim.tier_open(i) and not sim.odds_settled(i):
 				sim.survival(i)
 				read = sim.odds_settled(i)
+				sim.odds_keep(i)                  # its read kept for its pin once it shows (BUILD48 A, item 3)
 			if read:
 				_odds_part[tk] = base
 			else:
@@ -639,20 +653,6 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 			sim.repeat_read(i)
 	if gate:
 		done = false                              # hurt: read each frame as before (the HP moves as the runner rests)
-	if room == MISSIONS:
-		for p in Data.PINNACLES:
-			var pk: String = "order/" + str(p["key"])
-			if _odds_part.get(pk, []) == base:
-				continue
-			if sim._odds_time_up():
-				done = false
-				break
-			if sim.order_open(p["key"]) and not bool(sim.order_odds_now(p["key"])[1]):
-				sim.order_odds(p["key"])          # a pin's colour: read to the showing count, then left
-				if not bool(sim.order_odds_now(p["key"])[1]):
-					done = false
-					continue
-			_odds_part[pk] = base
 	sim.odds_step = false
 	_odds_settle(what, done, sig)
 
@@ -680,15 +680,22 @@ func _odds_what() -> String:
 ## and heads armed, the orders' and the County's ladder, the issued kit worn.
 func _odds_base() -> Array:
 	return [sim.odds_state(), sim.cls, int(round(sim.hp * 10.0 / maxf(sim.max_hp(), 1.0))), sim.runs_total, sim.chron_count, sim.reach, sim.odds_runs(),
-		sim.campaign_done(), hash(sim.depth), hash(sim.words), hash(sim.boss_armed), hash(sim.order_beaten), hash(sim.clear_level), sim.issued_worn()]
+		sim.campaign_done(), hash(sim.depth), hash(sim.words), hash(sim.boss_armed), hash(sim.order_beaten), hash(sim.clear_level), sim.issued_worn(),
+		# what the odds key reads past the above (BUILD48 A, parked item 9: the Map's odds stopped reading): HP either side of
+		# half (the damage's memo reads it: resting across half moved the key and left the base, so a read the key threw away
+		# was never asked again), the rounds' plans and Kev's wagers (the key's per site)
+		sim.hp < sim.max_hp() * 0.5, hash(sim.rounds_plans), hash(sim.wagers)]
 
 
 ## A screen's whole read: the base, and what it picks - the Radio's signal as it stands and the crew, the Map's pin.
 func _odds_sig(what: String, base: Array) -> Array:
 	if what == "radio":
-		return [base, _radio.selected, hash(sim.signal_at(_radio.selected)), sim.crew_played()]
+		return [base, _radio.selected, hash(sim.signal_at(_radio.selected)), sim.crew_played(), _radio.crew_shown()]     # the crew's row on show (BUILD48 A, item 26)
 	if what == "map":
-		return [base, _missions.selected, _missions.order_key]
+		# the picked site's own odds key too (BUILD48 A, the review of item 9): one key a frame, so a move the base doesn't
+		# see can't leave its pin "Reading the odds"
+		var sel: int = _missions.selected
+		return [base, sel, _missions.order_key, hash(sim._odds_key(sel)) if sel >= 0 and sel < Data.TIERS.size() else 0]
 	return [base]
 
 

@@ -63,6 +63,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   never comes - the lull (`event_lull`) waits for a first search, and a site with no crates left has none to make, so
   the 30% roll (every run with the Caretaker's Keys) is silently lost. Found by the 0.12.1 smoke flake fix. Suggested
   fix: open the lull when nothing's left to search (crates done or none). Built with the first fixes after the playtest.
+- **The fix round, part 1 done (4 Nov, build 48, not yet played):** items 1, 2 (the label), 3, 4 (the countdown and
+  warnings; Get out mid-refill checked, not lost), 7, 8, 9, 10, 11, 16, 17, 20, 22, 24, 26, 27, 28. Item 13 stays open
+  (the 1.0 was the head's fight read fresh; the odds assume a med used under 40% HP, which Matt, not watching, didn't -
+  the leading suspect; a line on the card or a change to the odds is Matt's call). Item 26: the reads now step across
+  frames (p90 16 ms at a level-40 signal, 9 ms with the crew, from 19-27 ms whole dry runs); live_guard's ~2 ms a frame
+  is a further speed fix. The UI reworks (6, 12, 14, 15, 18, 19, 21, 23, 25) are on the canvas "Fiat – Fix round UI"
+  (https://claude.ai/artifact/STAWLDppiNCUqZ5rL5kMs4) for Matt's picks. The SMG flash points: a contact sheet for Matt.
 - **Parked from the playtest (0.12.2, 3 Nov):**
   1. UI: the site card's head is two controls - the Gang / Head toggle picks who the card shows, and the foot's "Head"
      button is what takes him on, so toggling Head alone doesn't take him on (Matt: "head selected but doesnt activate
@@ -6377,6 +6384,19 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 4 Nov (night): the fix round, part 1 (build 48: 18 of the playtest's 28 items)
+
+Matt: "proceed" (and his picks: item 10, the Bunkhouse's Expeditions line scrambled; item 24, the rig topped up with only
+what the last run used). Two builders side by side (A: the odds and the sim; B: the UI), merged, the reviewer's ten
+findings fixed (the bot and repeats pack as the gate now does; the Radio no longer reads the order places; the Map's
+picked pin keyed on its own odds key; a short form for the pick panel's figure; the clock's warnings skip marks passed
+before the run; three checks made able to fail), the language pass (two reviewers; the editor's calls: "their own kit
+and points from here", "Turn Head off first"). Smoke green in the cloud and on Matt's machine; lint 0. Item 8's real
+cause: a Control can't shrink under its old minimum height in the same call, so the rail's rows stayed 101 px when the
+away card shrank them to 77. Item 9's: the shell's "has anything moved" base saw HP only to the tenth, and a read thrown
+away by a half-HP crossing was never asked again. The canvas of the UI reworks for Matt's picks:
+https://claude.ai/artifact/STAWLDppiNCUqZ5rL5kMs4. No version bump (not a build Matt plays; 0.13.0 is).
 
 ## 4 Nov (evening): act two designed (docs/design/act_two.md)
 

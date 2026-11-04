@@ -71,10 +71,14 @@ func _init(room_name: String) -> void:
 
 
 ## The row's height from the layout (the rail runs to the log's bottom): the
-## stamp and the two lines sit centred in it.
+## stamp and the two lines sit centred in it. The minimum first (4 Nov, BUILD48 item 8, Matt: "you never fixed the rail
+## clipping here when a runner is away"): a size under the old minimum doesn't take, so when the away card came in and
+## the rows shrank (101 to 77 at 1920 x 1080) each row kept its old height - its name and badge placed for 101 while its
+## stamp and hairline and the next row went at 77: every name low in its row, the badge down over the next. The 30 Oct
+## check only ever grew the rows.
 func set_row_height(h: float) -> void:
-	size.y = h
 	custom_minimum_size.y = h
+	size.y = h
 	_stamp.position.y = floorf((h - STAMP) / 2.0)
 	_dot.position.y = _stamp.position.y - 6
 	_rule.position.y = h - 1

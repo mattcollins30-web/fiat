@@ -38,7 +38,6 @@ const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
 const PAD := 20
 const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
-const BOSS_W := 150                # the boss toggle beside Set off
 const REPEAT_W := 170              # "Run it ×5" beside Set off (29 Oct, docs/design/trips.md 1); Kev's wagers in its place before a first clear or a head
 const FOOT_H := 48                 # the insurance's row, the rig's top-up beside it (23 Oct, parked item 4)
 
@@ -112,9 +111,7 @@ func _init() -> void:
 		var body := SiteCard.new(COL_W)
 		panel.add_child(body)
 		body.fix.connect(_fix)
-		body.view_changed.connect(func():
-			_shown = ""
-			show_state(sim))
+		body.view_changed.connect(_head_pick.bind(col))     # the card's Head takes him on (BUILD48 item 1: one control)
 		c["card"] = body
 		# the foot: Set off across, the insurance and the rig's top-up sharing the row under it (21 Oct, Matt: auto-run's
 		# gone; 23 Oct: the top-up beside the paper)
@@ -146,10 +143,6 @@ func _init() -> void:
 		c["deploy"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
 		c["deploy"].text = "Set off"
 		c["deploy"].pressed.connect(_deploy.bind(col))
-		# the zone's last site has its boss: a toggle beside Set off takes them on
-		c["boss"] = UI.button(panel, Rect2(PAD + INNER - BOSS_W, fy, BOSS_W, Pal.BUTTON_H), false)
-		c["boss"].pressed.connect(_boss.bind(col))
-		c["boss"].visible = false
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		# the repeat runs (29 Oct): "Run it ×5" beside Set off, shut with its reason on the note; Kev's wagers in its place
 		# on a run he bets on (a first clear, a head armed)
@@ -412,26 +405,12 @@ func show_state(s) -> void:
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
 		# the card's body (BUILD46-S): what the runner's short of, as fix chips, at Risky and worse
 		var why: Array = odds_reasons(sim, i) if is_open and sim.odds_ready(i) and odds < WHY_UNDER else []
+		c["card"].head_view = bool(sim.boss_armed.get(i, false))     # the card shows the head when he's taken on, else the gang (BUILD48 item 1)
 		c["card"].show_state(sim, i, why)
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and not walks and sim.notes < sim.boss_cost(i))
-		var boss: Dictionary = sim.boss_of(i)
-		var convoy: bool = sim.is_convoy(i)
-		if convoy:
-			boss = {"name": "The convoy"}
-		elif not boss.is_empty() and sim.is_pinnacle(i):
-			boss = {"name": "%s, at full strength" % boss["name"]}
-		c["boss"].visible = is_open and not boss.is_empty()
 		_repeat_lay(c, i, is_open)
-		if c["boss"].visible:
-			var armed: bool = sim.boss_armed.get(i, false)
-			if convoy:
-				c["boss"].text = "Convoy ✓" if armed else "Convoy"
-			else:
-				UI.fit_button(c["boss"], [Words.SITE_CARD["taken_on"], "Head ✓"] if armed else [Words.SITE_CARD["take_on"], "Head"])     # the language pass
-			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
-			UI.style_button(c["boss"], false, "bad" if armed else "")
 		c["insure"].visible = is_open
 		_foot_lay(c, is_open)
 		UI.fit_button(c["insure"], ["Insured ✓"] if sim.insure_next else ["Insure kit · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)).replace(" tins", ""), "Insure"])
@@ -478,8 +457,6 @@ func _tier(_k: int) -> int:
 func select(i: int) -> void:
 	if i < 0 or i >= Data.TIERS.size() or sim == null or not sim.zone_open(int(Data.TIERS[i]["zone"])):
 		return
-	if i != selected:
-		_cols[0]["card"].head_view = bool(sim.boss_armed.get(i, false))     # a new pin: the gang, unless its head's taken on
 	selected = i
 	order_key = ""
 	if _wagers.visible and _wagers.key != sim.wager_site_key(i):
@@ -598,13 +575,13 @@ func _deploy(k: int) -> void:
 	acted.emit()
 
 
-## The Set off row (29 Oct): Set off, then "Run it ×5" (or Kev's wagers in its place on a run he bets on), then the head's
-## toggle when the site has one; Set off takes what's left.
+## The Set off row (29 Oct): Set off, then "Run it ×5" (or Kev's wagers in its place on a run he bets on); Set off takes
+## what's left. The head's taken on from the card's Gang / Head toggle (BUILD48 item 1), not a button here.
 func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
 	var wager_on: bool = is_open and sim.wager_site_open(i)
 	c["wager"].visible = wager_on
 	c["repeat"].visible = is_open and not wager_on
-	var right: float = PAD + INNER - (BOSS_W + 8 if c["boss"].visible else 0)
+	var right: float = PAD + INNER
 	for b in [c["repeat"], c["wager"]]:
 		b.position.x = right - REPEAT_W
 	c["deploy"].size.x = (right - REPEAT_W - 8.0 - PAD) if is_open else float(INNER)
@@ -635,10 +612,16 @@ func _wager_open(k: int) -> void:
 	acted.emit()
 
 
-func _boss(k: int) -> void:
+## The card's Gang / Head toggle pressed (BUILD48 item 1, Matt: "there should just be one"): Head takes him on, Gang lets
+## him be; the card then shows whichever he is, so the toggle and Set off never disagree.
+func _head_pick(k: int) -> void:
 	var i := _tier(k)
-	sim.arm_boss(i, not sim.boss_armed.get(i, false))
-	_cols[k]["card"].head_view = bool(sim.boss_armed.get(i, false))     # taken on: the card shows him (BUILD46-S)
+	var card = _cols[k]["card"]
+	var want: bool = bool(card.head_view)
+	if want != bool(sim.boss_armed.get(i, false)):
+		sim.arm_boss(i, want)
+	card.head_view = bool(sim.boss_armed.get(i, false))
+	_shown = ""
 	acted.emit()
 
 
@@ -820,7 +803,7 @@ func _text_nodes_under() -> Array:
 	for c in _cols:
 		out.append_array(c["card"].text_nodes())
 		out.append(c["note"])
-		for b in [c["deploy"], c["boss"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
+		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:

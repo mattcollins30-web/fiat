@@ -465,8 +465,11 @@ static func _sentence(nd: Dictionary) -> String:
 	return str(PANEL_WORDS.get(nd["effect"], ""))
 
 
-## The panel's chip: a notable with a figure shows the figure; a keystone or capstone its kind; a plain node its figure.
+## The panel's chip: a notable with a figure shows the figure; a keystone or capstone its kind; a plain node its figure;
+## a skill node "Skill" (BUILD48 item 2, Matt: "skills identified as notable when they should be labelled 'skill'").
 static func _chip_words(nd: Dictionary) -> String:
+	if nd.has("skill"):
+		return Words.WEB_SCREEN["skill_chip"]
 	if nd.get("capstone", false):
 		return "Capstone"
 	if nd.get("keystone", false):
@@ -963,9 +966,10 @@ func _show_panel() -> void:
 		selected = ""
 	if selected == "" and _armed != "":
 		var lv: int = sim.crew_level(_armed)
+		var jl: int = sim.join_level(_armed)     # the level they join at: the crew's floor lifts them (BUILD48 item 7, Matt: "the level 1 wording is incorrect")
 		var el: String = sim.crew_element(_armed)
 		var r: Dictionary = sim.crew_runner(_armed)
-		UI.fit(_title, [UI.dots(("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed), _armed])
+		UI.fit(_title, [UI.dots(("%s · level %d" % [_armed, jl]) if lv > 0 else "%s · new" % _armed), _armed])
 		if el != "":
 			UI.fit(_where, [el])
 		var kit: Array = []
@@ -976,7 +980,7 @@ func _show_panel() -> void:
 		var trt: String = str(r.get("trait", ""))
 		var state: String = "wounded: send them out to see the Clinic" if not Dictionary(r.get("wounds", {})).is_empty() else ""
 		if lv <= 0:
-			_node_forms = ["A new runner: level 1, the arrival's kit, their own points from here.", "A new runner at level 1."]
+			_node_forms = ["A new runner: level %d, their own kit and points from here." % jl, "A new runner at level %d." % jl]
 		else:
 			_node_forms = ["%s%s%s." % [", ".join(kit), (" · " + trt) if trt != "" else "", (" · " + state) if state != "" else ""], ", ".join(kit) + "."]
 		_icon.texture = People.portrait(_armed)
@@ -1068,6 +1072,8 @@ func where_words(id: String, short := false) -> String:
 	var WS: Dictionary = Words.WEB_SCREEN
 	var rg: String = str(_web._region.get(id, ""))
 	var kind: String = str(_web._kind.get(id, "small"))
+	if kind == "notable" and _web.node_of(id).has("skill"):
+		kind = "skill"                         # a skill node says so, not "a notable" (BUILD48 item 2); the start stays the start
 	var parts: Array = []
 	if rg == "centre":
 		parts.append(WS["centre"])

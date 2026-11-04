@@ -8843,7 +8843,8 @@ func _odds_key(i: int) -> Array:
 	var common: Array = _odds_key_common()
 	return common + [depth[i], str(words[i]), fight_weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
 		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0,     # a signal laid on the site reads apart from it (15 Oct)
-		str(rounds_plans.get(str(i), rounds_plans.get("camp", "")))]     # the rounds the site's plan packs (BUILD46-R)
+		str(rounds_plans.get(str(i), rounds_plans.get("camp", ""))),     # the rounds the site's plan packs (BUILD46-R)
+		str(wagers_read(i).map(func(w): return str(w["cond"])))]     # Kev's wagers taken on its run (BUILD48 A, item 17)
 
 
 ## The key's runner half, the same for every site: worked once a frame while the shell reads the odds (16 Oct: twelve
@@ -9125,6 +9126,28 @@ func odds_ready(i: int) -> bool:
 	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= mini(runs, Data.ODDS_RUNS)
 
 
+## The Map's last read a site (BUILD48 A, parked item 3; Matt: "just calculate odds when a place is clicked on and keep
+## the last read odds for places not selected"): the shell reads the picked place alone and keeps each place's read here
+## as it comes in (odds_keep); a pin not picked shows it - in its colour while nothing it hangs on has moved, dimmed once
+## the kit, the level, the HP or the place has (its odds key no longer the read's). Not saved: a loaded camp's pins wait
+## for their first pick.
+var _odds_last := {}
+
+
+## Keeps site `i`'s read, once it has read enough to show (odds_ready).
+func odds_keep(i: int) -> void:
+	if odds_ready(i):
+		_odds_last[i] = [_surv_cache[i][1], _surv_cache[i][0]]
+
+
+## Site `i`'s last read kept: [odds, current (read under the odds key as it is now)], or [] for none.
+func odds_last(i: int) -> Array:
+	var l = _odds_last.get(i, null)
+	if l == null:
+		return []
+	return [float(l[0]), l[1] == _odds_key(i)]
+
+
 ## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).
 func odds_settled(i: int) -> bool:
 	var runs: int = odds_runs() if odds_runs_max <= 0 else mini(odds_runs(), odds_runs_max)     # the read's cap as survival() runs it (D13 review)
@@ -9174,6 +9197,7 @@ func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 		for q in t.get("boss_queue", []):
 			m["boss_queue"].append(_boss_entry(q))
 		m["convoy"] = t.get("convoy", false)
+	_wagers_dry(m, wagers_read(i))            # Kev's wagers taken on this run's (BUILD48 A, item 17): the odds read the fight they make
 	# no run event in the odds (1 Nov, run events): they come in the lull after the clear, where a dry run has ended, and
 	# a threat is a choice, not the run's fight; the odds roll none and move no dice for one. A signal's convoy still
 	# joins the fight it comes into (D17)
@@ -9897,7 +9921,7 @@ func _repeat_go() -> void:
 	var bg = _plan_bg(rp, rc)     # once, before filling (the reviewer on m32c, 1): held for the gate's own top-up and box
 	var picks: Dictionary = _plan_picks(rp, rc)
 	_fill_mags(bg, picks)
-	pack_rig("fill", i)                      # the site's cures, not the front's (S9)
+	pack_rig("fill", i, false)               # the site's cures, not the front's (S9); no magazines past each gun's first, as the gate (BUILD48 A, item 24)
 	_fill_mags(bg, picks)                     # the magazines it packed, filled (30 Oct)
 	var ins := insure_next
 	insure_next = false                       # the paper's for a watched run
@@ -10311,6 +10335,54 @@ func _wagers_on(m: Dictionary, key: String) -> void:
 	wagers[key] = {"seq": int(wagers.get(key, {}).get("seq", 0)) + 1, "taken": []}
 	log_event(Words.WAGERS["on"] % [" · ".join(on.map(func(x): return wager_words(x)))])
 	chron("wagers_on", {"key": key, "n": on.size()})
+
+
+## The wagers a read of site `i` takes (BUILD48 A, parked item 17: the odds read 100% for a fight with meds the runner
+## didn't have): those taken on its next run as deploy would put them on - the signal's laid on it (a signal read), else the
+## site's while its gate is open (a first clear, a head armed) - as their offers. [] for none, an order's or a County read.
+func wagers_read(i: int) -> Array:
+	var key := ""
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		if _sig.has("order") or str(_sig.get("county_head", "")) != "":
+			return []
+		key = "sig:%d" % int(_sig["id"])
+	elif int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false)):
+		key = wager_site_key(i)
+	else:
+		return []
+	var taken: Array = wagers.get(key, {}).get("taken", [])
+	if taken.is_empty():
+		return []
+	var offer := wager_offer(key)
+	var out: Array = []
+	for k in taken:
+		if int(k) < offer.size():
+			out.append(offer[int(k)])
+	return out
+
+
+## The wagers' terms on a dry run's fight (BUILD48 A, item 17): what _wagers_on puts on a run's - more men, no meds, the
+## clock, harder fire - and none of the pay, nothing spent or logged.
+func _wagers_dry(m: Dictionary, on: Array) -> void:
+	if on.is_empty():
+		return
+	m["t"] = m["t"].duplicate(true)
+	var t: Dictionary = m["t"]
+	for w in on:
+		match str(w["cond"]):
+			"gang":
+				t["pool"] = ceili(float(t["pool"]) * Data.WAGER_GANG)
+				m["remaining"] = ceili(float(m["remaining"]) * Data.WAGER_GANG)
+				m["wager_gang"] = float(m.get("wager_gang", 1.0)) * Data.WAGER_GANG
+			"no_meds":
+				t["no_meds"] = true
+			"clock":
+				m["clock"] = float(m["clock"]) * Data.WAGER_CLOCK
+				m["clock_max"] = float(m.get("clock_max", m["clock"])) * Data.WAGER_CLOCK
+			"hard":
+				t["dps"] = float(t["dps"]) * Data.WAGER_HARD
+				for b in ([m["boss"]] if m.get("boss", null) is Dictionary else []) + m.get("boss_queue", []):
+					b["dps"] = float(b["dps"]) * Data.WAGER_HARD
 
 
 ## A slot's wagered finds: the find landed, and its two more of the same slot (×3), rolled as it was.
@@ -12078,7 +12150,7 @@ func _take_materials(m: Dictionary, n: int) -> void:
 func _vag_shelf(ev: Dictionary) -> Array:
 	var step: int = trader_step("vagabond")
 	var off: float = (1.0 - Data.TRADER_STEP_OFF) if step >= 2 else 1.0
-	var tins: int = int(floor(float(mission["cash"])))
+	var tins: int = int(floor(cash))         # the camp's tins, the home purse as the Fence's (BUILD48 A, parked item 16, Matt's pick): a run's take couldn't pay his shelf
 	var mats: int = pack_materials(mission)
 	var bought: Array = ev.get("bought", [])
 	var out: Array = []
@@ -12103,8 +12175,8 @@ func _vag_shelf(ev: Dictionary) -> Array:
 	return out
 
 
-## Buy off his shelf: tins off the run's, or materials off the pack's stacks; gear into the pack (it comes home), a
-## rumour a tip. A trade on his standing as the visit ends.
+## Buy off his shelf: tins off the camp's at home (BUILD48 A, item 16), or materials off the pack's stacks; gear into the
+## pack (it comes home), a rumour a tip. A trade on his standing as the visit ends.
 func _vag_buy(row: Dictionary) -> bool:
 	var m: Dictionary = mission
 	var ev: Dictionary = m["ev"]
@@ -12114,7 +12186,7 @@ func _vag_buy(row: Dictionary) -> bool:
 		_take_materials(m, cost_v)
 		paid = Words.EV["vag_mat"] % cost_v
 	else:
-		m["cash"] = float(m["cash"]) - cost_v
+		cash -= cost_v                        # the camp's tins (BUILD48 A, item 16), not the run's take
 		paid = _cash_words(cost_v)
 	ev["bought"].append(row["key"])
 	ev["trades"] = int(ev.get("trades", 0)) + 1
@@ -14386,8 +14458,7 @@ const SURV_SLOTS := ["Helmet", "Armour", "Charm", "Rig"]
 ## the damage and the pace is the damage's own reading, not counted twice through a longer fight (the riot suit's -8
 ## pace read as less survival than a stab vest's 15 armour).
 func survival_value(fight := -1.0) -> float:
-	var i := front_tier()
-	var t := effective(i)
+	var t := surv_fight()
 	if fight <= 0.0:
 		fight = front_fight()
 	var on_you: int = contact(t)
@@ -14404,8 +14475,31 @@ func front_fight() -> float:
 		_cmp_key = key
 		_cmp_cache.clear()
 	if not _cmp_cache.has("ff"):             # once a kit (the review: every cell of a grid asked it again)
-		_cmp_cache["ff"] = clampf(float(_try({}, func(): return estimate(front_tier()))), 1.0, 3600.0)
+		_cmp_cache["ff"] = clampf(float(_try({}, func(): return _surv_estimate(surv_fight()))), 1.0, 3600.0)
 	return _cmp_cache["ff"]
+
+
+## The fight the body's figure is read against (BUILD48 A, parked item 22; Matt: "why the disparity here between being in a
+## fight and out ?"): on a run, the run's own (as the gun's edge and the level fought read it); at camp the fight being
+## pushed, front_tier()'s. Before, a run read front_tier() too - and on a signal's run that was the signal's site at its
+## level with its codes on, so the same piece read "Upgrade" in the pack and "Sidegrade" in the stash. The figure's line
+## says which (surv_against) and is never called odds.
+func surv_fight() -> Dictionary:
+	if mission != null and mission.get("t", null) is Dictionary and not mission.get("dry", false):
+		return mission["t"]
+	return effective(front_tier())
+
+
+## The yardstick in words: "against this run" on one, "against the Barracks" at camp.
+func surv_against() -> String:
+	if mission != null and mission.get("t", null) is Dictionary and not mission.get("dry", false):
+		return Words.YARDSTICK["run"]
+	return Words.YARDSTICK["home"] % Words.mid(str(Data.TIERS[front_tier()]["name"]))
+
+
+## estimate() against a fight as given (the yardstick's): its seconds at the runner's damage.
+func _surv_estimate(t: Dictionary) -> float:
+	return float(t["pool"]) * float(t["hp"]) / maxf(dps() * edge_read(t) * pace() * float(t["pace"]), 0.000001)
 
 
 ## The rounds' types to hand, when the Fence is shut (a try-on reads a gun fed only then: the verdicts follow them).
@@ -14514,7 +14608,8 @@ func _kit_parts() -> Array:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
 	return [runner_key(), _rig_grades(), _stash_grades(), pack, yard_picks, yard_ranks, mission != null, lot, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
-			fight_weather_of(front_tier()), is_night()]     # the runner whole (runner_parts: the kit, the level, the trees, the skills a run takes and their rules on or off); the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
+			fight_weather_of(front_tier()), is_night(),
+			[int(mission["t"].get("tier", -1)), int(mission["t"].get("level", 0)), int(mission["t"].get("depth", 0))] if mission != null and mission.get("t", null) is Dictionary else []]     # the run's own fight, the body's yardstick on a run (BUILD48 A, item 22)     # the runner whole (runner_parts: the kit, the level, the trees, the skills a run takes and their rules on or off); the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
 ## The runner out, whole (30 Oct, refactor 1, the review's 28 caches each cleared by hand): who they are and everything of
@@ -15201,10 +15296,13 @@ func _top_up(at := -1, site := -1) -> void:
 	var picks: Dictionary = _plan_picks(plan, counts)
 	_gate_bg = bg
 	var fill_on: bool = bool(plan.get("load", true))     # the tick off (BUILD46-R): the magazines go as they are; the rig's meds still packed (fix 46, R2)
+	# what the last run used (BUILD48 A, parked item 24, Matt's pick; Matt: "another annoyance is the rig constantly being
+	# filled up with magazines"): the rig's magazines that came back short are filled, as before, and no more are packed
+	# than went out - each worn gun's first only, when the rig holds none of its; the meds left alone by them
 	var f: Array = _fill_mags(bg, picks) if fill_on else [0, []]
 	var got: Array = [0, 0]
 	if mode != "leave":
-		got = pack_rig(mode, at)
+		got = pack_rig(mode, at, false)
 		if fill_on:
 			var f2: Array = _fill_mags(bg, picks)
 			f = [int(f[0]) + int(f2[0]), Array(f[1]) + Array(f2[1]).filter(func(g): return not (g in f[1]))]
@@ -15358,12 +15456,15 @@ func _gate_mags_plan(p = null) -> Array:
 	var out: Array = rig.filter(func(x): return Items.is_mag(x)).map(func(x): return x.duplicate())
 	if (p is Dictionary and bool(p.get("top", true))) or (p == null and top_up_mode != "leave"):
 		var pouches: int = mini(mag_pouch_room(), med_capacity() - rig_used())
-		for slot in ["Primary", "Secondary"]:
+		for slot in ["Primary", "Secondary"]:     # each gun's first alone, when the rig has none of its (BUILD48 A, item 24: pack_rig's gate)
 			var g = equipped[slot]
+			if g == null or out.any(func(x): return Items.mag_fits(x, g)):
+				continue
 			for r in stash:
 				if Items.mag_fits(r, g) and Items.size(r) <= pouches and not out.any(func(x): return int(x["id"]) == int(r["id"])):
 					pouches -= Items.size(r)
 					out.append(r.duplicate())
+					break
 	return out
 
 
@@ -15381,7 +15482,9 @@ func _mag_rank(it: Dictionary) -> int:
 ## secondary firing another type), the heals the pouches left. A magazine is packed only with rounds to fill it (in it,
 ## or a box of its type in the stash). "best" takes the best heal alone. What's in the rig already stays. The gate's
 ## top-up and the bot pack by it. [magazines moved, meds and cures in].
-func pack_rig(mode := "fill", at := -1) -> Array:
+## `mags_share` off (the watched gate's top-up, BUILD48 A, item 24): no magazines past each worn gun's first (one when the
+## rig holds none of its type), and no heal put back for their share - the meds left alone by the magazines.
+func pack_rig(mode := "fill", at := -1, mags_share := true) -> Array:
 	if mission != null:
 		return [0, 0]
 	var lists: Array = []
@@ -15463,7 +15566,7 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 	# the magazines' share before spare heals (30 Oct, the clean-up's R2: a rig filled with heals while a bat was worn kept
 	# them over the next gun's magazines - one pouch of rounds, run after run): heals past the best go back to the stash
 	# while the primary's magazines are under their share and more of them are in the stash
-	if not lists.is_empty() and not lists[0][1].filter(func(x): return stash.has(x)).is_empty():
+	if mags_share and not lists.is_empty() and not lists[0][1].filter(func(x): return stash.has(x)).is_empty():
 		var best_h = null
 		for it in rig:
 			if Items.is_heal(it) and (best_h == null or med_heal(it) > med_heal(best_h)):
@@ -15484,7 +15587,10 @@ func pack_rig(mode := "fill", at := -1) -> Array:
 	var sec_quota: int = sec_need if two_types and (room >= sec_need + 1 or (room >= sec_need and prim_in)) else 0     # the primary's in already: the secondary's the next
 	var quotas: Array = [room - sec_quota, sec_quota]
 	for li in range(lists.size()):
-		moved += _pack_mags(lists[li][1], int(quotas[li]))
+		if mags_share:
+			moved += _pack_mags(lists[li][1], int(quotas[li]))
+		elif not lists[li][1].is_empty() and not rig.any(func(x): return Items.is_mag(x) and Items.mag_type(x) == str(lists[li][0])):
+			moved += _pack_mags(lists[li][1], Items.size(lists[li][1][0]))     # a gun's first, never dead for want of one
 	# and the heals, the best first, a pouch each while the rig has one
 	for it in meds:
 		if not stash.has(it) or not rig_room(Items.size(it)):

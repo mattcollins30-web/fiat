@@ -503,6 +503,17 @@ static func rarity_tone(it: Dictionary) -> String:
 	return Pal.item_tone(it)
 
 
+## A worn piece's name on its card (4 Nov, BUILD48 item 27): Items.full_name fitted, falling back to the base; a unique's,
+## a set's or a mythic's in its colour, else `plain`.
+static func _worn_name(l: Label, it: Dictionary, plain: Color) -> void:
+	UI.fit(l, [Items.full_name(it), str(it["base"])])
+	l.add_theme_color_override("font_color", _worn_colour(it, plain))
+
+
+static func _worn_colour(it: Dictionary, plain: Color) -> Color:
+	return Pal.tone_color(Pal.item_tone(it)) if it.has("unique") or it.has("set") or it.get("mythic", false) else plain
+
+
 # ------------------------------------------------------------------ showing
 
 func show_state(s) -> void:
@@ -550,9 +561,11 @@ func show_state(s) -> void:
 			g["name"].add_theme_color_override("font_color", Pal.TEXT_3)
 			g["figure"].text = ""
 		else:
-			g["name"].text = gun["base"]
-			g["name"].add_theme_color_override("font_color", Pal.TEXT)
-			UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps(gun)])
+			_worn_name(g["name"], gun, Pal.TEXT)     # the piece's own name (BUILD48 item 27, Matt: "butchers steel displays as machete")
+			if Items.is_melee(gun):
+				UI.fit(g["figure"], ["%.0f dmg/s" % Items.dps(gun)])     # a blade says nothing of rounds (BUILD48 item 27)
+			else:
+				UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps(gun)])
 		# the chips: the type, the rarity in its tone, what's fitted
 		g["chips"].visible = view == "guns" and gun != null
 		if gun != null:
@@ -595,15 +608,16 @@ func show_state(s) -> void:
 			g["name"].add_theme_color_override("font_color", Pal.TEXT_3)
 		else:
 			if n > 0:
-				g["name"].text = gear["base"]
+				_worn_name(g["name"], gear, Pal.TEXT)     # the piece's own name (BUILD48 item 27)
 			else:
 				# shares the row with the slot's name on the left: 150 px for that
+				var fn: String = Items.full_name(gear)
 				g["name"].text = "No sockets"
-				for o in ["%s: no sockets" % gear["base"], "%s: none" % gear["base"]]:
+				for o in ["%s: no sockets" % fn, "%s: none" % fn, "%s: no sockets" % gear["base"], "%s: none" % gear["base"]]:
 					if UI.text_width(g["name"], o) <= BODY_W - 2 * PAD - 160:
 						g["name"].text = o
 						break
-			g["name"].add_theme_color_override("font_color", Pal.TEXT if n > 0 else Pal.TEXT_3)
+				g["name"].add_theme_color_override("font_color", _worn_colour(gear, Pal.TEXT_3))
 		_lay_socks(slot)
 		for mount in g["rows"]:
 			var r: Dictionary = g["rows"][mount]

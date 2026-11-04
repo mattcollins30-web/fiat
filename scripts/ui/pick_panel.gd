@@ -186,7 +186,7 @@ func show_readings(fitted: Dictionary, sim, rows: Array, unit: String, kicker :=
 			figs = ["%s against %s %s" % [_num(f), _num(wv), unit], "%s against %s" % [_num(f), _num(wv)], "%s / %s" % [_num(f), _num(wv)]]
 		else:
 			var rel: float = (f - wv) / maxf(wv, 0.000001) * 100.0
-			figs = ["%s%.0f%% odds" % ["+" if rel >= 0.0 else "−", absf(rel)], "%s%.0f%%" % ["+" if rel >= 0.0 else "−", absf(rel)]]
+			figs = ["%s%.0f%% %s" % ["+" if rel >= 0.0 else "−", absf(rel), sim.surv_against()], "%s%.0f%%" % ["+" if rel >= 0.0 else "−", absf(rel)]]     # against what, never "odds" (BUILD48 A, item 22)
 		var ahead: bool = f > wv * 1.0005
 		var behind: bool = f < wv * 0.9995
 		r["fig"].add_theme_color_override("font_color", Pal.GOOD if ahead else (Pal.BAD if behind else Pal.TEXT_2))
@@ -280,6 +280,14 @@ func set_verdict(verdict: String, tone: String, deltas: Array) -> void:
 		l.text = "%s %s" % ["▲" if up else "▼", deltas[i][1]]
 		l.add_theme_color_override("font_color", Pal.GOOD if up else Pal.BAD)
 		l.size.x = ceilf(UI.text_width(l, l.text)) + 2
+		l.tooltip_text = ""
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if x + l.size.x > room and deltas[i].size() > 2:
+			# its short form, the whole on hover (BUILD48 A, the review of item 22): "▲ 12%", "against the Garden Centre" kept
+			l.tooltip_text = str(deltas[i][1])
+			l.mouse_filter = Control.MOUSE_FILTER_PASS
+			l.text = "%s %s" % ["▲" if up else "▼", deltas[i][2]]
+			l.size.x = ceilf(UI.text_width(l, l.text)) + 2
 		if x + l.size.x > room:
 			break
 		l.position.x = x
@@ -505,7 +513,7 @@ static func deltas_for(sim, it: Dictionary, fitted: Dictionary, moved := false) 
 		# the body's figure first (12 Oct): what the arrow reads for a helmet or a coat, regen and resists in it
 		var sg: float = sim.survival_gain(it, moved) * 100.0
 		if absf(sg) >= 0.5:
-			out.push_front([sg, "%.0f%% odds" % absf(sg)])
+			out.push_front([sg, "%.0f%% %s" % [absf(sg), sim.surv_against()], "%.0f%%" % absf(sg)])     # its yardstick named, never "odds" (BUILD48 A, item 22)
 	return out
 
 

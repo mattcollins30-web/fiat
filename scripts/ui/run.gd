@@ -152,6 +152,16 @@ var _six_groups: Array = []        # their two panels, THEM and YOU (17 Oct)
 var _event_panel                   # a run event's choice (1 Nov, event_panel.gd): in the crates' and the rig's place, the buttons' too
 var _stop_chip: Panel              # "clock stopped" by the run's clock while an event's choice waits
 var _stopped_shown := false
+# the run's clock at its end (4 Nov, BUILD48 item 4, Matt: "a big timer on the fight screen that counts down from 10
+# seconds. Maybe a warning at one minute and 30 seconds"): the last COUNTDOWN_S seconds big over the frame, a toast at
+# each of CLOCK_WARN_AT left, once a run
+const COUNTDOWN_S := 10.0
+const COUNTDOWN_FONT := 120
+const COUNTDOWN_W := 170
+const CLOCK_WARN_AT := [60.0, 30.0]
+var _countdown: Label
+var _warn_run := -1                # the run the warnings were said on (sim.runs_total), and how many said
+var _warned := 0
 
 
 func _init() -> void:
@@ -188,7 +198,7 @@ func _init() -> void:
 	_runner["chips"].position = Vector2(PAD + KEY_W, RUNNER_NOTE_Y + 2)
 	_left.add_child(_runner["chips"])
 	# the rig's pouches: what's carried, a cell a pouch; a med's cell uses that med
-	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · click an item to use it")
+	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), RIG_HEAD)
 	for k in range(RIG_MAX):
 		var o := UI.panel(_left, Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
 		o.visible = false
@@ -267,6 +277,12 @@ func _init() -> void:
 	_stop_chip.visible = false
 	if RunView.has_art():
 		_view_make()
+	# the clock's last ten seconds, big at the frame's right where the gang stands: under the "On them" chips, clear of the
+	# skill's name across the middle and the skills' buttons and the bars at the foot
+	var ch: float = ceilf(UI.font("SemiBold", true).get_height(COUNTDOWN_FONT))
+	_countdown = UI.label(_left, Rect2(VIEW_X + VIEW_W - COUNTDOWN_W - BOX_PAD, FIGHT_BOX_Y + 66, COUNTDOWN_W, ch), "", "SemiBold", COUNTDOWN_FONT, Pal.BAD, HORIZONTAL_ALIGNMENT_CENTER)
+	UI.shadow(_countdown)
+	_countdown.visible = false
 
 
 ## The run view in place of the two boxes: the frame, the bars and the chips over it, six tiles under it.
@@ -387,6 +403,7 @@ func show_state(s) -> void:
 		if stopped != _stopped_shown:
 			_stopped_shown = stopped              # the unit's colour set once a change, not every frame (a theme change lays the band out again)
 			_band.unit.add_theme_color_override("font_color", Pal.ACCENT if stopped else Pal.TEXT_2)
+	_clock_end(clock, way_out)
 	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
 	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
@@ -607,6 +624,32 @@ func show_state(s) -> void:
 
 ## A run event's choice (1 Nov): its panel up over the crates, the floor, the rig and the buttons while it asks, and the
 ## clock's chip; true while it shows.
+## The run's clock near its end (BUILD48 item 4): a toast at 1:00 and at 0:30 left, each once a run, and the last ten
+## seconds counting down big over the frame. Not on the way out (its own count is the headline) nor with the Bomb
+## Disposal Suit on (the clock never runs out).
+func _clock_end(clock: float, way_out: bool) -> void:
+	var runs: bool = not sim.has_rule("bomb_suit") and clock > 0.0
+	_countdown.visible = runs and not way_out and clock <= COUNTDOWN_S
+	if _countdown.visible:
+		_countdown.text = "%d" % ceili(clock)
+	if _warn_run != int(sim.runs_total):
+		_warn_run = int(sim.runs_total)
+		_warned = 0
+		# a mark already passed when the run started isn't said (BUILD48 A, the review: a run under a minute toasted "1:00 left")
+		var start: float = float(sim.mission.get("clock_max", clock)) if sim.mission != null else clock
+		for k in range(CLOCK_WARN_AT.size()):
+			if start <= float(CLOCK_WARN_AT[k]):
+				_warned = k + 1
+	if not runs:
+		return
+	for k in range(CLOCK_WARN_AT.size() - 1, -1, -1):
+		if _warned <= k and clock <= float(CLOCK_WARN_AT[k]):
+			_warned = k + 1                       # the latest crossed: one toast, the earlier ones not said after it
+			if juice != null and clock > COUNTDOWN_S:
+				juice.toast(Words.RUN_CLOCK["warn"] % Fmt.mss(float(CLOCK_WARN_AT[k])), "bad" if k > 0 else "warn")
+			break
+
+
 func _event_show() -> bool:
 	var m: Dictionary = sim.mission
 	var instant: bool = m["cleared"] and not m.get("ghost_pending", false)
@@ -1379,10 +1422,20 @@ static func rig_places(widths: Array, cap: int, per_row: int, widest_first: bool
 	return out
 
 
+const RIG_HEAD := "The rig · click an item to use it"
+var _rig_no_meds := false                 # the rig's head as last styled: the meds shut by Kev's wager (BUILD48 A, item 17)
+
+
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
 var _rig_sig := 0
 func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
+	# the meds shut by Kev's wager say why (BUILD48 A, parked item 17; Matt: "my meds wouldnt work or allow me to click")
+	var no_meds: bool = bool(sim.mission["t"].get("no_meds", false))
+	if no_meds != _rig_no_meds:                # restyled only when it moves (the review), not every paint
+		_rig_no_meds = no_meds
+		UI.fit(_rig_head, [str(Words.RIG_NO_MEDS["head"]).to_upper(), str(Words.RIG_NO_MEDS["med"]).to_upper()] if no_meds else [RIG_HEAD.to_upper()])
+		_rig_head.add_theme_color_override("font_color", Pal.BAD if no_meds else Pal.TEXT_3)
 	# laid out again only when what it shows has moved (BUILD43, perf43's cause 3: 1.6-2.4 ms of every paint): the
 	# rig's pieces by value (the rounds in), which are lit, the pick, the runner's figures the hovers read
 	var lits: Array = []
@@ -1426,7 +1479,7 @@ func _show_rig() -> void:
 		c.show_item(it, lit or int(it["id"]) == _rig_pick, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		# the hover (11 Oct): what a med heals, what a stack is and whether it's firing
 		if Items.is_medical(it):
-			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
+			c.tooltip_text = "%s · %s" % [it["base"], Words.RIG_NO_MEDS["med"] if no_meds else sim.med_words(it)]
 		elif Items.is_mag(it):
 			c.set_mags([sim.mag_fill(it)], it)         # a magazine: its rounds and a bar how full (30 Oct)
 			c.tooltip_text = "%s · %s · click for the pack" % [it["base"], sim.mag_words(it)]
@@ -1630,6 +1683,8 @@ func text_nodes() -> Array:
 	for b in [_button, _button2]:
 		if b.visible:
 			out.append(b)
+	if _countdown.visible:
+		out.append(_countdown)
 	out.append_array(_inv.text_nodes())
 	if _crates.visible:
 		out.append_array(_crates.text_nodes())
