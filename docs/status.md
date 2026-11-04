@@ -70,6 +70,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   frames (p90 16 ms at a level-40 signal, 9 ms with the crew, from 19-27 ms whole dry runs); live_guard's ~2 ms a frame
   is a further speed fix. The UI reworks (6, 12, 14, 15, 18, 19, 21, 23, 25) are on the canvas "Fiat – Fix round UI"
   (https://claude.ai/artifact/STAWLDppiNCUqZ5rL5kMs4) for Matt's picks. The SMG flash points: a contact sheet for Matt.
+- **The UI reworks' picks (4 Nov, Matt: "take your picks across the board and build it"):** 6 as drawn; 12 A (the
+  picture left); 14 A (today's boxes with their pictures); 15 B (the site card's row, steppers); 18 as drawn, with
+  item 13's line (the odds assume a med used under 40% HP, said on the card); 19 as drawn (the night's break with act
+  two); 21 pointers 1 and 3 (Kev's last line naming the next step - a new take for Matt - and the Map's goal line); 23 as
+  drawn; 25 A. Building now: 0.13.0 phase 1 (the skill web version two and its screen, these reworks), then phase 2
+  (act two).
 - **Parked from the playtest (0.12.2, 3 Nov):**
   1. UI: the site card's head is two controls - the Gang / Head toggle picks who the card shows, and the foot's "Head"
      button is what takes him on, so toggling Head alone doesn't take him on (Matt: "head selected but doesnt activate
