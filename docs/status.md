@@ -145,6 +145,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      find's name is cut to its last word ("Coat"); the tile shows the whole name (fitted) with its rarity's colour.
      Canvas first (the card as it stands against the redo), fit-checked; a smoke check that each tile shows its picture
      and the find's full name fits.
+  13. Bug, to check: a death at 100% odds (slot 1, 4 Nov 11:47: the Doorman, level 20, the Barracks with the
+     Quartermaster ticked, the record's odds 1.0 at setting off; dead in 38.6 s, 10 of 22 gangs, their fire 4.7, his HP
+     206 against 229 at the snapshot before; the kit lost, 9,906 tins, not insured). Matt: "i just died because i
+     wasnt paying attention". The level back to 1 and every point back to spend is the rule before the Quartermaster
+     falls (sim.death_keeps_level, 31 Oct; the class back to level 1 with a trait, 21 Oct) - working as designed. The
+     odds aren't: check which fight the 1.0 read (the gang without the head? item 1's toggle) and whether it was stale
+     (item 9), against this record; a smoke check that the odds read with the head ticked are the head's fight's.
 
 ## First slice (2026-10-01)
 
