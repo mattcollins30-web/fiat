@@ -103,12 +103,20 @@ The numbers plan (held) becomes this act's tuning, against these targets for Mat
 
 With chains, a signal's XP and drops are a link's, so repeats matter less; the repeat-XP change may not be wanted.
 
-## 4. Matt's calls
+## 4. Matt's calls (4 Nov)
 
-1. The town as the goal, the Issue as the turn (§1) - yes, or another spine?
-2. The chain: A, B or C?
-3. Tins as the town's cost before the Issue (wages, upkeep) - yes?
-4. The targets in §3.
+1. The town as the goal, the Issue as the turn: **yes**.
+2. The chain: **C** (open-ended, something special every fifth link).
+3. Tins as the town's cost before the Issue (wages, upkeep): **yes**.
+4. The targets: **"everything a bit longer than that"**. Claude's proposal, back near the vision's gates (21 Oct: the
+   campaign 3-4 h, Kev's story 10-13 h, level 50 12-24 h), for Matt's OK:
 
-Then: the canvas (the flow from the campaign's end to the County; a chain's breaks on the run screen; the town on the
+| | Was proposed | Now proposed |
+|---|---|---|
+| The Radio and the rebuild open (the Quartermaster) | about 3 h | about 4 h |
+| The town half running, the Lineman | about 4 h | about 6 h |
+| The Issuer down, the Issue, the County open | about 6-7 h | about 9 h |
+| Level 50 | about 12 h | about 15 h |
+
+Next: the canvas (the flow from the campaign's end to the County; a chain's breaks on the run screen; the town on the
 Map), Matt's picks on it, this note rewritten as the spec, and one build with the fix round and the skill web.
