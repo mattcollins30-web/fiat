@@ -89,6 +89,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      fix round after the playtest (goes with item 2). Every place filled (4 Nov, Matt: "ill take you suggestions on
      1-3"): the hung notables placed, 18 new names, points for a new runner as today doubled (the spec's "The places
      filled"). This also answers the 3 Nov "word wanted" item on the 25 hung notables and the open gates.
+  6. UI: the class swap's card on Training (a class not yet run, before "Swap to the <Class>") says only "A new
+     runner: level 1, the arrival's kit, their own points from here." Matt: "class swap - should display what the
+     class does in the space on the right". Show the class: its line, its skill, its two trees and its two elements
+     (the words already written for the class intros, docs/voice/scripts.md). Canvas first, fit-checked.
+  7. Bug: the same card says "level 1" while the banner over the runner cards says the new runner "joins at level 8"
+     (the crew's floor, 30 Oct); the card's words are fixed text (scripts/ui/barracks.gd, _node_forms) and never read
+     the floor. Matt: "the level 1 wording is incorrect there anyway". The card says the level the runner joins at.
 
 ## First slice (2026-10-01)
 
