@@ -147,10 +147,52 @@ As built in 0.12.0, with:
   spent and a capstone under 80; reward points counted once each; the labels fit at 1920x1080 and the smallest window.
 - No balance pass with it (CLAUDE.md, 2 Nov); the bot's builds only need to run.
 
-## Open (Matt's word, then the balance pass)
-- The names: 12 new element notables (two an element); the corners' notables for the five classes past the Poacher
-  where today has no spare; whatever places a class can't fill from today's nodes (the builder's tables). The 25 hung
-  notables (data.gd WEB_DROPPED) and the three open gates are the first candidates.
-- Two points a level "past the class's best": unchanged from today's rule, doubled - say if a fresh runner of a class
-  should earn differently.
-- The lesser nodes' values; the stepped-down capstones' numbers; the corners' keystones' numbers (the balance pass).
+## The places filled (4 Nov, Matt: "ill take you suggestions on 1-3")
+Every place on the web is filled from today's nodes where one exists; 18 new names in all (marked new).
+
+**The elements' six new clusters.** Low down (the pair either side, in from the centre): the element's two hung
+notables (data.gd WEB_EXTRA, off the web since 0.12.0). Beside the tip: version one's two hangs. Beside the resist
+notable, before the keystone: two new. The four small names (Frost, Bait ...) stay on named lesser nodes in the column.
+
+| Element | Low pair | Beside the tip | Before the keystone (new) |
+|---|---|---|---|
+| The cold | Chilblains, Sleet | Deep freeze, Brittle | Black ice, Brass monkeys |
+| Live | Live rail, Stripped wire | Capacitor, Overload | Crossed wires, Fuse box |
+| Petrol | Accelerant, Flashpoint | Oil drum, Backdraught | Forecourt, Bonfire night |
+| Blades | Honed, Whetstone | Serrated, Arterial | Paper cuts, Shiv |
+| Knuckles | Knuckleduster, Shin pads | Low blow, Floored | Sucker punch, Bare-knuckle |
+| The Rat Man | Strychnine, Tainted | Takes its time, Catching | Nest, Rat run |
+
+**The classes' places**, by the template (the Poacher's table above): the left tree's centre, pair, second notable
+and keystone down the left track; the right tree's down the right; the left tree's three skills left, the right
+tree's first three right and its fourth up the middle; the start's flower's outer notable (version one) as staying
+up; the far flower's two notables as finds; the capstone at the far end; the corner's notable the start's flower's
+centre notable (version one), its keystone the third keystone.
+
+| Class | Corner keystone | Corner notable | Staying up | Middle skill | Finds |
+|---|---|---|---|---|---|
+| Poacher | Snare and wait | Early doors | In the hide | Net every hole | Night work, Poached |
+| Paramedic | Jab | Second shift | Double shift | Code blue | Walking wounded, Transfusion |
+| Scrapper | Breaker's yard | Workbench | Sheet metal | Everything must go | Quiet hands, The lot |
+| Drifter | On a roll | Light fingers | Breather | Jackpot | Hit and run, Loaded dice |
+| Doorman | Bin lid | Through the lot | Squared up | Chucking-out time | Loud, Iron |
+| Recruit | Firing blanks | Square-bashing (new) | Double time | Fire and manoeuvre | Blast burns, Passing-out parade |
+
+- The Recruit's two empty second notables (new): Fuse cut short (Ordnance, the left), By the numbers (Drill, the right).
+- Each class's old starter notable (Still hands, Steady pulse, Nose for parts, Light feet, Heavy hands, Pull the pin)
+  steps down to a named lesser node on its start's wheel: the first thing a runner can take.
+- The Scrapper's Hoarder and the Doorman's Stand and fight (version one's third far notable) step down to named lesser
+  nodes in their finds clusters, as the stepped-down capstones did: words kept, numbers to the balance pass.
+
+**The centre's 13 clusters.** The centre: The dog's share. The inner ring (life, Guard, pace, twice): Circuits, Home
+ground (life); Chin down, Elbows in (Guard, new); Good boots, Shortcuts (pace, Shortcuts new). The outer ring, one
+under each class's start: Double tap, Second wind, Pack horse, Word of mouth, Market day, Well stocked. The kettle
+(resting, as Second wind's words) steps down to a named lesser node in Second wind's cluster; Long walks stays a named
+lesser node in a life cluster, as today.
+
+**Points for a new runner of a class:** unchanged from today, doubled: two for each level past the class's best (a
+replacement runner doesn't re-earn levels the class has had), and every reward point to every runner, past and future.
+
+## Open (the balance pass, after Matt's playtest)
+- The new names' effects (the 18 above) and the stepped-down nodes' numbers.
+- The lesser nodes' values; the stepped-down capstones' numbers; the corners' keystones' numbers.

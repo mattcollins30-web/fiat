@@ -86,7 +86,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      Rounds four to six (4 Nov): denser element columns, a tighter centre, each class's top corner its own shape, the
      element's middle cluster dropped; Matt: "ok sounds good". The spec is rewritten as version two
      (docs/design/skill_web.md, the layout as data in docs/design/skill_web_layout.json: 1,549 nodes). Built with the
-     fix round after the playtest (goes with item 2); names wanted first (the spec's "Open").
+     fix round after the playtest (goes with item 2). Every place filled (4 Nov, Matt: "ill take you suggestions on
+     1-3"): the hung notables placed, 18 new names, points for a new runner as today doubled (the spec's "The places
+     filled"). This also answers the 3 Nov "word wanted" item on the 25 hung notables and the open gates.
 
 ## First slice (2026-10-01)
 
@@ -6215,8 +6217,10 @@ rewritten as version two: 1,549 nodes (153 a class on one mirrored template, eve
 track; 74 an element as a column merged into its two classes; a two-ring centre); two points a level plus 22 reward
 points (a head's first fall, a Kev chapter, the Issue): 120 at 50; gates at 30 and 80 spent; each class's corner its
 own shape (the long walk, the ward round, the scrapheap, the fork, the wall, the ladder). The layout as data:
-docs/design/skill_web_layout.json. No build until the playtest is done; names wanted first (the spec's "Open": 12
-element notables, the corners past the Poacher's, what a class can't fill from today's nodes).
+docs/design/skill_web_layout.json. No build until the playtest is done. Then Matt took Claude's suggestions for the
+open places ("ill take you suggestions on 1-3"): every hung notable placed (24 of them, data.gd WEB_EXTRA), 18 new
+names, the old starters and two third far notables stepped down to named lesser nodes, points for a new runner as
+today doubled.
 
 ## 3 Nov (evening): 0.12.2 - names with their emblems
 
