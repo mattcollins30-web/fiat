@@ -34,6 +34,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   8. The release candidate: the version, a full smoke, the balance gates green, Matt's final play - to friends.
   Open (Matt, not urgent): how many friends and on what; how it reaches them (a zip, a private itch.io page, a Steam
   playtest); a date.
+- **For the balance pass (Matt's playtest, 4 Nov, slot 1: "I've hit a wall on the shopping center"):** the Pleasure
+  Park to the Shopping Centre is the campaign's biggest step: a gang's HP 676 to 1,605 (x2.4), its fire 0.8 to 2.3 (x2.9),
+  12 gangs to 16 - the site's whole HP x3.2, where every step before was x1.5-1.6. The 29 Oct fix round cut the
+  Pleasure Park to x0.47 (the Town's door) and left the Shopping Centre at x0.95 (data.gd's campaign sites). Matt's
+  Doorman, level 9-10, 79-111 dps, kit at item level 4-5: five tries, 5, 6, 9, 8, 10 of 16 gangs, each a cut and run
+  or out of time, the Map's odds 0% every time; the bot's Doorman (2 Nov read, before the 0.12 web) first cleared it
+  at level 11. Winnable, but a wall: smooth the step (the Shopping Centre down, or the Pleasure Park back up) in the
+  pass, read against this save.
 - **For the balance pass (from the reviews, 2 Nov):** the swap affix lifts a gun's fire share to 1.0 (+13-30%); the
   bot packs up to a quarter of its pack in rounds boxes; "Press on" (+25-50% loot quality for the run) taken at 80%
   odds by default; "Go through the pockets" a trap against "Search it"; "Cut it open" beats "Strip it"; rooms at half
