@@ -225,6 +225,19 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      get what's left. To settle with Matt before any build: what the fill should leave alone (a meds share kept
      first; a set number of magazines a gun; only what the last run used put back; or off by default with the Rounds
      plan's "Top up" an explicit pick), and whether the fill line needs saying every gate.
+  25. UI (a pass): the Radio's signal card (screenshot, signal 61, the Allotments at level 28; Matt: "this interface
+     could probably use a pass - also the retune doesnt always display the cost - i assume to avoid clipping"). Seen:
+     the gang's figure cut ("14 × 32,2…"); Tune in and Retune drop their price to fit (Twist keeps "· 105 notes"); a
+     code chip and a materials chip in two shades of red/amber that read as warnings; Set off / Wagers / Bin it all the
+     same weight; the crew's odds row under them in small type; the class's odds (42%) twice. A canvas round: the card as
+     it stands against a pass in the site card's language, every figure whole and every price shown at 1920x1080 and the
+     smallest window; smoke checks that no figure or price is cut.
+  26. Performance: Retune spins Matt's laptop fans (Matt: "retune makes my laptop fans go crazy"). Suspects, to measure
+     on his save: a retune throws away every read the signal had - the runner's and each of the crew's
+     (signal_odds_class, one class a frame) - and the shell reads them all again at the odds' budget every frame, with
+     the decrypt panel's animation (set_process) running over it; a retune pressed again mid-read starts it all over.
+     First: time a retune's reads headless (frames and ms to settled) and the frame time while the decrypt runs; then
+     cap it (read the picked class first, the crew's only when asked, the animation off the odds' frames).
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
