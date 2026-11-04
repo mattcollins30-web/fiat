@@ -152,6 +152,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      falls (sim.death_keeps_level, 31 Oct; the class back to level 1 with a trait, 21 Oct) - working as designed. The
      odds aren't: check which fight the 1.0 read (the gang without the head? item 1's toggle) and whether it was stale
      (item 9), against this record; a smoke check that the odds read with the head ticked are the head's fight's.
+  14. UI (art): the Radio's Dial reads as a placeholder - text boxes on lines (Matt: "this reads as a placeholder - the
+     layout is fine but i thought we had art for these"). The art is there: every one of the Dial's 35 nodes has its
+     picture (art/nodes/map_<key>.png) and the 10 fillers theirs (map_f_<name>), but atlas.gd draws a picture only in
+     the picked node's panel at the foot (PIC 88), and nothing's picked when the Dial opens. Keep the layout; each node
+     gets its picture on its box (a notable's and a keystone's bigger, framed as the web frames them; a filler's small,
+     or its picture as the box's mark). Canvas first, fit-checked at 1920x1080 and the smallest window; a smoke check
+     that every Dial node's box shows its picture.
 
 ## First slice (2026-10-01)
 
