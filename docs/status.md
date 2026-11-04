@@ -70,6 +70,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      time the clock ran out" - "I just had no idea". His fix (UI): "a big timer on the fight screen that counts down
      from 10 seconds. Maybe a warning at one minute and 30 seconds". Still to check while there: that a Get out
      pressed during a gang fight or a magazine refill isn't lost.
+  5. Design (the skill web, round two - goes with item 2): Matt: "I think we can afford to go bigger. Skills surrounded
+     by lesser nodes - we already have the art so there's no harm repeating the weaker ones. Poe doesn't by one track
+     covering energy or shield and another covering hp or damage. I think we're much closer than we were but I'd advise
+     you to directly compare poe when designing ours. I'm not saying to copy poe or reverse engineer it, just use the
+     layout as a comparison." So: a bigger web; each skill (and notable) a cluster with its own smalls round it,
+     repeating the small nodes' art; themed tracks (a defence track, a life/damage track and so on) rather than mixed
+     smalls; canvas rounds with PoE's layout set beside ours as the reference, before any build.
 
 ## First slice (2026-10-01)
 
