@@ -121,6 +121,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      than a late save's harder sites read at 5 ms a frame; or a read left half-done (_odds_part) that is never asked
      again. First: load his save headless, pick the Bank, and count frames to settled; a smoke check that every open
      site's odds settle within N frames on a late save. Goes with item 3 (read only the picked place's odds).
+  10. UI: the Bunkhouse on the Pitch reads in plain words while its Expeditions line is shut (Matt: "bunkhouse needs to
+     be encrypted like the radio - also when does the bunkhouse open and from where ?"). How it stands: the Bunkhouse
+     serves no room (sim.building_room has the Bench, the Clinic, the Fence and the Radio only), so it's never
+     scrambled; its Repeat line is open from the start (Ten in a row, 2,200 tins, then "Run it ×10" on a cleared
+     site's card on the Map), its Expeditions line shut till the Quartermaster falls (sim.expeditions_open), each step
+     reading "After the Quartermaster". Claude's suggestion, Matt's word wanted: scramble the Expeditions line's names
+     and words till the Quartermaster falls (as the Radio's are till it opens), the Repeat line stays readable since
+     it can be built now; the building's name stays plain.
 
 ## First slice (2026-10-01)
 
