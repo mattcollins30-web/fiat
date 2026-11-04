@@ -66,8 +66,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   4. Bug or UI, to check: a run at the Pleasure Park ended "Out of time" (slot 1, 21:07) - the clock ran out 11 s after a
      second Garrison gang came in, during a magazine refill; the pack went, and the derringer and the new Bergen with it
      (the rule: CLOCK_LOSE_KIT 2 worn pieces). Matt had 66 of 165 HP and had decided to get out; the record shows no
-     Get out taken (the site was cleared, so Get out is instant). To check: whether a Get out pressed while a gang is
-     on or a magazine refills is lost; and whether the clock running low is warned loudly enough.
+     Get out taken (the site was cleared, so Get out is instant). Matt: "I probably pressed the button at the exact
+     time the clock ran out" - "I just had no idea". His fix (UI): "a big timer on the fight screen that counts down
+     from 10 seconds. Maybe a warning at one minute and 30 seconds". Still to check while there: that a Get out
+     pressed during a gang fight or a magazine refill isn't lost.
 
 ## First slice (2026-10-01)
 
