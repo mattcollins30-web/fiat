@@ -129,6 +129,15 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      reading "After the Quartermaster". Claude's suggestion, Matt's word wanted: scramble the Expeditions line's names
      and words till the Quartermaster falls (as the Radio's are till it opens), the Repeat line stays readable since
      it can be built now; the building's name stays plain.
+  11. UI (art placement): the SMGs' muzzle flash comes out of the sights, not the muzzle (Matt's clip, 4 Nov 11:13, the
+     Doorman's Courier's SMG at the Services; Matt: "muzzle flash on smgs need work - the flash comes out of the
+     sights not the muzzle"). Cause: run_view.gd's find_muzzle takes a pistol's or an SMG's topmost drawn pixel, and on
+     the kit hands' pictures (the gun raised to the top left) an SMG's topmost pixel is its rear sight. Five guns have
+     a muzzle read off by eye (MUZZLE_AT: the Police carbine, the Security guard's carbine, the Army SMG, the Riot
+     squad's SMG, the Close protection SMG); the Courier's SMG and about 15 more SMGs fall to the finder. Fix: the SMG
+     takes the long guns' rule (the furthest drawn pixel toward the top left) or each SMG's muzzle is read off by eye;
+     a smoke check that every SMG picture's muzzle sits at the barrel's end (in the picture's top-left part, not its top
+     edge's middle), shown on a contact sheet for Matt.
 
 ## First slice (2026-10-01)
 
