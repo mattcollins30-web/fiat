@@ -218,6 +218,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      Rounds plan, what you'll bring home, Insure, Set off). Matt: "these need updating with the rest of the site overhaul
      we did". Fix: the order's places (and the County's, which share the plumbing) drawn by the site card, the head's
      fight as a site's head is; canvas first; the site card's own smoke checks run over an order place too.
+  24. UI / design: the rig fills with magazines at every gate (Matt: "another annoyance is the rig constantly being
+     filled up with magazines"). His rig after the last gate: 10 SMG magazines and one burn gel. The camp's rounds plan
+     is "fill" with "top" on for every site (rounds_plans), so each homecoming tops the rig's magazines up to its
+     magazines' share (RIG_MAG_SHARE of the pouches, mag_pouch_room) and logs "Filled: N magazines ..." - and the meds
+     get what's left. To settle with Matt before any build: what the fill should leave alone (a meds share kept
+     first; a set number of magazines a gun; only what the last run used put back; or off by default with the Rounds
+     plan's "Top up" an explicit pick), and whether the fill line needs saying every gate.
 - **Done in the playtest (4 Nov):** Matt's slot 1 and autosave: the Doorman's eight pieces lost at the Parade
   (item 17's death) put back in the stash from the camp's loose kit (sim.loose_kit, run 93: the Butcher's Steel, the
   Paramedic's Bum Bag, the Competition pistol, the High-cut helmet, the Arctic smock, the Close-combat gloves, the
