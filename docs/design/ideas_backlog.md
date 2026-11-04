@@ -97,6 +97,9 @@ just too weak to sustain play - if they were more fun then I would've been willi
 Design, ahead of the numbers plan (XP taper, the order's and the County's levels, repeats, aimed crafting - proposed
 4 Nov, held): the numbers only move the wall if there's a reason to cross it. To talk through with Matt before any
 design: what the camp and the money are for past the campaign; what makes a signal a thing worth running.
+Then (Matt): "part of the friction was setting one up, tuning the codes, running it and being done in 30secs then having
+to repeat the whole process to go again - think we need to be able to chain them together". Drafted for his calls:
+docs/design/act_two.md (4 Nov).
 
 ## Leaving a head's thing behind should cost its room (parked 1 Nov, Matt, during the 0.10.3 playtest)
 
