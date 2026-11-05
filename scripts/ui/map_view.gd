@@ -523,11 +523,20 @@ func _draw_flat() -> void:
 ## The zone lit: the picked site's, or the picked order place's host site's; -1 for none.
 func lit_zone() -> int:
 	if order_key != "":
-		var p: Dictionary = Data.pinnacle(order_key)
-		return int(p.get("zone", -1))
+		return order_zone(order_key)
 	if selected >= 0 and selected < Data.TIERS.size():
 		return int(Data.TIERS[selected]["zone"])
 	return -1
+
+
+## The zone an order's place lights: the one its diamond sits in on the painting (Matt placed the Grid and the Mint by
+## the ring road, BUILD54), else its own zone in the data.
+func order_zone(key: String) -> int:
+	var at: Vector2 = order_pin_at(key) / PX
+	for z in range(Data.ZONES.size()):
+		if Geometry2D.is_point_in_polygon(at, zone_points(z)):
+			return z
+	return int(Data.pinnacle(key).get("zone", -1))
 
 
 ## A road or the river: a polyline through the drawing's points, smoothed.

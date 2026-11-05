@@ -6,41 +6,41 @@
 script = ExtResource("1_mplcs")
 paint_size = Vector2(688, 384)
 sites = {
-"ransacked_streets": Vector2(60, 80),
-"shopping_centre": Vector2(415, 212),
-"the_allotments": Vector2(25, 282),
-"the_bank": Vector2(450, 170),
-"the_barracks": Vector2(655, 245),
-"the_garden_centre": Vector2(215, 315),
-"the_hospital": Vector2(632, 112),
-"the_parade": Vector2(172, 115),
-"the_pleasure_park": Vector2(400, 132),
-"the_retail_park": Vector2(55, 172),
-"the_services": Vector2(540, 55),
-"top_farm": Vector2(125, 285)
+"ransacked_streets": Vector2(65, 104),
+"shopping_centre": Vector2(397, 206),
+"the_allotments": Vector2(33, 282),
+"the_bank": Vector2(451, 167),
+"the_barracks": Vector2(627, 257),
+"the_garden_centre": Vector2(210, 316),
+"the_hospital": Vector2(633, 97),
+"the_parade": Vector2(176, 114),
+"the_pleasure_park": Vector2(394, 132),
+"the_retail_park": Vector2(99, 198),
+"the_services": Vector2(537, 55),
+"top_farm": Vector2(136, 289)
 }
 order = {
-"archive": Vector2(415, 296),
-"grid": Vector2(628, 182),
-"mint": Vector2(630, 330)
+"archive": Vector2(410, 294),
+"grid": Vector2(332, 345),
+"mint": Vector2(471, 243)
 }
 town = {
-"bus_depot": Vector2(250, 48),
-"library": Vector2(330, 330),
-"market_hall": Vector2(360, 245),
-"mint": Vector2(470, 255),
-"pumping": Vector2(530, 322),
-"substation": Vector2(325, 62)
+"bus_depot": Vector2(235, 55),
+"library": Vector2(251, 234),
+"market_hall": Vector2(336, 252),
+"mint": Vector2(325, 176),
+"pumping": Vector2(626, 330),
+"substation": Vector2(349, 63)
 }
 zone_names = {
-"the_city": Vector2(555, 268),
+"the_city": Vector2(542, 138),
 "the_estate": Vector2(8, 34),
-"the_outskirts": Vector2(8, 345),
-"the_town": Vector2(260, 150)
+"the_outskirts": Vector2(6, 355),
+"the_town": Vector2(218, 128)
 }
 zones = {
 "the_city": PackedVector2Array(470, 32, 688, 32, 688, 384, 455, 384, 470, 330, 505, 290, 535, 250, 540, 200, 530, 150, 500, 118, 465, 95, 455, 60),
 "the_estate": PackedVector2Array(0, 34, 205, 34, 205, 100, 185, 135, 165, 170, 158, 215, 150, 232, 0, 228),
 "the_outskirts": PackedVector2Array(0, 232, 150, 236, 190, 248, 235, 282, 262, 300, 250, 340, 240, 384, 0, 384),
-"the_town": PackedVector2Array(210, 92, 260, 85, 330, 78, 390, 88, 440, 105, 470, 125, 495, 150, 505, 185, 500, 225, 480, 262, 455, 300, 430, 318, 380, 320, 330, 310, 280, 300, 240, 280, 195, 252, 165, 222, 162, 180, 180, 135)
+"the_town": PackedVector2Array(210, 92, 260, 85, 330, 78, 390, 88, 440, 105, 470, 125, 495, 150, 505, 185, 500, 225, 480, 262, 505, 290, 470, 330, 455, 384, 240, 384, 250, 340, 262, 300, 235, 282, 195, 252, 165, 222, 162, 180, 180, 135)
 }

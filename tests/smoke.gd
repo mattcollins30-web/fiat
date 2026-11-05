@@ -25655,8 +25655,11 @@ func _map_checks(main) -> void:
 			_check(mv.pin_at(i).distance_to(mv.pin_at(j)) > 2.0 * mv.HIT_R, "%s's and %s's pins are too close to click apart" % [Data.TIERS[i]["name"], Data.TIERS[j]["name"]])
 	for k in mv.ORDER_AT:
 		_check(Rect2(Vector2.ZERO, mv.size).has_point(mv.order_pin_at(k)), "%s's diamond is off the Map" % k)
-		var oz: int = int(Data.pinnacle(k)["zone"])
+		var oz: int = mv.order_zone(k)     # the zone its diamond sits in (BUILD54: Matt's placing)
 		_check(Geometry2D.is_point_in_polygon(mv.order_pin_at(k) / mv.PX, mv.zone_points(oz)), "%s's diamond sits outside the zone it lights" % k)
+		mv.order_key = k
+		_check(mv.lit_zone() == oz, "%s picked lights zone %d, not the one its diamond's in (%d)" % [k, mv.lit_zone(), oz])
+		mv.order_key = ""
 	M.select(7)
 	main.refresh()
 	_check(mv.lit_zone() == int(Data.TIERS[7]["zone"]), "the lit zone doesn't follow the pick: %d" % mv.lit_zone())
@@ -39858,7 +39861,7 @@ func _b52_map_checks(main) -> void:
 	for i in range(Data.TIERS.size()):
 		_check(Geometry2D.is_point_in_polygon(mv.pin_at(i) / MV.PX, MV.zone_points(int(Data.TIERS[i]["zone"]))), "%s's pin sits outside %s" % [Data.TIERS[i]["name"], Data.ZONES[int(Data.TIERS[i]["zone"])]["name"]])
 	for p in Data.PINNACLES:
-		_check(Geometry2D.is_point_in_polygon(mv.order_pin_at(str(p["key"])) / MV.PX, MV.zone_points(int(p["zone"]))), "%s's diamond sits outside its zone" % p["place"])
+		_check(Geometry2D.is_point_in_polygon(mv.order_pin_at(str(p["key"])) / MV.PX, MV.zone_points(mv.order_zone(str(p["key"])))), "%s's diamond sits outside the zone it lights" % p["place"])     # the zone its diamond's in (BUILD54)
 	# the frame and the land, every pin reached and picked: both windows, the card on and off
 	var fr: Control = M._map_frame
 	var press := func(at_land: Vector2, down: bool) -> void:

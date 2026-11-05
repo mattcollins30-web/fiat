@@ -6488,6 +6488,15 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 5 Nov (night): Matt's places on the Map (data/map_places.tres)
+
+Matt placed the Map's places with the F3 tool (F5 saved). He put the Grid by the ring road's south edge and the Mint by
+the river inside the ring: an order's place now lights the zone its diamond sits in (map_view.order_zone, falling back
+to its data zone), and the Town's shape runs on to the painting's south edge between the Outskirts and the City (the
+land there was in no zone). Checks: each diamond inside the zone it lights, picking it lights that zone (proved red).
+Parked: the town's "mint" and the order's "Mint" share a name - the town's to be "the print works" (Claude's pick),
+words only, the key stays.
+
 ## 5 Nov (evening): 0.13.3 - the places tool clear of the fog; the boot warning
 
 Matt (placing on a fresh camp): "the fog is preventing me from placing", and Godot's warning at boot.gd:24 ("Nodes with
