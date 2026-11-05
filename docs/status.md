@@ -75,6 +75,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      and Apron - are each the capstone's rule by design.) The fix: the notable a share of the dose carried (half), the
      capstone the whole and more of it each carry (as Opened for good's bleed); the words to say which. A smoke check:
      each of the four nodes alone and together carries a different dose.
+- **The Map redrawn (5 Nov, Matt: "lets redraw the map - ill do it manually - provide the prompt and resolution. As it
+  is - its too zoomed in"):** Matt paints art/map/map.png anew at 1,024 x 848 (today's 512 x 424 drew x2; 0.13.1 drew it
+  x4 as test art), the layout kept so the pins' places hold (today's screen coordinates = the new canvas's pixels);
+  drawn x2 once it's in, the zones' shapes and pins traced again. Then (Matt: "it needs to be right click to move and
+  mouse wheel to zoom in / out but lets see how it works redrawn first"): right-drag to pan, the wheel to zoom - after
+  he's seen the redraw. The County the same after.
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
