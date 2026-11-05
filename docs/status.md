@@ -59,6 +59,18 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      drag and/or wheel, where it opens (the town's next step / the picked site), the panel's toggle and what the Map
      shows with it off (the pins' own tooltips, the goal line), the zones and the County on one sheet or two. Art: a new
      map at the bigger size by art.flag, only once the layout reads with today's map scaled as test art.
+  5. Design (the web's numbers): "Lucky" (the small nodes' pool, data.gd 2394/2417: loot_pct 2) is loot quantity; Matt:
+     "Lucky should be +quality not quantity". The web has no quality source today (no tree_sum("rarity_pct") in the
+     rarity sum, sim.gd ~5272) - the change is the effect and that one line. Its name also clashes with the death trait
+     "Lucky" (data.gd 3447: loot quality +10%) - one name, two things; with this change both are quality, the
+     glossary's call whether they share it. Its size against a charm's quality is the balance pass's.
+  6. Bug (the web): two nodes the same rule (Matt: "Catching and lingers do the same thing no?"). Yes - sim.gd ~12728:
+     the Rat Man's notable Catching and his capstone Lingers both carry a dying man's poison to the next, the same
+     line; holding both adds nothing. The same pair for fire: Backdraught (notable) and Wildfire (capstone) both carry
+     the burn. (Bleed has only its capstone, Bleed out; the uniques that carry - the Rat Man's Bag, the Butcher's Steel
+     and Apron - are each the capstone's rule by design.) The fix: the notable a share of the dose carried (half), the
+     capstone the whole and more of it each carry (as Opened for good's bleed); the words to say which. A smoke check:
+     each of the four nodes alone and together carries a different dose.
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
