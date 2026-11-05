@@ -100,6 +100,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      a wager-like rule; the site's head or the zone's crew at 3/3), the sites' numbers re-cut so a site's 1/3 sits just
      over the last one's 3/3 (no x1.6-3.2 walls), the levels and the XP curve re-read for ~36 steps. Open: what makes a
      stage feel new, whether 2/3 already opens the next, the head's place, the sites already cleared on Matt's save.
+     Matt's calls (5 Nov): (1) a stage feels new by its own art (a backdrop a stage) and the gear spread as today's
+     (Claude's reading: the loot tiers spread across the stages as they're spread across the sites now); (2) 2/3 opens
+     the next site, 3/3 is there for the grind; (3) a zone's head is his own fight - a gang first, then him - on his own
+     backdrop, not a site's stage; (4) no care for old saves: Matt starts fresh (SAVE_VERSION bumps). Next: the spec
+     (docs/design/stages.md) and the site card's "1/3" on the canvas; art by art.flag only once the stages read with
+     test art (today's backdrops reused).
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
