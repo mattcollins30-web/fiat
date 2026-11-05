@@ -18,6 +18,16 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      what we already have for the floor so that the rig always retains a full size row". The fix: the floor's pages
      (crates_panel.gd: full-size cells, as many as fit, the arrows and "n of N") on run.gd's rig row; a smoke check that
      a rig of the most slots keeps full-size cells and pages, and fits at both windows.
+  2. Bug (the try-on): a rig's slots read as two different things (screenshots: the Bum bag, "3 capacity", against
+     the Gardening apron, "2 capacity" with "+1 pouch" and "+10% quicker meds"; Matt: "disparity here between a
+     headline stat and affix - cap vs pouch"). Both hold 3 in the rig, and the apron's meds are quicker, yet the bag reads
+     "▲ Upgrade · ▲ 1 cap · ▼ 1 pouch". The cause: the headline (Items.capacity, data.gd SLOT_SCORE "capacity") is the
+     base's alone, while the "+1 pouch" affix (med_cap) adds to the same count in med_capacity(); pick_panel's
+     deltas_of folds an affix into the headline for armour and cells but not for a rig's pouches, and sim.compare
+     scores a rig on the base alone. The fix: a rig's headline is its whole count (base + the pouch affix), the affix
+     folded into it as armour's is, the verdict on that count and its other affixes; one word for a rig's slots
+     ("pouches", the affix's - not "capacity" / "cap"; a language-pass call). A smoke check: this pair reads Sidegrade
+     or Downgrade for the bag, one pouch figure, no "cap".
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
