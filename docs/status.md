@@ -12,6 +12,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   drop, the tuning rules on the Radio), signals' focus (a material, a slot, a resist or a unique's chance, on the card
   and in the loot), the Workshop's "Add a resist", the order's heads at 30/34/38, the County 40-75, XP_TAPER_END 4.5,
   REPEAT_XP back to 25-60%. Matt plays fresh; his play sets the figures.
+- **Parked from the playtest (0.13.0, 5 Nov):**
+  1. UI: the rig's row on the run screen shrinks its cells to fit when the rig has many slots - too small to read
+     (screenshot: "THE RIG · CLICK AN ITEM TO USE IT"). Matt: "the rig should be scrollable like the floor ... just copy
+     what we already have for the floor so that the rig always retains a full size row". The fix: the floor's pages
+     (crates_panel.gd: full-size cells, as many as fit, the arrows and "n of N") on run.gd's rig row; a smoke check that
+     a rig of the most slots keeps full-size cells and pages, and fits at both windows.
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
