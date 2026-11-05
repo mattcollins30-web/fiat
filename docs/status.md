@@ -41,6 +41,16 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
        figures, 29 Oct).
      The one rule for the fix: a headline counts everything that feeds its number, and an affix it counts is folded in,
      never listed beside it; a verdict reads the same whole (the rig's score and the gun score's double count).
+  3. Bug: a magazine moved from the rig to the pack mid-fight comes straight back (Matt: "taking a mag into the pack
+     during a fight to make room for a med ... instantly forces the mag back because the rounds feed it from the pack - i
+     nearly died because i couldnt move my secondary mag to take a med"). The cause: sim.gd _refill_start - a worn gun
+     with no magazine in the rig and a box of its rounds in the pack takes a fitting magazine from the pack into the rig
+     (the three-stage review, game 1: a fresh camp's first gun never fired), and _rig_room_for makes the room by moving
+     the rig's last-packed heals into the pack - so the med just put in can go out again for the magazine. The fix: a
+     magazine the player takes out of the rig on a run stays out till the player puts it back (a hand-moved mark on the
+     run); the pull from the pack only for a gun that has never had one in the rig this run, and never by moving a heal
+     out while a gang is on you. Smoke checks: the move holds through the next refill tick; the med stays in; the
+     first-gun case still fires.
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
