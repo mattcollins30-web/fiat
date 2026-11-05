@@ -21,7 +21,7 @@ func _init(l: Control, v: Vector2) -> void:
 	view = v
 
 
-## Where the view's top left sits on the land.
+## Where the view's top left sits on the land (less than 0 on an axis the land fits: it sits centred, BUILD52).
 func offset() -> Vector2:
 	return -land.position
 
@@ -32,7 +32,14 @@ func max_offset() -> Vector2:
 
 func pan_to(off: Vector2) -> void:
 	var mo: Vector2 = max_offset()
-	land.position = -Vector2(clampf(off.x, 0.0, mo.x), clampf(off.y, 0.0, mo.y))
+	var at := Vector2(clampf(off.x, 0.0, mo.x), clampf(off.y, 0.0, mo.y))
+	# an axis the land fits: no pan, the land centred, the room round it (BUILD52: the redrawn Map's 1,376 x 768 in a
+	# frame up to 1,536 x 844)
+	if land.size.x < view.x:
+		at.x = -roundf((view.x - land.size.x) / 2.0)
+	if land.size.y < view.y:
+		at.y = -roundf((view.y - land.size.y) / 2.0)
+	land.position = -at
 	if moved.is_valid():
 		moved.call()
 
@@ -60,7 +67,7 @@ func input(ev: InputEvent) -> String:
 		var mb: InputEventMouseButton = ev
 		if mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]:
 			var d := WHEEL_PX * maxf(1.0, mb.factor if mb.factor > 0.0 else 1.0)
-			var across: bool = mb.shift_pressed or mb.button_index in [MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]
+			var across: bool = mb.shift_pressed or mb.button_index in [MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT] or land.size.y <= view.y     # a land that fits top to bottom: the wheel goes across (BUILD52)
 			var sgn: float = -1.0 if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_LEFT] else 1.0
 			pan_to(offset() + (Vector2(sgn * d, 0.0) if across else Vector2(0.0, sgn * d)))
 			return "pan"

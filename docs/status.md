@@ -75,12 +75,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      and Apron - are each the capstone's rule by design.) The fix: the notable a share of the dose carried (half), the
      capstone the whole and more of it each carry (as Opened for good's bleed); the words to say which. A smoke check:
      each of the four nodes alone and together carries a different dose.
-- **The Map redrawn (5 Nov, Matt: "lets redraw the map - ill do it manually - provide the prompt and resolution. As it
-  is - its too zoomed in"):** Matt paints art/map/map.png anew at 1,024 x 848 (today's 512 x 424 drew x2; 0.13.1 drew it
-  x4 as test art), the layout kept so the pins' places hold (today's screen coordinates = the new canvas's pixels);
-  drawn x2 once it's in, the zones' shapes and pins traced again. Then (Matt: "it needs to be right click to move and
-  mouse wheel to zoom in / out but lets see how it works redrawn first"): right-drag to pan, the wheel to zoom - after
-  he's seen the redraw. The County the same after.
+- **The Map redrawn (5 Nov, 0.13.2):** Matt's painting in (art/map/map.png, 688 x 384, drawn x2: 1,376 x 768; the old
+  512 x 424 kept as map_old_512x424.png, not loaded or exported); the places' points and the zones' shapes in
+  data/map_places.tres (painting pixels; rescaled if the painting's size changes); the F3/F5 placement tool on the Map as
+  the fight's (Matt: "can you do an f3/f5 piece for the places? some of the ones you've selected I'd want to move"): F3
+  on the Map, drag a place, right-drag pans, F5 saves to data/map_places.tres, F4 prints, F3 done - debug builds only.
+  The land centred where it fits the frame; a plain wheel pans across when it fits top to bottom. Next (Matt: "right
+  click to move and mouse wheel to zoom in / out but lets see how it works redrawn first"): after he's seen it. The
+  County's painting the same after.
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
@@ -6485,6 +6487,14 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 5 Nov (evening): 0.13.2 - the Map redrawn by Matt, the F3/F5 places tool (build 52)
+
+Matt painted the Map (688 x 384) and asked for an F3/F5 tool to move its places. One builder: the painting drawn x2, the
+places and zones from data/map_places.tres seeded with Claude's picks, the zones re-traced, the tool as the fight's;
+the reviewer's seven findings fixed (paint_size always saved; the drag check driven by real mouse events; the PLACING
+line clear of the goal line; the plain wheel across; a margin click puts the card away; a missing field guarded; the
+old painting kept out of exports). Smoke green in the cloud and on Matt's machine; lint 0.
 
 ## 5 Nov (afternoon): 0.13.1 - the open list built (build 51; SAVE_VERSION 25, Matt's save carries on)
 

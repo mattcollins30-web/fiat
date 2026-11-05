@@ -885,6 +885,8 @@ func _init() -> void:
 	_u51_rig_pages_checks(main)               # BUILD51-U (5 Nov): item 1 - the rig's row pages as the floor's, full-size cells
 	_u51_map_checks(main)                     # BUILD51-U: item 2 - the Map's land twice the size, panned, the side panel on and off
 	_u51_county_checks(main)                  # BUILD51-U: item 2 - the County, the same rules
+	_b52_map_checks(main)                     # BUILD52 (5 Nov): Matt's redrawn Map x2, centred where it fits, every pin, the places from the file
+	_b52_tool_checks(main)                    # BUILD52: the Map's F3/F5 tool for the places
 	_u51_break_wagers_checks(main)            # BUILD51-U: item 3 - Kev's wagers at a night's break in his panel
 	_u51_signal_rules_checks(main)            # BUILD51-U: item 4 - the loot rules on a signal's run, the Radio's button
 	_u51_web_room_checks(main)                # BUILD51-U: item 5 - the picked name's plate follows a pan
@@ -25522,9 +25524,11 @@ func _map_checks(main) -> void:
 		_check(mv._clouds.get_index() < mv._zone_names[0][0].get_index() and mv._clouds.mouse_filter == Control.MOUSE_FILTER_IGNORE and mv._clouds.size == mv.size, "the cloud sits over the words or takes the clicks")
 		var base: Vector2 = mv.size / mv.land_k()     # the mask's cut at today's map's size, read by UV (BUILD51-U)
 		var mk: Image = mv.cloud_mask("1000", base)
+		var ps: Vector2 = mv.paint_size()             # points in the painting's pixels (BUILD52: the redrawn Map, its places from data)
 		var at_px := func(p: Vector2) -> float:
-			return mk.get_pixel(int(p.x * base.x / mv.W0 / mv.MASK_DIV), int(p.y * base.y / mv.H0 / mv.MASK_DIV)).r
-		_check(at_px.call(mv.SITE_AT[0]) > 0.5 and at_px.call(mv.SITE_AT[10]) < 0.5 and at_px.call(Vector2(600, 800)) < 0.5, "the cloud's mask is off: the Allotments %.1f, the Hospital %.1f, the moor %.1f" % [at_px.call(mv.SITE_AT[0]), at_px.call(mv.SITE_AT[10]), at_px.call(Vector2(600, 800))])
+			return mk.get_pixel(int(p.x * base.x / ps.x / mv.MASK_DIV), int(p.y * base.y / ps.y / mv.MASK_DIV)).r
+		var river := Vector2(520, 200)                  # between the Town and the City: no zone's (BUILD52; the moor's before)
+		_check(at_px.call(mv.pin_at(0) / mv.PX) > 0.5 and at_px.call(mv.pin_at(10) / mv.PX) < 0.5 and at_px.call(river) < 0.5, "the cloud's mask is off: the Allotments %.1f, the Hospital %.1f, the river %.1f" % [at_px.call(mv.pin_at(0) / mv.PX), at_px.call(mv.pin_at(10) / mv.PX), at_px.call(river)])
 		# with the City open too, nothing's left clouded: the moor and the motorway strip clear with it (20 Oct, Matt)
 		var mk3: Image = mv.cloud_mask("1110", base)
 		var all_open: Image = mv.cloud_mask("1111", base)
@@ -25532,11 +25536,13 @@ func _map_checks(main) -> void:
 		for yy in range(all_open.get_height()):
 			for xx in range(all_open.get_width()):
 				lit += 1 if all_open.get_pixel(xx, yy).r > 0.5 else 0
-		_check(lit == all_open.get_width() * all_open.get_height() and mk3.get_pixel(int(600 * base.x / mv.W0 / mv.MASK_DIV), int(800 * base.y / mv.H0 / mv.MASK_DIV)).r < 0.5,
-			"with every zone open %d of %d cells clear; the moor before the City %.1f" % [lit, all_open.get_width() * all_open.get_height(), mk3.get_pixel(int(600 * base.x / mv.W0 / mv.MASK_DIV), int(800 * base.y / mv.H0 / mv.MASK_DIV)).r])
+		var mk3_at := func(p: Vector2) -> float:
+			return mk3.get_pixel(int(p.x * base.x / ps.x / mv.MASK_DIV), int(p.y * base.y / ps.y / mv.MASK_DIV)).r
+		_check(lit == all_open.get_width() * all_open.get_height() and mk3_at.call(river) < 0.5,
+			"with every zone open %d of %d cells clear; the river before the City %.1f" % [lit, all_open.get_width() * all_open.get_height(), mk3_at.call(river)])
 		# every pin clear of the cloud's soft edge: 12 px at least from its zone's edges, bar the map's own
 		for i in range(Data.TIERS.size()):
-			var poly: Array = mv.ZONE_SHAPES[int(Data.TIERS[i]["zone"])]["points"]
+			var poly: PackedVector2Array = mv.zone_points(int(Data.TIERS[i]["zone"]))
 			var pp: Vector2 = mv.pin_at(i)
 			var near := INF
 			for e in range(poly.size()):
@@ -25642,14 +25648,14 @@ func _map_checks(main) -> void:
 		var pr: Rect2 = mv.painting_rect()             # on the land at twice today's (BUILD51-U)
 		_check(pr.encloses(Rect2(Vector2.ZERO, mv.size)) and pr.size.x - mv.size.x <= 8.0 * mv.land_k() and pr.size.y - mv.size.y <= 8.0 * mv.land_k(), "the painting doesn't fill the Map: %s on %s" % [str(pr), str(mv.size)])
 	for i in range(Data.TIERS.size()):
-		var zpoly := PackedVector2Array(mv.ZONE_SHAPES[int(Data.TIERS[i]["zone"])]["points"])
-		_check(Geometry2D.is_point_in_polygon(mv.SITE_AT[i], zpoly), "%s's pin sits outside its zone" % Data.TIERS[i]["name"])
+		var zpoly: PackedVector2Array = mv.zone_points(int(Data.TIERS[i]["zone"]))
+		_check(Geometry2D.is_point_in_polygon(mv.pin_at(i) / mv.PX, zpoly), "%s's pin sits outside its zone" % Data.TIERS[i]["name"])
 		for j in range(i):
 			_check(mv.pin_at(i).distance_to(mv.pin_at(j)) > 2.0 * mv.HIT_R, "%s's and %s's pins are too close to click apart" % [Data.TIERS[i]["name"], Data.TIERS[j]["name"]])
 	for k in mv.ORDER_AT:
 		_check(Rect2(Vector2.ZERO, mv.size).has_point(mv.order_pin_at(k)), "%s's diamond is off the Map" % k)
 		var oz: int = int(Data.pinnacle(k)["zone"])
-		_check(Geometry2D.is_point_in_polygon(mv.ORDER_AT[k], PackedVector2Array(mv.ZONE_SHAPES[oz]["points"])), "%s's diamond sits outside the zone it lights" % k)
+		_check(Geometry2D.is_point_in_polygon(mv.order_pin_at(k) / mv.PX, mv.zone_points(oz)), "%s's diamond sits outside the zone it lights" % k)
 	M.select(7)
 	main.refresh()
 	_check(mv.lit_zone() == int(Data.TIERS[7]["zone"]), "the lit zone doesn't follow the pick: %d" % mv.lit_zone())
@@ -26347,7 +26353,7 @@ func _skills_ui_checks(main) -> void:
 	main.refresh()
 	var pk = ms._skill_pick
 	_check(pk.visible and pk.rows.filter(func(r): return r["btn"].visible).size() == 8, "the picker doesn't show the Poacher's eight")
-	_check(pk.position.y + pk.size.y <= ms.TOP + ms._map.size.y + 1, "the picker runs off the map: %.0f" % (pk.position.y + pk.size.y))
+	_check(pk.position.y + pk.size.y <= ms.TOP + ms._map_frame.size.y + 1, "the picker runs off the map: %.0f" % (pk.position.y + pk.size.y))     # the map's frame on the room (BUILD52: the land's smaller than it now)
 	_check_fit(main, "Runs (the skills' picker)")
 	var flush_row: int = -1
 	for k in range(pk.rows.size()):
@@ -37272,7 +37278,7 @@ func _t50_town_checks(main) -> void:
 			for ok in M._map.ORDER_AT:
 				if c.distance_to(M._map.order_pin_at(ok)) < 40.0:
 					near.append([k, ok])
-			if Rect2(M._goal.position, M._goal.size).has_point(M._map.position + c):
+			if Rect2(M._goal.position, M._goal.size).grow(M._map.TOWN_R).has_point(M._map_frame.position + M._map.position + c):     # on the room: the frame's place too (BUILD52: the land sits centred in it)
 				near.append([k, "goal"])
 		_check(near.is_empty(), "the town's pins on others: %s" % str(near))
 		_check_fit(main, "the Map, the town's wages and pins (%dx%d)" % [int(sz.x), int(sz.y)])
@@ -39042,11 +39048,20 @@ func _u51_map_checks(main) -> void:
 	M.set_county(false)
 	main.refresh()
 	var MV = load("res://scripts/ui/map_view.gd")
-	# the land: twice today's, the painting over it, the pins as far apart as twice today's, the pins and names today's size
-	_check(mv.size == MV.BASE * MV.LAND and is_equal_approx(mv.land_k(), MV.LAND), "the Map's land is %s, not twice today's %s" % [str(mv.size), str(MV.BASE)])
-	_check(mv.painting_rect().encloses(Rect2(Vector2.ZERO, mv.size)) and mv.painting_rect().size.x - mv.size.x <= 6.0 * MV.LAND + 0.5, "the painting doesn't cover the land: %s" % str(mv.painting_rect()))
-	var base_d: float = ((MV.SITE_AT[1] - MV.SITE_AT[0]) * Vector2(MV.BASE.x / MV.W0, MV.BASE.y / MV.H0)).length()
-	_check(absf(mv.pin_at(1).distance_to(mv.pin_at(0)) - base_d * MV.LAND) < 1.0 and mv.PIN_R == 12.0 and mv._pin_labels[0].get_theme_font_size("font_size") == Pal.CELL_TEXT, "the pins aren't twice as far apart at today's size: %.0f against %.0f" % [mv.pin_at(1).distance_to(mv.pin_at(0)), base_d * MV.LAND])
+	# the land (BUILD52: Matt's redraw x2, its size the painting's - _b52_land_checks has the rest): the painting over it,
+	# the pins its pixels x2 apart, the pins and names their size
+	_check(mv.size == MV.land_size() and mv.painting_rect() == Rect2(Vector2.ZERO, mv.size), "the painting doesn't cover the land: %s on %s" % [str(mv.painting_rect()), str(mv.size)])
+	var base_d: float = ((MV.placed("sites", MV.site_key(1)) - MV.placed("sites", MV.site_key(0))) * MV.PX).length()
+	_check(absf(mv.pin_at(1).distance_to(mv.pin_at(0)) - base_d) < 1.0 and mv.PIN_R == 12.0 and mv._pin_labels[0].get_theme_font_size("font_size") == Pal.CELL_TEXT, "the pins aren't the painting's pixels x2 apart: %.0f against %.0f" % [mv.pin_at(1).distance_to(mv.pin_at(0)), base_d])
+	# where the view sits for a wanted point: clamped, and centred on an axis the land fits (BUILD52)
+	var expect_off := func(p: Vector2) -> Vector2:
+		var w: Vector2 = p - mv.pan.view / 2.0
+		w = Vector2(clampf(w.x, 0.0, mv.pan.max_offset().x), clampf(w.y, 0.0, mv.pan.max_offset().y))
+		if mv.size.x < mv.pan.view.x:
+			w.x = -roundf((mv.pan.view.x - mv.size.x) / 2.0)
+		if mv.size.y < mv.pan.view.y:
+			w.y = -roundf((mv.pan.view.y - mv.size.y) / 2.0)
+		return w
 	var fr: Control = M._map_frame
 	var press := func(at_land: Vector2, down: bool) -> void:
 		var ev := InputEventMouseButton.new()
@@ -39073,17 +39088,19 @@ func _u51_map_checks(main) -> void:
 		M._shown = ""
 		main.refresh()
 		var where := "%dx%d" % [int(sz.x), int(sz.y)]
-		# the pan: clamped to the land's edges
+		# the pan: clamped to the land's edges - across with the card on, none down (BUILD52: the land 768 tall in the
+		# frame's 844, centred)
 		var mo: Vector2 = mv.pan.max_offset()
-		_check(mo.x > 900.0 and mo.y > 700.0 and fr.clip_contents and is_equal_approx(fr.size.x, float(M.MAP_W)), "%s: the land doesn't overrun its frame to pan: %s, frame %s" % [where, str(mo), str(fr.size)])
+		var cy: float = -roundf((mv.pan.view.y - mv.size.y) / 2.0)
+		_check(mo.x > 240.0 and mo.y == 0.0 and cy < 0.0 and fr.clip_contents and is_equal_approx(fr.size.x, float(M.MAP_W)), "%s: the land doesn't overrun its frame across to pan, or does down: %s, frame %s" % [where, str(mo), str(fr.size)])
 		mv.pan.pan_to(Vector2(-500, -500))
-		_check(mv.pan.offset() == Vector2.ZERO, "%s: the pan went past the top left: %s" % [where, str(mv.pan.offset())])
+		_check(mv.pan.offset() == Vector2(0, cy), "%s: the pan went past the top left: %s" % [where, str(mv.pan.offset())])
 		mv.pan.pan_to(Vector2(99999, 99999))
-		_check(mv.pan.offset() == mo and mv.position == -mo, "%s: the pan went past the bottom right: %s of %s" % [where, str(mv.pan.offset()), str(mo)])
-		# a drag: the land follows the mouse, no pick, no panel change; the wheel: down, and across with shift
-		mv.pan.pan_to(Vector2(300, 300))
+		_check(mv.pan.offset() == Vector2(mo.x, cy) and mv.position == -mv.pan.offset(), "%s: the pan went past the bottom right: %s of %s" % [where, str(mv.pan.offset()), str(mo)])
+		# a drag: the land follows the mouse, no pick, no panel change; the wheel: across with shift, not down
+		mv.pan.pan_to(Vector2.ZERO)
 		var empty := Vector2(-1, -1)
-		for p in [Vector2(40, 40), Vector2(1900, 60), Vector2(60, 1600), Vector2(1980, 1640), Vector2(1000, 60)]:
+		for p in [Vector2(40, 40), Vector2(mv.size.x - 40.0, 60), Vector2(60, mv.size.y - 30.0), Vector2(mv.size.x - 40.0, mv.size.y - 30.0), Vector2(700, 40)]:
 			var clear := true
 			for i in range(Data.TIERS.size()):
 				clear = clear and p.distance_to(mv.pin_at(i)) > 80.0
@@ -39096,21 +39113,34 @@ func _u51_map_checks(main) -> void:
 		_check(empty.x >= 0.0, "the fixture: no empty land to click")
 		var sel0: int = M.selected
 		var start_f := Vector2(500, 400)
-		mv.pan.pan_to(Vector2(300, 300))
+		var empty_f := Vector2(-1, -1)                 # a press on the land with no pin near it (BUILD52: the pins moved)
+		for f in [Vector2(500, 400), Vector2(560, 120), Vector2(700, 300), Vector2(620, 520)]:
+			var lp: Vector2 = f - mv.position
+			var near_pin := false
+			for i in range(Data.TIERS.size()):
+				near_pin = near_pin or lp.distance_to(mv.pin_at(i)) < 2.0 * mv.HIT_R
+			for k in mv.ORDER_AT:
+				near_pin = near_pin or lp.distance_to(mv.order_pin_at(k)) < 2.0 * mv.HIT_R
+			for k in mv.TOWN_AT:
+				near_pin = near_pin or lp.distance_to(mv.town_pin_at(k)) < 2.0 * mv.HIT_R
+			if not near_pin and empty_f.x < 0.0:
+				empty_f = f
+		_check(empty_f.x >= 0.0, "the fixture: nowhere on the land to start a drag")
+		start_f = empty_f
 		press.call(start_f - mv.position, true)
 		drag_to.call(start_f + Vector2(-120, -80))
 		drag_to.call(start_f + Vector2(-240, -160))
 		press.call(start_f + Vector2(-240, -160) - mv.position, false)
 		main.refresh()
-		_check(mv.pan.offset().distance_to(Vector2(540, 460)) < 0.5 and M.panel_on and M.selected == sel0, "%s: a drag didn't move the land with the mouse (or picked, or put the panel away): %s, panel %s" % [where, str(mv.pan.offset()), str(M.panel_on)])
+		_check(mv.pan.offset().distance_to(Vector2(240, cy)) < 0.5 and M.panel_on and M.selected == sel0, "%s: a drag didn't move the land across with the mouse (or moved it down, picked, or put the panel away): %s, panel %s" % [where, str(mv.pan.offset()), str(M.panel_on)])
 		var o0: Vector2 = mv.pan.offset()
-		wheel.call(MOUSE_BUTTON_WHEEL_DOWN, false)
-		_check(is_equal_approx(mv.pan.offset().y, o0.y + mv.pan.WHEEL_PX) and is_equal_approx(mv.pan.offset().x, o0.x), "%s: the wheel didn't scroll down: %s from %s" % [where, str(mv.pan.offset()), str(o0)])
+		wheel.call(MOUSE_BUTTON_WHEEL_DOWN, false)     # a land that fits top to bottom: the plain wheel goes across (BUILD52, the review)
+		_check(is_equal_approx(mv.pan.offset().x, minf(mo.x, o0.x + mv.pan.WHEEL_PX)) and mv.pan.offset().y == cy, "%s: the wheel didn't scroll across a land that fits top to bottom: %s from %s" % [where, str(mv.pan.offset()), str(o0)])
 		wheel.call(MOUSE_BUTTON_WHEEL_DOWN, true)
-		_check(is_equal_approx(mv.pan.offset().x, o0.x + mv.pan.WHEEL_PX), "%s: shift and the wheel didn't scroll across: %s" % [where, str(mv.pan.offset())])
+		_check(is_equal_approx(mv.pan.offset().x, minf(mo.x, o0.x + 2.0 * mv.pan.WHEEL_PX)), "%s: shift and the wheel didn't scroll across: %s" % [where, str(mv.pan.offset())])
 		for i in range(40):
-			wheel.call(MOUSE_BUTTON_WHEEL_UP, false)
-		_check(is_equal_approx(mv.pan.offset().y, 0.0), "%s: the wheel scrolled past the top: %s" % [where, str(mv.pan.offset())])
+			wheel.call(MOUSE_BUTTON_WHEEL_UP, true)
+		_check(is_equal_approx(mv.pan.offset().x, 0.0) and mv.pan.offset().y == cy, "%s: the wheel scrolled past the left: %s" % [where, str(mv.pan.offset())])
 		# the side panel: off on the empty land's click, the map the width; on again with a pin's
 		mv.pan.centre_on(empty)
 		press.call(empty, true)
@@ -39172,16 +39202,14 @@ func _u51_map_checks(main) -> void:
 	main.refresh()
 	mv.pan.pan_to(Vector2.ZERO)
 	M.map_open()
-	var want: Vector2 = mv.town_pin_at(target) - mv.pan.view / 2.0
-	want = Vector2(clampf(want.x, 0.0, mv.pan.max_offset().x), clampf(want.y, 0.0, mv.pan.max_offset().y))
+	var want: Vector2 = expect_off.call(mv.town_pin_at(target))
 	_check(mv.pan.offset().distance_to(want) < 0.5 and mv.pan.shows(mv.town_pin_at(target), 20.0), "the Map didn't open on the town's next step (%s): view at %s, wanted %s" % [target, str(mv.pan.offset()), str(want)])
 	M.select(1)
 	main.show_room(main.MARKET)
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	M.map_open()
-	var want2: Vector2 = mv.pin_at(1) - mv.pan.view / 2.0
-	want2 = Vector2(clampf(want2.x, 0.0, mv.pan.max_offset().x), clampf(want2.y, 0.0, mv.pan.max_offset().y))
+	var want2: Vector2 = expect_off.call(mv.pin_at(1))
 	_check(mv.pan.offset().distance_to(want2) < 0.5, "the Map didn't open on the picked place: %s, wanted %s" % [str(mv.pan.offset()), str(want2)])
 	sim.story_beat = int(keep["beat"])
 	sim.rebuilt = keep["rebuilt"]
@@ -39779,3 +39807,318 @@ func _f51_workshop_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("f51 workshop ok: '%s'" % fig)
+
+
+## BUILD52 (5 Nov; Matt: "lets redraw the map - ill do it manually"): his painting (688 x 384) in, drawn x2 nearest, the
+## land its size read from the texture; a frame bigger than the land shows it centred, the room round it, and pans no
+## further; every pin - the sites', the order's, the town's - on the land, in the view and picked by its click at
+## 1920x1080 and 1920x1200, the card on and off; each site's pin inside its zone's shape; the places read from
+## data/map_places.tres (a fixture moves one, the pin moves; a smaller painting's points rescale). `-- only b52_map`.
+func _b52_map_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
+	sim.story_beat = Data.STORY_BEATS.size()
+	for p in Data.PINNACLES:
+		sim.rebuilt[str(p["opened_by"])] = maxi(1, int(sim.rebuilt.get(str(p["opened_by"]), 0)))
+	var M = main._missions
+	var mv = M._map
+	var MV = load("res://scripts/ui/map_view.gd")
+	main.show_room(main.MISSIONS)
+	M.set_county(false)
+	M._shown = ""
+	mv._shown = ""
+	main.refresh()
+	# the painting: Matt's, drawn x2 nearest; the land its size, read from the texture (not 0.13.1's x4 or 1018 x 844)
+	var pic: Texture2D = MV.painting()
+	_check(pic != null and pic.get_size() == Vector2(688, 384) and FileAccess.file_exists("res://art/map/map_old_512x424.png"), "the Map's painting isn't Matt's 688 x 384 (the old one kept aside): %s" % (str(pic.get_size()) if pic != null else "none"))
+	_check(MV.PX == 2.0 and MV.paint_size() == pic.get_size() and mv.size == pic.get_size() * 2.0 and mv.painting_rect() == Rect2(Vector2.ZERO, mv.size) and mv.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+		"the painting isn't drawn x2 nearest over a land its size: the land %s, the painting drawn %s" % [str(mv.size), str(mv.painting_rect())])
+	# the file: every place has its entry, and the Map's pins are the file's
+	var real = ResourceLoader.load(MV.PLACES_FILE, "", ResourceLoader.CACHE_MODE_IGNORE)
+	_check(real != null and real.paint_size == Vector2(688, 384) and real.sites.size() == Data.TIERS.size() and real.order.size() == Data.PINNACLES.size() and real.town.size() == Data.REBUILDS.size() and real.zone_names.size() == Data.ZONES.size() and real.zones.size() == Data.ZONES.size(),
+		"data/map_places.tres doesn't hold every place: %s" % (str([real.sites.size(), real.order.size(), real.town.size(), real.zone_names.size(), real.zones.size()]) if real != null else "none"))
+	if real != null:
+		for i in range(Data.TIERS.size()):
+			_check(real.sites.has(MV.site_key(i)) and mv.pin_at(i) == real.sites[MV.site_key(i)] * MV.PX, "%s's pin isn't the file's: %s" % [Data.TIERS[i]["name"], str(mv.pin_at(i))])
+		for k in real.order:
+			_check(mv.order_pin_at(k) == real.order[k] * MV.PX, "%s's diamond isn't the file's" % k)
+		for k in real.town:
+			_check(mv.town_pin_at(k) == real.town[k] * MV.PX, "the town's %s isn't the file's" % k)
+		for z in range(Data.ZONES.size()):
+			_check(MV.zone_points(z) == PackedVector2Array(real.zones[MV.zone_key(z)]) and mv._zone_names[z][0].position == real.zone_names[MV.zone_key(z)] * MV.PX, "%s's shape or name isn't the file's" % Data.ZONES[z]["name"])
+	# each site's pin inside its own zone's shape, each order's diamond inside the zone it lights
+	for i in range(Data.TIERS.size()):
+		_check(Geometry2D.is_point_in_polygon(mv.pin_at(i) / MV.PX, MV.zone_points(int(Data.TIERS[i]["zone"]))), "%s's pin sits outside %s" % [Data.TIERS[i]["name"], Data.ZONES[int(Data.TIERS[i]["zone"])]["name"]])
+	for p in Data.PINNACLES:
+		_check(Geometry2D.is_point_in_polygon(mv.order_pin_at(str(p["key"])) / MV.PX, MV.zone_points(int(p["zone"]))), "%s's diamond sits outside its zone" % p["place"])
+	# the frame and the land, every pin reached and picked: both windows, the card on and off
+	var fr: Control = M._map_frame
+	var press := func(at_land: Vector2, down: bool) -> void:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = down
+		ev.position = at_land
+		mv._gui_input(ev)
+	var overs: Array = [M._came, M._report, M._exp_report, M._wagers]
+	var over_was: Array = overs.map(func(o): return o.visible)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for on in [true, false]:
+			var where := "%dx%d, the card %s" % [int(sz.x), int(sz.y), "on" if on else "off"]
+			var lay := func() -> void:
+				M.set_panel(on)
+				M._shown = ""
+				main.refresh()
+				M._panel_lay(false)
+				for o in overs:
+					o.visible = false              # the camp's own cards over the Map (what came back, a crew back): theirs to put away
+			lay.call()
+			var view: Vector2 = mv.pan.view
+			_check(view == fr.size and mv.size.y < view.y and (on or mv.size.x < view.x) and (not on or mv.size.x > view.x), "%s: the fixture: the frame %s against the land %s" % [where, str(view), str(mv.size)])
+			# centred on an axis the land fits, clamped on one it overruns, wherever it's panned
+			for off in [Vector2(-999, -999), Vector2(150, 50), Vector2(99999, 99999)]:
+				mv.pan.pan_to(off)
+				var pos: Vector2 = mv.position
+				var ok := true
+				for ax in [0, 1]:
+					if mv.size[ax] < view[ax]:
+						ok = ok and absf(pos[ax] - (view[ax] - mv.size[ax]) / 2.0) <= 0.5
+					else:
+						ok = ok and pos[ax] <= 0.0 and pos[ax] >= view[ax] - mv.size[ax]
+				_check(ok and mv.pan.offset() == -pos, "%s: the land isn't centred where it fits, or pans past its edge: at %s in %s (asked %s)" % [where, str(pos), str(view), str(off)])
+			_check(Rect2(Vector2.ZERO, mv.size).encloses(Rect2(mv._sky_clip.position, mv._sky_clip.size)) and Rect2(mv.pan.offset(), view).encloses(Rect2(mv._key_layer.position + mv._key_rect.position, mv._key_rect.size)), "%s: the sky leaves the land, or the key the view" % where)
+			_check_fit(main, "the Map, Matt's redraw (%s)" % where)
+			# a click on the room's margin round the land: the empty land's - the card away (the review)
+			lay.call()
+			var margin := Vector2(view.x / 2.0, view.y - 8.0)
+			_check(not Rect2(mv.position, mv.size).has_point(margin) and _b52_target(M, fr.position + margin) == fr, "%s: the margin round the land doesn't take the click: %s" % [where, str(_b52_target(M, fr.position + margin))])
+			for down in [true, false]:
+				var mev := InputEventMouseButton.new()
+				mev.button_index = MOUSE_BUTTON_LEFT
+				mev.pressed = down
+				mev.position = margin
+				M._frame_input(mev)
+			main.refresh()
+			_check(not M.panel_on, "%s: a click on the margin round the land didn't put the card away" % where)
+			# every pin: on the land, brought into the view, nothing over it, picked by its click
+			var pins: Array = []
+			for i in range(Data.TIERS.size()):
+				pins.append(["site", i, mv.pin_at(i)])
+			for p in Data.PINNACLES:
+				pins.append(["order", str(p["key"]), mv.order_pin_at(str(p["key"]))])
+			for k in MV.TOWN_AT:
+				pins.append(["town", str(k), mv.town_pin_at(str(k))])
+			var town_got: Array = []
+			var on_town := func(k): town_got.append(str(k))
+			mv.picked_town.connect(on_town)
+			for e in pins:
+				lay.call()
+				var at: Vector2 = e[2]
+				mv.pan.pan_to(Vector2(99999, 0) if at.x < mv.size.x / 2.0 else Vector2.ZERO)     # from the far side first
+				mv.reveal(at)
+				var in_frame: Vector2 = mv.position + at
+				var hit: Control = _b52_target(M, fr.position + in_frame)
+				_check(Rect2(Vector2.ZERO, mv.size).grow(-mv.PIN_R).has_point(at) and Rect2(Vector2.ZERO, view).grow(-mv.PIN_R).has_point(in_frame) and hit == mv,
+					"%s: %s %s's pin isn't on the land, in the view, or free to click: at %s in the frame, under %s" % [where, e[0], str(e[1]), str(in_frame), (str(hit.name) + " " + str(hit.get("text"))) if hit != null else "nothing"])
+				press.call(at, true)
+				press.call(at, false)
+				match str(e[0]):
+					"site":
+						_check(M.selected == int(e[1]) and M.order_key == "", "%s: %s's pin didn't pick it: %d" % [where, Data.TIERS[int(e[1])]["name"], M.selected])
+					"order":
+						_check(M.order_key == str(e[1]), "%s: %s's diamond didn't pick it: '%s'" % [where, e[1], M.order_key])
+					"town":
+						_check(town_got.has(str(e[1])), "%s: the town's %s didn't take its click" % [where, e[1]])
+						main.show_room(main.MISSIONS)
+			mv.picked_town.disconnect(on_town)
+	for oi in range(overs.size()):
+		overs[oi].visible = over_was[oi]
+	# the file read: a fixture moves the Bank (its painting half the size: x2 on reading), the rest from the tables
+	var fx := "user://smoke_b52_places.tres"
+	var r = load("res://scripts/ui/map_places.gd").new()
+	r.paint_size = Vector2(344, 192)
+	r.sites = {"the_bank": Vector2(150, 100)}
+	_check(ResourceSaver.save(r, fx) == OK, "the fixture didn't save")
+	MV.places_file = fx
+	MV.forget_places()
+	var mv2 = MV.new(Rect2(Vector2.ZERO, MV.land_size()))
+	_check(mv2.pin_at(8) == Vector2(300, 200) * MV.PX and mv2.pin_at(0) == MV.SITE_AT[0] * MV.PX and mv2._label_at[mv2._pin_labels[8]][0] == mv2.pin_at(8),
+		"a place moved in the file didn't move its pin: the Bank %s, the Allotments %s" % [str(mv2.pin_at(8)), str(mv2.pin_at(0))])
+	mv2.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(fx))
+	MV.places_file = MV.PLACES_FILE
+	MV.forget_places()
+	sim.load_dict(hold)
+	main.layout(Vector2(1920, 1080))
+	M.set_panel(true)
+	M._shown = ""
+	mv._shown = ""
+	main.refresh()
+	print("b52 map ok: Matt's painting x2, the land %s, centred where it fits, every pin picked, the places from the file" % str(mv.size))
+
+
+## BUILD52: the Map's F3/F5 tool (Matt: "can you do an f3/f5 piece for the places?"), as the fight's: F3 on the Map turns
+## placing on - every place outlined, the pan off the left button; a drag moves a place in whole painting pixels and its
+## name with it; the line at the top in the view; F4 prints them all; F5 writes the file (what it doesn't touch kept) and
+## the Map, and a fresh one, read it; F3 again ends it; leaving the Map lets it go; outside a debug build F3 does
+## nothing. The real file untouched. `-- only b52_tool`.
+func _b52_tool_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var M = main._missions
+	var mv = M._map
+	var MV = load("res://scripts/ui/map_view.gd")
+	var MP = load("res://scripts/ui/map_placement.gd")
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	M.set_county(false)
+	M._shown = ""
+	main.refresh()
+	M.set_panel(true)
+	main.refresh()
+	M._panel_lay(false)
+	var fr: Control = M._map_frame
+	var p = mv._placer
+	var md5_0: String = FileAccess.get_md5(MV.PLACES_FILE)
+	var keep_path: String = p.save_path
+	p.save_path = "user://smoke_b52_tool.tres"
+	var seed_res = ResourceLoader.load(MV.PLACES_FILE, "", ResourceLoader.CACHE_MODE_IGNORE)
+	seed_res.sites["not_a_site"] = Vector2(1, 2)          # an entry the tool doesn't move: kept by F5
+	ResourceSaver.save(seed_res, p.save_path)
+	var f3 := InputEventKey.new()
+	f3.keycode = KEY_F3
+	f3.pressed = true
+	_check(mv.can_place() and not mv.placing and not p.visible, "F3 can't start on the Map, or the tool's up already")
+	p._unhandled_input(f3)
+	_check(mv.placing and p.visible and p.mouse_filter == Control.MOUSE_FILTER_STOP and p.size == mv.size and p.get_index() == mv.get_child_count() - 1, "F3 didn't turn placing on, over the whole land")
+	var all: Array = mv.all_places()
+	_check(all.size() == Data.TIERS.size() + Data.PINNACLES.size() + Data.REBUILDS.size() + Data.ZONES.size(), "the tool doesn't offer every place: %d" % all.size())
+	for k in range(all.size()):
+		_check(Rect2(Vector2.ZERO, mv.size).encloses(p.grab_of(k).grow(-1.0)) and p.hit(p.at_of(k) + (Vector2(4, 4) if all[k][0] == "zone_names" else Vector2.ZERO)) == k, "%s can't be grabbed where it sits" % all[k][2])
+	# the left button's the tool's: a left drag on the empty land doesn't pan; a right drag does (real events, the review)
+	var mbe := func(btn: int, down: bool, at: Vector2) -> InputEventMouseButton:
+		var e := InputEventMouseButton.new()
+		e.button_index = btn as MouseButton
+		e.pressed = down
+		e.position = at
+		return e
+	var mme := func(mask: int, at: Vector2) -> InputEventMouseMotion:
+		var e := InputEventMouseMotion.new()
+		e.button_mask = mask as MouseButtonMask
+		e.position = at
+		return e
+	_check(mv.size.x > mv.pan.view.x, "the fixture: the land doesn't overrun the view across (the card on)")
+	mv.pan.pan_to(Vector2(150, 0))
+	var off0: Vector2 = mv.pan.offset()
+	p._gui_input(mbe.call(MOUSE_BUTTON_LEFT, true, Vector2(700, 40)))
+	p._gui_input(mme.call(MOUSE_BUTTON_MASK_LEFT, Vector2(600, 40)))
+	p._gui_input(mbe.call(MOUSE_BUTTON_LEFT, false, Vector2(600, 40)))
+	_check(mv.pan.offset() == off0, "a left drag while placing panned the land: %s from %s" % [str(mv.pan.offset()), str(off0)])
+	p._gui_input(mbe.call(MOUSE_BUTTON_RIGHT, true, Vector2(700, 40)))
+	p._gui_input(mme.call(MOUSE_BUTTON_MASK_RIGHT, Vector2(600, 40)))
+	p._gui_input(mbe.call(MOUSE_BUTTON_RIGHT, false, Vector2(600, 40)))
+	_check(mv.pan.offset() == off0 + Vector2(100, 0), "a right drag while placing didn't pan the land: %s from %s" % [str(mv.pan.offset()), str(off0)])
+	# the line under the goal line, in the view
+	var ly: float = p.line_at().y - mv.pan.offset().y           # in the frame
+	var goal_f := Rect2(M._goal.position - fr.position, M._goal.size)
+	_check(M._goal.visible and not goal_f.intersects(Rect2(0, ly, mv.pan.view.x, p.TOP_H)) and ly + p.TOP_H <= mv.pan.view.y, "the tool's line sits on the goal line or off the view: at %.0f, the goal %s" % [ly, str(goal_f)])
+	# a drag moves the Bank by the drag over x2, its name with it
+	var kb: int = all.find(all.filter(func(e): return e[0] == "sites" and e[1] == "the_bank")[0])
+	var b0: Vector2 = mv.place_of("sites", "the_bank")
+	var a0: Vector2 = p.at_of(kb)
+	p.press(a0)
+	p.move(a0 + Vector2(21, 9))
+	p.release()
+	var b1: Vector2 = b0 + (Vector2(21, 9) / MV.PX).round()
+	_check(mv.place_of("sites", "the_bank") == b1 and mv.pin_at(8) == b1 * MV.PX and mv._label_at[mv._pin_labels[8]][0] == mv.pin_at(8), "a drag didn't move the Bank, or its name: %s from %s" % [str(mv.place_of("sites", "the_bank")), str(b0)])
+	var lb: Label = mv._pin_labels[8]
+	_check(absf(lb.position.x + lb.size.x / 2.0 - mv.pin_at(8).x) < 2.0, "the Bank's name didn't follow its pin")
+	# a zone's name drags as well
+	var kz: int = all.find(all.filter(func(e): return e[0] == "zone_names" and e[1] == "the_town")[0])
+	var z0: Vector2 = mv._zone_names[2][0].position
+	p.press(p.at_of(kz) + Vector2(10, 10))
+	p.move(p.at_of(kz) + Vector2(10, 10) + Vector2(-16, 8))
+	p.release()
+	_check(mv._zone_names[2][0].position == z0 + Vector2(-16, 8) and mv._zone_names[2][1].position == z0 + Vector2(-16, 40), "a drag didn't move the Town's name: %s from %s" % [str(mv._zone_names[2][0].position), str(z0)])
+	# the line at the view's top: its words, what's under the mouse and where in the painting's pixels
+	var fnt: Font = ThemeDB.fallback_font
+	_check(p.TOP_LINE == "PLACING · drag a place to move it · F5 save · F4 print · F3 done" and fnt.get_string_size(p.TOP_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16.0 <= mv.pan.view.x, "the tool's line is off, or doesn't fit the view")
+	_check(p._where(kb) == "The Bank (sites the_bank): (%d, %d)" % [b1.x, b1.y] and fnt.get_string_size(p._where(kb), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 16.0 <= mv.pan.view.x, "what's under the mouse reads '%s'" % p._where(kb))
+	# F4: every place printed
+	var dump: String = p.dump()
+	_check(dump.split("\n").size() == all.size() + 1 and dump.contains(p._where(kb)), "F4 doesn't print every place: %d lines" % dump.split("\n").size())
+	# F5: the file written, what the tool doesn't move kept; the Map reads it from then on, and a fresh Map from the file
+	_check(p.save() == OK, "F5 didn't save")
+	_check(FileAccess.get_file_as_string(p.save_path).contains("paint_size = Vector2(688, 384)"), "the F5 file doesn't hold its painting's size")
+	var back = ResourceLoader.load(p.save_path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	_check(back != null and back.sites.get("the_bank") == b1 and back.sites.get("not_a_site") == Vector2(1, 2) and back.zones.size() == Data.ZONES.size() and back.zone_names.get("the_town") == (z0 + Vector2(-16, 8)) / MV.PX,
+		"the save doesn't hold the moves, or lost what it didn't touch: %s" % (str(back.sites) if back != null else "nothing"))
+	# F5 over a file that isn't the places' (a missing field): a whole places file in its place (the review)
+	var odd = load("res://scripts/ui/fight_slots.gd").new()
+	ResourceSaver.save(odd, p.save_path)
+	_check(p.save() == OK, "F5 over another kind of file failed")
+	var back2 = ResourceLoader.load(p.save_path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	_check(back2 != null and back2.get("order") is Dictionary and back2.order.size() == Data.PINNACLES.size() and back2.sites.get("the_bank") == b1, "F5 over another kind of file didn't write the places")
+	p._unhandled_input(f3)
+	_check(not mv.placing and not p.visible and p.mouse_filter == Control.MOUSE_FILTER_IGNORE and mv.pin_at(8) == b1 * MV.PX, "F3 again didn't end it, or the Map didn't keep the saved Bank: %s" % str(mv.pin_at(8)))
+	MV.places_file = p.save_path
+	MV.forget_places()
+	var mv2 = MV.new(Rect2(Vector2.ZERO, MV.land_size()))
+	_check(mv2.pin_at(8) == b1 * MV.PX, "a fresh Map didn't read the saved Bank: %s" % str(mv2.pin_at(8)))
+	mv2.free()
+	# a move not saved goes with F3 off
+	p.toggle()
+	p.press(p.at_of(kb))
+	p.move(p.at_of(kb) + Vector2(40, 0))
+	p.release()
+	p.toggle()
+	_check(mv.pin_at(8) == b1 * MV.PX, "a move not saved stayed after F3")
+	# leaving the Map lets the tool go
+	p.toggle()
+	main.show_room(main.MARKET)
+	p._process(0.0)
+	_check(not mv.placing and not p.visible, "leaving the Map kept the tool on")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	# outside a debug build: F3 does nothing
+	MP.in_debug = false
+	p._unhandled_input(f3)
+	_check(not mv.placing and not p.visible and not mv.can_place(), "F3 placed outside a debug build")
+	MP.in_debug = true
+	# put it back: the fixtures gone, the real file untouched, the Map on it again
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(p.save_path))
+	p.save_path = keep_path
+	MV.places_file = MV.PLACES_FILE
+	MV.forget_places()
+	mv.relay()
+	_check(FileAccess.get_md5(MV.PLACES_FILE) == md5_0 and mv.pin_at(8) == MV.placed("sites", "the_bank") * MV.PX, "the real data/map_places.tres changed, or the Map's not on it again")
+	M._shown = ""
+	mv._shown = ""
+	main.refresh()
+	print("b52 tool ok: F3 on and off, a drag moves a place and its name, F4 prints, F5 saves and the Map reads it")
+
+
+## What takes a click at a point of `c` (its own space): _click_target's rule, by the controls' own positions - the
+## smoke's main is never in the tree, so a global rect cached before a layout can be stale (BUILD52).
+func _b52_target(c: Control, at: Vector2) -> Control:
+	if not c.visible:
+		return null
+	if c.clip_contents and not Rect2(Vector2.ZERO, c.size).has_point(at):
+		return null
+	for k in range(c.get_child_count() - 1, -1, -1):
+		var ch = c.get_child(k)
+		if ch is Control:
+			var hit: Control = _b52_target(ch, at - (ch as Control).position)
+			if hit != null:
+				return hit
+	if c.mouse_filter != Control.MOUSE_FILTER_IGNORE and Rect2(Vector2.ZERO, c.size).has_point(at):
+		return c
+	return null

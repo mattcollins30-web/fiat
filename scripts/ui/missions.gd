@@ -98,15 +98,17 @@ func _init() -> void:
 	_map_frame.position = Vector2(0, TOP)
 	_map_frame.size = Vector2(MAP_W, Pal.ROOM_H - TOP)
 	_map_frame.clip_contents = true
-	_map_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_frame.mouse_filter = Control.MOUSE_FILTER_STOP     # the room's margin round a centred land: a click there is the empty land's (BUILD52)
+	_map_frame.gui_input.connect(_frame_input)
 	add_child(_map_frame)
-	_map = MapView.new(Rect2(Vector2.ZERO, MapView.BASE * MapView.LAND))
+	_map = MapView.new(Rect2(Vector2.ZERO, MapView.land_size()))     # the painting's size x2 (BUILD52)
 	_map.picked.connect(select)
 	_map.picked_order.connect(select_order)
 	_map.picked_town.connect(func(_k): to_town.emit())     # a town's place's pin: the Radio's Town tab (BUILD50-T)
 	_map.empty_clicked.connect(set_panel.bind(false))      # the empty land: the side panel away (BUILD51-U)
 	_map_frame.add_child(_map)
 	_map.set_view(_map_frame.size)
+	_map.top_clear = func() -> float: return (_goal.position.y + _goal.size.y - _map_frame.position.y + 4.0) if _goal.visible else 0.0     # the F3 tool's line under the goal line (BUILD52)
 	_goal_build()
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
 	# row's right while there's a tally, the card dropping under it when pressed
@@ -1157,6 +1159,19 @@ func _panel_lay(picking: bool) -> void:
 		_map.set_view(_map_frame.size)
 	for x in _panel_x:
 		x.visible = panel_on and not picking
+
+
+## A click on the frame round the land (BUILD52: the redrawn land sits centred, the room's margin round it): as a click on
+## the empty land, the side panel away. The land takes its own clicks first.
+var _frame_down := false
+func _frame_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if ev.pressed:
+			_frame_down = true
+		elif _frame_down:
+			_frame_down = false
+			set_panel(false)
+		_map_frame.accept_event()
 
 
 ## The Map's view on its step: the picked place, else the town's next step, else the card's site.

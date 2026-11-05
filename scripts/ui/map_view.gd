@@ -3,9 +3,10 @@ extends Control
 ## the Outskirts' fields, the Estate's grid, the Town's ring road, the City past the river - each site a pin in its
 ## odds' colour, a shut zone under a hatch, the order's places as pins once their rebuild has opened them. A pin picked
 ## shows its card at the Map's right (missions.gd). The painting (19 Oct, Matt: "a single image with everything on it ...
-## then we carve it up in the game"): art/map/map.png, 512 x 424, drawn x2 nearest from (-3, -2) so it fills the
-## 1018 x 844; the zones' shapes and the pins are traced off it. The picked site's zone is lit, a shut zone hatched.
-## Without the picture the old flat drawing stands in (shapes, roads, river).
+## then we carve it up in the game"): art/map/map.png - Matt's redraw (5 Nov, BUILD52: "lets redraw the map - ill do it
+## manually"), 688 x 384 - drawn x2 nearest from the land's top left, the land its size x2; the zones' shapes and the
+## pins are traced off it, in its own pixels, and read from data/map_places.tres (the F3/F5 tool, map_placement.gd,
+## moves them). The picked site's zone is lit, a shut zone hatched. Without the picture the old flat drawing stands in.
 ##
 ## Signals: `picked(i)` for a site, `picked_order(key)` for an order's place.
 
@@ -22,45 +23,44 @@ const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const SkyLayer := preload("res://scripts/ui/sky.gd")
 const MapPan := preload("res://scripts/ui/map_pan.gd")
-## The land at twice today's size each way (BUILD51-U, item 2; Matt: "redraw the map at a larger resolution and make it
-## scrollable"): the drawing's space (W0 x H0) scaled to the land; the painting over PAINT_SIZE of it at today's scale (a
-## 512 x 424 picture drawn x4 nearest - the same pixel look, twice the room - or a bigger painting at its own); the pins,
-## the names and the key at today's size on it. Its frame (missions.gd) shows a part, panned by drag and wheel.
-const LAND := 2.0
-const BASE := Vector2(1018, 844)       # today's map on the screen: the land is BASE x LAND
-const PAINT_SIZE := Vector2(1024, 848) # the painting on today's map (512 x 424 drawn x2 from MAP_AT)
-
-const W0 := 1000.0                 # the drawing's own space, as the canvas drew it
-const H0 := 844.0
+## The land (BUILD52; BUILD51-U made it pan): the painting drawn PX times nearest, the game's pixel size, the land its
+## size - read from the texture, not a table. Every place's point is in the painting's pixels; _px() puts it on the land.
+## Its frame (missions.gd) shows a part, panned by drag and wheel; a frame bigger than the land shows it centred.
+const PX := 2.0                        # a painting's pixel on the screen
+const PAINT_FALLBACK := Vector2(688, 384)    # the land's painting size with no painting (the flat drawing stands in)
+const OLD_SPACE := Vector2(1000, 844)  # the flat drawing's roads and river, as the first canvas drew them
 const PIN_R := 12.0
 const PIN_R_SHUT := 7.0
 const HIT_R := 30.0                # a click within this of a pin picks it
 const LABEL_W := 300.0
 const LABEL_H := 24.0
 
-## The zones' areas, fills and where their names sit (20 Oct: traced off Matt's red lines on the painting; the moor south of the Town and the motorway strip are no zone).
+## The zones' areas, fills and where their names sit, in the painting's pixels (BUILD52: re-traced to Matt's redraw - the
+## Outskirts the fields bottom left, the Estate the towers and the retail park, the Town in and on the ring road, the
+## City east of the river; the motorway strip and the river are no zone). The fallback: data/map_places.tres rules.
 const ZONE_SHAPES := [
-	{"points": [Vector2(279, 431), Vector2(271, 433), Vector2(264, 459), Vector2(250, 467), Vector2(94, 466), Vector2(0, 457), Vector2(0, 844), Vector2(412, 844), Vector2(420, 798), Vector2(336, 729), Vector2(305, 713), Vector2(310, 701), Vector2(391, 641), Vector2(395, 630), Vector2(336, 578), Vector2(285, 507), Vector2(279, 489)], "fill": Color("222c25"), "name_at": Vector2(12, 770)},
-	{"points": [Vector2(575, 65), Vector2(528, 63), Vector2(457, 53), Vector2(327, 57), Vector2(144, 97), Vector2(94, 117), Vector2(44, 149), Vector2(0, 170), Vector2(0, 454), Vector2(94, 465), Vector2(250, 466), Vector2(262, 461), Vector2(277, 422), Vector2(281, 350), Vector2(288, 322), Vector2(340, 257), Vector2(373, 233), Vector2(449, 193), Vector2(564, 166), Vector2(567, 89)], "fill": Color("282b30"), "name_at": Vector2(12, 180)},
-	{"points": [Vector2(356, 245), Vector2(334, 266), Vector2(287, 327), Vector2(277, 429), Vector2(281, 435), Vector2(280, 489), Vector2(292, 515), Vector2(338, 578), Vector2(381, 613), Vector2(398, 633), Vector2(433, 642), Vector2(512, 646), Vector2(627, 689), Vector2(666, 690), Vector2(651, 593), Vector2(652, 575), Vector2(706, 489), Vector2(721, 451), Vector2(725, 423), Vector2(724, 374), Vector2(717, 341), Vector2(689, 286), Vector2(567, 167), Vector2(449, 194)], "fill": Color("2d2a2c"), "name_at": Vector2(400, 300)},
-	{"points": [Vector2(577, 63), Vector2(568, 89), Vector2(565, 165), Vector2(686, 281), Vector2(715, 331), Vector2(724, 365), Vector2(727, 423), Vector2(723, 451), Vector2(707, 489), Vector2(653, 575), Vector2(652, 593), Vector2(668, 689), Vector2(803, 822), Vector2(809, 844), Vector2(1000, 844), Vector2(1000, 67), Vector2(782, 70)], "fill": Color("262c34"), "name_at": Vector2(770, 450)},
+	{"points": [Vector2(0, 232), Vector2(150, 236), Vector2(190, 248), Vector2(235, 282), Vector2(262, 300), Vector2(250, 340), Vector2(240, 384), Vector2(0, 384)], "fill": Color("222c25"), "name_at": Vector2(8, 345)},
+	{"points": [Vector2(0, 34), Vector2(205, 34), Vector2(205, 100), Vector2(185, 135), Vector2(165, 170), Vector2(158, 215), Vector2(150, 232), Vector2(0, 228)], "fill": Color("282b30"), "name_at": Vector2(8, 34)},
+	{"points": [Vector2(210, 92), Vector2(260, 85), Vector2(330, 78), Vector2(390, 88), Vector2(440, 105), Vector2(470, 125), Vector2(495, 150), Vector2(505, 185), Vector2(500, 225), Vector2(480, 262), Vector2(455, 300), Vector2(430, 318), Vector2(380, 320), Vector2(330, 310), Vector2(280, 300), Vector2(240, 280), Vector2(195, 252), Vector2(165, 222), Vector2(162, 180), Vector2(180, 135)], "fill": Color("2d2a2c"), "name_at": Vector2(260, 150)},
+	{"points": [Vector2(470, 32), Vector2(688, 32), Vector2(688, 384), Vector2(455, 384), Vector2(470, 330), Vector2(505, 290), Vector2(535, 250), Vector2(540, 200), Vector2(530, 150), Vector2(500, 118), Vector2(465, 95), Vector2(455, 60)], "fill": Color("262c34"), "name_at": Vector2(555, 268)},
 ]
-## Each site's pin, by its index in Data.TIERS (the Outskirts' three, the Estate's, the Town's, the City's).
-const SITE_AT := [Vector2(36, 638), Vector2(262, 778), Vector2(223, 628),
-	Vector2(135, 418), Vector2(292, 268), Vector2(390, 118),
-	Vector2(547, 238), Vector2(616, 418), Vector2(567, 528),
-	Vector2(832, 108), Vector2(852, 388), Vector2(852, 598)]
+## Each site's pin, by its index in Data.TIERS (the Outskirts' three, the Estate's, the Town's, the City's), in the
+## painting's pixels: the fallback (data/map_places.tres rules).
+const SITE_AT := [Vector2(25, 282), Vector2(215, 315), Vector2(125, 285),
+	Vector2(60, 80), Vector2(172, 115), Vector2(55, 172),
+	Vector2(400, 132), Vector2(415, 212), Vector2(450, 170),
+	Vector2(540, 55), Vector2(632, 112), Vector2(655, 245)]
 ## Where a pin's name sits: below it, above, to its right or its left - so no two names cross, nor a zone's name.
 enum { BELOW, ABOVE, RIGHT, LEFT }
 const SITE_LABEL := [BELOW, RIGHT, ABOVE, BELOW, BELOW, ABOVE, BELOW, BELOW, BELOW, BELOW, BELOW, LEFT]
 ## The order's places (18 Oct), by key: off their host site, out along the road east.
-const ORDER_AT := {"grid": Vector2(842, 248), "archive": Vector2(596, 643), "mint": Vector2(940, 728)}
+const ORDER_AT := {"grid": Vector2(628, 182), "archive": Vector2(415, 296), "mint": Vector2(630, 330)}
 const ORDER_LABEL := {"grid": BELOW, "archive": ABOVE, "mint": BELOW}
 ## The town's places (act two §1, BUILD50-T; the canvas "The town on the Map"): a square each in the Town and the City,
 ## clear of the sites' and the order's pins and names - ringed while not built, dashed the next step, lit running (a
 ## glow), red-ringed and unlit stopped, unpaid. Shown once the rebuild's open.
-const TOWN_AT := {"substation": Vector2(650, 320), "pumping": Vector2(480, 440), "bus_depot": Vector2(722, 540),
-	"market_hall": Vector2(430, 380), "library": Vector2(470, 600), "mint": Vector2(760, 320)}
+const TOWN_AT := {"substation": Vector2(325, 62), "pumping": Vector2(530, 322), "bus_depot": Vector2(250, 48),
+	"market_hall": Vector2(360, 245), "library": Vector2(330, 330), "mint": Vector2(470, 255)}
 const TOWN_R := 9.0
 const TOWN_LIT := Color("e9d3a1")    # a running place's name, the canvas's
 const ART_DIR := "res://art/map/"
@@ -68,7 +68,6 @@ const KEY_H := 30.0
 const KEY_PAD := 12.0
 const KEY_GAP := 14.0
 const KEY_DOT := 10.0
-const MAP_AT := Vector2(-3, -2)        # the painting's top left: 1024 x 848 drawn, 3 px off each side, 2 off top and bottom
 const LIT := Color(1.0, 0.86, 0.6, 0.08)    # the picked site's zone, lit
 
 var sim
@@ -87,6 +86,7 @@ var _clouds: ColorRect                 # the cloud over all but the open zones (
 var _sky                               # the sky's layer (23 Oct): night, rain, fog over the painting, under the pins
 var _pins: Control                     # the pins, drawn on their own layer over the sky
 var _clouds_open := "-"
+var _sky_clip: Control                 # the sky's clip: the land in the view (BUILD52)
 var _key_bg: Control                   # the key's panel and dots, over the cloud, under its words                # the open zones the cloud's mask was cut for
 const MASK_DIV := 6.0                  # the mask at a sixth of the map: smoothed up, a soft edge
 const CLOUD_SHADER := """
@@ -130,13 +130,17 @@ static var _art := {}                  # path -> Texture2D or null, looked for o
 func _init(rect: Rect2) -> void:
 	position = rect.position
 	size = rect.size
-	clip_contents = true
+	clip_contents = false                  # the frame clips (BUILD52): a frame bigger than the land shows the key on its corner
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
 	# the sky over the painting (23 Oct, parked item 8), the pins on a layer over it so they keep their colour
-	_sky = SkyLayer.new(Vector2(Pal.GRID_W, size.y / LAND))     # the weather over the view, not the land: it stays as the land pans (BUILD51-U)
-	add_child(_sky)
+	_sky_clip = Control.new()              # the weather over the land in the view, not the room round it (BUILD52)
+	_sky_clip.clip_contents = true
+	_sky_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_sky_clip)
+	_sky = SkyLayer.new(Vector2(Pal.GRID_W, Pal.ROOM_H))     # the weather over the view, not the land: it stays as the land pans (BUILD51-U)
+	_sky_clip.add_child(_sky)
 	_pins = Control.new()
 	_pins.size = size
 	_pins.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -160,15 +164,15 @@ func _init(rect: Rect2) -> void:
 		_clouds.material = mat
 		add_child(_clouds)
 	_key_layer = Control.new()             # the key on the view's corner, over the cloud: it stays as the land pans (BUILD51-U)
-	_key_layer.size = BASE
+	_key_layer.size = size
 	_key_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_key_bg = Control.new()
-	_key_bg.size = BASE
+	_key_bg.size = size
 	_key_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_key_bg.draw.connect(_draw_key)
 	_key_layer.add_child(_key_bg)
 	for z in range(Data.ZONES.size()):
-		var at: Vector2 = _px(ZONE_SHAPES[z]["name_at"])
+		var at: Vector2 = zone_name_pin(z)
 		var room: float = minf(320.0, size.x - at.x - 8.0)
 		var nm := UI.label(self, Rect2(at.x, at.y, room, 32), str(Data.ZONES[z]["name"]), "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var st := UI.label(self, Rect2(at.x, at.y + 32, room, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -176,12 +180,12 @@ func _init(rect: Rect2) -> void:
 		UI.shadow(st)
 		_zone_names.append([nm, st])
 	for i in range(Data.TIERS.size()):
-		var l := _pin_label(_px(SITE_AT[i]), int(SITE_LABEL[i]), Pal.TEXT)
+		var l := _pin_label(pin_at(i), int(SITE_LABEL[i]), Pal.TEXT)
 		_pin_labels.append(l)
 	for k in ORDER_AT:
-		_order_labels[k] = _pin_label(_px(ORDER_AT[k]), int(ORDER_LABEL[k]), Pal.ACCENT)
+		_order_labels[k] = _pin_label(order_pin_at(k), int(ORDER_LABEL[k]), Pal.ACCENT)
 	for k in TOWN_AT:
-		_town_labels[k] = _pin_label(_px(TOWN_AT[k]), BELOW, Pal.TEXT_2)
+		_town_labels[k] = _pin_label(town_pin_at(k), BELOW, Pal.TEXT_2)
 		_town_labels[k].add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
 		_town_labels[k].visible = false
 	# the key, bottom right: what a pin's colour says - a dot and its word, packed tight (19 Oct, Matt: "too big ... too
@@ -203,8 +207,12 @@ func _init(rect: Rect2) -> void:
 	for c in get_children():
 		if c is CanvasItem:
 			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	pan = MapPan.new(self, BASE)
+	pan = MapPan.new(self, size)
 	pan.moved = _panned
+	_placer = preload("res://scripts/ui/map_placement.gd").new()     # F3/F5 (BUILD52), debug builds
+	_placer.view = self
+	_placer.size = size
+	add_child(_placer)
 	_lay_key()
 
 
@@ -282,10 +290,11 @@ static func cloud_mask(key: String, map_size: Vector2) -> Image:
 	var polys: Array = []
 	for z in range(mini(key.length(), ZONE_SHAPES.size())):
 		if key[z] == "1":
-			polys.append(PackedVector2Array(ZONE_SHAPES[z]["points"]))
+			polys.append(zone_points(z))
+	var to_paint: Vector2 = paint_size() / map_size      # a cell's middle in the painting's pixels (BUILD52)
 	for y in range(h):
 		for x in range(w):
-			var p := Vector2((x + 0.5) * MASK_DIV * W0 / map_size.x, (y + 0.5) * MASK_DIV * H0 / map_size.y)
+			var p := Vector2((x + 0.5) * MASK_DIV, (y + 0.5) * MASK_DIV) * to_paint
 			var inside := false
 			for poly in polys:
 				if Geometry2D.is_point_in_polygon(p, poly):
@@ -302,6 +311,14 @@ static func painting() -> Texture2D:
 
 ## A pin's name: its box on the side asked, kept inside the map.
 func _pin_label(p: Vector2, side: int, col: Color) -> Label:
+	var l := UI.label(self, Rect2(0, 0, LABEL_W, LABEL_H), "", "SemiBold", Pal.CELL_TEXT, col, HORIZONTAL_ALIGNMENT_CENTER, false)
+	UI.shadow(l)
+	_lay_label(l, p, side)
+	return l
+
+
+## A pin's name's box at its pin (BUILD52: again when the F3 tool moves the pin).
+func _lay_label(l: Label, p: Vector2, side: int) -> void:
 	var r := Rect2(p.x - LABEL_W / 2.0, p.y + PIN_R + 6, LABEL_W, LABEL_H)
 	var align := HORIZONTAL_ALIGNMENT_CENTER
 	match side:
@@ -314,10 +331,11 @@ func _pin_label(p: Vector2, side: int, col: Color) -> Label:
 			r = Rect2(p.x - PIN_R - 8 - LABEL_W, p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)
 			align = HORIZONTAL_ALIGNMENT_RIGHT
 	r.position.x = clampf(r.position.x, 4.0, size.x - 4.0 - r.size.x)
-	var l := UI.label(self, r, "", "SemiBold", Pal.CELL_TEXT, col, align, false)
-	UI.shadow(l)
+	l.position = r.position
+	l.size = r.size
+	l.horizontal_alignment = align
 	_label_at[l] = [p, side]
-	return l
+	_snug(l)
 
 
 ## A pin's name hugging its own pin (19 Oct, Matt: the Allotments' name drifted off its dot): above or below, its box the
@@ -331,9 +349,9 @@ func _snug(l: Label) -> void:
 	l.position.x = clampf(at[0].x - w / 2.0, 4.0, size.x - 4.0 - w)
 
 
-## A point of the drawing's space on the control.
+## A point of the painting's pixels on the land.
 func _px(p: Vector2) -> Vector2:
-	return Vector2(p.x * size.x / W0, p.y * size.y / H0)
+	return p * PX
 
 
 ## The pin's tone: the odds as read, grey while they're read, hollow when shut. A pin not read now shows its last read
@@ -437,11 +455,11 @@ func _draw() -> void:
 	# just read wrong")
 	var lit_z := lit_zone()
 	if lit_z >= 0 and sim != null and sim.zone_open(lit_z):
-		draw_colored_polygon(_scaled(PackedVector2Array(ZONE_SHAPES[lit_z]["points"])), LIT)
+		draw_colored_polygon(_scaled(zone_points(lit_z)), LIT)
 	# a shut zone under a hatch, where there's no cloud
 	for z in range(Data.ZONES.size()):
 		if _clouds == null and sim != null and not sim.zone_open(z):
-			_hatch(ZONE_SHAPES[z]["points"])
+			_hatch(zone_points(z))
 	# the pins: their own layer (_draw_pins), over the sky
 	# the key's panel and its dots: their own layer (_draw_key), over the cloud
 
@@ -451,7 +469,7 @@ func _draw_pins() -> void:
 	if sim == null:
 		return
 	for i in range(Data.TIERS.size()):
-		var c: Vector2 = _px(SITE_AT[i])
+		var c: Vector2 = pin_at(i)
 		var open: bool = sim.tier_open(i)
 		var zone_open: bool = sim.zone_open(int(Data.TIERS[i]["zone"]))
 		var r: float = PIN_R if zone_open else PIN_R_SHUT
@@ -465,9 +483,9 @@ func _draw_pins() -> void:
 			_pins.draw_circle(c, r, Pal.BUTTON)
 			_pins.draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if zone_open else Color("5a6068"), 2.0)
 	for p in Data.PINNACLES:
-		if not sim.order_open(p["key"]):
+		if not sim.order_open(p["key"]) and not placing:     # the F3 tool shows every place (BUILD52)
 			continue
-		var c: Vector2 = _px(ORDER_AT[p["key"]])
+		var c: Vector2 = order_pin_at(p["key"])
 		if order_key == p["key"]:
 			_pins.draw_circle(c, PIN_R + 9.0, Color(Pal.ACCENT, 0.25))
 		var d := PIN_R + 3.0                 # a diamond: the order's places aren't the campaign's
@@ -493,7 +511,7 @@ func _draw_key() -> void:
 func _draw_flat() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("181b1f"))
 	for z in range(ZONE_SHAPES.size()):
-		var pts := _scaled(PackedVector2Array(ZONE_SHAPES[z]["points"]))
+		var pts := _scaled(zone_points(z))
 		draw_colored_polygon(pts, ZONE_SHAPES[z]["fill"])
 		pts.append(pts[0])
 		draw_polyline(pts, Pal.CARD_LINE, 2.0)
@@ -521,9 +539,9 @@ func _curve(pts: Array, col: Color, w: float) -> void:
 		var b1: Vector2 = pts[mini(pts.size() - 1, k + 2)]
 		for s in range(8):
 			var t := s / 8.0
-			out.append(_px(_catmull(a0, a, b, b1, t)))
-	out.append(_px(pts.back()))
-	draw_polyline(out, col, w * size.x / W0, true)
+			out.append(_catmull(a0, a, b, b1, t) * size / OLD_SPACE)
+	out.append(pts.back() * size / OLD_SPACE)
+	draw_polyline(out, col, w * size.x / OLD_SPACE.x, true)
 
 
 static func _catmull(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) -> Vector2:
@@ -533,7 +551,7 @@ static func _catmull(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: floa
 
 
 ## Diagonal strokes over a zone, clipped to its shape by stepping along each stroke.
-func _hatch(points: Array) -> void:
+func _hatch(points: PackedVector2Array) -> void:
 	var poly := PackedVector2Array()
 	for p in points:
 		poly.append(p)
@@ -543,7 +561,7 @@ func _hatch(points: Array) -> void:
 	for p in poly:
 		lo = lo.min(p)
 		hi = hi.max(p)
-	var step := 18.0
+	var step := 9.0                         # in the painting's pixels: 18 on the screen
 	var c := lo.x - (hi.y - lo.y)
 	while c < hi.x:
 		var a := Vector2(c, hi.y)
@@ -602,20 +620,20 @@ func _gui_input(ev: InputEvent) -> void:
 	for i in range(Data.TIERS.size()):
 		if not sim.zone_open(int(Data.TIERS[i]["zone"])):
 			continue
-		var d: float = at.distance_to(_px(SITE_AT[i]))
+		var d: float = at.distance_to(pin_at(i))
 		if d < best:
 			best = d
 			hit_i = i
 	var hit_t := ""
 	for k in town_states:
-		var dt: float = at.distance_to(_px(TOWN_AT[k]))
+		var dt: float = at.distance_to(town_pin_at(k))
 		if dt < best:
 			best = dt
 			hit_t = str(k)
 			hit_i = -1
 	for p in Data.PINNACLES:
 		if sim.order_known(p["key"]):          # a place in a shut zone doesn't pick, as its pins don't (20 Oct)
-			var d: float = at.distance_to(_px(ORDER_AT[p["key"]]))
+			var d: float = at.distance_to(order_pin_at(p["key"]))
 			if d < best:
 				best = d
 				hit_k = p["key"]
@@ -644,13 +662,13 @@ func step_site(by: int) -> int:
 	return int(sites[posmod((at if at >= 0 else 0) + by, sites.size())])
 
 
-## Where a site's pin is, on the control (for the tests' clicks).
+## Where a site's pin is, on the control (for the tests' clicks): its point from data/map_places.tres (BUILD52).
 func pin_at(i: int) -> Vector2:
-	return _px(SITE_AT[i])
+	return _px(place_of("sites", site_key(i)))
 
 
 func order_pin_at(key: String) -> Vector2:
-	return _px(ORDER_AT[key])
+	return _px(place_of("order", key))
 
 
 ## The names on the screen: those whose words sit wholly in the view (BUILD51-U: the land's others are panned off it, or
@@ -713,11 +731,16 @@ func _town_show() -> String:
 ## The places' squares, on the pins' layer: a glow and a lit square running; red-ringed and dark stopped; a dashed ring
 ## the next step; a plain ring not yet built.
 func _draw_town() -> void:
-	for k in town_states:
-		var c: Vector2 = _px(TOWN_AT[k])
+	var drawn: Dictionary = town_states
+	if placing:                             # the F3 tool shows every place, built or not (BUILD52)
+		drawn = {}
+		for k in TOWN_AT:
+			drawn[k] = town_states.get(k, "ringed")
+	for k in drawn:
+		var c: Vector2 = town_pin_at(k)
 		var r := TOWN_R
 		var box := Rect2(c - Vector2(r, r), Vector2(2 * r, 2 * r))
-		match str(town_states[k]):
+		match str(drawn[k]):
 			"running":
 				_pins.draw_circle(c, r + 12.0, Color(Pal.ACCENT, 0.16))
 				_pins.draw_circle(c, r + 7.0, Color(Pal.ACCENT, 0.3))
@@ -767,14 +790,14 @@ func _get_tooltip(at: Vector2) -> String:
 	if sim == null:
 		return ""
 	for k in town_states:
-		if at.distance_to(_px(TOWN_AT[k])) < HIT_R:
+		if at.distance_to(town_pin_at(k)) < HIT_R:
 			return town_tip(str(k))
 	return ""
 
 
 ## Where a town's place's pin is, on the control (for the tests).
 func town_pin_at(key: String) -> Vector2:
-	return _px(TOWN_AT[key])
+	return _px(place_of("town", key))
 
 
 # ------------------------------------------------------------------ the land and its pan (BUILD51-U, item 2)
@@ -786,15 +809,14 @@ var _key_widths: Array = []
 var _press_hit := false                 # the last press picked a pin (its let-go isn't the empty land's)
 
 
-## The land over today's map.
+## The land over the cloud's own scale (its tile and its warp were set for a painting drawn x2): 1 at PX 2 (BUILD52).
 func land_k() -> float:
-	return size.x / BASE.x
+	return PX / 2.0
 
 
-## The painting's place on the land.
+## The painting's place on the land: the whole land, its pixels PX times (BUILD52).
 func painting_rect() -> Rect2:
-	var k: float = land_k()
-	return Rect2(MAP_AT * k, PAINT_SIZE * k)
+	return Rect2(Vector2.ZERO, paint_size() * PX)
 
 
 ## The frame's size (the side panel on: the map's two columns; off: the whole width): the view clamped, the key and the
@@ -808,7 +830,12 @@ func set_view(v: Vector2) -> void:
 func _panned() -> void:
 	var off: Vector2 = pan.offset()
 	_key_layer.position = off
-	_sky.position = off
+	var seen := Rect2(off, pan.view).intersection(Rect2(Vector2.ZERO, size))     # the land in the view: the sky over that alone (BUILD52)
+	_sky_clip.position = seen.position
+	_sky_clip.size = seen.size
+	_sky.position = off - seen.position
+	if _placer != null:
+		_placer.queue_redraw()                 # the F3 tool's line on the view's top
 
 
 func _lay_key() -> void:
@@ -848,3 +875,191 @@ func open_at(s, sel: int, okey: String, by_hand: bool) -> Vector2:
 		return town_pin_at(nk)
 	return pin_at(maxi(0, sel))
 
+
+
+# ------------------------------------------------------------------ the places from data (BUILD52)
+
+## Matt: "can you do an f3/f5 piece for the places? some of the ones you've selected I'd want to move". Every pin's point
+## and every zone's name point and shape: data/map_places.tres (map_places.gd) where it has an entry, the tables above
+## where it hasn't; points in the painting's pixels, the file's rescaled from the size it was placed on.
+const PLACES_FILE := "res://data/map_places.tres"
+static var places_file: String = PLACES_FILE     # the tests point it at a fixture
+static var _places = null                        # {kind: {key: point}} in this painting's pixels, read once
+
+
+## The painting's size in its own pixels (the land is this x PX); the fallback's with no painting.
+static func paint_size() -> Vector2:
+	var pic := painting()
+	return pic.get_size() if pic != null else PAINT_FALLBACK
+
+
+## The land's size on the screen: the painting's x PX.
+static func land_size() -> Vector2:
+	return paint_size() * PX
+
+
+## A site's key in the file: its name's slug (the_allotments), as the fight's slots.
+static func site_key(i: int) -> String:
+	return Items.slug(str(Data.TIERS[i]["name"]))
+
+
+static func zone_key(z: int) -> String:
+	return Items.slug(str(Data.ZONES[z]["name"]))
+
+
+## What the file holds, read once (again after use_places / forget_places): kind -> key -> point, rescaled to this
+## painting; "zones" -> key -> PackedVector2Array.
+static func places() -> Dictionary:
+	if _places == null:
+		_places = {}
+		if ResourceLoader.exists(places_file):
+			var r = ResourceLoader.load(places_file, "", ResourceLoader.CACHE_MODE_IGNORE)
+			if r != null and r.get("sites") is Dictionary:
+				use_places(r)
+	return _places
+
+
+## A map_places.gd's points taken as the Map's from now on (F5's save, a fresh read).
+static func use_places(r) -> void:
+	_places = {}
+	var from: Vector2 = r.paint_size if r.paint_size.x > 0.0 and r.paint_size.y > 0.0 else paint_size()
+	var k: Vector2 = paint_size() / from
+	for kind in ["sites", "order", "town", "zone_names"]:
+		var d: Dictionary = {}
+		var src: Dictionary = r.get(kind)
+		for key in src:
+			if src[key] is Vector2:
+				d[str(key)] = src[key] * k
+		_places[kind] = d
+	var zs: Dictionary = {}
+	for key in r.zones:
+		var pts := PackedVector2Array()
+		for p in PackedVector2Array(r.zones[key]):
+			pts.append(p * k)
+		if pts.size() >= 3:
+			zs[str(key)] = pts
+	_places["zones"] = zs
+
+
+## The next places() reads the file again.
+static func forget_places() -> void:
+	_places = null
+
+
+## A place's point in the painting's pixels, from the file, else the tables: kind "sites" (a site's key), "order",
+## "town", "zone_names" (a zone's key).
+static func placed(kind: String, key: String) -> Vector2:
+	var d: Dictionary = places().get(kind, {})
+	if d.has(key):
+		return d[key]
+	match kind:
+		"sites":
+			for i in range(Data.TIERS.size()):
+				if site_key(i) == key:
+					return SITE_AT[i]
+		"order":
+			return ORDER_AT.get(key, Vector2.ZERO)
+		"town":
+			return TOWN_AT.get(key, Vector2.ZERO)
+		"zone_names":
+			for z in range(Data.ZONES.size()):
+				if zone_key(z) == key:
+					return ZONE_SHAPES[z]["name_at"]
+	return Vector2.ZERO
+
+
+## A zone's shape in the painting's pixels: the file's, else the table's.
+static func zone_points(z: int) -> PackedVector2Array:
+	var d: Dictionary = places().get("zones", {})
+	if d.has(zone_key(z)):
+		return d[zone_key(z)]
+	return PackedVector2Array(ZONE_SHAPES[z]["points"])
+
+
+## A place's point as it is now: the F3 tool's while placing, else placed().
+func place_of(kind: String, key: String) -> Vector2:
+	if placing and _edit.has(kind) and _edit[kind].has(key):
+		return _edit[kind][key]
+	return placed(kind, key)
+
+
+## A zone's name's top left on the land.
+func zone_name_pin(z: int) -> Vector2:
+	return _px(place_of("zone_names", zone_key(z)))
+
+
+## Every place the F3 tool moves: [kind, key, its name on the tool].
+func all_places() -> Array:
+	var out: Array = []
+	for i in range(Data.TIERS.size()):
+		out.append(["sites", site_key(i), str(Data.TIERS[i]["name"])])
+	for p in Data.PINNACLES:
+		out.append(["order", str(p["key"]), str(p["place"])])
+	for r in Data.REBUILDS:
+		out.append(["town", str(r["key"]), str(r["name"])])
+	for z in range(Data.ZONES.size()):
+		out.append(["zone_names", zone_key(z), str(Data.ZONES[z]["name"])])
+	return out
+
+
+# ------------------------------------------------------------------ the placement tool (F3, debug builds; BUILD52)
+
+var placing := false                    # F3's on: every place shown and draggable
+var top_clear := Callable()             # the frame's first y clear of what the room lays over the Map (missions.gd: the goal line)
+var _edit: Dictionary = {}              # kind -> key -> point, as they're being dragged
+var _placer: Control                    # map_placement.gd
+
+
+## Whether F3 can start here: a debug build (the tool's gate, as the fight's), the Map up (not the County), a game on it.
+func can_place() -> bool:
+	return _placer != null and _placer.in_debug and on_screen() and sim != null
+
+
+## The Map's showing: it and every room it's in visible (as the run view's _shown).
+func on_screen() -> bool:
+	var n: Node = self
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return false
+		n = n.get_parent()
+	return true
+
+
+func set_placing(on: bool) -> void:
+	placing = on
+	_edit = {}
+	if on:
+		for e in all_places():
+			if not _edit.has(e[0]):
+				_edit[e[0]] = {}
+			_edit[e[0]][e[1]] = placed(e[0], e[1])
+	relay()
+
+
+## A place moved (painting pixels, kept on the painting).
+func set_place(kind: String, key: String, p: Vector2) -> void:
+	if not (placing and _edit.has(kind)):
+		return
+	_edit[kind][key] = p.clamp(Vector2.ZERO, paint_size())
+	relay()
+
+
+## Every name back on its pin, the pins redrawn: after a move, a save, F3 on or off.
+func relay() -> void:
+	for i in range(_pin_labels.size()):
+		_lay_label(_pin_labels[i], pin_at(i), int(SITE_LABEL[i]))
+	for k in _order_labels:
+		_lay_label(_order_labels[k], order_pin_at(k), int(ORDER_LABEL[k]))
+	for k in _town_labels:
+		_lay_label(_town_labels[k], town_pin_at(k), BELOW)
+	for z in range(_zone_names.size()):
+		var at: Vector2 = zone_name_pin(z)
+		var room: float = minf(320.0, size.x - at.x - 8.0)
+		_zone_names[z][0].position = at
+		_zone_names[z][0].size.x = room
+		_zone_names[z][1].position = at + Vector2(0, 32)
+		_zone_names[z][1].size.x = room
+	queue_redraw()
+	_pins.queue_redraw()
+	if _placer != null:
+		_placer.queue_redraw()
