@@ -28,6 +28,19 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      folded into it as armour's is, the verdict on that count and its other affixes; one word for a rig's slots
      ("pouches", the affix's - not "capacity" / "cap"; a language-pass call). A smoke check: this pair reads Sidegrade
      or Downgrade for the bag, one pouch figure, no "cap".
+     The sweep (Matt: "worth checking if there are any other gaps anywhere"), by reading items.gd headline() / score(),
+     pick_panel.gd deltas_of() and sim._compare():
+     - Guns: the dmg/s headline counts the damage affix (dps() via fitted_sum) and deltas_of lists "+N% dmg" again
+       beside it - one figure twice; the rate-of-fire affix (attack_pct, Primary/Secondary) isn't in the headline at
+       all, though the fight counts it - the rig's gap. Items.score for guns multiplies the damage affix in a second
+       time. The verdict itself is sound (a try-on of the whole fight).
+     - Armour and helmets: the headline counts the flat armour affix but not "+N% armour" (armour_pct), which the fight
+       applies; the try-on lists "N arm" and "N% armour" as two lines. The verdict is sound (the survival try-on).
+     - Meds: the "HP in N s" headline counts "+N% healing" and "quicker to use", and deltas_of would list them again.
+     - Sound: packs (cells affix folded in), charms (loot quality folded in; tins its own line), gloves (their own
+       figures, 29 Oct).
+     The one rule for the fix: a headline counts everything that feeds its number, and an affix it counts is folded in,
+     never listed beside it; a verdict reads the same whole (the rig's score and the gun score's double count).
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
