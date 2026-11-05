@@ -584,6 +584,29 @@ static func kit_pair(key: String) -> bool:
 	return true
 
 
+## The run's scene for its stage (BUILD55-U, docs/design/stages.md §6): `<site>_2` / `<site>_3` for the 2/3 and the 3/3
+## when that pair is drawn, else the site's own (no stage plates exist yet: the fallback is what shows). A signal (depth
+## 4 and on) and the 1/3 read the site's.
+static func stage_key(m: Dictionary) -> String:
+	var key: String = Items.slug(str(Data.TIERS[int(m["tier"])]["name"]))
+	var st: int = int(m.get("stage", m.get("t", {}).get("depth", 1))) if m.get("signal", {}).is_empty() else 1     # A's mission["stage"]; the depth a campaign run stands at else
+	if st >= 2 and st <= Data.STAGES and tex("%s_%d_plate" % [key, st]) != null and tex("%s_%d_cover" % [key, st]) != null:
+		return "%s_%d" % [key, st]
+	return key
+
+
+## The head's own fight (BUILD55-U, §4: mission["head_fight"]): his den's key from the first man, "" on any other run.
+static func head_den(m: Dictionary) -> String:
+	if not bool(m.get("head_fight", false)):
+		return ""
+	var nm: String = str(m.get("boss", {}).get("name", ""))
+	if nm == "":
+		for b in Data.BOSSES:
+			if int(b["tier"]) == int(m["tier"]):
+				nm = str(b["name"])
+	return Items.slug(nm) if nm != "" else ""
+
+
 ## A boss's own plate and cover are both on disk (art/fight_boss).
 static func boss_pair(key: String) -> bool:
 	return _pair_in(BOSS_DIR, key) or _pair_in(COUNTY_DIR, key)     # a County place's pair is drawn at the kit's size too
@@ -786,7 +809,8 @@ func show_state(sim, m: Dictionary) -> void:
 	var site: Dictionary = Data.TIERS[int(m["tier"])]
 	_boss_key = Items.slug(str(m["boss"]["name"])) if boss_on else ""
 	var place_key: String = county_key(m)
-	var scene_key: String = _boss_key if _boss_key != "" and _pair_in(BOSS_DIR, _boss_key) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else Items.slug(str(site["name"])))     # his den while he's out, when it's drawn; a County place's own (26 Oct)
+	var den: String = head_den(m) if _boss_key == "" else _boss_key     # the head's own fight: his den from the first man (BUILD55-U)
+	var scene_key: String = den if den != "" and _pair_in(BOSS_DIR, den) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else stage_key(m))     # his den while he's out, when it's drawn; a County place's own (26 Oct); the stage's own plate, else the site's (BUILD55-U)
 	if scene_key != _site_key:
 		_site(scene_key)
 	_zone_key = ZONE_KEYS[mini(int(m.get("signal", {}).get("zone", site["zone"])), ZONE_KEYS.size() - 1)]     # the signal's crew, the one the Radio names

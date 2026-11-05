@@ -14,7 +14,7 @@ static var _next_id := 1
 ## A new item of this slot, from the bases a zone tier can drop, at a rarity
 ## rolled from the table. `rng` so the tests can replay a run.
 static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity_bonus := 0.0, no_commons := false, fewer_commons := false,
-		site := "", prefer := "", own_share := 0.33, depth := 0, level := -1) -> Dictionary:
+		site := "", prefer := "", own_share := 0.33, depth := 0, level := -1, theme: Array = [], theme_share := 0.0) -> Dictionary:
 	# the site's own: a base found only there drops only there, and a third of
 	# the time the roll is one of them; a site that leans to a gun type leans
 	var pool: Array = []
@@ -35,8 +35,11 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		if home == site and site != "":
 			own.append(b)
 		pool.append(b)
+	var themed: Array = pool.filter(func(b): return str(b["name"]) in theme) if not theme.is_empty() else []     # (BUILD55-C) the site's list in reach
 	if not own.is_empty() and rng.randf() < own_share:
 		pool = own
+	elif not themed.is_empty() and rng.randf() < theme_share:
+		pool = themed                         # (BUILD55-C) a themed find: the list's bases for the slot, at the find's tiers
 	elif prefer != "" and rng.randf() < 0.5:
 		var typed: Array = []
 		for b in pool:

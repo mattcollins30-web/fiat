@@ -87,6 +87,8 @@ const FOOTPRINTS := {
 	"Pistol drum": [2, 1], "Rifle drum": [2, 1], "Shotgun drum": [2, 1], "SMG drum": [2, 1], "Nail drum": [2, 1], "Belt box": [2, 1], "Hundred-round drum": [2, 1],
 	# optics
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
+	# (BUILD55-C) the stages' new bases: their borrowed picture's footprint
+	"Garden fork": [2, 1], "Bone saw": [3, 1], "Scalpel": [1, 1], "Humane killer": [1, 1], "Mascot suit": [3, 4], "Bank bag": [2, 2],
 }
 
 ## The pack as a grid (27 Oct): no bag wider than the screen's thirteen columns, and its rows in pages of seven - a
@@ -539,6 +541,12 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Ministerial SMG", "type": "smg", "tier": 9, "damage": 52.0, "rof": 3.7, "value": 2010, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Garden fork", "type": "melee", "ammo": "none", "tier": 2, "damage": 40.0, "rof": 0.68, "value": 65, "conv_bleed_pct": 15,     # the T2 melee's 27 dmg/s: a heavy tine, slow
+			"attachments": ["grip", "business end"]},
+		{"name": "Bone saw", "type": "melee", "ammo": "none", "tier": 4, "damage": 42.0, "rof": 1.3, "value": 255, "conv_bleed_pct": 25,     # the T4 melee's 54-55: quick strokes, the most bleed
+			"attachments": ["grip"]},
 	],
 	# no sling mount on a secondary (the three-stage review, UI 6, the project manager's call): the sling only lifts the secondary from the primary
 	"Secondary": [
@@ -650,6 +658,12 @@ const BASES := {
 			"attachments": []},
 		{"name": "Spring gun", "type": "improvised", "tier": 4, "damage": 45.0, "rof": 0.67, "value": 150,
 			"attachments": ["optic"]},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Humane killer", "type": "pistol", "tier": 2, "damage": 30.0, "rof": 0.75, "value": 45,     # the T2 pistols' ~24: the Old revolver's slow heavy shot
+			"attachments": []},
+		{"name": "Scalpel", "type": "melee", "ammo": "none", "tier": 4, "damage": 14.0, "rof": 2.15, "value": 145, "conv_bleed_pct": 25,     # the T4 knives' 30: the quickest, the most bleed
+			"attachments": ["grip"]},
 	],
 	## Armour and helmets: armour, and weight as pace - a riot suit stops a lot and
 	## slows you; leathers stop less and don't.
@@ -686,6 +700,12 @@ const BASES := {
 		{"name": "Arctic helmet", "tier": 7, "armour": 58.0, "pace": -3, "res": {"frost": 35}, "value": 600, "role": "specialist"},
 		{"name": "Search-team helmet", "tier": 8, "armour": 58.0, "stats": {"search_pct": 20}, "value": 820, "role": "light"},
 		{"name": "Surveillance helmet", "tier": 9, "armour": 70.0, "stats": {"patrol_pct": 20}, "value": 1150, "role": "light"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Flat cap", "tier": 1, "armour": 3.0, "stats": {"search_pct": 6}, "value": 15, "role": "light"},     # the T1 light, the Caving helmet's search under it
+		{"name": "Strimmer visor", "tier": 2, "armour": 9.0, "pace": 3, "value": 35, "role": "light"},     # the T2 light on pace (the Cycle helmet's line)
+		{"name": "Delivery rider's helmet", "tier": 2, "armour": 15.0, "pace": -4, "value": 40, "role": "heavy"},     # the T2 heavies' 12-14: more armour, slower (15 keeps the Scrum cap at 80%)
+		{"name": "Go-kart helmet", "tier": 3, "armour": 18.0, "pace": 3, "value": 95, "role": "light"},     # the T3 light on pace beside the Comms headset
 	],
 	"Armour": [
 		{"name": "Work jacket", "tier": 1, "armour": 6.0, "value": 10, "start": true},     # the start: the worst there is, never found
@@ -726,6 +746,14 @@ const BASES := {
 		{"name": "Tailored body armour", "tier": 8, "armour": 190.0, "pace": 3, "value": 1650, "role": "light"},
 		{"name": "State protection vest", "tier": 9, "armour": 215.0, "pace": 3, "value": 2150, "role": "light"},
 		{"name": "Chainmail shark suit", "tier": 9, "armour": 210.0, "pace": -8, "res": {"bleed": 50}, "value": 2250, "role": "specialist"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Donkey jacket", "tier": 2, "armour": 30.0, "pace": 2, "value": 75, "role": "light"},     # the T2 lights: more than the leathers (25), less pace
+		{"name": "Staff fleece", "tier": 2, "armour": 21.0, "pace": 5, "value": 70, "role": "light"},     # the T2 lights: less armour, the most pace
+		{"name": "Waxed coat", "tier": 2, "armour": 30.0, "res": {"bleed": 20}, "value": 80, "role": "specialist"},     # beside the Slash-proof jacket: more armour, less resist
+		{"name": "Lined hoodie", "tier": 3, "armour": 52.0, "pace": 5, "value": 200, "role": "light"},     # the T3 light under the Light plates (62, +2%): less armour, more pace
+		{"name": "Sheepskin coat", "tier": 3, "armour": 78.0, "pace": -4, "value": 230, "role": "heavy"},     # the T3 heavies' 60-85: between the Ballistic vest and the Riot suit
+		{"name": "Mascot suit", "tier": 4, "armour": 100.0, "pace": -8, "value": 380, "role": "heavy"},     # the T4 heavy outside the City (the Stab plates its own): under them, as slow
 	],
 	## Gloves (29 Oct, §4): a role each - grip (quicker reloads), pace, rate of fire - its figure built in (`stats`, read beside the
 	## affixes); three a tier. Quicker reloads is the gloves' alone.
@@ -757,6 +785,9 @@ const BASES := {
 		{"name": "EOD gauntlets", "tier": 9, "stats": {"reload_pct": 80}, "value": 1490, "role": "grip"},
 		{"name": "Dress uniform gloves", "tier": 9, "pace": 10, "value": 1490, "role": "pace"},
 		{"name": "Special forces gloves", "tier": 9, "stats": {"attack_pct": 11}, "value": 1500, "role": "rate"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Rose gauntlets", "tier": 2, "stats": {"reload_pct": 22}, "res": {"bleed": 10}, "value": 55, "role": "grip"},     # the T2 grip under the Rigger gloves (28), thorn-proof
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
@@ -791,6 +822,11 @@ const BASES := {
 		{"name": "Shield-team rig", "tier": 8, "capacity": 11, "stats": {"guard_gang": 9}, "value": 1000, "role": "specialist"},
 		{"name": "Desert patrol rig", "tier": 9, "capacity": 11, "stats": {"med_speed_pct": 26}, "value": 1250, "role": "light"},
 		{"name": "Royal escort rig", "tier": 9, "capacity": 12, "stats": {"guard_gang": 10}, "value": 1300, "role": "specialist"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Joiner's apron", "tier": 2, "capacity": 5, "pace": 2, "value": 65, "role": "light"},     # the Webbing's line a tier down: the Fishing vest's 5, light
+		{"name": "Hi-vis tabard", "tier": 3, "capacity": 5, "stats": {"patrol_pct": 8}, "value": 120, "role": "light"},     # the Comms headset's later gangs on a rig, a cell under the Webbing
+		{"name": "Security van vest", "tier": 4, "capacity": 8, "value": 215, "role": "heavy"},     # the T4 heavy outside the City (the Medic's harness its own): a cell under, no slower
 	],
 	## a pack's "w" (Matt, 27 Oct, the pack as a real grid): its width in cells, never under 5 so a long gun lies flat;
 	## its capacity is its cells, row by row (the Plastic bag 9 to 15, 5x3: a rifle or a jacket; the School bag 12 to 18,
@@ -830,6 +866,10 @@ const BASES := {
 		{"name": "Strongroom bag", "tier": 8, "capacity": 80, "w": 10, "stats": {"loot_pct": 24}, "value": 1120, "role": "specialist"},
 		{"name": "Freefall pack", "tier": 9, "capacity": 100, "w": 10, "stats": {"search_pct": 22}, "value": 1420, "role": "light"},
 		{"name": "Wax-sealed bag", "tier": 9, "capacity": 100, "w": 10, "stats": {"loot_pct": 26}, "value": 1480, "role": "specialist"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Bank bag", "tier": 3, "capacity": 28, "w": 7, "stats": {"loot_pct": 15}, "value": 115, "role": "specialist"},     # the Dumpy bag's line (36, +14%): smaller, a point more
+		{"name": "Grab bag", "tier": 5, "capacity": 54, "w": 9, "pace": 2, "value": 380, "role": "light"},     # the T5 light beside the drag bag (56, search): pace instead
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.
@@ -863,6 +903,12 @@ const BASES := {
 		{"name": "Sword knot", "tier": 8, "find": 9, "cash": 0, "stats": {"bleed_pct": 22}, "value": 1960, "role": "specialist"},
 		{"name": "Uncut diamond", "tier": 9, "find": 40, "cash": 20, "value": 2650, "role": "light"},
 		{"name": "Apothecary's vial", "tier": 9, "find": 10, "cash": 0, "stats": {"poison_pct": 24}, "value": 2660, "role": "specialist"},
+		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
+		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Arcade token", "tier": 3, "find": 7, "cash": 14, "value": 170, "role": "heavy"},     # beside the Gold tooth (6/16)
+		{"name": "Branch key", "tier": 4, "find": 9, "cash": 18, "value": 300, "role": "heavy"},     # beside the Pocket watch (8/20)
+		{"name": "Hospital wristband", "tier": 4, "find": 14, "cash": 10, "value": 310, "role": "light"},     # beside the Dog tag (15/8)
+		{"name": "Cap badge", "tier": 5, "find": 17, "cash": 16, "value": 510, "role": "light"},     # beside the Casino chip (18/15)
 	],
 	## Papers: the before, on paper. Worth their value to the Fence and nothing
 	## else; the deeds are dropped by the Bank once; what's done with them is the player's.
@@ -1889,45 +1935,45 @@ const OUTSKIRTS_SITES := 3         # the sites before the Streets: a site's leve
 ## depth curve is bent for it - many and thin, or few and hard; gangs often
 ## or rarely; cash-heavy), and its drops: which slots its finds favour, a gun
 ## type it leans to, and the bases found there and nowhere else.
-const TIERS := [
+const TIERS := [     # (BUILD55-A) re-cut to stages.md §3: each row its 1/3 as fought (CAMPAIGN_HOSTILE folded in), a stage x1.22, a site's 1/3 to the next x1.446 HP / x1.439 fire; gangs smoothed; XP a kill x0.7
 	# the Outskirts (12 Oct): gentler than the Streets, no crew; finds at tier 1
-	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 240.0, "dps": 0.35, "drop": 0.35, "loot_tier": 1, "xp": 3, "cash": 3,     # E1-2 (17 Oct, Matt: the Outskirts pointless, the Parade at level 1-2): 120/0.2/1; E1 300/0.4 put the Gamekeeper at 0.8 h
+	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 216.0, "dps": 0.315, "drop": 0.35, "loot_tier": 1, "xp": 2, "cash": 3,     # (FIX55) stages.md §3: the 1/3 as fought, 4 gangs, a man 216.0 HP and 0.315 fire, XP a kill 2 (0.13.3: 4 gangs, 240.0 / 0.35 x CAMPAIGN_HOSTILE, XP 3)
 		"shape": {"pool": 14, "hp": 0.6, "dps": 0.7, "patrol": 0.9, "cash": 0.7},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Gloves": 1, "Backpack": 2}, "type": "melee", "only": ["A seed order", "An allotment waiting list"]}},
-	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 290.0, "dps": 0.42, "drop": 0.4, "loot_tier": 1, "xp": 3, "cash": 4,     # E1-2: 150/0.25/1
+	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 249.9, "dps": 0.363, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 4,     # (FIX55) stages.md §3: the 1/3 as fought, 5 gangs, a man 249.9 HP and 0.363 fire, XP a kill 2 (0.13.3: 5 gangs, 290.0 / 0.42 x CAMPAIGN_HOSTILE, XP 3)
 		"shape": {"pool": 13, "hp": 0.7, "dps": 0.8, "patrol": 1.0, "cash": 0.9, "med": 1.5},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "improvised", "only": ["A loyalty card"]}},
-	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 1, "xp": 6, "cash": 5,     # E1-2: 170/0.3/2
+	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 301.2, "dps": 0.435, "drop": 0.4, "loot_tier": 1, "xp": 4, "cash": 5,     # (FIX55) stages.md §3: the 1/3 as fought, 6 gangs, a man 301.2 HP and 0.435 fire, XP a kill 4 (0.13.3: 6 gangs, 330.0 / 0.5 x CAMPAIGN_HOSTILE, XP 6)
 		"shape": {"pool": 12, "hp": 0.8, "dps": 0.8, "patrol": 1.1, "cash": 1.0, "ammo": 1.5},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "shotgun", "only": ["A milk quota letter"]}},
-	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 2, "xp": 5, "cash": 6,     # E1-2: 200/0.4/2
+	{"name": "Ransacked Streets", "zone": 1, "pool": 7, "hp": 373.4, "dps": 0.536, "drop": 0.4, "loot_tier": 2, "xp": 4, "cash": 6,     # (FIX55) stages.md §3: the 1/3 as fought, 7 gangs, a man 373.4 HP and 0.536 fire, XP a kill 4 (0.13.3: 6 gangs, 330.0 / 0.5 x CAMPAIGN_HOSTILE, XP 5)
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
-	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 300.0,     # 280 to 300 (29 Oct: the Estate's T2 its gear now, the Streets' T2 brought to it - never easier than the Streets' first clear)
-		 "dps": 0.35, "drop": 0.4, "loot_tier": 2,     # 2 (29 Oct, one tier a zone); was 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
-		 "xp": 5, "cash": 9,     # E1: 3
+	{"name": "The Parade", "zone": 1, "pool": 9, "hp": 420.0,     # (FIX55) stages.md §3: the 1/3 as fought, 9 gangs, a man 420.0 HP and 0.6 fire, XP a kill 4 (0.13.3: 10 gangs, 300.0 / 0.35 x CAMPAIGN_HOSTILE, XP 5)
+		 "dps": 0.6, "drop": 0.4, "loot_tier": 2,     # 2 (29 Oct, one tier a zone); was 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
+		 "xp": 4, "cash": 9,
 		"shape": {"pool": 12, "hp": 0.9, "dps": 0.8, "patrol": 1.0, "cash": 1.2},
 		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
-	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 315.0, "dps": 0.61, "drop": 0.45, "loot_tier": 2, "xp": 10, "cash": 14,     # E1-2: 6
+	{"name": "The Retail Park", "zone": 1, "pool": 11, "hp": 497.0, "dps": 0.706, "drop": 0.45, "loot_tier": 2, "xp": 7, "cash": 14,     # (FIX55) stages.md §3: the 1/3 as fought, 11 gangs, a man 497.0 HP and 0.706 fire, XP a kill 7 (0.13.3: 14 gangs, 315.0 / 0.61 x CAMPAIGN_HOSTILE, XP 10)
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 1.0, "cash": 1.0, "att": 2.0},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Webbing sling", "Wire stock"]}},
-	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 520.0,     # ×0.75 to ×0.47 of 1100, its fire ×0.875 to ×0.47 (the fix round, 29 Oct: the Town's door on the Estate's T2 kit, the gate reads)
-		 "dps": 0.65, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
+	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 658.9,     # (FIX55) stages.md §3: the 1/3 as fought, 12 gangs, a man 658.9 HP and 0.931 fire, XP a kill 12 (0.13.3: 12 gangs, 520.0 / 0.65 x CAMPAIGN_HOSTILE, XP 17)
+		 "dps": 0.931, "drop": 0.45, "loot_tier": 3, "xp": 12, "cash": 22,
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Gloves": 1, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
-	{"name": "Shopping Centre", "zone": 2, "pool": 14, "hp": 715.0, "dps": 1.04, "drop": 0.5, "loot_tier": 3, "xp": 24, "cash": 24,     # (BUILD51-C) 16/1235/1.75 to 14/715/1.04 (Matt's playtest, 4 Nov: "I've hit a wall on the shopping center" - the site's whole HP x3.2 the Pleasure Park's, its fire x2.7): x1.6 in both
+	{"name": "Shopping Centre", "zone": 2, "pool": 14, "hp": 816.9, "dps": 1.147, "drop": 0.5, "loot_tier": 3, "xp": 17, "cash": 24,     # (FIX55) stages.md §3: the 1/3 as fought, 14 gangs, a man 816.9 HP and 1.147 fire, XP a kill 17 (0.13.3: 14 gangs, 715.0 / 1.04 x CAMPAIGN_HOSTILE, XP 24)
 		"shape": {"pool": 11, "hp": 1.1, "dps": 1.0, "patrol": 0.9, "cash": 1.1},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
-	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 880.0, "dps": 1.63, "drop": 0.5, "loot_tier": 3, "xp": 28, "cash": 30,     # (BUILD51-C) 1200/2.16 to 880/1.63: the Shopping Centre's wall moved down a step otherwise (x2.4 HP, x2.1 fire); x1.77 HP and x1.57 fire each side of it now
+	{"name": "The Bank", "zone": 2, "pool": 16, "hp": 1033.7, "dps": 1.444, "drop": 0.5, "loot_tier": 3, "xp": 20, "cash": 30,     # (FIX55) stages.md §3: the 1/3 as fought, 16 gangs, a man 1033.7 HP and 1.444 fire, XP a kill 20 (0.13.3: 20 gangs, 880.0 / 1.63 x CAMPAIGN_HOSTILE, XP 28)
 		"shape": {"pool": 7, "hp": 1.4, "dps": 1.3, "patrol": 1.5, "cash": 1.6, "paper": 3.0},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
-	{"name": "The Services", "zone": 3, "pool": 16, "hp": 1950.0, "dps": 2.56, "drop": 0.5, "loot_tier": 4, "xp": 37, "cash": 40,
+	{"name": "The Services", "zone": 3, "pool": 17, "hp": 1407.1, "dps": 1.955, "drop": 0.5, "loot_tier": 4, "xp": 26, "cash": 40,     # (FIX55) stages.md §3: the 1/3 as fought, 17 gangs, a man 1407.1 HP and 1.955 fire, XP a kill 26 (0.13.3: 16 gangs, 1950.0 / 2.56 x CAMPAIGN_HOSTILE, XP 37)
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Gloves": 1, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},     # the Cargo frame a ZONE_KIT too (31 Oct)
-	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 2376.0, "dps": 3.08, "drop": 0.5, "loot_tier": 4, "xp": 45, "cash": 44,
+	{"name": "The Hospital", "zone": 3, "pool": 19, "hp": 1820.9, "dps": 2.517, "drop": 0.5, "loot_tier": 4, "xp": 32, "cash": 44,     # (FIX55) stages.md §3: the 1/3 as fought, 19 gangs, a man 1820.9 HP and 2.517 fire, XP a kill 32 (0.13.3: 18 gangs, 2376.0 / 3.08 x CAMPAIGN_HOSTILE, XP 45)
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Gloves": 2, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},     # Medic's harness a ZONE_KIT too (31 Oct)
-	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 2604.0, "dps": 3.58, "drop": 0.55, "loot_tier": 4, "xp": 57, "cash": 50,
+	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 2274.4, "dps": 3.127, "drop": 0.55, "loot_tier": 4, "xp": 40, "cash": 50,     # (FIX55) stages.md §3: the 1/3 as fought, 22 gangs, a man 2274.4 HP and 3.127 fire, XP a kill 40 (0.13.3: 22 gangs, 2604.0 / 3.58 x CAMPAIGN_HOSTILE, XP 57)
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Gloves": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},     # Stab plates a ZONE_KIT too (31 Oct)
 ]
@@ -2087,7 +2133,15 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
-const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear"}
+const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
+	# (BUILD55-C) the stages' 24 new bases on a neighbour's picture until the art manifest (docs/design/stages.md §5-6)
+	"Garden fork": "Billhook", "Bone saw": "Machete", "Humane killer": "Derringer", "Scalpel": "Knife",
+	"Flat cap": "Beekeeper's hat", "Strimmer visor": "Welder's mask", "Delivery rider's helmet": "Riot helmet", "Go-kart helmet": "Cycle helmet",
+	"Donkey jacket": "Work jacket", "Staff fleece": "Padded jacket", "Waxed coat": "Slash-proof jacket", "Lined hoodie": "Padded jacket",
+	"Sheepskin coat": "Foundry coat", "Mascot suit": "Riot suit", "Rose gauntlets": "Gardening gloves",
+	"Joiner's apron": "Bum bag", "Hi-vis tabard": "Lifeguard's vest", "Security van vest": "Door staff vest",
+	"Bank bag": "Holdall", "Grab bag": "Daysack",
+	"Arcade token": "Lucky penny", "Branch key": "Pocket watch", "Hospital wristband": "Dog tag", "Cap badge": "St Christopher"}
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [
@@ -3684,8 +3738,8 @@ const PATROL_FIRST := 2.0          # the first gang after the clear waits twice 
                                    # gang, "Back, chased", two searches in); the gangs after come at the zone's gap
 const PATROL_ZONE := [1.0, 0.9, 0.8, 0.7]     # the gangs' gap by zone: the City's a third sooner
 const CLOCK_SEARCH_RATE := 0.5     # the clock runs through a search at half pace (it stood while the site was clear)
-const CAMPAIGN_HOSTILE := [0.9, 1.15, 1.3, 1.3]     # by zone: the Outskirts as Matt played them, the Estate +15%, the Town and the City +30% (the web's fillers, web.md §8)
-const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
+const CAMPAIGN_HOSTILE := [1.0, 1.0, 1.0, 1.0]     # (BUILD55-A) folded into TIERS (stages.md §3); was 0.9 / 1.15 / 1.3 / 1.3. By zone: the Outskirts as Matt played them, the Estate +15%, the Town and the City +30% (the web's fillers, web.md §8)
+const DEPTH_HOSTILE := 0.22       # (BUILD55-A) 0.25 to 0.22: a stage x1.22 (stages.md §2). hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
 const DEPTH_DROP := 0.03
 const ARMOUR_K := 150.0           # mitigation = armour / (armour + ARMOUR_K)
@@ -3841,7 +3895,7 @@ const SIGNAL_PAPERS := 3
 const KEV_RUNS := 2.0
 const KEV_FLOOR := 10
 const SIGNALS_HELD := 3
-const REACH_START := 10                      # a level: the campaign tops at 9 (the Barracks at depth 1); the first signal's at 10
+const REACH_START := 12                      # (BUILD55-A) 10 to 12: the campaign tops at 11 (the Barracks' 3/3); the first signal's at 12
 const STORY_UNDER := 2                       # Kev's beats come this many levels under your reach (D4: the head at full strength is
                                              # three levels' worth, and the odds fall from 100% to 0% in two; at the reach no build won one)
 ## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
@@ -3933,7 +3987,8 @@ const REBUILDS := [
 		"fx": [{"stat": "shelf", "base": 1, "step": 0.5, "say": "Fence's shelf +%d"}, {"stat": "fence_pct", "base": 5, "step": 2, "cap": 40, "say": "Fence −%d%%"}]},
 	{"key": "library", "name": "The library", "costs": {"glass": 15, "ledgers": 15}, "rank_key": "ledger_seal", "opens": "archive",
 		"fx": [{"stat": "paper_pct", "base": 25, "step": 5, "say": "+%d%% papers"}]},
-	{"key": "mint", "name": "The mint", "costs": {"ledgers": 30, "army_kit": 20}, "first": {"fuses": 5, "grid_key": 1}, "rank_key": "ledger_seal", "opens": "mint",
+	{"key": "mint", "name": "The print works",     # (BUILD55-A) "The mint" renamed (the order's "The Mint" keeps its name); the key stays
+		 "costs": {"ledgers": 30, "army_kit": 20}, "first": {"fuses": 5, "grid_key": 1}, "rank_key": "ledger_seal", "opens": "mint",
 		"fx": [{"stat": "mint_pay", "base": 1.0, "step": 0.25, "say": "Pays tins by worth on clears"}]},     # on clears only (31 Oct, the designer)
 ]
 const REBUILD_GROWTH := 1.35
@@ -4286,3 +4341,69 @@ const F51_POCKETS_FIND := 0.35        # "Go through the pockets": the tins, and 
 const F51_BOT_PRESS_AT := 0.9         # the bot's own "Press on" (BUILD51-A's 90%); the player's stays WEATHER_PRESS_AT
 const F51_SWAP_LIFT_PCT := 10         # the Hot swap's lift: a gun's share of time firing never past its no-swap share + this many points
 const F51_SWAP_LIFT := F51_SWAP_LIFT_PCT / 100.0
+
+
+# ------------------------------------------------------------------ BUILD55-A (5 Nov): stages per site (docs/design/stages.md)
+const STAGES := 3                       # a campaign site's stages: depth 1-3 on it, "1/3" to "3/3" on screen
+const SIGNAL_DEPTH := 4                 # the first depth past the stages: signals, set pieces, the endgame curve, the Map's points from here
+const STAGE_OPENS := 2                  # the stage that opens the next site (on a zone's last site, its head)
+
+
+# ------------------------------------------------------------------ BUILD55-C (5 Nov): themed finds (docs/design/stages.md §5)
+## A site's list (Matt, 5 Nov: "finding a feed bag and gardening gloves in the allotments is great for the feel - thats what
+## we need to replicate across the other zones"): THEME_SHARE of its plain gear finds roll from it, the list's bases for the
+## slot at the stage's tiers; the rest, and a slot with nothing on the list in reach, as before. Each list holds the site's
+## own; never another site's. By the site's name (a TIERS row's), kept here so the rows' numbers stay builder A's.
+const THEME_SHARE := 0.6
+const STAGE_TIER_UP := 0.25        # at 3/3, this share of the plain gear finds rolls a tier up (within loot_cap)
+const SITE_THEMES := {
+	"The Allotments": ["Billhook", "Lump hammer", "Knife", "Beekeeper's hat", "Spraying overalls", "Gardening gloves", "Gardening apron",
+		"Feed sack", "Box of matches", "Rabbit's foot", "Pipe wrench", "Screwdriver", "Tartan shopper",
+		"Garden fork", "Strimmer visor", "Donkey jacket", "Rose gauntlets", "Joiner's apron"],
+	"The Garden Centre": ["Nail gun", "Bolt gun", "Billhook", "Knife", "Hard hat", "Beekeeper's hat", "Spraying overalls", "Gardening gloves",
+		"Work gloves", "Gardening apron", "Feed sack", "Lucky penny", "Speargun", "Screwdriver", "Rigger gloves", "Lifeguard's vest",
+		"Tartan shopper", "Old spark plug",
+		"Strimmer visor", "Staff fleece"],
+	"Top Farm": ["Farmer's shotgun", "Four-ten", "Bolt gun", "Billhook", "Knife", "Padded jacket", "Spraying overalls", "Work gloves",
+		"Woolly gloves", "Body warmer", "Feed sack", "Rabbit's foot", "Goose gun", "Over-and-under", "Old .303", "Lever-action rifle",
+		"Rigger gloves", "Tweed waistcoat", "Horseshoe nail",
+		"Flat cap", "Waxed coat", "Humane killer"],
+	"Ransacked Streets": ["Pipe shotgun", "Carrier bags", "Nail gun", "Spiked bat", "Air pistol", "Cycle helmet", "Bum bag", "Body warmer",
+		"School bag", "Lucky penny", "Bike chain", "Pipe wrench", "Knuckle duster", "Bike lock", "Scrum cap", "Motorbike leathers",
+		"Cycling mitts", "Old spark plug", "Slam-fire shotgun", "Converted air rifle", "Zip gun", "Cosh", "Hatchet", "Welder's mask",
+		"Leather gloves", "Dumpy bag",
+		"Lined hoodie"],
+	"The Parade": ["Sawn-off", "Holdall", "Pocket pistol", "Derringer", "Stab vest", "Bum bag", "Lucky penny", "Old revolver",
+		"Service pistol", "Knuckle duster", "Slash-proof jacket", "Driving gloves", "St Christopher", "Meat cleaver", "Big revolver",
+		"Target pistol", "Cosh", "Leather gloves", "Door staff vest", "Daysack", "Barber's razor", "Gold tooth", "Wedding ring",
+		"Delivery rider's helmet", "Sheepskin coat"],
+	"The Retail Park": ["Garage-built rifle", "Nail gun", "Bolt gun", "Hard hat", "Work gloves", "Crossbow", "Speargun", "Machete",
+		"Pipe wrench", "Screwdriver", "Caving helmet", "Motorbike leathers", "Rigger gloves", "Hiking pack", "Old spark plug",
+		"Compound bow", "Converted air rifle", "Fire axe", "Hatchet", "Welder's mask", "Foundry coat", "Goalkeeper gloves",
+		"Shooting gloves", "Dumpy bag",
+		"Joiner's apron", "Hi-vis tabard"],
+	"The Pleasure Park": ["Fishing vest", "Framed pack", "Pump shotgun", "Catapult", "Lifeguard's vest", "Riot shotgun", "Semi-auto shotgun",
+		"Converted air rifle", "Target pistol", "Goalkeeper gloves", "Paintball gun", "Pocket watch",
+		"Go-kart helmet", "Mascot suit", "Arcade token"],
+	"Shopping Centre": ["Tactical pistol", "Ballistic vest", "Security guard's carbine", "Extendable baton", "Comms headset", "Visored helmet",
+		"Leather gloves", "Door staff vest", "Daysack", "Wedding ring", "Courier's SMG", "Polymer pistol", "Bump helmet",
+		"Low-profile vest", "Tactical gloves", "Messenger bag", "Pocket watch"],
+	"The Bank": ["Compact pistol", "Light plates", "Machine pistol", "Police carbine", "Visored helmet", "Comms headset", "Leather gloves",
+		"Wedding ring", "Courier's SMG", "Police revolver", "Bump helmet", "Low-profile vest", "Tactical gloves", "Pocket watch",
+		"Bank bag", "Security van vest", "Branch key"],
+	"The Services": ["Cargo frame", "Courier's SMG", "Workshop carbine", "Police revolver", "Bump helmet", "Cold-store parka",
+		"Low-profile vest", "Racing gloves", "Quick-release rig", "Messenger bag", "Pocket watch", "Armoured car gun", "Belt-fed SMG",
+		"Automatic pistol", "Folding PDW", "Thermal headset", "Hazmat suit", "Load carrier", "Mule pack", "Casino chip"],
+	"The Hospital": ["Medic's harness", "Fire axe", "Paramedic's rig", "Station helmet, visored", "Low-profile vest", "Tactical gloves",
+		"Messenger bag", "Respirator helmet", "Hazmat suit", "Cut-resistant gloves",
+		"Bone saw", "Scalpel", "Hospital wristband", "Grab bag"],
+	"The Barracks": ["Section gun", "Stab plates", "Scoped .308", "Self-loading rifle", "Army SMG", "Bayonet on a stick", "Army helmet",
+		"Army plates", "Webbing", "Chest rig", "Bergen", "Tactical gloves", "Dog tag", "Regimental rifle", "Sniper rifle", "Belt-fed SMG",
+		"Automatic pistol", "Thermal headset", "Full plate carrier", "Plate rig", "Sniper's drag bag", "Armourer's gloves",
+		"Cap badge"],
+}
+## The 24 new bases (BUILD55-C), for the art manifest: name -> the picture borrowed (ART_AS holds the same).
+const C55_NEW_BASES := ["Garden fork", "Bone saw", "Humane killer", "Scalpel", "Flat cap", "Strimmer visor", "Delivery rider's helmet",
+	"Go-kart helmet", "Donkey jacket", "Staff fleece", "Waxed coat", "Lined hoodie", "Sheepskin coat", "Mascot suit", "Rose gauntlets",
+	"Joiner's apron", "Hi-vis tabard", "Security van vest", "Bank bag", "Grab bag", "Arcade token", "Branch key", "Hospital wristband",
+	"Cap badge"]

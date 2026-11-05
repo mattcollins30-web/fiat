@@ -327,3 +327,22 @@ About a day.
 8. "Stage" in sentences and "1/3" on screen, or the figure alone everywhere.
 9. A themed share of 60%, with a quarter one tier up at 3/3.
 10. All 22 new bases in this release, on borrowed pictures until the art, or the Outskirts' first.
+
+## As built (0.14.0, 5 Nov)
+
+Matt's calls: A (the picker a segmented row), XP a kill x0.7, the Radio at 5-5.5 h; the other open calls took Claude's
+pick (the first each). Built by three builders (sim, UI, finds), reviewed, the language pass applied. Differences from
+the draft above:
+
+- **The heads' fights** form at their gate stage, the 2/3: his gang, floor(gangs/2), at the 2/3 man; him at his BOSSES
+  figures on the site's **1/3** man (the draft had both at the 3/3). The 3/3 version made the Gamekeeper 0% for every
+  class at levels 1-3 and the bot stuck on him at level 7; now the bot downs him at run 7, level 3. Him: the
+  Gamekeeper 1,506 HP / 0.87 fire, the Carpet Man 2,982 / 1.41, the Manager 12,404 / 5.05, the Quartermaster 13,646 /
+  7.82. His fight reads stage 0 (no 3/3 tier-up); his site's list applies.
+- **New bases: 24** (the draft counted 22). Renamed by the language pass: "Security van vest" (was Cash-in-transit),
+  "Bank bag" (Coin bag), "Joiner's apron" (Tool belt). Each borrows a neighbour's picture (ART_AS) till the art manifest.
+- **The sites' "cleared" lines** come at a site's first 2/3 (the stage that opens the next), not its 3/3.
+- **Kev's wagers** are offered on any stage's first clear and on a head's fight.
+- **"Run it ×N"** is shut on a stage not yet cleared.
+- Loose uniques rise with a stage's depth (a 3/3 rolls them at the cap): kept, as a 3/3's reward.
+- The town's sixth place is "The print works" (the order's "The Mint" keeps its name).

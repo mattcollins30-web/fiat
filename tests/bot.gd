@@ -157,7 +157,7 @@ func wall_at(sim) -> Array:
 	for i in range(Data.TIERS.size()):
 		if not sim.tier_open(i):
 			continue
-		if int(sim.best_depth[i]) <= 0:
+		if sim.stage_done(i) < Data.STAGE_OPENS:     # (BUILD55-A) the stage that opens the next
 			return [i, false]
 		var b: Dictionary = sim.boss_of(i)
 		if not b.is_empty() and not sim.bosses_beaten[int(b["zone"])]:
@@ -172,15 +172,8 @@ func wall_odds(sim, wall: Array) -> float:
 		return 0.0
 	if not bool(wall[1]):
 		return sim.survival(i)
-	var was: bool = sim.boss_armed.get(i, false)
-	if not was:
-		if not sim.can_arm_boss(i):
-			return 0.0
-		sim.arm_boss(i, true)
-	var o: float = sim.survival(i)
-	if not was:
-		sim.arm_boss(i, false)
-	return o
+	var z: int = int(Data.TIERS[i]["zone"])
+	return sim.head_fight_odds(z) if sim.notes >= sim.head_fight_cost(z) else 0.0     # (BUILD55-A) his own fight
 
 
 ## A pick noted (the step's): a first clear or a head at FIRST or better is a step forward; anything else, the wall's
@@ -193,8 +186,8 @@ func wall_note(sim, t: int) -> void:
 		_tgt_lv = sim.level()
 		_tgt_lv_at = sim.elapsed
 	var head: Dictionary = sim.boss_of(t) if t >= 0 else {}
-	var head_new: bool = t >= 0 and bool(sim.boss_armed.get(t, false)) and not head.is_empty() and not sim.bosses_beaten[int(head["zone"])]     # a beaten head farmed is no step (the review)
-	if sim.level() < _wall_grace_lv or (t >= 0 and (int(sim.best_depth[t]) <= 0 or head_new) and pick_odds(sim, t) >= FIRST):     # a fallback under FIRST is no step (the fix round: it stopped the clock for good)
+	var head_new: bool = t >= 0 and head_go >= 0 and not head.is_empty() and not sim.bosses_beaten[int(head["zone"])]     # a beaten head farmed is no step (the review); (BUILD55-A) his own fight
+	if sim.level() < _wall_grace_lv or (t >= 0 and (sim.stage_done(t) < int(sim.depth[t]) or head_new) and pick_odds(sim, t) >= FIRST):     # (BUILD55-A) a stage not yet cleared     # a fallback under FIRST is no step (the fix round: it stopped the clock for good)
 		_wall_from = -1.0
 	elif _wall_from < 0.0:
 		_wall_from = sim.elapsed
@@ -202,7 +195,7 @@ func wall_note(sim, t: int) -> void:
 
 ## The odds a pick went in at: the site as pick_tier left it (a head armed or not), read from its memo.
 func pick_odds(sim, t: int) -> float:
-	return sim.survival(t)
+	return sim.head_fight_odds(head_go) if head_go >= 0 else sim.survival(t)     # (BUILD55-A)
 
 
 ## The read's own target out and a level up in the last WALL_S: still growing, so not walled away (the fix round).
@@ -429,15 +422,18 @@ func step(sim) -> int:
 		if wall_on and not sim.campaign_done():
 			wall_note(sim, t)
 		t0 = _lap("step/pick_tier", t0)
-		if repeat_ok(sim) and sim.can_repeat(t) and sim.start_repeat(t):
+		if head_go >= 0:
+			sim.start_head_fight(head_go)     # (BUILD55-A) the head's own fight, after his site's 2/3
+		elif repeat_ok(sim) and sim.can_repeat(t) and sim.start_repeat(t):
 			_repeat_out(sim)                  # farmed unwatched: the repeat's runs, then the report put away
 			_lap("step/repeat", t0)
 			return t
-		if wagers_on and sim.wager_site_open(t):
-			var wk: String = sim.wager_site_key(t)
-			for k in range(sim.wager_offer(wk).size()):
-				sim.take_wager(wk, k)
-		sim.deploy(t)
+		else:
+			if wagers_on and sim.wager_site_open(t):
+				var wk: String = sim.wager_site_key(t)
+				for k in range(sim.wager_offer(wk).size()):
+					sim.take_wager(wk, k)
+			sim.deploy(t)
 	t0 = _lap("step/deploy", t0)
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
@@ -1037,8 +1033,8 @@ func _endgame(sim) -> void:
 			sim.set_insure(true)
 	# the bench: an affix on what's worn, while the notes stay above the next boss's price
 	var floor_notes: int = 0
-	for i in range(Data.TIERS.size()):
-		floor_notes = maxi(floor_notes, sim.boss_cost(i))
+	for z in range(Data.ZONES.size()):
+		floor_notes = maxi(floor_notes, sim.head_fight_cost(z))     # (BUILD55-A) the heads' own fights
 	if element != "":
 		_craft_toward(sim)
 	_bench_needs(sim)
@@ -1693,7 +1689,12 @@ static func picked_clean(sim, i: int) -> bool:
 	return not st.is_empty() and Array(st[0]).size() + int(st[1]) == 0
 
 
+## The zone whose head's own fight pick_tier chose, -1 for a site's stage (BUILD55-A): the step starts his fight.
+var head_go := -1
+
+
 func pick_tier(sim) -> int:
+	head_go = -1
 	# from the top down, stopping at the first tier that reads PUSH: each read
 	# is the lookout's dry runs, so the tiers under the one it will run go unread
 	var best := -1
@@ -1726,44 +1727,56 @@ func pick_tier(sim) -> int:
 	if best < 0:
 		var found := false
 		var clean_fallback := -1
+		var clean_stage := 1
+		var best_stage := 1
 		for i in range(Data.TIERS.size() - 1, -1, -1):
 			if not sim.tier_open(i):
 				continue
-			while sim.depth[i] > 1 and sim.survival(i) < PUSH:
-				sim.set_depth(i, sim.depth[i] - 1)
+			# (BUILD55-A, stages.md §8) the head after his site's 2/3, at FIRST; the next uncleared stage at FIRST; the
+			# highest cleared stage farmed at PUSH, stepping down a stage while it doesn't hold
 			var head: Dictionary = sim.boss_of(i)
-			if not head.is_empty() and sim.best_depth[i] > 0 and not sim.bosses_beaten[int(head["zone"])] and sim.can_arm_boss(i):
-				sim.arm_boss(i, true)               # a head not yet beaten, at a person's odds (the review: farmed sites never armed him)
-				if sim.survival(i) >= FIRST:
+			if not head.is_empty() and not sim.bosses_beaten[int(head["zone"])] and sim.head_fight_open(int(head["zone"])):
+				if sim.head_fight_odds(int(head["zone"])) >= FIRST:
 					best = i
+					head_go = int(head["zone"])
 					found = true                 # a head to fight is never swapped for a fallback (the review)
 					break
-				sim.arm_boss(i, false)
-			var odds: float = sim.survival(i)
-			if odds >= (FIRST if sim.best_depth[i] <= 0 else PUSH):     # a first clear at a person's odds; what's cleared, farmed at PUSH
-				if sim.best_depth[i] > 0 and picked_clean(sim, i):
-					if clean_fallback < 0:
-						clean_fallback = i      # farmed and picked clean (28 Oct): the next site down that holds, this one if none
-					continue
-				best = i
-				found = true
+			var done: int = sim.stage_done(i)
+			var tries: Array = []
+			if done < Data.STAGES and sim.stage_open(i, done + 1):
+				tries.append([done + 1, FIRST])
+			for s_i in range(done, 0, -1):
+				tries.append([s_i, PUSH])
+			for try_v in tries:
+				var st: int = int(try_v[0])
+				sim.set_stage_pick(i, st)
+				var odds: float = sim.survival(i)
+				if odds >= float(try_v[1]):
+					if st <= done and picked_clean(sim, i):
+						if clean_fallback < 0:
+							clean_fallback = i      # farmed and picked clean (28 Oct): the next site down that holds, this one if none
+							clean_stage = st
+						continue
+					best = i
+					found = true
+					break
+				if odds >= best_odds:
+					best_odds = odds              # ties to the lower tier: the old fallback was the lowest open tier
+					best = i
+					best_stage = st
+			if found:
 				break
-			if odds >= best_odds:
-				best_odds = odds                  # ties to the lower tier: the old fallback was the lowest open tier
-				best = i
 		if not found and clean_fallback >= 0:
 			best = clean_fallback
+			sim.set_stage_pick(best, clean_stage)
+		elif not found and best >= 0:
+			sim.set_stage_pick(best, best_stage)     # the best odds read, at the stage they were read at
 	best = maxi(best, 0)
-	# the zone's boss, once its last site is cleared and the crew's head still
-	# stands: armed when the odds hold with them in; past the campaign, when
-	# the notes are there
+	# past the campaign, a beaten head's own fight when the notes are there and it holds at PUSH (his uniques, his notes)
 	var b: Dictionary = sim.boss_of(best)
-	if not b.is_empty() and sim.best_depth[best] > 0 and (not sim.bosses_beaten[int(b["zone"])] or (sim.notes >= sim.boss_cost(best) * 2 and sim.notes - sim.boss_cost(best) >= _notes_kept(sim))):
-		sim.arm_boss(best, true)
-		if sim.survival(best) < (FIRST if not sim.bosses_beaten[int(b["zone"])] else PUSH):     # a head not yet beaten at a person's odds (13 Oct)
-			sim.arm_boss(best, false)
-	elif not b.is_empty():
-		sim.arm_boss(best, false)
+	if head_go < 0 and sim.campaign_done() and not b.is_empty() and sim.head_fight_open(int(b["zone"])) and sim.notes >= sim.head_fight_cost(int(b["zone"])) * 2 \
+			and sim.notes - sim.head_fight_cost(int(b["zone"])) >= _notes_kept(sim) and sim.head_fight_odds(int(b["zone"])) >= PUSH:
+		head_go = int(b["zone"])
 	# the lorry: armed on the services at its depth when the notes are there and the odds hold with the convoy in
 	# (the price and the convoy grow with the depth: when the armed read fails, the services step back toward
 	# convoy_depth() and read again, so the bot does not dig past the lorry it cannot take)
@@ -1787,7 +1800,7 @@ func pick_tier(sim) -> int:
 			if sim.can_insure(best):
 				sim.set_insure(true)         # the lorry, insured
 			return best
-	if sim.survival(best) < (FIRST if sim.best_depth[best] <= 0 or sim.boss_armed.get(best, false) else PUSH):
+	if pick_odds(sim, best) < (FIRST if sim.stage_done(best) < int(sim.depth[best]) or head_go >= 0 else PUSH):     # (BUILD55-A)
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best
 
@@ -1879,7 +1892,8 @@ func _disarm_stale(sim) -> void:
 
 
 ## Climb: gone (18 Oct, Matt: a player can't set a site's depth since signals took the depths on 15 Oct, so the bot
-## doesn't either; set_depth held the campaign at depth 1 already, this makes it plain).
+## doesn't either). (BUILD55-A) The stages are picked in pick_tier (set_stage_pick): the next uncleared at FIRST, the
+## highest cleared farmed at PUSH; signals keep the depths past them.
 func _climb(_sim) -> void:
 	return
 

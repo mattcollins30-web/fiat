@@ -2153,8 +2153,8 @@ func next_words(short := false) -> String:
 				return w["level"] % zone_gate(z)
 			break
 		for i in Data.ZONES[z]["tiers"]:
-			if best_depth[i] <= 0:
-				return w["site"] % Data.TIERS[i]["name"]
+			if stage_done(int(i)) < Data.STAGE_OPENS:     # (BUILD55-A) the 2/3 that opens the next
+				return w["site"] % (Words.mid(str(Data.TIERS[i]["name"])) if not short else Data.TIERS[i]["name"])     # (FIX55, the language pass) mid-sentence: "at the Pleasure Park"
 		for b in Data.BOSSES:
 			if int(b["zone"]) == z and not bosses_beaten[z]:
 				return (w["head"] % [b["name"], Words.mid(Data.TIERS[int(b["tier"])]["name"])]) if not short else (w["head"] % Words.mid(b["name"]))
@@ -2323,7 +2323,7 @@ func gamble_level() -> int:
 func unique_odds(t: Dictionary) -> float:
 	var z: int = int(Data.TIERS[int(t["tier"])]["zone"])
 	var base: float = Data.UNIQUE_CAMPAIGN if z >= Data.UNIQUE_FROM_ZONE else 0.0
-	return minf(Data.UNIQUE_CAP, base + Data.UNIQUE_DROP * maxi(0, int(t["depth"]) - 1))
+	return minf(Data.UNIQUE_CAP, base + Data.UNIQUE_DROP * maxi(0, int(t["depth"]) - 1))     # (FIX55, review 6) intended: a stage's depth counts too - the Town's and the City's 3/3 roll loose uniques at the cap, a 3/3's reward
 
 
 ## A find's mythic (16 Oct, docs/design/mythics.md): one in MYTHIC_ODDS_IN on its own dice, wherever it is; one held
@@ -5722,7 +5722,7 @@ func set_insure(on: bool) -> void:
 ## A site carries words once its ladder is open: the campaign done and depth 2 or deeper. Campaign sites are
 ## plain (Matt: "you don't juice campaign maps in PoE").
 func juiceable(i: int) -> bool:
-	return campaign_done() and tier_open(i) and int(depth[i]) >= int(Data.WORD_TIER_DEPTH[0])
+	return campaign_done() and tier_open(i) and int(depth[i]) >= maxi(Data.SIGNAL_DEPTH, int(Data.WORD_TIER_DEPTH[0]))     # (BUILD55-A) never a stage
 
 
 ## The top tier a word reaches at a depth: 0 above the first, then I, II, III.
@@ -5775,7 +5775,7 @@ func knows_word(name: String) -> bool:
 
 func zone_heard(z: int) -> bool:
 	for i in Data.ZONES[z]["tiers"]:
-		if int(best_depth[i]) >= int(Data.WORD_TIER_DEPTH[0]):     # depth 2 anywhere is a signal won there: the same on every site
+		if int(best_depth[i]) >= maxi(Data.SIGNAL_DEPTH, int(Data.WORD_TIER_DEPTH[0])):     # (BUILD55-A) a signal's depth, not a stage's; depth 2 anywhere is a signal won there: the same on every site
 			return true
 	return false
 
@@ -6258,7 +6258,7 @@ func deepest_dug() -> int:
 func dug_depth(i: int) -> int:
 	if int(best_depth[i]) <= 0:
 		return 0
-	return tier_depth(lv_at(i, int(best_depth[i]))) if int(best_depth[i]) >= 2 else 1
+	return tier_depth(lv_at(i, int(best_depth[i]))) if int(best_depth[i]) >= Data.SIGNAL_DEPTH else 1     # (BUILD55-A) a stage digs nothing
 
 
 ## The deepest site's level (its tier and its depth): the Gunsmith's and the Arms dealer's.
@@ -7018,7 +7018,7 @@ func zone_level_shut(z: int) -> bool:
 
 func zone_complete(z: int) -> bool:
 	for i in Data.ZONES[z]["tiers"]:
-		if best_depth[i] <= 0:
+		if stage_done(int(i)) < Data.STAGE_OPENS:     # (BUILD55-A) every site's 2/3
 			return false
 	return bosses_beaten[z] or zone_boss(z).is_empty()     # the Outskirts has no crew (12 Oct): its sites cleared is it done
 
@@ -7051,6 +7051,8 @@ func boss_of(i: int) -> Dictionary:
 func boss_cost(i: int) -> int:
 	if _exp_fetch >= 0:
 		return 0                              # a hold-up fetched (29 Oct): the holder's the run's, free
+	if _a55_head == i:
+		return head_fight_cost(int(Data.TIERS[i]["zone"]))     # (BUILD55-A) the head's own fight: his notes, not by depth
 	if is_convoy(i):
 		var total := 0
 		for b in Data.BOSSES:
@@ -7109,7 +7111,7 @@ func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool, convoy := false) ->
 
 
 func can_arm_boss(i: int) -> bool:
-	return (not boss_of(i).is_empty() or is_convoy(i)) and not runner_busy() and tier_open(i) and notes >= boss_cost(i)     # away (29 Oct): no head on a repeat
+	return (is_convoy(i) or (not boss_of(i).is_empty() and int(depth[i]) >= Data.SIGNAL_DEPTH)) and not runner_busy() and tier_open(i) and notes >= boss_cost(i)     # away (29 Oct): no head on a repeat; (BUILD55-A) a head is his own fight now (start_head_fight), never armed on a stage's run
 
 
 ## Armed for the next run, and only that run: the deploy takes it off, so the notes are paid once a choice (7 Oct).
@@ -7133,7 +7135,7 @@ func tier_open(i: int) -> bool:
 		return false
 	var zt: Array = Data.ZONES[t["zone"]]["tiers"]
 	var k := zt.find(i)
-	return (k == 0 or best_depth[zt[k - 1]] > 0) and not level_gated(i)
+	return (k == 0 or stage_done(int(zt[k - 1])) >= Data.STAGE_OPENS) and not level_gated(i)     # (BUILD55-A) the one before's 2/3
 
 
 ## The level a site first opens at (19 Oct, Matt: "the level a player enters a new level matches the level of the gear
@@ -7222,17 +7224,17 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 		"loot_tier": int(base["loot_tier"]), "rarity": Data.DEPTH_RARITY * (d - 1),
 		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": [], "word_tiers": {}, "armour": 1.0,
 	}
-	if d == 1:
+	if d < Data.SIGNAL_DEPTH and not on_sig:     # (BUILD55-A) the stages, 1/3 to 3/3: the campaign's fight
 		var hostile: float = float(Data.CAMPAIGN_HOSTILE[int(base["zone"])])     # by zone (the pass, 20 Oct); D20: the campaign's crews a touch softer
 		# the campaign gets harder with the runner's level (21 Oct, Matt): a site past CAMPAIGN_LEVEL_FREE under the
 		# runner compounds its heads' HP and fire a level; and its pool is CAMPAIGN_POOL bigger, the fight the run's length
-		var harder: float = campaign_level_mult(i)
+		var harder: float = campaign_level_mult(i, d)
 		hostile *= harder
 		e["clock_mult"] = harder               # the clock keeps pace: the level's tax is on the fight, not the time
 		e["hp"] *= hostile
 		e["dps"] *= hostile
 		e["pool"] = int(round(float(e["pool"]) * Data.CAMPAIGN_POOL))
-	if d >= 2 and (campaign_done() or ahead):
+	if d >= Data.SIGNAL_DEPTH and (campaign_done() or ahead):     # (BUILD55-A) the curve from depth 4: the stages keep their own figures after the campaign
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
 		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
 		# bases a find draws from and its item level follow the level too (the sites were the same fight before)
@@ -7277,15 +7279,15 @@ func guide_rows(i: int, from_lv: int, count := 12) -> Array:
 	var rows: Array = []
 	var before: int = tier_depth(from_lv - 1) if from_lv > lv_at(i, 1) else 0     # what the levels under the first row already opened
 	var capped: bool = before > 0 and unique_odds({"tier": i, "depth": before}) >= Data.UNIQUE_CAP - 1e-6
-	var sets: bool = before >= 2
+	var sets: bool = before >= Data.SIGNAL_DEPTH     # (BUILD55-A)
 	for lv in range(from_lv, from_lv + count):
 		var td: int = tier_depth(lv)
 		var f: Dictionary = depth_figures(i, td, lv, true, true)
 		var uq: float = unique_odds({"tier": i, "depth": td})
 		var marks: Array = []
-		if td >= 2 and not sets:
+		if td >= Data.SIGNAL_DEPTH and not sets:     # (BUILD55-A) set pieces from depth 4
 			marks.append(["Set pieces drop", "set"])
-		sets = sets or td >= 2
+		sets = sets or td >= Data.SIGNAL_DEPTH
 		if not own.is_empty() and td == site_unique_depth(i):
 			marks.append(["%s drops" % own["name"], "unique"])
 		if lv in Data.DEEP_TIER_LEVELS:
@@ -7353,6 +7355,9 @@ func effective(i: int) -> Dictionary:
 	if sky != "" and yard_has("forecast"):
 		e["cash"] *= Data.FX["yard/forecast"]                     # the Radio's forecast: a run under the weather pays
 	# no wear (27 Oct, Matt: "kill drops should remain the same really"): a cleared site's picked over in its crates alone
+	if _a55_head == i:
+		e["pool"] = maxi(1, int(floor(float(e["pool"]) / 2.0)))     # (BUILD55-A) the head's own fight: half the site's gangs at his gate's man (FIX55b: the 2/3's), then him
+		e["head_fight"] = true
 	e["plain_pool"] = int(e["pool"])         # the clock reads the site as plain (9 Oct): the words bite through it; the heads are formed from the same
 	e["plain_hp"] = float(e["hp"])
 	var act: Array = active_words(i)
@@ -7386,8 +7391,15 @@ func effective(i: int) -> Dictionary:
 		e["boss"] = queue[0]
 		e["boss_queue"] = queue.slice(1)
 		e["convoy"] = true
-	elif not b.is_empty() and boss_armed.get(i, false):
+	elif not b.is_empty() and boss_armed.get(i, false) and (_a55_head == i or _exp_fetch >= 0 or int(depth[i]) >= Data.SIGNAL_DEPTH):     # (BUILD55-A) his own fight, a hold-up fetched, the old ladder's depths; never after a stage's pool
 		e["boss"] = boss_form(b, e, is_pinnacle(i))
+		if _a55_head == i:
+			# (FIX55b, Matt: "the wall is still there early game") him on his site's 1/3 man, his gang on the 2/3's: the
+			# fight's own figures (night, the tax) carried, the stage's step taken off
+			var d1: Dictionary = depth_figures(i, 1, lv_at(i, 1))
+			var dg: Dictionary = depth_figures(i, int(e["depth"]), lv_at(i, int(e["depth"])))
+			e["boss"]["hp"] = float(e["boss"]["hp"]) * float(d1["hp"]) / maxf(0.001, float(dg["hp"]))
+			e["boss"]["dps"] = float(e["boss"]["dps"]) * float(d1["dps"]) / maxf(0.001, float(dg["dps"]))
 	elif walks and not zone_boss(int(base["zone"])).is_empty():     # the zone's head walks (the Gamekeeper on the Outskirts since 13 Oct)
 		e["boss"] = boss_form(zone_boss(int(base["zone"])), e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
 	for name in e["intel"]:
@@ -7483,8 +7495,9 @@ func modifier(name: String) -> Dictionary:
 ## Depth up or down. A site's words stay as they are; their tiers work at what the new depth allows.
 func set_depth(i: int, d: int) -> void:
 	if not runner_busy():                     # away (29 Oct): the site's level stands while the repeat's on it
-		var top: int = best_depth[i] + 1 if campaign_done() else 1     # the ladder is the endgame's
+		var top: int = mini(Data.STAGES, stage_done(i) + 1)     # (BUILD55-A) the stages: up to the one past the furthest cleared, at any time
 		depth[i] = clampi(d, 1, top)
+		a55_pick[i] = depth[i]
 		_stats_dirty()                        # the front's level: the armour's cut at camp (review 43, 1)
 
 
@@ -8656,7 +8669,7 @@ func signal_level(sg: Dictionary) -> int:
 
 ## The depth that puts site `i` at level `lv`; never under 2 (depth 1 is the campaign's).
 static func depth_for_level(i: int, lv: int) -> int:
-	return maxi(2, lv - (i - Data.OUTSKIRTS_SITES))
+	return maxi(Data.SIGNAL_DEPTH, lv - (i - Data.OUTSKIRTS_SITES))     # (BUILD55-A) past the stages: signals and stages never share a depth
 
 
 ## A level's codes' tier, read as the hardest site's depth at it (the Barracks: the tiers' depths as they always were
@@ -8947,6 +8960,7 @@ func deploy_signal(k: int) -> bool:
 ## A signal's run over: beaten (cleared, its head down if it had one) at your reach or past it raises the reach and pays
 ## a point on the Dial; the site goes back to its campaign self.
 func _signal_done(m: Dictionary, died := false) -> void:
+	_a55_run_end(m)                           # (BUILD55-A) a head's fight: his site back at its stage; the picks follow
 	if not m.has("signal") or _sig.is_empty():
 		return
 	var d: int = signal_level(_sig)
@@ -9043,7 +9057,7 @@ func can_deploy() -> bool:
 
 
 func can_deploy_to(i: int) -> bool:
-	return can_deploy() and tier_open(i)
+	return can_deploy() and tier_open(i) and (int(depth[i]) > Data.STAGES or _a55_head == i or (not _sig.is_empty() and int(_sig["site"]) == i) or stage_open(i, int(depth[i])))     # (BUILD55-A) the stage's own gates
 
 
 ## Seconds a tier's fight should take at the operator's damage, for the card.
@@ -9106,7 +9120,7 @@ func _odds_key(i: int) -> Array:
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
 	var common: Array = _odds_key_common()
-	return common + [depth[i], str(words[i]), fight_weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
+	return common + [depth[i], str(words[i]), fight_weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)), int(clear_level.get(stage_key(i, int(depth[i])), 0)), _a55_head == i,     # (BUILD55-A) the stage's tax floor, the head's fight; the first clear sets the tax's floor (21 Oct)
 		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0,     # a signal laid on the site reads apart from it (15 Oct)
 		str(rounds_plans.get(str(i), rounds_plans.get("camp", ""))),     # the rounds the site's plan packs (BUILD46-R)
 		str(wagers_read(i).map(func(w): return str(w["cond"])))]     # Kev's wagers taken on its run (BUILD48 A, item 17)
@@ -9457,6 +9471,7 @@ func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
 	}
 	_combo_warm(m)                            # the odds read the warm start too
+	_a55_mission_marks(m, i)                  # (BUILD55-A) the stage, for the finds
 	if t.has("boss"):
 		m["boss"] = _boss_entry(t["boss"])
 		m["boss_queue"] = []
@@ -9591,7 +9606,7 @@ func _dry_resume(job: Dictionary) -> void:
 func deploy(i: int) -> void:
 	if not can_deploy_to(i):
 		return
-	var wager_gate: bool = (not _sig.is_empty() and int(_sig["site"]) == i) or int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false))     # Kev's wagers go only on a run whose gate is open as it sets off
+	var wager_gate: bool = (not _sig.is_empty() and int(_sig["site"]) == i) or f55_first_clear(i) or _a55_head == i or bool(boss_armed.get(i, false))     # Kev's wagers go only on a run whose gate is open as it sets off; (FIX55) a stage's first clear, the head's fight
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
 	var odds_seen: float = _gate_odds(i)     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
@@ -9674,7 +9689,9 @@ func deploy(i: int) -> void:
 		if line != "":
 			log_event(line)
 	if not _repeat_going and not _dry_on and wager_gate:
-		_wagers_on(mission, ("sig:%d" % int(_sig["id"])) if sig_head else wager_site_key(i))     # Kev's wagers taken there (29 Oct): never a repeat's
+		_wagers_on(mission, ("sig:%d" % int(_sig["id"])) if sig_head else (wager_head_key(int(Data.TIERS[i]["zone"])) if _a55_head == i else wager_site_key(i)))     # Kev's wagers taken there (29 Oct): never a repeat's; (FIX55) the head's fight its own
+	_a55_mission_marks(mission, i)            # (BUILD55-A) mission["stage"] and ["depth"]
+	mark_site_seen(i)
 
 
 
@@ -9851,10 +9868,11 @@ func clock_budget(t: Dictionary) -> float:
 ## The campaign's fight at a site, harder with the runner's level (21 Oct, Matt: "yes to campaign getting harder"): x1
 ## until the site's first clear and for CAMPAIGN_LEVEL_FREE levels after it, then compounding CAMPAIGN_LEVEL_GROW a
 ## level gained since, CAMPAIGN_LEVEL_MAX at most. The frontier never hardens: a site you haven't cleared is as it is.
-func campaign_level_mult(i: int) -> float:
-	if not clear_level.has(i):
+func campaign_level_mult(i: int, s := 1) -> float:
+	var k: int = stage_key(i, s)     # (BUILD55-A) keyed per stage: never on a stage not cleared
+	if not clear_level.has(k):
 		return 1.0
-	return minf(Data.CAMPAIGN_LEVEL_MAX, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, maxi(0, level() - int(clear_level[i]) - Data.CAMPAIGN_LEVEL_FREE)))
+	return minf(Data.CAMPAIGN_LEVEL_MAX, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, maxi(0, level() - int(clear_level[k]) - Data.CAMPAIGN_LEVEL_FREE)))
 
 
 ## A crew's head brings his own time when he comes out: a head's seconds for every plain head's HP he carries.
@@ -10141,7 +10159,7 @@ func repeat_block(i: int) -> String:
 		return Words.REPEAT["shut_out"]
 	if candidates.size() == 2:
 		return Words.REPEAT["shut_trait"]
-	if int(best_depth[i]) <= 0:
+	if int(best_depth[i]) <= 0 or f55_first_clear(i):     # (FIX55, review 2) the picked stage not yet cleared: its first clear is watched
 		return Words.REPEAT["shut_new"]
 	if bool(boss_armed.get(i, false)):
 		return Words.REPEAT["shut_convoy"] if is_convoy(i) else Words.REPEAT["shut_head"]
@@ -10423,6 +10441,7 @@ func _repeat_end(why: String, reason := "") -> void:
 	var r: Dictionary = repeat
 	_rest_off_wounds()
 	repeat = {}
+	_a55_sync(int(r["site"]))                 # (FIX55, review 5) a stage first cleared while away: the site's depth follows its pick now
 	repeat_report = {"site": int(r["site"]), "of": int(r["of"]), "runs": r["runs"], "kept": r["kept"], "time": elapsed - float(r["t0"]), "ended": why, "reason": reason,
 		"lv0": int(r["lv0"]), "lv1": level(), "share": float(r["share"])}
 	var tot := repeat_totals(repeat_report)
@@ -10496,7 +10515,7 @@ func wager_signal_key(k: int) -> String:
 
 ## Whether Kev has an offer on the site's next run: the Radio open, the runner home, a first clear or a head armed.
 func wager_site_open(i: int) -> bool:
-	return room_open("radio") and not runner_busy() and i >= 0 and i < Data.TIERS.size() and tier_open(i) and (int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false)))
+	return room_open("radio") and not runner_busy() and i >= 0 and i < Data.TIERS.size() and tier_open(i) and (f55_first_clear(i) or bool(boss_armed.get(i, false)))     # (FIX55) any stage's first clear
 
 
 func wager_signal_open(k: int) -> bool:
@@ -10622,8 +10641,10 @@ func wagers_read(i: int) -> Array:
 		if _sig.has("order") or str(_sig.get("county_head", "")) != "":
 			return []
 		key = "sig:%d" % int(_sig["id"])
-	elif int(best_depth[i]) <= 0 or bool(boss_armed.get(i, false)):
-		key = wager_site_key(i)
+	elif _a55_head == i:
+		key = wager_head_key(int(Data.TIERS[i]["zone"]))     # (FIX55) the head's fight: his own offer
+	elif f55_first_clear(i) or bool(boss_armed.get(i, false)):
+		key = wager_site_key(i)                 # (FIX55) any stage's first clear
 	else:
 		return []
 	var taken: Array = wagers.get(key, {}).get("taken", [])
@@ -13252,7 +13273,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	_gain_xp(t["xp"] * 10.0)
 	_earn_points(before)
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
-	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))
+	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * (1 if bool(m.get("head_fight", false)) else int(t["depth"])) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))     # (BUILD55-A) the head's fight at 3/3 pays as at 1/3
 	if str(b.get("order", "")) != "":
 		_order_down(m, t, b)                  # the order's true pinnacle: their own drops, none of a crew's
 		return
@@ -13262,7 +13283,8 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.MAP["head_start"] % b["name"])
 	var first: bool = not bosses_beaten[int(b["zone"])]
 	if first:
-		_web_reward("head:" + str(b["name"]), Data.REWARD_HEAD, str(b["name"]))     # a head's first fall: a point for every runner
+		_web_reward("head:" + str(b["name"]), Data.REWARD_HEAD, str(b["name"]))
+		_a55_head_first(int(b["zone"]))       # (BUILD55-A) the next zone's first site "New"; the Carpet Man's road     # a head's first fall: a point for every runner
 	chron("boss", {"name": str(b["name"]), "zone": int(b["zone"]), "tier": int(m["tier"]), "depth": int(t.get("depth", 1)), "first": first,
 		"pinnacle": bool(b.get("pinnacle", false)), "convoy": bool(m.get("convoy", false))})
 	var opened_before: Array = Data.CLASSES.map(func(c): return class_open(str(c["name"])))
@@ -13504,6 +13526,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var myth: Dictionary = mythic_roll()
 	var find_lv: int = int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))
 	var find_tier: int = int(t["loot_tier"])
+	find_tier = c55_tier_up(m, t, slot, find_tier, find_lv)     # (BUILD55-C) a 3/3's quarter a tier up, within loot_cap
 	if slot in Data.SLOTS and rng.randf() < Data.FIND_AT_MINE and wearable_level() < find_lv:
 		# a fifth of the plain gear at the level the runner wears (16 Oct), on a base the campaign gives - as a gamble
 		# rolls: a deep signal's tier-7+ bases stay the deep runner's (the review); the tier his level's own (the fix round,
@@ -13524,14 +13547,15 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	elif not loose.is_empty() and rng.randf() < loose_unique_chance(t, float(crate.get("unique", 1.0)), fat):     # a Safe's double, a unique focus and a fat drop, inside the cap (the review; fix 50)
 		it = Items.roll_unique(pick_unique(loose, int(t["loot_tier"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the band's weight picks
 		said = "Found: %s" % it["unique"]
-	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < minf(Data.SET_CAP, Data.SET_DROP * (t["depth"] - 1)):
+	elif t["depth"] >= Data.SIGNAL_DEPTH and not pieces.is_empty() and rng.randf() < minf(Data.SET_CAP, Data.SET_DROP * (t["depth"] - 1)):     # (BUILD55-A) from depth 4, never a stage
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
 		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		said = "Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()]
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv,
+			c55_theme(m, t, slot), Data.THEME_SHARE)     # (BUILD55-C) the site's list
 		if slot == Data.AMMO:
 			# rounds only for a gun you have (17 Oct): half for the one in your hands, as they always were, the rest any you
 			# own - a stash of guns kept to sell doesn't thin the hands' share (the review) - at the find's tier or under
@@ -13798,14 +13822,16 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
 	if m.has("signal") and m["signal"].has("order"):
 		cd = 0                                # the order's run (18 Oct): no depth, no best signal, no Yard column; the reach is the signals'
+	if bool(m.get("head_fight", false)):
+		cd = 0                                # (BUILD55-A) the head's own fight clears no stage
 	if first_clear or cd > best_depth[m["tier"]]:
 		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(cd), "first": first_clear,
 			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
 	if cd > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = cd
-		if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
+		if cd >= Data.SIGNAL_DEPTH and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # (BUILD55-A) no Map point from a stage     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
 			atlas_points += 1
-	if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (cd > int(best_dig.get("depth", 0)) or (cd == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
+	if cd >= Data.SIGNAL_DEPTH and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (cd > int(best_dig.get("depth", 0)) or (cd == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
 		best_dig = {"site": t["name"], "tier": m["tier"], "depth": cd}     # the ladder's, not the campaign's
 	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)
 		depot_cleared = true
@@ -13815,9 +13841,10 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 			clear_level[int(m["tier"])] = level()     # the level the site was first cleared at: its fight hardens from here (21 Oct)
 			if has_node("word_of_mouth"):
 				m["notes"] = int(m.get("notes", 0)) + 1     # Word of mouth: a note on each site's first clear
-		log_event(Words.site_cleared(t["name"]))
+		log_event(Words.LOG["cleared"] % t["name"])     # (BUILD55-A) the site's own "cleared" line waits for its first 2/3 (_a55_stage_clear)
 	else:
 		log_event(Words.LOG["cleared"] % t["name"])
+	_a55_stage_clear(m, t)
 	if int(m["tier"]) == Data.FIRST_GUN_SITE and not seen.has("first_gun_home") and owned_ammo_types(m).is_empty():
 		_first_gun(m)                         # until one's home (the review: a first clear's gun lost to a time-out would never come again)
 	# the deeds come off the Manager now, not the Bank's first clear (13 Oct, Matt): see the boss's things
@@ -18269,7 +18296,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "supplies_in": supplies_in, "wounds": wounds.duplicate(true),
-		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "site_runs": site_runs.duplicate(true), "left_behind": left_behind.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
+		"past": past, "past_folded": past_folded.duplicate(), "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "site_crates": site_crates.duplicate(true), "site_runs": site_runs.duplicate(true), "left_behind": left_behind.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "deeds_back": deeds_back, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "stages": a55_save(), "workbench_day": workbench_day, "patterns": patterns.duplicate(true), "loot_rules": loot_rules.duplicate(true), "loot_rules_on": loot_rules_on, "sets_seen": sets_seen.duplicate(), "loadouts": loadouts.duplicate(true), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": _notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -18444,6 +18471,7 @@ func load_dict(d: Dictionary) -> void:
 	clear_level = {}
 	for k in d.get("clear_level", {}):
 		clear_level[int(k)] = int(d["clear_level"][k])     # JSON's keys come back as strings
+	a55_load(d)                               # (BUILD55-A) the stages
 	workbench_day = int(d.get("workbench_day", -1))
 	loot_rules_on = bool(d.get("loot_rules_on", true))
 	sets_seen = Array(d.get("sets_seen", [])).map(func(x): return str(x))
@@ -20892,3 +20920,387 @@ var f51_bot_press := false
 
 func f51_press_at() -> float:
 	return Data.F51_BOT_PRESS_AT if f51_bot_press else Data.WEATHER_PRESS_AT
+
+
+# ------------------------------------------------------------------ BUILD55-A (5 Nov): stages per site (docs/design/stages.md §2-4, §8)
+# A campaign site's stage is its depth 1-3 (Data.STAGES); "1/3" on screen. 2/3 opens the next site (on a zone's last
+# site, the head's own fight); 3/3 is for the grind. A signal's clear never moves a stage (it keeps depth >= 4).
+
+var a55_done: Dictionary = {}     # site -> the furthest stage cleared on it (1-3); a signal's clear never moves it
+var a55_pick: Dictionary = {}     # site -> the stage the player picked (1-3); none: the furthest open
+var a55_new: Dictionary = {}      # site -> true: opened (by a 2/3 or a head's fall) and not yet picked - the Map's "· New"
+var _a55_head := -1               # the site a head's own fight is being formed on (start_head_fight, head_fight_preview)
+
+
+## The furthest stage cleared on site i (0-3).
+func stage_done(i: int) -> int:
+	return int(a55_done.get(i, 0))
+
+
+## A stage's level: lv_at at the stage (the 1/3 the site's own, a level a stage up).
+func stage_level(i: int, s: int) -> int:
+	return lv_at(i, s)
+
+
+## A stage's level gate: today's formula on the stage's level (wear_of(level) - 1).
+func stage_gate(i: int, s: int) -> int:
+	return maxi(1, wear_of(lv_at(i, s)) - 1)
+
+
+## Shut for the runner's level: a stage not yet cleared, under its gate. Once cleared it stays open.
+func stage_level_gated(i: int, s: int) -> bool:
+	return stage_done(i) < s and level() < stage_gate(i, s)
+
+
+## A stage can be run: the site open, the stage before it cleared, its level gate met.
+func stage_open(i: int, s: int) -> bool:
+	if i < 0 or i >= Data.TIERS.size() or s < 1 or s > Data.STAGES:
+		return false
+	return tier_open(i) and stage_done(i) >= s - 1 and not stage_level_gated(i, s)
+
+
+## Why a stage is shut, in the card's words ("" when open): "After 1/3", "Opens at level 7", "After Top Farm 2/3",
+## "After the Gamekeeper".
+func stage_block(i: int, s: int) -> String:
+	if stage_open(i, s) or i < 0 or i >= Data.TIERS.size():
+		return ""
+	var w: Dictionary = Words.A55_STAGE
+	if not tier_open(i):
+		var z: int = int(Data.TIERS[i]["zone"])
+		var zt: Array = Data.ZONES[z]["tiers"]
+		if not zone_open(z):
+			if zone_level_shut(z):
+				return w["level"] % zone_gate(z)
+			var pz: int = maxi(0, z - 1)
+			var hb: Dictionary = zone_boss(pz)
+			for pi in Data.ZONES[pz]["tiers"]:
+				if stage_done(int(pi)) < Data.STAGE_OPENS:
+					return w["after_site"] % Words.mid(str(Data.TIERS[int(pi)]["name"]))
+			if not hb.is_empty():
+				return w["after_head"] % Words.mid(str(hb["name"]))
+			return ""
+		var k: int = zt.find(i)
+		if k > 0 and stage_done(int(zt[k - 1])) < Data.STAGE_OPENS:
+			return w["after_site"] % Words.mid(str(Data.TIERS[int(zt[k - 1])]["name"]))
+		return w["level"] % site_gate(i)
+	if s > 1 and stage_done(i) < s - 1:
+		return w["after_stage"] % (s - 1)
+	if stage_level_gated(i, s):
+		return w["level"] % stage_gate(i, s)
+	return ""
+
+
+## The furthest stage open on a site (1 when none is).
+func stage_furthest(i: int) -> int:
+	for s in range(Data.STAGES, 0, -1):
+		if stage_open(i, s):
+			return s
+	return 1
+
+
+## The stage the card's Set off runs: the one picked while it's open, else the furthest open.
+func stage_pick(i: int) -> int:
+	var p: int = int(a55_pick.get(i, 0))
+	if p >= 1 and stage_open(i, p):
+		return p
+	return stage_furthest(i)
+
+
+## The player picks a stage on the card: kept until a new stage opens there; the site's depth follows it.
+func set_stage_pick(i: int, s: int) -> void:
+	if not stage_open(i, s):
+		return
+	a55_pick[i] = s
+	mark_site_seen(i)
+	_a55_sync(i)
+
+
+## The site's depth set to its picked stage (never mid-run, never under a signal or a head's fight).
+func _a55_sync(i: int) -> void:
+	if i < 0 or i >= Data.TIERS.size() or runner_busy() or (not _sig.is_empty() and int(_sig["site"]) == i) or _a55_head == i:
+		return
+	var p: int = stage_pick(i)
+	if int(depth[i]) != p:
+		depth[i] = p
+		_surv_cache.erase(i)
+		_stats_dirty()
+
+
+## The Map's "· New": opened by a 2/3 or a head's fall, open now, not yet picked.
+func site_new(i: int) -> bool:
+	return bool(a55_new.get(i, false)) and tier_open(i)
+
+
+func mark_site_seen(i: int) -> void:
+	a55_new.erase(i)
+
+
+## The key a stage's first-clear level is kept under in clear_level: the site's own for the 1/3 (as before stages).
+static func stage_key(i: int, s: int) -> int:
+	return i + 100 * (maxi(1, s) - 1)
+
+
+## A stage run's clear (from _clear): the stage's tick, its tax floor, the next site's "New", the cleared lines.
+func _a55_stage_clear(m: Dictionary, t: Dictionary) -> void:
+	if m.has("signal") or bool(m.get("head_fight", false)) or not m.has("stage"):
+		return                                   # a signal's or a head's clear never moves a stage (BUILD55-A)
+	var i: int = int(m["tier"])
+	var s: int = int(m["stage"])
+	if not clear_level.has(stage_key(i, s)):
+		clear_level[stage_key(i, s)] = level()   # the level tax per stage: never on a stage not cleared
+	if s <= stage_done(i):
+		return
+	a55_done[i] = s
+	a55_pick.erase(i)                            # a new stage open: the card goes to the furthest again
+	if s == Data.STAGE_OPENS:
+		log_event(Words.site_cleared(str(t["name"])))     # the site's "cleared" line on its first 2/3 (the stage that opens the next)
+		var zt: Array = Data.ZONES[int(Data.TIERS[i]["zone"])]["tiers"]
+		var k: int = zt.find(i)
+		if k >= 0 and k + 1 < zt.size():
+			a55_new[int(zt[k + 1])] = true
+	chron("stage", {"tier": i, "site": str(t["name"]), "stage": s, "level": level()})
+
+
+## A head's first fall: the next zone's first site is new on the Map.
+func _a55_head_first(z: int) -> void:
+	if z + 1 < Data.ZONES.size():
+		a55_new[int(Data.ZONES[z + 1]["tiers"][0])] = true
+	if z == 1:
+		log_event(Words.A55_STAGE["road_town"])     # the Retail Park's "the road to the Town is open", on the Carpet Man's fall
+
+
+## The site a zone's head is fought on (his zone's last), -1 for none.
+func head_site(z: int) -> int:
+	var b: Dictionary = zone_boss(z)
+	return int(b["tier"]) if not b.is_empty() else -1
+
+
+## What the head's own fight costs: free until his first fall, then his notes (Long memory: paid once; Heads up).
+func head_fight_cost(z: int) -> int:
+	var b: Dictionary = zone_boss(z)
+	if b.is_empty() or not bosses_beaten[z]:
+		return 0
+	var i: int = int(b["tier"])
+	if atlas_rank("long_memory") > 0 and i < boss_paid.size() and (Data.STAGE_OPENS in boss_paid[i]):     # (FIX55b) his fight at his gate stage, paid there
+		return 0
+	return int(round(int(b["notes"]) * (1.0 - atlas_rank("heads_up") / 3.0)))
+
+
+## Why the head's own fight is shut ("" when it can go): his site's 2/3 not cleared, the runner out, the notes short.
+func head_fight_block(z: int) -> String:
+	var i: int = head_site(z)
+	var w: Dictionary = Words.A55_STAGE
+	if i < 0:
+		return w["head_after"]
+	if not tier_open(i) or stage_done(i) < Data.STAGE_OPENS:
+		return w["head_after"]
+	if runner_busy() or not can_deploy():
+		return w["head_busy"]
+	var cost: int = head_fight_cost(z)
+	if notes < cost:
+		return w["head_notes"]
+	return ""
+
+
+func head_fight_open(z: int) -> bool:
+	return head_fight_block(z) == ""
+
+
+## The head's fight as it would be formed: his site at its 2/3 (FIX55b), half its gangs, then him on its 1/3 man ({} for none).
+func head_fight_preview(z: int) -> Dictionary:
+	var i: int = head_site(z)
+	if i < 0:
+		return {}
+	var was: int = int(depth[i])
+	var was_armed: bool = bool(boss_armed.get(i, false))
+	depth[i] = Data.STAGE_OPENS     # (FIX55b) his gate stage, the 2/3: his gang its man
+	_a55_head = i
+	boss_armed[i] = true
+	var e: Dictionary = effective(i)
+	boss_armed[i] = was_armed
+	_a55_head = -1
+	depth[i] = was
+	return e
+
+
+## The head's own fight (stages.md §4): his site at its 3/3 level, half its gangs at the 3/3 man, then him at his
+## BOSSES multipliers; his den the backdrop from the first man (mission["head_fight"]). The site's depth goes back
+## after the run (_a55_run_end).
+func start_head_fight(z: int) -> bool:
+	if not head_fight_open(z):
+		return false
+	var i: int = head_site(z)
+	var was: int = int(depth[i])
+	var b: Dictionary = zone_boss(z)
+	if Words.BOSSES.has(b["name"]):
+		log_event(Words.LOG["head_armed"] % [b["name"], Words.BOSSES[b["name"]]["armed"]])     # his line as he's taken on (arm_boss's)
+	depth[i] = Data.STAGE_OPENS     # (FIX55b) his gate stage, the 2/3: his gang its man
+	_a55_head = i
+	boss_armed[i] = true
+	deploy(i)
+	_a55_head = -1
+	if mission == null or int(mission.get("tier", -1)) != i:
+		boss_armed[i] = false
+		depth[i] = was
+		return false
+	mission["head_fight"] = true
+	mission["a55_was"] = was
+	mission["depth"] = Data.STAGE_OPENS     # (FIX55b)
+	mission.erase("stage")
+	return true
+
+
+## A run over (from _signal_done, both ends): a head's fight puts his site back at its stage; every other site's depth
+## follows its picked stage (a clear or a level may have opened one). A signal's site goes back with _sig_off.
+func _a55_run_end(m: Dictionary) -> void:
+	if m.get("dry", false):
+		return
+	if bool(m.get("head_fight", false)) and m.has("a55_was"):
+		var hi: int = int(m["tier"])
+		depth[hi] = int(m["a55_was"])
+		m.erase("a55_was")
+		boss_armed[hi] = false
+		_surv_cache.erase(hi)
+	for i in range(Data.TIERS.size()):
+		if (not _sig.is_empty() and int(_sig["site"]) == i) or (away() and int(repeat.get("site", -1)) == i):
+			continue                             # a signal's site goes back with _sig_off; a repeat keeps its stage to the end
+		var p: int = stage_pick(i)
+		if int(depth[i]) != p and int(depth[i]) <= Data.STAGES:
+			depth[i] = p
+			_surv_cache.erase(i)
+
+
+## A stage's run: the stage and its depth on the mission (signals keep their depth >= 4).
+func _a55_mission_marks(m: Dictionary, i: int) -> void:
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		m["depth"] = site_depth(i)
+		return
+	m["depth"] = int(depth[i])
+	if _a55_head != i:
+		m["stage"] = clampi(int(depth[i]), 1, Data.STAGES)
+
+
+## The saved stage state.
+func a55_save() -> Dictionary:
+	return {"done": a55_done.duplicate(), "pick": a55_pick.duplicate(), "new": a55_new.duplicate()}
+
+
+func a55_load(d: Dictionary) -> void:
+	a55_done = {}
+	a55_pick = {}
+	a55_new = {}
+	var st: Dictionary = d.get("stages", {}) if d.get("stages", {}) is Dictionary else {}
+	for k in st.get("done", {}):
+		a55_done[int(k)] = clampi(int(st["done"][k]), 0, Data.STAGES)     # JSON's keys come back as strings
+	for k in st.get("pick", {}):
+		a55_pick[int(k)] = clampi(int(st["pick"][k]), 1, Data.STAGES)
+	for k in st.get("new", {}):
+		if bool(st["new"][k]):
+			a55_new[int(k)] = true
+
+
+## The head's fight's odds, read as a site's are (the lookout's dry runs): his site at 3/3, his gang, then him. 0 when
+## there's no head. The read lays the fight on the site for its runs and puts it back, in its own slot (FIX55, review 1:
+## it shared the site's, so the card's head read and the shell's site read wiped each other and never settled). Stepped
+## a few ms a frame when the shell calls it (main._read_odds, odds_step); whole for the bot and the gate.
+func head_fight_odds(z: int) -> float:
+	var i: int = head_site(z)
+	if i < 0 or runner_busy():
+		return 0.0
+	return float(_f55_head_slot(z, func(): return survival(i)))
+
+
+## The head's fight's odds as read so far, without running any (FIX55, review 1: the card reads this while the shell
+## steps the read): [ready to show, the odds, settled].
+func head_odds_now(z: int) -> Array:
+	var i: int = head_site(z)
+	if i < 0 or runner_busy():
+		return [false, 0.0, false]
+	return _f55_head_slot(z, func(): return [odds_ready(i), odds_now(i), odds_settled(i)])
+
+
+## The head's fight laid on his site for `fn` (FIX55, review 1): depth 3, armed, _a55_head; the read and its tally in
+## their own slots ("head:<site>"), as _whole's are, so the site's own read is never overwritten by his. All put back.
+func _f55_head_slot(z: int, fn: Callable) -> Variant:
+	var i: int = head_site(z)
+	var slot := "head:%d" % i
+	var home = _surv_cache.get(i, null)
+	var home_t = _odds_tally.get(i, null)
+	if _surv_cache.has(slot):
+		_surv_cache[i] = _surv_cache[slot]
+	else:
+		_surv_cache.erase(i)
+	if _odds_tally.has(slot):
+		_odds_tally[i] = _odds_tally[slot]
+	else:
+		_odds_tally.erase(i)
+	var was: int = int(depth[i])
+	var was_armed = boss_armed.get(i, null)
+	depth[i] = Data.STAGE_OPENS     # (FIX55b) his gate stage, the 2/3: his gang its man
+	_a55_head = i
+	boss_armed[i] = true
+	var out = fn.call()
+	if was_armed != null:
+		boss_armed[i] = was_armed
+	else:
+		boss_armed.erase(i)                 # as it was: the shell's base hashes boss_armed
+	_a55_head = -1
+	depth[i] = was
+	if _surv_cache.has(i):
+		_surv_cache[slot] = _surv_cache[i]
+	if _odds_tally.has(i):
+		_odds_tally[slot] = _odds_tally[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	if home_t != null:
+		_odds_tally[i] = home_t
+	else:
+		_odds_tally.erase(i)
+	return out
+
+
+# ------------------------------------------------------------------ BUILD55-C (5 Nov): themed finds (docs/design/stages.md §5)
+## The stage a run is on: mission["stage"] (1-3) on a campaign site's stage, 0 for anything else - a signal's (depth 4
+## or more), the head's own fight (FIX55, review 4: no 3/3 tier-up), a run with no stage. (FIX55: the stub's fallback
+## to the run's depth is gone now A's mark is in.)
+func c55_stage(m: Dictionary, _t: Dictionary) -> int:
+	if bool(m.get("head_fight", false)) or not m.has("stage"):
+		return 0
+	return int(m["stage"])
+
+
+## A find's themed list: the site's (Data.SITE_THEMES) for plain gear on a stage, [] otherwise - a signal's finds,
+## papers, meds, rounds, parts and the rest roll as before.
+func c55_theme(m: Dictionary, t: Dictionary, slot: String) -> Array:
+	if not (slot in Data.SLOTS) or (c55_stage(m, t) <= 0 and not bool(m.get("head_fight", false))):     # (FIX55, review 4) his site's list on the head's fight too
+		return []
+	return Data.SITE_THEMES.get(str(Data.TIERS[int(t["tier"])]["name"]), [])
+
+
+## A plain gear find's tier on a 3/3: STAGE_TIER_UP of them one up, never past loot_cap at the find's level. Draws the
+## dice only on a 3/3, so every other run's finds roll as before.
+func c55_tier_up(m: Dictionary, t: Dictionary, slot: String, tier_v: int, level_v: int) -> int:
+	if not (slot in Data.SLOTS) or c55_stage(m, t) != 3:
+		return tier_v
+	if rng.randf() < Data.STAGE_TIER_UP:
+		return mini(loot_cap(level_v), tier_v + 1)
+	return tier_v
+
+
+# ------------------------------------------------------------------ FIX55 (5 Nov): the review's findings
+## A stage's first clear (FIX55, review 3): the site's picked stage (its depth, 1-3) not yet cleared. Kev bets on it, as
+## he did on a site's first clear before stages; the repeat's gate shuts on it (review 2).
+func f55_first_clear(i: int) -> bool:
+	return i >= 0 and i < Data.TIERS.size() and int(depth[i]) >= 1 and int(depth[i]) <= Data.STAGES and stage_done(i) < int(depth[i])
+
+
+## Kev's offer on a zone's head's own fight (FIX55, review 3): its own key, as an armed head's was the site's.
+static func wager_head_key(z: int) -> String:
+	return "head:%d" % z
+
+
+## Whether Kev has an offer on the head's fight: the Radio open and the fight open (his site's 2/3, the runner home).
+func wager_head_open(z: int) -> bool:
+	return room_open("radio") and head_fight_open(z)

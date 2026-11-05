@@ -92,6 +92,21 @@ static func _advance(sim, j: Dictionary) -> void:
 		j["c"] = sim._surv_cache.get(i, null)
 		_put_back(sim._surv_cache, i, home)
 		_put_back(sim._odds_tally, i, home_t)
+	elif key.begins_with("head:"):
+		# a zone's head's own fight (FIX55, review 3): read as the card's own head read is (sim.head_fight_odds, in its
+		# own slot), this read's cache swapped into that slot and the card's put back
+		var z: int = int(key.trim_prefix("head:"))
+		var hi: int = sim.head_site(z)
+		var slot: String = "head:%d" % hi
+		var h_home = sim._surv_cache.get(slot, null)
+		var h_home_t = sim._odds_tally.get(slot, null)
+		_put_back(sim._surv_cache, slot, j["c"])
+		_put_back(sim._odds_tally, slot, null)
+		j["o"] = sim.head_fight_odds(z)
+		j["done"] = hi < 0 or sim.runner_busy() or bool(sim.head_odds_now(z)[2])     # nothing to read while the runner's out
+		j["c"] = sim._surv_cache.get(slot, null)
+		_put_back(sim._surv_cache, slot, h_home)
+		_put_back(sim._odds_tally, slot, h_home_t)
 	elif key.begins_with("sig:"):
 		var id: int = int(key.trim_prefix("sig:"))
 		var k := -1

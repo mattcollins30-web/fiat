@@ -131,7 +131,7 @@ func _init() -> void:
 		var body := SiteCard.new(COL_W)
 		panel.add_child(body)
 		body.fix.connect(_fix)
-		body.view_changed.connect(_head_pick.bind(col))     # the card's Head takes him on (BUILD48 item 1: one control)
+		body.view_changed.connect(_head_pick.bind(col))     # the card's stage picker and its Head (BUILD55-U: one control)
 		c["card"] = body
 		# the foot: Set off across, the insurance and the rig's top-up sharing the row under it (21 Oct, Matt: auto-run's
 		# gone; 23 Oct: the top-up beside the paper)
@@ -424,8 +424,10 @@ func show_state(s) -> void:
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
-			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(sim.wager_site_open(selected)), str(sim.wagers.get(sim.wager_site_key(selected), {})), sim.repeat_count()] \
-			+ "|%s|%s|%s|%d|%d|%d|%s" % [str(sim.site_runs.get(str(selected), {})), str(sim.left_behind), sim.cls, sim.rig.size(), sim.stash.size(), sim.stat_v, str(_cols[0]["card"].head_view)] + "|" + WagerOdds.state()     # the site card's (BUILD46-S); Kev's wagers' reads (BUILD49 U)
+			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))] + "|%s|%s|%s|%d" % [sim.repeat_block(selected), str(wager_open(selected)), str(sim.wagers.get(wager_key(selected), {})), sim.repeat_count()] \
+			+ "|%s|%s|%s|%d|%d|%d|%s" % [str(sim.site_runs.get(str(selected), {})), str(sim.left_behind), sim.cls, sim.rig.size(), sim.stash.size(), sim.stat_v, str(_cols[0]["card"].head_view)] + "|" + WagerOdds.state() \
+				+ "|%d|%d|%s" % [sim.stage_pick(selected), sim.stage_done(selected), str(sim.head_fight_open(zone))] \
+				+ "|" + (str(sim.head_odds_now(head_zone())) if head_zone() >= 0 else "")     # the site card's (BUILD46-S); Kev's wagers' reads (BUILD49 U); the stage picker's (BUILD55-U); the head's read as it comes in (FIX55)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -440,11 +442,15 @@ func show_state(s) -> void:
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
 		# the card's body (BUILD46-S): what the runner's short of, as fix chips, at Risky and worse
 		var why: Array = odds_reasons(sim, i) if is_open and sim.odds_ready(i) and odds < WHY_UNDER else []
-		c["card"].head_view = bool(sim.boss_armed.get(i, false))     # the card shows the head when he's taken on, else the gang (BUILD48 item 1)
+		if int(c["card"].site) != i:
+			c["card"].head_view = false            # another site: its picked stage, not the last one's head (BUILD55-U)
 		c["card"].show_state(sim, i, why)
+		var head_on: bool = _head_on(k)
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and not walks and sim.notes < sim.boss_cost(i))
+		if head_on:
+			c["deploy"].disabled = not sim.can_deploy() or not sim.head_fight_open(zone)     # the head's own fight (BUILD55-U)
 		_repeat_lay(c, i, is_open)
 		c["insure"].visible = is_open
 		_foot_lay(c, is_open)
@@ -456,8 +462,8 @@ func show_state(s) -> void:
 		UI.fit_button(c["rig"], [Words.ROUNDS["button"], Words.ROUNDS["button_short"]])
 		UI.style_button(c["rig"], false, "bad" if not sim.rounds_short(i).is_empty() else "")     # red while the plan's short (BUILD46-R; the merge: the old chips' read went with _show_chips)
 		_death_lay(c, i, is_open)
-		var rep_why: String = sim.repeat_block(i) if c["repeat"].visible else ""
-		var wstrip: Array = WagerOdds.strip_forms(sim, sim.wager_site_key(i)) if is_open and sim.wager_site_open(i) else []     # what's on (BUILD49 U, item 19)
+		var rep_why: String = sim.repeat_block(i) if c["repeat"].visible and not head_on else ""     # the Head picked: no repeat to explain (BUILD55-U)
+		var wstrip: Array = WagerOdds.strip_forms(sim, wager_key(i)) if is_open and wager_open(i) else []     # what's on (BUILD49 U, item 19); the head's own (FIX55)
 		c["note"].add_theme_color_override("font_color", Pal.WARN if not wstrip.is_empty() and rep_why == "" and not sim.away() and sim.hp >= sim.max_hp() * 0.5 else Pal.TEXT_2)
 		if not is_open:
 			c["note"].text = ""
@@ -543,7 +549,8 @@ func select(i: int) -> void:
 	order_key = ""
 	panel_on = true                            # a pin picked: its card (BUILD51-U)
 	picked_by_hand = true
-	if _wagers.visible and _wagers.key != sim.wager_site_key(i):
+	sim.mark_site_seen(i)                      # its pin's "New" goes once picked (BUILD55-U)
+	if _wagers.visible and _wagers.key != sim.wager_site_key(i) and _wagers.key != sim.wager_head_key(int(Data.TIERS[i]["zone"])):     # (FIX55) his head's offer is the site's card's too
 		_wagers.visible = false               # Kev's offer is the picked site's: another pin, another offer (the review)
 	_shown = ""
 	show_state(sim)
@@ -664,16 +671,31 @@ func _deploy(k: int) -> void:
 			rounds_panel.visible = false
 			acted.emit()
 		return
-	sim.deploy(_tier(k))
+	var i: int = _tier(k)
+	if _head_on(k):
+		sim.start_head_fight(int(Data.TIERS[i]["zone"]))     # the picker's Head: his gang, then him (BUILD55-U)
+	else:
+		sim.set_stage_pick(i, sim.stage_pick(i))     # the picked stage, the one the card shows (BUILD55-U)
+		sim.deploy(i)
 	_skill_pick.visible = false                # set off: the three are locked
 	rounds_panel.visible = false               # and the rounds have gone out (BUILD46-R)
 	acted.emit()
 
 
 ## The Set off row (29 Oct): Set off, then "Run it ×5" (or Kev's wagers in its place on a run he bets on); Set off takes
-## what's left. The head's taken on from the card's Gang / Head toggle (BUILD48 item 1), not a button here.
+## what's left. The head's picked on the card's stage picker (BUILD55-U), not a button here: with him picked the
+## repeat's place says his price ("Free, the first time"), greyed - his fight's one run.
 func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
-	var wager_on: bool = is_open and sim.wager_site_open(i)
+	if is_open and _head_on(_cols.find(c)) and not wager_open(i):     # (FIX55, review 3) Kev's wagers on his fight in the price's place
+		c["wager"].visible = false
+		c["repeat"].visible = true
+		c["repeat"].position.x = PAD + INNER - REPEAT_W
+		c["deploy"].size.x = INNER - REPEAT_W - 8.0
+		c["repeat"].disabled = true
+		var cost: int = sim.head_fight_cost(int(Data.TIERS[i]["zone"]))
+		UI.fit_button(c["repeat"], [Words.SITE_CARD["free"], Words.SITE_CARD["free_short"]] if cost <= 0 else [Fmt.notes(cost), Fmt.group(cost)])
+		return
+	var wager_on: bool = is_open and wager_open(i)
 	c["wager"].visible = wager_on
 	c["repeat"].visible = is_open and not wager_on
 	var right: float = PAD + INNER
@@ -686,7 +708,7 @@ func _repeat_lay(c: Dictionary, i: int, is_open: bool) -> void:
 		c["repeat"].disabled = why != ""
 		UI.fit_button(c["repeat"], [Words.REPEAT["button"] % n, Words.REPEAT["button_short"] % n] if n > 0 else [Words.REPEAT["button_full"], Words.REPEAT["button_full_short"], Words.REPEAT["button_full_tiny"]])
 	if wager_on:
-		var key: String = sim.wager_site_key(i)
+		var key: String = wager_key(i)
 		var on: int = sim.wagers.get(key, {}).get("taken", []).size()
 		UI.fit_button(c["wager"], [Words.WAGERS["button_on"] % on, Words.WAGERS["button_n"] % on, "%d" % on] if on > 0 else [Words.WAGERS["button"]])     # the count, never a second gold button (the review)
 
@@ -712,6 +734,9 @@ func _death_lay(c: Dictionary, i: int, is_open: bool) -> void:
 
 
 func _repeat(k: int) -> void:
+	if _head_on(k):
+		return                                 # the head's fight is one run (BUILD55-U)
+	sim.set_stage_pick(_tier(k), sim.stage_pick(_tier(k)))     # the picked stage, ten times (BUILD55-U)
 	if sim.start_repeat(_tier(k)):
 		_skill_pick.visible = false
 		rounds_panel.visible = false
@@ -721,23 +746,43 @@ func _repeat(k: int) -> void:
 
 func _wager_open(k: int) -> void:
 	var i := _tier(k)
-	_wagers.open(sim, sim.wager_site_key(i), Data.TIERS[i]["name"])
+	var hz: int = int(Data.TIERS[i]["zone"]) if _head_on(k) else -1
+	_wagers.open(sim, wager_key(i), str(sim.zone_boss(hz)["name"]) if hz >= 0 else Data.TIERS[i]["name"])     # the head's fight: his name on the kicker (FIX55)
 	_wagers.move_to_front()
 	_shown = ""
 	acted.emit()
 
 
-## The card's Gang / Head toggle pressed (BUILD48 item 1, Matt: "there should just be one"): Head takes him on, Gang lets
-## him be; the card then shows whichever he is, so the toggle and Set off never disagree.
-func _head_pick(k: int) -> void:
-	var i := _tier(k)
-	var card = _cols[k]["card"]
-	var want: bool = bool(card.head_view)
-	if want != bool(sim.boss_armed.get(i, false)):
-		sim.arm_boss(i, want)
-	card.head_view = bool(sim.boss_armed.get(i, false))
+## The card's stage picker pressed (BUILD55-U; BUILD48 item 1, Matt: "there should just be one"): a stage is the one
+## Set off runs, the Head his own fight - the card picked it and the sim holds the stage; the card and Set off show it.
+func _head_pick(_k: int) -> void:
 	_shown = ""
 	acted.emit()
+
+
+## The Head picked on the card's picker, on a site with a head (BUILD55-U).
+func _head_on(k: int) -> bool:
+	if k < 0 or k >= _cols.size() or order_key != "":
+		return false
+	var card = _cols[k]["card"]
+	return bool(card.head_view) and bool(card.has_head) and int(card.site) == selected
+
+
+## Kev's offer the card shows for site i (FIX55, review 3): the head's fight's while the Head's picked, else the site's.
+func wager_key(i: int) -> String:
+	return sim.wager_head_key(int(Data.TIERS[i]["zone"])) if i == selected and head_zone() >= 0 else sim.wager_site_key(i)
+
+
+func wager_open(i: int) -> bool:
+	return sim.wager_head_open(int(Data.TIERS[i]["zone"])) if i == selected and head_zone() >= 0 else sim.wager_site_open(i)
+
+
+## The zone whose head's fight the card shows (the Head picked on the selected site), -1 for none (FIX55, review 1: the
+## shell steps his read while it's picked).
+func head_zone() -> int:
+	if selected < 0 or selected >= Data.TIERS.size() or not _head_on(0) or not sim.tier_open(selected):
+		return -1
+	return int(Data.TIERS[selected]["zone"])
 
 
 ## A fix chip on the site card (2 Nov, BUILD46-S): the meds to the gate's top-up (then the Kit), the rounds to the
@@ -1212,4 +1257,3 @@ func room_rect(n: Control) -> Rect2:
 	if q != self:
 		return Rect2(n.global_position - global_position, n.size)
 	return Rect2(p, n.size)
-

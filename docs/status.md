@@ -4,18 +4,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (5 Nov, afternoon):** 0.13.1 on Matt's 0.13.0 save (SAVE_VERSION 25, no fresh save) - his playtest goes on.
-  Built in 0.13.1 (Matt: "list out the open items and lets just build it - the wall is still there early game"): the
-  0.13.0 playtest's items 1-6 (the rig pages as the floor; the try-on reads one whole figure - a rig's pouches, a gun's
-  rate of fire, armour's %; a magazine moved to the pack stays; the Map twice the size, panned, the card put away and
-  back; Lucky -> Sharp-eyed, loot quality; the carries: notables half the dose, capstones the whole, 25% more a carry up
-  to twice); the wall (the Shopping Centre x1.60 over the Pleasure Park, was x3.17; the Bank down too - 880 HP, fire 1.63
-  - so the step after stays under x1.8); act two (f) and (g) (the break's odds without the gate's boxes; Kev's wagers at
-  the break in his panel); loot rules on the Radio; the web's words (the Manual's new rule, the Cap, Second wind, no hung
-  notables left); a picked-over site's run event; the 2 Nov reviews' rules (the swap capped, the pockets' find 35%,
-  Strip it up, the bot's Press on 90 - Matt's own order stays 80); speed (live_guard 1.5 -> 0.02 ms, the dogs stepped,
-  the late fight timed); the SMG flash sheet (docs/art/smg_flash_sheet.png: every flash at the muzzle; the Castle guard
-  rifle's moved).
+- **Now (5 Nov, night):** 0.14.0 for a fresh save (SAVE_VERSION 26), not yet played - stages per site
+  (docs/design/stages.md and its "As built"): every campaign site 1/3, 2/3, 3/3 (a stage x1.22; 2/3 opens the next
+  site, 3/3 the grind), the site card's picker (Matt's A) with "Head" on a zone's last site (his own fight, his gang
+  then him, on his den), the Map's pins "· 2/3" / "· 3/3" / "· New", 60% of finds from a site's themed list and 24 new
+  bases (borrowed pictures), XP a kill x0.7, signals from level 12, "The print works". Matt starts fresh; his play sets
+  the figures. Art next by art.flag once it reads: 24 stage backdrops, 24 item pictures.
 - **Parked from the playtest (0.13.0, 5 Nov) - all six built in 0.13.1:**
   1. UI: the rig's row on the run screen shrinks its cells to fit when the rig has many slots - too small to read
      (screenshot: "THE RIG · CLICK AN ITEM TO USE IT"). Matt: "the rig should be scrollable like the floor ... just copy
@@ -6523,6 +6517,18 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 5 Nov (late night): 0.14.0 - stages per site (build 55; SAVE_VERSION 26, a fresh save)
+
+Matt: "i think the answer to campaign length/balance is more stages per site"; his calls (four, then "A, 0.7x, 5-5.5
+is fine. build it now"). Three builders (A the sim, numbers, heads, guards and the bot; U the picker, Head, the pins and
+the stage backdrops' key; C themed finds and the new bases), merged; the reviewer's findings fixed, each with a check
+proved red (the head's odds in their own cache slot, stepped; "Run it" shut on an uncleared stage; Kev's wagers on any
+first stage clear and the head's fight; the head's finds no 3/3 tier-up; a repeat's first clear synced); the heads'
+fights eased after the starter-kit read (him on his site's 1/3 man, his gang at the 2/3: the bot downs the Gamekeeper
+at run 7, level 3, every class); the language pass (two reviewers; "Security van vest", "Bank bag", "Joiner's apron",
+"Clear the second stage at %s", "Pick Head on the site's card", "At level %d", the 3/3 lines that didn't fit). Smoke
+green in the cloud and on Matt's machine; lint 0.
 
 ## 5 Nov (night): Matt's places on the Map (data/map_places.tres)
 

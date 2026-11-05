@@ -75,6 +75,10 @@ var selected := -1
 var order_key := ""
 var _zone_names: Array = []        # [name Label, state Label] a zone
 var _pin_labels: Array = []        # a Label a site
+var pin_marks: Array = []          # a site's "New" (BUILD55-U): a Label on its pin's label, in amber, pulsing; hidden else
+var pulse_t := 0.0                 # the "New" marks' breath, in seconds; the Map ticks only while one shows
+const NEW_PULSE_S := 1.6           # the "New" mark's breath: alpha NEW_PULSE_LOW to 1 and back, not a blink
+const NEW_PULSE_LOW := 0.55
 var _order_labels: Dictionary = {}  # key -> Label
 var _town_labels: Dictionary = {}   # a town's place: key -> Label (BUILD50-T)
 var town_states: Dictionary = {}    # key -> "running", "stopped", "next", "ringed" as drawn (the smoke reads them)
@@ -182,6 +186,10 @@ func _init(rect: Rect2) -> void:
 	for i in range(Data.TIERS.size()):
 		var l := _pin_label(pin_at(i), int(SITE_LABEL[i]), Pal.TEXT)
 		_pin_labels.append(l)
+		var mk := UI.label(l, Rect2(0, 0, 60, LABEL_H), Words.U55["new"], "SemiBold", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)     # on the label, not a draw call (BUILD55-U)
+		UI.shadow(mk)
+		mk.visible = false
+		pin_marks.append(mk)
 	for k in ORDER_AT:
 		_order_labels[k] = _pin_label(order_pin_at(k), int(ORDER_LABEL[k]), Pal.ACCENT)
 	for k in TOWN_AT:
@@ -349,6 +357,54 @@ func _snug(l: Label) -> void:
 	l.position.x = clampf(at[0].x - w / 2.0, 4.0, size.x - 4.0 - w)
 
 
+## A pin's mark after its name (BUILD55-U, the canvas StagesMap): "New" while a site the stage before opened is unpicked,
+## else the furthest stage cleared ("2/3"); "" for a shut site or one not cleared.
+func pin_mark(i: int) -> String:
+	if not sim.tier_open(i):
+		return ""
+	if sim.site_new(i):
+		return Words.U55["new"]
+	var d: int = sim.stage_done(i)
+	return Words.U55["stage"] % [d, Data.STAGES] if d > 0 else ""
+
+
+## The "New" mark on a pin's label: the label's own words to the dot, the mark drawn over the rest in amber, breathing.
+func _show_new(i: int, on: bool) -> void:
+	var l: Label = _pin_labels[i]
+	var mk: Label = pin_marks[i]
+	mk.visible = on
+	l.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING     # the box keeps the whole words' layout
+	set_process(pin_marks.any(func(m): return m.visible))     # ticking only while a "New" shows
+	if not on:
+		l.visible_characters = -1
+		mk.modulate.a = 1.0
+		return
+	var lead: String = l.text.substr(0, l.text.length() - mk.text.length())
+	l.visible_characters = lead.length()
+	var w: float = UI.text_width(l, l.text)
+	var x0: float = (l.size.x - w) / 2.0 if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER else (l.size.x - w if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0)
+	mk.position = Vector2(x0 + UI.text_width(l, lead), 0)
+	mk.size = Vector2(ceilf(UI.text_width(mk, mk.text)) + 2.0, l.size.y)
+	mk.modulate.a = pulse_alpha(pulse_t)
+
+
+## The "New" mark's alpha at t seconds: 1 down to NEW_PULSE_LOW and back over NEW_PULSE_S, eased - a breath, not a blink.
+static func pulse_alpha(t: float) -> float:
+	return NEW_PULSE_LOW + (1.0 - NEW_PULSE_LOW) * (0.5 + 0.5 * cos(TAU * t / NEW_PULSE_S))
+
+
+func _ready() -> void:
+	set_process(pin_marks.any(func(m): return m.visible))     # a defined _process ticks from here unless told (BUILD55-U)
+
+
+func _process(delta: float) -> void:
+	pulse_t = fmod(pulse_t + delta, NEW_PULSE_S)
+	var a: float = pulse_alpha(pulse_t)
+	for mk in pin_marks:
+		if mk.visible:
+			mk.modulate.a = a
+
+
 ## A point of the painting's pixels on the land.
 func _px(p: Vector2) -> Vector2:
 	return p * PX
@@ -395,6 +451,8 @@ func show_state(s, sel: int, okey: String) -> void:
 	for p in Data.PINNACLES:
 		opens += "1" if sim.order_open(p["key"]) else "0"
 	var sig := "%s|%d|%s|%s|%s|%s|%s|%d|%d" % [settled, selected, order_key, opens, str(sim.best_depth), str(sim.bosses_beaten), str(sim.weather), sim.level(), int(sim.is_night())]
+	for i in range(Data.TIERS.size()):
+		sig += "%d%d" % [sim.stage_done(i), int(sim.site_new(i))]     # the pins' stage marks (BUILD55-U)
 	sig += "|" + _town_show()                  # the town's places (BUILD50-T)
 	sig += "|%d" % int(placing)                # the F3 tool: the fog off and every name plain while placing (BUILD53, Matt: "the fog is preventing me from placing")
 	if sig == _shown:
@@ -431,9 +489,14 @@ func show_state(s, sel: int, okey: String) -> void:
 		var known: bool = sim.zone_open(z) or placing     # placing: every name plain (BUILD53)
 		l.visible = true
 		l.text = str(Data.TIERS[i]["name"]) if known else Fmt.scramble(str(Data.TIERS[i]["name"]))     # the name only (19 Oct); scrambled till its zone's open (20 Oct)
+		var mark: String = pin_mark(i) if known and not placing else ""     # the furthest stage cleared, or "New" (BUILD55-U); a shut site and the F3 tool its name only
+		if mark != "":
+			l.text = Words.U55["pin"] % [l.text, mark]
 		_snug(l)
 		var picked_now: bool = i == selected and order_key == ""
-		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.TEXT if sim.tier_open(i) else (Pal.TEXT_2 if known else Pal.TEXT_3)))
+		var done: bool = mark != "" and sim.stage_done(i) >= Data.STAGES
+		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.GOOD if done else (Pal.TEXT if sim.tier_open(i) else (Pal.TEXT_2 if known else Pal.TEXT_3))))     # 3/3: the whole label in the done colour
+		_show_new(i, mark == Words.U55["new"])
 	for p in Data.PINNACLES:
 		var l: Label = _order_labels[p["key"]]
 		l.visible = sim.order_open(p["key"]) or placing     # placing: every place named (BUILD53)

@@ -2,11 +2,12 @@ extends Control
 ## The Map's site card (2 Nov, BUILD46-S; docs/design/site_card.md, the canvas "Fiat – The Map's site card" round 3 with
 ## the designer's changes): one fixed layout - every block the same size and place on every site, only what it shows
 ## changes. Top to bottom: the picture with the figures standing in it (the gang in the site's picture, or the head in
-## his own interior), you against them, the head's row with the Gang / Head toggle, what it takes, the fix chips that
-## act, what you'll bring home, and you here. The buttons under it are missions.gd's, as before.
+## his own interior), the stage picker (BUILD55-U: "1/3 · 2/3 · 3/3", and "Head" on a zone's last site, in the old
+## Gang / Head toggle's place - one control, the 0.12.2 playtest's item 1), you against them, what it takes, the fix
+## chips that act, what you'll bring home, and you here. The buttons under it are missions.gd's, as before.
 
 signal fix(act: String)                 # a fix chip pressed: "kit", "clinic", "meds", "rounds" or "site:<tier>"
-signal view_changed                     # Gang / Head pressed: the Map takes the head on or lets him be (BUILD48 item 1)
+signal view_changed                     # a stage or the Head picked on the picker (BUILD55-U): the Map shows it
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -20,13 +21,17 @@ const Run := preload("res://scripts/ui/run.gd")
 
 const PAD := 20
 const PIC_H := 190                      # the picture's fixed height (the design doc's "~200-350, fixed once")
-const MATCH_Y := 196                    # you against them
+const PICK_Y := 196                     # the stage picker, under the picture (BUILD55-U, layout A)
+const PICK_H := 48
+const SEG_GAP := 6
+const PICKED_W := 128                   # "Picked" over "2/3 · level 3", at the row's right
+const MATCH_Y := 250                    # you against them (BUILD55-U: under the picker, 196 before)
 const FACE := 64
 const SIDE_W := 150                     # a portrait's column, its name under it
 const MID_X := 110                      # the verdict between: clear of both portraits
-const HEAD_Y := 292                     # the head's row
+const HEAD_Y := PICK_Y                   # an order's place's head row, in the picker's slot (BUILD55-U: a site's head is the picker's Head)
 const HEAD_H := 48
-const TOGGLE_W := 84
+const GANG_FACE := 40                   # the head picked: his gang's face behind his, the count on it
 const TAKES_Y := 346                    # what it takes
 const TAKES_H := 150
 const ROW_H := 24
@@ -53,8 +58,16 @@ var W := 501.0
 var INNER := 461.0
 var sim
 var site := -1
-var head_view := false                  # the toggle: the head taken on and in his interior, else the gang in the site's picture
+var head_view := false                  # the picker's Head picked: his den, his gang and him; else the picked stage's gang
 var has_head := false
+# the stage picker (BUILD55-U): a segment a stage and the Head's, "Picked" and the picked one's level beside them
+var pick_box: Control
+var segs: Array = []                    # {button, top, sub}: the three stages, then the Head
+var picked_key: Label
+var picked_val: Label
+var gang_frame: Panel                   # the head picked: his gang's face, behind his
+var gang_face: TextureRect
+var gang_count: Label
 
 # the picture
 var pic: Control
@@ -82,8 +95,6 @@ var head_box: Panel
 var head_face: TextureRect
 var head_name: Label
 var head_sub: Label
-var gang_btn: Button
-var head_btn: Button
 # what it takes
 var takes_box: Panel
 var keys: Array = []                    # Labels, a row each: you last, their fire, your fire, meds, rounds
@@ -110,6 +121,7 @@ func _init(w := 501.0) -> void:
 	size = Vector2(W, BOTTOM)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_build_picture()
+	_build_picker()
 	_build_match()
 	_build_head()
 	_build_takes()
@@ -180,6 +192,12 @@ func _build_match() -> void:
 	var a := _face(lx, MATCH_Y + 2)
 	you_frame = a[0]
 	you_face = a[1]
+	gang_frame = UI.panel(self, Rect2(rx - GANG_FACE + 8, MATCH_Y + 2 + FACE - GANG_FACE - 6, GANG_FACE + 4, GANG_FACE + 4), UI.box(Pal.BG, 6, 2, Pal.CARD_LINE))     # behind his (BUILD55-U)
+	gang_face = People.rect(gang_frame, Vector2(2, 2), GANG_FACE / 128.0)
+	gang_face.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	var gb := UI.panel(gang_frame, Rect2(-10, -12, 38, 20), UI.box(Pal.ACCENT, 9))
+	gang_count = UI.label(gb, Rect2(0, 0, 38, 20), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.ACCENT_TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+	gang_frame.visible = false
 	var b := _face(rx, MATCH_Y + 2)
 	them_frame = b[0]
 	them_face = b[1]
@@ -196,17 +214,29 @@ func _build_head() -> void:
 	var hf := UI.panel(head_box, Rect2(6, 4, 40, 40), UI.box(Pal.PANEL, 6))
 	head_face = People.rect(hf, Vector2.ZERO, 40 / 128.0)
 	head_face.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	var tw: float = INNER - 2 * TOGGLE_W - 4 - 12
-	head_name = UI.label(head_box, Rect2(54, 3, tw - 54, 22), "", "SemiBold", Pal.CELL_TEXT_BIG - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	head_sub = UI.label(head_box, Rect2(54, 24, tw - 54, 20), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	gang_btn = UI.button(head_box, Rect2(INNER - 6 - 2 * TOGGLE_W - 4, 8, TOGGLE_W, 32), false)
-	head_btn = UI.button(head_box, Rect2(INNER - 6 - TOGGLE_W, 8, TOGGLE_W, 32), false)
-	for bt in [gang_btn, head_btn]:
-		bt.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-	gang_btn.text = Words.SITE_CARD["gang"]
-	head_btn.text = Words.SITE_CARD["head"]
-	gang_btn.pressed.connect(_toggle.bind(false))
-	head_btn.pressed.connect(_toggle.bind(true))
+	head_name = UI.label(head_box, Rect2(54, 3, INNER - 54 - 8, 22), "", "SemiBold", Pal.CELL_TEXT_BIG - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	head_sub = UI.label(head_box, Rect2(54, 24, INNER - 54 - 8, 20), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	head_box.visible = false                 # an order's place's row only (BUILD55-U); a site has the picker here
+
+
+## The stage picker (BUILD55-U, the canvas StagesCard layout A): a segment a stage - "1/3 ✓" over "Cleared", "2/3" over
+## "Not cleared", a shut one greyed with its reason - and "Head" on a zone's last site; "Picked" and the picked one's
+## level at the row's right.
+func _build_picker() -> void:
+	pick_box = Control.new()
+	pick_box.position = Vector2(PAD, PICK_Y)
+	pick_box.size = Vector2(INNER, PICK_H)
+	pick_box.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(pick_box)
+	for k in range(Data.STAGES + 1):
+		var b := UI.button(pick_box, Rect2(0, 0, 80, PICK_H), false)
+		b.text = ""
+		var top := UI.label(b, Rect2(0, 3, 80, 24), "", "SemiBold", Pal.CELL_TEXT_BIG - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		var sub := UI.label(b, Rect2(0, 25, 80, 19), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+		b.pressed.connect(_seg_pressed.bind(k))
+		segs.append({"button": b, "top": top, "sub": sub})
+	picked_key = UI.label(pick_box, Rect2(INNER - PICKED_W, 2, PICKED_W, 18), Words.U55["picked"], "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	picked_val = UI.label(pick_box, Rect2(INNER - PICKED_W, 20, PICKED_W, 24), "", "SemiBold", Pal.CELL_TEXT_BIG - 1, Pal.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 
 func _build_takes() -> void:
@@ -258,10 +288,21 @@ func _build_home() -> void:
 		tiles.append({"panel": p, "icon": ic, "text": tx, "edge": edge})
 
 
-func _toggle(on: bool) -> void:
-	if on and not has_head:
+## A segment pressed (BUILD55-U): a stage picks it for Set off; the Head shows his fight. Either marks the site seen
+## (its "New" goes from the Map's pin).
+func _seg_pressed(k: int) -> void:
+	if sim == null or site < 0 or order != "":
 		return
-	head_view = on
+	if k >= Data.STAGES:
+		if not has_head or segs[k]["button"].disabled:
+			return                               # shut till his site's 2/3 (§4)
+		head_view = true
+	else:
+		if not sim.stage_open(site, k + 1):
+			return
+		sim.set_stage_pick(site, k + 1)
+		head_view = false
+	sim.mark_site_seen(site)
 	view_changed.emit()
 
 
@@ -281,8 +322,6 @@ func show_state(s, i: int, why: Array = []) -> void:
 	_why = why
 	if order != "":
 		order = ""                              # back to a site from an order's place (BUILD49 U, item 23)
-		gang_btn.visible = true
-		head_btn.visible = true
 		_art.modulate = Color.WHITE
 		foot.tooltip_text = ""
 		foot.add_theme_color_override("font_color", Pal.TEXT_2)
@@ -290,28 +329,26 @@ func show_state(s, i: int, why: Array = []) -> void:
 			f.modulate = Color.WHITE
 		for kk in range(keys.size()):
 			keys[kk].add_theme_color_override("font_color", Pal.TEXT_2)
-		var tw: float = INNER - 2 * TOGGLE_W - 4 - 12
-		head_name.size.x = tw - 54
-		head_sub.size.x = tw - 54
+	head_box.visible = false                     # a site's head is the picker's Head (BUILD55-U)
+	pick_box.visible = true
 	var z: int = int(Data.TIERS[i]["zone"])
 	var tiers: Array = Data.ZONES[z]["tiers"]
 	var is_open: bool = sim.tier_open(i)
 	var b: Dictionary = sim.boss_of(i)
-	var convoy: bool = sim.is_convoy(i)
-	has_head = not b.is_empty() or convoy          # a locked site's head is still his (fix 46, S1): the toggle greys, his name stays
+	has_head = not b.is_empty()                  # a zone's last site: the picker's fourth segment
 	var showing_head: bool = head_view and has_head and is_open
-	_show_picture(i, z, tiers.find(i) + 1, b, convoy, showing_head)
-	_show_match(i, z, is_open, b, convoy, showing_head)
-	_show_head(i, b, convoy, is_open, showing_head)
+	_show_picker(i, z, is_open, showing_head)
+	_show_picture(i, z, tiers.find(i) + 1, b, showing_head)     # (FIX55) the convoy's a signal's now: no convoy here
+	_show_match(i, z, is_open, b, showing_head)
 	_show_takes(i, is_open)
 	_show_fix(i, is_open)
 	_show_home(i, is_open, b, showing_head)
 	_show_here(i)
 
 
-func _show_picture(i: int, z: int, tier_n: int, b: Dictionary, convoy: bool, showing_head: bool) -> void:
+func _show_picture(i: int, z: int, tier_n: int, b: Dictionary, showing_head: bool) -> void:
 	var nm: String = str(Data.TIERS[i]["name"])
-	var head_key: String = Items.slug(str(b.get("name", ""))) if showing_head and not convoy else ""
+	var head_key: String = Items.slug(str(b.get("name", ""))) if showing_head else ""
 	var plate: Texture2D = RunView.tex(head_key + "_plate") if head_key != "" and RunView.boss_pair(head_key) else null
 	_art.texture = plate if plate != null else UI.place_texture(nm)     # the head's own interior; else the site's picture
 	UI.fit(kicker, ["%s · Tier %d" % [Data.ZONES[z]["name"], tier_n], "Tier %d" % tier_n])
@@ -320,12 +357,13 @@ func _show_picture(i: int, z: int, tier_n: int, b: Dictionary, convoy: bool, sho
 	UI.fit(sky, [sim.clock_words() + " · " + _sky_word(i), sim.clock_words()])
 	# the figures: the head alone, or the gang - as many as fight at once, three at most
 	var zone_key: String = RunView.ZONE_KEYS[mini(z, RunView.ZONE_KEYS.size() - 1)]
-	var n: int = 1 if head_key != "" else (mini(FIG_X.size(), maxi(1, int(sim.effective(i)["pool"]))) if sim.tier_open(i) else 0)
+	var n: int = FIG_X.size() if head_key != "" else (mini(FIG_X.size(), maxi(1, int(sim.effective(i)["pool"]))) if sim.tier_open(i) else 0)
 	for k in range(_figs.size()):
 		var f: TextureRect = _figs[k]
 		var t: Texture2D = null
+		var him: bool = head_key != "" and k == FIG_X.size() - 1     # the head picked: his gang either side, him in the middle and in front (BUILD55-U)
 		if k < n:
-			t = RunView.tex("head_%s_stand" % head_key) if head_key != "" else RunView.tex_of(["gang_%s_%s_stand" % [zone_key, "a" if k % 2 == 0 else "b"], "gang_stand"])
+			t = RunView.tex("head_%s_stand" % head_key) if him else RunView.tex_of(["gang_%s_%s_stand" % [zone_key, "a" if k % 2 == 0 else "b"], "gang_stand"])
 		f.texture = t
 		f.visible = t != null
 		if t == null:
@@ -333,12 +371,15 @@ func _show_picture(i: int, z: int, tier_n: int, b: Dictionary, convoy: bool, sho
 		var u: Rect2 = RunView.used_of(t)
 		if u.size.y <= 0.0:
 			u = Rect2(Vector2.ZERO, t.get_size())
-		var h: float = HEAD_FIG_H if head_key != "" else FIG_H
+		var h: float = HEAD_FIG_H if him else FIG_H
 		var sc: float = h / u.size.y
 		f.size = t.get_size() * sc
-		var fx: float = W * (FIG_X[1] if head_key != "" else FIG_X[k])
+		var fx: float = W * (FIG_X[1] if him else (FIG_X[[0, 2][k]] if head_key != "" else FIG_X[k]))
 		f.position = Vector2(fx - (u.position.x + u.size.x / 2.0) * sc, PIC_H - 30 - u.end.y * sc)
-	UI.fit(foot, _foot_forms(i) if sim.tier_open(i) else [""])
+	if showing_head and head_key != "":
+		UI.fit(foot, [Words.U55["head_foot"]])     # "His gang first, then him." (BUILD55-U)
+	else:
+		UI.fit(foot, _foot_forms(i) if sim.tier_open(i) else [""])
 
 
 ## The sky's word for the chip: the weather when there is some, else night or day.
@@ -359,31 +400,40 @@ func _foot_forms(i: int) -> Array:
 		var w: String = str(m.get("words", "")).get_slice(", ", 0) if not m.is_empty() else ""
 		parts.append(("%s: %s." % [str(nm), w]) if w != "" else "%s." % str(nm))
 	var line: String = Words.site_line(str(Data.TIERS[i]["name"]), int(t["depth"])).get_slice(". ", 0).trim_suffix(".") + "."
+	var clause: String = line.get_slice(", ", 0).trim_suffix(".") + "."     # a stage's long line to its first clause (BUILD55-U: the Hospital's 3/3)
 	if parts.is_empty():
-		return [line]
+		return [line, clause]
 	var conds: String = " ".join(parts)
 	var out: Array = [line + " " + conds, conds]
 	for n in range(parts.size() - 1, 0, -1):
 		out.append(" ".join(parts.slice(0, n)))
-	return out + [str(parts[0]).get_slice(":", 0) + ".", line]
+	return out + [str(parts[0]).get_slice(":", 0) + ".", line, clause]
 
 
-func _show_match(i: int, z: int, is_open: bool, b: Dictionary, convoy: bool, showing_head: bool) -> void:
+func _show_match(i: int, z: int, is_open: bool, b: Dictionary, showing_head: bool) -> void:
 	People.show(you_face, sim.cls)
 	UI.fit(you_name, ["The %s" % sim.cls, sim.cls] if sim.cls != "" else ["The runner"])
 	var odds: float = sim.odds_now(i) if is_open else 0.0
 	var read_in: bool = is_open and sim.odds_ready(i)
+	if showing_head:
+		var hr: Array = sim.head_odds_now(z)       # his own fight's odds as read so far (FIX55, review 1: the shell steps the read in
+		odds = float(hr[1])                        # its own slot, main._read_odds; the card runs none): his gang, then him
+		read_in = bool(hr[0])
 	var tone: Color = Pal.tone_color("good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad"))
 	var them: String = Run.gang_face(z)
 	var them_words: Array = [Words.SITE_CARD["the_gang"]]
 	if showing_head:
-		them = "" if convoy else str(b["name"])
-		them_words = [Words.SITE_CARD["convoy"]] if convoy else [str(b["name"]), str(b["name"]).trim_prefix("The ")]
+		them = str(b["name"])
+		them_words = [str(b["name"]), str(b["name"]).trim_prefix("The ")]
 	People.show(them_face, them)
 	UI.fit(them_name, them_words)
 	count_box.visible = is_open and not showing_head
 	if count_box.visible:
 		count.text = "×%d" % int(sim.effective(i)["pool"])
+	gang_frame.visible = showing_head     # his gang (×N) behind him (BUILD55-U)
+	if gang_frame.visible:
+		People.show(gang_face, Run.gang_face(z))
+		gang_count.text = "×%d" % head_gang(i)
 	for fr in [you_frame, them_frame]:
 		(fr.get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if read_in else Pal.CARD_LINE
 	(you_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD
@@ -393,8 +443,9 @@ func _show_match(i: int, z: int, is_open: bool, b: Dictionary, convoy: bool, sho
 		UI.fit(verdict, [Words.SITE_CARD["locked"]])
 		verdict.add_theme_color_override("font_color", Pal.TEXT_3)
 		var before: int = sim.site_before(i)
-		var why: Array = ["Opens at level %d" % sim.site_gate(i)] if sim.level_gated(i) and (Data.ZONES[z]["tiers"].find(i) == 0 or int(sim.best_depth[i - 1]) > 0) \
-			else (["After %s" % Words.mid(str(Data.TIERS[before]["name"])), "After the one before"] if before >= 0 else [""])
+		var two: String = Words.U55["stage"] % [2, Data.STAGES]     # a site opens on the one before's 2/3 (BUILD55-U: "After Top Farm 2/3")
+		var why: Array = [Words.A55_STAGE["level"] % sim.site_gate(i)] if sim.level_gated(i) and (Data.ZONES[z]["tiers"].find(i) == 0 or sim.stage_done(i - 1) >= 2) \
+			else ([Words.U55["after_site"] % [Words.mid(str(Data.TIERS[before]["name"])), two], Words.U55["after_site_short"] % two] if before >= 0 else [""])
 		UI.fit(odds_line, why)
 		return
 	UI.fit(verdict, [Words.odds_words(odds)])
@@ -407,43 +458,72 @@ func _show_match(i: int, z: int, is_open: bool, b: Dictionary, convoy: bool, sho
 		l.mouse_filter = Control.MOUSE_FILTER_PASS
 
 
-func _show_head(i: int, b: Dictionary, convoy: bool, is_open: bool, showing_head: bool) -> void:
-	var armed: bool = bool(sim.boss_armed.get(i, false))
-	head_face.get_parent().visible = has_head
-	gang_btn.disabled = false
-	head_btn.disabled = not has_head or not is_open or (not armed and not sim.can_arm_boss(i))     # pressing it takes him on (BUILD48 item 1): shut when he can't be
-	UI.style_button(gang_btn, not showing_head)
-	UI.style_button(head_btn, showing_head)
-	head_btn.tooltip_text = "" if has_head else Words.SITE_CARD["no_head"]
-	if not has_head:
-		UI.fit(head_name, [Words.SITE_CARD["no_head"]])
-		head_name.add_theme_color_override("font_color", Pal.TEXT_3)
-		UI.fit(head_sub, [Words.SITE_CARD["no_head_sub"]] if is_open else [""])
-		return
-	head_name.add_theme_color_override("font_color", Pal.TEXT)
-	var nm: String = Words.SITE_CARD["convoy"] if convoy else str(b["name"])
-	if not convoy and sim.is_pinnacle(i):
-		UI.fit(head_name, ["%s, at full strength" % nm, nm])
-	else:
-		UI.fit(head_name, [nm])
-	People.show(head_face, "" if convoy else str(b["name"]))
-	head_face.modulate = Color.WHITE if showing_head or armed else Color(0.6, 0.6, 0.6)
-	if not is_open:
-		UI.fit(head_sub, [Words.SITE_CARD["locked"]])     # his name, greyed toggle, no price till the site's open
-		return
-	var cost: int = sim.boss_cost(i)
-	var sub: Array
-	if armed and cost > 0 and sim.notes < cost:
-		sub = [Words.SITE_CARD["dear"] % [Fmt.notes(cost), Fmt.notes(sim.notes)], Fmt.notes(cost)]     # the price said here alone (fix 46, S6)
-	elif armed:
-		sub = [Words.SITE_CARD["armed"], Words.SITE_CARD["armed_short"]]
-	elif cost > 0 and sim.notes < cost:
-		sub = [Words.SITE_CARD["dear"] % [Fmt.notes(cost), Fmt.notes(sim.notes)], Fmt.notes(cost)]
-	elif cost > 0:
-		sub = [Words.SITE_CARD["cost"] % Fmt.notes(cost), Fmt.notes(cost)]
-	else:
-		sub = [Words.SITE_CARD["free"], Words.SITE_CARD["free_short"]]
-	UI.fit(head_sub, sub)
+## The stage picker (BUILD55-U, the canvas StagesCard layout A and its Head card): the three stages in a row, each "1/3"
+## over its state - "Cleared" with a tick, "Not cleared", or shut and greyed with stage_block's reason - the picked one
+## amber; a fourth, "Head", on a zone's last site (shut "After 2/3", then "Free" or his price); "Picked" and the picked
+## one's level at the row's right.
+func _show_picker(i: int, z: int, is_open: bool, showing_head: bool) -> void:
+	var n: int = Data.STAGES + (1 if has_head else 0)
+	var w: float = floorf((INNER - PICKED_W - 8 - (n - 1) * SEG_GAP) / float(n))
+	var pick: int = sim.stage_pick(i)
+	var done: int = sim.stage_done(i)
+	for k in range(segs.size()):
+		var sg: Dictionary = segs[k]
+		var bt: Button = sg["button"]
+		bt.visible = k < n
+		if not bt.visible:
+			continue
+		bt.position.x = k * (w + SEG_GAP)
+		bt.size = Vector2(w, PICK_H)
+		for l in [sg["top"], sg["sub"]]:
+			l.size.x = w
+		var on: bool
+		var shut: bool
+		var top: String
+		var sub: Array
+		var sub_tone: Color = Pal.TEXT_2
+		if k < Data.STAGES:
+			var s: int = k + 1
+			var why: String = sim.stage_block(i, s)
+			shut = why != ""
+			on = is_open and not showing_head and s == pick
+			top = Words.U55["stage"] % [s, Data.STAGES] + (" ✓" if done >= s else "")
+			if done >= s:
+				sub = [Words.U55["cleared"]]
+				sub_tone = Pal.GOOD
+			elif shut:
+				sub = [why] + ([Words.U55["opens_short"] % int(why.get_slice(" ", why.get_slice_count(" ") - 1))] if why.begins_with(Words.A55_STAGE["level"].get_slice("%", 0)) else []) + [Words.SITE_CARD["locked"]]     # the site's own gate in full on the verdict's line
+			else:
+				sub = [Words.U55["not_cleared"], Words.U55["not_cleared_short"]]     # (FIX55, the language pass) "Open" when it won't fit
+		else:
+			var site_two: bool = sim.stage_done(i) >= 2
+			shut = not is_open or not site_two
+			on = showing_head
+			top = Words.U55["head"] + (" ✓" if bool(sim.bosses_beaten[z]) else "")
+			var cost: int = sim.head_fight_cost(z)
+			if shut:
+				sub = [Words.U55["after_site_short"] % (Words.U55["stage"] % [2, Data.STAGES])]
+			elif cost > 0:
+				sub = [Fmt.notes(cost), Fmt.group(cost)]
+				sub_tone = Pal.BAD if sim.notes < cost else Pal.TEXT_2
+			else:
+				sub = [Words.U55["head_free"]]
+				sub_tone = Pal.GOOD
+		bt.disabled = shut
+		UI.style_button(bt, on)
+		UI.fit(sg["top"], [top, top.trim_suffix(" ✓")])
+		UI.fit(sg["sub"], sub)
+		sg["top"].add_theme_color_override("font_color", Pal.ACCENT_TEXT if on else (Pal.TEXT_3 if shut else Pal.TEXT))
+		sg["sub"].add_theme_color_override("font_color", Pal.ACCENT_TEXT if on else (Pal.TEXT_3 if shut else sub_tone))
+	var lv: int = sim.stage_level(i, Data.STAGE_OPENS if showing_head else pick)     # the head's level is his gate's, the 2/3 (FIX55b)
+	var what: String = Words.U55["head"] if showing_head else Words.U55["stage"] % [pick, Data.STAGES]
+	UI.fit(picked_val, [Words.U55["picked_line"] % [what, lv], Words.U55["picked_short"] % lv])
+	picked_val.add_theme_color_override("font_color", Pal.ACCENT if is_open else Pal.TEXT_3)
+
+
+## The head's gang (§4): half the site's gangs, at its 3/3 man - as the sim forms his fight.
+func head_gang(i: int) -> int:
+	return maxi(1, int(sim.head_fight_preview(int(Data.TIERS[i]["zone"])).get("pool", 1)))
 
 
 ## Words for a share, never the figure (the style guide: words over raw numbers).
@@ -734,10 +814,16 @@ func _show_here(i: int) -> void:
 
 ## Every label and button with words, for the fit checks.
 func text_nodes() -> Array:
-	var out: Array = [kicker, title, sky, foot, you_name, them_name, verdict, odds_line, head_name, head_sub, no_fix, home_head, here, here_right, last]
-	for b in [gang_btn, head_btn]:
-		if b.visible:
-			out.append(b)
+	var out: Array = [kicker, title, sky, foot, you_name, them_name, verdict, odds_line, no_fix, home_head, here, here_right, last]
+	if head_box.visible:
+		out.append_array([head_name, head_sub])     # an order's place's row (BUILD55-U: a site's is the picker)
+	if pick_box.visible:
+		for sg in segs:
+			if sg["button"].visible:
+				out.append_array([sg["top"], sg["sub"]])
+		out.append_array([picked_key, picked_val])
+	if gang_frame.visible:
+		out.append(gang_count)
 	if count_box.visible:
 		out.append(count)
 	out.append_array(keys + vals)
@@ -877,10 +963,9 @@ func _order_head(k: String, p: Dictionary, open: bool) -> void:
 	head_face.get_parent().visible = true
 	People.show(head_face, str(p["who"]))
 	head_face.modulate = Color.WHITE if open else Color(0.6, 0.6, 0.6)
-	gang_btn.visible = false
-	head_btn.visible = false
-	head_name.size.x = INNER - 54 - 8
-	head_sub.size.x = INNER - 54 - 8
+	head_box.visible = true                  # his row in the picker's slot (BUILD55-U)
+	pick_box.visible = false
+	gang_frame.visible = false
 	head_name.add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
 	UI.fit(head_name, ["%s · level %d" % [p["who"], sim.order_level(k)], str(p["who"])])
 	var line: String = str(Words.PINNACLE_WORDS.get(k, ""))

@@ -119,10 +119,10 @@ func _outskirts_checks(main) -> void:
 	var fresh = Sim.new()
 	fresh.start()
 	_check(fresh.tier_open(0) and not fresh.tier_open(1) and not fresh.tier_open(3) and fresh.zone_open(0) and not fresh.zone_open(1), "a new pitch does not start at the Allotments alone")
-	fresh.best_depth[0] = 1
-	fresh.best_depth[1] = 1
+	_bd(fresh, 0, 1)
+	_bd(fresh, 1, 1)
 	_check(fresh.tier_open(2) and not fresh.zone_open(1), "the Estate opened before Top Farm was cleared")
-	fresh.best_depth[2] = 1
+	_bd(fresh, 2, 1)
 	_check(not fresh.zone_open(1) and str(fresh.zone_boss(0).get("name", "")) == "The Gamekeeper", "the Estate opened with the Gamekeeper standing (13 Oct)")
 	fresh.bosses_beaten[0] = true
 	_check(fresh.zone_complete(0) and fresh.zone_open(1) and fresh.tier_open(3), "the Outskirts cleared and the Gamekeeper down did not open the Estate")
@@ -312,7 +312,7 @@ func _init() -> void:
 			if not sim.treat():
 				sim.advance(120.0)            # rest instead
 				continue
-		sim.deploy(t)
+		_smoke_go(sim, t)
 		var guard := 0
 		while sim.on_mission() and guard < 10000:
 			sim.advance(1.0)
@@ -365,7 +365,7 @@ func _init() -> void:
 		if sim.hp < sim.max_hp() * 0.7 and not sim.treat():
 			sim.advance(120.0)
 			continue
-		sim.deploy(t)
+		_smoke_go(sim, t)
 		var guard := 0
 		while sim.on_mission() and guard < 10000:
 			sim.advance(1.0)
@@ -905,6 +905,22 @@ func _init() -> void:
 	_f51_night_read_checks(main)              # FIX51: the review's 9 - the break's pack inside night_odds alone
 	_f51_words_checks()                       # FIX51: the Cap, Press on and the swap read their constants
 	_f51_workshop_checks(main)                # FIX51: the Workshop's gun figure is the pick panel's headline
+	_a55_stages_checks()                      # BUILD55-A: stages per site - the numbers, the gates, the guards, the heads, the save, the bot's wall
+	_u55_picker_checks(main)                  # BUILD55-U: the site card's stage picker
+	_u55_head_checks(main)                    # BUILD55-U: the Head on a zone's last site
+	_u55_pin_checks(main)                     # BUILD55-U: the Map's stage marks and "New"
+	_u55_backdrop_checks(main)                # BUILD55-U: the stage backdrops and the head's den
+	_u55_words_checks(main)                   # BUILD55-U: "stage" and "After Top Farm 2/3"
+	_c55_theme_checks()                       # BUILD55-C (5 Nov): the sites' lists - 60% of plain gear from them, as before where none's in reach
+	_c55_tier_up_checks()                     # BUILD55-C: a 3/3's quarter a tier up, never past loot_cap; a signal's finds as before
+	_c55_bases_checks()                       # BUILD55-C: the 24 new bases roll, wear and show their borrowed picture
+	_f55_head_odds_checks(main)               # FIX55 (5 Nov): the review's 1 - the Head's read stepped in its own slot, the frames in budget
+	_f55_repeat_gate_checks(main)             # FIX55: the review's 2 - "Run it ×N" shut on a stage not yet cleared
+	_f55_wagers_checks(main)                  # FIX55: the review's 3 - Kev's wagers on every stage's first clear and the head's fight
+	_f55_head_finds_checks(main)              # FIX55: the review's 4 - the head's fight's finds: no stage, his site's list
+	_f55_repeat_sync_checks(main)             # FIX55: the review's 5 - the repeat's end syncs its site's depth
+	_f55_words_checks(main)                   # FIX55: the tidy and the language pass
+	_f55_head_rule_checks()                   # FIX55b: each head on his site's 1/3 man, his gang on the 2/3's
 	_finish()
 
 
@@ -932,7 +948,7 @@ func _run_only(main, only: Array) -> void:
 	# a camp some way in, as the bot's run would leave it: every site cleared once, every head down, a runner of some level
 	var sim = main.sim
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.depot_cleared = true
@@ -1490,7 +1506,7 @@ func _fence_screen(main) -> void:
 func _finish_campaign(sim) -> void:
 	sim.depot_cleared = true
 	for k in range(Data.TIERS.size()):
-		sim.best_depth[k] = maxi(sim.best_depth[k], 1)
+		_bd(sim, k, maxi(sim.best_depth[k], 1))
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = true
 
@@ -1506,21 +1522,20 @@ func _campaign_checks(main) -> void:
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = false
 	for k in range(Data.TIERS.size()):
-		sim.best_depth[k] = 1
+		_bd(sim, k, 1)
 	_check(not sim.zone_open(1), "the Estate opened with the Gamekeeper standing")
 	sim.bosses_beaten[0] = true                 # the Gamekeeper down (13 Oct): the Estate's is the test
 	_check(sim.zone_open(1) and not sim.zone_open(2), "the Town opened with every Estate site cleared but its boss standing")
 	_check(not sim.campaign_done(), "the campaign read as done with no boss beaten")
-	sim.set_depth(3, 2)
-	_check(sim.depth[3] == 1, "depth 2 opened before the campaign")
+	sim.set_depth(3, 5)
+	_check(sim.depth[3] == 3, "a depth past 3/3 opened on a campaign site: %d" % sim.depth[3])     # (BUILD55-A) the stages, not the old ladder
 	sim.hp = sim.max_hp()
-	# the Estate's boss, free, from the Retail Park
-	_check(sim.boss_cost(5) == 0, "the first boss fight is not free")
-	_check(sim.can_arm_boss(5), "the Estate's boss could not be armed")
-	sim.arm_boss(5, true)
-	var t: Dictionary = sim.effective(5)
-	_check(t.has("boss") and t["boss"]["hp"] > t["hp"], "arming the boss did not put them in the fight")
-	sim.deploy(5)
+	# the Estate's boss, free, his own fight after the Retail Park's 2/3 (BUILD55-A)
+	_check(sim.head_fight_cost(1) == 0, "the first boss fight is not free")
+	_check(sim.head_fight_open(1), "the Estate's boss's fight isn't open: '%s'" % sim.head_fight_block(1))
+	var t: Dictionary = sim.head_fight_preview(1)
+	_check(t.has("boss") and t["boss"]["hp"] > t["hp"], "the head's fight has no head in it")
+	sim.start_head_fight(1)
 	_check(sim.on_mission() and sim.mission.has("boss"), "the boss did not come on the run")
 	_check(not sim.boss_armed.get(2, false), "the boss stayed armed past the deploy: arming is one run, like the insurance")
 	# through the pool with a big gun, then the boss
@@ -1549,18 +1564,18 @@ func _campaign_checks(main) -> void:
 	sim.extract_now()
 	_check(sim.notes > notes_before, "the notes did not come home")
 	_check(sim.zone_open(2), "the Town did not open with the Estate's boss down")
-	_check(sim.boss_cost(5) > 0, "the second boss fight is free")
-	# the endgame: campaign done, depth 2 everywhere; the sites are nine ladders now (7 Oct): each site's
-	# depth 2 harder than the one before it in the campaign's order, the city's a good deal harder than the estate's
+	_check(sim.head_fight_cost(1) > 0, "the second boss fight is free")
+	# the endgame: campaign done, the first depth past the stages everywhere (BUILD55-A: was depth 2); the sites are nine
+	# ladders now (7 Oct): each site's harder than the one before it in the campaign's order, the city's a good deal harder
 	_finish_campaign(sim)
 	var last_work := 0.0
 	var work_lo := 1e9
 	var work_hi := 0.0
 	for i in range(Data.TIERS.size()):
-		sim.set_depth(i, 2)
-		_check(sim.depth[i] == 2, "depth 2 did not open at %s after the campaign" % Data.TIERS[i]["name"])
+		sim.set_depth(i, 3)
+		_check(sim.depth[i] == 3, "3/3 did not open at %s after the campaign" % Data.TIERS[i]["name"])
 		sim.words[i] = []                       # the shape alone, without the word on it
-		var e: Dictionary = sim.effective(i)
+		var e: Dictionary = sim.depth_figures(i, Data.SIGNAL_DEPTH, Sim.lv_at(i, Data.SIGNAL_DEPTH))     # (BUILD55-A) the endgame's curve from depth 4
 		var work: float = e["hp"] * e["dps"]       # how hard one of them is: the level's curve, bent by the shape
 		_check(work >= last_work * 0.8, "at depth 2 %s reads easier than the site before it: %.0f after %.0f" % [Data.TIERS[i]["name"], work, last_work])
 		last_work = work
@@ -1569,9 +1584,9 @@ func _campaign_checks(main) -> void:
 	_check(work_hi / work_lo > 3.0, "at depth 2 the sites' fights differ by only ×%.1f; the ladders are not nine" % (work_hi / work_lo))
 	# the boss costs notes now
 	sim.notes = 0
-	_check(not sim.can_arm_boss(5), "a boss was armed with no notes")
+	_check(not sim.head_fight_open(1), "a boss's fight opened with no notes")     # (BUILD55-A) his own fight
 	sim.notes = 1000
-	_check(sim.can_arm_boss(5), "a boss could not be armed with notes in hand")
+	_check(sim.head_fight_open(1), "a boss's fight shut with notes in hand: '%s'" % sim.head_fight_block(1))
 	# exclusives: a site's own base drops there and nowhere else
 	var seen_at := {}
 	for i in range(Data.TIERS.size()):
@@ -1613,7 +1628,7 @@ func _narrative_checks(main) -> void:
 	sim.deeds_fate = ""                         # and decided them (19 Oct, the flaky drop: a fate or deeds in the stash from the
 	sim.stash = sim.stash.filter(func(x): return not Items.is_deeds(x))     # smoke's earlier play stop a second drop, as they should)
 	sim.unlocked.erase("yard")                  # the deeds come off the Manager while the Yard isn't yours (13 Oct)
-	sim.boss_armed[bank] = true
+	sim.set_stage_pick(bank, 1)
 	sim.deploy(bank)
 	_check(sim.on_mission(), "could not set off for the Bank")
 	_check(sim.events.back()[1] == Words.site_line("The Bank", 1), "setting off for the Bank gave no site line: %s" % sim.events.back()[1])
@@ -1623,6 +1638,11 @@ func _narrative_checks(main) -> void:
 		if Items.is_deeds(it):
 			deeds = it
 	_check(deeds.is_empty(), "clearing the Bank dropped the deeds: they're the Manager's now (13 Oct)")
+	sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.notes = maxi(sim.notes, 1000)
+	sim.start_head_fight(2)                      # (BUILD55-A) the Manager's own fight
+	_check(sim.on_mission() and sim.mission.has("boss"), "the Manager's own fight didn't start: '%s'" % sim.head_fight_block(2))
 	if sim.mission.has("boss"):
 		sim._boss_down(sim.mission, sim.mission["t"])
 	for it in sim.mission["found"]:
@@ -1644,8 +1664,8 @@ func _narrative_checks(main) -> void:
 	sim.deeds_fate = ""
 	sim.hp = sim.max_hp()
 	sim.unlocked.erase("yard")
-	sim.boss_armed[bank] = true
-	sim.deploy(bank)
+	sim.notes = maxi(sim.notes, 1000)
+	sim.start_head_fight(2)                      # (BUILD55-A) the Manager's own fight
 	sim._clear(sim.mission, sim.mission["t"])
 	if sim.mission.has("boss"):
 		sim._boss_down(sim.mission, sim.mission["t"])
@@ -2942,7 +2962,8 @@ func _web_rule_checks(main) -> void:
 	sim.extract_now()
 	# Workbench, On a roll, the dots' lengths (Light pack and Shop local went for the Drifter's and the Scrapper's skills, 24 Oct)
 	with.call(["Stripping/Workbench"])
-	var piece: Dictionary = sim.stash.filter(func(x): return x.has("affixes") and not x["affixes"].is_empty() and not Items.is_ammo(x))[0] if not sim.stash.filter(func(x): return x.has("affixes") and not x["affixes"].is_empty() and not Items.is_ammo(x)).is_empty() else {}
+	var benchable := func(x): return x.has("affixes") and not x["affixes"].is_empty() and not Items.is_ammo(x) and not x.has("unique") and not x.has("set") and not Items.is_paper(x) and not Items.is_mag(x)     # (BUILD55-C) a piece the bench works: the themed finds' dice once handed this a unique
+	var piece: Dictionary = sim.stash.filter(benchable)[0] if not sim.stash.filter(benchable).is_empty() else {}
 	if not piece.is_empty():
 		_check(sim.workbench_free() and sim.craft_cost(piece, "values") == 0, "Workbench's free job isn't free: %d" % sim.craft_cost(piece, "values"))
 		sim.workbench_day = int(sim.elapsed / 86400.0)
@@ -3574,7 +3595,7 @@ func _capstone_checks(main) -> void:
 	sim.extract_now()
 	_check(sim.best_tier == best_before, "a Ghost run brought home light counted as a clear")
 	sim.best_tier = 0
-	sim.best_depth[3] = 0
+	_bd(sim, 3, 0)
 	sim.deploy(3)
 	m = sim.mission
 	m["found"] = []
@@ -3811,10 +3832,10 @@ func _unique_rules_checks(main) -> void:
 		_check(it["unique"] == u["name"] and Words.UNIQUES.has(u["name"]), "%s does not roll, or has no words" % u["name"])
 	_check(sim.loose_uniques(1).size() == 8 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 1
+		_bd(sim, i, 1)
 	for k in range(20):
 		_check(int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) == 0, "the mate sold a deep unique before anyone had been deep")
-	sim.best_depth[3] = 25
+	_bd(sim, 3, 25)
 	var deep := 0
 	for k in range(40):
 		deep += 1 if int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) >= 6 else 0     # the build ones open at 6 now (12 Oct)
@@ -4354,17 +4375,22 @@ func _atlas_checks(main) -> void:
 	# a clear at depth 2 earns a point; depth 1 does not
 	sim.set_depth(3, 1)
 	var t1: Dictionary = sim.effective(3)
-	sim.best_depth[3] = 0
+	_bd(sim, 3, 0)
 	sim.deploy(3)
 	sim._clear(sim.mission, t1)
 	sim.extract_now()
 	_check(sim.atlas_points == 0, "a depth-1 clear put a point on the map")
 	sim.set_depth(3, 2)
+	sim.deploy(3)
+	sim._clear(sim.mission, sim.effective(3))
+	sim.extract_now()
+	_check(sim.atlas_points == 0, "a stage's clear (2/3) put a point on the map: %d" % sim.atlas_points)     # (BUILD55-A) stages pay no Map points
+	sim.depth[3] = Data.SIGNAL_DEPTH             # (BUILD55-A) the first depth past the stages (set_depth stops at 3/3)
 	var t2: Dictionary = sim.effective(3)
 	sim.deploy(3)
 	sim._clear(sim.mission, t2)
 	sim.extract_now()
-	_check(sim.atlas_points == 1 and sim.atlas_free() == 1, "a depth-2 clear did not earn a point: %d" % sim.atlas_points)
+	_check(sim.atlas_points == 1 and sim.atlas_free() == 1, "a depth-4 clear did not earn a point: %d" % sim.atlas_points)
 	sim.deploy(3)
 	sim._clear(sim.mission, t2)
 	sim.extract_now()
@@ -4459,18 +4485,18 @@ func _exchange_checks(main) -> void:
 	# rebuild open the fuses
 	var pin: Dictionary = sim.to_dict()
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 1 if i < 3 else 0
+		_bd(sim, i, 1 if i < 3 else 0)
 		sim.depth[i] = 1
 	sim.salvage = {"copper": 0, "steel": 0, "army": 0}
 	sim.materials = {}
 	_check(sim.salvage_kinds().is_empty() and sim.materials_met().filter(func(m): return m != "fuses").all(func(m): return Data.SITE_MATERIAL.slice(0, 3).has(m)), "the Outskirts alone give salvage or another site's material: %s, %s" % [str(sim.salvage_kinds()), str(sim.materials_met())])
 	var town_site: int = int(Data.ZONES[2]["tiers"][0])     # the Town's first: steel, ZONE_SALVAGE's
 	var dug_d := 1
-	sim.best_depth[town_site] = dug_d
+	_bd(sim, town_site, dug_d)
 	while sim.dug_depth(town_site) < Data.SALVAGE_DEPTH and dug_d < 40:
 		_check(sim.salvage_kinds().is_empty(), "salvage drops dug %d, short of SALVAGE_DEPTH" % sim.dug_depth(town_site))
 		dug_d += 1
-		sim.best_depth[town_site] = dug_d
+		_bd(sim, town_site, dug_d)
 	_check(sim.salvage_kinds() == [Data.ZONE_SALVAGE[2]] and sim.exchange_offered().has(Data.ZONE_SALVAGE[2]), "dug %d at %s doesn't put %s on the exchange: %s" % [sim.dug_depth(town_site), Data.TIERS[town_site]["name"], Data.ZONE_SALVAGE[2], str(sim.salvage_kinds())])
 	var mat_site: int = -1
 	for i in range(3, mini(Data.SITE_MATERIAL.size(), sim.best_depth.size())):
@@ -4480,7 +4506,7 @@ func _exchange_checks(main) -> void:
 	if mat_site >= 0:
 		var mk: String = str(Data.SITE_MATERIAL[mat_site])
 		_check(not sim.materials_met().has(mk) or Data.SITE_MATERIAL.slice(0, 3).has(mk), "a material on the board before its site's cleared: %s" % mk)
-		sim.best_depth[mat_site] = 1
+		_bd(sim, mat_site, 1)
 		_check(sim.materials_met().has(mk) and sim.exchange_offered().has(mk), "%s cleared doesn't put %s on the exchange" % [Data.TIERS[mat_site]["name"], mk])
 	_check(sim.materials_met().has("fuses") == sim.rebuild_open(), "the fuses' place on the board doesn't follow the rebuild")
 	sim.load_dict(pin)
@@ -4741,7 +4767,7 @@ func _events_checks(main) -> void:
 	var asks_was: bool = Sim.asks
 	Sim.asks = false
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	var charm_was = sim.equipped["Charm"]
@@ -5280,6 +5306,9 @@ func _events_checks(main) -> void:
 	var bs = Sim.new()                        # a copy of the camp: the bot sets what a save doesn't keep (the hand's loot, its reads)
 	bs.load_dict(sim.to_dict())
 	bs.equipped["Charm"] = Items.roll_unique(bs._unique_named("The Caretaker's Keys"), bs.rng)     # an event every run
+	for z in range(bs.bosses_beaten.size()):
+		bs.bosses_beaten[z] = true                # (FIX55) the bot's runs a site's: the head's own fight has no lull to search in, so no event
+	bs.notes = 0                                  # and no notes to farm a head with
 	var outs: Array = []
 	for k in range(6):
 		bs.hp = bs.max_hp()
@@ -5486,7 +5515,7 @@ func _events_more_checks(main) -> void:
 	var charm_was = sim.equipped["Charm"]
 	sim.equipped["Charm"] = null
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.event_threads = {}
@@ -5637,10 +5666,11 @@ func _events_more_checks(main) -> void:
 				break
 		_check(sim.thread_list("weak").any(func(wk): return int(wk["site"]) == ih), "a head's clue left no thread: %s" % str(sim.event_threads))
 		sim.notes += 100000
-		sim.arm_boss(ih, true)
-		var full_hp: float = float(sim.effective(ih)["boss"]["hp"]) if sim.effective(ih).has("boss") else 0.0
+		var hz: int = int(Data.TIERS[ih]["zone"])     # (BUILD55-A) his own fight
+		var pv: Dictionary = sim.head_fight_preview(hz)
+		var full_hp: float = float(pv["boss"]["hp"]) if pv.has("boss") else 0.0
 		sim.hp = sim.max_hp()
-		sim.deploy(ih)
+		sim.start_head_fight(hz)
 		_check(sim.on_mission() and sim.mission.has("boss") and is_equal_approx(float(sim.mission["boss"]["hp"]), full_hp * (1.0 - Data.BODY_HEAD_CUT)) and sim.thread_list("weak").is_empty(), "the head's weakness didn't come off his HP: %.0f against %.0f" % [float(sim.mission.get("boss", {}).get("hp", 0.0)) if sim.on_mission() else 0.0, full_hp])
 		if sim.on_mission():
 			sim.extract_now()
@@ -6218,15 +6248,15 @@ func _pinnacle_checks(main) -> void:
 	_finish_campaign(sim)
 	sim.notes += 100000
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = 20
+		_bd(sim, i, 20)
 	# the Carpet Man a depth short of full strength and at it (the Retail Park's at 12, the Bank's at 9, the Barracks' at 6: level 14 on each)
 	var pd: int = sim.pinnacle_depth(5)
 	_check(pd == 12 and sim.pinnacle_depth(8) == 9 and sim.pinnacle_depth(11) == 6, "the stations' depths are off: %d %d %d" % [pd, sim.pinnacle_depth(8), sim.pinnacle_depth(11)])
-	sim.set_depth(5, pd - 1)
+	_sd(sim, 5, pd - 1)
 	sim.arm_boss(5, true)
 	var cost9: int = sim.boss_cost(5)
 	var e9: Dictionary = sim.effective(5)
-	sim.set_depth(5, pd)
+	_sd(sim, 5, pd)
 	_check(sim.is_pinnacle(5) and not sim.is_pinnacle(4), "depth %d is not a pinnacle" % pd)
 	var e10: Dictionary = sim.effective(5)
 	_check(e10["boss"]["pinnacle"] and not e9["boss"].get("pinnacle", false), "the boss at depth %d is not at full strength" % pd)
@@ -6248,7 +6278,7 @@ func _pinnacle_checks(main) -> void:
 				charms += 1
 		sim.extract_now()
 	_check(charms > 3 and charms < 30, "the Van Keys came %d of 40 pinnacle kills; a third was the aim" % charms)
-	sim.set_depth(5, 5)
+	_sd(sim, 5, 5)
 	charms = 0
 	for k in range(30):
 		sim.arm_boss(5, true)
@@ -6262,9 +6292,9 @@ func _pinnacle_checks(main) -> void:
 		sim.extract_now()
 	_check(charms == 0, "the Van Keys came from the Carpet Man under full strength")
 	# the convoy: the Services at convoy_depth() (CONVOY_DEPTH on the first yard, a depth deeper a move)
-	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH - 1)
+	_sd(sim, Data.CONVOY_TIER, Data.CONVOY_DEPTH - 1)
 	_check(not sim.is_convoy(Data.CONVOY_TIER) and not sim.can_arm_boss(Data.CONVOY_TIER), "the convoy came before depth %d" % Data.CONVOY_DEPTH)
-	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH)
+	_sd(sim, Data.CONVOY_TIER, Data.CONVOY_DEPTH)
 	_check(sim.is_convoy(Data.CONVOY_TIER) and sim.can_arm_boss(Data.CONVOY_TIER), "the convoy is not on the Services at depth %d" % Data.CONVOY_DEPTH)
 	var convoy_cost: int = sim.boss_cost(Data.CONVOY_TIER)
 	var three := 0
@@ -6317,7 +6347,7 @@ func _pinnacle_checks(main) -> void:
 	_check(sim.pace() > pace0 * 1.2, "the Van Keys did not drive")
 	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The Manager's Pen"), sim.rng)
 	for oi in Data.ZONES[0]["tiers"]:
-		sim.best_depth[oi] = maxi(1, int(sim.best_depth[oi]))     # the moved yard's Outskirts walked, so the Streets are open (12 Oct)
+		_bd(sim, oi, maxi(1, int(sim.best_depth[oi])))     # the moved yard's Outskirts walked, so the Streets are open (12 Oct)
 	var n0: int = sim.notes
 	sim.deploy(3)
 	sim.mission["notes"] = 7
@@ -6945,19 +6975,15 @@ func _faces_checks(main) -> void:
 	_finish_campaign(sim)
 	sim.notes = 1000
 	var bt := 5                                  # the Retail Park, the Carpet Man's (index 5 since the Outskirts)
-	sim.best_depth[bt] = maxi(sim.best_depth[bt], 1)
-	sim.arm_boss(bt, false)
+	_bd(sim, bt, maxi(sim.best_depth[bt], 1))
 	var armed_line: String = sim.boss_of(bt)["name"] + ": " + Words.BOSSES[sim.boss_of(bt)["name"]]["armed"]
 	var n0: int = sim.events.filter(func(ev): return str(ev[1]) == armed_line).size()
-	sim.arm_boss(bt, true)
-	var n1: int = sim.events.filter(func(ev): return str(ev[1]) == armed_line).size()
-	_check(sim.boss_armed.get(bt, false) and n1 == n0 + 1 and str(sim.events.back()[1]) == armed_line, "arming the head had no line: %s" % str(sim.events.back()))
-	sim.arm_boss(bt, true)
-	_check(sim.events.filter(func(ev): return str(ev[1]) == armed_line).size() == n1, "arming an armed head spoke twice")
 	# the run screen's face slot follows the head; the fit holds either way
 	sim.words[bt] = []
 	sim.hp = sim.max_hp()
-	sim.deploy(bt)
+	sim.start_head_fight(1)                      # (BUILD55-A) his own fight: his line as he's taken on
+	var n1: int = sim.events.filter(func(ev): return str(ev[1]) == armed_line).size()
+	_check(sim.on_mission() and n1 == n0 + 1, "taking the head on had no line: %s" % str(sim.events.slice(-3)))
 	var m: Dictionary = sim.mission
 	m["remaining"] = 1
 	m["target_hp"] = 0.1                  # the last of the pool drops: the head comes out
@@ -7102,26 +7128,26 @@ func _next_checks(main) -> void:
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(0)                              # a new yard starts at the Outskirts (12 Oct)
 	fresh.extract_now()
-	_check(fresh.next_words().begins_with("The Allotments hasn't") or fresh.next_words().begins_with("The Garden Centre hasn't"), "after the first run the next site is not named: %s" % fresh.next_words())
+	_check(fresh.next_words() in [Words.NEXT["site"] % "the Allotments", Words.NEXT["site"] % "the Garden Centre"], "after the first run the next site is not named: %s" % fresh.next_words())
 	for i in [0, 1, 2]:
-		fresh.best_depth[i] = 1
+		_bd(fresh, i, 1)
 	_check(fresh.next_words() == Words.NEXT["head"] % ["The Gamekeeper", "Top Farm"], "the Outskirts' head is not named: %s" % fresh.next_words())     # 13 Oct
 	fresh.bosses_beaten[0] = true
 	for i in [3, 4, 5]:
-		fresh.best_depth[i] = 1
-	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on the Map", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
+		_bd(fresh, i, 1)
+	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Next: the Carpet Man", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
 	fresh.bosses_beaten[1] = true
 	fresh.xp = maxf(fresh.xp, Data.xp_for_level(fresh.zone_gate(2)))     # the Town opens at its level (19 Oct)
-	_check(fresh.next_words() == Words.NEXT["site"] % "The Pleasure Park", "the town's first site is not named: %s" % fresh.next_words())
+	_check(fresh.next_words() == Words.NEXT["site"] % "the Pleasure Park" and fresh.next_words(true) == Words.NEXT_SHORT["site"] % "The Pleasure Park", "the town's first site is not named: %s" % fresh.next_words())
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(0)
 	fresh.extract_now()
-	_check(fresh.events.any(func(ev): return str(ev[1]) == Words.NEXT["site"] % "The Pleasure Park"), "the log did not carry the change")
+	_check(fresh.events.any(func(ev): return str(ev[1]) == Words.NEXT["site"] % "the Pleasure Park"), "the log did not carry the change")
 	var n1: int = fresh.events.size()
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(0)
 	fresh.extract_now()
-	_check(not fresh.events.slice(n1).any(func(ev): return str(ev[1]).begins_with("The Pleasure Park hasn't")), "the log said the same thing twice")
+	_check(not fresh.events.slice(n1).any(func(ev): return str(ev[1]) == Words.NEXT["site"] % "the Pleasure Park"), "the log said the same thing twice")
 	_finish_campaign(sim)
 	_check(sim.next_words() == Words.NEXT["done"] and sim.next_words().contains("Radio"), "the campaign done doesn't point at the Radio: %s" % sim.next_words())     # signals, 15 Oct
 	main.show_room(main.OVERVIEW)
@@ -7599,7 +7625,7 @@ func _early_game_checks(main) -> void:
 	fresh.start()
 	fresh.mythics_on = false
 	fresh.best_tier = maxi(fresh.best_tier, Data.FIRST_GUN_SITE)
-	fresh.best_depth[0] = 1
+	_bd(fresh, 0, 1)
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(Data.FIRST_GUN_SITE)
 	var m = fresh.mission
@@ -7643,7 +7669,7 @@ func _early_game_checks(main) -> void:
 	binned.start()
 	binned.mythics_on = false
 	binned.best_tier = maxi(binned.best_tier, Data.FIRST_GUN_SITE)
-	binned.best_depth[0] = 1
+	_bd(binned, 0, 1)
 	_yard_ids(binned, ["another_unit", "bins"], "bins")          # the Stash's second column, the Bins
 	_check(binned.yard_has("bins"), "the fixture: no Bins built")
 	while binned.stash_put(binned._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])):
@@ -8162,7 +8188,7 @@ func _playtest_checks(main) -> void:
 	var card = c["card"]
 	_check(card.title.position.y > card.kicker.position.y and card.foot.position.y + card.foot.size.y <= card.PIC_H and card.kicker.text.contains(" · Tier "), "the picture's words are off: '%s' / '%s'" % [card.kicker.text, card.title.text])
 	_check(card.verdict.text != "" and card.odds_line.text != "", "the matchup has no verdict: '%s' / '%s'" % [card.verdict.text, card.odds_line.text])
-	var blocks: Array = [Rect2(0, 0, card.W, card.PIC_H), Rect2(card.PAD, card.MATCH_Y, card.INNER, card.HEAD_Y - card.MATCH_Y - 2), Rect2(card.head_box.position, card.head_box.size),
+	var blocks: Array = [Rect2(0, 0, card.W, card.PIC_H), Rect2(card.pick_box.position, card.pick_box.size), Rect2(card.PAD, card.MATCH_Y, card.INNER, card.TAKES_Y - card.MATCH_Y - 2),     # the stage picker in the head row's place (BUILD55-U)
 		Rect2(card.takes_box.position, card.takes_box.size), Rect2(card.PAD, card.FIX_Y, card.INNER, card.FIX_H), Rect2(card.PAD, card.HOME_Y, card.INNER, card.TILE_Y + card.TILE_H - card.HOME_Y),
 		Rect2(card.PAD, card.HERE_Y, card.INNER, 44)]
 	for a in range(blocks.size()):
@@ -8206,8 +8232,8 @@ func _playtest_checks(main) -> void:
 	var hold_elapsed: float = sim.elapsed
 	var hold_weather: Array = sim.weather.duplicate()
 	_finish_campaign(sim)
-	sim.best_depth[tier0] = maxi(sim.best_depth[tier0], 5)
-	sim.set_depth(tier0, 5)                  # three words at depth 5
+	_bd(sim, tier0, maxi(sim.best_depth[tier0], 5))
+	_sd(sim, tier0, 5)                  # three words at depth 5
 	sim.words[tier0] = [{"w": "Bailiffs", "t": 1}, {"w": "Rubbered", "t": 1}, {"w": "Long odds", "t": 1}]
 	sim.elapsed = 3600.0 * 23.0
 	sim.weather[main._missions.zone] = "Rain"
@@ -8316,26 +8342,29 @@ func _playtest_checks(main) -> void:
 	_check_fit(main, "Fence (salt)")
 	# (the papers' picture: _art_inventory_checks, the fix round, 30 Oct)
 	sim.load_dict(saved)
-	# the boss toggle on the Runs card: one press, one toast, however many refreshes follow
+	# the Head on the card's picker (BUILD55-U; was the boss toggle): picking him, a stage, him again toasts at most once,
+	# however many refreshes follow - the pick only shows his fight, it takes nothing on
 	_finish_campaign(sim)
+	for k in range(Data.TIERS.size()):
+		_u55_done(sim, k, maxi(sim.stage_done(k), 2))     # his gate: the site's 2/3 (BUILD55-U)
 	sim.notes = 1000
 	sim.arm_boss(5, false)
 	main._juice._toasts = []
 	main.show_room(main.MISSIONS)
 	main._missions.select(5)                 # the Retail Park: the Carpet Man's
 	main.refresh()
-	main._missions._cols[0]["card"].head_btn.pressed.emit()     # the card's Head (BUILD48 item 1: the foot's button went)
+	var hcard = main._missions._cols[0]["card"]
+	hcard.segs[Data.STAGES]["button"].pressed.emit()
 	for k in range(4):
 		main._missions._shown = ""
 		main.refresh()
+	hcard.segs[0]["button"].pressed.emit()
+	main.refresh()
+	hcard.segs[Data.STAGES]["button"].pressed.emit()
+	main.refresh()
 	var boss_toasts: int = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
-	_check(boss_toasts == 1, "the boss toggle toasted %d times" % boss_toasts)
-	main._missions._cols[0]["card"].gang_btn.pressed.emit()
-	main.refresh()
-	main._missions._cols[0]["card"].head_btn.pressed.emit()
-	main.refresh()
-	boss_toasts = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
-	_check(boss_toasts == 1, "toggling off and on again toasted again while the first still showed: %d" % boss_toasts)
+	_check(hcard.head_view and boss_toasts <= 1, "the Head picked, a stage, him again: view %s, %d toasts" % [str(hcard.head_view), boss_toasts])
+	hcard.head_view = false
 	# the odds read a few milliseconds a frame (main._read_odds, 7 Oct) and settle; a refresh never runs one;
 	# without the shell's brake, all at once
 	sim._surv_cache = {}
@@ -8590,8 +8619,8 @@ func _sink_checks(main) -> void:
 	sim.words[3] = []
 	sim.set_depth(3, 1)
 	# the Radio's crafts (9 Oct): notes by the site's depth, less the map's Good reception and the Yard's Scanner
-	sim.best_depth[3] = 5
-	sim.set_depth(3, 4)
+	_bd(sim, 3, 5)
+	_sd(sim, 3, 4)
 	var yf: float = 0.75 if sim.yard_has("scanner") else 1.0
 	_check(sim.word_craft_cost(3, "retune") == maxi(1, int(ceil(8.0 * yf))) and sim.word_craft_cost(3, "call") == maxi(1, int(ceil(32.0 * yf))) and sim.word_craft_cost(3, "clear") == maxi(1, int(ceil(2.0 * yf))), "the crafts' prices are off at depth 4: retune %d, call %d, clear %d" % [sim.word_craft_cost(3, "retune"), sim.word_craft_cost(3, "call"), sim.word_craft_cost(3, "clear")])
 	sim.atlas_points = 1
@@ -8705,14 +8734,14 @@ func _damage_model_checks(main) -> void:
 	var e: Dictionary = sim.effective(3)
 	_check(e.has("types") and e.has("res") and is_equal_approx(e["types"]["physical"] + e["types"]["bleed"], 1.0) and e["types"]["bleed"] > 0.1, "the estate's fire is not mostly physical with some bleed: %s" % str(e["types"]))
 	_finish_campaign(sim)
-	sim.best_depth[3] = maxi(sim.best_depth[3], 2)
-	sim.set_depth(3, 2)
+	_bd(sim, 3, maxi(sim.best_depth[3], 2))
+	_sd(sim, 3, Data.SIGNAL_DEPTH)              # (BUILD55-A) codes past the stages: depth 4 reads as depth 2 did
 	sim.words[3] = [{"w": "Burners", "t": 1}, {"w": "Jacketed", "t": 1}]
 	e = sim.effective(3)
 	_check(e["types"].get("fire", 0.0) >= 0.33 and e["res"]["fire"] >= 0.4, "Burners and Jacketed did not take: %s %s" % [str(e["types"]), str(e["res"])])
 	sim.words[3] = [{"w": "Kitted out", "t": 1}]
-	sim.best_depth[3] = 20
-	sim.set_depth(3, 12)
+	_bd(sim, 3, 20)
+	_sd(sim, 3, 12)
 	e = sim.effective(3)
 	_check(e["res"]["bleed"] >= 0.25 + Data.RESIST_DEPTH_STEP * 4 and is_equal_approx(e["res"]["fire"], 0.25) and e["res"]["fire"] <= Data.RESIST_ENEMY_CAP, "Kitted out (tier I) at depth 12 is %s (the estate's own bleed grows, the rest stay as the word says)" % str(e["res"]))
 	sim.words[3] = []
@@ -9007,13 +9036,21 @@ func _pick_tier(sim) -> int:
 			continue
 		if sim.survival(i) >= 0.8:
 			best = i
-	# the zone's boss, once its site is cleared and the odds hold with them in
+	# the zone's boss, his own fight once his site's 2/3 is cleared and the odds hold (BUILD55-A)
+	_head_go = -1
 	var b: Dictionary = sim.boss_of(best)
-	if not b.is_empty() and sim.best_depth[best] > 0 and not sim.bosses_beaten[int(b["zone"])]:
-		sim.arm_boss(best, true)
-		if sim.survival(best) < 0.6:
-			sim.arm_boss(best, false)
+	if not b.is_empty() and not sim.bosses_beaten[int(b["zone"])] and sim.head_fight_open(int(b["zone"])) and sim.head_fight_odds(int(b["zone"])) >= 0.6:
+		_head_go = int(b["zone"])
 	return best
+
+
+## The smoke's play: a head's own fight when _pick_tier chose one, else the site at its picked stage (BUILD55-A).
+var _head_go := -1
+func _smoke_go(sim, t: int) -> void:
+	if _head_go >= 0:
+		sim.start_head_fight(_head_go)
+	else:
+		sim.deploy(t)
 
 
 ## Climb: when a tier reads safe, go a depth deeper on it.
@@ -11561,7 +11598,7 @@ func _wall_rule_checks() -> void:
 	if w.cls != "Poacher":
 		w.set_class("Poacher")
 	for i in Data.ZONES[0]["tiers"]:
-		w.best_depth[i] = 1
+		_bd(w, i, 1)
 	w.bosses_beaten[0] = true                 # the Gamekeeper down: the Paramedic open
 	var bt = Bot.new()
 	bt.wall_on = true
@@ -11596,7 +11633,7 @@ func _wall_rule_checks() -> void:
 	if w2.cls != "Poacher":
 		w2.set_class("Poacher")
 	for i in Data.ZONES[0]["tiers"]:
-		w2.best_depth[i] = 1
+		_bd(w2, i, 1)
 	w2.bosses_beaten[0] = true
 	var bt2 = _wall_bot()
 	bt2.wall_on = true
@@ -11688,7 +11725,7 @@ func _wall_branch_checks() -> void:
 	if w.cls != "Poacher":
 		w.set_class("Poacher")
 	for i in Data.ZONES[0]["tiers"]:
-		w.best_depth[i] = 1
+		_bd(w, i, 1)
 	w.bosses_beaten[0] = true                 # the Paramedic open
 	w.bosses_beaten[1] = true                 # and the Doorman (the Estate's sites still to clear: the wall stands there)
 	_check(w.set_class("Paramedic") and w.set_class("Doorman") and w.set_class("Poacher"), "the wall's fixture: the three classes not played")
@@ -11755,7 +11792,7 @@ func _wall_branch_checks() -> void:
 	_check(h.cls == "Paramedic", "the Poacher's read took the Poacher back over the wall's swap")
 	# the campaign done: the read's own build back out, once
 	for i in range(Data.TIERS.size()):
-		h.best_depth[i] = maxi(1, int(h.best_depth[i]))
+		_bd(h, i, maxi(1, int(h.best_depth[i])))
 	for z in range(h.bosses_beaten.size()):
 		h.bosses_beaten[z] = true
 	h.depot_cleared = true
@@ -12015,7 +12052,7 @@ func _exp_lead_xp_checks(_main) -> void:
 	s.set_class(lead)
 	s.set_class("Poacher")
 	for i in range(Data.TIERS.size()):
-		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+		_bd(s, i, maxi(1, int(s.best_depth[i])))
 	for z in range(s.bosses_beaten.size()):
 		s.bosses_beaten[z] = true
 	s.cash = 1e7
@@ -14097,7 +14134,7 @@ func _b37g_checks(main) -> void:
 		for t in city:
 			var n := 0
 			for k in range(n_roll):
-				if str(Items.roll(slot, 4, zr, 0.0, false, false, str(t["name"]), str(t["drops"].get("type", "")))["base"]) == nm:
+				if str(Items.roll(slot, 4, zr, 0.0, false, false, str(t["name"]), str(t["drops"].get("type", "")), 0.33, 0, -1, Data.SITE_THEMES.get(str(t["name"]), []), Data.THEME_SHARE)["base"]) == nm:     # (BUILD55-C) with the site's list, as a find rolls
 					n += 1
 			counts[t["name"]] = n
 		var stray := 0
@@ -14272,7 +14309,7 @@ func _p35_shelf_checks() -> void:
 		w.start()
 		for i in range(Data.TIERS.size()):
 			if i <= z * 2:
-				w.best_depth[i] = 1
+				_bd(w, i, 1)
 		for k in range(mini(z, w.bosses_beaten.size())):
 			w.bosses_beaten[k] = true
 		w.xp = Data.xp_for_level(5 + z * 4)
@@ -15667,7 +15704,7 @@ func _signal_checks(main) -> void:
 	sim.extract_now()
 	var sl: int = sim.lv_at(si, sd)
 	_check(int(sim.best_depth[si]) >= sd and sim.deepest_cleared_level() >= sl, "a signal's clear kept depth %d on its site (it ran at %d) - the cleared level %d under its %d" % [int(sim.best_depth[si]), sd, sim.deepest_cleared_level(), sl])
-	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sl < r_won or sim.reach == r_won + 1) and sim.atlas_points >= pts, "a signal won: reach %d after level %d (depth %d), site at %d, points %d from %d" % [sim.reach, sl, sd, int(sim.depth[si]), sim.atlas_points, pts])
+	_check(not sim.on_mission() and int(sim.depth[si]) <= Data.STAGES and sim._sig.is_empty() and (sl < r_won or sim.reach == r_won + 1) and sim.atlas_points >= pts, "a signal won: reach %d after level %d (depth %d), site at %d, points %d from %d" % [sim.reach, sl, sd, int(sim.depth[si]), sim.atlas_points, pts])
 	# run one and lose it: the reach stays, the signal's gone
 	var r0: int = sim.reach
 	_check(sim.deploy_signal(0), "the second signal didn't set off")
@@ -15845,7 +15882,7 @@ func _over_level_checks(sim) -> void:
 	var bb0: Array = sim.bosses_beaten.duplicate()
 	sim.reach = Data.REACH_START
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 1                   # the campaign done, no signal won: the level alone reads (D9)
+		_bd(sim, i, 1)                   # the campaign done, no signal won: the level alone reads (D9)
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	_check(sim.campaign_done(), "the over-level case's campaign isn't done")
@@ -15859,6 +15896,7 @@ func _over_level_checks(sim) -> void:
 	# cleared at level 2 is as it was to 2 + the free levels, then x1.08 a level gained, twice at most
 	var site2: int = Data.OUTSKIRTS_SITES
 	var cl0: Dictionary = sim.clear_level.duplicate()
+	sim.set_depth(site2, 1)                    # (BUILD55-A) the tax is keyed per stage: the 1/3's here
 	sim.clear_level.erase(site2)
 	sim.xp = Data.xp_for_level(1)
 	var plain_hp: float = float(sim.effective(site2)["hp"])
@@ -15888,7 +15926,7 @@ func _over_level_checks(sim) -> void:
 	_check(sim.over_level_share(int(low["level"]) + 100) == 1.0 and sim.over_level_share(-100) == Data.OVER_LEVEL_FLOOR, "the share isn't whole over you or floored far under")
 	# the campaign (25 Oct, the second review; D12's clamp gone): your level against the level the site's gear wants
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 1 if i <= 4 else 0
+		_bd(sim, i, 1 if i <= 4 else 0)
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = false
 	sim.xp = Data.xp_for_level(30)                 # past WEAR_FLAT: a level of wear an item level, so both are there to find
@@ -15905,7 +15943,7 @@ func _over_level_checks(sim) -> void:
 		var share_past: float = sim.over_level_share(past_free)
 		_check(is_equal_approx(share_free, 1.0) and is_equal_approx(share_past, 1.0 - Data.OVER_LEVEL_STEP),
 			"a level-30 runner in the campaign: paid %.2f where the gear wants %d levels under him (want 1), %.2f a level further (want %.2f)" % [share_free, int(Data.OVER_LEVEL_FREE), share_past, 1.0 - Data.OVER_LEVEL_STEP])
-	sim.best_depth = bd0
+	_bd_all(sim, bd0)
 	sim.bosses_beaten = bb0
 	sim.reach = reach0
 	sim.xp = xp0
@@ -16276,7 +16314,7 @@ func _story_checks(main) -> void:
 	_check_fit(main, "the Radio with Kev's papers")
 	var sg: Dictionary = sim.decrypt(ids)
 	var b0: Dictionary = Data.STORY_BEATS[0]
-	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and sim.signal_level(sg) == maxi(maxi(Data.REACH_START, sim.reach - Data.STORY_UNDER), sim.lv_at(int(sg["site"]), 2)), "the first beat's signal: %s" % str(sg))
+	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and sim.signal_level(sg) == maxi(maxi(Data.REACH_START, sim.reach - Data.STORY_UNDER), sim.lv_at(int(sg["site"]), Data.SIGNAL_DEPTH)), "the first beat's signal: %s" % str(sg))     # (BUILD55-A) the story's floor past the stages
 	var e: Dictionary = sim.signal_read(0)
 	_check(e.has("boss") and e["boss"].get("pinnacle", false), "the first beat's signal has no head at full strength: %s" % str(e.get("boss", {})))
 	main._radio._shown = ""
@@ -16464,7 +16502,7 @@ func _kev_checks(main) -> void:
 		sim._home_gate(sim._plain(Data.PAPER, "A military radio"))
 	_check(sim.campaign_done() or sim.kev_block() == "the campaign first", "Kev sells before the campaign's done: '%s'" % sim.kev_block())
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done, as a signal wants it (load_dict puts it back)
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))     # the campaign done, as a signal wants it (load_dict puts it back)
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.depot_cleared = true
@@ -18750,7 +18788,7 @@ func _yard_wide_checks(main) -> void:
 	sim.best_dig = {}
 	for i in range(sim.depth.size()):
 		sim.depth[i] = 1
-		sim.best_depth[i] = 0
+		_bd(sim, i, 0)
 	sim.yard_open = 0
 	_finish_campaign(sim)
 	_check(sim.yard_cols() == 4, "the campaign done opens %d columns, not four" % sim.yard_cols())
@@ -18759,7 +18797,7 @@ func _yard_wide_checks(main) -> void:
 	sim.best_dig = {}
 	for i in range(sim.depth.size()):
 		sim.depth[i] = 1
-		sim.best_depth[i] = 0
+		_bd(sim, i, 0)
 	_check(sim.yard_cols() == Data.YARD_COLS, "the columns closed again when the depth went")
 	# the fifth column and the rank want salvage (a line's first four built: it climbs in order, 28 Oct)
 	sim.yard_picks["stash"] = ["ab", "ab", "ab", "ab", ""]
@@ -18995,8 +19033,8 @@ func _yard_pick_checks(main) -> void:
 	sim.weather = hold_weather
 	_finish_campaign(sim)
 	sim.atlas = {}
-	sim.best_depth[3] = maxi(sim.best_depth[3], 9)
-	sim.set_depth(3, 9)
+	_bd(sim, 3, maxi(sim.best_depth[3], 9))
+	_sd(sim, 3, 9)
 	sim.words[3] = []
 	sim.sealed[3] = false
 	sim.notes = 100000
@@ -19081,8 +19119,8 @@ func _yard_pick_checks(main) -> void:
 	# salvage: a deep kill on a zone's site drops its kind, home with the run; the buildings move with the Yard
 	sim.load_dict(saved)
 	_finish_campaign(sim)
-	sim.best_depth[3] = 7
-	sim.set_depth(3, 8)
+	_bd(sim, 3, 7)
+	_sd(sim, 3, 8)
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	var mm: Dictionary = sim.mission
@@ -19221,18 +19259,18 @@ func _deep_tier_checks(main) -> void:
 	# the Workshop's gun builds: a deep improvised base only once a site drops its tier (the review, 10 Oct)
 	var hold_bd: Array = sim.best_depth.duplicate()
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 1
+		_bd(sim, i, 1)
 	var top_build := 0
 	for e in sim.build_options("gun"):
 		top_build = maxi(top_build, int(e["tier"]))
 	_check(top_build == Data.CAMPAIGN_TIER, "the campaign's gun builds reach T%d" % top_build)
 	for i in range(sim.best_depth.size()):
-		sim.best_depth[i] = 20
+		_bd(sim, i, 20)
 	top_build = 0
 	for e in sim.build_options("gun"):
 		top_build = maxi(top_build, int(e["tier"]))
 	_check(top_build == Data.MAX_TIER, "the deep gun builds stop at T%d at depth 20" % top_build)
-	sim.best_depth = hold_bd
+	_bd_all(sim, hold_bd)
 	# a shop's unique or set piece carries its own base's level, not a deep throwaway's
 	var u_rng := RandomNumberGenerator.new()
 	u_rng.seed = 11
@@ -19264,25 +19302,25 @@ func _site_level_checks(main) -> void:
 	var hold_depth: Array = sim.depth.duplicate()
 	var hold_best: Array = sim.best_depth.duplicate()
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = 20
+		_bd(sim, i, 20)
 	_check(sim.loot_tier_at(1) == 1 and sim.loot_tier_at(9) == 1 and sim.loot_tier_at(10) == 5 and sim.loot_tier_at(30) == Data.MAX_TIER and sim.site_tier_at(3, 8) == 2 and sim.site_tier_at(11, 9) == Data.CAMPAIGN_TIER, "the gear tier by level is off: %d %d %d" % [sim.loot_tier_at(1), sim.loot_tier_at(10), sim.site_tier_at(11, 9)])
 	_deep_tier_checks(main)
-	sim.set_depth(3, 8)
-	sim.set_depth(11, 2)
+	sim.depth[3] = 8                      # (BUILD55-A) written straight in: set_depth stops at 3/3; the Barracks at the first depth past it
+	sim.depth[11] = Data.SIGNAL_DEPTH
 	var hold_intel: Array = [sim.words[3].duplicate(true), sim.words[11].duplicate(true)]
 	sim.words[3] = []                     # the plain sites: a word on the air can add a gear tier
 	sim.words[11] = []
 	var streets: Dictionary = sim.effective(3)
 	var barracks: Dictionary = sim.effective(11)
-	_check(int(streets["level"]) == 8 and int(barracks["level"]) == 10 and sim.site_level(3) == 8, "the sites' levels are off: %d / %d" % [int(streets["level"]), int(barracks["level"])])
+	_check(int(streets["level"]) == 8 and int(barracks["level"]) == 12 and sim.site_level(3) == 8, "the sites' levels are off: %d / %d" % [int(streets["level"]), int(barracks["level"])])
 	_check(float(barracks["hp"]) > float(streets["hp"]) and float(barracks["dps"]) > float(streets["dps"]), "the Barracks at depth 2 is no harder than the streets at depth 8: %.0f vs %.0f HP" % [float(barracks["hp"]), float(streets["hp"])])
-	_check(int(streets["loot_tier"]) == 2 and int(barracks["loot_tier"]) == 5, "the bases by level are off: streets tier %d, barracks tier %d" % [int(streets["loot_tier"]), int(barracks["loot_tier"])])     # the Streets' own T2 at level 8; the Barracks at level 10 a signal's T5 (29 Oct)
+	_check(int(streets["loot_tier"]) == 2 and int(barracks["loot_tier"]) == 5, "the bases by level are off: streets tier %d, barracks tier %d" % [int(streets["loot_tier"]), int(barracks["loot_tier"])])     # the Streets' own T2 at level 8; the Barracks at level 12 a signal's T5 (29 Oct; BUILD55-A: depth 4)
 	# a find carries the site's level
 	var f0: Dictionary = Items.roll("Primary", int(streets["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 8, int(streets["level"]))
 	var f8: Dictionary = Items.roll("Primary", int(barracks["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 2, int(barracks["level"]))
-	_check(int(f0["ilvl"]) == 8 and int(f8["ilvl"]) == 10, "a find's item level is not the site's: %d / %d" % [int(f0["ilvl"]), int(f8["ilvl"])])
+	_check(int(f0["ilvl"]) == 8 and int(f8["ilvl"]) == 12, "a find's item level is not the site's: %d / %d" % [int(f0["ilvl"]), int(f8["ilvl"])])
 	# never under the site's own campaign curve: the Barracks at depth 2 keeps the campaign's climb
-	var camp_d2: float = float(Data.TIERS[11]["hp"]) * (1.0 + Data.DEPTH_HOSTILE)
+	var camp_d2: float = float(Data.TIERS[11]["hp"]) * pow(1.0 + Data.DEPTH_HOSTILE, Data.SIGNAL_DEPTH - 1)     # (BUILD55-A) at depth 4
 	_check(float(barracks["hp"]) >= camp_d2 - 0.01, "the Barracks at depth 2 fell under its campaign curve: %.0f < %.0f" % [float(barracks["hp"]), camp_d2])
 	# the Runs card says it: the level on the kicker, the finds' level on a tile, the stations on the note
 	main.show_room(main.MISSIONS)
@@ -19311,7 +19349,7 @@ func _site_level_checks(main) -> void:
 	sim.words[3] = hold_intel[0]
 	sim.words[11] = hold_intel[1]
 	sim.depth = hold_depth
-	sim.best_depth = hold_best
+	_bd_all(sim, hold_best)
 	sim._surv_cache = {}
 
 
@@ -19423,7 +19461,7 @@ func _tier_guide_checks(main) -> void:
 			var r: Dictionary = rows[k]
 			if int(r["level"]) in Data.DEEP_TIER_LEVELS:
 				ok = ok and r["marks"].any(func(m): return str(m[1]) == "deep")
-			if k >= 1 and int(r["depth"]) >= 3:
+			if k >= 1 and int(r["depth"]) >= Data.SIGNAL_DEPTH + 1:     # (BUILD55-A) both rows signals' (the curve from depth 4; under it the stages')
 				ok = ok and float(r["gangs"]) >= float(rows[k - 1]["gangs"]) * (1.0 - 1e-6)
 		_check(ok, "%s's ladder: a deep tier unmarked, or the gangs easing with level: %s" % [Data.TIERS[i]["name"], str(rows.map(func(r): return [int(r["level"]), snappedf(float(r["gangs"]), 0.01), r["marks"].map(func(m): return m[1])]))])
 	# a ladder from part-way up doesn't mark again what opened under its first row
@@ -19790,8 +19828,8 @@ func _growth_checks(main) -> void:
 	var u_deep: Dictionary = Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng, Data.ILVL_FROM + 20)
 	_check(Items.ilvl(u_deep) == Data.ILVL_FROM + 20 and str(u_deep["affixes"][0]["stat"]) == "loot_pct" and int(u_deep["affixes"][0]["value"]) == int(round(20 * Items.ilvl_mult(mini(Data.ILVL_FROM + 20, Data.PCT_LINE_TOP)))) and int(u_shallow["affixes"][0]["value"]) == 20, "a unique found deep does not carry the depth: %d / %d" % [int(u_shallow["affixes"][0]["value"]), int(u_deep["affixes"][0]["value"])])
 	# the find carries the site's level into a unique
-	sim.best_depth[11] = 30
-	sim.set_depth(11, 25)
+	_bd(sim, 11, 30)
+	_sd(sim, 11, 25)
 	var t: Dictionary = sim.effective(11)
 	var found: Dictionary = Items.roll_unique(sim.site_unique(11), sim.rng, int(t["level"]))
 	_check(Items.ilvl(found) == 33, "the Barracks at depth 25 did not give a level-33 unique: %d" % Items.ilvl(found))
@@ -19905,7 +19943,7 @@ func _site_unique_checks(main) -> void:
 	var own := 0
 	for d in [5, 6]:
 		own = 0
-		sim.set_depth(11, d)
+		_sd(sim, 11, d)
 		sim.deploy(11)
 		var m: Dictionary = sim.mission
 		var eff: Dictionary = sim.effective(11)
@@ -19972,9 +20010,9 @@ func _map_nodes_checks(main) -> void:
 	_check(int(e2["contact"]) == int(e1["contact"]) - 1, "Open ground did not take one off")
 	_check(is_equal_approx(float(e2["cash"]) / float(e1["cash"]), 1.2), "Every penny is off")
 	var best0: int = sim.best_depth[3]
-	sim.best_depth[3] = 3
+	_bd(sim, 3, 3)
 	sim.set_depth(3, 6)
-	_check(sim.depth[3] == 4, "without the keystone the ladder opened past the deepest plus one: %d" % sim.depth[3])
+	_check(sim.depth[3] == 3, "a campaign site's depth went past 3/3: %d" % sim.depth[3])     # (BUILD55-A) the stages' clamp, at any time
 	var reach0: int = sim.reach
 	sim.reach = 20
 	var band0: Array = sim.signal_band([-1])     # one paper (20 Oct): the faint band reaches furthest under
@@ -19983,7 +20021,7 @@ func _map_nodes_checks(main) -> void:
 	_check(int(band0[0]) == 20 + int(Data.SIGNAL_GRADES[0]["roll"][0][0]) and int(band1[0]) == 20 - int(Data.FX["atlas/lie_of_the_land"]), "The lie of the land did not stop the low rolls: %s -> %s (18 Oct)" % [str(band0), str(band1)])
 	sim.reach = reach0
 	sim.set_depth(3, 2)
-	sim.best_depth[3] = best0
+	_bd(sim, 3, best0)
 	# the crews' column
 	take.call(["paid_in_notes", "two_of_everything", "heads_up", "heads_up"])
 	sim.boss_paid[5] = []                 # the runs above paid him: Long memory reads from here
@@ -19999,21 +20037,15 @@ func _map_nodes_checks(main) -> void:
 	_check(is_equal_approx(float(e3["xp"]) / float(e2["xp"]), 1.3 * 1.5) and is_equal_approx(float(e3["cash"]) / float(e2["cash"]), 1.5) and int(e3["contact"]) == int(e2["contact"]) + 1, "Wages and Heavy crews are off")
 	take.call(["their_own_kit", "their_own_kit", "marked_men", "long_memory"])
 	sim.notes += 10000
-	sim.arm_boss(5, true)
-	sim.deploy(5)
+	sim.hp = sim.max_hp()
+	var hc0: int = sim.head_fight_cost(1)     # (BUILD55-A) the Carpet Man's own fight: Long memory pays it once
+	sim.start_head_fight(1)
 	var paid_at: Array = sim.boss_paid[5].duplicate()
 	sim.extract_now()
-	_check(paid_at == [3] and sim.boss_cost(5) == 0, "Long memory did not make the next run at that depth free: %d, %s" % [sim.boss_cost(5), str(paid_at)])
-	sim.set_depth(5, 2)
-	_check(sim.boss_cost(5) > 0, "Long memory made another depth free")
-	sim.arm_boss(5, true)
-	sim.deploy(5)
-	sim.extract_now()
-	_check(sim.boss_paid[5] == [3, 2] and sim.boss_cost(5) == 0, "Long memory forgot a depth: %s" % str(sim.boss_paid[5]))
-	sim.depth[5] = 3                     # the ladder by hand: the Lie of the land no longer opens it (18 Oct)
-	_check(sim.boss_cost(5) == 0, "Long memory forgot the first depth paid")
+	_check(hc0 > 0 and paid_at == [Data.STAGE_OPENS] and sim.head_fight_cost(1) == 0, "Long memory did not make the head's next fight free: %d, %s" % [sim.head_fight_cost(1), str(paid_at)])
 	take.call(["head_start"])
 	var pts: int = sim.atlas_points
+	sim.depth[5] = 3                     # (BUILD55-A) the head's fight put the site back at its stage: 3 by hand again
 	sim.deploy(5)
 	var m: Dictionary = sim.mission
 	m["boss"] = {"name": sim.boss_of(5)["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true, "pinnacle": true}
@@ -20024,7 +20056,9 @@ func _map_nodes_checks(main) -> void:
 	var hi0: int = int(sim.signal_band([])[1])
 	take.call(["lorrys_route"])
 	_check(int(sim.signal_band([])[1]) == hi0 + 1, "The lorry's route did not widen the decoder's band at the top: %d from %d" % [int(sim.signal_band([])[1]), hi0])     # 15 Oct
-	# the air (9 Oct): the juicing lane, each read through the sim on the streets at depth 2
+	# the air (9 Oct): the juicing lane, each read through the sim on the streets at depth 2 (BUILD55-A: depth 4, the first
+	# past the stages - the same words and tiers as depth 2 had)
+	sim.depth[3] = Data.SIGNAL_DEPTH
 	sim.yard_picks.erase("radio")              # the Radio's Scanner and band read alone elsewhere
 	sim.yard_ranks = {}
 	sim._yard_changed("")
@@ -20484,7 +20518,7 @@ func _dig_checks(main) -> void:
 	sim.candidates = []
 	sim.auto_equip = false
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = 1
+		_bd(sim, i, 1)
 		sim.depth[i] = 1
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = true
@@ -20571,14 +20605,14 @@ func _leave_checks(main) -> void:
 		sim.candidates = []
 		var last_z: int = Data.ZONES.size() - 1
 		for i in range(Data.TIERS.size()):
-			sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+			_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 			sim.depth[i] = 1
 		for z in range(sim.bosses_beaten.size()):
 			sim.bosses_beaten[z] = true
 		if not campaign:
 			sim.bosses_beaten[last_z] = false
 			for i in Data.ZONES[last_z]["tiers"]:
-				sim.best_depth[i] = 0
+				_bd(sim, i, 0)
 		_check(sim.campaign_done() == campaign, "the fixture: the campaign done reads %s" % str(sim.campaign_done()))
 		for i in range(Data.TIERS.size()):
 			if sim.tier_open(i):
@@ -20912,8 +20946,8 @@ func _radio_juice_checks(main) -> void:
 	sim.book = []
 	sim.notes = 100000
 	for k in range(Data.TIERS.size()):
-		sim.best_depth[k] = 1                  # the zones heard: only the streets', below
-	sim.best_depth[3] = 30
+		_bd(sim, k, 1)                  # the zones heard: only the streets', below
+	_bd(sim, 3, 30)
 	sim.set_depth(3, 1)
 	_check(not sim.juiceable(3) and not sim.can_word_craft(3, "broadcast"), "a site at depth 1 takes words")
 	# the book: four to start, a zone's three once one of its sites is cleared at depth 2, a paper's when read
@@ -20924,10 +20958,10 @@ func _radio_juice_checks(main) -> void:
 	_check(sim.knows_word("Laid off") and sim.word_taught_by("A P45") == "Laid off" and sim.events.back()[1].contains("Laid off".to_lower()), "reading the P45 did not teach Laid off: %s" % str(sim.events.back()))
 	# how many and how strong by depth
 	for row in [[2, 2, 1], [5, 3, 1], [8, 3, 2], [9, 4, 2], [15, 4, 3]]:
-		sim.set_depth(3, row[0])
+		_sd(sim, 3, row[0])
 		_check(sim.max_words(3) == row[1] and sim.word_tier_cap(row[0]) == row[2], "depth %d holds %d words to tier %d, not %d to %d" % [row[0], sim.max_words(3), sim.word_tier_cap(row[0]), row[1], row[2]])
 	# the pools: the site's zone's own, the general, the deep only from their depth; never twice on a site
-	sim.set_depth(3, 15)
+	_sd(sim, 3, 15)
 	sim._read(sim._plain(Data.PAPER, "A ration book"))
 	sim._read(sim._plain(Data.PAPER, "A council minute"))
 	var seen := {}
@@ -20943,7 +20977,7 @@ func _radio_juice_checks(main) -> void:
 		_check(rw.all(func(wd): return int(wd["t"]) >= 1 and int(wd["t"]) <= 3), "a roll's tier is off: %s" % str(rw))
 	_check(seen.has("Rationed") and not seen.has("Curfew") and not seen.has("Market day") and not seen.has("Squaddies") and seen.has("Dogs off the lead") and seen.has("Laid off"), "the pools are off at depth 15 on the streets: %s" % str(seen.keys()))
 	# the crafts: prices in notes by depth; each does its one thing
-	sim.set_depth(3, 9)
+	_sd(sim, 3, 9)
 	var n0: int = sim.notes
 	var cost: int = sim.word_craft_cost(3, "broadcast")
 	_check(cost == 27 and not sim.can_word_craft(3, "retune") and not sim.can_word_craft(3, "hold") and sim.word_craft(3, "broadcast") and sim.words[3].size() == 4 and sim.notes == n0 - cost, "Broadcast did not fill the site for 27 notes: %s, %d" % [str(sim.words[3]), n0 - sim.notes])
@@ -20963,13 +20997,13 @@ func _radio_juice_checks(main) -> void:
 	sim.words[3] = [{"w": "Numbers", "t": 2}]
 	var e2: Dictionary = sim.effective(3)
 	_check(is_equal_approx(e2["hp"] / plain["hp"], pow(1.4, 1.75)) and is_equal_approx(e2["drop"] / plain["drop"], pow(1.3, 1.75)) and int(e2["word_tiers"]["Numbers"]) == 2, "Numbers at tier II is off: hp ×%.3f" % (e2["hp"] / plain["hp"]))
-	sim.set_depth(3, 2)
-	_check(sim.word_tier_now(3, 3) == 1 and int(sim.effective(3)["word_tiers"]["Numbers"]) == 1, "a tier II word ran at tier II at depth 2")
-	sim.set_depth(3, 9)
+	_sd(sim, 3, Data.SIGNAL_DEPTH)              # (BUILD55-A) the first depth past the stages reads as depth 2 did: words from there
+	_check(sim.word_tier_now(3, 3) == 1 and int(sim.effective(3)["word_tiers"].get("Numbers", 0)) == 1, "a tier II word ran at tier II at depth %d" % Data.SIGNAL_DEPTH)
+	_sd(sim, 3, 9)
 	_check(sim.word_words("Numbers", 1) == ["their HP +40%", "finds +30%"], "a word's words are off: %s" % str(sim.word_words("Numbers", 1)))
 	# the flags: no meds, no kill cash, a clock, your armour cut, the head walking
 	sim.words[3] = [{"w": "Rationed", "t": 1}, {"w": "Overdrawn", "t": 1}]
-	sim.set_depth(3, 15)
+	_sd(sim, 3, 15)
 	sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -20996,8 +21030,8 @@ func _radio_juice_checks(main) -> void:
 	sim.equipped["Armour"] = vest_was
 	sim._dry_memo.clear()
 	sim._read(sim._plain(Data.PAPER, "The Manager's note"))
-	sim.best_depth[6] = 60
-	sim.set_depth(6, 50)
+	_bd(sim, 6, 60)
+	_sd(sim, 6, 50)
 	sim.words[6] = [{"w": "The Manager walks", "t": 1}]
 	var tw: Dictionary = sim.effective(6)
 	var notes_w: int = sim.notes
@@ -21008,8 +21042,8 @@ func _radio_juice_checks(main) -> void:
 	if sim.on_mission():
 		sim._extract()
 	sim.words[6] = []
-	sim.best_depth[3] = 30
-	sim.set_depth(3, 24)
+	_bd(sim, 3, 30)
+	_sd(sim, 3, 24)
 	sim.words[3] = []
 	var clock_plain: float = sim.clock_of(3)
 	sim.words[3] = [{"w": "Last bus", "t": 1}]
@@ -21018,7 +21052,7 @@ func _radio_juice_checks(main) -> void:
 	_check(is_equal_approx(sim.clock_of(3), clock_plain), "the Radio's words moved the clock: %.0f of %.0f" % [sim.clock_of(3), clock_plain])
 	sim.words[3] = []
 	# Twist: one of four, always sealed; a sealed site takes nothing but a dear Clear
-	sim.set_depth(3, 15)
+	_sd(sim, 3, 15)
 	var fours := 0
 	var deeps := 0
 	for k in range(30):
@@ -21046,7 +21080,7 @@ func _radio_juice_checks(main) -> void:
 	# the screen: a row a site with a ladder, the picked site's words and crafts, the book
 	sim.sealed[3] = false
 	sim.words[3] = []
-	sim.set_depth(3, 9)
+	_sd(sim, 3, 9)
 	# a site's codes, crafted in the sim (the Radio's screen crafts signals now, 15 Oct; _signal_checks)
 	var rd = main._radio
 	_check(sim.word_craft(3, "broadcast") and sim.words[3].size() == 4, "a broadcast on a deep site: %s" % str(sim.words[3]))
@@ -23848,8 +23882,8 @@ func _codes_checks(main) -> void:
 	for on_air in [false, true]:
 		if on_air:
 			_finish_campaign(sim)
-			sim.best_depth[3] = maxi(sim.best_depth[3], 9)
-			sim.set_depth(3, 9)
+			_bd(sim, 3, maxi(sim.best_depth[3], 9))
+			_sd(sim, 3, 9)
 			sim.words[3] = []
 			sim.sealed[3] = false
 			sim.notes = 100000
@@ -23904,7 +23938,7 @@ func _gates_checks(main) -> void:
 	for b in Data.BOSSES:
 		var bt: int = int(b["tier"])
 		for i in range(bt + 1):
-			sim.best_depth[i] = maxi(sim.best_depth[i], 1)
+			_bd(sim, i, maxi(sim.best_depth[i], 1))
 		for z in range(int(b["zone"])):
 			sim.bosses_beaten[z] = true
 		var before_heard: int = sim.heard.size()
@@ -23913,8 +23947,7 @@ func _gates_checks(main) -> void:
 		var said_before: bool = sim.heard.size() > before_heard and str(sim.events.back()[1]).begins_with(Words.RADIO_LEAD)
 		_check(said_before or b["opens"].is_empty(), "%s's line before wasn't said with his site open" % b["name"])     # a head who opens no room (the Carpet Man, 24 Oct) has his class instead
 		sim.hp = sim.max_hp()
-		sim.boss_armed[bt] = true
-		sim.deploy(bt)
+		sim.start_head_fight(int(b["zone"]))     # (BUILD55-A) his own fight, after his site's 2/3
 		sim.mission["cleared"] = true
 		_check(sim.on_mission() and sim.mission.has("boss") and str(sim.mission["boss"]["name"]) == str(b["name"]), "%s didn't come out" % b["name"])
 		if not (sim.on_mission() and sim.mission.has("boss")):
@@ -24374,7 +24407,7 @@ func _rebuild_checks(main) -> void:
 	for z in range(Data.ZONES.size()):
 		s.bosses_beaten[z] = true
 		for i in Data.ZONES[z]["tiers"]:
-			s.best_depth[i] = 1
+			_bd(s, i, 1)
 	_check(s.campaign_done(), "the fixture: the campaign is not done")
 	_check(not s.rebuild_open() and s.rebuild_block("substation") == "After Kev's story", "the rebuild opens before Kev's story: '%s'" % s.rebuild_block("substation"))
 	s.story_beat = Data.STORY_BEATS.size()
@@ -24524,7 +24557,7 @@ func _rebuild_checks(main) -> void:
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = true
 		for i in Data.ZONES[z]["tiers"]:
-			sim.best_depth[i] = maxi(1, sim.best_depth[i])
+			_bd(sim, i, maxi(1, sim.best_depth[i]))
 	main.show_room(main.COMMS)
 	sim.story_beat = 0
 	main._radio._pick_view("town")
@@ -25049,7 +25082,7 @@ func _haul_camp(cleared: bool):
 	s.mythics_on = false
 	_open_camp(s)
 	for i in range(Data.TIERS.size()):
-		s.best_depth[i] = maxi(1, int(s.best_depth[i]))     # as an area alone's camp (_run_only): every site open
+		_bd(s, i, maxi(1, int(s.best_depth[i])))     # as an area alone's camp (_run_only): every site open
 	s.xp = maxf(s.xp, Data.xp_for_level(15))
 	s.hp = s.max_hp()
 	s.deploy(3)
@@ -25167,7 +25200,7 @@ func _paper_pile_checks(_main) -> void:
 	for z in range(Data.ZONES.size()):
 		s.bosses_beaten[z] = true
 		for i in Data.ZONES[z]["tiers"]:
-			s.best_depth[i] = 1
+			_bd(s, i, 1)
 	if not ("radio" in s.unlocked):
 		s.unlocked.append("radio")
 	s.papers = []
@@ -25360,15 +25393,15 @@ func _site_gate_checks(main) -> void:
 	var retail := 5
 	_check(Data.TIERS[parade]["name"] == "The Parade" and Data.TIERS[retail]["name"] == "The Retail Park", "the fixture: the Parade and the Retail Park moved")
 	for i in range(Data.OUTSKIRTS_SITES + 1):
-		s.best_depth[i] = 1
+		_bd(s, i, 1)
 	s.bosses_beaten[0] = true
 	s.xp = 0.0
 	_check(s.site_gate(retail) == Sim.wear_of(Sim.lv_at(retail, 1)) - 1 and s.site_gate(retail) > 1, "the Retail Park's gate reads %d" % s.site_gate(retail))
-	s.best_depth[parade] = 1
+	_bd(s, parade, 1)
 	_check(not s.tier_open(retail) and s.level_gated(retail), "the Retail Park opened to a level-1 runner")
 	s.xp = Data.xp_for_level(s.site_gate(retail))
 	_check(s.tier_open(retail), "the Retail Park stayed shut at its gate's level %d" % s.site_gate(retail))
-	s.best_depth[retail] = 1
+	_bd(s, retail, 1)
 	s.xp = 0.0
 	_check(s.tier_open(retail), "a cleared site shut on a new runner")
 	# every campaign site's gate: its drops' level less one
@@ -25376,7 +25409,7 @@ func _site_gate_checks(main) -> void:
 		_check(s.site_gate(i) == maxi(1, Sim.wear_of(Sim.lv_at(i, 1)) - 1), "%s opens at %d" % [Data.TIERS[i]["name"], s.site_gate(i)])
 	# the Map says so
 	var keep = main.sim
-	s.best_depth[retail] = 0
+	_bd(s, retail, 0)
 	main.sim = s
 	main.show_room(main.MISSIONS)
 	main._missions.select(retail)
@@ -25387,7 +25420,7 @@ func _site_gate_checks(main) -> void:
 	# a zone shut till its first site's level (19 Oct, Matt: "keep a zone locked until the level cap is hit and note it
 	# on the zone of the map"): the Estate done, the Town at its gate
 	for i in Data.ZONES[1]["tiers"]:
-		s.best_depth[i] = 1
+		_bd(s, i, 1)
 	s.bosses_beaten[1] = true
 	var tg: int = s.zone_gate(2)
 	s.xp = Data.xp_for_level(tg - 1)
@@ -25403,7 +25436,7 @@ func _site_gate_checks(main) -> void:
 	_check_fit(main, "the Map (a zone shut for the level)")
 	s.xp = Data.xp_for_level(tg)
 	_check(s.zone_open(2) and s.tier_open(int(Data.ZONES[2]["tiers"][0])), "the Town stayed shut at level %d" % tg)
-	s.best_depth[int(Data.ZONES[2]["tiers"][0])] = 1
+	_bd(s, int(Data.ZONES[2]["tiers"][0]), 1)
 	s.xp = 0.0
 	_check(s.zone_open(2), "a zone with a site cleared shut on a new runner")
 	main.sim = keep
@@ -25580,7 +25613,7 @@ func _map_checks(main) -> void:
 	_check(M.selected == 2, "ui_left didn't go round the end to the last open zone's last pin: %d" % M.selected)
 	# a level-gated site in an open zone: its pin picks its card, which says what opens it
 	for i in range(5):
-		s.best_depth[i] = 1                  # the Outskirts and the Parade cleared: the Retail Park next, shut for the level
+		_bd(s, i, 1)                  # the Outskirts and the Parade cleared: the Retail Park next, shut for the level
 	s.bosses_beaten[0] = true
 	s.xp = 0.0
 	M._shown = ""
@@ -27372,7 +27405,7 @@ func _collection_checks(main) -> void:
 	var st: Dictionary = Data.SETS[0]
 	for pc in st["pieces"]:
 		sim._read({"set": st["name"], "piece": pc["name"], "slot": pc["slot"], "base": pc["base"]})
-	sim.best_depth[0] = Data.COLLECTION_LEVELS[-1] + 20
+	_bd(sim, 0, Data.COLLECTION_LEVELS[-1] + 20)
 	col = sim.collection()
 	var row: Array = col["uniques"].filter(func(x): return x[0] == u["name"])
 	_check(int(col["tiles"][0][1]) == 1 and not row.is_empty() and row[0][2] and int(col["tiles"][5][1]) >= 1 and int(col["tiles"][2][1]) >= 1, "the collection didn't count a unique, a set or a site: %s" % str(col["tiles"]))
@@ -28029,7 +28062,7 @@ func _county_checks(main) -> void:
 		sim.extract_now()
 	var hold: Dictionary = sim.to_dict()
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done, as the Issue's camp would be
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))     # the campaign done, as the Issue's camp would be
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
@@ -28760,12 +28793,12 @@ func _tier_map_checks(main) -> void:
 	var hold_beaten: Array = sim.bosses_beaten.duplicate()
 	var hold_xp: float = sim.xp
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = 1
+		_bd(sim, i, 1)
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.xp = maxf(sim.xp, Data.xp_for_level(30))     # every site open, none gated by the level
 	_check(sim.best_tier_open() == Data.CAMPAIGN_TIER and sim.shop_unique_tier() == Data.CAMPAIGN_TIER, "the campaign's shelves aren't at T4: %d" % sim.best_tier_open())
-	sim.best_depth[11] = 12                    # the Barracks at level 20: a signal's T8
+	_bd(sim, 11, 12)                    # the Barracks at level 20: a signal's T8
 	_check(sim.best_tier_open() == 8 and sim.shop_unique_tier() == 8, "the endgame's shelves stuck at T%d, the level's T8" % sim.best_tier_open())
 	var yard_hold: Dictionary = sim.yard_picks.duplicate(true)
 	for side in ["", "arms_dealer"]:
@@ -28786,7 +28819,7 @@ func _tier_map_checks(main) -> void:
 	_check(not gl.is_empty() and str(sim.roll_gamble(gl, 1.0)["slot"]) == Data.GLOVES, "the gamble has no gloves")
 	_check(int(sim.roll_mate().get("tier", 0)) == sim.best_tier_open(), "the mate's unique isn't at the best tier open: T%d against T%d" % [int(sim.roll_mate().get("tier", 0)), sim.best_tier_open()])     # == (the fix round, the tools review's C4: >= T4 passed at T8's open)
 	sim.yard_picks = yard_hold
-	sim.best_depth = hold_bd
+	_bd_all(sim, hold_bd)
 	sim.bosses_beaten = hold_beaten
 	sim.xp = hold_xp
 	# a site's own base never above its site's tier (the review: the Section gun, the Stab plates came off at T6 in T4's City)
@@ -28828,9 +28861,11 @@ func _gang_retune_checks(main) -> void:
 			if d > 2:
 				_check(man >= last_d * 0.999, "%s at depth %d is easier than at %d: %.0f after %.0f" % [Data.TIERS[i]["name"], d, d - 1, man, last_d])
 			last_d = man
-	var sig: Dictionary = sim.depth_figures(11, Sim.tier_depth(10), 10, true, true)
+	var sig: Dictionary = sim.depth_figures(11, Sim.tier_depth(Data.REACH_START), Data.REACH_START, true, true)     # (BUILD55-A) the first signal at REACH_START, against the Barracks' 3/3 (stages.md §2: just over its man)
 	var sig_man: float = float(sig["hp"]) * float(sig["dps"])
-	_check(sig_man <= barracks1 * 1.35, "the first signal is ×%.2f the Barracks' first clear, man for man" % (sig_man / barracks1))
+	var b3: Dictionary = sim.depth_figures(11, Data.STAGES, Sim.lv_at(11, Data.STAGES))
+	var b3_man: float = float(b3["hp"]) * float(b3["dps"])
+	_check(sig_man <= b3_man * 1.6 and float(sig["dps"]) <= float(b3["dps"]) * 1.1 and barracks1 > 0.0, "the first signal is ×%.2f the Barracks' 3/3, man for man (fire ×%.2f)" % [sig_man / b3_man, float(sig["dps"]) / float(b3["dps"])])
 	_check(float(Data.ZONE_TYPES[3]["types"].get("frost", 0.0)) >= 0.15, "the City throws no frost")
 	for lv in [10, 12, 13, 16, 20]:
 		_check(Data.curve_k(lv) >= 0.68 and Data.curve_k(lv) <= 0.88, "the signals' curve at level %d is ×%.2f, not 0.68-0.88" % [lv, Data.curve_k(lv)])     # 12 at 0.69 (the fix round, the game review's B5)
@@ -29340,7 +29375,7 @@ func _estate_read(cls: String) -> Array:
 	s.odds_runs_max = 24
 	s.rng.seed = 11
 	for i in range(6):
-		s.best_depth[i] = 1
+		_bd(s, i, 1)
 	s.bosses_beaten[0] = true
 	var lv0: int = s.level()
 	s.xp = maxf(s.xp, Data.xp_for_level(ESTATE_LV))
@@ -29655,6 +29690,8 @@ func _repeat_checks(main) -> void:
 	var site := 0                            # the Allotments, cleared, at level 15: the odds read high
 	var cols: Dictionary = main._missions._cols[0]
 	var read := func(i: int) -> void:
+		if sim.stage_done(i) > 0:
+			sim.set_stage_pick(i, sim.stage_done(i))     # (FIX55) a cleared stage: the repeat's gate shuts on one not yet cleared
 		sim._dry_memo.clear()
 		var reads := 0
 		while not sim.odds_settled(i) and reads < 200:
@@ -29690,9 +29727,9 @@ func _repeat_checks(main) -> void:
 		_check(sim.repeat_block(site) == why and cols["repeat"].visible and cols["repeat"].disabled and cols["note"].text.contains(why), "Run it ×5 %s: '%s', shut %s, the note '%s'" % [what, sim.repeat_block(site), str(cols["repeat"].disabled), cols["note"].text])
 		_check_fit(main, "the Map, Run it ×5 shut: " + what)
 	sim.unlocked.erase("radio")             # Kev's wagers wait on the Radio: the button stays the repeat's
-	sim.best_depth[site] = 0
+	_bd(sim, site, 0)
 	shut.call(Words.REPEAT["shut_new"], "not cleared")
-	sim.best_depth[site] = 1
+	_bd(sim, site, 1)
 	var head_site := -1
 	for i in range(Data.TIERS.size()):
 		if not sim.boss_of(i).is_empty() and sim.tier_open(i) and int(sim.best_depth[i]) > 0:
@@ -30084,7 +30121,7 @@ func _repeat_checks(main) -> void:
 	sim._yard_dirty = true
 	# --- Kev's wagers: offered on a first clear or a head on, taken, stacked, on the next run whose gate is open, paid
 	var nsite := 1
-	sim.best_depth[nsite] = 0
+	_bd(sim, nsite, 0)
 	_check(sim.wager_site_open(nsite) and not sim.wager_site_open(site), "Kev's wagers: open on a first clear %s, closed on a farmed site %s" % [str(sim.wager_site_open(nsite)), str(sim.wager_site_open(site))])
 	main.show_room(main.MISSIONS)
 	main._missions.select(nsite)
@@ -30194,7 +30231,7 @@ func _repeat_checks(main) -> void:
 	sim.mission["found"] = []
 	sim.extract_now()
 	# the gate: taken on a head, the head untaken, a plain run carries none; a repeat run never
-	sim.best_depth[nsite] = 1
+	_bd(sim, nsite, 1)
 	if head_site >= 0:
 		sim.boss_armed[head_site] = true
 		var hk: String = sim.wager_site_key(head_site)
@@ -30259,7 +30296,7 @@ func _repeat_checks(main) -> void:
 	bsim.start()
 	bsim.unlock_all()
 	for i in range(Data.TIERS.size()):
-		bsim.best_depth[i] = 1
+		_bd(bsim, i, 1)
 	bsim.xp = Data.xp_for_level(15)
 	bsim.hp = bsim.max_hp()
 	_check(not bot.repeat_ok(bsim), "the bot repeats in the campaign")
@@ -30304,6 +30341,7 @@ func _fixa_prep(sim) -> void:
 
 ## The repeat's gate read open on a site, as the shell reads it a frame at a time; whether it opened.
 func _fixa_gate(sim, site: int) -> bool:
+	sim.set_stage_pick(site, maxi(1, sim.stage_done(site)))     # (FIX55) a cleared stage: the repeat's gate shuts on one not yet cleared
 	sim._dry_memo.clear()
 	var g := 0
 	while not sim.can_repeat(site) and g < 400:
@@ -30481,7 +30519,7 @@ func _fixa_hard_wager_checks(main) -> void:
 		if not sim.boss_of(i).is_empty() and sim.tier_open(i) and not sim.is_convoy(i) and i != Data.CONVOY_TIER:
 			head = i
 			break
-	sim.best_depth[Data.CONVOY_TIER] = maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth())
+	_bd(sim, Data.CONVOY_TIER, maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth()))
 	sim.depth[Data.CONVOY_TIER] = sim.convoy_depth()     # the Services at the convoy's level
 	var sites: Array = [head, Data.CONVOY_TIER]
 	_check(head >= 0 and sim.is_convoy(Data.CONVOY_TIER), "S7: the fixture: a head %d, the convoy %s" % [head, str(sim.is_convoy(Data.CONVOY_TIER))])
@@ -30490,12 +30528,15 @@ func _fixa_hard_wager_checks(main) -> void:
 		if i < 0:
 			continue
 		sim.load_dict(mid)
-		sim.boss_armed[i] = true
+		var as_head: bool = i != Data.CONVOY_TIER     # (BUILD55-A) a head is his own fight; the convoy's still armed
+		var hz: int = int(Data.TIERS[i]["zone"])
+		if not as_head:
+			sim.boss_armed[i] = true
 		sim.notes = 10000000
 		sim._caches_out()
-		var t: Dictionary = sim.effective(i)
+		var t: Dictionary = sim.head_fight_preview(hz) if as_head else sim.effective(i)
 		var plain: Array = ([t["boss"]] + t.get("boss_queue", [])).map(func(b): return float(b["dps"])) if t.has("boss") else []
-		var key: String = sim.wager_site_key(i)
+		var key: String = sim.wager_head_key(hz) if as_head else sim.wager_site_key(i)     # (FIX55) the head's fight has its own offer
 		var hit := false
 		for sq in range(1, 400):
 			sim.wagers[key] = {"seq": sq, "taken": []}
@@ -30507,7 +30548,10 @@ func _fixa_hard_wager_checks(main) -> void:
 			if hit:
 				break
 		sim.hp = sim.max_hp()
-		sim.deploy(i)
+		if as_head:
+			sim.start_head_fight(hz)
+		else:
+			sim.deploy(i)
 		var m = sim.mission
 		var now: Array = ([m["boss"]] + m.get("boss_queue", [])).map(func(b): return float(b["dps"])) if m != null and m.has("boss") else []
 		var all_up: bool = plain.size() >= 1 and now.size() == plain.size() and range(plain.size()).all(func(k): return absf(float(now[k]) - float(plain[k]) * Data.WAGER_HARD) <= 0.001 * float(plain[k]) + 0.0001)
@@ -31169,6 +31213,7 @@ func _fixa_gate_paint_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	_fixa_prep(sim)
 	var site := 0
+	sim.set_stage_pick(site, maxi(1, sim.stage_done(site)))     # (FIX55) a cleared stage: the repeat's gate shuts on one not yet cleared
 	main.show_room(main.MISSIONS)
 	main._missions.select(site)
 	main._missions._shown = ""
@@ -31202,14 +31247,14 @@ func _fixa_repeat_refused_checks(main) -> void:
 	_fixa_prep(sim)
 	var zt: Array = Data.ZONES[0]["tiers"]
 	var site: int = int(zt[1])
-	sim.best_depth[site] = maxi(1, int(sim.best_depth[site]))
+	_bd(sim, site, maxi(1, int(sim.best_depth[site])))
 	_fixa_repeat_at(sim, site)
-	sim.best_depth[int(zt[0])] = 0                 # the site shut behind them: the next run can't go
+	_bd(sim, int(zt[0]), 0)                 # the site shut behind them: the next run can't go
 	sim._repeat_go()
 	var rep: Dictionary = sim.repeat_report
 	var want: String = Words.mid_base(Words.REPEAT["shut_site"])
 	_check(not sim.away() and str(rep.get("ended", "")) == "blocked" and str(rep.get("reason", "")) == want, "U3: a refused repeat's reason: ended '%s', '%s' (want '%s')" % [str(rep.get("ended", "")), str(rep.get("reason", "")), want])
-	sim.best_depth[int(zt[0])] = 1
+	_bd(sim, int(zt[0]), 1)
 	main.show_room(main.MISSIONS)
 	main._missions.select(site)
 	main._missions._shown = ""
@@ -31267,7 +31312,7 @@ func _expeditions_checks(main) -> void:
 	sim.salvage["army"] = 999                  # the Bunkhouse's fifth step wants army surplus
 	sim.yard_open = maxi(sim.yard_open, 5)     # the Pitch's fifth column, as a camp dug deep has it
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done: the hold sites open
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))     # the campaign done: the hold sites open
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	var cargo: Array = [{"kind": "scrap", "n": 5000}]
@@ -31721,7 +31766,7 @@ func _ui30c_checks(main) -> void:
 		_check(sim.set_class(lead) and sim.set_class(home), "the fixture: no lead")
 	_exp_strong_lead(sim, lead)
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.yard_open = maxi(sim.yard_open, 5)
@@ -31963,7 +32008,7 @@ func _wager_take_checks(main) -> void:
 				if found or str(of[k][want[0]]) != want[1]:
 					continue
 				found = true
-				sim.best_depth[nsite] = 0
+				_bd(sim, nsite, 0)
 				sim.hp = sim.max_hp()
 				_check(sim.wager_site_open(nsite) and sim.take_wager(key, k) and sim.wager_taken(key, k), "the fixture: Kev's %s wager wasn't taken" % want[1])
 				var w: Dictionary = of[k]
@@ -32006,7 +32051,7 @@ func _wager_take_checks(main) -> void:
 					sim.extract_now()
 		_check(found, "no offer with Kev's %s in 200" % want[1])
 	_check(met == wants.size() and wants.size() == Data.WAGER_CONDS.size() + Data.WAGER_PAYS.size(), "Kev's wagers met through the take path: %d of %d" % [met, wants.size()])
-	sim.best_depth[nsite] = depth_was
+	_bd(sim, nsite, depth_was)
 	sim.wagers = wagers_was
 	sim.hp = sim.max_hp()
 
@@ -32062,7 +32107,7 @@ func _expeditions_fix_checks(main) -> void:
 		_check(sim.set_class(lead) and sim.set_class(home), "the fixture: no lead")
 	_exp_strong_lead(sim, lead)
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.yard_open = maxi(sim.yard_open, 5)
@@ -32909,7 +32954,7 @@ func _b41_camp_checks() -> void:
 	s.start()
 	_set_cls(s, "Doorman")
 	for i in range(Data.TIERS.size()):
-		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+		_bd(s, i, maxi(1, int(s.best_depth[i])))
 	for z in range(s.bosses_beaten.size()):
 		s.bosses_beaten[z] = true
 	for room in Data.ROOMS_SHUT:
@@ -33166,9 +33211,9 @@ func _b43_memo_checks(main) -> void:
 		_b43_moves("the wound treated", body, func(): _check(sim.treat(), "the Clinic wouldn't treat the wound"))
 	# the ladder (review 43, 1 and 5): the front site a few levels up at camp - the armour's cut reads the front's level
 	var front: int = sim.front_tier()
-	sim.best_depth[front] = maxi(int(sim.best_depth[front]), 30)
+	_bd(sim, front, maxi(int(sim.best_depth[front]), 30))
 	_check(sim.campaign_done(), "the memo's camp hasn't the ladder (the campaign isn't done)")
-	_b43_moves("the front's level raised on the ladder", mit, func(): sim.set_depth(front, int(sim.depth[front]) + 25))
+	_b43_moves("the front's level raised on the ladder", mit, func(): _sd(sim, front, int(sim.depth[front]) + 25))
 	_check(sim.front_tier() == front, "the ladder moved the front off its site: the check reads another site")
 	# a signal read on the front site: _sig_on moves its depth with no call of its own; then back
 	var sg := {"id": 4301, "site": front, "zone": int(Data.TIERS[front]["zone"]), "depth": int(sim.depth[front]) + 20, "codes": [], "papers": [], "head": false, "convoy": false, "line": 0}
@@ -33182,8 +33227,8 @@ func _b43_memo_checks(main) -> void:
 	sim.hp = sim.max_hp()
 	sim.notes = maxf(sim.notes, 1e6)
 	sim.lorry_done = false
-	sim.best_depth[Data.CONVOY_TIER] = maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth())
-	sim.set_depth(Data.CONVOY_TIER, sim.convoy_depth())     # the Services at the convoy's depth
+	_bd(sim, Data.CONVOY_TIER, maxi(int(sim.best_depth[Data.CONVOY_TIER]), sim.convoy_depth()))
+	_sd(sim, Data.CONVOY_TIER, sim.convoy_depth())     # the Services at the convoy's depth
 	sim.arm_boss(Data.CONVOY_TIER, true)
 	sim.deploy(Data.CONVOY_TIER)
 	_check(sim.on_mission() and sim.mission.get("convoy", false), "the memo's convoy didn't set off")
@@ -33592,6 +33637,10 @@ func _b45_load(main, path: String) -> bool:
 	w.close()
 	main.load_game("user://smoke_b45.save")
 	main.sim.mythics_on = false
+	if main.sim != null and main.sim.a55_done.is_empty():
+		for i in range(Data.TIERS.size()):
+			if int(main.sim.best_depth[i]) > 0:
+				_bd(main.sim, i, int(main.sim.best_depth[i]))     # (BUILD55-A) a fixture saved before stages: its clears as 2/3s
 	return main.sim != null and main.sim.level() > 1
 
 
@@ -34137,7 +34186,7 @@ func _b45a_odds_checks() -> void:
 	_set_cls(s, "Doorman")
 	s.skill_slots = ["", "", ""]                 # the gun's fight alone (the start's skill comes slotted with the class, 3 Nov)
 	for i in range(Data.TIERS.size()):
-		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+		_bd(s, i, maxi(1, int(s.best_depth[i])))
 	for z in range(s.bosses_beaten.size()):
 		s.bosses_beaten[z] = true
 	s.depot_cleared = true
@@ -34194,7 +34243,7 @@ func _b45a_bot_checks() -> void:
 	s.start()
 	_set_cls(s, "Doorman")
 	for i in range(Data.TIERS.size()):
-		s.best_depth[i] = maxi(1, int(s.best_depth[i]))
+		_bd(s, i, maxi(1, int(s.best_depth[i])))
 	for z in range(s.bosses_beaten.size()):
 		s.bosses_beaten[z] = true
 	s.depot_cleared = true
@@ -35060,7 +35109,7 @@ func _b46r_affix_checks(main) -> void:
 func _b46s_rects(card) -> Array:
 	var out: Array = []
 	for n in [card.kicker, card.title, card.sky_box, card.foot, card.you_frame, card.them_frame, card.you_name, card.them_name, card.verdict,
-			card.odds_line, card.head_box, card.gang_btn, card.head_btn, card.takes_box, card.bar_track, card.home_head, card.here, card.here_right, card.last] \
+			card.odds_line, card.pick_box, card.picked_key, card.picked_val, card.takes_box, card.bar_track, card.home_head, card.here, card.here_right, card.last] \
 			+ card.keys + card.vals + card.tiles.map(func(t): return t["panel"]):
 		out.append(Rect2(n.global_position, n.size))
 	return out
@@ -35084,7 +35133,7 @@ func _b46s_card_checks(main) -> void:
 			continue
 		M.select(i)
 		for view in [false, true]:
-			sim.arm_boss(i, view)                # the card shows the head when he's taken on (BUILD48 item 1)
+			card.head_view = view                # the picker's Head shows him (BUILD55-U; was taken on, BUILD48 item 1)
 			M._shown = ""
 			main.refresh()
 			# one layout: every block where it was on the first site, whatever this one shows
@@ -35097,36 +35146,36 @@ func _b46s_card_checks(main) -> void:
 			var b: Dictionary = sim.boss_of(i)
 			if not sim.tier_open(i):
 				continue
-			if view and card.has_head and not sim.is_convoy(i):
+			if view and card.has_head:
 				heads += 1
 				var hk: String = Items.slug(str(b["name"]))
-				_check(card._art.texture == RunView.tex(hk + "_plate") and card._figs[0].visible and card._figs[0].texture == RunView.tex("head_%s_stand" % hk) and not card._figs[1].visible,
-					"%s's head view isn't him standing in his own interior" % b["name"])
+				_check(card._art.texture == RunView.tex(hk + "_plate") and card._figs[2].visible and card._figs[2].texture == RunView.tex("head_%s_stand" % hk) and card._figs[0].visible,
+					"%s's head view isn't him and his gang in his own interior" % b["name"])     # his gang either side (BUILD55-U)
 				_check(card.them_name.text == str(b["name"]) or card.them_name.text == str(b["name"]).trim_prefix("The "), "the head view's face is named '%s'" % card.them_name.text)
-				_check(not card.count_box.visible and card.head_name.text.begins_with(str(b["name"])), "the head view's row is off: '%s'" % card.head_name.text)
+				_check(not card.count_box.visible and card.gang_frame.visible and card.picked_val.text.begins_with(Words.U55["head"]), "the head view's picker is off: '%s'" % card.picked_val.text)
 			elif not view:
 				_check(card._art.texture == UI.place_texture(str(Data.TIERS[i]["name"])) and card._figs[0].visible and card.count_box.visible and card.count.text == "×%d" % int(sim.effective(i)["pool"]),
 					"%s's gang view isn't the gang standing in the site's picture" % Data.TIERS[i]["name"])
 				_check(card.them_name.text == Words.SITE_CARD["the_gang"] and card.you_name.text.contains(sim.cls), "the matchup's names: '%s' against '%s'" % [card.you_name.text, card.them_name.text])
-			if b.is_empty() and not sim.is_convoy(i):
-				_check(card.head_btn.disabled and card.head_name.text == Words.SITE_CARD["no_head"] and card.head_box.visible, "a site with no head: the toggle's Head not greyed, or the row went: '%s'" % card.head_name.text)
+			if b.is_empty():
+				_check(not card.segs[Data.STAGES]["button"].visible and not card.head_box.visible, "a site with no head shows a Head or the head's row")     # three segments (BUILD55-U)
 				card.head_view = false
-				card._toggle(true)
+				card._seg_pressed(Data.STAGES)
 				_check(not card.head_view, "the Head side took a press on a site with no head")
-		sim.arm_boss(i, false)
+		card.head_view = false
 	_check(heads >= 4, "only %d heads shown standing in their interiors" % heads)
-	# the card's Head takes him on and the card shows him; Gang, the gang again (BUILD48 item 1: the foot's button went)
+	# the picker's Head shows him; a stage, the gang again (BUILD55-U; BUILD48 item 1: one control)
 	var hs: int = int(Data.BOSSES[0]["tier"])
+	_u55_done(sim, hs, maxi(sim.stage_done(hs), 2))     # his gate: his site's 2/3 (BUILD55-U)
 	M.select(hs)
-	sim.boss_armed.erase(hs)
 	M._shown = ""
 	main.refresh()
-	card.head_btn.pressed.emit()
+	card.segs[Data.STAGES]["button"].pressed.emit()
 	main.refresh()
-	_check(sim.boss_armed.get(hs, false) and card.head_view and card.head_sub.text.begins_with(Words.SITE_CARD["armed_short"]), "taking the head on didn't show him: armed %s, view %s, '%s'" % [str(sim.boss_armed.get(hs, false)), str(card.head_view), card.head_sub.text])
-	card.gang_btn.pressed.emit()
+	_check(card.head_view and card.gang_frame.visible, "the Head didn't show him: view %s" % str(card.head_view))
+	card.segs[0]["button"].pressed.emit()
 	main.refresh()
-	_check(not sim.boss_armed.get(hs, false) and not card.head_view, "letting the head be didn't show the gang again")
+	_check(not card.head_view and not card.gang_frame.visible, "a stage after the Head didn't show the gang again")
 	# the fix chips act: no meds and near dead on a site with one before it - the green chip picks that site, the meds'
 	# turns the gate's top-up on, the Kit's and the Clinic's go there
 	sim.rig = sim.rig.filter(func(it): return str(it["slot"]) != Data.MEDICAL)
@@ -35399,22 +35448,25 @@ func _fix46s_checks(main) -> void:
 		if not b.is_empty() and sim.boss_cost(i) > 0:
 			var price: String = Fmt.notes(sim.boss_cost(i))
 			_check(not M._cols[0]["note"].text.contains(price), "%s: the head's price twice, the note '%s'" % [Data.TIERS[i]["name"], M._cols[0]["note"].text])
-	# S6: taken on and short of notes - the head's row says the price, the note doesn't
+	# S6: the Head picked and short of notes - the Head's segment says the price, the note doesn't (BUILD55-U: the picker)
 	var hs: int = int(Data.BOSSES[0]["tier"])
-	if sim.tier_open(hs) and sim.boss_cost(hs) > 0:
-		sim.boss_armed[hs] = true
+	_u55_done(sim, hs, maxi(sim.stage_done(hs), 2))     # his gate: his site's 2/3 (BUILD55-U)
+	var hz: int = int(Data.TIERS[hs]["zone"])
+	if sim.tier_open(hs) and sim.head_fight_cost(hz) > 0:
 		sim.notes = 0
 		M.select(hs)
-		card.head_view = false
+		card.head_view = true
 		M._shown = ""
 		main.refresh()
-		var pr: String = Fmt.notes(sim.boss_cost(hs))
-		_check(card.head_sub.text.contains(pr) and not M._cols[0]["note"].text.contains(pr), "taken on, short of notes: the head's row '%s', the note '%s'" % [card.head_sub.text, M._cols[0]["note"].text])
-		_check_fit(main, "the site card, taken on short of notes")
+		var pr: String = Fmt.notes(sim.head_fight_cost(hz))     # his own fight's price (BUILD55-U)
+		var hsub: String = card.segs[Data.STAGES]["sub"].text
+		_check((hsub == pr or hsub == Fmt.group(sim.head_fight_cost(hz))) and not M._cols[0]["note"].text.contains(pr), "the Head short of notes: its segment '%s', the note '%s'" % [hsub, M._cols[0]["note"].text])
+		_check_fit(main, "the site card, the Head short of notes")
+		card.head_view = false
 		sim.load_dict(saved)
-	# S1: a locked site with a head - his name, the Head toggle greyed, no "No head here"
+	# S1: a locked site with a head - the Head greyed on its picker, no "No head here" (BUILD55-U: the picker's Head)
 	for k in range(sim.best_depth.size()):
-		sim.best_depth[k] = 0
+		_bd(sim, k, 0)
 	var locked_head := -1
 	for bd in Data.BOSSES:
 		var bi: int = int(bd["tier"])
@@ -35427,8 +35479,8 @@ func _fix46s_checks(main) -> void:
 		card.head_view = true
 		M._shown = ""
 		main.refresh()
-		var hn: String = str(sim.boss_of(locked_head).get("name", ""))
-		_check(card.has_head and card.head_name.text.begins_with(hn) and card.head_btn.disabled and not card.gang_btn.disabled and card.head_name.text != Words.SITE_CARD["no_head"], "a locked site with a head: '%s' / '%s', Head disabled %s" % [card.head_name.text, card.head_sub.text, str(card.head_btn.disabled)])
+		var hb: Button = card.segs[Data.STAGES]["button"]
+		_check(card.has_head and hb.visible and hb.disabled and not card.head_box.visible and card.segs[Data.STAGES]["top"].text.begins_with(Words.U55["head"]), "a locked site with a head: Head shown %s, disabled %s" % [str(hb.visible), str(hb.disabled)])
 		_check_fit(main, "the site card, a locked site with a head")
 		card.head_view = false
 	sim.load_dict(saved)
@@ -35481,50 +35533,40 @@ func _b48b_head_checks(main) -> void:
 	var M = main._missions
 	var card = M._cols[0]["card"]
 	var hs: int = int(Data.BOSSES[0]["tier"])
-	sim.boss_armed.erase(hs)
+	_u55_done(sim, hs, maxi(sim.stage_done(hs), 2))     # his gate: his site's 2/3 (BUILD55-U)
 	M.select(hs)
 	M._shown = ""
 	main.refresh()
-	_check(sim.tier_open(hs) and card.has_head and not card.head_btn.disabled and not card.head_view, "the fixture: %s's head can't be picked: open %s, head %s, Head disabled %s" % [Data.TIERS[hs]["name"], str(sim.tier_open(hs)), str(card.has_head), str(card.head_btn.disabled)])
-	# no second Head control: nothing under the card's panel but the card's own toggle reads Head or Take him on
+	var hb: Button = card.segs[Data.STAGES]["button"]
+	_check(sim.tier_open(hs) and card.has_head and not hb.disabled and not card.head_view, "the fixture: %s's head can't be picked: open %s, head %s, Head disabled %s" % [Data.TIERS[hs]["name"], str(sim.tier_open(hs)), str(card.has_head), str(hb.disabled)])
+	# no second Head control: nothing under the card's panel but the card's own picker reads Head or Take him on
 	var c: Dictionary = M._cols[0]
 	var foot: Array = []
 	_buttons_under(c["panel"], foot)
 	foot = foot.filter(func(b): return not card.is_ancestor_of(b) and (b.text.begins_with(Words.SITE_CARD["head"]) or b.text.begins_with(Words.SITE_CARD["take_on"]) or b.text.begins_with(Words.SITE_CARD["taken_on"]) or b.text.begins_with("Convoy")))
 	_check(not c.has("boss") and foot.is_empty(), "a second Head button by Set off: %s" % str(foot.map(func(b): return b.text)))
-	# Head picked: he's taken on and the card shows him
-	card.head_btn.pressed.emit()
+	# Head picked: the card shows him
+	hb.pressed.emit()
 	main.refresh()
-	_check(bool(sim.boss_armed.get(hs, false)) and card.head_view, "the card's Head didn't take him on: armed %s, view %s" % [str(sim.boss_armed.get(hs, false)), str(card.head_view)])
+	_check(card.head_view, "the card's Head didn't show him")
 	_check_fit(main, "the site card, the head picked")
-	# Set off sets off at the head
+	# Set off sets off at the head: his own fight (BUILD55-U)
 	M._deploy(0)
-	_check(sim.on_mission() and int(sim.mission["tier"]) == hs and sim.mission.has("boss") and str(sim.mission["boss"].get("name", "")) == str(sim.boss_of(hs).get("name", "-")),
-		"Head picked then Set off didn't set off at the head: %s" % (str(sim.mission.get("boss", {}).get("name", "no head")) if sim.on_mission() else "no run"))
+	_check(sim.on_mission() and int(sim.mission["tier"]) == hs and bool(sim.mission.get("head_fight", false)),
+		"Head picked then Set off didn't set off at the head: %s" % (str(sim.mission.get("head_fight", "no flag")) if sim.on_mission() else "no run"))
 	if sim.on_mission():
 		sim.extract_now()
+	# a stage lets him be
 	main.show_room(main.MISSIONS)
 	M._shown = ""
 	main.refresh()
-	_check(not card.head_view or bool(sim.boss_armed.get(hs, false)), "the card still shows the head after the run took him off")
-	# Gang lets him be
-	card.head_btn.pressed.emit()
+	card.segs[0]["button"].pressed.emit()
 	main.refresh()
-	card.gang_btn.pressed.emit()
-	main.refresh()
-	_check(not bool(sim.boss_armed.get(hs, false)) and not card.head_view, "the card's Gang didn't let him be")
-	# short of his notes: Head greyed, the row says the price
-	if sim.boss_cost(hs) > 0:
-		sim.notes = 0
-		M._shown = ""
-		main.refresh()
-		_check(card.head_btn.disabled and card.head_sub.text.contains(Fmt.notes(sim.boss_cost(hs))), "short of notes the Head isn't greyed with his price: disabled %s, '%s'" % [str(card.head_btn.disabled), card.head_sub.text])
-		card.head_btn.pressed.emit()
-		_check(not bool(sim.boss_armed.get(hs, false)), "the Head took him on with no notes")
+	_check(not card.head_view, "a stage picked didn't let him be")
 	sim.load_dict(saved)
 	M._shown = ""
 	main.refresh()
-	print("b48b head ok: one control, Head picked sets off at the head, Gang lets him be")
+	print("b48b head ok: one control, Head picked sets off at the head, a stage lets him be")
 
 
 ## Item 2 (Matt: "skills identified as notable when they should be labelled 'skill' instead"): a skill node's card on
@@ -36717,11 +36759,11 @@ func _u49_wagers_checks(main) -> void:
 	for k in range(1, Data.TIERS.size()):
 		if sim.tier_open(k) and nsite < 0:
 			saved_bd = int(sim.best_depth[k])
-			sim.best_depth[k] = 0
+			_bd(sim, k, 0)
 			if sim.tier_open(k) and sim.wager_site_open(k):
 				nsite = k
 			else:
-				sim.best_depth[k] = saved_bd
+				_bd(sim, k, saved_bd)
 	_check(nsite >= 0, "no site with Kev's offer for the wagers' checks")
 	if nsite < 0:
 		return
@@ -36805,7 +36847,7 @@ func _u49_wagers_checks(main) -> void:
 		else:
 			wp.rows[pick]["take"].pressed.emit()
 	sim.wagers.erase(key)
-	sim.best_depth[nsite] = saved_bd
+	_bd(sim, nsite, saved_bd)
 	sim.yard_picks = picks0
 	sim.odds_budget = budget0
 	main.layout(Vector2(1920, 1080))
@@ -36949,7 +36991,7 @@ func _u49_order_card_checks(main) -> void:
 					M._show_order_card(k)        # a shut place, drawn as its card would be (its pin stays shut: Matt's 20 Oct rule)
 				var where: String = "%s %s (%dx%d)" % [k, "open" if open else "shut", int(sz.x), int(sz.y)]
 				_check(card.head_name.text.begins_with(str(p["who"])) and card.head_name.text.to_lower().contains("level %d" % sim.order_level(k)) and card.head_sub.text != "" and str(Words.PINNACLE_WORDS[k]).begins_with(card.head_sub.text.trim_suffix(".")), "%s: the head's row reads '%s' / '%s'" % [where, card.head_name.text, card.head_sub.text])
-				_check(not card.gang_btn.visible and not card.head_btn.visible, "%s: the Gang / Head toggle shows on an order's place" % where)
+				_check(not card.pick_box.visible and card.head_box.visible, "%s: the stage picker shows on an order's place, or his row doesn't" % where)     # BUILD55-U
 				_check(card.title.text == str(p["place"]) and card._art.texture == load("res://scripts/ui/ui.gd").place_texture(str(p["art"])) and card.them_name.text in [str(p["who"]), str(p["who"]).trim_prefix("The ")], "%s: the picture and the head: '%s' '%s'" % [where, card.title.text, card.them_name.text])
 				_check(card.tiles[1]["text"].text == Words.U49_ORDER["unique"] and card.tiles[0]["icon"].texture != null and card.tiles[0]["text"].text != "", "%s: what comes home: %s" % [where, str(card.tiles.map(func(t): return t["text"].text))])
 				if open:
@@ -36985,7 +37027,7 @@ func _u49_order_card_checks(main) -> void:
 	M.order_key = ""
 	M.select(0)
 	main.refresh()
-	_check(card.order == "" and card.gang_btn.visible, "the card stayed the order's back on a site")
+	_check(card.order == "" and card.pick_box.visible and not card.head_box.visible, "the card stayed the order's back on a site")     # BUILD55-U: the picker
 	print("u49 order card ok")
 
 
@@ -37344,7 +37386,7 @@ func _t50_town_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 		_check(sim.exchange_day == day0 + 1 and sim.town_stopped.is_empty() and sim.town_running() == 6, "a run home didn't pay the wages: day %d, stopped %s" % [sim.exchange_day, str(sim.town_stopped.keys())])
-		var back_line: String = Words.T50_TOWN["log_back"] % Words.mid("The mint")
+		var back_line: String = Words.T50_TOWN["log_back"] % Words.mid("The print works")     # (BUILD55-A) the town's place renamed
 		_check(sim.events.any(func(e): return str(e[1]) == back_line) and Words.toast_tone(back_line) == "good", "no toast for the mint running again")
 	# saved and loaded: a stopped place stays stopped
 	sim.town_stopped = {"library": true}
@@ -39233,7 +39275,7 @@ func _u51_county_checks(main) -> void:
 		sim.extract_now()
 	var hold: Dictionary = sim.to_dict()
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
@@ -39349,7 +39391,7 @@ func _c51_wall_checks() -> void:
 	var sh: float = whole[sc] / whole[sc - 1]
 	var sf: float = fire[sc] / fire[sc - 1]
 	_check(bad.is_empty(), "item 1: campaign steps past x%.1f in whole HP or a gang's fire: %s" % [C51_STEP_MAX, ", ".join(bad)])
-	_check(sh >= 1.5 and sh <= 1.7 and sf >= 1.5 and sf <= 1.7, "item 1: the Pleasure Park to the Shopping Centre is x%.2f HP, x%.2f fire (about x1.6 wanted)" % [sh, sf])
+	_check(sh >= 1.40 and sh <= 1.50 and sf >= 1.15 and sf <= 1.30, "item 1: the Pleasure Park to the Shopping Centre is x%.2f HP, x%.2f fire (BUILD55-A, stages.md §3: a 1/3 to the next x1.446 whole HP; a man's fire x1.23 with the gangs 12 to 14)" % [sh, sf])
 	print("c51 wall: the steps (whole HP/fire) %s" % ", ".join(steps))
 
 
@@ -39806,7 +39848,8 @@ func _f51_workshop_checks(main) -> void:
 	main.add_child(pp)
 	pp.show_pick(gun, sim, "Picked")
 	var head: String = str(pp._heads[0]._figure.text)
-	pp.queue_free()
+	main.remove_child(pp)
+	pp.free()                                 # (BUILD55-U) at once: the smoke runs no frames, so a queue_free left it on main for every later sweep
 	_check(head != "" and fig.begins_with(head + " dmg/s") and absf(Items.dps_whole(gun) - Items.dps(gun)) >= 1.0, "f51 workshop: the Workshop's '%s', the pick panel's headline '%s' (whole %.0f, plain %.0f)" % [fig, head, Items.dps_whole(gun), Items.dps(gun)])
 	sim.load_dict(saved)
 	main.refresh()
@@ -39824,7 +39867,7 @@ func _b52_map_checks(main) -> void:
 		sim.extract_now()
 	var hold: Dictionary = sim.to_dict()
 	for i in range(Data.TIERS.size()):
-		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+		_bd(sim, i, maxi(1, int(sim.best_depth[i])))
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = true
 	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
@@ -40162,3 +40205,1059 @@ func _b53_fog_checks(main) -> void:
 	M._shown = ""
 	main.refresh()
 	print("b53 fog ok (a shut zone: %d)" % shut)
+
+
+# ------------------------------------------------------------------ BUILD55-A (5 Nov): stages per site
+## A site's clears as the checks before stages set them (BUILD55-A): best_depth as given, and its stages to match - a
+## site "cleared" (1) is its 2/3 cleared, the one that opens the next (stage_done 2); deeper, its 3/3.
+func _bd(s, i: int, v: int) -> void:
+	s.best_depth[i] = v
+	if v <= 0:
+		s.a55_done.erase(i)
+	else:
+		s.a55_done[i] = mini(Data.STAGES, maxi(Data.STAGE_OPENS, v))
+	if int(s.depth[i]) <= Data.STAGES and int(s.depth[i]) > s.stage_done(i) + 1 and not s.runner_busy():
+		s.depth[i] = s.stage_done(i) + 1          # a stage past the one after the furthest cleared isn't one to stand at
+
+
+func _bd_all(s, bd: Array) -> void:
+	for i in range(bd.size()):
+		_bd(s, i, int(bd[i]))
+
+
+
+## A fresh camp for the stages' checks: a Doorman at full HP, no mythics.
+func _a55_camp():
+	var s = Sim.new()
+	s.start()
+	_set_cls(s, "Doorman")
+	s.mythics_on = false
+	s.hp = s.max_hp()
+	return s
+
+
+## A stage run on site i: picked, out, its pool down (the clear), home. True when it went.
+func _a55_clear(s, i: int, st: int) -> bool:
+	s.set_stage_pick(i, st)
+	s.hp = s.max_hp()
+	s.deploy(i)
+	if not s.on_mission():
+		return false
+	var ok: bool = int(s.mission.get("stage", 0)) == st and int(s.mission.get("depth", 0)) == st
+	s._clear(s.mission, s.mission["t"])
+	s.extract_now()
+	return ok
+
+
+## BUILD55-A (5 Nov): stages per site - the numbers (stages.md §3), the gates (§2), the guards (§8), the heads (§4), the
+## words, the save, the bot's wall.
+func _a55_stages_checks() -> void:
+	var s = _a55_camp()
+	# the numbers: a stage x1.22, every step on the path at most x1.23 in whole HP and fire; the ends held
+	_check(is_equal_approx(Data.DEPTH_HOSTILE, 0.22) and Data.REACH_START == 12 and Data.STAGES == 3, "the stage constants: DEPTH_HOSTILE %.2f, REACH_START %d" % [Data.DEPTH_HOSTILE, Data.REACH_START])
+	var path: Array = []
+	for i in range(Data.TIERS.size()):
+		for st in [1, 2]:
+			var f: Dictionary = s.depth_figures(i, st, Sim.lv_at(i, st))
+			path.append([float(f["pool"]) * float(f["hp"]), float(f["pool"]) * float(f["dps"]), "%s %d/3" % [Data.TIERS[i]["name"], st]])
+		var f3: Dictionary = s.depth_figures(i, 3, Sim.lv_at(i, 3))
+		var f2: Dictionary = s.depth_figures(i, 2, Sim.lv_at(i, 2))
+		_check(absf(float(f3["hp"]) / float(f2["hp"]) - 1.22) < 0.001 and absf(float(f3["dps"]) / float(f2["dps"]) - 1.22) < 0.001, "%s's 3/3 isn't x1.22 its 2/3" % Data.TIERS[i]["name"])
+	var worst := 0.0
+	var worst_at := ""
+	for k in range(1, path.size()):
+		for c in [0, 1]:
+			var r: float = float(path[k][c]) / float(path[k - 1][c])
+			if r > worst:
+				worst = r
+				worst_at = str(path[k][2])
+	_check(worst <= 1.23, "a step on the stages' path past x1.23: x%.3f at %s" % [worst, worst_at])
+	var a1: Dictionary = s.depth_figures(0, 1, 1)
+	var b3: Dictionary = s.depth_figures(11, 3, Sim.lv_at(11, 3))
+	_check(absf(float(a1["pool"]) * float(a1["hp"]) - 864.0) < 2.0 and absf(float(a1["pool"]) * float(a1["dps"]) - 1.26) < 0.01, "the Allotments' 1/3 isn't as Matt played it: %.0f / %.2f" % [float(a1["pool"]) * float(a1["hp"]), float(a1["pool"]) * float(a1["dps"])])
+	_check(absf(float(b3["pool"]) * float(b3["hp"]) - 74474.0) < 40.0 and absf(float(b3["pool"]) * float(b3["dps"]) - 102.4) < 0.2, "the Barracks' 3/3 isn't today's Barracks: %.0f / %.1f" % [float(b3["pool"]) * float(b3["hp"]), float(b3["pool"]) * float(b3["dps"])])
+	var gangs: Array = Data.TIERS.map(func(t): return int(t["pool"]))
+	var xps: Array = Data.TIERS.map(func(t): return int(t["xp"]))
+	_check(gangs == [4, 5, 6, 7, 9, 11, 12, 14, 16, 17, 19, 22] and xps == [2, 2, 4, 4, 4, 7, 12, 17, 20, 26, 32, 40], "the gangs or XP a kill aren't §3's: %s / %s" % [str(gangs), str(xps)])
+	# the gates: 1/3 first, 2/3 after it, the next site after the 2/3
+	_check(s.stage_open(0, 1) and not s.stage_open(0, 2) and s.stage_block(0, 2) == "After 1/3" and not s.tier_open(1) and s.stage_block(1, 1) == "After the Allotments 2/3", "a fresh camp's stages: 2/3 '%s', the Garden Centre '%s'" % [s.stage_block(0, 2), s.stage_block(1, 1)])
+	s.set_depth(0, 3)
+	_check(int(s.depth[0]) == 1, "set_depth went past the one after the furthest cleared: %d" % int(s.depth[0]))
+	var lines_before: int = s.events.size()
+	_check(_a55_clear(s, 0, 1), "the Allotments' 1/3 didn't run as stage 1")
+	var site_line: String = Words.site_cleared("The Allotments")
+	_check(s.stage_done(0) == 1 and not s.tier_open(1) and s.stage_open(0, 2) and s.stage_pick(0) == 2, "after the 1/3: done %d, the next open %s, picked %d" % [s.stage_done(0), str(s.tier_open(1)), s.stage_pick(0)])
+	_check(not s.events.slice(lines_before).any(func(e): return str(e[1]) == site_line), "the site's cleared line came on its 1/3")
+	s.set_depth(0, 3)
+	_check(int(s.depth[0]) == 2, "set_depth isn't up to the furthest cleared + 1: %d" % int(s.depth[0]))
+	lines_before = s.events.size()
+	_check(_a55_clear(s, 0, 2), "the Allotments' 2/3 didn't run as stage 2")
+	_check(s.stage_done(0) == 2 and s.tier_open(1) and s.site_new(1) and s.events.slice(lines_before).any(func(e): return str(e[1]) == site_line), "the 2/3 didn't open the Garden Centre, its New mark or the cleared line")
+	s.set_stage_pick(1, 1)
+	_check(not s.site_new(1) and int(s.depth[1]) == 1, "a pick didn't take the New mark off / set the depth")
+	_check(_a55_clear(s, 0, 3) and s.stage_done(0) == 3 and not s.tier_open(2), "the 3/3 opened something, or didn't tick: done %d" % s.stage_done(0))
+	# the level tax per stage: never on a stage not cleared
+	s.xp = Data.xp_for_level(12)
+	_check(s.campaign_level_mult(0, 1) > 1.0 and s.clear_level.has(Sim.stage_key(0, 3)) and Sim.stage_key(0, 1) == 0, "the tax isn't keyed by stage")
+	var s2 = _a55_camp()
+	_a55_clear(s2, 0, 1)
+	s2.xp = Data.xp_for_level(12)
+	_check(s2.campaign_level_mult(0, 1) > 1.0 and is_equal_approx(s2.campaign_level_mult(0, 2), 1.0), "the level tax hit a stage not yet cleared: %.2f" % s2.campaign_level_mult(0, 2))
+	# a stage's level gate: the Retail Park's 2/3 (level 4) opens at level 5
+	var g = _a55_camp()
+	for k in range(5):
+		g.a55_done[k] = 2
+	g.bosses_beaten[0] = true
+	g.a55_done[5] = 1
+	g.xp = Data.xp_for_level(3)
+	_check(g.stage_gate(5, 2) == 5 and not g.stage_open(5, 2) and g.stage_block(5, 2) == "Opens at level 5", "the Retail Park's 2/3 gate: %d, '%s'" % [g.stage_gate(5, 2), g.stage_block(5, 2)])
+	g.xp = Data.xp_for_level(5)
+	_check(g.stage_open(5, 2), "the Retail Park's 2/3 shut at level 5")
+	# no Map point, no best_dig, no set piece from a stage; a signal's clear never moves one
+	var pts0: int = int(g.atlas_points)
+	g.xp = Data.xp_for_level(8)
+	_check(_a55_clear(g, 3, 1) and _a55_clear(g, 3, 2) and _a55_clear(g, 3, 3), "the Streets' stages didn't run")
+	_check(int(g.atlas_points) == pts0 and g.best_dig.is_empty() and g.stage_done(3) == 3, "a stage paid a Map point or a best dig: %d -> %d, %s" % [pts0, int(g.atlas_points), str(g.best_dig)])
+	_check(g.deepest_cleared_level() == Sim.lv_at(3, 3) and g.deepest_site_level() >= Sim.lv_at(3, 3), "the shelf's and the gamble's level doesn't read the stages: %d / %d" % [g.deepest_cleared_level(), g.deepest_site_level()])
+	g.set_stage_pick(5, 2)
+	g.deploy(5)
+	g.mission["signal"] = {"id": -1}
+	g._clear(g.mission, g.mission["t"])
+	g.extract_now()
+	_check(g.stage_done(5) == 1, "a signal's clear moved a stage: %d" % g.stage_done(5))
+	var sets := 0
+	g.set_stage_pick(3, 3)
+	g.deploy(3)
+	var t3: Dictionary = g.mission["t"]
+	for k in range(3000):
+		var it: Dictionary = g._find(g.mission, t3, false, {}, true).get("it", {})
+		if it.has("set"):
+			sets += 1
+	var t4: Dictionary = t3.duplicate()
+	t4["depth"] = Data.SIGNAL_DEPTH + 6
+	var sets4 := 0
+	for k in range(3000):
+		var it4: Dictionary = g._find(g.mission, t4, false, {}, true).get("it", {})
+		if it4.has("set"):
+			sets4 += 1
+	g.extract_now()
+	_check(sets == 0 and sets4 > 0, "set pieces: %d at 3/3, %d past it (none at a stage, some from depth 4)" % [sets, sets4])
+	# signals land past the stages
+	for i in range(Data.TIERS.size()):
+		_check(Sim.depth_for_level(i, Data.REACH_START) >= Data.SIGNAL_DEPTH and Sim.depth_for_level(i, 1) >= Data.SIGNAL_DEPTH, "a signal on %s is at a stage's depth: %d" % [Data.TIERS[i]["name"], Sim.depth_for_level(i, 1)])
+	# the endgame curve from depth 4: a stage's figures after the campaign are as before it
+	var e2_before: float = float(g.depth_figures(0, 2, 1)["hp"])
+	var c = _a55_camp()
+	for k in range(Data.TIERS.size()):
+		c.a55_done[k] = 3
+		c.best_depth[k] = 3
+	for z in range(Data.ZONES.size()):
+		c.bosses_beaten[z] = true
+	_check(c.campaign_done() and absf(float(c.depth_figures(0, 2, 1)["hp"]) - e2_before) < 0.01 and absf(e2_before - 263.5) < 1.0, "the Allotments' 2/3 man jumped after the campaign: %.0f -> %.0f" % [e2_before, float(c.depth_figures(0, 2, 1)["hp"])])
+	# the head: his own fight, gated on his site's 2/3, his gang half the site's at its 3/3 man, then him; free the first time
+	var h = _a55_camp()
+	h.a55_done[0] = 2
+	h.a55_done[1] = 2
+	h.a55_done[2] = 1
+	h.xp = Data.xp_for_level(2)
+	_check(not h.head_fight_open(0) and h.head_fight_block(0) == "After 2/3" and not h.can_arm_boss(2), "the Gamekeeper's fight before Top Farm's 2/3: '%s'" % h.head_fight_block(0))
+	h.set_stage_pick(2, 1)
+	h.boss_armed[2] = true                     # armed as the old card did: a site's run brings him no more
+	h.deploy(2)
+	_check(h.on_mission() and not h.mission.has("boss"), "the head came out after a site's pool")
+	h.extract_now()
+	h.boss_armed[2] = false
+	h.a55_done[2] = 2
+	var man1: float = float(h.depth_figures(2, 1, Sim.lv_at(2, 1))["hp"])     # (FIX55b) him on the 1/3 man, his gang on the 2/3's
+	var man2: float = float(h.depth_figures(2, 2, Sim.lv_at(2, 2))["hp"])
+	var pv: Dictionary = h.head_fight_preview(0)
+	_check(h.head_fight_open(0) and int(pv.get("pool", 0)) == 3 and pv.has("boss") and absf(float(pv["boss"]["hp"]) - man1 * 5.0) < 0.5 and absf(float(pv["hp"]) - man2) < 0.01, "the Gamekeeper's fight: open %s, gang %d at %.0f, him %.0f (want 3 at %.0f, %.0f)" % [str(h.head_fight_open(0)), int(pv.get("pool", 0)), float(pv.get("hp", 0.0)), float(pv.get("boss", {}).get("hp", 0.0)), man2, man1 * 5.0])
+	var notes0: int = int(h.notes)
+	var d_was: int = int(h.depth[2])
+	_check(h.start_head_fight(0) and bool(h.mission.get("head_fight", false)) and int(h.mission.get("depth", 0)) == Data.STAGE_OPENS and not h.mission.has("stage") and int(h.mission["remaining"]) == 3 and str(h.mission["boss"]["name"]) == "The Gamekeeper" and int(h.notes) == notes0, "the Gamekeeper's fight didn't start as his own (free)")
+	h._clear(h.mission, h.mission["t"])
+	h._boss_down(h.mission, h.mission["t"])
+	h.extract_now()
+	_check(h.bosses_beaten[0] and h.stage_done(2) == 2 and int(h.depth[2]) == d_was and h.zone_open(1) and h.site_new(3), "the Gamekeeper's fall: beaten %s, Top Farm done %d, depth %d, the Estate open %s, the Streets New %s" % [str(h.bosses_beaten[0]), h.stage_done(2), int(h.depth[2]), str(h.zone_open(1)), str(h.site_new(3))])
+	_check(h.head_fight_cost(0) == int(Data.BOSSES[0]["notes"]), "the Gamekeeper isn't his notes after his first fall: %d" % h.head_fight_cost(0))
+	# the Carpet Man's fall says the road to the Town; the Retail Park's 2/3 doesn't
+	_check(not Words.site_cleared("The Retail Park").contains("road to the Town") and Words.A55_STAGE["road_town"].contains("road to the Town"), "the Retail Park's road line didn't move to the Carpet Man")
+	var cm = _a55_camp()
+	for k in range(6):
+		cm.a55_done[k] = 2
+	cm.bosses_beaten[0] = true
+	cm.xp = Data.xp_for_level(6)
+	var ev0: int = cm.events.size()
+	cm.start_head_fight(1)
+	cm._clear(cm.mission, cm.mission["t"])
+	cm._boss_down(cm.mission, cm.mission["t"])
+	cm.extract_now()
+	_check(cm.bosses_beaten[1] and cm.events.slice(ev0).any(func(e): return str(e[1]) == Words.A55_STAGE["road_town"]), "the Carpet Man's fall didn't say the road to the Town")
+	# the save: the stages, the picks and the New marks
+	var back = Sim.new()
+	back.load_dict(h.to_dict())
+	_check(back.stage_done(0) == 2 and back.stage_done(2) == 2 and back.site_new(3) and back.stage_pick(1) == h.stage_pick(1) and back.a55_pick == h.a55_pick, "the stages didn't survive a save: %s / %s" % [str(back.a55_done), str(back.a55_new)])
+	# the bot's wall: the next site's 2/3, then the head
+	var bot = load("res://tests/bot.gd").new()
+	var w = _a55_camp()
+	w.a55_done[0] = 2
+	w.a55_done[1] = 1
+	_check(bot.wall_at(w) == [1, false], "the bot's wall isn't the Garden Centre's 2/3: %s" % str(bot.wall_at(w)))
+	w.a55_done[1] = 2
+	w.a55_done[2] = 2
+	_check(bot.wall_at(w) == [2, true], "the bot's wall isn't the Gamekeeper after Top Farm's 2/3: %s" % str(bot.wall_at(w)))
+	# the town's place renamed; the order's Mint keeps its name
+	var pw: Array = Data.REBUILDS.filter(func(r): return str(r["key"]) == "mint")
+	_check(pw.size() == 1 and str(pw[0]["name"]) == "The print works" and Data.pinnacle("mint")["place"] == "The Mint", "the print works: %s" % str(pw[0]["name"] if pw.size() == 1 else ""))
+	print("stages ok: x1.22 a stage, the path, the ends, the gates, the tax per stage, no points or sets from a stage, signals past them, the head's own fight, the words, the save, the bot's wall")
+
+
+## A site's depth as the checks before stages set it (BUILD55-A): up to 3/3 by set_depth (the stages' clamp); past it -
+## a signal's depth, the endgame's ladder - written straight in, the runner home (set_depth stops at 3/3 now).
+func _sd(s, i: int, d: int) -> void:
+	if d <= Data.STAGES:
+		s.set_depth(i, d)
+	elif not s.runner_busy():
+		s.depth[i] = d
+		s._stats_dirty()
+
+# ------------------------------------------------------------------ BUILD55-U (5 Nov): stages on the card and the Map
+
+## A camp for the stage checks: the campaign's sites at `done` stages cleared (the Outskirts' first two at 1/3 and 2/3
+## where asked), every zone open, a runner well up, notes in hand.
+func _u55_camp(sim, done: int) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	for k in range(Data.TIERS.size()):
+		_u55_done(sim, k, done)
+	for z in range(Data.ZONES.size()):
+		sim.bosses_beaten[z] = done > 0
+	sim.xp = maxf(sim.xp, Data.xp_for_level(15))
+	sim.hp = sim.max_hp()
+	sim.notes = 100000
+
+
+## A site marked "New" (opened by the stage before and not yet picked): the sim's own mark (A's a55_new).
+func _u55_set_new(sim, i: int) -> void:
+	sim.a55_new[i] = true
+
+
+## A site's stages cleared to n (A's a55_done; the old best_depth with it, as a camp's clears leave it).
+func _u55_done(sim, i: int, n: int) -> void:
+	if n > 0:
+		sim.a55_done[i] = n
+	else:
+		sim.a55_done.erase(i)
+	sim.best_depth[i] = n
+
+
+## The picker's segment k on the card: {button, top, sub}.
+func _u55_seg(card, k: int) -> Dictionary:
+	return card.segs[k]
+
+
+## The stage picker (BUILD55-U item 1): the three stages' states, the picked one amber with its level beside the row, a
+## shut one greyed with its reason; a pick moves the card's figures and Set off and the repeat run the picked stage.
+func _u55_picker_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	var gc := 1                                   # the Garden Centre: no head
+	_u55_done(sim, 0, 2)
+	_u55_done(sim, gc, 1)
+	sim.xp = Data.xp_for_level(1)                 # level 1: the 3/3 shut by its stage before, not its level
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	M.select(gc)
+	M._shown = ""
+	main.refresh()
+	_check(card.pick_box.visible and not card.head_box.visible and card.segs.filter(func(sg): return sg["button"].visible).size() == Data.STAGES, "the Garden Centre's card has no three-stage picker: %d segments" % card.segs.filter(func(sg): return sg["button"].visible).size())
+	var s0: Dictionary = _u55_seg(card, 0)
+	var s1: Dictionary = _u55_seg(card, 1)
+	var s2: Dictionary = _u55_seg(card, 2)
+	_check(s0["top"].text == "1/3 ✓" and s0["sub"].text == Words.U55["cleared"] and not s0["button"].disabled, "1/3 cleared reads '%s' / '%s'" % [s0["top"].text, s0["sub"].text])
+	_check(s1["top"].text == "2/3" and s1["sub"].text == Words.U55["not_cleared"] and not s1["button"].disabled, "2/3 open reads '%s' / '%s'" % [s1["top"].text, s1["sub"].text])
+	var why: String = sim.stage_block(gc, 3)
+	_check(why != "" and s2["button"].disabled and (s2["sub"].text == why or s2["sub"].text == Words.U55["opens_short"] % sim.stage_gate(gc, 3)) and s2["top"].get_theme_color("font_color") == Pal.TEXT_3, "3/3 shut isn't greyed with its reason '%s': '%s', disabled %s" % [why, s2["sub"].text, str(s2["button"].disabled)])
+	# opens on stage_pick: the furthest open, amber, its level beside the row
+	var pk: int = sim.stage_pick(gc)
+	_check(pk == 2 and str(card.segs[pk - 1]["button"].get_meta("ui_style", "")).begins_with("true") and str(s0["button"].get_meta("ui_style", "")).begins_with("false"), "the card didn't open on the furthest open stage, amber: pick %d" % pk)
+	_check(card.picked_key.text == Words.U55["picked"] and card.picked_val.text == UI.dots(Words.U55["picked_line"] % ["2/3", sim.stage_level(gc, 2)]), "the picked line reads '%s'" % card.picked_val.text)
+	_check_fit(main, "the site card's picker (Garden Centre, 2/3 picked)")
+	# a shut one takes no pick; 1/3 picked moves the card: the level, the foot line, the item level
+	s2["button"].pressed.emit()
+	main.refresh()
+	_check(sim.stage_pick(gc) == 2, "a shut 3/3 took the pick")
+	s0["button"].pressed.emit()
+	main.refresh()
+	_check(sim.stage_pick(gc) == 1 and str(s0["button"].get_meta("ui_style", "")).begins_with("true") and card.picked_val.text == UI.dots(Words.U55["picked_line"] % ["1/3", sim.stage_level(gc, 1)]), "1/3 picked: pick %d, '%s'" % [sim.stage_pick(gc), card.picked_val.text])
+	var line1: String = Words.site_line(str(Data.TIERS[gc]["name"]), 1).get_slice(". ", 0).trim_suffix(".")
+	var ff1: Array = card._foot_forms(gc).map(func(f): return UI.dots(str(f)))
+	_check(ff1.has(line1 + ".") and ff1.has(card.foot.text), "1/3's foot isn't Words.SITES' first line: '%s' of %s" % [card.foot.text, str(ff1)])     # the sky's and the words' conditions may lead it
+	s1["button"].pressed.emit()
+	main.refresh()
+	var line2: String = Words.site_line(str(Data.TIERS[gc]["name"]), 2).get_slice(". ", 0).trim_suffix(".")
+	var ff2: Array = card._foot_forms(gc).map(func(f): return UI.dots(str(f)))
+	_check(line2 != line1 and ff2.has(line2 + ".") and not ff2.has(line1 + ".") and ff2.has(card.foot.text), "2/3's foot isn't its own line: '%s' of %s (1/3's '%s')" % [card.foot.text, str(ff2), line1])
+	_check(card.tiles[0]["text"].text.contains(str(sim.wear_of(sim.stage_level(gc, 2)))), "the item level isn't the picked stage's: '%s'" % card.tiles[0]["text"].text)
+	# Set off runs the picked stage
+	sim.hp = sim.max_hp()
+	M._deploy(0)
+	_check(sim.on_mission() and int(sim.mission["tier"]) == gc and int(sim.mission.get("stage", sim.mission["t"].get("depth", -1))) == 2, "Set off didn't run the picked 2/3: %s" % (str(sim.mission.get("stage", sim.mission["t"].get("depth", -1))) if sim.on_mission() else "no run"))
+	if sim.on_mission():
+		sim.extract_now()
+	# and 1/3 picked, the repeat runs it (a runner well up, the gate's read)
+	sim.xp = Data.xp_for_level(15)
+	sim.hp = sim.max_hp()
+	M._shown = ""
+	main.refresh()
+	s0["button"].pressed.emit()
+	main.refresh()
+	sim._dry_memo.clear()
+	var gh := 0
+	while not sim.odds_settled(gc) and gh < 300:
+		sim.survival(gc)
+		gh += 1
+	_check(sim.repeat_block(gc) == "", "the fixture: the repeat's shut: '%s'" % sim.repeat_block(gc))
+	M._repeat(0)
+	_check(sim.on_mission() and int(sim.mission.get("stage", sim.mission["t"].get("depth", -1))) == 1, "the repeat didn't run the picked 1/3: %s, away %s" % [str(sim.mission.get("stage", sim.mission["t"].get("depth", -1))) if sim.on_mission() else "no run", str(sim.away())])
+	if sim.on_mission():
+		sim.extract_now()
+	# fit at both windows, a stage shut for its level ("Opens at level N") in the narrowest segments (a head's site)
+	_u55_camp(sim, 2)
+	var last: int = int(Data.BOSSES.back()["tier"])
+	var parade: int = int(Data.ZONES[1]["tiers"][1])
+	_u55_done(sim, parade - 1, 1)                 # the Parade shut after the Streets' 2/3: the longest reason
+	_u55_done(sim, parade, 0)
+	sim.xp = Data.xp_for_level(1)                 # the Barracks' 3/3 shut for its level, by the Head
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for i in [gc, last, parade]:
+			M.select(i)
+			M._shown = ""
+			main.refresh()
+			_check_fit(main, "the site card's picker, %s (%dx%d)" % [Data.TIERS[i]["name"], int(sz.x), int(sz.y)])
+			for sg in card.segs:
+				if sg["button"].visible:
+					for l in [sg["top"], sg["sub"]]:
+						_check(UI.text_width(l, l.text) <= sg["button"].size.x - 4.0, "%s: a segment's words run past it: '%s'" % [Data.TIERS[i]["name"], l.text])
+			var segs_end: float = card.segs.filter(func(sg): return sg["button"].visible).back()["button"].position.x + card.segs.filter(func(sg): return sg["button"].visible).back()["button"].size.x
+			_check(segs_end + 4.0 <= card.picked_val.position.x + card.picked_val.size.x - UI.text_width(card.picked_val, card.picked_val.text), "%s: the segments run under the picked line" % Data.TIERS[i]["name"])
+			_check(card.pick_box.position.y >= card.PIC_H and card.pick_box.position.y + card.PICK_H <= card.you_frame.position.y, "%s: the picker isn't between the picture and the faces" % Data.TIERS[i]["name"])
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("u55 picker ok: the stages' states, the pick amber with its level, Set off and the repeat run it, fits")
+
+
+## The Head (BUILD55-U item 2): a fourth segment on a zone's last site - shut "After 2/3", then free or his price;
+## picked, his den, his gang (×N) and him, "His gang first, then him", and Set off starts his own fight. The old Gang /
+## Head toggle is gone.
+func _u55_head_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	sim.unlocked.erase("radio")                  # (FIX55) the Radio shut: his price in the repeat's place, not Kev's wagers (_f55_wagers_checks)
+	var hs: int = int(Data.BOSSES[0]["tier"])     # Top Farm: the Gamekeeper
+	var z: int = int(Data.TIERS[hs]["zone"])
+	for k in Data.ZONES[z]["tiers"]:
+		_u55_done(sim, k, 2)
+	_u55_done(sim, hs, 1)
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	_check(not ("gang_btn" in card) and not ("head_btn" in card), "the old Gang / Head toggle is still on the card")
+	M.select(hs)
+	M._shown = ""
+	main.refresh()
+	var sh: Dictionary = _u55_seg(card, Data.STAGES)
+	_check(sh["button"].visible and sh["button"].disabled and sh["top"].text == Words.U55["head"] and sh["sub"].text == "After 2/3", "the Head before the 2/3 isn't shut 'After 2/3': '%s' / '%s', disabled %s" % [sh["top"].text, sh["sub"].text, str(sh["button"].disabled)])
+	sh["button"].pressed.emit()
+	main.refresh()
+	_check(not card.head_view, "a shut Head took the pick")
+	# the 2/3 cleared: Head open and free the first time
+	_u55_done(sim, hs, 2)
+	M._shown = ""
+	main.refresh()
+	_check(not sh["button"].disabled and sh["sub"].text == Words.U55["head_free"] and sim.head_fight_open(z), "the Head after the 2/3 isn't open and free: '%s', open %s" % [sh["sub"].text, str(sim.head_fight_open(z))])
+	sh["button"].pressed.emit()
+	main.refresh()
+	var b: Dictionary = sim.boss_of(hs)
+	var hk: String = Items.slug(str(b["name"]))
+	_check(card.head_view and str(sh["button"].get_meta("ui_style", "")).begins_with("true") and card.picked_val.text == UI.dots(Words.U55["picked_line"] % [Words.U55["head"], sim.stage_level(hs, Data.STAGE_OPENS)]), "Head picked: view %s, '%s'" % [str(card.head_view), card.picked_val.text])
+	_check(card._art.texture == RunView.tex(hk + "_plate") and card._figs[2].visible and card._figs[2].texture == RunView.tex("head_%s_stand" % hk) and card._figs[0].visible and card._figs[1].visible, "Head picked: not his den with his gang and him in it")
+	_check(card.gang_frame.visible and card.gang_count.text == "×%d" % card.head_gang(hs) and card.head_gang(hs) == maxi(1, floori(int(Data.TIERS[hs]["pool"]) / 2.0)) and (card.them_name.text == str(b["name"]) or card.them_name.text == str(b["name"]).trim_prefix("The ")), "Head picked: his gang '%s' and him '%s'" % [card.gang_count.text, card.them_name.text])
+	_check(card.foot.text == Words.U55["head_foot"], "Head picked: the foot reads '%s'" % card.foot.text)
+	_check(M._cols[0]["repeat"].visible and M._cols[0]["repeat"].disabled and M._cols[0]["repeat"].text in [Words.SITE_CARD["free"], Words.SITE_CARD["free_short"]], "Head picked: the repeat's place doesn't say he's free: '%s'" % M._cols[0]["repeat"].text)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		M._shown = ""
+		main.refresh()
+		_check_fit(main, "the site card, the Head picked (%dx%d)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	# Set off starts his fight
+	M._deploy(0)
+	_check(sim.on_mission() and int(sim.mission["tier"]) == hs and bool(sim.mission.get("head_fight", false)), "Head picked then Set off didn't start his fight: %s" % (str(sim.mission.get("head_fight", "no flag")) if sim.on_mission() else "no run"))
+	if sim.on_mission():
+		sim.extract_now()
+	# a stage picked again: the head's view goes, Set off runs the stage
+	main.show_room(main.MISSIONS)
+	M._shown = ""
+	main.refresh()
+	_u55_seg(card, 0)["button"].pressed.emit()
+	main.refresh()
+	_check(not card.head_view and sim.stage_pick(hs) == 1 and not card.gang_frame.visible and card._art.texture == UI.place_texture(str(Data.TIERS[hs]["name"])), "1/3 picked after the Head: the card still shows him")
+	sim.hp = sim.max_hp()
+	M._deploy(0)
+	_check(sim.on_mission() and not bool(sim.mission.get("head_fight", false)), "1/3 picked: Set off still started the head's fight")
+	if sim.on_mission():
+		sim.extract_now()
+	# beaten: his price on the segment, red short of it, Set off shut
+	sim.bosses_beaten[z] = true
+	sim.notes = 0
+	main.show_room(main.MISSIONS)
+	M._shown = ""
+	main.refresh()
+	var cost: int = sim.head_fight_cost(z)
+	if cost > 0:
+		_check(sh["sub"].text == Fmt.notes(cost) or sh["sub"].text == Fmt.group(cost), "his price isn't on the Head: '%s'" % sh["sub"].text)
+		_check(sh["sub"].get_theme_color("font_color") == Pal.BAD, "short of his notes: the price isn't red")
+		sh["button"].pressed.emit()
+		main.refresh()
+		_check(card.head_view and M._cols[0]["deploy"].disabled, "short of his notes: the Head picked and Set off isn't shut")
+		_check_fit(main, "the site card, the Head short of notes")
+	else:
+		_check(false, "the fixture: the Gamekeeper costs nothing once beaten")
+	# a site with no head: three segments, the fourth hidden
+	M.select(0)
+	M._shown = ""
+	main.refresh()
+	_check(not _u55_seg(card, Data.STAGES)["button"].visible and not card.has_head, "the Allotments' card shows a Head")
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("u55 head ok: shut after 2/3, free then his price, his den, gang and him, his fight on Set off")
+
+
+## The Map's pins (BUILD55-U item 3): "· 2/3" the furthest cleared, "· 3/3" the whole label in the done colour, "· New"
+## amber and breathing until picked (and kept over a save), a shut site its name only; the F3 tool's names plain.
+func _u55_pin_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var mv = M._map
+	_u55_done(sim, 0, 2)                         # the Allotments 2/3
+	_u55_done(sim, 1, 3)                         # the Garden Centre 3/3
+	_u55_done(sim, 2, 2)                         # Top Farm 2/3, the Gamekeeper down: the Estate open
+	sim.bosses_beaten[0] = true
+	var nw: int = int(Data.ZONES[1]["tiers"][0])  # Ransacked Streets: open, not cleared
+	var shut: int = int(Data.ZONES[1]["tiers"][1])     # the Parade: shut till the Streets' 2/3
+	M.select(0)
+	M.select(2)                                   # the picked pin elsewhere, so the done colour shows
+	M._shown = ""
+	main.refresh()
+	var names: Array = Data.TIERS.map(func(t): return str(t["name"]))
+	_check(mv._pin_labels[0].text == "%s · 2/3" % names[0] and mv._pin_labels[0].get_theme_color("font_color") != Pal.GOOD, "the Allotments' pin reads '%s'" % mv._pin_labels[0].text)
+	_check(mv._pin_labels[1].text == "%s · 3/3" % names[1] and mv._pin_labels[1].get_theme_color("font_color") == Pal.GOOD, "the Garden Centre's 3/3 pin reads '%s', not in the done colour" % mv._pin_labels[1].text)
+	_check(sim.tier_open(nw) and mv._pin_labels[nw].text == names[nw], "an uncleared pin isn't its name alone: '%s'" % mv._pin_labels[nw].text)
+	_check(sim.zone_open(1) and not sim.tier_open(shut) and mv._pin_labels[shut].text == names[shut], "a shut site's pin isn't its name only: '%s'" % mv._pin_labels[shut].text)
+	# "New": amber, after the dot, breathing (0.55 to 1 over 1.6 s), the label's own words to the dot
+	_u55_set_new(sim, nw)
+	M._shown = ""
+	main.refresh()
+	var l: Label = mv._pin_labels[nw]
+	var mk: Label = mv.pin_marks[nw]
+	_check(l.text == "%s · %s" % [names[nw], Words.U55["new"]] and mk.visible and mk.text == Words.U55["new"] and mk.get_theme_color("font_color") == Pal.ACCENT and l.visible_characters == l.text.length() - mk.text.length(), "the Streets' 'New' isn't marked: '%s', mark %s, chars %d" % [l.text, str(mk.visible), l.visible_characters])
+	var x0: float = (l.size.x - UI.text_width(l, l.text)) / 2.0 if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER else (l.size.x - UI.text_width(l, l.text) if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0)
+	var lead_end: float = x0 + UI.text_width(l, "%s · " % names[nw])
+	_check(absf(mk.position.x - lead_end) < 1.0 and mk.position.x + UI.text_width(mk, mk.text) <= l.size.x + 1.0, "the 'New' mark isn't after the dot: at %.1f, want %.1f" % [mk.position.x, lead_end])
+	_check(mv.is_processing() and mv.NEW_PULSE_S == 1.6 and mv.NEW_PULSE_LOW == 0.55, "'New' doesn't breathe (the Map isn't ticking)")
+	mv.pulse_t = 0.0
+	mv._process(0.8)
+	var a_low: float = mk.modulate.a
+	mv._process(0.8)
+	_check(absf(a_low - 0.55) < 0.01 and absf(mk.modulate.a - 1.0) < 0.01 and mv.pulse_alpha(0.4) > 0.6 and mv.pulse_alpha(0.4) < 0.95, "'New' breathes %.2f to %.2f, not 0.55 to 1 eased" % [a_low, mk.modulate.a])
+	_check_fit(main, "the Map, a pin's 'New'")
+	# kept over a save and a load
+	var d: Dictionary = sim.to_dict()
+	sim.mark_site_seen(nw)
+	sim.load_dict(d)
+	_check(sim.site_new(nw), "'New' lost over a save and a load")
+	# picked: gone, and stays gone; the Map stops ticking
+	M.select(nw)
+	M.select(2)
+	M._shown = ""
+	main.refresh()
+	_check(not sim.site_new(nw) and not mk.visible and not l.text.contains(Words.U55["new"]) and l.visible_characters == -1 and not mv.is_processing(), "picked, the Streets still say 'New': '%s'" % l.text)
+	# fit: the longest ("The Pleasure Park · 3/3") and every pin at 3/3, both windows
+	for k in range(Data.TIERS.size()):
+		_u55_done(sim, k, 3)
+	for z in range(Data.ZONES.size()):
+		sim.bosses_beaten[z] = true
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		M._shown = ""
+		main.refresh()
+		var pp: int = names.find("The Pleasure Park")
+		_check(mv._pin_labels[pp].text == "The Pleasure Park · 3/3", "the longest pin reads '%s'" % mv._pin_labels[pp].text)
+		var wr: Rect2 = mv.word_rect(mv._pin_labels[pp])
+		_check(Rect2(Vector2.ZERO, mv.size).encloses(wr) and UI.text_width(mv._pin_labels[pp], mv._pin_labels[pp].text) <= mv._pin_labels[pp].size.x, "the longest pin runs off its box or the land: %s" % str(wr))
+		for a in range(Data.TIERS.size()):
+			for b in range(a + 1, Data.TIERS.size()):
+				_check(not mv.word_rect(mv._pin_labels[a]).intersects(mv.word_rect(mv._pin_labels[b])), "at 3/3 the pins %s and %s cross" % [names[a], names[b]])
+		_check_fit(main, "the Map, every pin at 3/3 (%dx%d)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	# the F3 tool: the names plain, no marks
+	_u55_set_new(sim, nw)
+	mv.set_placing(true)
+	_check(mv._pin_labels.all(func(pl): return not pl.text.contains(" · ")) and mv.pin_marks.all(func(m): return not m.visible), "the F3 tool's names carry the stage marks")
+	mv.set_placing(false)
+	M._shown = ""
+	main.refresh()
+	_check(mv._pin_labels[nw].text.ends_with(Words.U55["new"]) and mv._pin_labels[0].text.ends_with("3/3"), "after the F3 tool the marks didn't come back: '%s'" % mv._pin_labels[nw].text)
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("u55 pins ok: 2/3, 3/3 in the done colour, New breathing till picked and kept over a save, F3 plain, fits")
+
+
+## The stage backdrops (BUILD55-U item 4): `<site>_2` / `<site>_3` when drawn, else the site's own; the head's fight on
+## his den from the first man.
+func _u55_backdrop_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 3)
+	var v = main._run._view
+	var was_key: String = v._site_key
+	# no stage files exist yet: every stage falls back to the site's own pair
+	for i in range(Data.TIERS.size()):
+		var key: String = Items.slug(str(Data.TIERS[i]["name"]))
+		for st in [1, 2, 3]:
+			_check(RunView.stage_key({"tier": i, "stage": st}) == key, "%s %d/3's scene isn't the site's own with no stage plate: '%s'" % [Data.TIERS[i]["name"], st, RunView.stage_key({"tier": i, "stage": st})])
+	# a stage's own pair, once there (held in the picture cache, as a drawn file is): read for that stage only
+	var pt: Texture2D = RunView.tex("the_allotments_plate")
+	var ct: Texture2D = RunView.tex("the_allotments_cover")
+	RunView._tex["the_allotments_2_plate"] = pt
+	RunView._tex["the_allotments_2_cover"] = ct
+	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments_2" and RunView.stage_key({"tier": 0, "stage": 3}) == "the_allotments" and RunView.stage_key({"tier": 0, "stage": 1}) == "the_allotments", "a drawn 2/3 pair isn't read for the 2/3 alone")
+	_check(RunView.stage_key({"tier": 0, "stage": 2, "signal": {"zone": 0}}) == "the_allotments", "a signal's run took the stage's plate")
+	RunView._tex.erase("the_allotments_2_cover")
+	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments", "half a stage pair (no wall) was read")
+	RunView._tex["the_allotments_2_cover"] = ct
+	# a real run at 2/3 draws it; at 1/3 the site's
+	sim.set_stage_pick(0, 2)
+	sim.deploy(0)
+	_check(sim.on_mission(), "the fixture: no run at the Allotments' 2/3")
+	if sim.on_mission():
+		v.show_state(sim, sim.mission)
+		_check(v._site_key == ("the_allotments_2" if int(sim.mission.get("stage", sim.mission["t"].get("depth", 1))) == 2 else "?"), "the 2/3's run isn't on its own plate: '%s'" % v._site_key)
+		sim.extract_now()
+	RunView._tex.erase("the_allotments_2_plate")
+	RunView._tex.erase("the_allotments_2_cover")
+	sim.hp = sim.max_hp()
+	sim.set_stage_pick(0, 2)
+	sim.deploy(0)
+	if sim.on_mission():
+		v.show_state(sim, sim.mission)
+		_check(v._site_key == "the_allotments", "the 2/3's run with no plate of its own isn't on the site's: '%s'" % v._site_key)
+		sim.extract_now()
+	# the head's fight: his den from the first man, before he's out
+	var b: Dictionary = Data.BOSSES[0]
+	var hs: int = int(b["tier"])
+	sim.hp = sim.max_hp()
+	_check(sim.start_head_fight(int(b["zone"])), "the fixture: the Gamekeeper's fight didn't start")
+	if sim.on_mission():
+		var out: bool = sim.mission.has("boss") and bool(sim.mission["boss"].get("started", false))
+		v.show_state(sim, sim.mission)
+		_check(not out and int(sim.mission["remaining"]) > 0 and v._site_key == Items.slug(str(b["name"])), "the head's fight at the first man isn't on his den: '%s' (out %s)" % [v._site_key, str(out)])
+		sim.extract_now()
+	_check(RunView.head_den({"tier": hs}) == "" and RunView.head_den({"tier": hs, "head_fight": true}) == Items.slug(str(b["name"])), "the den's read off the flag")
+	v._site(was_key if was_key != "" else "the_parade")
+	sim.load_dict(saved)
+	print("u55 backdrop ok: the stage's plate when drawn, else the site's; the head's den from the first man")
+
+
+## The words (BUILD55-U item 5): "stage" in the glossary, "1/3" on the screen's buttons and pins, the gates "After Top
+## Farm 2/3".
+func _u55_words_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var g: String = FileAccess.get_file_as_string("res://docs/language/style_guide.md")
+	_check(g.contains("| stage, in sentences") and g.contains("Not: depth, level, part"), "the style guide has no glossary row for stage")
+	_u55_camp(sim, 0)                            # the Allotments uncleared: the Garden Centre shut after its 2/3
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	M.select(1)
+	M._shown = ""
+	main.refresh()
+	_check(not sim.tier_open(1) and card.odds_line.text == "After the Allotments 2/3", "a shut site's gate reads '%s'" % card.odds_line.text)
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("u55 words ok")
+
+
+# ------------------------------------------------------------------ BUILD55-C (5 Nov): themed finds and the new bases
+## A fresh sim for the finds: no mythic in the way, a runner who can wear the lot.
+func _c55_sim():
+	var sim = Sim.new()
+	sim.start()
+	sim.mythics_on = false
+	sim.xp = Data.xp_for_level(20)
+	return sim
+
+
+## The finds' gear on site `i` at stage `stage` (0: no stage, a signal's): `n` rolled, not landed. [plain gear finds].
+func _c55_gear(sim, i: int, stage: int, n: int, seed_v: int) -> Array:
+	var keep: int = int(sim.depth[i])
+	sim.depth[i] = maxi(1, stage)
+	var t: Dictionary = sim.effective(i)
+	sim.depth[i] = keep
+	var m := {"found": [], "tier": i, "kills": 0, "patrols": 0, "stage": stage}
+	sim.rng.seed = seed_v
+	var out: Array = []
+	for k in range(n):
+		var got: Dictionary = sim._find(m, t, k % 2 == 0, {}, true)
+		if got.is_empty():
+			continue
+		var it: Dictionary = got["it"]
+		if str(it.get("slot", "")) in Data.SLOTS and not it.has("unique") and not it.has("set") and not it.has("piece"):
+			out.append(it)
+	return out
+
+
+## The lists (stages.md §5): over the Allotments' plain gear finds, the share from its list is THEME_SHARE plus the rest's
+## chance of landing on it anyway (read off the same site with no stage); every list holds no other site's own; a slot
+## with nothing on the list in reach rolls exactly as before (the same dice, the same base).
+func _c55_theme_checks() -> void:
+	var sim = _c55_sim()
+	var lst: Array = Data.SITE_THEMES["The Allotments"]
+	var on := func(arr: Array) -> float:
+		return float(arr.filter(func(it): return str(it["base"]) in lst).size()) / maxf(1.0, float(arr.size()))
+	var themed: Array = _c55_gear(sim, 0, 1, 6000, 5501)
+	var plain: Array = _c55_gear(sim, 0, 0, 6000, 5501)
+	var p0: float = on.call(plain)
+	var p1: float = on.call(themed)
+	var want: float = Data.THEME_SHARE + (1.0 - Data.THEME_SHARE) * p0
+	_check(themed.size() > 1500 and absf(p1 - want) < 0.04, "the Allotments' 1/3: %.2f of %d plain gear finds from its list, want %.2f (%.2f with no stage)" % [p1, themed.size(), want, p0])
+	_check(p1 - p0 > 0.3, "the Allotments' list doesn't lead its finds: %.2f against %.2f with no stage" % [p1, p0])
+	# the new bases come up there: its five at the 3/3, a tier up
+	var top: Array = _c55_gear(sim, 0, 3, 9000, 5502)
+	for nm in ["Garden fork", "Strimmer visor", "Donkey jacket", "Rose gauntlets", "Joiner's apron"]:
+		_check(top.any(func(it): return str(it["base"]) == nm), "the Allotments' 3/3 never dropped its %s in %d gear finds" % [nm, top.size()])
+	# every list: real bases, its own site's own on it, never another site's
+	for site in Data.TIERS:
+		var names: Array = Data.SITE_THEMES.get(str(site["name"]), [])
+		_check(names.size() >= 10, "%s has no list (%d)" % [site["name"], names.size()])
+		for nm in names:
+			var found := false
+			for sl in Data.SLOTS:
+				if not Items.base_named(sl, str(nm)).is_empty():
+					found = true
+			_check(found, "%s's list names %s, no gear base" % [site["name"], nm])
+			var home: String = Items.exclusive_to(str(nm))
+			_check(home == "" or home == str(site["name"]), "%s's list holds %s, %s's own" % [site["name"], nm, home])
+		for nm in site["drops"].get("only", []):
+			for sl in Data.SLOTS:
+				if not Items.base_named(sl, str(nm)).is_empty():
+					_check(str(nm) in names, "%s's own %s isn't on its list" % [site["name"], nm])
+	# off-site: a list rolled at every slot, its whole share, never lands another site's own
+	var r := RandomNumberGenerator.new()
+	r.seed = 5503
+	for site in Data.TIERS:
+		var names: Array = Data.SITE_THEMES.get(str(site["name"]), [])
+		for k in range(160):
+			var sl: String = Data.SLOTS[k % Data.SLOTS.size()]
+			var it := Items.roll(sl, mini(Data.MAX_TIER, int(site["loot_tier"]) + 1), r, 0.0, false, false, str(site["name"]), str(site["drops"].get("type", "")), 0.33, 3, -1, names, 1.0)
+			var home: String = Items.exclusive_to(str(it["base"]))
+			_check(home == "" or home == str(site["name"]) or (str(it["base"]) in Data.ZONE_KIT and Items.site_zone(home) == int(site["zone"])), "%s dropped at %s off its list; it's %s's" % [it["base"], site["name"], home])
+	# a slot with nothing on the list in reach: the Pleasure Park's armour at T3 (its Mascot suit is T4) rolls as before
+	var pp: Array = Data.SITE_THEMES["The Pleasure Park"]
+	_check(not pp.any(func(nm): return not Items.base_named("Armour", str(nm)).is_empty() and int(Items.base_named("Armour", str(nm))["tier"]) <= 3), "the fixture: the Pleasure Park has armour on its list at T3")
+	var same := 0
+	for k in range(200):
+		var ra := RandomNumberGenerator.new()
+		var rb := RandomNumberGenerator.new()
+		ra.seed = 5600 + k
+		rb.seed = 5600 + k
+		var a := Items.roll("Armour", 3, ra, 0.0, false, false, "The Pleasure Park", "shotgun", 0.33, 1, 4, pp, Data.THEME_SHARE)
+		var b := Items.roll("Armour", 3, rb, 0.0, false, false, "The Pleasure Park", "shotgun", 0.33, 1, 4)
+		if str(a["base"]) == str(b["base"]) and int(a["rarity"]) == int(b["rarity"]) and ra.state == rb.state:
+			same += 1
+	_check(same == 200, "the Pleasure Park's armour, nothing on its list in reach, rolled differently in %d of 200" % (200 - same))
+	print("c55 theme ok: the Allotments %.2f from its list (want %.2f, %.2f with no stage)" % [p1, want, p0])
+
+
+## The stage steps the tier (§5): at 3/3 a quarter of the plain gear finds roll a tier up, within loot_cap - the Services'
+## 3/3 (level 9) stays T4, the Hospital's (level 10) reaches T5; 1/3 and 2/3 none; a signal's finds (depth 4 and on, no
+## stage) draw no extra dice and have no list.
+func _c55_tier_up_checks() -> void:
+	var sim = _c55_sim()
+	var m3 := {"stage": 3}
+	var t0 := {"tier": 0, "depth": 3}
+	sim.rng.seed = 5510
+	var up := 0
+	for k in range(4000):
+		if sim.c55_tier_up(m3, t0, "Helmet", 1, 1) == 2:
+			up += 1
+	_check(absf(float(up) / 4000.0 - Data.STAGE_TIER_UP) < 0.025, "a 3/3's tier-up share is %.3f, not %.2f" % [float(up) / 4000.0, Data.STAGE_TIER_UP])
+	var past := 0
+	var t5 := 0
+	for k in range(2000):
+		if sim.c55_tier_up(m3, {"tier": 9, "depth": 3}, "Primary", 4, 9) != 4:
+			past += 1
+		if sim.c55_tier_up(m3, {"tier": 10, "depth": 3}, "Primary", 4, 10) == 5:
+			t5 += 1
+	_check(past == 0 and Sim.loot_cap(9) == 4, "a level-9 3/3's find went past loot_cap %d times" % past)
+	_check(t5 > 300 and t5 < 700, "a level-10 3/3 rolled T5 %d times in 2000" % t5)
+	for st in [1, 2]:
+		var s0: int = sim.rng.state
+		_check(sim.c55_tier_up({"stage": st}, {"tier": 0, "depth": st}, "Helmet", 1, 1) == 1 and sim.rng.state == s0, "a %d/3 rolled a tier up, or drew dice" % st)
+	_check(sim.c55_tier_up(m3, t0, Data.PAPER, 1, 1) == 1 and sim.c55_tier_up(m3, t0, Data.MEDICAL, 1, 1) == 1, "a 3/3's paper or med went a tier up")
+	# a signal: depth 4 and on, no stage - no list, no extra dice
+	for d in [4, 7]:
+		var ms := {"found": []}
+		var ts := {"tier": 11, "depth": d}
+		var s1: int = sim.rng.state
+		_check(sim.c55_stage(ms, ts) == 0 and sim.c55_theme(ms, ts, "Primary").is_empty() and sim.c55_tier_up(ms, ts, "Primary", 5, 13) == 5 and sim.rng.state == s1,
+			"a signal at depth %d has a stage, a list or a tier-up" % d)
+	# through the finds: the Allotments' T2 gear only at its 3/3
+	var at1: Array = _c55_gear(sim, 0, 1, 3000, 5511)
+	var at2: Array = _c55_gear(sim, 0, 2, 3000, 5511)
+	var at3: Array = _c55_gear(sim, 0, 3, 3000, 5511)
+	var t2 := func(arr: Array) -> int:
+		return arr.filter(func(it): return int(it["tier"]) == 2).size()
+	_check(t2.call(at1) == 0 and t2.call(at2) == 0 and t2.call(at3) > at3.size() / 20.0, "the Allotments' T2 gear: %d at 1/3, %d at 2/3, %d of %d at 3/3" % [t2.call(at1), t2.call(at2), t2.call(at3), at3.size()])
+	_check(not at3.any(func(it): return int(it["tier"]) > 2), "the Allotments' 3/3 rolled past a tier up")
+	print("c55 tier up ok: %d of 4000 a tier up; T5 %d of 2000 at level 10" % [up, t5])
+
+
+## The new bases (§5 "Gaps"): each a gear base on a site's list that rolls there, wears, carries its line and shows its
+## borrowed picture (the neighbour's, until the art) at the borrowed one's footprint.
+func _c55_bases_checks() -> void:
+	var sim = _c55_sim()
+	_check(Data.C55_NEW_BASES.size() == 24, "the new bases: %d" % Data.C55_NEW_BASES.size())
+	var r := RandomNumberGenerator.new()
+	r.seed = 5520
+	for nm in Data.C55_NEW_BASES:
+		var slot := ""
+		for sl in Data.SLOTS:
+			if not Items.base_named(sl, str(nm)).is_empty():
+				slot = sl
+		_check(slot != "", "%s isn't a gear base" % nm)
+		if slot == "":
+			continue
+		var b: Dictionary = Items.base_named(slot, str(nm))
+		var site := ""
+		for t in Data.TIERS:
+			if str(nm) in Data.SITE_THEMES.get(str(t["name"]), []):
+				site = str(t["name"])
+		_check(site != "", "%s is on no site's list" % nm)
+		# it rolls: at its site, its own tier, the list's whole share
+		var seen := false
+		for k in range(400):
+			var it := Items.roll(slot, int(b["tier"]), r, 0.0, false, false, site, "", 0.33, 1, -1, Data.SITE_THEMES[site], 1.0)
+			if str(it["base"]) == str(nm):
+				seen = true
+				break
+		_check(seen, "%s never rolled at %s" % [nm, site])
+		# it wears
+		var pc: Dictionary = sim._plain(slot, str(nm))
+		sim.stash = []                         # room for what comes off
+		sim.stash_put(pc)
+		_check(sim.equip_item(int(pc["id"])) and sim.equipped[slot] != null and str(sim.equipped[slot]["base"]) == str(nm), "%s won't wear" % nm)
+		_check(Items.score(pc) > 0.0, "%s scores nothing worn" % nm)
+		# its picture: the borrowed one's, at that one's footprint
+		var lent: String = str(Data.ART_AS.get(str(nm), ""))
+		_check(lent != "" and not Items.base_named(slot, lent).is_empty(), "%s borrows no picture of its slot (%s)" % [nm, lent])
+		var tex: Texture2D = Items.art(pc)
+		_check(tex != null and tex == Items.art(sim._plain(slot, lent)), "%s doesn't show %s's picture" % [nm, lent])
+		_check(Items.footprint(pc) == Items.footprint(sim._plain(slot, lent)), "%s is %s, its picture's %s %s" % [nm, str(Items.footprint(pc)), lent, str(Items.footprint(sim._plain(slot, lent)))])
+		_check(str(Words.ITEMS.get(str(nm), "")).ends_with("."), "%s has no line" % nm)
+	# the built-in figures read and count: the Hi-vis tabard's later gangs, the Waxed coat's bleed resist
+	var hv: Dictionary = sim._plain("Rig", "Hi-vis tabard")
+	sim.stash = []
+	sim.stash_put(hv)
+	_check(sim.equip_item(int(hv["id"])) and is_equal_approx(sim._affix_sum("patrol_pct"), 8.0) and Items.base_res_words(hv).contains("8% gangs later"), "the Hi-vis tabard's later gangs: %.0f, '%s'" % [sim._affix_sum("patrol_pct"), Items.base_res_words(hv)])
+	sim.equipped["Gloves"] = null              # the Rose gauntlets, worn above, carry their own
+	var wc: Dictionary = sim._plain("Armour", "Waxed coat")
+	sim.stash = []
+	sim.stash_put(wc)
+	_check(sim.equip_item(int(wc["id"])) and is_equal_approx(sim.base_res("bleed"), 20.0) and Items.base_res_words(wc).contains("bleed resist 20%"), "the Waxed coat's bleed resist: %.0f, '%s'" % [sim.base_res("bleed"), Items.base_res_words(wc)])
+	print("c55 bases ok: %d new" % Data.C55_NEW_BASES.size())
+
+
+# ------------------------------------------------------------------ FIX55 (5 Nov): the review's findings and the language pass
+
+## The review's 1: the Head picked on Top Farm's card - his fight's read in its own slot, stepped by the shell
+## (main._read_odds) a few ms a frame; the card reads it and runs none. It settles, the site's own read beside it
+## stays settled too (neither wipes the other), no fresh read once settled, and the frames hold the Map's budget
+## (B43_MAP_MED median, B43_P95 at the 95th percentile, stretched by the machine's pace). Before: the card ran the
+## whole read unstepped on each paint and the shell's site read wiped it - 112 fresh reads in 60 frames, never settled.
+const F55_HEAD_FRAMES := 3000
+func _f55_head_odds_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var speed_was: float = main.speed
+	_u55_camp(sim, 0)
+	var hs: int = int(Data.BOSSES[0]["tier"])     # Top Farm: the Gamekeeper
+	var z: int = int(Data.TIERS[hs]["zone"])
+	for k in Data.ZONES[z]["tiers"]:
+		_u55_done(sim, k, 2)
+	sim.xp = Data.xp_for_level(3)                 # about where Matt meets him
+	sim.hp = sim.max_hp()
+	main.speed = 0.0                               # the world still: nothing the odds hang on moves under the frames
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	M.select(hs)
+	M._shown = ""
+	main.refresh()
+	_u55_seg(card, Data.STAGES)["button"].pressed.emit()
+	main.refresh()
+	_check(card.head_view and M.head_zone() == z, "the fixture: Top Farm's Head isn't picked (view %s, zone %d)" % [str(card.head_view), M.head_zone()])
+	sim._surv_cache = {}
+	sim._odds_tally = {}
+	main._odds_forget()
+	_b45_pace = _b45_pace_now()
+	var ms: Array = []
+	var settled_at := -1
+	var r0: int = int(sim.prof["surv_reads"])
+	for k in range(F55_HEAD_FRAMES):
+		ms.append(_b43_frame(main))
+		if bool(sim.head_odds_now(z)[2]) and sim.odds_settled(hs) and main._odds_done.get("map", []) == main._odds_sig("map", main._odds_base()):
+			settled_at = k
+			break
+	var fresh: int = int(sim.prof["surv_reads"]) - r0
+	_check(settled_at >= 0, "the Head picked: his read and the site's didn't both settle in %d frames (%d fresh reads; his %s, the site's %s)" % [F55_HEAD_FRAMES, fresh, str(sim.head_odds_now(z)), str(sim.odds_settled(hs))])
+	_check(fresh <= 4, "the Head picked: %d fresh reads before it settled (his and the site's: 2, a wipe makes more)" % fresh)
+	# it stays: frames on, no read again, the card on his settled figure
+	var r1: int = int(sim.prof["surv_reads"])
+	var calls1: int = int(sim.prof["surv_calls"])
+	for k in range(120):
+		ms.append(_b43_frame(main))
+	M._shown = ""
+	main.refresh()
+	var ho: Array = sim.head_odds_now(z)
+	_check(int(sim.prof["surv_reads"]) == r1 and bool(ho[2]) and sim.odds_settled(hs), "the Head picked: settled, then %d fresh reads in 120 frames (his settled %s, the site's %s)" % [int(sim.prof["surv_reads"]) - r1, str(ho[2]), str(sim.odds_settled(hs))])
+	_check(int(sim.prof["surv_calls"]) - calls1 <= 2, "the Head picked, settled: the odds were asked %d times in 120 frames" % (int(sim.prof["surv_calls"]) - calls1))
+	_check(card.odds_line.text == "%s to clear" % Fmt.pct(float(ho[1])), "the Head picked: the card reads '%s', his settled read %s" % [card.odds_line.text, Fmt.pct(float(ho[1]))])
+	var st: Array = _b43_stats(ms)
+	_check(st[0] < _b45_b(B43_MAP_MED) and st[1] < _b45_b(B43_P95), "the Head picked: the Map's frames ran a median %.2f ms (under %.1f), p95 %.2f ms (under %.1f), max %.1f, pace %.2f" % [st[0], _b45_b(B43_MAP_MED), st[1], _b45_b(B43_P95), st[2], _b45_pace])
+	main.speed = speed_was
+	card.head_view = false
+	sim.load_dict(saved)
+	main._odds_forget()
+	M._shown = ""
+	main.refresh()
+	print("f55 head odds ok: settled in %d frames, %d fresh reads; median %.2f ms, p95 %.2f, max %.1f (pace %.2f)" % [settled_at + 1, fresh, st[0], st[1], st[2], _b45_pace])
+
+
+## The review's 2: "Run it ×N" shut on a stage not yet cleared, 1/3 to 3/3, with the card's "Not cleared yet"; open on
+## the cleared one (whatever else it says).
+func _f55_repeat_gate_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	sim.unlocked.erase("radio")                    # no wager in the repeat's place
+	var gc := 1                                    # the Garden Centre
+	_u55_done(sim, 0, 2)
+	_u55_done(sim, gc, 1)
+	sim.set_stage_pick(gc, 2)
+	_check(sim.stage_pick(gc) == 2 and sim.repeat_block(gc) == Words.REPEAT["shut_new"], "2/3 not cleared after a 1/3: the repeat reads '%s'" % sim.repeat_block(gc))
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	M.select(gc)
+	M._shown = ""
+	main.refresh()
+	var c: Dictionary = M._cols[0]
+	_check(c["repeat"].visible and c["repeat"].disabled and c["note"].text.contains(Words.REPEAT["shut_new"]), "2/3 not cleared: the card's repeat isn't shut 'Not cleared yet': disabled %s, '%s'" % [str(c["repeat"].disabled), c["note"].text])
+	sim.set_stage_pick(gc, 1)
+	_check(sim.repeat_block(gc) != Words.REPEAT["shut_new"], "1/3 cleared: the repeat still says it isn't")
+	_u55_done(sim, gc, 2)
+	sim.set_stage_pick(gc, 3)
+	_check(sim.stage_pick(gc) == 3 and sim.repeat_block(gc) == Words.REPEAT["shut_new"], "3/3 not cleared: the repeat reads '%s'" % sim.repeat_block(gc))
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("f55 repeat gate ok: shut on 2/3 and 3/3 not yet cleared")
+
+
+## The review's 3: Kev's wagers on any stage's first clear (1/3, 2/3, 3/3) and on the head's own fight - its own offer,
+## on the card in the repeat's place, read on his fight (the panel's "as you stand" his settled odds), and put on his
+## run; none on a stage already cleared.
+func _f55_wagers_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	if not sim.room_open("radio"):
+		sim.unlocked.append("radio")
+	var gc := 1
+	_u55_done(sim, 0, 2)
+	for s in range(1, Data.STAGES + 1):
+		_u55_done(sim, gc, s - 1)
+		sim.set_stage_pick(gc, s)
+		_check(sim.stage_pick(gc) == s and sim.wager_site_open(gc), "%d/3's first clear: Kev has no offer" % s)
+		_u55_done(sim, gc, s)
+		sim.set_stage_pick(gc, s)
+		_check(not sim.wager_site_open(gc), "%d/3 cleared: Kev still offers on it" % s)
+	# the head's fight
+	var hs: int = int(Data.BOSSES[0]["tier"])
+	var z: int = int(Data.TIERS[hs]["zone"])
+	for k in Data.ZONES[z]["tiers"]:
+		_u55_done(sim, k, 2)
+	sim.hp = sim.max_hp()
+	_check(sim.wager_head_open(z), "the Gamekeeper's fight: Kev has no offer")
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	M.select(hs)
+	M._shown = ""
+	main.refresh()
+	_u55_seg(card, Data.STAGES)["button"].pressed.emit()
+	main.refresh()
+	var c: Dictionary = M._cols[0]
+	var key: String = Sim.wager_head_key(z)
+	_check(card.head_view and c["wager"].visible and not c["repeat"].visible and M.wager_key(hs) == key, "the Head picked: Kev's wagers aren't on the card (wager %s, repeat %s, key %s)" % [str(c["wager"].visible), str(c["repeat"].visible), M.wager_key(hs)])
+	_check_fit(main, "the site card, the Head picked with Kev's wagers")
+	# the panel's read is his fight's: "as you stand" his settled read
+	var WagerOdds = load("res://scripts/ui/wager_odds.gd")
+	M._wager_open(0)
+	_check(M._wagers.visible and M._wagers.key == key, "the Head's wager panel opened on '%s'" % M._wagers.key)
+	main.speed = 0.0
+	var n := 0
+	while n < F55_HEAD_FRAMES and (WagerOdds.pending() or not bool(sim.head_odds_now(z)[2])):
+		_b43_frame(main)
+		n += 1
+	main.speed = 1.0
+	var w0: Array = WagerOdds.now(sim, key, [])
+	_check(bool(w0[1]) and absf(float(w0[0]) - float(sim.head_odds_now(z)[1])) < 0.0001, "the Head's wager panel: as you stand %s (settled %s), his fight's %s" % [Fmt.pct(float(w0[0])), str(w0[1]), Fmt.pct(float(sim.head_odds_now(z)[1]))])
+	M._wagers.visible = false
+	# taken: read on his fight and put on his run
+	_check(sim.take_wager(key, 0), "the Head's wager wasn't taken")
+	_check(sim._f55_head_slot(z, func(): return sim.wagers_read(hs)).size() == 1 and sim.wagers_read(hs).is_empty(), "the Head's wager isn't read on his fight alone")
+	_check(sim.start_head_fight(z) and sim.mission.get("wagers", []).size() == 1, "the Head's wager didn't go on his fight: %s" % (str(sim.mission.get("wagers", "none")) if sim.on_mission() else "no run"))
+	if sim.on_mission():
+		sim.extract_now()
+	card.head_view = false
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("f55 wagers ok: every stage's first clear, the head's fight (%d frames to read)" % n)
+
+
+## The review's 4: the head's fight's finds - no stage (no 3/3 tier-up, no dice drawn), his site's list still; a run with
+## no "stage" is no stage (the stub's fallback to its depth gone).
+func _f55_head_finds_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	var hs: int = int(Data.BOSSES[0]["tier"])
+	var z: int = int(Data.TIERS[hs]["zone"])
+	for k in Data.ZONES[z]["tiers"]:
+		_u55_done(sim, k, 2)
+	sim.hp = sim.max_hp()
+	_check(sim.start_head_fight(z), "the fixture: the Gamekeeper's fight didn't start")
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		var t: Dictionary = m["t"]
+		var s0: int = sim.rng.state
+		_check(sim.c55_stage(m, t) == 0 and sim.c55_tier_up(m, t, "Primary", 1, 3) == 1 and sim.rng.state == s0, "the head's fight has a stage (%d) or a tier-up" % sim.c55_stage(m, t))
+		_check(sim.c55_theme(m, t, "Primary") == Data.SITE_THEMES[str(Data.TIERS[hs]["name"])], "the head's fight's finds lost Top Farm's list")
+		sim.extract_now()
+	_check(sim.c55_stage({"tier": 0}, {"tier": 0, "depth": 2}) == 0, "a run with no stage reads its depth as one")
+	sim.load_dict(saved)
+	print("f55 head finds ok: no stage, his site's list")
+
+
+## The review's 5: a stage first cleared while a repeat's away (before the gate, or a save's) - the repeat's end puts the
+## site's depth on its pick, so the card's figures and odds read the stage it shows.
+func _f55_repeat_sync_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 0)
+	var gc := 1
+	_u55_done(sim, 0, 2)
+	_u55_done(sim, gc, 1)
+	sim.set_stage_pick(gc, 1)
+	sim.repeat = {"site": gc, "of": 5, "done": 1, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": sim.elapsed, "run_t0": sim.elapsed, "lv0": sim.level(), "wounds0": {}, "share": 0.1, "own_list": false, "first": false}
+	sim._a55_stage_clear({"tier": gc, "stage": 2}, Data.TIERS[gc])     # its 2/3 first cleared on the repeat
+	sim._a55_run_end({"tier": gc})
+	_check(int(sim.depth[gc]) == 1, "the fixture: the repeat's site moved with its run's end (%d)" % int(sim.depth[gc]))
+	sim._repeat_end("done")
+	_check(not sim.away() and int(sim.depth[gc]) == sim.stage_pick(gc) and sim.stage_pick(gc) >= 2, "the repeat's end: the site's depth %d, its pick %d" % [int(sim.depth[gc]), sim.stage_pick(gc)])
+	sim.load_dict(saved)
+	print("f55 repeat sync ok: depth %d" % sim.stage_pick(gc))
+
+
+## The tidy (review 7-9) and the language pass: the renamed bases everywhere and their lines, the sites' 3/3 lines on
+## the card in full, the card's words, Kev's lines; the card's gate words through Words, its convoy gone.
+func _f55_words_checks(main) -> void:
+	var sim = main.sim
+	var src: String = FileAccess.get_file_as_string("res://scripts/ui/site_card.gd")
+	_check(not src.contains("\"Opens at level") and not src.contains("convoy: bool") and not src.contains("not convoy"), "site_card.gd still hard-codes 'Opens at level' or passes the convoy")
+	var renamed := {"Security van vest": ["Rig", "Cash-in-transit vest"], "Bank bag": ["Backpack", "Coin bag"], "Joiner's apron": ["Rig", "Tool belt"]}
+	for nm in renamed:
+		var sl: String = renamed[nm][0]
+		var was: String = renamed[nm][1]
+		_check(not Items.base_named(sl, nm).is_empty() and Items.base_named(sl, was).is_empty(), "%s isn't the %s base (or %s still is)" % [nm, sl, was])
+		_check(Words.ITEMS.has(nm) and not Words.ITEMS.has(was) and nm in Data.C55_NEW_BASES and not (was in Data.C55_NEW_BASES) and Data.ART_AS.has(nm) and not Data.ART_AS.has(was), "%s's line, its place in the new bases or its borrowed picture is missing" % nm)
+		var on_list := false
+		for site in Data.SITE_THEMES:
+			_check(not (was in Data.SITE_THEMES[site]), "%s's list still names %s" % [site, was])
+			on_list = on_list or nm in Data.SITE_THEMES[site]
+		_check(on_list, "%s is on no site's list" % nm)
+	_check(Data.FOOTPRINTS.has("Bank bag") and not Data.FOOTPRINTS.has("Coin bag"), "the Bank bag's footprint")
+	_check(Words.ITEMS["Bank bag"] == "Canvas, from behind the counter, the seal cut. Made to carry weight in a small space." and Words.ITEMS["Joiner's apron"] == "A joiner's leather apron, pockets all round. Everything hangs where the hand drops.", "the Bank bag's or the Joiner's apron's line")
+	_check(Words.ITEMS["Staff fleece"].contains("the Garden Centre's name") and Words.ITEMS["Mascot suit"].begins_with("The Pleasure Park's dog") and Words.ITEMS["Hi-vis tabard"].contains("the car park marshal on the Retail Park") and Words.ITEMS["Waxed coat"].begins_with("Waxed cotton gone soft at the elbows"), "a lore line names a site in lower case, or the Waxed coat's")
+	for k in Words.ITEMS:
+		_check(not str(Words.ITEMS[k]).contains("bank's counter"), "%s's line: 'bank's counter'" % k)
+	_check(Words.U55["head_foot"] == "His gang first, then him" and Words.U55["opens_short"] % 7 == "At level 7" and Words.U55["not_cleared_short"] == "Open", "the card's words: '%s', '%s', '%s'" % [Words.U55["head_foot"], Words.U55["opens_short"], Words.U55.get("not_cleared_short", "")])
+	_check(Words.NEXT["head"] % ["The Gamekeeper", "Top Farm"] == "The Gamekeeper is behind Top Farm. Pick Head on the site's card." and Words.NEXT_SHORT["head"] % "the Gamekeeper" == "Next: the Gamekeeper", "Kev's head lines: '%s'" % Words.NEXT["head"])
+	# the sites' 3/3 lines on the card, whole
+	var saved: Dictionary = sim.to_dict()
+	_u55_camp(sim, 3)
+	main.show_room(main.MISSIONS)
+	var M = main._missions
+	var card = M._cols[0]["card"]
+	var want := {"The Hospital": "The staff emptied the pharmacy by rota, to be fair.", "Shopping Centre": "The upper floor's where they sleep."}
+	for nm in want:
+		var i: int = Data.TIERS.map(func(t): return str(t["name"])).find(nm)
+		sim.words[i] = []                           # no Radio words and a clear sky: the foot is the line alone
+		sim.weather[int(Data.TIERS[i]["zone"])] = ""
+		for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+			main.layout(sz)
+			M.select(i)
+			sim.set_stage_pick(i, 3)
+			M._shown = ""
+			main.refresh()
+			_check(Words.site_line(nm, 3) == want[nm] and card.foot.text.begins_with(want[nm]), "%s's 3/3 foot at %dx%d reads '%s'" % [nm, int(sz.x), int(sz.y), card.foot.text])
+			_check_fit(main, "the site card, %s's 3/3 (%dx%d)" % [nm, int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("f55 words ok: the renamed bases, the lines, the card's words")
+
+
+## FIX55b (Matt, 5 Nov: "the wall is still there early game"): each head's own fight puts him at his BOSSES multipliers
+## on his site's 1/3 man (HP and fire), his gang - floor(gangs / 2) - at the 2/3 man, his gate stage.
+func _f55_head_rule_checks() -> void:
+	for b in Data.BOSSES:
+		var h = _a55_camp()
+		var z: int = int(b["zone"])
+		var i: int = int(b["tier"])
+		var d1: Dictionary = h.depth_figures(i, 1, Sim.lv_at(i, 1))
+		var d2: Dictionary = h.depth_figures(i, 2, Sim.lv_at(i, 2))
+		var pv: Dictionary = h.head_fight_preview(z)
+		var hb: Dictionary = pv.get("boss", {})
+		_check(not hb.is_empty() and absf(float(hb["hp"]) - float(d1["hp"]) * float(b["hp"])) < 0.01 * float(d1["hp"]) and absf(float(hb["dps"]) - float(d1["dps"]) * float(b["dps"])) < 0.01 * float(d1["dps"]),
+			"%s: %.0f HP, %.2f fire; want BOSSES x the 1/3 man, %.0f and %.2f" % [b["name"], float(hb.get("hp", 0.0)), float(hb.get("dps", 0.0)), float(d1["hp"]) * float(b["hp"]), float(d1["dps"]) * float(b["dps"])])
+		_check(absf(float(pv["hp"]) - float(d2["hp"])) < 0.01 and int(pv["pool"]) == maxi(1, floori(int(Data.TIERS[i]["pool"]) / 2.0)), "%s's gang: %d at %.0f HP, want %d at the 2/3 man %.0f" % [b["name"], int(pv["pool"]), float(pv["hp"]), maxi(1, floori(int(Data.TIERS[i]["pool"]) / 2.0)), float(d2["hp"])])
+		print("f55b %s: him %.0f HP %.2f fire, his gang %d x %.0f HP %.2f fire" % [b["name"], float(hb.get("hp", 0.0)), float(hb.get("dps", 0.0)), int(pv["pool"]), float(pv["hp"]), float(pv["dps"])])

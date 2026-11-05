@@ -293,7 +293,7 @@ func _show_farm() -> void:
 	_farm_label(Rect2(x, y, col_w, 28), "ANYWHERE", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_3)
 	y += 32
 	_farm_label(Rect2(x, y, col_w, 26), "Mythics · one for each slot · 1 in %s finds" % _thousands(Data.MYTHIC_ODDS_IN), "Regular", Pal.CELL_TEXT, Pal.MYTHIC)
-	_farm_label(Rect2(x, y + 28, col_w, 26), "Set pieces · signals from level %d, any site" % (2 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES), "Regular", Pal.CELL_TEXT, Pal.SET)
+	_farm_label(Rect2(x, y + 28, col_w, 26), "Set pieces · signals from level %d, any site" % Data.REACH_START, "Regular", Pal.CELL_TEXT, Pal.SET)
 	_farm_label(Rect2(x, y + 56, col_w, 26), "Loose uniques · %.0f%% from %s on, +%.0f%% a level past %d anywhere, up to %.0f%%" % [Data.UNIQUE_CAMPAIGN * 100.0, Data.ZONES[Data.UNIQUE_FROM_ZONE]["name"], Data.UNIQUE_DROP * 100.0, 1 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES, Data.UNIQUE_CAP * 100.0], "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
 	# each site's own unique
 	x += col_w + 24

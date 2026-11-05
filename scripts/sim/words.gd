@@ -664,7 +664,7 @@ const SITES := {
 			"There's a crew in the carpet warehouse. They've got the carpet.",
 			"The petrol station's forecourt is a market on Sundays. Not this Sunday.",
 		],
-		"cleared": "The Retail Park's cleared. The road to the Town is open, which is not the same as safe.",
+		"cleared": "The Retail Park's cleared. The Carpet Man's still in the car park.",     # (BUILD55-A) the road's line to his fall (A55_STAGE)
 	},
 	"The Pleasure Park": {
 		"depths": [
@@ -680,7 +680,7 @@ const SITES := {
 		"depths": [
 			"Two floors and a food court. The escalators are stairs.",
 			"The jeweller's was done the first night. Nobody wanted the watches.",
-			"The upper floor is a camp. The children's clothes shop, for the children.",
+			"The upper floor's where they sleep.",     # (FIX55, the language pass) the 3/3's foot
 			"The Bank's crew come here for stock. They pay in paper.",
 			"The security office has the tapes from the night it happened. Nobody's watched them.",
 		],
@@ -700,7 +700,7 @@ const SITES := {
 		"depths": [
 			"The Hospital kept going longer than anything. Then it kept going without the lights.",
 			"A&E is the gate. They triage who comes in, and they're not doctors any more.",
-			"The pharmacy was emptied by the staff, by rota, to be fair about it.",
+			"The staff emptied the pharmacy by rota, to be fair.",     # (FIX55, the language pass) the 3/3's foot, to fit the card
 			"Theatres on the third floor. Someone's still operating. Not on who you'd think.",
 			"The paramedic's old crew are here. They kept the ambulances. They kept the uniforms.",
 		],
@@ -1379,6 +1379,31 @@ const ITEMS := {
 	"EOD gauntlets": "The bomb squad's: thick on the back, fine in the fingers.",
 	"Dress uniform gloves": "White cotton from the parade ground. They've never been dirty and they're quick.",
 	"Special forces gloves": "The best there is, made for the trigger and nothing else.",
+	# (BUILD55-C) the stages' new bases (docs/design/stages.md §5), for the language pass
+	"Garden fork": "Four tines and an ash handle worn pale, off a plot by the railway. It goes in easier than it comes out.",
+	"Bone saw": "From the theatre trays, steel and heavy in the hand. It was made for bone.",
+	"Humane killer": "The vet's captive-bolt pistol, from the farm's locked drawer. Made for one shot, close.",
+	"Scalpel": "A surgeon's blade in a steel handle, still sharp. Small, quick, and it doesn't stop.",
+	"Flat cap": "Tweed, greasy at the peak, off the farmhouse hook. He saw everything from under it.",
+	"Strimmer visor": "A mesh face guard off the council's grass cutters. Light, and it keeps the stones out of your eyes.",
+	"Delivery rider's helmet": "A full-face lid, the takeaway's sticker half picked off. Heavy, and the rider never came back for it.",
+	"Go-kart helmet": "From the karting track, scuffed from the tyre walls. Light, and made for coming off at speed.",
+	"Donkey jacket": "Black wool with leather across the shoulders, from the council depot. It's had thirty winters and it'll have more.",
+	"Staff fleece": "Green, the Garden Centre's name on the chest, off the staff room peg. Warm, light, and nobody asks.",
+	"Waxed coat": "Waxed cotton gone soft at the elbows, from the boot room. Brambles skid off it, and so does a blade.",
+	"Lined hoodie": "Fleece-lined, the zip gone, worn on the streets every day of the year. You can run all day in it.",
+	"Sheepskin coat": "From a market trader on the Parade, heavy as the sheep. It takes a knock and keeps you warm after.",
+	"Mascot suit": "The Pleasure Park's dog, the size of a door, the foam gone hard. Whatever hits it hits a lot of dog first.",
+	"Rose gauntlets": "Leather to the elbow, bought for the roses. Thorns don't get through, and nothing slips out of them.",
+	"Joiner's apron": "A joiner's leather apron, pockets all round. Everything hangs where the hand drops.",     # (FIX55, the language pass) was "Tool belt"
+	"Hi-vis tabard": "Orange, off the car park marshal on the Retail Park. Nobody stops a man in hi-vis.",
+	"Security van vest": "The van crew's vest, plated, pouches front and back. Made to carry the takings through a robbery.",
+	"Bank bag": "Canvas, from behind the counter, the seal cut. Made to carry weight in a small space.",     # (FIX55, the language pass) was "Coin bag"; the vest "Cash-in-transit vest" (no "cash": the glossary's tins)
+	"Grab bag": "Packed for a call-out and left by the door in A&E. Everything in it comes out in one pull.",
+	"Arcade token": "Brass, from the arcade's change machine. It never paid out much, but it paid out.",
+	"Branch key": "The manager's key on a brass fob, from the back office. Every door it opens has something behind it.",
+	"Hospital wristband": "A patient's band, a name and a date, kept from the ward. The date's the day they walked out.",
+	"Cap badge": "The regiment's brass, polished by somebody who meant it. Luck goes where it goes.",
 }
 
 
@@ -1732,8 +1757,8 @@ const NEXT := {
 	"past": "The runner's waiting in Training. Ask what they were, before.",
 	"first": "The Allotments are out past the ring road. Go and see what's left.",
 	"supplies": "There's medical supplies in the stash. The Clinic's medic wants them: hand them in.",     # 28 Oct, Matt: as a ready contract's
-	"site": "%s hasn't been cleared. That's where the next lot are.",
-	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
+	"site": "Clear the second stage at %s. That's where the next lot are.",     # (BUILD55-A) the stage that opens the next; (FIX55, the language pass) "stage" in a sentence
+	"head": "%s is behind %s. Pick Head on the site's card.",     # (BUILD55-A) his own fight; (FIX55, the language pass)
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
 	"level": "The next area opens at level %d. The sites you have still pay the XP.",     # not named: it isn't known yet (20 Oct)
@@ -1743,7 +1768,7 @@ const NEXT_SHORT := {
 	"first": "Next: the Allotments",
 	"supplies": "Supplies for the Clinic",
 	"site": "Next: %s",
-	"head": "Arm %s on the Map",
+	"head": "Next: %s",     # (BUILD55-A); (FIX55, the language pass)
 	"done": "The Radio's the game now",
 	"level": "Next area at level %d",
 }
@@ -2306,4 +2331,29 @@ const U51 := {
 	"offer_one": "Kev has a wager on this link: the odds with it under Wagers", "offer_n": "Kev has %d wagers on this link: the odds with each under Wagers",
 	"offer_one_short": "Kev has a wager on this link", "offer_n_short": "Kev has %d wagers on this link",
 	"panel_close": "Put the card away: the Map takes the width", "county_close": "Put the card away: the County takes the width",     # the Map's side panel (item 2)
+}
+
+
+## BUILD55-A (5 Nov): stages per site - why a stage or a head is shut, in the card's words ("" when open).
+const A55_STAGE := {
+	"after_stage": "After %d/3", "after_site": "After %s 2/3", "after_head": "After %s", "level": "Opens at level %d",
+	"head_after": "After 2/3", "head_busy": "Not while the runner's out", "head_notes": "Not enough notes",
+	"road_town": "The road to the Town is open, which is not the same as safe.",
+}
+
+
+## Stages per site (5 Nov, BUILD55-U; docs/design/stages.md §7, the canvas StagesCard layout A and StagesMap): the site
+## card's picker, the head's segment, the Map's pin marks. "1/3" as a figure on buttons and pins; "stage" in sentences.
+const U55 := {
+	"stage": "%d/%d",                               # a stage on a button or a pin: "2/3"
+	"cleared": "Cleared", "not_cleared": "Not cleared", "not_cleared_short": "Open",     # (FIX55, the language pass) the fallback form
+	"picked": "Picked",
+	"picked_line": "%s · level %d", "picked_short": "Level %d",     # "2/3 · level 3"
+	"head": "Head",
+	"head_free": "Free",                                            # the head's segment: free the first time, else his price
+	"head_foot": "His gang first, then him",     # (FIX55, the language pass) a one-line label: no stop
+	"after_site": "After %s %s", "after_site_short": "After %s",   # "After Top Farm 2/3"
+	"opens_short": "At level %d",     # (FIX55, the language pass)
+	"new": "New",                                   # a pin's mark: opened and not yet picked
+	"pin": "%s · %s",                               # "The Allotments · 2/3", "The Retail Park · New"
 }

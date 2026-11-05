@@ -78,6 +78,7 @@ fails on them); flavour may use them only where a character is talking.
 | Where the runner goes | site | location, map, level |
 | How hard a site or a signal is (Matt, 18 Oct) | level, on the runner's scale ("a level 14 signal") | depth (internal only: never on screen) |
 | A site's place on the Map | tier | — |
+| One of a site's three fights, in order (5 Nov, docs/design/stages.md) | stage, in sentences ("the next stage"); "1/3", "2/3", "3/3" as a figure on buttons and pins ("The Allotments · 2/3"); a gate "After Top Farm 2/3" | Not: depth, level, part |
 | The runner's level | level | rank |
 | An item's power band | item level | ilvl |
 | The big Map areas | the Outskirts, the Estate, the Town, the City | zone, area (in mechanics, "area" if a generic word is needed) |
