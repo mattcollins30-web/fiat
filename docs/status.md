@@ -110,6 +110,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      gardening gloves in the allotments is great for the feel - thats what we need to replicate across the other
      zones"): each site's finds themed to the place, across every zone (the spec lists a site's own bases: the Retail
      Park's shop stock, the Hospital's medical kit, the Barracks' army kit ...), the stage stepping their tier.
+     The spec (5 Nov, Matt: "make a start - i think we're agreed"): docs/design/stages.md - a stage x1.22 over the one
+     before, a site's 1/3 x1.19 over the last 2/3 (no step over x1.22; the Allotments 1/3 and the Barracks 3/3 as
+     today), the heads' fights gated on their site's 2/3, REACH_START 12, XP a kill x0.7 (the Quartermaster at ~33 runs,
+     level 18), 60% of finds from a site's themed list and 22 new bases, 24 stage backdrops (test art first), 0.14.0 /
+     SAVE_VERSION 26; ten open calls for Matt. Next: the canvas (the site card's stage picker, the Map's "· 2/3").
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
