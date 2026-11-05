@@ -93,6 +93,13 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   2. Words: the town's "mint" to "the print works" (the order's "Mint" keeps its name); the key stays.
   3. The Map's controls (Matt: "right click to move and mouse wheel to zoom in / out but lets see how it works redrawn
      first"): waiting on his word now he's seen the redraw.
+  4. Design (the campaign's length and steps; Matt: "i think the answer to campaign length/balance is more stages per
+     site - garden center 1/3 for example"): to design before any build. Claude's take: the stages as the depths the
+     sim already has (depth 1-3 a campaign site, DEPTH_HOSTILE x1.25 and DEPTH_REWARD x1.12 a depth; the Radio's reach
+     starting past them), the next site opening at 3/3, each stage its own turn (more gangs; a twist - night, weather or
+     a wager-like rule; the site's head or the zone's crew at 3/3), the sites' numbers re-cut so a site's 1/3 sits just
+     over the last one's 3/3 (no x1.6-3.2 walls), the levels and the XP curve re-read for ~36 steps. Open: what makes a
+     stage feel new, whether 2/3 already opens the next, the head's place, the sites already cleared on Matt's save.
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
