@@ -106,6 +106,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      backdrop, not a site's stage; (4) no care for old saves: Matt starts fresh (SAVE_VERSION bumps). Next: the spec
      (docs/design/stages.md) and the site card's "1/3" on the canvas; art by art.flag only once the stages read with
      test art (today's backdrops reused).
+     More (5 Nov): the heads' fights use the heads' art already made. On the loot (Matt: "finding a feed bag and
+     gardening gloves in the allotments is great for the feel - thats what we need to replicate across the other
+     zones"): each site's finds themed to the place, across every zone (the spec lists a site's own bases: the Retail
+     Park's shop stock, the Hospital's medical kit, the Barracks' army kit ...), the stage stepping their tier.
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
