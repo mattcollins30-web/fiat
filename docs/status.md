@@ -83,6 +83,16 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   The land centred where it fits the frame; a plain wheel pans across when it fits top to bottom. Next (Matt: "right
   click to move and mouse wheel to zoom in / out but lets see how it works redrawn first"): after he's seen it. The
   County's painting the same after.
+- **Parked from the playtest (0.13.3, 5 Nov) - the next fix round:**
+  1. New (UI): a "New" mark over a newly opened site on the Map (Matt: "we need a 'New' small indicator over a newly
+     unlocked site on the map - flashing subtly"). Claude's proposal: a small accent chip "New" above the pin's name,
+     its alpha pulsing gently (about 0.55 to 1 over 1.6 s, not a blink), on a site that's opened since it was last
+     looked at - till it's picked once; the order's places the same when their rebuild opens them; the seen set saved
+     (a new save field read with a default, no SAVE_VERSION bump). Checks: shown on an opened unseen site, gone once
+     picked, kept through a save and load, fits at both windows and clear of the names.
+  2. Words: the town's "mint" to "the print works" (the order's "Mint" keeps its name); the key stays.
+  3. The Map's controls (Matt: "right click to move and mouse wheel to zoom in / out but lets see how it works redrawn
+     first"): waiting on his word now he's seen the redraw.
 - **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
   in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
   25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
