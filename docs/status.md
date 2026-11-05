@@ -6488,6 +6488,13 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 5 Nov (evening): 0.13.3 - the places tool clear of the fog; the boot warning
+
+Matt (placing on a fresh camp): "the fog is preventing me from placing", and Godot's warning at boot.gd:24 ("Nodes with
+non-equal opposite anchors will have their size overridden after _ready()"). F3 on the Map now lifts the cloud and the
+hatch and names every zone, site and order's place plain, all back on F3 done (a check, proved red); boot's black rect
+sized by its anchors alone (no size set). Reviewed; smoke green in the cloud and on Matt's machine; lint 0.
+
 ## 5 Nov (evening): 0.13.2 - the Map redrawn by Matt, the F3/F5 places tool (build 52)
 
 Matt painted the Map (688 x 384) and asked for an F3/F5 tool to move its places. One builder: the painting drawn x2, the

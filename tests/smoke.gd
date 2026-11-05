@@ -887,6 +887,7 @@ func _init() -> void:
 	_u51_county_checks(main)                  # BUILD51-U: item 2 - the County, the same rules
 	_b52_map_checks(main)                     # BUILD52 (5 Nov): Matt's redrawn Map x2, centred where it fits, every pin, the places from the file
 	_b52_tool_checks(main)                    # BUILD52: the Map's F3/F5 tool for the places
+	_b53_fog_checks(main)                     # BUILD53: the fog off and every name plain while placing
 	_u51_break_wagers_checks(main)            # BUILD51-U: item 3 - Kev's wagers at a night's break in his panel
 	_u51_signal_rules_checks(main)            # BUILD51-U: item 4 - the loot rules on a signal's run, the Radio's button
 	_u51_web_room_checks(main)                # BUILD51-U: item 5 - the picked name's plate follows a pan
@@ -40122,3 +40123,39 @@ func _b52_target(c: Control, at: Vector2) -> Control:
 	if c.mouse_filter != Control.MOUSE_FILTER_IGNORE and Rect2(Vector2.ZERO, c.size).has_point(at):
 		return c
 	return null
+
+
+# ------------------------------------------------------------------ BUILD53 (5 Nov): the fog off while placing
+## The F3 tool on a camp with shut zones (Matt: "the fog is preventing me from placing"): placing turns the cloud off
+## and shows every zone's, site's and order's place's name plain; F3 done puts the cloud and the scrambling back.
+## `-- only b53_fog`. The City shut for it by the Town's crew set unbeaten (put back after); the names change at the
+## toggle itself, no refresh between.
+func _b53_fog_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var M = main._missions
+	var mv = M._map
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	M.set_county(false)
+	M._shown = ""
+	main.refresh()
+	var keep_bb: Array = sim.bosses_beaten.duplicate()
+	sim.bosses_beaten[2] = false                  # the Town's crew not beaten: the City shut (a fixture, put back below)
+	var shut: int = 3
+	_check(not sim.zone_open(shut), "the fixture: the City still open")
+	mv.set_placing(true)
+	_check(mv._clouds == null or not mv._clouds.visible, "placing: the fog still over the map")
+	_check(mv._zone_names[shut][0].text == str(Data.ZONES[shut]["name"]), "placing: a shut zone's name still scrambled: '%s'" % mv._zone_names[shut][0].text)
+	var i: int = int(Data.ZONES[shut]["tiers"][0])
+	_check(mv._pin_labels[i].text == str(Data.TIERS[i]["name"]), "placing: a shut site's name still scrambled: '%s'" % mv._pin_labels[i].text)
+	for p in Data.PINNACLES:
+		_check(mv._order_labels[p["key"]].visible and mv._order_labels[p["key"]].text == str(p["place"]), "placing: the order's %s not named plain" % p["key"])
+	mv.set_placing(false)
+	_check(mv._clouds == null or mv._clouds.visible, "placing done: the fog not back")
+	_check(mv._zone_names[shut][0].text != str(Data.ZONES[shut]["name"]), "placing done: a shut zone's name not scrambled again")
+	sim.bosses_beaten = keep_bb
+	M._shown = ""
+	main.refresh()
+	print("b53 fog ok (a shut zone: %d)" % shut)

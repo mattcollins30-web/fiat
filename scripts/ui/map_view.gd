@@ -396,6 +396,7 @@ func show_state(s, sel: int, okey: String) -> void:
 		opens += "1" if sim.order_open(p["key"]) else "0"
 	var sig := "%s|%d|%s|%s|%s|%s|%s|%d|%d" % [settled, selected, order_key, opens, str(sim.best_depth), str(sim.bosses_beaten), str(sim.weather), sim.level(), int(sim.is_night())]
 	sig += "|" + _town_show()                  # the town's places (BUILD50-T)
+	sig += "|%d" % int(placing)                # the F3 tool: the fog off and every name plain while placing (BUILD53, Matt: "the fog is preventing me from placing")
 	if sig == _shown:
 		return
 	_shown = sig
@@ -404,7 +405,7 @@ func show_state(s, sel: int, okey: String) -> void:
 	for z in range(Data.ZONES.size()):
 		var nm: Label = _zone_names[z][0]
 		var st: Label = _zone_names[z][1]
-		var open_z: bool = sim.zone_open(z)
+		var open_z: bool = sim.zone_open(z) or placing     # placing: every zone as known (BUILD53)
 		nm.text = str(Data.ZONES[z]["name"]) if open_z else Fmt.scramble(str(Data.ZONES[z]["name"]))     # not yet known (20 Oct, Matt)
 		nm.add_theme_color_override("font_color", Pal.TEXT if open_z else Pal.TEXT_2)
 		if not open_z and sim.zone_level_shut(z):
@@ -427,7 +428,7 @@ func show_state(s, sel: int, okey: String) -> void:
 	for i in range(Data.TIERS.size()):
 		var l: Label = _pin_labels[i]
 		var z: int = int(Data.TIERS[i]["zone"])
-		var known: bool = sim.zone_open(z)
+		var known: bool = sim.zone_open(z) or placing     # placing: every name plain (BUILD53)
 		l.visible = true
 		l.text = str(Data.TIERS[i]["name"]) if known else Fmt.scramble(str(Data.TIERS[i]["name"]))     # the name only (19 Oct); scrambled till its zone's open (20 Oct)
 		_snug(l)
@@ -435,9 +436,9 @@ func show_state(s, sel: int, okey: String) -> void:
 		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.TEXT if sim.tier_open(i) else (Pal.TEXT_2 if known else Pal.TEXT_3)))
 	for p in Data.PINNACLES:
 		var l: Label = _order_labels[p["key"]]
-		l.visible = sim.order_open(p["key"])
+		l.visible = sim.order_open(p["key"]) or placing     # placing: every place named (BUILD53)
 		if l.visible:
-			var ok: bool = sim.order_known(p["key"])
+			var ok: bool = sim.order_known(p["key"]) or placing
 			l.text = str(p["place"]) if ok else Fmt.scramble(str(p["place"]))     # scrambled till its zone's open (20 Oct)
 			_snug(l)
 			l.add_theme_color_override("font_color", Pal.ACCENT if order_key == p["key"] else (Pal.TEXT if ok else Pal.TEXT_3))
@@ -458,7 +459,7 @@ func _draw() -> void:
 		draw_colored_polygon(_scaled(zone_points(lit_z)), LIT)
 	# a shut zone under a hatch, where there's no cloud
 	for z in range(Data.ZONES.size()):
-		if _clouds == null and sim != null and not sim.zone_open(z):
+		if _clouds == null and sim != null and not sim.zone_open(z) and not placing:     # placing: no hatch (BUILD53)
 			_hatch(zone_points(z))
 	# the pins: their own layer (_draw_pins), over the sky
 	# the key's panel and its dots: their own layer (_draw_key), over the cloud
@@ -1027,6 +1028,8 @@ func on_screen() -> bool:
 
 func set_placing(on: bool) -> void:
 	placing = on
+	if _clouds != null:
+		_clouds.visible = not on            # the fog off while placing, back after (BUILD53)
 	_edit = {}
 	if on:
 		for e in all_places():
@@ -1034,6 +1037,9 @@ func set_placing(on: bool) -> void:
 				_edit[e[0]] = {}
 			_edit[e[0]][e[1]] = placed(e[0], e[1])
 	relay()
+	if sim != null:
+		_shown = ""
+		show_state(sim, selected, order_key)     # the names plain or scrambled at once, not on the next refresh (BUILD53, the review)
 
 
 ## A place moved (painting pixels, kept on the painting).

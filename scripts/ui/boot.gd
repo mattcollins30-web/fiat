@@ -20,8 +20,7 @@ func _ready() -> void:
 	black = ColorRect.new()
 	black.color = Color.BLACK
 	black.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	black.set_anchors_preset(Control.PRESET_FULL_RECT)
-	black.size = get_viewport_rect().size
+	black.set_anchors_preset(Control.PRESET_FULL_RECT)     # its anchors fill the boot screen: no size set (BUILD53: "Nodes with non-equal opposite anchors will have their size overridden")
 	add_child(black)
 	fit_window(get_window())                # the Deck's window fitted before the card draws, not after the load (review45u 8)
 	if DisplayServer.get_name() != "headless":
