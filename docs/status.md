@@ -51,6 +51,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      run); the pull from the pack only for a gun that has never had one in the rig this run, and never by moving a heal
      out while a gang is on you. Smoke checks: the move holds through the next refill tick; the med stays in; the
      first-gun case still fires.
+  4. New (design): the Map bigger and scrollable, the site's side panel toggled on and off (Matt: "lets redraw the map
+     at a larger resolution and make it scrollable and the side panel per site can be clicked on and off - just thinking
+     this will allow for a more dynamic experience especially as we've just added a bunch of landmarks and made the town
+     the focus"). Today: art/map/map.png 512 x 424 pixel art drawn x2 (1,024 x 848) to fill the left of the screen, the
+     card column always on. To settle on the canvas first: the map's size (2x the land at the same pixel scale), pan by
+     drag and/or wheel, where it opens (the town's next step / the picked site), the panel's toggle and what the Map
+     shows with it off (the pins' own tooltips, the goal line), the zones and the County on one sheet or two. Art: a new
+     map at the bigger size by art.flag, only once the layout reads with today's map scaled as test art.
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
