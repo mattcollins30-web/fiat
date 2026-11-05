@@ -211,6 +211,7 @@ func _init() -> void:
 		c.pressed.connect(_rig_pressed.bind(k))
 		_left.add_child(c)
 		_rig_cells.append(c)
+	_rig_pages_build()                        # the rig's pages, as the floor's (BUILD51-U, item 1)
 	# the take, one strip: the tins with their icon, the pack's fill as a bar, what was passed over or swapped small
 	_take_head = UI.head(_left, Rect2(PAD, TAKE_Y, INNER, UI.HEAD_H), "The take")
 	_take_strip["panel"] = UI.panel(_left, Rect2(PAD, STRIP_Y, INNER, STRIP_H), UI.box(Pal.BG, 6))
@@ -672,7 +673,7 @@ func _event_show() -> bool:
 	if on:
 		_crates.visible = false
 		_rig_head.visible = false
-		for c in _rig_cells + _rig_outlines:
+		for c in _rig_cells + _rig_outlines + [_rig_prev, _rig_next, _rig_page_label]:     # its pages' arrows too (BUILD51-U)
 			c.visible = false
 		_rig_sig = 0                          # hidden here: the rig lays out again when the panel goes (BUILD43)
 		for n in [_take_head, _take_strip["panel"], _note, _button, _button2]:
@@ -1462,31 +1463,44 @@ func _show_rig() -> void:
 	for it in sim.rig.slice(0, RIG_MAX):
 		lits.append((Items.is_heal(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0) \
 			or (Items.is_cure(it) and sim.ail_weight(sim.mission, Items.cure_of(it)) > 0.5 and not sim.cure_wards(sim.mission, Items.cure_of(it)) and not sim.mission["t"].get("no_meds", false)))     # a cure lit while its element's on you (28 Oct)
-	var sig: int = hash([cap, sim.rig, lits, _rig_pick, sim.stat_v, sim.mission["t"].get("level", 0), _rig_y])
+	if not is_same(_rig_run, sim.mission):
+		_rig_run = sim.mission
+		_rig_page = 0                            # a run starts on the rig's first page (BUILD51-U)
+		_f51_heal_lit = false                    # (FIX51)
+	var sig: int = hash([cap, sim.rig, lits, _rig_pick, sim.stat_v, sim.mission["t"].get("level", 0), _rig_y, _rig_page])     # the page too (BUILD51-U)
 	if sig == _rig_sig:
 		return
 	_rig_sig = sig
-	# one row of full cells to eight, one row of smaller to twelve, two rows past that (the generator's row): the same 64 px tall
-	var rows: int = 1 if cap <= 12 else 2
-	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
-	@warning_ignore("integer_division")
-	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
-	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
-	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the
-	# gap a wide kit left at a row's end. 20 Oct (Matt: two pouches shown empty on a full rig): first fit in the rig's
-	# order could leave a wide one no run and hide it; then the widest first, and failing that one row of smaller cells
+	# one row of full-size cells, paged as the floor is past what fits (BUILD51-U, item 1; Matt: "the rig should be
+	# scrollable like the floor ... so that the rig always retains a full size row"): as many as fit across, the floor's
+	# arrows and "n / N" at the row's end once there's more than a row; an item never split across two pages
 	var widths: Array = []
 	for it in sim.rig.slice(0, RIG_MAX):
 		widths.append(Items.size(it))
+	var paged: bool = cap > rig_fit(false)
+	var per_row: int = rig_fit(paged)
 	var lay: Array = rig_layout(widths, cap, per_row)
 	var places: Array = lay[0]
 	if int(lay[1]) != per_row:
-		rows = 1
-		per_row = int(lay[1])
-		@warning_ignore("integer_division")
-		cell = mini(Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+		places = rig_places(widths, cap + RIG_MAX, per_row, true)     # no first fit in the cap's pages (wide kits at the ends): a page more
+		paged = true
+	var used_to: int = cap
+	for n in range(places.size()):
+		used_to = maxi(used_to, int(places[n]) + mini(int(widths[n]), per_row))
+	var pages: int = maxi(1, ceili(float(used_to) / float(per_row)))
+	paged = paged and pages > 1
+	var heal_page: int = _f51_heal_page(lits, places, per_row) if paged else -1
+	if heal_page >= 0 and not _f51_heal_lit:
+		_rig_page = heal_page                   # a heal lights (the low-HP prompt): the rig turns to its page, once (FIX51)
+	_f51_heal_lit = heal_page >= 0
+	_rig_page = clampi(_rig_page, 0, pages - 1)
+	_rig_pages_show(paged, pages)
+	_f51_heal_arrows(heal_page)
+	var cell: int = Pal.CELL
 	@warning_ignore("integer_division")
-	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y + (pos / per_row) * (cell + Pal.CELL_GAP))
+	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y)
+	@warning_ignore("integer_division")
+	var on_page := func(pos: int) -> bool: return pos / per_row == _rig_page
 	var k := 0
 	var taken := {}
 	for n in range(places.size()):
@@ -1505,17 +1519,27 @@ func _show_rig() -> void:
 			c.tooltip_text = "%s · %s · click for the pack" % [it["base"], sim.mag_words(it)]
 		else:
 			c.tooltip_text = str(it["base"])
-		c.visible = true
+		c.visible = on_page.call(pos)
 		for j in range(w):
 			taken[pos + j] = true
 		k += 1
 	for i in range(k, RIG_MAX):
 		_rig_cells[i].visible = false
-	for i in range(RIG_MAX):
-		var o = _rig_outlines[i]
-		o.visible = i < cap and not taken.has(i)
-		o.position = at.call(i)
-		o.size = Vector2(cell, cell)
+	# the empty pouches' outlines: the free places, as many as the rig has pouches free
+	var free_n: int = maxi(0, cap - sim.rig_used())
+	var oi := 0
+	var p := 0
+	while oi < RIG_MAX and p < pages * per_row:
+		if not taken.has(p) and free_n > 0:
+			var o = _rig_outlines[oi]
+			o.visible = on_page.call(p)
+			o.position = at.call(p)
+			o.size = Vector2(cell, cell)
+			oi += 1
+			free_n -= 1
+		p += 1
+	for i in range(oi, RIG_MAX):
+		_rig_outlines[i].visible = false
 
 
 func _rig_pressed(k: int) -> void:
@@ -1710,6 +1734,9 @@ func text_nodes() -> Array:
 	out.append_array(_inv.text_nodes())
 	if _crates.visible:
 		out.append_array(_crates.text_nodes())
+	for n in [_rig_prev, _rig_next, _rig_page_label]:     # the rig's pages (BUILD51-U)
+		if n.visible:
+			out.append(n)
 	out.append_array(_event_panel.text_nodes())
 	return out
 
@@ -1736,3 +1763,84 @@ static func _hint_forms(hints: Array) -> Array:
 	out.append(" · ".join(hints))
 	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
 	return out
+
+
+# ------------------------------------------------------------------ the rig's pages (BUILD51-U, item 1)
+
+## The rig's row paged as the floor's (crates_panel.gd): full-size pouches, as many as fit across the column - all of it,
+## or what's left beside the arrows and "n / N" once the rig runs past a row.
+var _rig_page := 0
+var _rig_run = null                         # the run the page is of: a new run opens on the first
+var _rig_prev: Button
+var _rig_next: Button
+var _rig_page_label: Label
+
+
+static func rig_fit(paged: bool) -> int:
+	var room: float = INNER - (float(2 * CratesPanel.ARROW + CratesPanel.PAGE_W + 16) if paged else 0.0)
+	return maxi(1, int((room + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP)))
+
+
+func _rig_pages_build() -> void:
+	var y: float = RIG_Y + (Pal.CELL - CratesPanel.ARROW) / 2.0
+	_rig_prev = UI.button(_left, Rect2(PAD + INNER - 2 * CratesPanel.ARROW - 8, y, CratesPanel.ARROW, CratesPanel.ARROW), false)
+	_rig_prev.text = "‹"
+	_rig_prev.pressed.connect(rig_turn.bind(-1))
+	_rig_next = UI.button(_left, Rect2(PAD + INNER - CratesPanel.ARROW, y, CratesPanel.ARROW, CratesPanel.ARROW), false)
+	_rig_next.text = "›"
+	_rig_next.pressed.connect(rig_turn.bind(1))
+	_rig_page_label = UI.label(_left, Rect2(PAD + INNER - 2 * CratesPanel.ARROW - 8 - CratesPanel.PAGE_W - 4, y, CratesPanel.PAGE_W, CratesPanel.ARROW), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
+	for n in [_rig_prev, _rig_next, _rig_page_label]:
+		n.visible = false
+
+
+## A page along (1) or back (-1).
+func rig_turn(by: int) -> void:
+	_rig_page = maxi(0, _rig_page + by)
+	_rig_sig = 0
+	if sim != null and sim.on_mission():
+		_show_rig()
+
+
+## The arrows and the count on the rig's row, where its row sits now (the fight's or the search's).
+func _rig_pages_show(paged: bool, pages: int) -> void:
+	var y: float = _rig_y + (Pal.CELL - CratesPanel.ARROW) / 2.0
+	for n in [_rig_prev, _rig_next, _rig_page_label]:
+		n.visible = paged
+		n.position.y = y
+	_rig_prev.disabled = _rig_page == 0
+	_rig_next.disabled = _rig_page >= pages - 1
+	_rig_page_label.text = "%d / %d" % [_rig_page + 1, pages]
+
+
+## For the tests: the rig's page and how many.
+func rig_page() -> Array:
+	return [_rig_page, int(_rig_page_label.text.get_slice(" / ", 1)) if _rig_page_label.visible else 1]
+
+
+
+# ------------------------------------------------------------------ FIX51 (5 Nov): a lit heal on a page not showing
+
+## The review's 2: a heal that lights at low HP may sit on a page of the rig not showing. As it lights the rig turns to
+## the page of the first lit heal; turned away from it, the arrow toward it lights (amber, as a warning).
+var _f51_heal_lit := false
+
+
+## The page of the first lit heal in the rig, -1 for none.
+func _f51_heal_page(lits: Array, places: Array, per_row: int) -> int:
+	for n in range(places.size()):
+		if bool(lits[n]) and Items.is_heal(sim.rig[n]):
+			return floori(float(places[n]) / float(per_row))
+	return -1
+
+
+func _f51_heal_arrows(heal_page: int) -> void:
+	UI.style_button(_rig_next, false, "warn" if heal_page > _rig_page else "")
+	UI.style_button(_rig_prev, false, "warn" if heal_page >= 0 and heal_page < _rig_page else "")
+
+
+## For the tests: which of the rig's arrows is lit toward a heal: 1 (›), -1 (‹), 0 neither.
+func f51_heal_arrow() -> int:
+	if str(_rig_next.get_meta("ui_style", "")).ends_with("|warn"):
+		return 1
+	return -1 if str(_rig_prev.get_meta("ui_style", "")).ends_with("|warn") else 0

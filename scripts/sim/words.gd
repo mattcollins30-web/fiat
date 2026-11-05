@@ -85,7 +85,7 @@ const ROOM_INTROS := {
 	"training": {"room": "Training", "face": "", "title": "The caravan at the back", "voice": "training", "cues": [0.0, 7.22], "lines": [
 		"The caravan at the back. Whoever runs for you sleeps here, and gets better here.",
 		"Each runner has their own web. They start at their class and buy outward."],     # the skill web (3 Nov, BUILD47): the voice wants recording again
-		"tiles": [["Their past", "What they were, before"], ["Their trees", "What they can learn"], ["The crew", "Pick who goes out"]]},
+		"tiles": [["Their past", "What they were, before"], ["Their web", "Perks they can buy"], ["The crew", "Pick who goes out"]]},     # "Their trees" gone: the room's own words, a web of perks (BUILD51-U, item 5)
 	"clinic": {"room": "The Clinic", "face": "medic", "title": "The medic", "voice": "clinic", "cues": [0.0, 4.60, 7.58, 12.74], "lines": [
 		"Sit down. Don't bleed on that, it's the only clean one.",
 		"Resting on the Pitch heals, slowly.",
@@ -1639,7 +1639,7 @@ const EV := {
 	"go_in": "Go in", "careful": "Go in carefully", "danger_face": ["%d s · %d%% clean, %d%% hurt: −%d%% HP", "%d s · %d%% clean · −%d%% HP"],
 	"stash_take": "Take it", "check": "Check it first", "take_face": "%d s · %d%% a catch",
 	"check_face": "%d s · %d finds, no catch", "tip_face": "%d s · %d finds a tier up",
-	"search": "Search it", "search_face": "%d s · A find · %d%% a clue", "pockets": "Go through the pockets", "pockets_face": "%d s · About %s",
+	"search": "Search it", "search_face": "%d s · A find · %d%% a clue", "pockets": "Go through the pockets", "pockets_face": "%d s · About %s · %d%% a find",
 	"strip": "Strip it", "strip_face": "%d s · %d–%d scrap", "cut": "Cut it open", "cut_face": ["%d s · −%d scrap · %s %s and a find", "%d s · −%d scrap · A find"], "cut_no": "No scrap to cut it",
 	"listen": "Listen", "listen_face": "%d s · A tip", "short": "Catch the end", "short_face": "%d s · %d%% a tip",
 	"press": "Press on", "press_face": "+%d%% loot quality · +%d%% gang damage", "home": "Go home", "home_face": "Out now with the pack", "let_pass": "Let it pass",
@@ -1688,7 +1688,7 @@ const ORDERS := {"button": "Standing orders", "title": "Standing orders", "sub":
 	"body": {"search": "Search it", "pockets": "Go through the pockets", "leave": "Leave it"},
 	"wreck": {"strip": "Strip it", "cut": "Cut it open, scrap allowing", "leave": "Leave it"},
 	"broadcast": {"listen": "Listen", "short": "Catch the end", "leave": "Leave it"},
-	"weather": {"press_80": "Press on at 80% odds or better", "leave": "Let it pass", "press": "Always press on", "home": "Go home"},
+	"weather": {"press_80": "Press on at %d%% odds or better", "leave": "Let it pass", "press": "Always press on", "home": "Go home"},
 	"default": "Leave it"}
 
 
@@ -2285,7 +2285,7 @@ const NIGHT := {
 	"kit": "Kit · %d piece%s", "no_kit": "No kit yet", "kit_more": "and %d more",
 	"death": "A death tonight loses the haul and the kit worn",
 	"timeout_line": "Out of time on a link: as a run out of time",
-	"wagers_head": "KEV'S WAGERS ON LINK %d", "wagers_none": "Kev has nothing on this one", "wager_on": "On", "wager_off": "Take it",
+	"wagers_head": "KEV'S WAGERS ON LINK %d", "wagers_none": "Kev has nothing on this link", "wager_on": "On", "wager_off": "Take it",
 	"crafts_head": "TUNE LINK %d",
 	"next_btn": "Next link", "next_btn_fifth": "Next link: the fifth", "out_btn": "Get out with the haul", "tune_btn": "Tune it", "tune_close": "Done tuning",
 	"auto": "Auto: keep going", "auto_floor": "at %d%% or over", "auto_under": "Auto stopped: under %d%%",
@@ -2298,4 +2298,12 @@ const NIGHT := {
 	"rule_none": "No rules: the codes come as they're rolled, and no wager is taken",
 	"add": "Add a rule", "up": "Up", "drop": "Remove", "on": "On", "off": "Off",
 	"floor_head": "Auto: keep going while the odds stay at", "floor": "%d%% or over", "done": "Done",
+}
+
+
+## BUILD51-U (5 Nov): Kev's wagers at a night's break in his panel (item 3).
+const U51 := {
+	"offer_one": "Kev has a wager on this link: the odds with it under Wagers", "offer_n": "Kev has %d wagers on this link: the odds with each under Wagers",
+	"offer_one_short": "Kev has a wager on this link", "offer_n_short": "Kev has %d wagers on this link",
+	"panel_close": "Put the card away: the Map takes the width", "county_close": "Put the card away: the County takes the width",     # the Map's side panel (item 2)
 }

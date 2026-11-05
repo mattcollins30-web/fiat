@@ -4,15 +4,19 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (5 Nov):** 0.13.0 for a fresh save (SAVE_VERSION 25), not yet played - the skill web version two (phase 1)
-  and act two (phase 2, build 50; docs/design/act_two.md): the town on the Map (pins ringed / dashed / lit, the goal
-  line counting places running), tins paying builds and a day's wages at every run home (an unpaid place stops till
-  paid, never debt), a night on the air (Start a night on a held signal's card: links chained, a break between with
-  Next link / Get out with the haul / Tune it and Auto at the odds floor, every fifth link a head, a hoard or a fat
-  drop, the tuning rules on the Radio), signals' focus (a material, a slot, a resist or a unique's chance, on the card
-  and in the loot), the Workshop's "Add a resist", the order's heads at 30/34/38, the County 40-75, XP_TAPER_END 4.5,
-  REPEAT_XP back to 25-60%. Matt plays fresh; his play sets the figures.
-- **Parked from the playtest (0.13.0, 5 Nov):**
+- **Now (5 Nov, afternoon):** 0.13.1 on Matt's 0.13.0 save (SAVE_VERSION 25, no fresh save) - his playtest goes on.
+  Built in 0.13.1 (Matt: "list out the open items and lets just build it - the wall is still there early game"): the
+  0.13.0 playtest's items 1-6 (the rig pages as the floor; the try-on reads one whole figure - a rig's pouches, a gun's
+  rate of fire, armour's %; a magazine moved to the pack stays; the Map twice the size, panned, the card put away and
+  back; Lucky -> Sharp-eyed, loot quality; the carries: notables half the dose, capstones the whole, 25% more a carry up
+  to twice); the wall (the Shopping Centre x1.60 over the Pleasure Park, was x3.17; the Bank down too - 880 HP, fire 1.63
+  - so the step after stays under x1.8); act two (f) and (g) (the break's odds without the gate's boxes; Kev's wagers at
+  the break in his panel); loot rules on the Radio; the web's words (the Manual's new rule, the Cap, Second wind, no hung
+  notables left); a picked-over site's run event; the 2 Nov reviews' rules (the swap capped, the pockets' find 35%,
+  Strip it up, the bot's Press on 90 - Matt's own order stays 80); speed (live_guard 1.5 -> 0.02 ms, the dogs stepped,
+  the late fight timed); the SMG flash sheet (docs/art/smg_flash_sheet.png: every flash at the muzzle; the Castle guard
+  rifle's moved).
+- **Parked from the playtest (0.13.0, 5 Nov) - all six built in 0.13.1:**
   1. UI: the rig's row on the run screen shrinks its cells to fit when the rig has many slots - too small to read
      (screenshot: "THE RIG · CLICK AN ITEM TO USE IT"). Matt: "the rig should be scrollable like the floor ... just copy
      what we already have for the floor so that the rig always retains a full size row". The fix: the floor's pages
@@ -71,6 +75,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
      and Apron - are each the capstone's rule by design.) The fix: the notable a share of the dose carried (half), the
      capstone the whole and more of it each carry (as Opened for good's bleed); the words to say which. A smoke check:
      each of the four nodes alone and together carries a different dose.
+- **Matt's word wanted (0.13.1, 5 Nov):** the Quartermaster's Manual's new rule (+8% damage each element held a perk
+  in - it had none left; the builder's pick); the Bank made easier with the Shopping Centre (act two's gate: 27% less HP,
+  25% less fire); the Bank's 20 gangs leave a gang's own HP x2.2 from the Bank to the Services; "trees" still on screen
+  in four places beside "Their web" (the language rename pass); the perk "Sharp-eyed" (was Lucky) and the trait "Lucky".
 - **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
   repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
   nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
@@ -6471,6 +6479,19 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 5 Nov (afternoon): 0.13.1 - the open list built (build 51; SAVE_VERSION 25, Matt's save carries on)
+
+Matt: "list out the open items and lets just build it - the wall is still there early game and id rather just get
+things done". Three builders (A the sim rules, the try-on and the web; U the UI - the rig's pages, the Map panned with its
+card put away, Kev's wagers at the break, loot rules on the Radio; C the wall, speed, the flash sheet), merged; the
+reviewer's findings fixed, each with a check proved red (the capstone's carry undone by the next hit - a pool never
+lowered, the growth topped at twice; a lit heal on a rig page not showing; the pockets beating Search - their find 35%;
+Matt's own Press on order back to 80, the bot's 90; a slower med reading "quicker"; the night's dry read keyed on a
+flag; the Cap's figure from the constant; the Workshop's gun figure as the try-on's); the language pass (two reviewers;
+the editor's calls: "Kev has a wager on this link: the odds with it under Wagers", "the Map", the carries' "25%
+stronger each time, up to twice", "Hot swap ... up to 10% more time firing", Lucky -> "Sharp-eyed", "Finds roll at a
+higher loot quality.", "the class's corner", "SIGNALS %d/%d"). Smoke green in the cloud and on Matt's machine; lint 0.
 
 ## 5 Nov (late): 0.13.0 phase 2 - act two (build 50; SAVE_VERSION 25)
 

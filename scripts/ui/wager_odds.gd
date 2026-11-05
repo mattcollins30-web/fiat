@@ -68,7 +68,21 @@ static func _advance(sim, j: Dictionary) -> void:
 	var trial: Dictionary = held.duplicate(true) if had else {"seq": 0, "taken": []}
 	trial["taken"] = Array(j["taken"]).duplicate()
 	sim.wagers[key] = trial
-	if key.begins_with("site:"):
+	if sim.night_break() and key == sim.night_wager_key():
+		# the next link at a night's break (BUILD51-U, item 3): read as the break's own odds are (sim.night_odds - the
+		# runner as they stand, carried), its cache kept here and the break's put back
+		var nid: int = int(key.trim_prefix("sig:"))
+		var nsite: int = int(sim.night_next_sig().get("site", 0))
+		var n_home = sim._sig_odds.get(nid, null)
+		var n_home_t = sim._odds_tally.get(nsite, null)
+		_put_back(sim._sig_odds, nid, j["c"])
+		var nr: Array = sim.night_odds()
+		j["o"] = float(nr[0])
+		j["done"] = bool(nr[1])
+		j["c"] = sim._sig_odds.get(nid, null)
+		_put_back(sim._sig_odds, nid, n_home)
+		_put_back(sim._odds_tally, nsite, n_home_t)
+	elif key.begins_with("site:"):
 		var i: int = int(key.trim_prefix("site:"))
 		var home = sim._surv_cache.get(i, null)
 		var home_t = sim._odds_tally.get(i, null)

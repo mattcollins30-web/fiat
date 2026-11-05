@@ -106,7 +106,7 @@ func show_state(s) -> void:
 	sim = s
 	if not visible or key == "":
 		return
-	if sim.runner_busy():
+	if sim.runner_busy() and not (sim.night_break() and key == sim.night_wager_key()):     # a night's break: the next link's (BUILD51-U)
 		visible = false                     # set off: the offer's spent or gone
 		return
 	var sig: bool = key.begins_with("sig:")     # a signal's wagers go on that signal's run (the review)

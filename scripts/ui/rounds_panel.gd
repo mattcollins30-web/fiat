@@ -142,13 +142,7 @@ func show_state(s) -> void:
 		r["panel"].position.y = y
 		y += ROW_H + ROW_GAP
 		UI.fit(r["name"], [str(d["gun"])])
-		var cells: String = (Words.ROUNDS["cells"] % int(d["cells"])) if int(d["cells"]) == 1 else (Words.ROUNDS["cells_n"] % int(d["cells"]))
-		var lo: String = Words.group(int(d["loaded"]))
-		var bx: String = Words.group(int(d["box_rounds"]))
-		if int(d["packed"]) > 0:
-			UI.fit(r["line"], [Words.ROUNDS["row"] % [lo, bx, cells], Words.ROUNDS["row_short"] % [lo, bx, cells]])
-		else:
-			UI.fit(r["line"], [Words.ROUNDS["row_none"] % lo, Words.ROUNDS["row_none_short"] % lo])
+		UI.fit(r["line"], row_forms(d))
 		var g: String = str(d["grade"])
 		r["grade"].disabled = Array(d["grades"]).is_empty()
 		if g == "":
@@ -314,3 +308,15 @@ func text_nodes() -> Array:
 		out = out.filter(func(n): return not gr.intersects(n.get_global_rect()))     # the open list covers what's under it
 		out.append_array(grades.text_nodes())
 	return out
+
+
+## A gun's row line, long to short (BUILD51-U, item 6: the short form was given the cells too - "not all arguments
+## converted" logged at every open, 16 a smoke).
+static func row_forms(d: Dictionary) -> Array:
+	var lo: String = Words.group(int(d["loaded"]))
+	if int(d["packed"]) <= 0:
+		return [Words.ROUNDS["row_none"] % lo, Words.ROUNDS["row_none_short"] % lo]
+	var cells: String = (Words.ROUNDS["cells"] % int(d["cells"])) if int(d["cells"]) == 1 else (Words.ROUNDS["cells_n"] % int(d["cells"]))
+	var bx: String = Words.group(int(d["box_rounds"]))
+	return [Words.ROUNDS["row"] % [lo, bx, cells], Words.ROUNDS["row_short"] % [lo, bx]]
+

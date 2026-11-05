@@ -16,6 +16,9 @@ const Words := preload("res://scripts/sim/words.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
+const WagersPanel := preload("res://scripts/ui/wagers_panel.gd")     # Kev's wagers on the next link (BUILD51-U, item 3)
+const WagerOdds := preload("res://scripts/ui/wager_odds.gd")
+const WAGER_BTN_W := 220
 
 const W := Pal.RUN_W                    # 1760
 const H := Pal.ROOM_H                   # 916
@@ -85,6 +88,7 @@ var out_btn: Button
 var tune_btn: Button
 var auto_btn: Button
 var _foot: Label
+var wagers                             # wagers_panel.gd over the card while open (BUILD51-U, item 3)
 
 
 func _init() -> void:
@@ -116,6 +120,12 @@ func _init() -> void:
 	for b in [next_btn, out_btn, tune_btn, auto_btn]:
 		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 2)
 	_foot = UI.label(self, Rect2(RIGHT_X, BTN_Y, RIGHT_W, Pal.BUTTON_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	wagers = WagersPanel.new()
+	wagers.position = Vector2(PAD, TOP_Y)
+	wagers.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(wagers)
 	visible = false
 
 
@@ -241,13 +251,17 @@ func show_state(s) -> void:
 	visible = sim.night_break()
 	if not visible:
 		tuning = false
+		wagers.visible = false
 		return
+	if wagers.visible:
+		wagers.show_state(sim)               # its reads as they settle (BUILD51-U)
 	var m: Dictionary = sim.mission
 	var sg: Dictionary = sim.night_next_sig()
 	var od: Array = sim.night_odds_now()
 	var key: String = sim.night_wager_key()
 	var sig := "%s|%s|%s|%s|%s|%.0f|%d|%s|%s|%s|%s|%s|%s" % [str(sim.night_chain), str(sg), str(od), str(sim.wagers.get(key, {})), str(tuning), sim.hp, sim.notes, str(sim.rig.size()),
 		str(m["found"].size()), str(sim.night_auto), str(sim.night_floor), str(sim.night_rules), sim.cls]
+	sig += "|%s|%s" % [str(wagers.visible), WagerOdds.state()]     # Kev's panel and its reads (BUILD51-U)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -414,6 +428,7 @@ func _show_stand(m: Dictionary) -> void:
 ## Kev's wagers on the next link, a button each (taken, or Take it); or, with Tune it open, the Radio's three crafts at
 ## their prices.
 func _show_row(next: int, key: String) -> void:
+	_row_lay(tuning)
 	if tuning:
 		UI.fit(_row_head, [Words.NIGHT["crafts_head"] % next])
 		_row_none.visible = false
@@ -429,21 +444,7 @@ func _show_row(next: int, key: String) -> void:
 			UI.style_button(b, false)
 		return
 	UI.fit(_row_head, [Words.NIGHT["wagers_head"] % next])
-	var offer: Array = sim.wager_offer(key) if key != "" else []
-	_row_none.visible = offer.is_empty()
-	if offer.is_empty():
-		UI.fit(_row_none, [Words.NIGHT["wagers_none"]])
-	for k in range(3):
-		var b: Button = _row_btns[k]
-		b.visible = k < offer.size()
-		if not b.visible:
-			continue
-		var taken: bool = sim.wager_taken(key, k)
-		var w: String = Sim.wager_words(offer[k])
-		b.disabled = false
-		b.tooltip_text = ""
-		UI.fit_button(b, ["%s · %s" % [w, Words.NIGHT["wager_on"] if taken else Words.NIGHT["wager_off"]], w, Sim.wager_cond_chip(offer[k])])
-		UI.style_button(b, false, "warn" if taken else "")
+	_wager_row(key)
 
 
 func _show_haul() -> void:
@@ -497,6 +498,7 @@ func _on_out() -> void:
 
 func _on_tune() -> void:
 	tuning = not tuning
+	wagers.visible = false                     # one over the break's card at a time (BUILD51-U)
 	_shown = ""
 	acted.emit()
 
@@ -513,9 +515,8 @@ func _on_row(k: int) -> void:
 		return
 	if tuning:
 		sim.night_craft(str(Sim.SIGNAL_CRAFTS[k]))
-	else:
-		var key: String = sim.night_wager_key()
-		sim.take_wager(key, k, not sim.wager_taken(key, k))
+	elif k == 0:
+		_open_wagers()                         # Kev's panel over the card (BUILD51-U, item 3)
 	_shown = ""
 	acted.emit()
 
@@ -541,6 +542,9 @@ func text_nodes() -> Array:
 			out.append(b)
 	if _row_none.visible:
 		out.append(_row_none)
+	if wagers.visible:                     # Kev's panel over the card (BUILD51-U): what's under it isn't the screen's
+		var wr: Rect2 = wagers.get_global_rect()
+		out = out.filter(func(n): return not wr.intersects(n.get_global_rect())) + wagers.text_nodes()
 	for t in _tiles:
 		out.append_array([t["key"], t["value"]])
 	out.append_array(_mats.text_nodes())
@@ -548,3 +552,58 @@ func text_nodes() -> Array:
 		if r["panel"].visible:
 			out.append_array([r["name"], r["rarity"]])
 	return out
+
+
+# ------------------------------------------------------------------ Kev's wagers at the break (BUILD51-U, item 3)
+
+## The row's three buttons as the Tune it row has them, or Kev's one at the row's right, his line beside it.
+func _row_lay(tune: bool) -> void:
+	var bw: float = (LEFT_W - 48 - 2 * 12) / 3.0
+	var b0: Button = _row_btns[0]
+	if tune:
+		b0.position.x = 24
+		b0.size.x = bw
+		_row_none.size.x = LEFT_W - 48
+	else:
+		b0.position.x = LEFT_W - 24 - WAGER_BTN_W
+		b0.size.x = WAGER_BTN_W
+		_row_none.size.x = LEFT_W - 48 - WAGER_BTN_W - 16
+
+
+## Kev's wagers on the next link (Matt's call (g) of act two: the build-49 panel, as the site card's strip): what's on
+## (cost for pay, the odds without it) or what he offers, and Wagers to his panel - each wager's odds with it there.
+func _wager_row(key: String) -> void:
+	var offer: Array = sim.wager_offer(key) if key != "" else []
+	var b0: Button = _row_btns[0]
+	for k in range(1, 3):
+		_row_btns[k].visible = false
+	b0.visible = not offer.is_empty()
+	_row_none.visible = true
+	_row_none.add_theme_color_override("font_color", Pal.TEXT_2)
+	if offer.is_empty():
+		UI.fit(_row_none, [Words.NIGHT["wagers_none"]])
+		return
+	var on: int = WagerOdds.taken_of(sim, key).size()
+	var strip: Array = WagerOdds.strip_forms(sim, key)
+	if not strip.is_empty():
+		UI.fit(_row_none, strip)
+		_row_none.add_theme_color_override("font_color", Pal.WARN)
+	elif offer.size() == 1:
+		UI.fit(_row_none, [Words.U51["offer_one"], Words.U51["offer_one_short"]])
+	else:
+		UI.fit(_row_none, [Words.U51["offer_n"] % offer.size(), Words.U51["offer_n_short"] % offer.size()])
+	b0.disabled = false
+	b0.tooltip_text = ""
+	UI.fit_button(b0, [Words.WAGERS["button_on"] % on, Words.WAGERS["button_n"] % on] if on > 0 else [Words.WAGERS["button"]])
+	UI.style_button(b0, false, "warn" if on > 0 else "")
+
+
+func _open_wagers() -> void:
+	var key: String = sim.night_wager_key()
+	var sg: Dictionary = sim.night_next_sig()
+	if key == "" or sg.is_empty():
+		return
+	tuning = false
+	wagers.open(sim, key, sim.signal_place(sg))
+	wagers.move_to_front()
+

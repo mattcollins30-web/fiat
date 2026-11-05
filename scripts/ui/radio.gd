@@ -311,6 +311,7 @@ func _init() -> void:
 		_shown = ""
 		acted.emit())
 	_air.add_child(tuning_ov)
+	_u51_build_loot()                             # the Kit's loot rules by the signals' title (BUILD51-U, item 4)
 	# the tab bar over every view's band (28 Oct, RadioAir: "not small buttons lost in the painting")
 	_view_bar = UI.panel(self, Rect2(VIEWS_X - 6, VIEW_Y - 6, Pal.GRID_W - PAD - VIEWS_X + 12, VIEW_H + 12), UI.box(Color(Pal.BG, 0.86), 10, 1, Pal.CARD_LINE))
 	for k in range(VIEWS.size()):
@@ -1164,6 +1165,7 @@ func _show_signals(od: Array) -> void:
 	var n: int = sim.signals.size()
 	UI.fit(_signals_title, ["SIGNALS · %d OF %d HELD" % [n, sim.signals_cap()]])
 	UI.fit_button(rules_btn, [Words.NIGHT["rules_btn"]])     # BUILD50 N
+	_u51_show_loot(n)                             # BUILD51-U, item 4
 	if tuning_ov.visible:
 		tuning_ov.show_state(sim)
 	_card.visible = n > 0
@@ -1603,6 +1605,9 @@ func text_nodes() -> Array:
 	if tuning_ov.visible and _air.visible:           # the tuning rules over the air (BUILD50 N), as the wagers
 		var r2: Rect2 = tuning_ov.get_global_rect()
 		out = out.filter(func(n): return not r2.intersects(n.get_global_rect())) + tuning_ov.text_nodes()
+	if loot_ov != null and loot_ov.visible:            # the loot rules over the air (BUILD51-U, item 4), as the wagers
+		var r3: Rect2 = loot_ov.get_global_rect()
+		out = out.filter(func(n): return not r3.intersects(n.get_global_rect())) + loot_ov.text_nodes()
 	return out
 
 
@@ -1655,6 +1660,8 @@ func _text_nodes_base() -> Array:
 	out.append(_signals_title)
 	if rules_btn.visible:
 		out.append(rules_btn)                       # BUILD50 N
+	if loot_btn != null and loot_btn.visible:
+		out.append(loot_btn)                        # BUILD51-U, item 4
 	if _card.visible:
 		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin, _card_codes_head, _card_faces[0]["name"], _card_faces[1]["name"], _card_count])
 		out.append(night_btn)                       # BUILD50 N
@@ -1696,4 +1703,70 @@ func line_pairs() -> Array:
 	if view == "story":
 		return _story.line_pairs()
 	return [[_headline, _unit]]
+
+
+# ------------------------------------------------------------------ the loot rules on the Radio (BUILD51-U, item 4)
+
+## Matt: "theres no loot rules for radio signals". The Kit's rules already run on a signal's run (and a night's) as it
+## comes home - one list, the gate's (sim.apply_loot_rules); the Radio gets the button to them by the signals' title,
+## beside the tuning rules, and the same panel (rules_panel.gd) over the air.
+const RulesPanel := preload("res://scripts/ui/rules_panel.gd")
+const LOOT_BTN_GAP := 8
+var loot_btn: Button
+var loot_ov                                       # rules_panel.gd over the air while open
+
+
+func _u51_build_loot() -> void:
+	loot_btn = UI.button(_signals_box, Rect2(rules_btn.position.x - LOOT_BTN_GAP - 150, rules_btn.position.y, 150, rules_btn.size.y), false)
+	loot_btn.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+	loot_btn.pressed.connect(open_loot)
+	loot_ov = RulesPanel.new()
+	loot_ov.position = Vector2.ZERO
+	loot_ov.visible = false
+	loot_ov.orders_button.visible = false         # the standing orders are the Kit's (its panel's in the Kit's place)
+	loot_ov.closed.connect(close_loot)
+	loot_ov.changed.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(loot_ov)
+
+
+## The button by the title: its words the Kit's (how many rules are on), sized to them, left of the tuning rules; the
+## title fitted to the room left of it.
+func _u51_show_loot(n: int) -> void:
+	var on_n: int = sim.loot_rules.filter(func(r): return bool(r.get("on", true))).size() if sim.loot_rules_on else 0
+	var LR: Dictionary = Words.LOOT_RULES
+	var forms: Array = [LR["button"] % on_n, LR["button_short"] % on_n] if on_n > 0 else [LR["button_none"]]
+	var right: float = rules_btn.position.x + rules_btn.size.x
+	rules_btn.size.x = minf(ceilf(UI.text_width(rules_btn, rules_btn.text)) + 34.0, 170.0)     # the tuning rules to their words: room for the title
+	rules_btn.position.x = right - rules_btn.size.x
+	var w: float = 0.0
+	for f in forms:
+		w = maxf(w, UI.text_width(loot_btn, str(f)))
+	loot_btn.size.x = minf(ceilf(w) + 34.0, 190.0)     # fit_button's 32 of padding
+	loot_btn.position.x = rules_btn.position.x - LOOT_BTN_GAP - loot_btn.size.x
+	UI.fit_button(loot_btn, forms)
+	UI.style_button(loot_btn, false, "warn" if on_n > 0 else "")
+	_signals_title.size.x = loot_btn.position.x - LOOT_BTN_GAP - _signals_title.position.x
+	UI.fit(_signals_title, ["SIGNALS · %d OF %d HELD" % [n, sim.signals_cap()], "SIGNALS · %d OF %d" % [n, sim.signals_cap()], "SIGNALS %d/%d" % [n, sim.signals_cap()]])     # the shortest form (FIX51, the language pass)
+	if loot_ov.visible:
+		if view != "air" or not visible:
+			loot_ov.visible = false
+		else:
+			loot_ov.show_state(sim)
+
+
+func open_loot() -> void:
+	loot_ov.picked = 0 if not sim.loot_rules.is_empty() else -1
+	loot_ov.show_state(sim)
+	loot_ov.visible = true
+	loot_ov.move_to_front()
+	_shown = ""
+	acted.emit()
+
+
+func close_loot() -> void:
+	loot_ov.visible = false
+	_shown = ""
+	acted.emit()
 

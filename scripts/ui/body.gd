@@ -331,18 +331,18 @@ func _lay_card(b: Dictionary, _across: bool) -> void:
 static func figure_forms(it: Dictionary) -> Array:
 	var slot: String = it["slot"]
 	if slot in ["Primary", "Secondary"]:
-		var d: float = Items.dps(it)
+		var d: float = Items.dps_whole(it)     # the headline's whole (BUILD51-A)
 		var rounds: String = Items.ammo_words(it).trim_prefix("Takes ").to_lower()
 		return ["%.0f dmg/s · %s" % [d, rounds], "%.0f dmg/s" % d]
 	if slot in ["Helmet", "Armour"]:
-		return ["%.0f armour" % Items.armour(it)]
+		return ["%.0f armour" % Items.armour_whole(it)]     # its own "+N% armour" in (BUILD51-A)
 	if slot == "Gloves":
 		var gh: Array = Items.glove_headline(it)     # their role's figure (29 Oct)
 		return ["%s %s" % [gh[0], gh[1]], "%s %s" % [gh[0], Items.glove_unit_short(it)], str(gh[0])]     # the unit short before none (the fix round)
 	if slot == "Backpack":
 		return ["%d cells" % Items.capacity(it)]
 	if slot == "Rig":
-		var n: int = Items.capacity(it)
+		var n: int = Items.pouches(it)     # the whole pouch count (BUILD51-A)
 		return ["%d pouch%s" % [n, "" if n == 1 else "es"]]
 	return [Items.rarity_name(it)]
 

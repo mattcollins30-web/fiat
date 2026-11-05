@@ -12,6 +12,7 @@ extends Control
 signal picked(i: int)
 signal picked_order(key: String)
 signal picked_town(key: String)     # a town's place's pin (BUILD50-T): its card on the Radio's Town tab
+signal empty_clicked                # a click on the land, no pin under it (BUILD51-U, item 2): the side panel goes
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -20,6 +21,14 @@ const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const SkyLayer := preload("res://scripts/ui/sky.gd")
+const MapPan := preload("res://scripts/ui/map_pan.gd")
+## The land at twice today's size each way (BUILD51-U, item 2; Matt: "redraw the map at a larger resolution and make it
+## scrollable"): the drawing's space (W0 x H0) scaled to the land; the painting over PAINT_SIZE of it at today's scale (a
+## 512 x 424 picture drawn x4 nearest - the same pixel look, twice the room - or a bigger painting at its own); the pins,
+## the names and the key at today's size on it. Its frame (missions.gd) shows a part, panned by drag and wheel.
+const LAND := 2.0
+const BASE := Vector2(1018, 844)       # today's map on the screen: the land is BASE x LAND
+const PAINT_SIZE := Vector2(1024, 848) # the painting on today's map (512 x 424 drawn x2 from MAP_AT)
 
 const W0 := 1000.0                 # the drawing's own space, as the canvas drew it
 const H0 := 844.0
@@ -88,6 +97,7 @@ uniform sampler2D noise : repeat_enable, filter_linear;
 uniform vec2 warp_px = vec2(40.0, 34.0);
 uniform vec2 px_size = vec2(1018.0, 844.0);
 uniform float tile_px = 228.0;
+uniform float land_k = 1.0;             // the land over today's map (BUILD51-U): the cloud read in today's pixels, drawn bigger
 // a tile's edges needn't meet: near an edge, a copy shifted half a tile takes over (its own edge lies mid-tile, where
 // the first is whole) - a crossfade, across and then down, not a mirror (20 Oct, Matt: the mirror's V)
 float edge_w(float f) {
@@ -103,7 +113,7 @@ vec3 seamless(vec2 uv) {
 // line wanders a little either side; near it the cloud thins in patches into wisps over the open land. The drifts
 // four times what they were (1.4 px a second read as a still painting)
 void fragment() {
-	vec2 px = floor(UV * px_size / 2.0) * 2.0;                 // whole 2 px steps, the painting's pixels
+	vec2 px = floor(UV * px_size / (2.0 * land_k)) * 2.0;      // whole steps of the painting's pixels, in today's map's px
 	vec2 a = px / tile_px + vec2(TIME * 0.024, TIME * 0.01);
 	vec2 b = px / (tile_px * 1.37) + vec2(0.43, 0.29) - vec2(TIME * 0.016, -TIME * 0.006);
 	vec3 col = mix(seamless(a), seamless(b), 0.42);            // two drifts crossed: no repeat
@@ -125,7 +135,7 @@ func _init(rect: Rect2) -> void:
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
 	# the sky over the painting (23 Oct, parked item 8), the pins on a layer over it so they keep their colour
-	_sky = SkyLayer.new(size)
+	_sky = SkyLayer.new(Vector2(Pal.GRID_W, size.y / LAND))     # the weather over the view, not the land: it stays as the land pans (BUILD51-U)
 	add_child(_sky)
 	_pins = Control.new()
 	_pins.size = size
@@ -145,14 +155,18 @@ func _init(rect: Rect2) -> void:
 		mat.set_shader_parameter("px_size", size)
 		mat.set_shader_parameter("tile_px", tile.get_width() * 2.0)
 		mat.set_shader_parameter("noise", SkyLayer.noise())
-		mat.set_shader_parameter("warp_px", CLOUD_WARP)
+		mat.set_shader_parameter("warp_px", CLOUD_WARP * land_k())
+		mat.set_shader_parameter("land_k", land_k())
 		_clouds.material = mat
 		add_child(_clouds)
+	_key_layer = Control.new()             # the key on the view's corner, over the cloud: it stays as the land pans (BUILD51-U)
+	_key_layer.size = BASE
+	_key_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_key_bg = Control.new()
-	_key_bg.size = size
+	_key_bg.size = BASE
 	_key_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_key_bg.draw.connect(_draw_key)
-	add_child(_key_bg)
+	_key_layer.add_child(_key_bg)
 	for z in range(Data.ZONES.size()):
 		var at: Vector2 = _px(ZONE_SHAPES[z]["name_at"])
 		var room: float = minf(320.0, size.x - at.x - 8.0)
@@ -176,22 +190,22 @@ func _init(rect: Rect2) -> void:
 	var widths: Array = []
 	var total := KEY_PAD
 	for e in items:
-		var l := UI.label(self, Rect2(0, 0, 10, KEY_H), str(e[0]), "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2 if e[2] else Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var l := UI.label(_key_layer, Rect2(0, 0, 10, KEY_H), str(e[0]), "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2 if e[2] else Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var w: float = ceilf(UI.text_width(l, l.text)) + 2.0
 		l.size.x = w
 		widths.append(w)
 		_legend.append([l, e[1], e[2]])
 		total += KEY_DOT + 6.0 + w + KEY_GAP
 	total += KEY_PAD - KEY_GAP
-	_key_rect = Rect2(size.x - total - 12.0, size.y - KEY_H - 12.0, total, KEY_H)
-	var kx: float = _key_rect.position.x + KEY_PAD
-	for k in range(_legend.size()):
-		var l: Label = _legend[k][0]
-		l.position = Vector2(kx + KEY_DOT + 6.0, _key_rect.position.y)
-		kx += KEY_DOT + 6.0 + float(widths[k]) + KEY_GAP
+	_key_w = total
+	_key_widths = widths
+	add_child(_key_layer)
 	for c in get_children():
 		if c is CanvasItem:
 			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	pan = MapPan.new(self, BASE)
+	pan.moved = _panned
+	_lay_key()
 
 
 ## A picture of the map's, if made: imported, or dropped in and not yet imported; null when there's none.
@@ -218,7 +232,7 @@ func _cut_clouds() -> void:
 	if key == _clouds_open:
 		return
 	_clouds_open = key
-	(_clouds.material as ShaderMaterial).set_shader_parameter("mask", ImageTexture.create_from_image(soft_mask(cloud_mask(key, size))))
+	(_clouds.material as ShaderMaterial).set_shader_parameter("mask", ImageTexture.create_from_image(soft_mask(cloud_mask(key, size / land_k()))))     # cut at today's map's size: read by UV, the same cloud (BUILD51-U)
 
 
 ## The mask softened for the cloud's edge (23 Oct): the open land grown SOFT_GROW cells into the shut first, so the ramp
@@ -416,7 +430,7 @@ func show_state(s, sel: int, okey: String) -> void:
 func _draw() -> void:
 	var pic := painting()
 	if pic != null:
-		draw_texture_rect(pic, Rect2(MAP_AT, pic.get_size() * 2.0), false)
+		draw_texture_rect(pic, painting_rect(), false)
 	else:
 		_draw_flat()
 	# the picked site's zone, lit: its shape washed warm (its yellow outline gone, 23 Oct, Matt: "the yellow boundaries
@@ -564,10 +578,23 @@ func _gui_input(ev: InputEvent) -> void:
 			var to: int = step_site(int(dir[1]))
 			if to >= 0:
 				picked.emit(to)
+				reveal(pin_at(to))
 				accept_event()
 			return
-	if not (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT):
+	# the pan (BUILD51-U, item 2): a drag or the wheel moves the land; a click with no pin under it, let go where it was
+	# pressed, puts the side panel away
+	var act: String = pan.input(ev)
+	if act == "pan":
+		accept_event()
 		return
+	if act == "click":
+		if not _press_hit:
+			empty_clicked.emit()
+		accept_event()
+		return
+	if act != "press":
+		return
+	_press_hit = false
 	var at: Vector2 = ev.position
 	var best := HIT_R
 	var hit_i := -1
@@ -594,6 +621,7 @@ func _gui_input(ev: InputEvent) -> void:
 				hit_k = p["key"]
 				hit_i = -1
 				hit_t = ""
+	_press_hit = hit_t != "" or hit_k != "" or hit_i >= 0
 	if hit_t != "" and hit_k == "":
 		picked_town.emit(hit_t)
 		accept_event()
@@ -603,6 +631,8 @@ func _gui_input(ev: InputEvent) -> void:
 	elif hit_i >= 0:
 		picked.emit(hit_i)
 		accept_event()
+	else:
+		accept_event()                         # the land's: a drag may follow
 
 
 ## The next site along (1) or back (-1) from the picked one among the open zones' sites, round the end; -1 for none.
@@ -623,7 +653,15 @@ func order_pin_at(key: String) -> Vector2:
 	return _px(ORDER_AT[key])
 
 
+## The names on the screen: those whose words sit wholly in the view (BUILD51-U: the land's others are panned off it, or
+## cut by its edge); land_nodes() for every one on the land.
 func text_nodes() -> Array:
+	var vr := Rect2(pan.offset(), pan.view)
+	var kr := Rect2(_key_rect.position + pan.offset(), _key_rect.size)     # the key over the land: a name under it is under it
+	return land_nodes().filter(func(l): return l.text == "" or (vr.encloses(word_rect(l)) and not kr.intersects(word_rect(l))))
+
+
+func land_nodes() -> Array:
 	var out: Array = []
 	for pair in _zone_names:
 		out.append_array(pair)
@@ -636,9 +674,19 @@ func text_nodes() -> Array:
 	for k in _town_labels:
 		if _town_labels[k].visible:
 			out.append(_town_labels[k])
-	for e in _legend:
-		out.append(e[0])
 	return out
+
+
+## A name's words on the land, at its alignment.
+static func word_rect(l: Label) -> Rect2:
+	var w: float = UI.text_width(l, l.text)
+	var x: float = l.position.x + ((l.size.x - w) / 2.0 if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER else (l.size.x - w if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0))
+	return Rect2(x, l.position.y, w, l.size.y)
+
+
+## The key's words (BUILD51-U): on the view, not the land - the screen's fit checks read them with the Map's.
+func key_nodes() -> Array:
+	return _legend.map(func(e): return e[0])
 
 
 # ------------------------------------------------------------------ the town on the Map (BUILD50-T, act two §1)
@@ -727,3 +775,76 @@ func _get_tooltip(at: Vector2) -> String:
 ## Where a town's place's pin is, on the control (for the tests).
 func town_pin_at(key: String) -> Vector2:
 	return _px(TOWN_AT[key])
+
+
+# ------------------------------------------------------------------ the land and its pan (BUILD51-U, item 2)
+
+var pan                                 # map_pan.gd: the land in its frame
+var _key_layer: Control                 # the key, kept on the view's bottom right
+var _key_w := 0.0
+var _key_widths: Array = []
+var _press_hit := false                 # the last press picked a pin (its let-go isn't the empty land's)
+
+
+## The land over today's map.
+func land_k() -> float:
+	return size.x / BASE.x
+
+
+## The painting's place on the land.
+func painting_rect() -> Rect2:
+	var k: float = land_k()
+	return Rect2(MAP_AT * k, PAINT_SIZE * k)
+
+
+## The frame's size (the side panel on: the map's two columns; off: the whole width): the view clamped, the key and the
+## weather to its corner.
+func set_view(v: Vector2) -> void:
+	pan.set_view(v)
+	_lay_key()
+
+
+## After a pan: what stays on the view goes with it.
+func _panned() -> void:
+	var off: Vector2 = pan.offset()
+	_key_layer.position = off
+	_sky.position = off
+
+
+func _lay_key() -> void:
+	var v: Vector2 = pan.view
+	_key_layer.size = v
+	_key_bg.size = v
+	_key_rect = Rect2(v.x - _key_w - 12.0, v.y - KEY_H - 12.0, _key_w, KEY_H)
+	var kx: float = _key_rect.position.x + KEY_PAD
+	for k in range(_legend.size()):
+		var l: Label = _legend[k][0]
+		l.position = Vector2(kx + KEY_DOT + 6.0, _key_rect.position.y)
+		kx += KEY_DOT + 6.0 + float(_key_widths[k]) + KEY_GAP
+	_key_bg.queue_redraw()
+	_panned()
+
+
+## The view centred on a land point (the Map opening on its step).
+func centre_on(p: Vector2) -> void:
+	pan.centre_on(p)
+
+
+## A pin brought into the view if it's off it (a pad's step), else the view left where it is.
+func reveal(p: Vector2) -> void:
+	if not pan.shows(p, 60.0):
+		pan.centre_on(p)
+
+
+## Where the Map opens: the picked place when the player's picked one (`sel` a site, `okey` an order's place), else the
+## town's next step's pin while the rebuild's open, else the site the card shows.
+func open_at(s, sel: int, okey: String, by_hand: bool) -> Vector2:
+	if by_hand and okey != "":
+		return order_pin_at(okey)
+	if by_hand and sel >= 0:
+		return pin_at(sel)
+	var nk: String = str(s.town_next_key()) if s.rebuild_open() else ""
+	if TOWN_AT.has(nk):
+		return town_pin_at(nk)
+	return pin_at(maxi(0, sel))
+

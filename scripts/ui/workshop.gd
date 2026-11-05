@@ -564,9 +564,9 @@ func show_state(s) -> void:
 		else:
 			_worn_name(g["name"], gun, Pal.TEXT)     # the piece's own name (BUILD48 item 27, Matt: "butchers steel displays as machete")
 			if Items.is_melee(gun):
-				UI.fit(g["figure"], ["%.0f dmg/s" % Items.dps(gun)])     # a blade says nothing of rounds (BUILD48 item 27)
+				UI.fit(g["figure"], ["%.0f dmg/s" % Items.dps_whole(gun)])     # a blade says nothing of rounds (BUILD48 item 27); the whole figure as the try-on reads it (merge 51)
 			else:
-				UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps(gun)])
+				UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps_whole(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps_whole(gun)])
 		# the chips: the type, the rarity in its tone, what's fitted
 		g["chips"].visible = view == "guns" and gun != null
 		if gun != null:

@@ -2168,6 +2168,7 @@ func _pack(sim) -> void:
 	sim.pack_rig("fill", -1, false)           # the gate's own packing (BUILD48 A, item 24: no magazines past each gun's first)
 	sim._fill_mags()                          # the newly packed magazines filled, as the gate does (30 Oct)
 	sim.gate_box_always = true                # and its box for the refills at the gate, as "fill" packs it (the fix round, the designer's A)
+	sim.f51_bot_press = true                  # the bot's own "Press on" at 90% (FIX51: the player's back at 80)
 
 
 func _restock_meds(sim) -> void:

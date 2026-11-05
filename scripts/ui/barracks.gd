@@ -434,7 +434,7 @@ const PANEL_WORDS := {
 	"search_pct": "Searching goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
 	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
 	"rest_pct": "Resting on the Pitch heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
-	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run brings home more money.", "rarity": "Rarer things turn up.",
+	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run brings home more money.", "rarity": "Finds roll at a higher loot quality.",
 	"pace_pct": "The fight and the search go quicker.", "damage_low_pct": "Under half HP, every shot hits harder.",
 	"conv_fire_pct": "A share of every hit lands as fire and keeps burning.", "conv_frost_pct": "A share of every hit lands as frost and slows them.", "conv_poison_pct": "A share of every hit lands as poison and keeps working.",
 	"conv_shock_pct": "A share of every hit lands as shock, and they take more damage.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",

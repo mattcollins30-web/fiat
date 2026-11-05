@@ -828,6 +828,8 @@ func _more_raw(ty: String) -> float:
 		m *= Data.FX["rule/tester"]
 	if has_rule("sergeants_whistle"):
 		m *= Data.FX["rule/sergeants_whistle.damage"]
+	if has_rule("qm_manual"):
+		m *= 1.0 + Data.FX["rule/qm_manual"] * a51_elements_held()     # the Quartermaster's Manual (BUILD51-A): its rule back
 	if (ty == "fire" or ty == "shock") and yard_has("arc_lamps"):
 		m *= Data.FX["yard/arc_lamps"]                                  # the Generator's Arc lamps
 	if (ty == "poison" or ty == "bleed") and yard_has("ratter"):
@@ -1083,7 +1085,9 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs) * maxf(grow, 1.0)
 	if ty == "bleed" and theirs and combo_on("opened_for_good"):
 		cap = Data.COMBO_CEILING                 # Opened for good: no top a gang could find (a float's, kept off INF for the save)
-	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * grow)     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
+	var old: float = float(dots.get(ty, 0.0))
+	dots[ty] = maxf(old, minf(cap, old + landed * float(d["ratio"]) * grow))     # the trees' too, on them only (16 Oct: Fumes was read nowhere); never lowers a pool: a carry over the cap stands (FIX51, the review's 1)
+	_f51_cap_seen(dots, ty, cap)               # the site's cap kept for the carry's top (FIX51)
 
 
 ## A dot's growth: the kit's dot_pct and the trees', on them only - a burn on you is their fire's, and your gear's
@@ -4154,7 +4158,8 @@ func mag_share(slot: String) -> float:
 		fire_s += float(Items.mag_cap(mg, gun)) / rate
 		re_s += reload_s(gun) * Items.mag_reload_x(mg)
 	if mags.size() >= 2 and hot_swap():
-		re_s = 0.0                                # the rig's swap (BUILD46-R): no pause while a second one's loaded - the odds and the sheet read it
+		# the rig's swap (BUILD46-R), its lift capped (BUILD51-A, the 2 Nov reviews): never past the no-swap share +A51_SWAP_LIFT
+		return minf(1.0, fire_s / maxf(0.0001, fire_s + re_s) + A51_SWAP_LIFT)
 	return fire_s / maxf(0.0001, fire_s + re_s)
 
 
@@ -4575,6 +4580,7 @@ func _mags_tick(m: Dictionary, dt: float) -> void:
 	if not m.has("bg_refill"):
 		m["bg_refill"] = {}                       # the rig's swap's refills (BUILD46-R): {magazine id: seconds left}
 	var dtp: float = dt * reload_pace(m)          # reloads and refills at the runner's pace, as the fire is (the fix round)
+	a51_mags_seen(m)                              # BUILD51-A: which guns have had a magazine in the rig this run
 	_refills_tick(m, dtp)
 	_bg_refills_tick(m, dtp)
 	for slot in ["Primary", "Secondary"]:
@@ -4625,10 +4631,10 @@ func _refill_start(m: Dictionary, slot: String) -> void:
 	if _pack_box(m, ty).is_empty():
 		return
 	var mags: Array = mags_for(gun)
-	if mags.is_empty():
+	if mags.is_empty() and not a51_mag_had(m, gun):     # only a gun that's had none in the rig this run (BUILD51-A)
 		# none in the rig (the three-stage review, game 1): one that fits from the pack, room made for it as a gun fitted does
 		for f in m["found"].duplicate():
-			if Items.is_mag(f) and Items.mag_fits(f, gun) and _rig_room_for(m, f, gun):
+			if Items.is_mag(f) and Items.mag_fits(f, gun) and not a51_hand_out(m, f) and _rig_room_for(m, f, gun):
 				m["found"].erase(f)
 				pack_off(f)
 				f.erase("first_gun")
@@ -4882,11 +4888,17 @@ func _fire_rounds(m: Dictionary, slot: String, shots: float) -> void:
 				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
 			return
 		if hot_swap():
-			# the rig's swap (BUILD46-R): the next one's in with no reload, the spent one refills from the pack as it fires
+			# the rig's swap (BUILD46-R): the next one's in, the spent one refills from the pack as it fires; a short pause, the
+			# lift capped at A51_SWAP_LIFT over the gun's no-swap share (BUILD51-A)
 			_bg_refill_start(m, cur, gun)
 			m["swaps"] = int(m.get("swaps", 0)) + 1
-			_mag_load(m, slot, nxt)
-			continue
+			var pause: float = a51_swap_pause(slot, nxt)
+			if pause <= 0.0:
+				_mag_load(m, slot, nxt)
+				continue
+			m["reload_t"][slot] = pause
+			m["reload_to"][slot] = int(nxt["id"])
+			return
 		m["reloads"] = int(m.get("reloads", 0)) + 1
 		var secs: float = reload_s(gun) * Items.mag_reload_x(nxt)
 		if secs <= 0.0:
@@ -4903,6 +4915,7 @@ func _mags_topped(m: Dictionary) -> void:
 	if not m.has("mag_in"):
 		return
 	m.erase("refill_said")                    # the next gang's refills say so once again
+	a51_quiet_pull(m)                         # BUILD51-A: a gun fitted mid-fight takes its magazine from the pack in the quiet
 	_refills_tick(m, 0.0, true)
 	if m.has("bg_refill"):
 		_bg_refills_tick(m, 0.0, true)       # the rig's swap's too (BUILD46-R)
@@ -9438,7 +9451,7 @@ func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 		_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above); never at a night's break, where the runner stands as they are (fix 50)
 	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") or has_node("snare_and_wait") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	var m := {
-		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": _gate_boxes(true, null, i) if gate_box_on(i) else [], "insured": false, "clock": clock_budget(t),
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": a51_dry_found(i), "insured": false, "clock": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
@@ -9689,6 +9702,10 @@ func advance(seconds: float) -> void:
 				left = 0.0                        # a night's break: the world waits on the player, no rest (BUILD50 N)
 			continue
 		if mission != null:
+			if _c51_dogs_held(mission):
+				if not _c51_dogs_step():
+					left = 0.0                    # (BUILD51-C) a repeat's run waits on its dogs' read, a few ms a frame
+				continue                          # answered: looked at again (the order may have taken the runner out)
 			var step := minf(1.0, left)
 			var p0 := Time.get_ticks_usec()
 			if fast_memo:
@@ -11162,8 +11179,8 @@ func event_paused(m) -> bool:
 func event_lull(m: Dictionary) -> bool:
 	if m.get("dry", false) or m.get("way_out", false) or int(m["remaining"]) > 0 or not m["cleared"] or m.get("ghost_pending", false):
 		return false
-	if int(m.get("searches", 0)) < 1:
-		return false
+	if int(m.get("searches", 0)) < 1 and not a51_nothing_to_search(m):
+		return false                         # after a first search, or none to make: a picked-over site's lull opens too (BUILD51-A)
 	return not (m.has("boss") and bool(m["boss"]["alive"]))
 
 
@@ -11202,6 +11219,8 @@ func _event_arrive(m: Dictionary) -> void:
 				_crew_arrive(m, ev)
 			if asks and not m.get("unwatched", false):
 				_dogs_job = {"ev": ev, "job": _dogs_begin(m, int(ev["n"]), threat_as(ev, m))}     # a watched run: taken now, read a few ms a frame (BUILD43)
+			elif asks:
+				_c51_dogs_begin(m, ev)             # (BUILD51-C) a repeat's run in the game: stepped too, the run held till it's read
 			else:
 				ev["odds"] = _dogs_read(m, int(ev["n"]), threat_as(ev, m))     # read once as they come: the face, and the standing order's
 			lines = Words.EV["dogs"][z] if str(ev["who"]) == "dogs" else Words.EV["crew_back" if bool(ev.get("back", false)) else "crew"][z]
@@ -11222,7 +11241,7 @@ func _event_arrive(m: Dictionary) -> void:
 	ev["line"] = event_fill(str(pick["t"]) if pick is Dictionary else str(pick), ev)
 	m["ev"] = ev
 	log_event(ev["line"])
-	if not asks or m.get("unwatched", false):
+	if (not asks or m.get("unwatched", false)) and not _c51_dogs_held(m):     # (BUILD51-C) the dogs' order once they're read
 		_event_by_orders(m)
 
 
@@ -11594,7 +11613,7 @@ func dogs_reading() -> bool:
 ## The shell's frame: the dogs' read on for `ms`, from where it stopped. Done, the odds go on the event as the old
 ## read put them there.
 func dogs_read_step(ms: float) -> void:
-	if _dogs_job.is_empty():
+	if _dogs_job.is_empty() or _dogs_job.get("unwatched", false):     # (BUILD51-C) a repeat's run's read is advance()'s
 		return
 	var ev: Dictionary = event_now()
 	if not is_same(_dogs_job["ev"], ev) or ev.has("odds") or mission == null or not dogs_waiting(mission):
@@ -12060,7 +12079,7 @@ func _options_more(ev: Dictionary) -> Array:
 				out.append({"key": "check", "text": Words.EV["check"], "ok": true, "s": Data.STASH_CHECK_S, "face": [Words.EV["check_face"] % [int(Data.STASH_CHECK_S), Data.STASH_FINDS]]})
 		"body":
 			out.append({"key": "search", "text": Words.EV["search"], "ok": true, "s": Data.BODY_S, "face": [Words.EV["search_face"] % [int(Data.BODY_S), roundi(Data.BODY_CLUE * 100.0)]]})
-			out.append({"key": "pockets", "text": Words.EV["pockets"], "ok": true, "s": Data.BODY_POCKETS_S, "face": [Words.EV["pockets_face"] % [int(Data.BODY_POCKETS_S), _cash_words(body_tins())]]})
+			out.append({"key": "pockets", "text": Words.EV["pockets"], "ok": true, "s": Data.BODY_POCKETS_S, "face": [Words.EV["pockets_face"] % [int(Data.BODY_POCKETS_S), _cash_words(body_tins()), roundi(Data.F51_POCKETS_FIND * 100.0)]]})     # (FIX51) the find's chance
 		"wreck":
 			out.append({"key": "strip", "text": Words.EV["strip"], "ok": true, "s": Data.WRECK_S, "face": [Words.EV["strip_face"] % [int(Data.WRECK_S), Data.WRECK_SCRAP[0], Data.WRECK_SCRAP[1]]]})
 			var can: bool = pack_scrap(mission) >= Data.WRECK_CUT_SCRAP
@@ -12129,6 +12148,8 @@ func _pick_more(m: Dictionary, t: Dictionary, ev: Dictionary, key: String) -> vo
 			_event_spend(m, Data.BODY_POCKETS_S)
 			m["cash"] = float(m["cash"]) + n
 			log_event(Words.EV["pocketed"] % _cash_words(n))
+			if rng.randf() < Data.F51_POCKETS_FIND:
+				_find(m, t)                       # and what was on him: a find, as a search's (BUILD51-A), a chance of one (FIX51: Search not the trap)
 		"strip":
 			_event_spend(m, Data.WRECK_S)
 			var n: int = rng.randi_range(Data.WRECK_SCRAP[0], Data.WRECK_SCRAP[1])
@@ -12253,7 +12274,7 @@ func _orders_more(m: Dictionary, ev: Dictionary, o: String) -> void:
 		"careful", "go", "take", "check", "search", "pockets", "strip", "cut", "listen", "short", "press", "home":
 			pick = o
 		"press_80":
-			pick = "press" if run_odds(m) >= Data.WEATHER_PRESS_AT else "leave"
+			pick = "press" if run_odds(m) >= f51_press_at() else "leave"     # the player's at WEATHER_PRESS_AT, the bot's its own (FIX51)
 	if str(ev["fam"]) == "stash" and bool(ev.get("tip", false)) and pick != "leave":
 		pick = "take"                              # a tip's stash has no catch to check
 	if pick == "careful" and not ok.call("careful"):
@@ -12724,17 +12745,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		if has_node("cap_flattened") and float(type_dps().get("physical", 0.0)) > 0.0:
 			m["flat_t"] = Data.FX["node/cap_flattened"]                        # Flattened: the plain put them down; the next of them fire at half for two seconds
 		m.erase("full_dose")
-		var carried := {}
-		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
-			carried["poison"] = m["dots"]["poison"]  # the Rat Man's Bag, or Lingers: poison carries to the next
-		if (has_rule("butchers_steel") or has_rule("butchers_apron") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
-			carried["bleed"] = m["dots"]["bleed"]
-			if exploit_on("bad_blood") and hp < max_hp() * 0.5:
-				carried["bleed"] = minf(Data.COMBO_CEILING, float(carried["bleed"]) * float(Data.EXPLOITS["bad_blood"]["grow"]))     # the tick's own under-half-HP share taken again
-		if (has_node("cap_spread") or has_node("backdraught")) and m.get("dots", {}).has("fire"):
-			carried["fire"] = m["dots"]["fire"]      # Spread, or Backdraught: the burn carries
-		if has_node("catching") and m.get("dots", {}).has("poison"):
-			carried["poison"] = m["dots"]["poison"]  # Catching: a poisoned one that dies doses the next
+		var carried := a51_carried(m.get("dots", {}), m)     # (FIX51: m, for the carry's top) the carries (BUILD51-A): a notable half the dose, a capstone or a unique the whole and +25% a carry
+		if carried.has("bleed") and exploit_on("bad_blood") and hp < max_hp() * 0.5:
+			carried["bleed"] = minf(Data.COMBO_CEILING, float(carried["bleed"]) * float(Data.EXPLOITS["bad_blood"]["grow"]))     # the tick's own under-half-HP share taken again
 		m["dots"] = carried                  # the next of them is a new target
 		m["chill_t"] = 0.0
 		m["shock_t"] = 0.0
@@ -14803,6 +14816,11 @@ func front_tier() -> int:
 	var key: int = hash([depth, best_depth, campaign_done(), bosses_beaten, words, standing, atlas])     # what opens a site and what it fights with (the review)
 	if key == _front_key:
 		return _front
+	var kept: int = _c51_front_seen(key)     # (BUILD51-C) a state seen lately: a parked read's signal laid on and off
+	if kept >= 0:                            # each frame made live_guard work this out twice a frame (~2 ms a frame late)
+		_front_key = key
+		_front = kept
+		return _front
 	var bf := -1.0
 	_front = 0
 	for i in range(Data.TIERS.size()):
@@ -14813,6 +14831,7 @@ func front_tier() -> int:
 				bf = f
 				_front = i
 	_front_key = key
+	_c51_front_keep(key, _front)             # (BUILD51-C)
 	return _front
 
 
@@ -16334,7 +16353,7 @@ func _mag_from_pack(m: Dictionary, gun: Dictionary) -> void:
 	if Items.mag_size(gun) <= 0 or not mags_for(gun).is_empty():
 		return
 	for f in m["found"].duplicate():
-		if Items.mag_fits(f, gun) and _rig_room_for(m, f, gun):
+		if Items.mag_fits(f, gun) and not a51_hand_out(m, f) and _rig_room_for(m, f, gun):     # never one the player took out (BUILD51-A)
 			m["found"].erase(f)
 			pack_off(f)
 			f.erase("first_gun")
@@ -16350,6 +16369,8 @@ func _rig_room_for(m: Dictionary, mag: Dictionary, gun: Dictionary) -> bool:
 	var need: int = Items.size(mag)
 	if rig_room(need):
 		return true
+	if int(m.get("remaining", 0)) > 0 and not _a51_quiet:
+		return false                          # no heal out while the site has men left (remaining: the whole pool, the quiet between gangs too), unless it's the quiet's own pull (a51_quiet_pull: a gun fitted in the quiet gets its magazine as the next gang comes) (BUILD51-A; FIX51 the words)
 	var heals: Array = []
 	var freed := 0
 	for k in range(rig.size() - 1, -1, -1):
@@ -16406,6 +16427,7 @@ func rig_to_pack(id: int) -> bool:
 			var it: Dictionary = rig[k]
 			rig.remove_at(k)
 			it["from_rig"] = true              # the runner's own: home to the rig, not counted as loot
+			a51_mark_hand_out(mission, it, true)     # out by hand: it stays out till the player puts it back (BUILD51-A)
 			_pack_put(mission, it, pack_spot(mission, it))
 			log_event(Words.LOG["into_pack"] % it["base"])
 			return true
@@ -16426,7 +16448,10 @@ func _pack_swap_spot(m: Dictionary, it: Dictionary, was: Dictionary) -> Array:
 func take_from_pack(id: int) -> bool:
 	if mission == null:
 		return false
-	return _take_from(mission["found"], id)
+	var ok: bool = _take_from(mission["found"], id)
+	if ok:
+		a51_mark_hand_out(mission, {"id": id}, false)     # put back by hand (BUILD51-A)
+	return ok
 
 
 ## Whether a drop tops up something in the rig with no pouch free: nothing does now (30 Oct: rounds never go in the
@@ -20456,6 +20481,7 @@ func night_odds() -> Array:
 	if sg.is_empty() or not _sig.is_empty():
 		return [0.0, false]
 	var held_m = mission
+	_a51_night_pack = Array(held_m.get("found", [])) if held_m is Dictionary else []     # BUILD51-A: the night's own pack, not a gate's
 	mission = null                             # read as a set-off would be: no run out
 	_sig_on(sg)
 	var i: int = int(sg["site"])
@@ -20464,7 +20490,9 @@ func night_odds() -> Array:
 		_surv_cache[i] = _sig_odds[int(sg["id"])]
 	else:
 		_surv_cache.erase(i)
+	_f51_night_read = true                     # (FIX51) the dry runs begun in this read take the night's pack
 	var o: float = survival(i)
+	_f51_night_read = false                    # (FIX51)
 	var done: bool = odds_settled(i)
 	_sig_odds[int(sg["id"])] = _surv_cache[i]
 	if home != null:
@@ -20631,3 +20659,236 @@ func night_carried() -> Dictionary:
 			if int(it.get("rounds", 0)) >= Items.mag_cap(it):
 				mags += 1
 	return {"meds": meds, "mags": mags, "rounds": rounds, "meds_used": int(mission.get("meds_used", 0)) if mission != null else 0}
+
+
+# ------------------------------------------------------------------ BUILD51-A (5 Nov): sim rules, the try-on, the web
+
+## A magazine moved to the pack mid-fight comes back (the 0.13.0 playtest's item 3, Matt: "i nearly died because i
+## couldnt move my secondary mag to take a med"): one the player takes out of the rig on a run stays out till the player
+## puts it back - a hand-moved mark on the run (by id); the pull from the pack only for a gun that's had no magazine in
+## the rig this run (the three-stage review's game 1, the fresh camp's first gun); never a heal out while a gang's on you.
+func a51_mark_hand_out(m, it: Dictionary, on: bool) -> void:
+	if not (m is Dictionary):
+		return
+	if not m.has("hand_out"):
+		m["hand_out"] = {}
+	var k: String = str(int(it.get("id", -1)))
+	if on and Items.is_mag(it):
+		m["hand_out"][k] = true
+	else:
+		m["hand_out"].erase(k)
+
+
+func a51_hand_out(m: Dictionary, it: Dictionary) -> bool:
+	return Dictionary(m.get("hand_out", {})).has(str(int(it.get("id", -1))))
+
+
+## Each worn gun that has a magazine of its in the rig, marked for the run (by the gun's id).
+func a51_mags_seen(m: Dictionary) -> void:
+	if not m.has("mag_had"):
+		m["mag_had"] = {}
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g != null and Items.mag_size(g) > 0 and not m["mag_had"].has(str(int(g["id"]))) and not mags_for(g).is_empty():
+			m["mag_had"][str(int(g["id"]))] = true
+
+
+func a51_mag_had(m: Dictionary, gun: Dictionary) -> bool:
+	return Dictionary(m.get("mag_had", {})).has(str(int(gun.get("id", -1))))
+
+
+## In the quiet between gangs (_mags_topped): a worn gun that's had no magazine in the rig this run takes one that fits
+## from the pack, room made as a gun fitted does - the room a gang on you never makes (a gun fitted mid-fight, the rig full).
+var _a51_quiet := false                 # the quiet's own pull: the next gang not yet on you
+func a51_quiet_pull(m: Dictionary) -> void:
+	_a51_quiet = true
+	for slot in ["Primary", "Secondary"]:
+		var g = equipped[slot]
+		if g != null and Items.mag_size(g) > 0 and mags_for(g).is_empty() and not a51_mag_had(m, g):
+			_mag_from_pack(m, g)
+	_a51_quiet = false
+
+
+## The carries (the 0.13.0 playtest's item 6, Matt: "Catching and lingers do the same thing no?"): what a dying man's
+## burn, poison or bleed leaves the next. A notable (Catching, Backdraught) carries half the dose; a capstone (Lingers,
+## Wildfire, Bleed out) or a unique that carries (the Rat Man's Bag, the Butcher's Steel and Apron) the whole and
+## A51_CARRY_GROW more each carry, to the combo ceiling; holding both, the capstone's.
+const A51_CARRY_HALF := 0.5
+const A51_CARRY_GROW := 0.25
+func a51_carry_rate(ty: String) -> float:
+	var whole := false
+	var half := false
+	match ty:
+		"poison":
+			whole = has_rule("rat_mans_bag") or has_node("cap_lingers")
+			half = has_node("catching")
+		"fire":
+			whole = has_node("cap_spread")
+			half = has_node("backdraught")
+		"bleed":
+			whole = has_rule("butchers_steel") or has_rule("butchers_apron") or has_node("cap_bleed_out")
+	if whole:
+		return 1.0 + A51_CARRY_GROW
+	return A51_CARRY_HALF if half else 0.0
+
+
+func a51_carried(dots: Dictionary, m = null) -> Dictionary:
+	var out := {}
+	for ty in ["poison", "fire", "bleed"]:
+		var r: float = a51_carry_rate(ty)
+		if r > 0.0 and dots.has(ty):
+			out[ty] = minf(Data.COMBO_CEILING, float(dots[ty]) * r)
+			if r > 1.0 and m is Dictionary:
+				out[ty] = f51_carry_top(m, ty, float(dots[ty]), float(out[ty]))     # the growth's top (FIX51)
+	return out
+
+
+## Act two (f) (the break's dry run): a night's next link sets off with the pack as it stands - no gate, no top-up - so its
+## odds read the boxes of rounds the night's pack holds, never the gate's (night_next carries "found" over as it is).
+var _a51_night_pack: Array = []
+func a51_dry_found(i: int) -> Array:
+	if _f51_night_read:                        # (FIX51, the review's 9) inside night_odds' read, not night_on() and a cached pack
+		return _a51_night_pack.filter(func(f): return Items.is_ammo(f)).map(func(f): return Dictionary(f).duplicate(true))
+	return _gate_boxes(true, null, i) if gate_box_on(i) else []
+
+
+## Nothing left to search on a run's site: every crate open, or none at all (the parked bug of 3 Nov: at a picked-over
+## site the lull waited for a first search that never came, and the rolled event was silently lost).
+func a51_nothing_to_search(m: Dictionary) -> bool:
+	if m.get("crates_off", false):
+		return false                          # the balance read's no-crates run: no lull rule of its own
+	return crate_now(m).is_empty()
+
+
+## The Quartermaster's Manual's count (its rule since the web's version two dropped the two-elements cap it lifted): the
+## elements (fire, frost, poison, shock, bleed) the runner holds a perk in.
+func a51_elements_held() -> int:
+	return build_elements().filter(func(e): return str(e) in Data.ELEMENTS).size()
+
+
+## The rig's swap capped (the 2 Nov reviews, for the balance pass: the swap lifted a gun's fire share to 1.0, +13-30%): a
+## gun's share of the time firing never passes its no-swap share by more than this.
+const A51_SWAP_LIFT := Data.F51_SWAP_LIFT     # (FIX51: the figure in Data, the affix's words read it)
+## The swap's pause before magazine `mg` fires, in reload seconds (the reload's own clock): the gun fires its magazine in f,
+## would reload in r; firing f of every f + pause holds it at its no-swap share f / (f + r) plus A51_SWAP_LIFT.
+func a51_swap_pause(slot: String, mg: Dictionary) -> float:
+	var gun = equipped[slot]
+	if gun == null:
+		return 0.0
+	var rate: float = maxf(0.01, float(Items.base_of(gun)["rof"]))
+	if slot == "Secondary" and equipped["Primary"] != null and has_rounds(equipped["Primary"]):
+		var px: float = mag_share("Primary")
+		rate *= secondary_share(true) * px + (1.0 - px) * reload_share()     # as mag_share reads the secondary's fire
+	var f: float = float(Items.mag_cap(mg, gun)) / maxf(0.0001, rate)
+	var r: float = reload_s(gun) * Items.mag_reload_x(mg)
+	if r <= 0.0 or f <= 0.0:
+		return 0.0
+	var s1: float = minf(1.0, f / (f + r) + A51_SWAP_LIFT)
+	return f * (1.0 - s1) / maxf(s1, 0.0001)
+# ------------------------------------------------------------------ BUILD51-C (5 Nov): the speed
+
+## front_tier's last few answers by their key (BUILD51-C): a signal's dry run parked across frames lays the signal on its
+## site (its depth and words) and takes it off again, so the front's key flipped between two states every frame and each
+## flip worked the front out afresh - every open site's effective(), ~1-2 ms a call, live_guard's ~2 ms a frame on the
+## Radio of a late save. The same key is the same answer, so a handful kept by key is the old read, only cheaper; what
+## effective() reads beyond the key (the runner's level against each site's clear: the campaign's level tax) is kept with
+## them, so a level-up still works it out afresh as before.
+const FRONT_SEEN_MAX := 8
+var _front_seen := {}
+
+
+func _c51_front_seen_key(key: int) -> int:
+	return hash([key, level(), clear_level])
+
+
+## The front kept for `key` as the runner stands, or -1.
+func _c51_front_seen(key: int) -> int:
+	return int(_front_seen.get(_c51_front_seen_key(key), -1))
+
+
+func _c51_front_keep(key: int, front: int) -> void:
+	if _front_seen.size() >= FRONT_SEEN_MAX:
+		_front_seen.clear()
+	_front_seen[_c51_front_seen_key(key)] = front
+
+
+## The dogs on a repeat's run (BUILD51-C; the open notes: "dogs on a repeat run read their odds in one lump (~0.3 s)"):
+## a run nobody watches answered them by its standing order the moment they came, so their read - DOG_READS dry fights
+## - ran whole in that frame. In the game (asks) it's now the watched run's job, stepped DOGS_REPEAT_MS a frame by
+## advance(), the run held still (no tick, its clocks stood) until it's read, then the order as before: the same odds,
+## the same moment of the run. The bot and the tests' shells (asks off) read it whole as before.
+const DOGS_REPEAT_MS := 3.0
+
+
+func _c51_dogs_begin(m: Dictionary, ev: Dictionary) -> void:
+	_dogs_job = {"ev": ev, "job": _dogs_begin(m, int(ev["n"]), threat_as(ev, m)), "unwatched": true}
+
+
+## An unwatched run's dogs come and not yet answered (in the game): the run waits on their read and its order.
+func _c51_dogs_held(m) -> bool:
+	return m != null and asks and bool(m.get("unwatched", false)) and dogs_waiting(m)
+
+
+## The read on for DOGS_REPEAT_MS (begun afresh if it isn't the job in hand: a load, say); read, the standing order
+## answers. True when it's answered.
+func _c51_dogs_step() -> bool:
+	var ev: Dictionary = mission["ev"]
+	if ev.has("odds"):
+		_event_by_orders(mission)
+		return true
+	if _dogs_job.is_empty() or not is_same(_dogs_job["ev"], ev):
+		_c51_dogs_begin(mission, ev)
+	_dogs_job_run(Time.get_ticks_usec() + int(DOGS_REPEAT_MS * 1000.0))
+	if not ev.has("odds"):
+		return false
+	_event_by_orders(mission)
+	return true
+
+
+# ------------------------------------------------------------------ FIX51 (5 Nov): the review of build 51
+
+## The carry's top (the review's 1): a carry's growth (x1.25) never takes a pool past twice the element's normal cap at
+## this site - the biggest cap _dot_add has worked out for it here - or, for a pool with no cap (the Rat Man's Bag or
+## Overalls' poison, Opened for good's bleed), past twice the dose the site's first carry of it took. Never lower than
+## the pool itself: a carry is the whole at least.
+func f51_carry_top(m: Dictionary, ty: String, pool: float, grown: float) -> float:
+	var top: float
+	if f51_uncapped(ty):
+		if not m.has("f51_first"):
+			m["f51_first"] = {}
+		if not m["f51_first"].has(ty):
+			m["f51_first"][ty] = pool
+		top = 2.0 * float(m["f51_first"][ty])
+	else:
+		top = 2.0 * float(Dictionary(m.get("f51_cap", {})).get(ty, pool))
+	return maxf(pool, minf(top, grown))
+
+
+## A pool with no top a gang could find: the Rat Man's poison, Opened for good's bleed.
+func f51_uncapped(ty: String) -> bool:
+	if ty == "poison":
+		return has_rule("rat_mans_bag") or has_rule("rat_mans_overalls")
+	return ty == "bleed" and combo_on("opened_for_good")
+
+
+## The cap _dot_add worked out for the run's own pool on the gang (the mission's "dots"), the biggest at this site.
+func _f51_cap_seen(dots: Dictionary, ty: String, cap: float) -> void:
+	if mission == null or cap >= Data.COMBO_CEILING or not is_same(dots, mission.get("dots")):
+		return
+	if not mission.has("f51_cap"):
+		mission["f51_cap"] = {}
+	if cap > float(mission["f51_cap"].get(ty, 0.0)):
+		mission["f51_cap"][ty] = cap
+
+
+## A night's break reading its next link's odds (night_odds): the dry runs it begins take the night's own pack.
+var _f51_night_read := false
+
+
+## "Press on at N% odds or better": the player's order at WEATHER_PRESS_AT (Matt's, mid-playtest), the bot's at its own
+## F51_BOT_PRESS_AT (the bot sets f51_bot_press).
+var f51_bot_press := false
+
+
+func f51_press_at() -> float:
+	return Data.F51_BOT_PRESS_AT if f51_bot_press else Data.WEATHER_PRESS_AT

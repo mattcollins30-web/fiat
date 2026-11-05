@@ -1263,11 +1263,11 @@ static func affix_total(it: Dictionary, stat: String) -> float:
 static func score(it: Dictionary, gun = null) -> float:
 	match Data.SLOT_SCORE[it["slot"]]:
 		"dps":
-			return dps(it) * (1.0 + affix_total(it, "damage_pct") / 100.0)
+			return dps_whole(it)     # the headline's whole (BUILD51-A): the gun's own damage and rate of fire, once each
 		"armour":
-			return armour(it) + affix_total(it, "hp") * 0.5
+			return armour_whole(it) + affix_total(it, "hp") * 0.5     # its own "+N% armour" in (BUILD51-A)
 		"capacity":
-			return capacity(it) + affix_total(it, "loot_pct") * 0.1
+			return (pouches(it) if it["slot"] == "Rig" else capacity(it)) + affix_total(it, "loot_pct") * 0.1     # a rig's whole pouch count (BUILD51-A)
 		"heal":
 			return heal(it)
 		"throw":
@@ -1452,9 +1452,9 @@ static func headline(it: Dictionary, gun = null) -> Array:
 		var cap: int = mag_cap(it, gun)          # against the gun it feeds, as the card reads it (the fix round); never over it
 		return ["%d" % mini(int(it.get("rounds", 0)), cap), "of %d rounds" % cap]
 	if b.has("damage"):
-		return ["%.0f" % dps(it), "dmg/s"]     # the style guide's form (25 Oct, the review)
+		return ["%.0f" % dps_whole(it), "dmg/s"]     # the style guide's form (25 Oct, the review); its own affixes in (BUILD51-A)
 	if b.has("armour"):
-		return ["%.0f" % armour(it), "armour"]
+		return ["%.0f" % armour_whole(it), "armour"]     # its own "+N% armour" in (BUILD51-A)
 	if b.has("heal"):
 		return ["%.0f" % heal(it), "HP in %.0f s" % use_time(it)]
 	if b.has("rounds"):
@@ -1469,6 +1469,8 @@ static func headline(it: Dictionary, gun = null) -> Array:
 		return ["+%.0f%%" % find(it), "loot quality"]
 	if it["slot"] == Data.GLOVES:
 		return glove_headline(it)
+	if it["slot"] == "Rig":
+		return ["%d" % pouches(it), POUCH_WORD if pouches(it) != 1 else "pouch"]     # the whole count, one word (BUILD51-A)
 	return ["%d" % capacity(it), "capacity"]
 
 
@@ -1761,3 +1763,50 @@ static func hand_affix_sum(it: Dictionary, stat: String, place_key := "") -> int
 			continue
 		v += hand_affix_value(it, a)
 	return v
+
+
+# ------------------------------------------------------------------ BUILD51-A: the try-on's one rule (5 Nov)
+## A headline counts everything that feeds its number; an affix it counts is folded in, never listed beside it, and the
+## verdict and score read the same whole (the playtest of 0.13.0, item 2: the Bum bag's "3 capacity" against the
+## Gardening apron's "2 capacity" and "+1 pouch").
+
+## A rig's slots, one word wherever its count shows.
+const POUCH_WORD := "pouches"
+
+
+## A rig's pouches: its base's and its affixes' count (capacity) and its own "+N pouch" (med_cap) - what the fight's
+## med_capacity reads off it.
+static func pouches(it: Dictionary) -> int:
+	return capacity(it) + int(affix_total(it, "med_cap"))
+
+
+## A gun's dmg/s as the fight counts the gun's own affixes: its damage % and its rate of fire on top of its parts'
+## (dps(), which the fight's sums read with the runner's own; the gun's affixes join the runner's there).
+static func dps_whole(it: Dictionary) -> float:
+	return dps(it) * (1.0 + stat_total(it, "damage_pct") / 100.0) * (1.0 + stat_total(it, "attack_pct") / 100.0)
+
+
+## A piece's armour with its own "+N% armour" on it (the fight lifts the whole body's armour by it; the headline counts
+## it on the piece's own).
+static func armour_whole(it: Dictionary) -> float:
+	return armour(it) * (1.0 + stat_total(it, "armour_pct") / 100.0)
+
+
+## The stats a headline already counts, by its unit: the deltas fold them in, never a line of their own.
+static func headline_folds(it: Dictionary) -> Array:
+	var b := base_of(it)
+	if it["slot"] == Data.GRENADE or b.has("cure") or it["slot"] in [Data.MAGAZINE, Data.SUPPLIES, Data.MATERIAL]:
+		return []
+	if b.has("damage"):
+		return ["damage_pct", "attack_pct"] if is_gun(it) else []
+	if b.has("armour"):
+		return ["armour", "armour_pct"]
+	if b.has("heal"):
+		return ["heal_pct", "med_fast_pct"]
+	if it["slot"] == "Rig":
+		return ["capacity", "med_cap"]
+	if it["slot"] == Data.CHARM:
+		return ["rarity_pct"]
+	if it["slot"] == "Backpack":
+		return ["capacity"]
+	return []

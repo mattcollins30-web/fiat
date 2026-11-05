@@ -442,9 +442,24 @@ static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 		var a := Items.headline(it)
 		var b := Items.headline(fitted)
 		var d := float(a[0]) - float(b[0])
-		if str(a[1]) == str(b[1]) and absf(d) >= 0.5:
+		if str(it.get("slot", "")) == "Rig" and str(fitted.get("slot", "")) == "Rig":
+			# a rig's whole pouch count (BUILD51-A): one figure, one word, whatever the counts ("pouch" / "pouches")
+			var dp: int = Items.pouches(it) - Items.pouches(fitted)
+			if dp != 0:
+				out.append([float(dp), "%d %s" % [absi(dp), "pouch" if absi(dp) == 1 else Items.POUCH_WORD]])
+		elif Items.base_of(it).has("heal") and Items.base_of(fitted).has("heal") and not Items.is_cure(it) and not Items.is_cure(fitted):
+			# a med's "HP in N s" (BUILD51-A): its HP and its seconds, its healing and quicker-to-use affixes in them
+			var dh: float = Items.heal(it) - Items.heal(fitted)
+			if absf(dh) >= 0.5:
+				out.append([dh, "%.0f HP" % absf(dh)])
+			var dt: float = Items.use_time(fitted) - Items.use_time(it)
+			if absf(dt) >= 0.05:
+				out.append([dt, ("%.1f s quicker" if dt > 0.0 else "%.1f s slower") % absf(dt)])     # by the sign (FIX51, the review's 6)
+		elif str(a[1]) == str(b[1]) and absf(d) >= 0.5:
 			out.append([d, "%.0f %s" % [absf(d), {"armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
 		covered = {{"armour": "armour", "capacity": "capacity", "loot quality": "rarity_pct"}.get(str(a[1]), ""): true}
+		for st in Items.headline_folds(it):
+			covered[st] = true                   # what the headline counts, folded in, never beside it (BUILD51-A)
 	var seen := {}
 	for ax in Data.AFFIXES:
 		if seen.has(ax["stat"]) or covered.has(ax["stat"]):

@@ -73,7 +73,8 @@ func _init() -> void:
 
 ## A family's order in words.
 static func order_words(fam: String, key: String) -> String:
-	return str(Words.ORDERS.get(fam, {}).get(key, Words.ORDERS["default"]))
+	var w: String = str(Words.ORDERS.get(fam, {}).get(key, Words.ORDERS["default"]))
+	return w % roundi(Data.WEATHER_PRESS_AT * 100.0) if key == "press_80" else w     # its figure from the constant (FIX51)
 
 
 func show_state(s) -> void:

@@ -1278,16 +1278,16 @@ const UNIQUES := [
 	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "band": "core", "range": [3, 9], "depth": 6,
 		"words": "33% of damage becomes shock; shock hits everyone on you", "short": "33% as shock, hits all", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
 	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [3, 9], "depth": 6,
-		"words": "Poison has no stack cap and carries to the next man when one dies", "short": "Poison uncapped, carries", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
+		"words": "Poison has no stack cap and carries to the next man when one dies, 25% stronger each time, up to twice", "short": "Poison uncapped, carries", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
 	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "band": "core", "range": [3, 9], "body": {"bleed_min": 25}, "depth": 6,
-		"words": "Bleed does double damage and carries to the next man when one dies", "short": "Bleed ×2, carries", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
+		"words": "Bleed does double damage and carries to the next man when one dies, 25% stronger each time, up to twice", "short": "Bleed ×2, carries", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Gritter's Hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "band": "chase", "range": [4, 9], "site": 3,
 		"words": "Everyone on you is always chilled, and only one can fire on you at once", "short": "Always chilled; 1 on you", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "armour", "value": 30}, {"stat": "frost_res", "value": 30}]},
 	{"name": "The Sparky's Gloves", "slot": "Gloves", "base": "Leather gloves",     # a charm till the gloves (29 Oct)
 		 "rule": "sparkys_gloves", "band": "core", "range": [3, 7], "site": 5,
 		"words": "Their shock resist is ignored; Earthed no longer costs armour", "short": "Shock resist ignored", "affixes": [{"stat": "shock_pct", "value": 30}, {"stat": "shock_res", "value": 40}]},
 	{"name": "The Quartermaster's Manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "band": "chase", "range": [5, 9], "site": 11,
-		"words": "The class can open more than 2 elements; taken off, those past 2 idle", "short": "More than 2 elements", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
+		"words": "Damage +8% for each element you hold a perk in", "short": "+8% damage each element", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
 	{"name": "A Blue Plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "band": "chase", "range": [4, 9], "site": 8,
 		"words": "All resists +40%; no other affix on your kit counts", "short": "Resists +40%, nothing else", "affixes": [{"stat": "all_res", "value": 40}]},
 	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "band": "core", "range": [3, 9], "depth": 6,
@@ -1326,7 +1326,7 @@ const UNIQUES := [
 	{"name": "The Substation Key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "band": "chase", "range": [5, 9], "depth": 14,
 		"words": "Shock hits everyone on you; shocked targets take 60% more damage", "short": "Shock spreads, +60%", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "conv_shock_pct", "value": 20}]},
 	{"name": "The Butcher's Apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "band": "chase", "range": [5, 9], "depth": 14,
-		"words": "A bleed stacks to 3 and carries to the next man when one dies", "short": "Bleed carries, stacks to 3", "affixes": [{"stat": "bleed_pct", "value": 50}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "armour", "value": 25}]},
+		"words": "A bleed stacks to 3 and carries to the next man when one dies, 25% stronger each time, up to twice", "short": "Bleed carries, stacks to 3", "affixes": [{"stat": "bleed_pct", "value": 50}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "armour", "value": 25}]},
 	# the gaps' (12 Oct, docs/design/uniques.md): a chase secondary, a core helmet, a levelling and a core rig
 	{"name": "The Starting Pistol", "slot": "Secondary", "base": "Close quarters pistol", "rule": "starting_pistol", "band": "chase", "range": [5, 9], "depth": 12,
 		"words": "Each man in every gang first takes a free shot from the secondary at triple damage", "short": "Free ×3 secondary shot", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_pct", "value": 25}]},
@@ -1349,7 +1349,7 @@ const UNIQUES := [
 	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
 		"words": "The secondary always does its full damage beside the primary, and never spends a round", "short": "Secondary: full damage, no rounds", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
-		"words": "Every perk in the class's trees is yours except keystones", "short": "Every class perk yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
+		"words": "Every perk in the class's corner is yours except keystones; its capstone once %d points are spent" % CAPSTONE_SPENT, "short": "Every class perk yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Bomb Disposal Suit", "slot": "Armour", "base": "Police body armour", "rule": "bomb_suit", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "You never lose more than 5% of max HP a second, and the clock never runs out", "short": "At most 5% max HP lost a second; no clock", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Crash Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
@@ -1668,6 +1668,7 @@ const FX := {
 	"rule/sergeants_whistle.damage": 1.6,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
 	"rule/substation_key": 0.6,     # The Substation Key: Shock on one of them is shock on all; shocked, they take 60% more
 	"rule/tester": 0.5,     # The Electrician's Tester: Shocked stays shocked until they're down; shock does half
+	"rule/qm_manual": 0.08,     # The Quartermaster's Manual (BUILD51-A): +8% damage for each element held a perk in
 	"set/army.damage": 1.3,     # The Army's: everything you do does 30% more
 	"set/carpet.bleed_s": 2.0,     # The Carpet Man's: bleeds last twice as long
 	"yard/arc_lamps": 1.1,     # Arc lamps: Fire and shock do a tenth more
@@ -1835,7 +1836,7 @@ const AFFIXES := [
 	# the rig's swap (BUILD46-R, 2 Nov, Matt's call: a rig affix): a gun with a second loaded magazine swaps with no reload,
 	# the spent one refilled from the pack's box as it fires, at a hand refill's pace (Sim.hot_swap). On or off. `tier_w`:
 	# its weight by the rig's base tier, 1 to 9 - likelier on the better rigs (drafts)
-	{"stat": "hot_swap", "label": "No reload pause: a spare magazine swaps in while the spent one refills", "short": "No reload pause", "min": 1, "max": 1, "slots": ["Rig"], "flag": true,
+	{"stat": "hot_swap", "label": "Hot swap: a spare magazine goes in while the spent one refills, up to %d%% more time firing" % F51_SWAP_LIFT_PCT, "short": "Hot swap", "min": 1, "max": 1, "slots": ["Rig"], "flag": true,     # its lift capped (BUILD51-A)
 		"weight": 0.4, "tier_w": [0.08, 0.12, 0.18, 0.25, 0.32, 0.4, 0.5, 0.6, 0.7]},
 	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
 	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
@@ -1914,10 +1915,10 @@ const TIERS := [
 		 "dps": 0.65, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Gloves": 1, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
-	{"name": "Shopping Centre", "zone": 2, "pool": 16, "hp": 1235.0, "dps": 1.75, "drop": 0.5, "loot_tier": 3, "xp": 24, "cash": 24,
+	{"name": "Shopping Centre", "zone": 2, "pool": 14, "hp": 715.0, "dps": 1.04, "drop": 0.5, "loot_tier": 3, "xp": 24, "cash": 24,     # (BUILD51-C) 16/1235/1.75 to 14/715/1.04 (Matt's playtest, 4 Nov: "I've hit a wall on the shopping center" - the site's whole HP x3.2 the Pleasure Park's, its fire x2.7): x1.6 in both
 		"shape": {"pool": 11, "hp": 1.1, "dps": 1.0, "patrol": 0.9, "cash": 1.1},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
-	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 1200.0, "dps": 2.16, "drop": 0.5, "loot_tier": 3, "xp": 28, "cash": 30,
+	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 880.0, "dps": 1.63, "drop": 0.5, "loot_tier": 3, "xp": 28, "cash": 30,     # (BUILD51-C) 1200/2.16 to 880/1.63: the Shopping Centre's wall moved down a step otherwise (x2.4 HP, x2.1 fire); x1.77 HP and x1.57 fire each side of it now
 		"shape": {"pool": 7, "hp": 1.4, "dps": 1.3, "patrol": 1.5, "cash": 1.6, "paper": 3.0},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Gloves": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
 	{"name": "The Services", "zone": 3, "pool": 16, "hp": 1950.0, "dps": 2.56, "drop": 0.5, "loot_tier": 4, "xp": 37, "cash": 40,
@@ -2098,7 +2099,7 @@ const TREES_SRC := [
 		{"name": "Zeroing", "col": 1, "row": 1, "effect": "damage_pct", "value": 7},
 		{"name": "Circuits", "col": 2, "row": 1, "effect": "hp", "value": 9},
 		{"name": "Keen eyes", "col": 3, "row": 0, "effect": "search_pct", "value": 15},
-		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Resting at home heals twice as fast"},
+		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Rest twice as fast on the Pitch"},
 		{"name": "Stashing", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Pack horse", "col": 4, "row": 1, "effect": "pack_mule", "notable": true, "words": "The pack holds 6 more cells"},
 		{"name": "The dog's share", "col": 5, "row": 0, "effect": "cap_dogs_share", "capstone": true, "words": "When the runner dies, their rig comes home"},
@@ -2296,7 +2297,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Fumes", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
 		{"name": "Scrapper's torch", "col": 3, "row": 1, "effect": "fire_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_fire", "words": "Improvised guns do 25% more fire damage"},
 		{"name": "On your hands", "col": 4, "row": 1, "effect": "fire_more", "notable": true, "words": "Fire damage +40%; every fire hit burns you for 2% of it"},
-		{"name": "Wildfire", "col": 5, "row": 0, "effect": "cap_spread", "capstone": true, "words": "A burn carries to the next man when one dies"},
+		{"name": "Wildfire", "col": 5, "row": 0, "effect": "cap_spread", "capstone": true, "words": "A burn carries to the next man when one dies, 25% stronger each time, up to twice"},
 		{"name": "Fireproof", "col": 5, "row": 1, "beside": true, "effect": "proof_fire", "value": 1, "also": {"fire_res": 20}, "notable": true,
 		 "words": "Fire resist +20%; past the 75% cap, each 1% adds 2% fire damage"},     # over the cap (12 Oct)
 	]},
@@ -2327,7 +2328,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Slow acting", "col": 2, "row": 1, "effect": "poison_pct", "value": 15},
 		{"name": "Recruit's gas", "col": 3, "row": 1, "effect": "poison_pct", "value": 20, "class": "Recruit", "notable": true, "joint": "recruit_poison", "words": "Poison damage +20%"},     # the Paramedic's dose's place (24 Oct, joints B: the Recruit takes poison)
 		{"name": "Rat's share", "col": 4, "row": 1, "effect": "poison_more", "notable": true, "words": "Poison damage +40%; loot quantity −20%"},
-		{"name": "Lingers", "col": 5, "row": 0, "effect": "cap_lingers", "capstone": true, "words": "Poison carries to the next man when one dies"},
+		{"name": "Lingers", "col": 5, "row": 0, "effect": "cap_lingers", "capstone": true, "words": "Poison carries to the next man when one dies, 25% stronger each time, up to twice"},
 		{"name": "Immune", "col": 5, "row": 1, "beside": true, "effect": "proof_poison", "value": 1, "also": {"poison_res": 20}, "notable": true,
 		 "words": "Poison resist +20%; past the 75% cap, each 1% adds 2% poison damage"},     # over the cap (12 Oct)
 	]},
@@ -2359,7 +2360,7 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Drifter's razor", "col": 3, "row": 1, "effect": "bleed_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_bleed", "words": "Bleed damage +25%; every gang takes 10% longer to arrive"},     # the Recruit's bayonet's place (24 Oct, joints B: the Drifter takes bleed)
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed damage +40%; meds take 30% longer"},
 		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true,
-		 "words": "Bleed damage +50%; a bleed carries to the next man when one dies"},
+		 "words": "Bleed damage +50%; a bleed carries to the next man when one dies, 25% stronger each time, up to twice"},
 		{"name": "Scar tissue", "col": 5, "row": 1, "beside": true, "effect": "proof_bleed", "value": 1, "also": {"bleed_res": 20}, "notable": true,
 		 "words": "Bleed resist +20%; past the 75% cap, each 1% adds 2% bleed damage"},     # over the cap (12 Oct)
 	]},
@@ -2391,7 +2392,7 @@ const ELEMENT_TREES_SRC := [
 const FILLERS := [
 	{"name": "Hardy", "effect": "hp", "value": 4}, {"name": "Keen", "effect": "damage_pct", "value": 3},
 	{"name": "Brisk", "effect": "pace_pct", "value": 2}, {"name": "Mending", "effect": "regen", "value": 0.2},
-	{"name": "Tough", "effect": "armour_pct", "value": 4}, {"name": "Lucky", "effect": "loot_pct", "value": 2},
+	{"name": "Tough", "effect": "armour_pct", "value": 4}, {"name": "Sharp-eyed", "effect": "rarity", "value": 2},     # loot quality, not quantity (BUILD51-A, Matt 5 Nov); Lucky renamed (FIX51: the trait keeps "Lucky")
 	{"name": "Nimble", "effect": "search_pct", "value": 5}, {"name": "Proofed", "effect": "res", "value": 3},
 ]
 const RES_NAMES := {"fire": "Singed", "frost": "Wrapped up", "poison": "Hardened", "shock": "Insulated", "bleed": "Clotted"}
@@ -2414,7 +2415,7 @@ const TRACK_FILLERS := {
 	"dmg": [{"name": "Keen", "effect": "damage_pct", "value": 3}],
 	"skill": [{"name": "Practised", "effect": "cdr_pct", "value": 2}],
 	"def": [{"name": "Hardy", "effect": "hp", "value": 4}, {"name": "Guarded", "effect": "guard_pct", "value": 3}, {"name": "Tough", "effect": "armour_pct", "value": 4}],
-	"loot": [{"name": "Lucky", "effect": "loot_pct", "value": 2}, {"name": "Nimble", "effect": "search_pct", "value": 5}],
+	"loot": [{"name": "Sharp-eyed", "effect": "rarity", "value": 2}, {"name": "Nimble", "effect": "search_pct", "value": 5}],     # Lucky: loot quality (BUILD51-A)
 }
 const WL := preload("res://scripts/sim/web_layout.gd")
 ## The physical floor (31 Oct, the designer: the Recruit's camp poison and his own Tear gas converted every hit, and
@@ -2527,7 +2528,7 @@ const WEB_EXTRA := {
 		{"name": "Accelerant", "hang": [1.5, -1], "effect": "fire_pct", "value": 15, "notable": true},
 		{"name": "Oil drum", "hang": [2, 1], "effect": "fire_last_pct", "value": 25, "notable": true, "words": "Burns last 25% longer"},
 		{"name": "Flashpoint", "hang": [4.5, -1], "effect": "conv_fire_pct", "value": 10, "notable": true},
-		{"name": "Backdraught", "hang": [4, 1], "effect": "backdraught", "notable": true, "words": "A burning one that dies lights the next"},
+		{"name": "Backdraught", "hang": [4, 1], "effect": "backdraught", "notable": true, "words": "A burning one that dies lights the next with half his burn"},
 		{"name": "Forecourt", "effect": "fire_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 		{"name": "Bonfire night", "effect": "fire_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
@@ -2567,7 +2568,7 @@ const WEB_EXTRA := {
 		{"name": "Strychnine", "hang": [1.5, -1], "effect": "poison_pct", "value": 15, "notable": true},
 		{"name": "Takes its time", "hang": [2, 1], "effect": "poison_last_pct", "value": 25, "notable": true, "words": "Poison lasts 25% longer"},
 		{"name": "Tainted", "hang": [4.5, -1], "effect": "conv_poison_pct", "value": 10, "notable": true},
-		{"name": "Catching", "hang": [4, 1], "effect": "catching", "notable": true, "words": "A poisoned one that dies doses the next"},
+		{"name": "Catching", "hang": [4, 1], "effect": "catching", "notable": true, "words": "A poisoned one that dies doses the next with half his poison"},
 		{"name": "Nest", "effect": "poison_res", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 		{"name": "Rat run", "effect": "poison_pct", "value": 15, "notable": true},     # new (4 Nov, skill web version two): before the keystone
 	],
@@ -3127,8 +3128,8 @@ const BODY_HEAD_CUT := 0.15
 const BODY_TINS := 4.0
 ## A wreck: Strip it (WRECK_S: WRECK_SCRAP scrap), or Cut it open (WRECK_CUT_S and WRECK_CUT_SCRAP scrap from the pack for
 ## the torch: the site's material, WRECK_MAT of it, and a find a tier up); Leave it.
-const WRECK_S := 20.0
-const WRECK_SCRAP := [15, 25]
+const WRECK_S := 10.0              # 20 to 10 and 15-25 to 25-40 scrap (BUILD51-A, the 2 Nov reviews: Cut it open beat it outright)
+const WRECK_SCRAP := [25, 40]
 const WRECK_CUT_S := 8.0
 const WRECK_CUT_SCRAP := 10
 const WRECK_MAT := [2, 4]
@@ -3143,7 +3144,7 @@ const TIP_TRADER := 0.25
 const TIP_RUNS := 12
 ## The weather turning: Press on (the turn's loot quality and the gangs' damage for the rest of the run: its "loot" and
 ## "harder" in EVENT_POOLS.turn), Head home (out now with the pack), or Let it pass (the family's "Leave it").
-const WEATHER_PRESS_AT := 0.8        # the default order presses on at the run's odds this or better
+const WEATHER_PRESS_AT := 0.8        # the player's order presses on at the run's odds this or better (FIX51: back to 0.8, Matt's order mid-playtest; the bot's F51_BOT_PRESS_AT)
 ## A rival crew (A threat passing, beside the dogs: BUILD46-E; the designer, 2 Nov: a normal fight, it can kill the
 ## runner, odds shown, Get out now always open): the next gang's size, each CREW_HP and CREW_DPS of a man of the site's gang
 ## (x1.5 a normal gang's difficulty), a man's XP; seen off, what they carry - CREW_NOTES notes a man, or (CREW_FIND) a find
@@ -4278,3 +4279,10 @@ const NIGHT_FAT_QUALITY := 2.0              # a fat drop: the link's loot qualit
 const NIGHT_FAT_UNIQUE := 3.0               # and a unique's chance ×3
 const NIGHT_FLOOR := 0.7                    # "Auto: keep going" carries on while the odds stay at or over this (a setting)
 const NIGHT_RULES_MAX := 8                  # the tuning rules on the Radio
+
+
+# ------------------------------------------------------------------ FIX51 (5 Nov): the review of build 51
+const F51_POCKETS_FIND := 0.35        # "Go through the pockets": the tins, and this chance of a find (Search it's find is sure, and its clue)
+const F51_BOT_PRESS_AT := 0.9         # the bot's own "Press on" (BUILD51-A's 90%); the player's stays WEATHER_PRESS_AT
+const F51_SWAP_LIFT_PCT := 10         # the Hot swap's lift: a gun's share of time firing never past its no-swap share + this many points
+const F51_SWAP_LIFT := F51_SWAP_LIFT_PCT / 100.0

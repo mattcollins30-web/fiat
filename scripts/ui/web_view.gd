@@ -1394,29 +1394,36 @@ func _draw_pick_labels() -> void:
 		var best_n := -1
 		if _pick_cache.has(ck):
 			var rc0 := Rect2(p + Vector2(_pick_cache[ck][0]), sz)
-			if canvas.encloses(rc0):
+			# a spot the canvas's edge pushed it to is placed again once a pan has moved it (BUILD51-U, item 5; review47: it
+			# stayed out wide after the pan brought a cleaner spot into view); a free spot is kept as it was
+			var held: bool = not bool(_pick_cache[ck][2]) or Vector2(_pick_cache[ck][3]) == cam
+			if canvas.encloses(rc0) and held:
 				best = rc0
 				best_n = int(_pick_cache[ck][1])
 		if best_n < 0:
 			if names_r.is_empty():
 				names_r = _axis.keys().map(func(ak): return block_rect(str(ak))).filter(func(br): return Rect2(br).size.x > 0.0)
 			best_n = 1 << 30
+			var edged := false                 # a spot before the one taken passed over for the canvas's edge (BUILD51-U)
+			var off_seen := false
 			for out in PICK_OUTS:
 				for at in [p + Vector2(-sz.x / 2.0, r + out), p + Vector2(-sz.x / 2.0, -r - out - sz.y), p + Vector2(r + out + 2.0, -sz.y / 2.0),
 						p + Vector2(-r - out - 2.0 - sz.x, -sz.y / 2.0), p + Vector2(r * 0.7 + out, r * 0.7 + out * 0.5), p + Vector2(-r * 0.7 - out - sz.x, r * 0.7 + out * 0.5),
 						p + Vector2(r * 0.7 + out, -r * 0.7 - out * 0.5 - sz.y), p + Vector2(-r * 0.7 - out - sz.x, -r * 0.7 - out * 0.5 - sz.y)]:     # below, above, right, left, the four diagonals
 					var rc := Rect2(at, sz)
 					var n: int = (0 if canvas.encloses(rc) else 1000)
+					off_seen = off_seen or n > 0
 					if n < best_n:
 						n += _covers_at(rc, id, names_r, best_n - n)
 					if n < best_n:
 						best_n = n
 						best = rc
+						edged = off_seen and n < 1000
 					if best_n == 0:
 						break
 				if best_n == 0:
 					break
-			_pick_cache[ck] = [best.position - p, best_n]
+			_pick_cache[ck] = [best.position - p, best_n, edged, cam]
 		pick_label_rects[id] = best
 		pick_label_hits[id] = best_n
 		if not dry:

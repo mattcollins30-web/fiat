@@ -674,6 +674,16 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 
 ## A night's break (BUILD50 N): the next link's odds as the runner stands, stepped in the frame's few ms as the Radio's.
 func _read_night_odds(budget_ms: float) -> void:
+	if WagerOdds.pending() and bool(sim.night_odds_now()[1]):
+		# Kev's wagers' reads on the next link, once the break's own has settled (BUILD51-U, item 3), as the Map's are
+		sim.live_guard()
+		sim.odds_time_ms = budget_ms
+		sim.odds_frame_start()
+		sim.odds_step = true
+		WagerOdds.step(sim)
+		sim.odds_step = false
+		sim.odds_time_ms = 0.0
+		return
 	if bool(sim.night_odds_now()[1]):
 		return
 	sim.live_guard()

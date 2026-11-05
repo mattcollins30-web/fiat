@@ -92,11 +92,21 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the row: the picked site's zone and its sky at the left (the zones are the map's now, not tabs)
 	_title = UI.label(self, Rect2(0, 0, Pal.GRID_W - GUIDE_W - CAME_BTN_W - COUNTY_BTN_W - 3 * COL_GAP, ZONE_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_map = MapView.new(Rect2(0, TOP, MAP_W, Pal.ROOM_H - TOP))
+	# the map's frame (BUILD51-U, item 2): the land twice today's size inside it, panned; the map's two columns with the
+	# side panel on, the whole width with it off
+	_map_frame = Control.new()
+	_map_frame.position = Vector2(0, TOP)
+	_map_frame.size = Vector2(MAP_W, Pal.ROOM_H - TOP)
+	_map_frame.clip_contents = true
+	_map_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_map_frame)
+	_map = MapView.new(Rect2(Vector2.ZERO, MapView.BASE * MapView.LAND))
 	_map.picked.connect(select)
 	_map.picked_order.connect(select_order)
 	_map.picked_town.connect(func(_k): to_town.emit())     # a town's place's pin: the Radio's Town tab (BUILD50-T)
-	add_child(_map)
+	_map.empty_clicked.connect(set_panel.bind(false))      # the empty land: the side panel away (BUILD51-U)
+	_map_frame.add_child(_map)
+	_map.set_view(_map_frame.size)
 	_goal_build()
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
 	# row's right while there's a tally, the card dropping under it when pressed
@@ -167,6 +177,7 @@ func _init() -> void:
 		c["wager"].pressed.connect(_wager_open.bind(col))
 		c["wager"].visible = false
 		_cols.append(c)
+		_panel_x_build(c)                     # the card's × (BUILD51-U)
 	_build_pick()
 	rounds_panel = RoundsPanel.new()
 	rounds_panel.position = Vector2(20, TOP + 8)
@@ -341,6 +352,11 @@ func show_state(s) -> void:
 	var sky: String = sim.sky_words(selected, false)
 	UI.fit(_title, ["%s · %s" % [place, sky], place])
 	_map.show_state(sim, selected, order_key)
+	_panel_lay(sim.candidates.size() == 2 and not sim.on_mission())     # the frame to the side panel (BUILD51-U)
+	if not is_same(_open_for, sim):
+		_open_for = sim                          # a game loaded or begun: the Map opens on its step (BUILD51-U)
+		picked_by_hand = false
+		map_open()
 	if _guide.visible:
 		_guide.show_state(sim)
 		_guide.move_to_front()             # over the tally's card, which comes to the front on every refresh
@@ -391,7 +407,7 @@ func show_state(s) -> void:
 	var on_order: bool = order_key != ""
 	_order.visible = false                     # the order's places are drawn by the site card now (BUILD49 U, item 23)
 	for c in _cols:
-		c["panel"].visible = true
+		c["panel"].visible = panel_on              # clicked off: the map takes the width (BUILD51-U)
 	if on_order:
 		_show_order_card(order_key)
 		_shown = ""
@@ -418,7 +434,7 @@ func show_state(s) -> void:
 		var is_open: bool = sim.tier_open(i)
 		var odds: float = sim.odds_now(i) if is_open else 0.0     # as read so far: the shell reads them a few ms a frame
 		var tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
-		c["edge"].visible = is_open
+		c["edge"].visible = is_open and panel_on
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
 		# the card's body (BUILD46-S): what the runner's short of, as fix chips, at Risky and worse
 		var why: Array = odds_reasons(sim, i) if is_open and sim.odds_ready(i) and odds < WHY_UNDER else []
@@ -468,7 +484,7 @@ func _show_order_card(k: String) -> void:
 	if open and bool(od[1]) and float(od[0]) < WHY_UNDER:
 		why = odds_reasons(sim, i)
 	c["card"].show_order(sim, k, why)
-	c["edge"].visible = open
+	c["edge"].visible = open and panel_on
 	(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color("good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad")) if bool(od[1]) else Pal.CARD_LINE
 	c["repeat"].visible = false
 	c["wager"].visible = false
@@ -523,6 +539,8 @@ func select(i: int) -> void:
 		return
 	selected = i
 	order_key = ""
+	panel_on = true                            # a pin picked: its card (BUILD51-U)
+	picked_by_hand = true
 	if _wagers.visible and _wagers.key != sim.wager_site_key(i):
 		_wagers.visible = false               # Kev's offer is the picked site's: another pin, another offer (the review)
 	_shown = ""
@@ -534,6 +552,8 @@ func select(i: int) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and _county != null:
 		_county.hide_shut()
+	if what == NOTIFICATION_VISIBILITY_CHANGED and visible and sim != null and _map != null:
+		map_open()                                # the Map opens on its step (BUILD51-U)
 
 
 func set_county(on: bool) -> void:
@@ -546,6 +566,7 @@ func set_county(on: bool) -> void:
 	_county._shown = ""
 	if sim != null:
 		show_state(sim)
+		map_open()                                # each sheet opens on its own place (BUILD51-U)
 
 
 ## An order's place picked: its card in the site's place.
@@ -553,6 +574,8 @@ func select_order(k: String) -> void:
 	if sim == null or not sim.order_known(k):
 		return
 	order_key = k
+	panel_on = true                            # BUILD51-U
+	picked_by_hand = true
 	_shown = ""
 	show_state(sim)
 
@@ -849,8 +872,8 @@ func text_nodes() -> Array:
 	var out: Array = _text_nodes_under()
 	for over in [_report, _wagers, _exp_report]:            # over the map (29 Oct): what's under it isn't the screen's
 		if over.visible:
-			var r: Rect2 = over.get_global_rect()
-			out = out.filter(func(n): return not r.intersects(n.get_global_rect())) + over.text_nodes()
+			var r: Rect2 = room_rect(over)
+			out = out.filter(func(n): return not r.intersects(room_rect(n))) + over.text_nodes()     # walked by hand (BUILD51-U: a panned land's names lag a frame in the global)
 	return out
 
 
@@ -868,7 +891,10 @@ func _text_nodes_under() -> Array:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
 	out.append(_title)
 	if not _skill_pick.visible and not rounds_panel.visible:
-		out.append_array(_map.text_nodes())     # the picker covers the map; the rounds picker too (BUILD46-R)
+		var gr := Rect2(_goal.position, _goal.size)
+		var fo: Vector2 = _map_frame.position + _map.position     # the land on the room (BUILD51-U): a name under the goal line is under it
+		out.append_array(_map.text_nodes().filter(func(n): return not _goal.visible or not Rect2(n.position + fo, n.size).intersects(gr)))     # the picker covers the map; the rounds picker too (BUILD46-R)
+		out.append_array(_map.key_nodes())
 		if _goal.visible:
 			out.append_array([_goal_text, _goal_next] + ([_goal_btn] if _goal_btn.visible else []) + ([_goal_bill] if _goal_bill.visible else []))
 	if _pick.visible:
@@ -890,23 +916,25 @@ func _text_nodes_under() -> Array:
 	if _exp_panel.visible:
 		out.append_array(_exp_panel.text_nodes())     # the Expeditions over the map (29 Oct)
 		if _came.visible:
-			var er: Rect2 = _came.get_global_rect()     # under the came-back card is out of sight (BUILD49 U: the place card reaches under it)
-			out = out.filter(func(n): return _came.is_ancestor_of(n) or not er.intersects(n.get_global_rect()))
+			var er: Rect2 = room_rect(_came)     # under the came-back card is out of sight (BUILD49 U: the place card reaches under it)
+			out = out.filter(func(n): return _came.is_ancestor_of(n) or not er.intersects(room_rect(n)))
 		return out
 	out.append_array(_skill_pick.text_nodes())
 	out.append_array(rounds_panel.text_nodes())
 	for c in _cols:
+		if not c["panel"].visible:
+			continue                               # clicked off (BUILD51-U)
 		out.append_array(c["card"].text_nodes())
 		out.append(c["note"])
 		if c["death"].visible:
 			out.append(c["death"])
-		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"]]:
+		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"], c["close"]]:     # the × too (BUILD51-U)
 			if b.visible:
 				out.append(b)
 	if _came.visible:
 		# under the card is out of sight: the column's words there aren't the screen's (the card's own are)
-		var cr: Rect2 = _came.get_global_rect()
-		out = out.filter(func(n): return _came.is_ancestor_of(n) or not cr.intersects(n.get_global_rect()))
+		var cr: Rect2 = room_rect(_came)
+		out = out.filter(func(n): return _came.is_ancestor_of(n) or not cr.intersects(room_rect(n)))
 	return out
 
 
@@ -1097,3 +1125,76 @@ func _goal_bill_show() -> void:
 		Words.T50_TOWN["bill_tiny"] % [Fmt.money_k(bill), days], Words.T50_TOWN["bill_least"] % [Fmt.short_num(bill) if not Fmt.fiat else Fmt.money_k(bill), days]]
 	UI.fit(_goal_bill, forms)
 	_goal_bill.add_theme_color_override("font_color", Pal.BAD if d < 1 else Pal.TEXT_2)
+
+
+# ------------------------------------------------------------------ the Map's land and side panel (BUILD51-U, item 2)
+
+## Matt: "make it scrollable and the side panel per site can be clicked on and off". The panel shows on a pin's click and
+## goes on a click on the empty land or its ×; off, the map takes the whole width. The Map opens on the picked place when
+## the player's picked one, else the town's next step's pin, centred.
+var _map_frame: Control
+var panel_on := true
+var picked_by_hand := false
+var _open_for = null                      # the game the Map last opened on
+var _panel_x: Array = []                  # the card's ×, a card
+
+
+func set_panel(on: bool) -> void:
+	if panel_on == on:
+		return
+	panel_on = on
+	_shown = ""
+	if sim != null:
+		show_state(sim)
+	acted.emit()
+
+
+## The frame's width to the panel: the card's column shows (on, or the trait pick that takes its place) or not.
+func _panel_lay(picking: bool) -> void:
+	var w: float = float(MAP_W) if (panel_on or picking) else float(Pal.GRID_W)
+	if not is_equal_approx(_map_frame.size.x, w):
+		_map_frame.size.x = w
+		_map.set_view(_map_frame.size)
+	for x in _panel_x:
+		x.visible = panel_on and not picking
+
+
+## The Map's view on its step: the picked place, else the town's next step, else the card's site.
+func map_open() -> void:
+	if sim == null:
+		return
+	if county_on:
+		_county.open_view()
+		return
+	_panel_lay(sim.candidates.size() == 2 and not sim.on_mission())
+	_map.centre_on(_map.open_at(sim, selected, order_key, picked_by_hand))
+
+
+func _panel_x_build(c: Dictionary) -> void:
+	var b := UI.button(c["panel"], Rect2(COL_W - PANEL_X - 10, 10, PANEL_X, PANEL_X_H), false)
+	b.text = "×"
+	b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 4)
+	b.tooltip_text = Words.U51["panel_close"]
+	b.pressed.connect(set_panel.bind(false))
+	_panel_x.append(b)
+	c["close"] = b
+	# the picture's top row makes room for it: the sky's box and the kicker moved left of it
+	var card = c["card"]
+	card.sky_box.position.x -= PANEL_X + 6
+	card.kicker.size.x -= PANEL_X + 6
+const PANEL_X := 48                     # the ×: its glyph and a button's padding
+const PANEL_X_H := 34
+
+
+## A control's box on the room, its positions summed up to here (BUILD51-U): the land moves by its position alone, and a
+## child's cached global transform can lag it by a frame (the smoke's own _screen_pos walks them the same way).
+func room_rect(n: Control) -> Rect2:
+	var p := Vector2.ZERO
+	var q: Node = n
+	while q != null and q != self and q is Control:
+		p += (q as Control).position
+		q = q.get_parent()
+	if q != self:
+		return Rect2(n.global_position - global_position, n.size)
+	return Rect2(p, n.size)
+

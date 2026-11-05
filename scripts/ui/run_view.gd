@@ -1353,6 +1353,8 @@ const MUZZLE_AT := {
 	"courier_s_smg": [Vector2(127, 78), Vector2(-1, -0.3)],     # the barrel's end; its topmost is the ring sight, its top-left the left glove
 	"consular_pdw": [Vector2(112, 76), Vector2(-1, -0.45)],     # the rail's front; the top-left rule finds the foregrip's glove
 	"broomhandle_pistol": [Vector2(140, 57), Vector2(0, -1)],     # held straight up: the muzzle is its top; the top-left rule finds the glove
+	# BUILD51-C (5 Nov, the flash contact sheet, docs/art/smg_flash_sheet.png): the one gun the sheet showed off its muzzle
+	"castle_guard_rifle": [Vector2(126, 70), Vector2(-1, -0.5)],     # the flash hider's end; the top-left rule found the left sleeve (90, 128)
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:

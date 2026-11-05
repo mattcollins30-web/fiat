@@ -18,6 +18,12 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
+const MapPan := preload("res://scripts/ui/map_pan.gd")
+const MapViewRef := preload("res://scripts/ui/map_view.gd")
+## The land at twice today's (BUILD51-U, item 2: the County as the Map - its own sheet, the same rules): the painting's
+## 512 x 424 drawn x4 nearest, the pins, names and key at today's size; panned in its frame, the card toggled.
+const LAND := 2.0
+const PAINT_SIZE := Vector2(1024, 848)   # the painting on today's sheet (drawn x2 from MAP_AT)
 
 const COL_GAP := 16
 @warning_ignore("integer_division")
@@ -79,14 +85,20 @@ func _init(rect: Rect2) -> void:
 	position = rect.position
 	size = rect.size
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	_frame = Control.new()                   # the land's frame (BUILD51-U): the sheet's two columns, the width with the card off
+	_frame.size = Vector2(MAP_W, rect.size.y)
+	_frame.clip_contents = true
+	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_frame)
 	_map = Control.new()
 	_map.position = Vector2.ZERO
-	_map.size = Vector2(MAP_W, rect.size.y)
-	_map.clip_contents = true
+	_map.size = Vector2(MAP_W, rect.size.y) * LAND
 	_map.mouse_filter = Control.MOUSE_FILTER_STOP
+	_map.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole
 	_map.draw.connect(_draw_map)
 	_map.gui_input.connect(_map_input)
-	add_child(_map)
+	_frame.add_child(_map)
+	pan = MapPan.new(_map, _frame.size)
 	_pins = Control.new()
 	_pins.size = _map.size
 	_pins.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -94,14 +106,17 @@ func _init(rect: Rect2) -> void:
 	_map.add_child(_pins)
 	for z in range(Data.COUNTY_ZONES.size()):
 		var at: Vector2 = _px(ZONE_NAME_AT[z])
-		var right: bool = at.x + 300.0 > MAP_W                # the Docks' name against the map's right edge, set from it
-		var l := UI.label(_map, Rect2(Vector2(MAP_W - 308.0 if right else at.x, at.y), Vector2(300, 30)), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, false)
+		var right: bool = at.x + 300.0 > _map.size.x          # the Docks' name against the map's right edge, set from it
+		var l := UI.label(_map, Rect2(Vector2(_map.size.x - 308.0 if right else at.x, at.y), Vector2(300, 30)), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, false)
 		UI.shadow(l)
 		_zone_labels.append(l)
 	for k in PLACE_AT:
 		_pin_labels[k] = _pin_label(_px(PLACE_AT[k][0]), int(PLACE_AT[k][1]))
 	_build_card()
 	_build_key()
+	for c in _map.get_children():
+		if c is CanvasItem:
+			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR     # the words smooth (BUILD51-U)
 	_shut = UI.panel(_map, Rect2(0, 0, 430, 130), UI.box(Color(Pal.BG, 0.95), 8, 2, Pal.CARD_LINE))
 	_shut.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_shut.visible = false
@@ -113,7 +128,7 @@ func _init(rect: Rect2) -> void:
 
 ## The key strip (the canvas 'The County board', A): the pins' colours, shut and taken, bottom left of the map.
 func _build_key() -> void:
-	_key = UI.panel(_map, Rect2(12, size.y - 50, 10, 38), UI.box(Color("0f1214", 0.86), 6))
+	_key = UI.panel(_frame, Rect2(12, size.y - 50, 10, 38), UI.box(Color("0f1214", 0.86), 6))     # on the frame: it stays as the land pans (BUILD51-U)
 	_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var x := 14.0
 	for e in [["safe", Pal.GOOD], ["risky", Pal.WARN], ["bad", Pal.BAD], ["shut", Color.TRANSPARENT], ["taken", Pal.GOOD]]:
@@ -213,9 +228,9 @@ func _pin_label(p: Vector2, side: int) -> Label:
 	return l
 
 
-## The painting's point on the map: drawn x2 from MAP_AT.
+## The painting's point on the land: drawn x2 from MAP_AT on today's sheet, the land LAND times that (BUILD51-U).
 static func _px(p: Vector2) -> Vector2:
-	return MAP_AT + p * 2.0
+	return (MAP_AT + p * 2.0) * LAND
 
 
 static func painting() -> Texture2D:
@@ -273,6 +288,7 @@ func show_state(s) -> void:
 		l.add_theme_color_override("font_color", Pal.ACCENT if k == selected else (Pal.TEXT if known else Pal.TEXT_3))
 		_snug(l, k)
 	_show_card()
+	_card_lay()
 	_map.queue_redraw()
 	_pins.queue_redraw()
 
@@ -359,7 +375,7 @@ func _show_card() -> void:
 func _draw_map() -> void:
 	var pic := painting()
 	if pic != null:
-		_map.draw_texture_rect(pic, Rect2(MAP_AT, pic.get_size() * 2.0), false)
+		_map.draw_texture_rect(pic, Rect2(MAP_AT * LAND, PAINT_SIZE * LAND), false)
 	else:
 		_map.draw_rect(Rect2(Vector2.ZERO, _map.size), Color("181b1f"))
 		for z in range(ZONE_SHAPES.size()):
@@ -438,8 +454,16 @@ func _hatch(points: Array) -> void:
 
 
 func _map_input(ev: InputEvent) -> void:
-	if sim == null or not (ev is InputEventMouseButton) or not ev.pressed or ev.button_index != MOUSE_BUTTON_LEFT:
+	if sim == null:
 		return
+	# the pan (BUILD51-U, item 2): a drag or the wheel moves the land; a click on the open land, no pin under it, puts
+	# the card away
+	var act: String = pan.input(ev)
+	if act == "click" and not _press_hit:
+		set_card(false)
+	if act != "press":
+		return
+	_press_hit = false
 	var hit := ""
 	var best := HIT_R
 	for k in PLACE_AT:
@@ -449,16 +473,18 @@ func _map_input(ev: InputEvent) -> void:
 			hit = k
 	hide_shut()
 	if hit != "":
+		_press_hit = true
 		select(hit)
 		return
 	var z := zone_at(ev.position)
 	if z >= 0 and not sim.county_zone_open(z):
+		_press_hit = true                      # a shut zone's card, not the land's click
 		show_shut(z, ev.position)
 
 
 ## The zone under a point of the map (its painting space), or -1.
 func zone_at(at: Vector2) -> int:
-	var p: Vector2 = (at - MAP_AT) / 2.0
+	var p: Vector2 = (at / LAND - MAP_AT) / 2.0
 	for z in range(ZONE_SHAPES.size()):
 		if Geometry2D.is_point_in_polygon(p, PackedVector2Array(ZONE_SHAPES[z])):
 			return z
@@ -505,6 +531,8 @@ func select(k: String) -> void:
 		return
 	selected = k
 	hide_shut()
+	card_on = true                             # a place picked: its card (BUILD51-U)
+	picked_by_hand = true
 	_shown = ""
 	show_state(sim)
 
@@ -554,14 +582,63 @@ func text_nodes() -> Array:
 		out.append(l)
 	for k in _pin_labels:
 		out.append(_pin_labels[k])
-	out.append_array([_card["state"], _card["place"], _card["who"], _card["want"], _card["status"]] + _card["words"])
-	out.append(_card["button"] if _card["button"].visible else _card["note"])
-	out.append(_card["slots_head"])
-	for sl in _slots:
-		out.append(sl[1])
+	var vr := Rect2(pan.offset(), pan.view)     # the names on the view (BUILD51-U): those panned off it, or cut, aren't the screen's
+	out = out.filter(func(l): return l.text == "" or vr.encloses(MapViewRef.word_rect(l)))
+	if _card["panel"].visible:
+		out.append_array([_card["state"], _card["place"], _card["who"], _card["want"], _card["status"]] + _card["words"])
+		out.append(_card["button"] if _card["button"].visible else _card["note"])
+		out.append(_card["slots_head"])
+		for sl in _slots:
+			out.append(sl[1])
+		if _card_x != null:
+			out.append(_card_x)
 	for c in _key.get_children():
 		if c is Label:
 			out.append(c)
 	if _shut.visible:
 		out.append_array(_shut_lines)
 	return out
+
+
+# ------------------------------------------------------------------ the land and the card's toggle (BUILD51-U, item 2)
+
+var pan                                    # map_pan.gd
+var _frame: Control
+var card_on := true
+var picked_by_hand := false
+var _press_hit := false
+var _card_x: Button
+const CARD_X_W := 48
+const CARD_X_H := 34
+
+
+## The card on or off: off, the land takes the width.
+func set_card(on: bool) -> void:
+	if card_on == on:
+		return
+	card_on = on
+	_card_lay()
+
+
+func _card_lay() -> void:
+	if _card_x == null:
+		_card_x = UI.button(_card["panel"], Rect2(COL_W - CARD_X_W - 10, 10, CARD_X_W, CARD_X_H), false)
+		_card_x.text = "×"
+		_card_x.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 4)
+		_card_x.tooltip_text = Words.U51["county_close"]
+		_card_x.pressed.connect(set_card.bind(false))
+		_card["state"].size.x -= CARD_X_W + 6
+	_card["panel"].visible = card_on
+	var w: float = float(MAP_W) if card_on else size.x
+	if not is_equal_approx(_frame.size.x, w):
+		_frame.size.x = w
+		pan.set_view(_frame.size)
+
+
+## The sheet opens on the picked place, centred.
+func open_view() -> void:
+	if sim == null:
+		return
+	_card_lay()
+	pan.centre_on(_px(PLACE_AT[selected][0]) if PLACE_AT.has(selected) else _map.size / 2.0)
+
