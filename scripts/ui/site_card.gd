@@ -488,7 +488,14 @@ func _show_takes(i: int, is_open: bool) -> void:
 		var lw: String = ("%d s" % roundi(lasted)) if lasted < 60.0 else Fmt.mss(lasted)
 		forms = [Words.SITE_CARD["lasted"] % [lw, Fmt.mss(fight)], lw]
 		tone = Pal.BAD
-	UI.fit(vals[0], forms)
+	# fitted beside its key, not across it (BUILD50-T: a fight of 12735:56 against the clock ran the value into "How long
+	# you last" by 3 px, the line-pair check's red on the bot's act-two camp)
+	var room0: float = vals[0].size.x - UI.text_width(keys[0], keys[0].text) - 16.0
+	vals[0].text = UI.dots(str(forms.back()))
+	for f in forms:
+		if UI.text_width(vals[0], UI.dots(str(f))) <= room0:
+			vals[0].text = UI.dots(str(f))
+			break
 	vals[0].add_theme_color_override("font_color", tone)
 	bar_fill.size.x = iw * clampf(lasted / span, 0.0, 1.0) if sim.odds_ready(i) or fight > clock else 0.0
 	(bar_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = tone

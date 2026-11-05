@@ -11,6 +11,7 @@ extends Control
 
 signal picked(i: int)
 signal picked_order(key: String)
+signal picked_town(key: String)     # a town's place's pin (BUILD50-T): its card on the Radio's Town tab
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -46,6 +47,13 @@ const SITE_LABEL := [BELOW, RIGHT, ABOVE, BELOW, BELOW, ABOVE, BELOW, BELOW, BEL
 ## The order's places (18 Oct), by key: off their host site, out along the road east.
 const ORDER_AT := {"grid": Vector2(842, 248), "archive": Vector2(596, 643), "mint": Vector2(940, 728)}
 const ORDER_LABEL := {"grid": BELOW, "archive": ABOVE, "mint": BELOW}
+## The town's places (act two §1, BUILD50-T; the canvas "The town on the Map"): a square each in the Town and the City,
+## clear of the sites' and the order's pins and names - ringed while not built, dashed the next step, lit running (a
+## glow), red-ringed and unlit stopped, unpaid. Shown once the rebuild's open.
+const TOWN_AT := {"substation": Vector2(650, 320), "pumping": Vector2(480, 440), "bus_depot": Vector2(722, 540),
+	"market_hall": Vector2(430, 380), "library": Vector2(470, 600), "mint": Vector2(760, 320)}
+const TOWN_R := 9.0
+const TOWN_LIT := Color("e9d3a1")    # a running place's name, the canvas's
 const ART_DIR := "res://art/map/"
 const KEY_H := 30.0
 const KEY_PAD := 12.0
@@ -60,6 +68,8 @@ var order_key := ""
 var _zone_names: Array = []        # [name Label, state Label] a zone
 var _pin_labels: Array = []        # a Label a site
 var _order_labels: Dictionary = {}  # key -> Label
+var _town_labels: Dictionary = {}   # a town's place: key -> Label (BUILD50-T)
+var town_states: Dictionary = {}    # key -> "running", "stopped", "next", "ringed" as drawn (the smoke reads them)
 var _legend: Array = []            # [Label, colour, hollow]
 var _key_rect := Rect2()           # the key's panel, fitted to its words
 var _label_at := {}                # Label -> [the pin's point, its side]: a name sits snug on its own pin
@@ -156,6 +166,10 @@ func _init(rect: Rect2) -> void:
 		_pin_labels.append(l)
 	for k in ORDER_AT:
 		_order_labels[k] = _pin_label(_px(ORDER_AT[k]), int(ORDER_LABEL[k]), Pal.ACCENT)
+	for k in TOWN_AT:
+		_town_labels[k] = _pin_label(_px(TOWN_AT[k]), BELOW, Pal.TEXT_2)
+		_town_labels[k].add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+		_town_labels[k].visible = false
 	# the key, bottom right: what a pin's colour says - a dot and its word, packed tight (19 Oct, Matt: "too big ... too
 	# spread out")
 	var items := [["Safe", Pal.GOOD, false], ["Risky", Pal.WARN, false], ["A bad idea", Pal.BAD, false], [Words.MAP_OLD_READ, old_tone(1.0), false], ["Locked", Pal.TEXT_3, true]]     # a last read since moved (BUILD48 A, item 3)
@@ -349,6 +363,7 @@ func show_state(s, sel: int, okey: String) -> void:
 	for p in Data.PINNACLES:
 		opens += "1" if sim.order_open(p["key"]) else "0"
 	var sig := "%s|%d|%s|%s|%s|%s|%s|%d|%d" % [settled, selected, order_key, opens, str(sim.best_depth), str(sim.bosses_beaten), str(sim.weather), sim.level(), int(sim.is_night())]
+	sig += "|" + _town_show()                  # the town's places (BUILD50-T)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -444,6 +459,7 @@ func _draw_pins() -> void:
 		var d := PIN_R + 3.0                 # a diamond: the order's places aren't the campaign's
 		_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
 		_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), Pal.ACCENT)
+	_draw_town()
 
 
 ## The key's panel and its dots, on their own layer over the cloud.
@@ -563,6 +579,13 @@ func _gui_input(ev: InputEvent) -> void:
 		if d < best:
 			best = d
 			hit_i = i
+	var hit_t := ""
+	for k in town_states:
+		var dt: float = at.distance_to(_px(TOWN_AT[k]))
+		if dt < best:
+			best = dt
+			hit_t = str(k)
+			hit_i = -1
 	for p in Data.PINNACLES:
 		if sim.order_known(p["key"]):          # a place in a shut zone doesn't pick, as its pins don't (20 Oct)
 			var d: float = at.distance_to(_px(ORDER_AT[p["key"]]))
@@ -570,7 +593,11 @@ func _gui_input(ev: InputEvent) -> void:
 				best = d
 				hit_k = p["key"]
 				hit_i = -1
-	if hit_k != "":
+				hit_t = ""
+	if hit_t != "" and hit_k == "":
+		picked_town.emit(hit_t)
+		accept_event()
+	elif hit_k != "":
 		picked_order.emit(hit_k)
 		accept_event()
 	elif hit_i >= 0:
@@ -606,6 +633,97 @@ func text_nodes() -> Array:
 	for k in _order_labels:
 		if _order_labels[k].visible:
 			out.append(_order_labels[k])
+	for k in _town_labels:
+		if _town_labels[k].visible:
+			out.append(_town_labels[k])
 	for e in _legend:
 		out.append(e[0])
 	return out
+
+
+# ------------------------------------------------------------------ the town on the Map (BUILD50-T, act two §1)
+
+## Each place's state and its name under its pin; the signature for show_state's redraw.
+func _town_show() -> String:
+	town_states = {}
+	var open: bool = sim.rebuild_open()
+	var nk: String = sim.town_next_key()
+	for r in Data.REBUILDS:
+		var k: String = str(r["key"])
+		var l: Label = _town_labels[k]
+		l.visible = open
+		if not open:
+			continue
+		var st: String = "running" if sim.town_on(k) else ("stopped" if sim.rebuild_rank(k) > 0 else ("next" if k == nk else "ringed"))
+		town_states[k] = st
+		l.text = str(r["name"])
+		_snug(l)
+		l.add_theme_color_override("font_color", {"running": TOWN_LIT, "stopped": Pal.BAD, "next": TOWN_LIT, "ringed": Pal.TEXT_2}[st])
+	return str(town_states)
+
+
+## The places' squares, on the pins' layer: a glow and a lit square running; red-ringed and dark stopped; a dashed ring
+## the next step; a plain ring not yet built.
+func _draw_town() -> void:
+	for k in town_states:
+		var c: Vector2 = _px(TOWN_AT[k])
+		var r := TOWN_R
+		var box := Rect2(c - Vector2(r, r), Vector2(2 * r, 2 * r))
+		match str(town_states[k]):
+			"running":
+				_pins.draw_circle(c, r + 12.0, Color(Pal.ACCENT, 0.16))
+				_pins.draw_circle(c, r + 7.0, Color(Pal.ACCENT, 0.3))
+				_pins.draw_rect(box.grow(3.0), Pal.BG)
+				_pins.draw_rect(box, Pal.ACCENT)
+			"stopped":
+				_pins.draw_rect(box.grow(3.0), Pal.BG)
+				_pins.draw_rect(box, Pal.BUTTON)
+				_pins.draw_rect(box, Pal.BAD, false, 2.5)
+			"next":
+				_pins.draw_rect(box.grow(3.0), Color(Pal.BG, 0.7))
+				var pts: Array = [box.position, box.position + Vector2(2 * r, 0), box.end, box.position + Vector2(0, 2 * r), box.position]
+				for e in range(4):
+					var a: Vector2 = pts[e]
+					var b: Vector2 = pts[e + 1]
+					for q in range(3):               # three dashes a side
+						_pins.draw_line(a.lerp(b, q / 3.0 + 0.04), a.lerp(b, q / 3.0 + 0.24), Pal.ACCENT, 2.5)
+			_:
+				_pins.draw_rect(box.grow(3.0), Color(Pal.BG, 0.7))
+				_pins.draw_rect(box, Pal.TEXT_3, false, 2.0)
+
+
+## A place's pin's words on the hover: its name and state, what it does, what came back with it (or what it wants).
+func town_tip(k: String) -> String:
+	var r: Dictionary = Data.rebuild(k)
+	var st: String = str(town_states.get(k, ""))
+	var w: String = Fmt.money(sim.town_wage(k))
+	var lines: Array = []
+	match st:
+		"running":
+			lines.append("%s · %s" % [r["name"], Words.T50_TOWN["running"] % w])
+		"stopped":
+			lines.append("%s · %s" % [r["name"], Words.T50_TOWN["stopped_day"] % w])
+		"next":
+			lines.append("%s · %s" % [r["name"], Words.T50_TOWN["next"]])
+		_:
+			lines.append("%s · %s" % [r["name"], Words.T50_TOWN["not_yet"]])
+	var fx: Array = sim.rebuild_words(k, maxi(1, sim.rebuild_rank(k)))
+	if not fx.is_empty():
+		lines.append(" · ".join(fx))
+	if st == "running" or st == "stopped":
+		lines.append(str(Words.T50_TOWN["back"][k]))
+	return "\n".join(lines)
+
+
+func _get_tooltip(at: Vector2) -> String:
+	if sim == null:
+		return ""
+	for k in town_states:
+		if at.distance_to(_px(TOWN_AT[k])) < HIT_R:
+			return town_tip(str(k))
+	return ""
+
+
+## Where a town's place's pin is, on the control (for the tests).
+func town_pin_at(key: String) -> Vector2:
+	return _px(TOWN_AT[key])

@@ -245,7 +245,7 @@ const YARD := [
 ## unwatched, a bail at Sim.BAIL never a death; XP a share of a watched run's (the Bunkhouse raises it).
 const REPEAT_RUNS := 5
 const REPEAT_ODDS := 0.9
-const REPEAT_XP := [0.12, 0.17, 0.22, 0.30]        # from the start; Ten in a row; Your own list; Bunk beds. x0.5 on every step (the designer's call, 1 Nov, PROBE40: the long pass had level 50 at 7-9 h on four of six, repeats 59-86% of the XP; was 0.25, 0.35, 0.45, 0.60)
+const REPEAT_XP := [0.25, 0.35, 0.45, 0.60]        # act two §6 (4 Nov, BUILD50-T): back to before 1 Nov's halving (Matt: "outside of codes the repeat runs are useless for XP"); was 0.12, 0.17, 0.22, 0.30: from the start; Ten in a row; Your own list; Bunk beds. x0.5 on every step (the designer's call, 1 Nov, PROBE40: the long pass had level 50 at 7-9 h on four of six, repeats 59-86% of the XP; was 0.25, 0.35, 0.45, 0.60)
 const REPEAT_RANK_REST := 0.05                     # the Bunkhouse's rank: rest between repeat runs 5% quicker a rank
 const REPEAT_MAX := 200                            # Till it's full: runs at most, a guard
 const REPEAT_MED_UNDER := 0.4                      # an unwatched run's med, under 40% HP, as the bot's
@@ -1191,6 +1191,7 @@ const UNIQUE_DROP := 0.01
 const UNIQUE_CAMPAIGN := 0.02     # a loose unique's chance in the campaign
 const UNIQUE_FROM_ZONE := 2
 const UNIQUE_CAP := 0.04
+const UNIQUE_BOOST_CAP := 0.12     # a signal's unique focus and a night's fat drop: ×3 on the capped chance, both together never past 12% (merge 50: inside UNIQUE_CAP they did nothing from depth 6)
 ## The mythics (16 Oct, docs/design/mythics.md): one find in MYTHIC_ODDS_IN is one, everywhere alike - no depth,
 ## quantity, quality or charm in it; one held isn't rolled again until all seven are.
 const MYTHIC_ODDS_IN := 10000
@@ -1796,11 +1797,13 @@ const AFFIXES := [
 	{"stat": "conv_poison_pct", "label": "of damage as poison", "short": "as poison", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_shock_pct", "label": "of damage as shock", "short": "as shock", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_bleed_pct", "label": "of damage as bleed", "short": "as bleed", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
-	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
-	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
-	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
-	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
-	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	# act two §5 (BUILD50-T): an element's resist on the gloves too (the body pieces Matt names: helmet, armour, gloves),
+	# and RES_BODY_LIFT its weight on them (Items.pick_affixes)
 	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm", "Rig"], "weight": 0.3},
 	# -proofed (12 Oct, over the cap): an element's resist and its damage on one line, the stacker's line
 	{"stat": "fire_proofed", "label": "fire resist and fire damage", "short": "fire res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
@@ -2866,6 +2869,10 @@ const CRAFT := {
 	"values": {"name": "Re-roll values", "cash": 25, "words": "The same affixes, new figures: a chance to go up a tier, a smaller one to go down"},
 	"affixes": {"name": "Re-roll affixes", "cash": 40, "words": "New affixes in their place; the count stays the same"},
 	"add": {"name": "Add an affix", "cash": 100, "words": "Adds one affix and raises the rarity one step"},
+	# act two §5 (4 Nov, BUILD50-T; Matt: "too difficult to craft what you need, especially ... resistances across the
+	# board"): an element's resist picked, its tier rolled as an affix's, at the add's price x RESIST_JOB_PRICE; only on
+	# RESIST_JOB_SLOTS
+	"resist": {"name": "Add a resist", "cash": 150, "words": "Adds the element's resist you pick and raises the rarity one step"},
 	"socket": {"name": "Cut a socket", "cash": 80, "words": "Adds a socket, up to %d"},
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Removes every affix; it becomes Common, worth less"},
 	"bump": {"name": "Raise the item's level", "notes": 10, "words": "+3 item levels, so the lowest affix tiers stop rolling; up to item level base tier + 20"},
@@ -2873,6 +2880,10 @@ const CRAFT := {
 	# the base's damage and armour grow with it; scrap by item level (TEMPER_GROW past ILVL_GROW_FROM), tins a share of its sale
 	"temper": {"name": "Temper", "scrap": 100, "cash": 0, "words": "+1 item level past Item level +3: its damage, armour and flat lines grow as a deeper drop's; not a mythic, a rig, a pack or a charm"},     # scrap 20 to 100, priced by item level; tins a share of its sale (the second review)
 }
+const RESIST_JOB_PRICE := 1.5          # "Add a resist": CRAFT add's cash x this (CRAFT resist's 150; the smoke holds them equal)
+const RESIST_JOB_SLOTS := ["Armour", "Helmet", "Gloves", "Charm"]
+const RES_BODY_SLOTS := ["Helmet", "Armour", "Gloves"]   # an element's resist a third likelier in the affix pool on these
+const RES_BODY_LIFT := 4.0 / 3.0
 const GREED_QUALITY := 0.10          # greed after the clear (25 Oct): loot quality a gang that comes after it, for the rest of the run
 const GREED_QUANTITY := 0.05         # and quantity
 const TEMPER_GROW := 1.035             # a temper's scrap, 1.10 to 1.035 (the second review): this much dearer an item level past ILVL_GROW_FROM, as income grows: the climb's pace is its price
@@ -3890,6 +3901,16 @@ const AIM_NOTES := 40                    # Kev tunes a signal to a crew's area f
 const MATERIAL_HANDFUL := [1, 3]         # a drop
 const MATERIAL_HEAD := [3, 6]            # a crew's head down: theirs, guaranteed
 const FUSE_SIGNAL := 0.10                # a signal's run: the chance at fuses too
+## A signal's focus (act two §4, 4 Nov, BUILD50-T; Matt: "radio signals are just too weak to sustain play"): each signal
+## rolls one of FOCUS_KINDS (by FOCUS_WEIGHTS) - a material (the town's next step's first short, else its crew's area's),
+## a slot, an element's resist or a unique's chance - shown on its card's drops and weighting its run's loot. Drafts.
+const FOCUS_KINDS := ["material", "slot", "resist", "unique"]
+const FOCUS_WEIGHTS := [1.0, 1.0, 1.0, 1.0]
+const FOCUS_MATERIAL := 2                # a material focus: this many more of it a run home
+const FOCUS_SLOT := 0.5                  # a slot focus: this share of the gear finds that slot
+const FOCUS_RESIST := 1.0 / 3.0          # a resist focus: this share of the gear finds that can carry it carry it
+const FOCUS_UNIQUE := 3.0                # a unique focus: the run's unique chance x this
+const FOCUS_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"]
 ## The order's things, kept as counts: what a true pinnacle drops for the next rebuild or rank.
 const KEY_ITEMS := {
 	"grid_key": {"name": "The Grid's key"},
@@ -3907,14 +3928,23 @@ const REBUILDS := [
 		"fx": [{"stat": "rest_pct", "base": 50, "step": 10, "say": "+%d%% rest"}, {"stat": "clinic_pct", "base": 10, "step": 2, "cap": 40, "say": "Clinic −%d%%"}]},
 	{"key": "bus_depot", "name": "The bus depot", "costs": {"paving": 15, "army_kit": 10}, "rank_key": "grid_key",
 		"fx": [{"stat": "pack_cells", "base": 2, "step": 1, "say": "Pack +%d cells"}]},     # 21 Oct, Matt: auto-run's rest went with it
-	{"key": "library", "name": "The library", "costs": {"glass": 15, "ledgers": 15}, "rank_key": "ledger_seal", "opens": "archive",
-		"fx": [{"stat": "paper_pct", "base": 25, "step": 5, "say": "+%d%% papers"}]},
 	{"key": "market_hall", "name": "The market hall", "costs": {"glass": 20, "copper_wire": 20}, "rank_key": "ledger_seal",
 		"fx": [{"stat": "shelf", "base": 1, "step": 0.5, "say": "Fence's shelf +%d"}, {"stat": "fence_pct", "base": 5, "step": 2, "cap": 40, "say": "Fence −%d%%"}]},
+	{"key": "library", "name": "The library", "costs": {"glass": 15, "ledgers": 15}, "rank_key": "ledger_seal", "opens": "archive",
+		"fx": [{"stat": "paper_pct", "base": 25, "step": 5, "say": "+%d%% papers"}]},
 	{"key": "mint", "name": "The mint", "costs": {"ledgers": 30, "army_kit": 20}, "first": {"fuses": 5, "grid_key": 1}, "rank_key": "ledger_seal", "opens": "mint",
 		"fx": [{"stat": "mint_pay", "base": 1.0, "step": 0.25, "say": "Pays tins by worth on clears"}]},     # on clears only (31 Oct, the designer)
 ]
 const REBUILD_GROWTH := 1.35
+## Act two §2 (4 Nov, BUILD50-T; docs/design/act_two.md, Matt: "tins pay for the town"): REBUILDS is the town's road,
+## in its order (the substation, the pumping station, the bus depot, the market hall, the library, the mint) - the order
+## the wages are paid in. A build costs its materials and REBUILD_TINS (x REBUILD_GROWTH a rank past the first); every
+## run home (the exchange's day) each place built draws its TOWN_WAGES, x (1 + TOWN_WAGE_RANK a rank past the first),
+## from the tins in hand; one the tins don't cover stops (its effects off) till a day it's paid. Never debt. All at
+## today's prices (Sim._inf): fiat after the Issue. First figures: Matt's fresh play sets them.
+const REBUILD_TINS := {"substation": 5000, "pumping": 8000, "bus_depot": 8000, "market_hall": 10000, "library": 15000, "mint": 25000}
+const TOWN_WAGES := {"substation": 900, "pumping": 800, "bus_depot": 900, "market_hall": 1000, "library": 1200, "mint": 1500}
+const TOWN_WAGE_RANK := 0.25
 const REBUILD_FUSES := 2                 # fuses a rank past the first
 const REBUILD_KEY_RANK := 3              # from this rank, one of the place's rank_key
 ## Issued kit (25 Oct, Matt's picks): sold only by the Issuer, in fiat, after the Issue. Stamped and numbered, a tier
@@ -3952,22 +3982,23 @@ const COUNTY_ZONES := [
 	{"name": "The Big Houses", "head": "The Collector", "words": "The Golf Club, the Gated Close, the Manor - where the money went to live."},
 	{"name": "The Treasury", "head": "The Treasurer", "words": "The Counting House, the Bullion Vault, the Treasury - where it's made to stick."},
 ]
+## Act two §6 (BUILD50-T): the zones 40-45, 50-55, 60-65, 70-75 (were 50-85), the same spread inside each.
 const COUNTY := [
-	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "level": 50},
-	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "level": 52},
-	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "level": 55,
+	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "level": 40},
+	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "level": 42},
+	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "level": 45,
 		"who": "The Bailiff", "mech": "bailiff", "hp": 14.0, "dps": 3.0},
-	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "level": 60},
-	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "level": 62},
-	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "level": 65,
+	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "level": 50},
+	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "level": 52},
+	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "level": 55,
 		"who": "The Auditor", "mech": "auditor", "hp": 16.0, "dps": 3.5},
-	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "level": 70},
-	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "level": 72},
-	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "level": 75,
+	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "level": 60},
+	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "level": 62},
+	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "level": 65,
 		"who": "The Collector", "mech": "collector", "hp": 18.0, "dps": 3.5},
-	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 80},
-	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 82},
-	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 85,
+	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 70},
+	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 72},
+	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 75,
 		"who": "The Treasurer", "mech": "treasurer", "hp": 18.0, "dps": 2.5},     # fire 4.5 to 3.6 to 3.0 to 2.5, HP 22 to 18 (Matt, 27 Oct, the gauntlet: the County's one wall)
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:
@@ -4020,15 +4051,15 @@ const PRINT_CIRC := 1.0                # and it goes into circulation again on t
 const PRINT_DECAY := 0.8               # each print this much of the last (Matt, 26 Oct: the Mint "a choice, not a farm")
 const MINT_TINS := 2.0                   # a run's tins from the mint: the town's worth × this × mint_pay, at today's prices
 ## The true pinnacles: new people in new places, opened by a rebuild, fought on a host site's crew and drops (`site`,
-## `zone`) under their own name and art; their first fight at their set `level` (the Grid 35, the Archive 40, the Mint 45),
+## `zone`) under their own name and art; their first fight at their set `level` (the Grid 30, the Archive 34, the Mint 38: act two §6, was 35/40/45),
 ## after it max(the set level, the reach + `over`) and a level more every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
 ## `first` on the first win only.
 const PINNACLES := [
-	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 35, "again": 90,
+	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2, "level": 30, "again": 90,
 		"drop": "grid_key", "unique": "The Lineman's Lamp", "unique2": "The Lineman's Tool Bag"},
-	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 40, "again": 95,
+	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4, "level": 34, "again": 95,
 		"drop": "ledger_seal", "unique": "The Registrar's Satchel", "unique2": "The Registrar's Stamp"},
-	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 45, "again": 100, "again_soft": 0.55,
+	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6, "level": 38, "again": 100, "again_soft": 0.55,
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes", "unique2": "The Issuer's Revolver"},
 ]
 const PINNACLE_WORTH := 4
@@ -4099,7 +4130,7 @@ const XP_RAMP_FROM := 1.0
 const XP_RAMP_TO := 12
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 8.0     # 4.0 to 8.0 (the designer's call, 1 Nov, PROBE40, with REPEAT_XP x0.5: the long pass had level 50 at 7-9 h on four of six; the analyst's estimate 11.3-21.2 h, median 14.7); 3.1 to 4.0 (31 Oct, PROBE36). The scale from level 40 on: level 50 wanted at 12-24 h
+const XP_TAPER_END := 4.5     # act two §6 (4 Nov, BUILD50-T): 8.0 to 4.5, the gap to the County;  4.0 to 8.0 (the designer's call, 1 Nov, PROBE40, with REPEAT_XP x0.5: the long pass had level 50 at 7-9 h on four of six; the analyst's estimate 11.3-21.2 h, median 14.7); 3.1 to 4.0 (31 Oct, PROBE36). The scale from level 40 on: level 50 wanted at 12-24 h
 
 
 static func xp_scale(l: int) -> float:
@@ -4233,3 +4264,17 @@ const HAND_WAGE := 50.0                # a hand's wage an expedition: this × ti
 const HAND_LV_MAX := 10
 const HAND_LV_EVERY := 2               # expeditions home a level
 const HAND_LV_GROW := 0.1              # a level's rise on the trade's figure and every affix's roll
+
+## A night on the air (BUILD50 N, act_two.md §3; Matt, 4 Nov: "think we need to be able to chain them together so that
+## after the first you go into the second and so on" - open-ended, something special every fifth link). First figures:
+## Matt's fresh play sets them.
+const NIGHT_CLOCK := 1200.0                 # the night's clock: 20 minutes of fight time; out, home with the haul at the end of that link
+const NIGHT_XP_STEP := 0.05                 # a link's XP rises 5% a link past the first
+const NIGHT_FIFTH := 5                      # every fifth link brings something special
+const NIGHT_FIFTHS := ["head", "stash", "fat"]     # in turn: a head away from home, a stash, a fat drop
+const NIGHT_STASH_CRATES := 2.0             # a stash: a room of crates (the site's searches ×2)
+const NIGHT_STASH_FINDS := 2                # and two finds a search
+const NIGHT_FAT_QUALITY := 2.0              # a fat drop: the link's loot quality ×2
+const NIGHT_FAT_UNIQUE := 3.0               # and a unique's chance ×3
+const NIGHT_FLOOR := 0.7                    # "Auto: keep going" carries on while the odds stay at or over this (a setting)
+const NIGHT_RULES_MAX := 8                  # the tuning rules on the Radio

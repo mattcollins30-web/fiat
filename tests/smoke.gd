@@ -857,6 +857,21 @@ func _init() -> void:
 	_u49_order_card_checks(main)              # BUILD49 U: item 23 - the order's places drawn by the site card
 	_u49_exp_card_checks(main)                # BUILD49 U: item 15 - the Expeditions' place card, layout B
 	_u49_next_step_checks(main)               # BUILD49 U: item 21 - after Kev's story, the next step
+	_t50_numbers_checks(main.sim)             # BUILD50-T: act two §6 - the order's and the County's levels, the XP taper, the repeat's share
+	_t50_town_checks(main)                    # BUILD50-T: §1-2 - the town on the Map, tins for builds, the wages
+	_t50_focus_checks(main)                   # BUILD50-T: §4 - a signal's focus on its card and in its loot
+	_t50_resist_checks(main)                  # BUILD50-T: §5 - the Workshop's Add a resist, the pool's resists on body pieces
+	_n50_carry_checks(main)                   # BUILD50 N: a night carries HP, meds and the pack; held, then rolled at the reach + 1
+	_n50_ends_checks(main)                    # BUILD50 N: the night's four ends
+	_n50_xp_checks(main)                      # BUILD50 N: a link's XP rises 5%
+	_n50_fifth_checks(main)                   # BUILD50 N: the fifth links' specials
+	_n50_rules_checks(main)                   # BUILD50 N: the tuning rules
+	_n50_auto_checks(main)                    # BUILD50 N: Auto: keep going, and its floor
+	_n50_save_checks(main)                    # BUILD50 N: a night saves and loads mid-chain
+	_n50_ui_checks(main)                      # BUILD50 N: the break screen and Start a night fit
+	_m50_focus_night_checks(main)             # merge 50: a night's rolled link carries a focus, and the break shows it
+	_f50_night_checks(main)                   # fix 50: the review's night bugs - rounds at a link's set-off, the break's odds, the notes wager, the fifth's head, the timeout line
+	_f50_rules_checks(main)                   # fix 50: the unique boosts inside the cap; the hard-coded words in Words
 	_finish()
 
 
@@ -2757,6 +2772,7 @@ func _web_pool_checks(main) -> void:
 	sim.tree = []
 	sim._ensure_start(false)
 	sim.training_points = 20
+	sim.rewards_earned = {}                   # the camp's reward points aside: the fixture counts the trained alone (BUILD50-T: the bot's camp earned one)
 	var start: String = Data.web_start("Scrapper")
 	_check(sim.tree == [start] and sim.web_points() == 20 and sim.web_free() == 20 and sim.web_spent() == 0, "the fixture: the Scrapper with only his start, 20 points: %s" % str(sim.tree))
 	# an element's node, the centre's and a class's all from the one pool
@@ -3052,6 +3068,7 @@ func _element_bot_checks(main) -> void:
 		sim.cash = 400000.0
 		sim.market = []                   # nothing to buy: the choices below are the only ones
 		sim.training_points = 3
+		sim.rewards_earned = {}               # the camp's reward points aside (BUILD50-T: the bot's camp earned one)
 		var bot = Bot.new()
 		bot.element = el
 		var flower: String = str(Bot.web_targets("Doorman", el)[0])     # the skill web (3 Nov): the element's flower first
@@ -3479,10 +3496,10 @@ func _capstone_checks(main) -> void:
 	var m: Dictionary = sim.mission
 	m["remaining"] = 0
 	m["cleared"] = true
-	var found_before: int = m["found"].size() + int(m["left"])
+	var found_before: int = int(m.get("finds", 0))     # every find, a stack joined too (BUILD50-T: the bot's camp's find topped up the rounds found before it)
 	m["patrol_timer"] = 1e9
 	sim.advance(0.5)
-	_check(m["patrols"] >= 1 and m["found"].size() + int(m["left"]) > found_before, "Poached did not bring a find when the gang came")
+	_check(m["patrols"] >= 1 and int(m.get("finds", 0)) > found_before, "Poached did not bring a find when the gang came")
 	sim.extract_now()
 	# the Caravan shows it as a ◆◆ tile the lane's height at its end, and the run band names it
 	main.show_room(main.BARRACKS)
@@ -8754,7 +8771,7 @@ func _ammo_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	# the stash's rounds aside while these runs go out dry on purpose: the gate tops the rig up from it (16 Oct)
-	var kept_ammo: Array = sim.stash.filter(func(x): return Items.is_ammo(x))
+	var kept_ammo: Array = sim.stash.filter(func(x): return Items.is_ammo(x) or Items.is_mag(x))     # magazines too (BUILD50-T: the bot's camp kept a nail magazine, and the gate loaded it for the pistol-alone run)
 	for it in kept_ammo:
 		sim.stash.erase(it)
 	var gun = sim.equipped["Primary"]
@@ -8789,7 +8806,7 @@ func _ammo_checks(sim) -> void:
 	var backing: int = pistol0 - sim.rounds_for(sim.equipped["Secondary"])
 	_check(backing > 0, "a pistol backing a live primary spent no rounds over thirty seconds (on a run %s, kills %d, gangs %d, primary rounds %d, searching %s)" % [str(sim.on_mission()), int(sim.mission.get("kills", 0)) if sim.on_mission() else -1, int(sim.mission.get("patrols", 0)) if sim.on_mission() else -1, sim.rounds_for(sim.equipped["Primary"]), str(sim.mission.get("searching", false)) if sim.on_mission() else "-"])
 	sim.extract_now()
-	for it in sim.stash.filter(func(x): return Items.is_ammo(x)):
+	for it in sim.stash.filter(func(x): return Items.is_ammo(x) or Items.is_mag(x)):
 		sim.stash.erase(it)                     # what the runs brought home aside too: the gate would top the nail gun up
 		kept_ammo.append(it)
 	sim.rig = _rmags(sim, "Pistol rounds", 6)        # the nail gun dry: the pistol is the gun in hand
@@ -21064,6 +21081,8 @@ func _radio_juice_checks(main) -> void:
 func _panel_words_checks(main) -> void:
 	var sim = main.sim
 	var hold_pts: int = sim.training_points
+	var hold_rw: Dictionary = sim.rewards_earned.duplicate(true)
+	sim.rewards_earned = {}                   # the camp's reward points aside (BUILD50-T: the bot's camp earned one)
 	main.show_room(main.BARRACKS)
 	var bk = main._barracks
 	# the card (3 Nov, the skill web): a node's words under its name and its place, over the button; the points are the
@@ -21084,6 +21103,7 @@ func _panel_words_checks(main) -> void:
 		main.refresh()
 		_check_fit(main, "Training (a node, no point free)")
 	sim.training_points = hold_pts
+	sim.rewards_earned = hold_rw
 	bk.selected = ""
 	bk._shown = ""
 	main.show_room(main.WORKSHOP)
@@ -22540,6 +22560,7 @@ func _web47_checks(main) -> void:
 	sim.tree = [start]
 	sim.ring = {}
 	sim.training_points = 4
+	sim.rewards_earned = {}                   # the camp's reward points aside (BUILD50-T: the bot's camp earned one)
 	sim._caches_out()
 	# the fixture: four nodes out from the start toward the Rat bait (the Poacher's left pair's half)
 	var pairs: Array = sim.web_pairs()
@@ -24325,6 +24346,7 @@ func _rebuild_checks(main) -> void:
 	_check(c1 == {"copper_wire": 20, "cable_drums": 10}, "the substation's first build wants %s" % str(c1))
 	_check(s.rebuild_block("substation").begins_with("Short of"), "the substation builds with nothing held")
 	s.materials = {"copper_wire": 100, "cable_drums": 100, "paving": 100, "glass": 100, "ledgers": 200, "army_kit": 100, "fuses": 50}
+	s.cash = 1e7                              # the builds' tins (BUILD50-T: tins pay for the town)
 	var rest0: float = s.rest_rate()
 	var bandage: Dictionary = s._plain(Data.MEDICAL, "Bandage")
 	var med0: int = s.clinic_price(bandage)
@@ -24478,6 +24500,7 @@ func _rebuild_checks(main) -> void:
 	sim.materials = {"copper_wire": 999, "cable_drums": 999, "paving": 999, "glass": 999, "ledgers": 999, "army_kit": 999, "fuses": 999}
 	sim.key_items = {"grid_key": 3, "ledger_seal": 3, "fiat_note": 1}
 	sim.rebuilt = {"substation": 4, "library": 2}
+	sim.cash = 1e8                            # the builds' tins (BUILD50-T)
 	main._radio._town._shown = ""
 	main.refresh()
 	var tw = main._radio._town
@@ -29771,7 +29794,7 @@ func _repeat_checks(main) -> void:
 	show_site.call(site)
 	var rc = main._missions._report
 	var tf: Array = Fmt.money_forms(float(tot["tins"]))
-	_check(rc.visible and rc.title.text == "Back from the Allotments" and rc.tiles[0]["value"].text == Fmt.group(int(tot["kills"])) and rc.tiles[2]["value"].text in tf and rc.tiles[6]["key"].text == "12% XP" and rc.tiles[6]["value"].text in [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))] and rc.ended.text == Words.REPEAT["ended_back"], "the report card: shown %s, '%s', kills '%s', tins '%s', '%s', ended '%s'" % [str(rc.visible), rc.title.text, rc.tiles[0]["value"].text, rc.tiles[2]["value"].text, rc.tiles[6]["key"].text, rc.ended.text])
+	_check(rc.visible and rc.title.text == "Back from the Allotments" and rc.tiles[0]["value"].text == Fmt.group(int(tot["kills"])) and rc.tiles[2]["value"].text in tf and rc.tiles[6]["key"].text == "25% XP" and rc.tiles[6]["value"].text in [Fmt.group(int(round(float(tot["xp"])))), Fmt.num(float(tot["xp"]))] and rc.ended.text == Words.REPEAT["ended_back"], "the report card: shown %s, '%s', kills '%s', tins '%s', '%s', ended '%s'" % [str(rc.visible), rc.title.text, rc.tiles[0]["value"].text, rc.tiles[2]["value"].text, rc.tiles[6]["key"].text, rc.ended.text])
 	_check(not main._missions._came_btn.visible, "Came back beside the repeat's report: the same runs twice")
 	_check(main._rail_status(main.MISSIONS).get("badge", "") == "Back", "the Map's badge with the report waiting: '%s'" % str(main._rail_status(main.MISSIONS)))
 	var shown_lines: int = rc.lines.filter(func(l): return l.visible and l.text.begins_with("Run ")).size()
@@ -29967,7 +29990,7 @@ func _repeat_checks(main) -> void:
 		counts.append(sim.repeat_count())
 		shares.append(share_of.call())
 	_check(counts == [5, 10, 10, 20, 20, 0], "the Bunkhouse's runs: %s" % str(counts))
-	_check(is_equal_approx(shares[0], 12.0) and is_equal_approx(shares[1], 17.0) and is_equal_approx(shares[2], 22.0) and is_equal_approx(shares[4], 30.0), "the repeat XP's share: %s (BUILD41: halved)" % str(shares))
+	_check(is_equal_approx(shares[0], 25.0) and is_equal_approx(shares[1], 35.0) and is_equal_approx(shares[2], 45.0) and is_equal_approx(shares[4], 60.0), "the repeat XP's share: %s (BUILD50-T: back to 25/35/45/60)" % str(shares))
 	sim.hp = sim.max_hp()
 	sim.deploy(0)
 	sim.mission["unwatched"] = true
@@ -36795,7 +36818,7 @@ func _u49_signal_card_checks(main) -> void:
 		var shown_d: Array = rd._card_drops.filter(func(d): return d["panel"].visible)
 		_check(shown_d.size() == (mats[0] as Dictionary).size() and shown_d.all(func(d): return d["icon"].texture != null and str(d["text"].text).ends_with("%")), "the drops aren't pictures with their share: %s" % str(shown_d.map(func(d): return d["text"].text)))
 		# Set off first: over the tuning, and the card inside its column with the places under it
-		_check(rd._set_off.position.y < rd._crafts[0]["button"].position.y and rd._set_off.position.y < rd._bin.position.y and rd._set_off.size.x >= rd._card.size.x - 40, "Set off isn't the card's first, full-width button")
+		_check(rd._set_off.position.y < rd._crafts[0]["button"].position.y and rd._set_off.position.y < rd._bin.position.y and rd._set_off.size.x >= (rd._card.size.x - 40) / 2.0 - 8.0, "Set off isn't the card's first button, the row's half beside Start a night")     # BUILD50 N: Start a night in the other half
 		_check(rd._card.size.y <= rd.CARD_H + 0.5, "the card is %.0f tall, over its %d (codes %.0f, set off %.0f, others %.0f)" % [rd._card.size.y, rd.CARD_H, rd._card_codes.size.y, rd._set_off.position.y, rd._card_others.position.y])
 		var bottom: float = rd._card.position.y + rd._card.size.y
 		for o in rd._others + rd._places.map(func(p): return {"button": p["box"]}):
@@ -37083,3 +37106,1102 @@ func _u49_settle_wagers(main, WO) -> Array:
 	main._missions._shown = ""
 	main.refresh()
 	return [n, parked]
+
+
+# ------------------------------------------------------------------ BUILD50-T (5 Nov): act two - the town, the numbers, signals' focus, aimed resists
+
+## §6 the numbers: the order's heads at 30, 34 and 38; the County's zones 40-45 to 70-75 (the same spread inside each);
+## the XP curve's taper ends at 4.5; a repeat run's XP share back to 25% (Bunkhouse 35, 45, 60).
+func _t50_numbers_checks(sim) -> void:
+	var lv: Array = Data.PINNACLES.map(func(p): return int(p["level"]))
+	var who: Array = Data.PINNACLES.map(func(p): return str(p["who"]))
+	_check(lv == [30, 34, 38] and who == ["The Lineman", "The Registrar", "The Issuer"], "the order's heads at %s (%s), not 30, 34, 38" % [str(lv), str(who)])
+	for p in Data.PINNACLES:
+		if int(sim.order_beaten.get(str(p["key"]), 0)) == 0:
+			_check(sim.order_level(str(p["key"])) == int(p["level"]), "%s's first fight at level %d, not its set %d" % [p["who"], sim.order_level(str(p["key"])), int(p["level"])])
+	for z in range(Data.COUNTY_ZONES.size()):
+		var ls: Array = Data.COUNTY.filter(func(c): return int(c["cz"]) == z).map(func(c): return int(c["level"]))
+		var want: Array = [40 + 10 * z, 42 + 10 * z, 45 + 10 * z]
+		_check(ls == want, "the County's zone %d at levels %s, not %s" % [z, str(ls), str(want)])
+	_check(sim.order_level("toll_plaza") == 40 or int(sim.order_beaten.get("toll_plaza", 0)) > 0, "the Toll Plaza's first fight at %d, not 40" % sim.order_level("toll_plaza"))
+	_check(is_equal_approx(Data.XP_TAPER_END, 4.5) and is_equal_approx(Data.xp_scale(Data.XP_TAPER_TO), 4.5) and is_equal_approx(Data.xp_scale(60), 4.5),
+		"the XP curve's taper ends at %.2f (level 40 %.2f, 60 %.2f), not 4.5" % [Data.XP_TAPER_END, Data.xp_scale(Data.XP_TAPER_TO), Data.xp_scale(60)])
+	var mid: float = Data.xp_scale(int((Data.XP_TAPER_FROM + Data.XP_TAPER_TO) / 2.0))
+	_check(mid > Data.XP_SCALE and mid < 4.5, "the taper's middle reads %.2f, not between %.1f and 4.5" % [mid, Data.XP_SCALE])
+	_check(Data.REPEAT_XP == [0.25, 0.35, 0.45, 0.60], "the repeat's XP shares %s, not 25/35/45/60%%" % str(Data.REPEAT_XP))
+	var share: float = sim.repeat_xp_share()
+	_check(share in Data.REPEAT_XP and (share >= 0.25), "a repeat run's XP share %.2f, not one of %s" % [share, str(Data.REPEAT_XP)])
+	if not sim.yard_has("rr_rest") and not sim.yard_has("rr_list") and not sim.yard_has("rr_ten"):
+		_check(is_equal_approx(share, 0.25), "a repeat run's XP share %.2f with no Bunkhouse, not 25%%" % share)
+	print("t50 numbers ok")
+
+
+## §1-2 the town: the road's order; a build takes its tins; a day's wages paid in the town's order; an unpaid place
+## stopping (its effects off, its pin unlit, the toast) then running again when paid; a run home pays them; the goal
+## line counting running places; the Map's pins and their words; the bill on the Map and the Town tab; fit at both sizes.
+func _t50_town_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var keep := {"beat": sim.story_beat, "rebuilt": sim.rebuilt.duplicate(), "mats": sim.materials.duplicate(), "keys": sim.key_items.duplicate(),
+		"cash": sim.cash, "stopped": sim.town_stopped.duplicate(), "halves": sim.rebuild_halves}
+	sim.story_beat = Data.STORY_BEATS.size()
+	sim.rebuilt = {}
+	sim.town_stopped = {}
+	sim.rebuild_halves = 0
+	var road: Array = Data.REBUILDS.map(func(r): return str(r["key"]))
+	_check(road == ["substation", "pumping", "bus_depot", "market_hall", "library", "mint"] and road == Words.U49_TOWN_ROAD, "the town's road %s, not act two's order" % str(road))
+	# a build takes its tins, with its materials; short of them it says so
+	sim.materials = {"copper_wire": 60, "cable_drums": 30, "fuses": 10}
+	var t0: int = sim.rebuild_tins("substation")
+	_check(t0 == sim._inf(5000.0) and t0 > 0, "the substation's build %d tins, not 5,000 at today's prices (%d)" % [t0, sim._inf(5000.0)])
+	sim.cash = float(t0 - 1)
+	_check(not sim.can_rebuild("substation") and sim.rebuild_block("substation") == Words.T50_TOWN["short_tins"] % sim.money_word(), "the substation builds short of tins: '%s'" % sim.rebuild_block("substation"))
+	sim.cash = float(t0 + 250)
+	_check(sim.rebuild_place("substation") and is_equal_approx(sim.cash, 250.0) and sim.rebuild_rank("substation") == 1, "a build didn't take its tins: %.0f left of %d" % [sim.cash, t0 + 250])
+	_check(sim.rebuild_tins("substation") == sim._inf(5000.0 * Data.REBUILD_GROWTH), "the substation's second rank %d tins, not x%.2f" % [sim.rebuild_tins("substation"), Data.REBUILD_GROWTH])
+	var tins_want := {"pumping": 8000, "bus_depot": 8000, "market_hall": 10000, "library": 15000, "mint": 25000}
+	for k in tins_want:
+		_check(sim.rebuild_tins(k) == sim._inf(float(tins_want[k])), "%s's build %d tins, not %d" % [k, sim.rebuild_tins(k), int(tins_want[k])])
+	# the wages: by rank, the bill, the days
+	sim.rebuilt = {"substation": 1, "pumping": 2, "bus_depot": 1, "market_hall": 1, "library": 1, "mint": 1}
+	var w := {}
+	for k in road:
+		w[k] = sim.town_wage(k)
+	var base := {"substation": 900.0, "pumping": 800.0 * 1.25, "bus_depot": 900.0, "market_hall": 1000.0, "library": 1200.0, "mint": 1500.0}
+	for k in base:
+		_check(int(w[k]) == sim._inf(float(base[k])), "%s's wage %d, not %d" % [k, int(w[k]), sim._inf(float(base[k]))])
+	var bill: int = 0
+	for k in road:
+		bill += int(w[k])
+	_check(sim.town_bill() == bill, "the day's bill %d, not %d" % [sim.town_bill(), bill])
+	sim.cash = float(bill * 7 + 3)
+	_check(sim.town_days() == 7, "the tins cover %d days, not 7" % sim.town_days())
+	# paid in the town's order: the first three covered, the rest stopped, never into debt
+	var spare: int = maxi(0, mini(int(w["market_hall"]), mini(int(w["library"]), int(w["mint"]))) - 1)     # short of every later wage (fiat's are small)
+	sim.cash = float(int(w["substation"]) + int(w["pumping"]) + int(w["bus_depot"]) + spare)
+	var ev0: int = sim.events_total
+	sim.town_pay_day()
+	_check(is_equal_approx(sim.cash, float(spare)) and sim.town_stopped.keys() == ["market_hall", "library", "mint"], "wages not paid in the town's order: %.0f left, stopped %s" % [sim.cash, str(sim.town_stopped.keys())])
+	_check(sim.town_running() == 3 and not sim.town_on("market_hall") and sim.town_on("pumping"), "running %d, not 3" % sim.town_running())
+	_check(sim.town_stat("shelf") == 0.0 and sim.town_stat("paper_pct") == 0.0 and sim.mint_tins() == 0.0 and sim.town_stat("pack_cells") > 0.0,
+		"a stopped place's effects stay on: shelf %.1f, papers %.1f, mint %.0f" % [sim.town_stat("shelf"), sim.town_stat("paper_pct"), sim.mint_tins()])
+	var said: Array = []
+	for e in sim.events.slice(sim.events.size() - mini(sim.events.size(), sim.events_total - ev0)):
+		said.append(str(e[1]))
+	var stop_line: String = Words.T50_TOWN["log_stopped"] % [Words.mid("The market hall"), sim.money_word()]
+	_check(stop_line in said and Words.toast_tone(stop_line) == "warn", "no toast for the market hall stopping: %s" % str(said))
+	sim.cash = 0.0
+	sim.town_pay_day()
+	_check(sim.cash >= 0.0 and sim.town_running() == 0, "no tins: %.0f in hand, %d running" % [sim.cash, sim.town_running()])
+	# the Map: the goal line counts the running, its pips, the stopped said, the bill; the pins' states; at both sizes
+	sim.cash = float(int(w["substation"]) + int(w["pumping"]) + int(w["bus_depot"]) + spare)
+	sim.town_pay_day()
+	var M = main._missions
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		M._shown = ""
+		M._goal_sig = ""
+		main.refresh()
+		_check(M._goal_text.text == Words.U49_NEXT["goal"] % [3, 6], "the goal line counts '%s' with three running of six built" % M._goal_text.text)
+		var lit: Array = []
+		var red: Array = []
+		for k in range(M._goal_pips.size()):
+			var sb: StyleBoxFlat = M._goal_pips[k].get_theme_stylebox("panel")
+			if sb.bg_color == Pal.ACCENT:
+				lit.append(k)
+			elif sb.border_color == Pal.BAD:
+				red.append(k)
+		_check(lit == [0, 1, 2] and red == [3, 4, 5], "the goal's pips: lit %s, red %s" % [str(lit), str(red)])
+		_check(M._goal_next.text.contains(Words.T50_TOWN["stopped"]) and M._goal_next.get_theme_color("font_color") == Pal.BAD, "the goal line doesn't say a place stopped: '%s'" % M._goal_next.text)
+		_check(M._goal_bill.visible and (M._goal_bill.text.contains(Fmt.money(bill)) or M._goal_bill.text.contains(Fmt.money_k(bill))) and M._goal_bill.text.contains(Words.T50_TOWN["day"] if sim.town_days() == 1 else Words.T50_TOWN["days"] % sim.town_days()),
+			"the Map's bill: '%s' (%d, %d days)" % [M._goal_bill.text, bill, sim.town_days()])
+		_check(M._goal_bill.text == Words.T50_TOWN["bill"] % [Fmt.money(bill), Words.T50_TOWN["day"] if sim.town_days() == 1 else Words.T50_TOWN["days"] % sim.town_days()] and M._goal_bill.position.y >= M._goal_btn.position.y + M._goal_btn.size.y - 4.0 and M._goal_bill.position.y + M._goal_bill.size.y <= M._goal.size.y + 2.0, "the bill isn't whole on the goal line's second row: '%s'" % M._goal_bill.text)
+		var st: Dictionary = M._map.town_states
+		_check(st.get("substation") == "running" and st.get("bus_depot") == "running" and st.get("market_hall") == "stopped" and st.get("mint") == "stopped", "the pins' states: %s" % str(st))
+		var tip: String = M._map._get_tooltip(M._map.town_pin_at("substation"))
+		_check(tip.contains(Words.T50_TOWN["back"]["substation"]) and tip.contains(Words.T50_TOWN["running"] % Fmt.money(int(w["substation"]))) and tip.contains(sim.rebuild_words("substation", 1)[0]), "the substation's pin says: '%s'" % tip)
+		var tip2: String = M._map._get_tooltip(M._map.town_pin_at("mint"))
+		_check(tip2.contains(Words.T50_TOWN["stopped_day"] % Fmt.money(sim.town_wage("mint"))), "the mint's pin doesn't say it stopped: '%s'" % tip2)     # fix 50's words: "Stopped: %s a day unpaid"
+		# the pins clear of the sites', the order's and the goal line
+		var near: Array = []
+		for k in M._map.TOWN_AT:
+			var c: Vector2 = M._map.town_pin_at(k)
+			for i in range(Data.TIERS.size()):
+				if c.distance_to(M._map.pin_at(i)) < 40.0:
+					near.append([k, i])
+			for ok in M._map.ORDER_AT:
+				if c.distance_to(M._map.order_pin_at(ok)) < 40.0:
+					near.append([k, ok])
+			if Rect2(M._goal.position, M._goal.size).has_point(M._map.position + c):
+				near.append([k, "goal"])
+		_check(near.is_empty(), "the town's pins on others: %s" % str(near))
+		_check_fit(main, "the Map, the town's wages and pins (%dx%d)" % [int(sz.x), int(sz.y)])
+		# the next step dashed, the rest ringed
+		var rb: Dictionary = sim.rebuilt
+		sim.rebuilt = {"substation": 1}
+		var stp: Dictionary = sim.town_stopped
+		sim.town_stopped = {}
+		M._shown = ""
+		M._map._shown = ""
+		main.refresh()
+		st = M._map.town_states
+		_check(st.get("substation") == "running" and st.get("pumping") == "next" and st.get("bus_depot") == "ringed" and st.get("mint") == "ringed", "one built: the pins %s" % str(st))
+		_check(M._goal_text.text == Words.U49_NEXT["goal"] % [1, 6] and M._goal_next.text.to_lower().contains("pumping"), "one running: '%s' / '%s'" % [M._goal_text.text, M._goal_next.text])
+		_check(M._map._get_tooltip(M._map.town_pin_at("pumping")).contains(Words.T50_TOWN["next"]), "the next step's pin doesn't say so")
+		_check_fit(main, "the Map, one place running (%dx%d)" % [int(sz.x), int(sz.y)])
+		# a press on a place's pin opens the Town tab
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = true
+		ev.position = M._map.town_pin_at("pumping")
+		M._map._gui_input(ev)
+		main.refresh()
+		_check(main.room == main.COMMS and main._radio.view == "town", "a press on the pumping station's pin didn't open the Town tab: %s, %s" % [main.room, main._radio.view])
+		sim.rebuilt = rb
+		sim.town_stopped = stp
+		# the Town tab: the bill, the days, a stopped card, what came back
+		main.open_town()
+		var tw = main._radio._town
+		tw._shown = ""
+		main.refresh()
+		_check(tw._bill.text.contains(Fmt.money(bill)) or tw._bill.text.contains(Fmt.money_k(bill)), "the Town tab's bill: '%s'" % tw._bill.text)
+		_check(tw._bill_sub.text.contains(Words.T50_TOWN["day"] if sim.town_days() == 1 else Words.T50_TOWN["days"] % sim.town_days()), "the Town tab's days: '%s'" % tw._bill_sub.text)
+		_check(tw.card("market_hall")["rank"].text == Words.T50_TOWN["stopped"] and tw.card("market_hall")["back"].text in [Words.T50_TOWN["stopped_day"] % Fmt.money(sim.town_wage("market_hall")), Words.T50_TOWN["stopped_day"] % Fmt.money_k(sim.town_wage("market_hall")), Words.T50_TOWN["stopped"]], "the market hall's card doesn't say stopped: '%s' / '%s'" % [tw.card("market_hall")["rank"].text, tw.card("market_hall")["back"].text])
+		_check(tw.card("substation")["back"].text.begins_with(Words.T50_TOWN["back"]["substation"]), "the substation's card: '%s'" % tw.card("substation")["back"].text)
+		_check_fit(main, "the Town tab, the wages (%dx%d)" % [int(sz.x), int(sz.y)])
+		var rb2: Dictionary = sim.rebuilt
+		sim.rebuilt = {"substation": 1}
+		sim.town_stopped = {}
+		sim.cash = 10.0
+		tw._shown = ""
+		main.refresh()
+		var chips_t: String = " ".join(tw.card("pumping")["chips"].text_nodes().map(func(l): return str(l.text)))
+		_check(chips_t.contains(Fmt.money(sim.rebuild_tins("pumping"))) or chips_t.contains(Fmt.money_k(sim.rebuild_tins("pumping"))), "the pumping station's card doesn't want its tins: '%s'" % chips_t)
+		_check(tw.card("pumping")["back"].text.contains(Words.T50_TOWN["next"]), "the next step's card: '%s'" % tw.card("pumping")["back"].text)
+		_check_fit(main, "the Town tab, one built (%dx%d)" % [int(sz.x), int(sz.y)])
+		sim.rebuilt = rb2
+		sim.town_stopped = stp
+	# a run home pays the day: every place stopped, the tins to cover them, one run home and they run
+	sim.rebuilt = {"substation": 1, "pumping": 2, "bus_depot": 1, "market_hall": 1, "library": 1, "mint": 1}
+	for k in road:
+		sim.town_stopped[k] = true
+	sim.cash = float(bill * 3)
+	var day0: int = sim.exchange_day
+	sim.hp = sim.max_hp()
+	sim.set_depth(0, 1)
+	sim.deploy(0)
+	_check(sim.on_mission(), "the fixture: the run didn't set off")
+	if sim.on_mission():
+		sim.extract_now()
+		_check(sim.exchange_day == day0 + 1 and sim.town_stopped.is_empty() and sim.town_running() == 6, "a run home didn't pay the wages: day %d, stopped %s" % [sim.exchange_day, str(sim.town_stopped.keys())])
+		var back_line: String = Words.T50_TOWN["log_back"] % Words.mid("The mint")
+		_check(sim.events.any(func(e): return str(e[1]) == back_line) and Words.toast_tone(back_line) == "good", "no toast for the mint running again")
+	# saved and loaded: a stopped place stays stopped
+	sim.town_stopped = {"library": true}
+	var d: Dictionary = sim.to_dict()
+	sim.town_stopped = {}
+	sim.load_dict(d)
+	sim = main.sim
+	_check(sim.town_stopped.keys() == ["library"], "a stopped place lost on a load: %s" % str(sim.town_stopped.keys()))
+	sim.story_beat = keep["beat"]
+	sim.rebuilt = keep["rebuilt"]
+	sim.materials = keep["mats"]
+	sim.key_items = keep["keys"]
+	sim.cash = keep["cash"]
+	sim.town_stopped = keep["stopped"]
+	sim.rebuild_halves = keep["halves"]
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("t50 town ok")
+
+
+## §4 a signal's focus: rolled and saved with the signal; the material the town's next step's first short; shown on
+## the card's drops at both sizes; weighting the run's loot - a resist focus over N finds gives its share, a slot its,
+## a unique x3, a material +2 in the pack.
+func _t50_focus_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var keep := {"rebuilt": sim.rebuilt.duplicate(), "mats": sim.materials.duplicate(), "signals": sim.signals.duplicate(true), "papers": sim.papers.duplicate(true), "cash": sim.cash, "beat": sim.story_beat}
+	sim.signals = []
+	sim.rebuilt = {}
+	sim.materials = {}
+	# the roll: every kind, the material the town's next wants first
+	var kinds := {}
+	for n in range(400):
+		var sg := {"zone": 2}
+		sim.signal_focus_roll(sg)
+		kinds[str(sg["focus"]["kind"])] = int(kinds.get(str(sg["focus"]["kind"]), 0)) + 1
+		if str(sg["focus"]["kind"]) == "material":
+			_check(str(sg["focus"]["key"]) == "copper_wire", "a material focus with nothing built: %s, not copper cable" % str(sg["focus"]))
+		elif str(sg["focus"]["kind"]) == "resist":
+			_check(str(sg["focus"]["el"]) in Data.ELEMENTS, "a resist focus %s" % str(sg["focus"]))
+		elif str(sg["focus"]["kind"]) == "slot":
+			_check(str(sg["focus"]["slot"]) in Data.SLOTS, "a slot focus %s" % str(sg["focus"]))
+	_check(kinds.keys().size() == 4 and kinds.values().min() > 50, "the focus kinds rolled: %s" % str(kinds))
+	sim.materials = {"copper_wire": 25}
+	_check(sim.focus_material(2) == "cable_drums", "with the copper cable held, the focus wants %s, not cable drums" % sim.focus_material(2))
+	# a decrypted signal carries one, kept through a save
+	sim.papers = []
+	for b in ["A P45", "A pawn ticket", "A bank statement"]:
+		sim.papers.append(sim._plain(Data.PAPER, b))
+	var made: Dictionary = sim.decrypt(sim.papers.map(func(x): return int(x["id"])))
+	_check(not made.is_empty() and str(made.get("focus", {}).get("kind", "")) in Data.FOCUS_KINDS, "a decrypted signal has no focus: %s" % str(made.get("focus", {})))
+	if made.is_empty():
+		sim.signals = keep["signals"]
+		return
+	made["focus"] = {"kind": "resist", "el": "shock"}
+	var d: Dictionary = sim.to_dict()
+	sim.load_dict(d)
+	sim = main.sim
+	_check(sim.signals.size() == 1 and sim.signals[0].get("focus", {}) == {"kind": "resist", "el": "shock"}, "a signal's focus lost on a load: %s" % str(sim.signals[0].get("focus", {}) if not sim.signals.is_empty() else {}))
+	# the card's drops: the focus chip first, each kind, inside the card, at both sizes
+	var rd = main._radio
+	var forms_seen: Array = []
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for f in [{"kind": "resist", "el": "shock"}, {"kind": "material", "key": "glass"}, {"kind": "slot", "slot": "Helmet"}, {"kind": "unique"}]:
+			sim.signals[0]["focus"] = f
+			main.show_room(main.COMMS)
+			rd._pick_view("air")
+			rd.selected = 0
+			rd._shown = ""
+			main.refresh()
+			var want: Array = rd.focus_forms(sim, sim.signals[0])
+			_check(rd._card_focus.visible and rd._card_focus_text.text in want and rd._card_drops_head.visible, "the card's focus for %s: '%s' (%s)" % [str(f), rd._card_focus_text.text, str(want)])
+			_check(rd._card_focus.position.x + rd._card_focus.size.x <= rd._card.size.x - 12.0 and is_equal_approx(rd._card_focus.position.y, rd._card_drops_head.position.y), "the focus chip leaves the card or its row")
+			for dp in rd._card_drops:
+				if dp["panel"].visible:
+					_check(dp["panel"].position.x >= rd._card_focus.position.x + rd._card_focus.size.x and dp["panel"].position.x + dp["panel"].size.x <= rd._card.size.x - 12.0, "a drop's chip on the focus or past the card")
+			forms_seen.append(rd._card_focus_text.text)
+			_check_fit(main, "the signal card, its focus %s (%dx%d)" % [str(f.get("kind")), int(sz.x), int(sz.y)])
+	_check(forms_seen.has(Words.T50_FOCUS["resist"] % "Shock") and forms_seen.has(Words.T50_FOCUS["material"] % [Data.FOCUS_MATERIAL, "glass"]), "the focus words: %s" % str(forms_seen))
+	main.layout(Vector2(1920, 1080))
+	# the loot: a resist focus's share over N finds, against none
+	var shares: Array = []
+	for f in [{"kind": "resist", "el": "shock"}, {}]:
+		sim.signals[0]["focus"] = f
+		var got: Array = _t50_finds(sim, 0, 700)
+		var can: Array = got.filter(func(it): return str(it.get("slot", "")) in Items.affix_def("shock_res")["slots"] and not it.has("unique") and not it.has("set") and it.has("affixes"))
+		var with: Array = can.filter(func(it): return it["affixes"].any(func(a): return str(a["stat"]) == "shock_res"))
+		shares.append([with.size(), can.size()])
+	var s_on: float = float(shares[0][0]) / maxf(1.0, float(shares[0][1]))
+	var s_off: float = float(shares[1][0]) / maxf(1.0, float(shares[1][1]))
+	_check(shares[0][1] >= 60 and s_on >= Data.FOCUS_RESIST - 0.06 and s_on > s_off + 0.15, "a shock resist focus: %d of %d finds carry it (%.2f), %.2f without" % [shares[0][0], shares[0][1], s_on, s_off])
+	# a slot's share
+	var sl_sh: Array = []
+	for f in [{"kind": "slot", "slot": "Helmet"}, {}]:
+		sim.signals[0]["focus"] = f
+		var got2: Array = _t50_finds(sim, 0, 700)
+		var gear: Array = got2.filter(func(it): return str(it.get("slot", "")) in Data.SLOTS and not it.has("unique") and not it.has("set"))     # the plain gear: a unique's or a set piece's slot is its own
+		sl_sh.append(float(gear.filter(func(it): return str(it["slot"]) == "Helmet").size()) / maxf(1.0, float(gear.size())))
+	_check(sl_sh[0] >= Data.FOCUS_SLOT - 0.06 and sl_sh[0] > sl_sh[1] + 0.25, "a helmet focus: %.2f of the gear helmets, %.2f without" % [sl_sh[0], sl_sh[1]])
+	# a unique's chance x3: on the run, the multiplier; over N finds, more uniques
+	var un: Array = []
+	for f in [{"kind": "unique"}, {}]:
+		sim.signals[0]["focus"] = f
+		var got3: Array = _t50_finds(sim, 0, 2500, true)
+		un.append(got3.filter(func(it): return it.has("unique")).size())
+	# fix 50 (review50a 8): the focus's ×3 sits inside UNIQUE_CAP - where loose uniques drop the chance is at the cap
+	# already, so the count no longer moves; the run's multiplier and the capped chance are read instead
+	var tu: Dictionary = sim.effective(0).duplicate(true)
+	tu["depth"] = 2
+	var cu: Array = []
+	for f in [{"kind": "unique"}, {}]:
+		var sgu: Dictionary = sim.signals[0].duplicate(true)
+		sgu["focus"] = f
+		sim._sig_on(sgu)
+		cu.append([sim.focus_unique_mult(), sim.loose_unique_chance(tu), sim.loose_unique_chance(_t50_deep(sim))])
+		sim._sig_off()
+	_check(un[0] > 0 and un[1] > 0 and is_equal_approx(float(cu[0][0]), Data.FOCUS_UNIQUE) and is_equal_approx(float(cu[1][0]), 1.0) and is_equal_approx(float(cu[0][1]), float(cu[1][1]) * Data.FOCUS_UNIQUE) and is_equal_approx(float(cu[0][2]), float(cu[1][2]) * Data.FOCUS_UNIQUE) and float(cu[0][2]) > Data.UNIQUE_CAP,
+		"a unique focus: ×%.1f / ×%.1f, the chance at depth 2 %.3f against %.3f, uniques found %d against %d" % [float(cu[0][0]), float(cu[1][0]), float(cu[0][1]), float(cu[1][1]), un[0], un[1]])
+	# a material: +2 of it in the pack, on the run's material roll
+	sim.signals[0]["focus"] = {"kind": "material", "key": "glass"}
+	sim.hp = sim.max_hp()
+	if sim.deploy_signal(0):
+		var m: Dictionary = sim.mission
+		m["found"] = []
+		m["mat_rolled"] = false
+		sim._run_materials(m)
+		var glass := 0
+		for it in m["found"] + m.get("floor", []):
+			if Items.is_material(it) and Items.material_key(it) == "glass":
+				glass += Items.stack_size(it)
+		_check(glass >= Data.FOCUS_MATERIAL, "a glass focus put %d glass in the pack, not %d" % [glass, Data.FOCUS_MATERIAL])
+		_check(is_equal_approx(sim.focus_unique_mult(), 1.0), "a material focus multiplies the uniques")
+		sim.mission["found"] = []
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: the glass signal didn't set off")
+	sim.signals = keep["signals"]
+	sim.papers = keep["papers"]
+	sim.rebuilt = keep["rebuilt"]
+	sim.materials = keep["mats"]
+	sim.cash = keep["cash"]
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("t50 focus ok: resist %.2f/%.2f, helmet %.2f/%.2f, uniques %d/%d" % [s_on, s_off, sl_sh[0], sl_sh[1], un[0], un[1]])
+
+
+## Held signal `k`'s run, its finds rolled `n` times as a search would (captured, nothing lands); home after. `deep`: at a
+## depth where the uniques drop.
+func _t50_finds(sim, k: int, n: int, deep := false) -> Array:
+	var out: Array = []
+	var sg: Dictionary = sim.signals[k]
+	var d0: int = int(sg["depth"])
+	var s0: int = int(sg["site"])
+	var copy: Dictionary = sg.duplicate(true)
+	if deep:
+		# a site and depth where loose uniques drop: the first that has them
+		var found := false
+		for i in range(Data.TIERS.size() - 1, -1, -1):
+			for dd in [12, 9, 15]:
+				sg["site"] = i
+				sg["depth"] = dd
+				sim.hp = sim.max_hp()
+				if not sim.deploy_signal(k):
+					continue
+				var mt: Dictionary = sim.mission["t"]
+				if not sim.loose_at(int(mt["depth"]), int(mt["loot_tier"])).is_empty():
+					found = true
+					break
+				sim.mission["found"] = []
+				sim.extract_now()
+				sim.signals.insert(k, sg)
+			if found:
+				break
+		_check(found, "the fixture: no site with loose uniques")
+		if not found:
+			return out
+	else:
+		sim.hp = sim.max_hp()
+		if not sim.deploy_signal(k):
+			_check(false, "the fixture: signal %d didn't set off" % k)
+			return out
+	var m: Dictionary = sim.mission
+	for i in range(n):
+		var r: Dictionary = sim._find(m, m["t"], false, {}, true)
+		if not r.is_empty() and not r.get("it", {}).is_empty():
+			out.append(r["it"])
+	m["found"] = []
+	sim.extract_now()
+	copy["depth"] = d0
+	copy["site"] = s0
+	sim.signals.insert(k, copy)              # back on the Radio for the next read
+	return out
+
+
+## §5 "Add a resist": the element's resist on a helmet, its tier an affix's, the rarity up a step, at the add's price
+## x 1.5; refused on a weapon, a rig, with it on already; the pool's resists a third likelier on the body pieces; the
+## Workshop's tile and its pick of the five, at both sizes.
+func _t50_resist_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var cash0: float = sim.cash
+	sim.cash = 1e9
+	var helm: Dictionary = sim._plain("Helmet", str(Data.BASES["Helmet"][2]["name"]))
+	helm["id"] = 995001
+	var gun: Dictionary = sim._plain("Primary", str(Data.BASES["Primary"][3]["name"]))
+	gun["id"] = 995002
+	var rig: Dictionary = sim._plain("Rig", str(Data.BASES["Rig"][1]["name"]))
+	rig["id"] = 995003
+	for it in [helm, gun, rig]:
+		sim.stash.append(it)
+	_check(Data.CRAFT["resist"]["cash"] == int(round(Data.CRAFT["add"]["cash"] * Data.RESIST_JOB_PRICE)), "the resist job's price isn't the add's x1.5")
+	var add_c: int = sim._craft_cost_raw(helm, "add")
+	var res_c: int = sim._craft_cost_raw(helm, "resist")
+	var price := func(kind: String) -> int:
+		var pv: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(helm) * (int(helm["rarity"]) + 1)
+		if sim.yard_has("cheap_parts"):
+			pv = int(round(pv * Data.FX["yard/cheap_parts"]))
+		return sim._inf(pv)
+	_check(res_c > 0 and res_c == price.call("resist") and add_c == price.call("add"), "Add a resist costs %d against the add's %d (%d, %d)" % [res_c, add_c, price.call("resist"), price.call("add")])
+	var r0: int = int(helm["rarity"])
+	_check(sim.craft(995001, "resist", "shock_res"), "Add a resist refused a helmet: '%s'" % sim.resist_job_block(helm, "shock_res"))
+	var sh: Array = helm["affixes"].filter(func(a): return str(a["stat"]) == "shock_res")
+	_check(sh.size() == 1 and int(helm["rarity"]) == r0 + 1 and int(sh[0]["tier"]) >= 1 and int(sh[0]["tier"]) <= Items.rarity_cap(helm) and float(sh[0]["value"]) > 0.0, "the helmet's shock resist: %s, rarity %d" % [str(sh), int(helm["rarity"])])
+	_check(sim.last_craft["words"].begins_with("Added") and sim.last_craft["words"].to_lower().contains("shock"), "the job's words: '%s'" % sim.last_craft["words"])
+	_check(not sim.craft(995001, "resist", "shock_res") and sim.resist_job_block(helm, "shock_res") == Words.T50_RESIST["has"], "a second shock resist went on")
+	_check(sim.craft_cost(gun, "resist") == -1 and not sim.craft(995002, "resist", "fire_res") and gun["affixes"].is_empty(), "Add a resist went on a weapon")
+	_check(not sim.craft(995003, "resist", "fire_res") and sim.resist_job_block(rig) == Words.T50_RESIST["no_slot"], "Add a resist went on a rig")
+	for sl in ["Armour", "Gloves", "Charm"]:
+		var p: Dictionary = sim._plain(sl, str(Data.BASES[sl][1]["name"]))
+		_check(sim.resist_job_block(p, "frost_res") == "", "Add a resist refuses %s: '%s'" % [sl, sim.resist_job_block(p, "frost_res")])
+	# the pool: an element's resist a third likelier on the body pieces, and on the gloves now
+	var fr: Dictionary = Items.affix_def("fire_res")
+	_check("Gloves" in fr["slots"] and is_equal_approx(Items.res_lift(fr, "Helmet"), 4.0 / 3.0) and is_equal_approx(Items.res_lift(fr, "Charm"), 1.0) and is_equal_approx(Items.res_lift(Items.affix_def("all_res"), "Helmet"), 1.0),
+		"the resists' weights: gloves %s, helmet x%.2f, charm x%.2f" % [str("Gloves" in fr["slots"]), Items.res_lift(fr, "Helmet"), Items.res_lift(fr, "Charm")])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5050
+	var tot := 0.0
+	var res_w := 0.0
+	for a in Items.allowed_affixes("Armour"):
+		var wv: float = Items.affix_weight(a) * Items.res_lift(a, "Armour")
+		tot += wv
+		if str(a["stat"]).trim_suffix("_res") in Data.ELEMENTS and str(a["stat"]).ends_with("_res"):
+			res_w += wv
+	var hits := 0
+	for n in range(4000):
+		var pk: Array = Items.pick_affixes("Armour", 1, rng)
+		if str(pk[0]["stat"]).ends_with("_res") and str(pk[0]["stat"]).trim_suffix("_res") in Data.ELEMENTS:
+			hits += 1
+	var plain_share: float = (res_w * 0.75) / (tot - res_w * 0.25)
+	_check(absf(hits / 4000.0 - res_w / tot) < 0.03 and hits / 4000.0 > plain_share + 0.03, "the armour's element resists: %.3f of the picks, %.3f wanted (%.3f unlifted)" % [hits / 4000.0, res_w / tot, plain_share])
+	# the Workshop: the tile, its pick of the five, at both sizes
+	var hel2: Dictionary = sim._plain("Helmet", str(Data.BASES["Helmet"][2]["name"]))
+	hel2["id"] = 995004
+	sim.stash.append(hel2)
+	var W = main._workshop
+	var k: int = W.JOBS.find("resist")
+	_check(k >= 0 and W._job_tiles.size() == W.JOBS.size(), "no Add a resist tile")
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.WORKSHOP)
+		W._set_view("craft")
+		W.open_piece(995004)
+		main.refresh()
+		var t: Dictionary = W._job_tiles[k]
+		_check(t["name"].text in [Words.T50_RESIST["job"], "Add resist"] and t["price"].text != "" and not t["button"].disabled, "the resist tile: '%s' '%s'" % [t["name"].text, t["price"].text])
+		var tile_r := Rect2(t["button"].position, t["button"].size)
+		var grid_end: float = 0.0
+		for tt in W._job_tiles:
+			grid_end = maxf(grid_end, tt["button"].position.y + tt["button"].size.y)
+		_check(tile_r.end.y <= grid_end + 0.5 and tile_r.end.x <= W._jobs.size.x, "the resist tile leaves the jobs")
+		W._press_job(k)
+		main.refresh()
+		_check(W._res_pick.visible and W._res_btns.size() == 5 and W._res_title.text.begins_with(Words.T50_RESIST["pick"]), "the resist's pick didn't open")
+		_check_fit(main, "the Workshop, Add a resist's pick (%dx%d)" % [int(sz.x), int(sz.y)])
+		for b in W._res_btns:
+			_check(b.position.x + b.size.x <= W._res_pick.size.x and b.position.y + b.size.y <= W._res_pick.size.y, "a resist's button leaves its row")
+		if sz.y < 1100:
+			W._press_res(Data.ELEMENTS.find("bleed"))
+			main.refresh()
+			_check(hel2["affixes"].any(func(a): return str(a["stat"]) == "bleed_res") and not W._res_pick.visible, "the bleed button didn't add a bleed resist: %s" % str(hel2["affixes"]))
+		else:
+			W._press_job(k)
+			main.refresh()
+			_check(W._res_btns[Data.ELEMENTS.find("bleed")].disabled and not W._res_btns[Data.ELEMENTS.find("fire")].disabled, "the bleed button stays open with bleed on it")
+			W._res_back.pressed.emit()
+		W.open_piece(995002)
+		main.refresh()
+		var tg: Dictionary = W._job_tiles[k]
+		var said: String = " ".join(tg["words"].map(func(l): return l.text)).strip_edges()
+		_check(tg["button"].disabled and said == Words.T50_RESIST["no_tile"] and tg["button"].tooltip_text == Words.T50_RESIST["no_slot"], "the resist tile on a gun: '%s'" % said)
+		_check_fit(main, "the Workshop, a gun picked (%dx%d)" % [int(sz.x), int(sz.y)])
+	for it in [helm, gun, rig, hel2]:
+		sim.stash.erase(it)
+	sim.cash = cash0
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("t50 resist ok")
+
+
+# ------------------------------------------------------------------ BUILD50 N: a night on the air (act_two.md §3)
+
+## A held signal for a night's fixture at level `lv` (site 3, the Estate's crew, no codes) on the Radio's list; its place.
+func _n50_sig(sim, lv: int, head := false) -> int:
+	sim.signal_seq += 1
+	var site: int = 3
+	sim.signals.append({"id": sim.signal_seq, "site": site, "zone": 1, "depth": sim.depth_for_level(site, lv), "codes": [], "words": [], "papers": [],
+		"head": head, "convoy": false, "line": 0, "grade": 3})
+	return sim.signals.size() - 1
+
+
+## A camp ready for a night: home, whole, the Radio on, no signals held, no rules, the runner rested; the dice fixed.
+func _n50_camp(sim) -> void:
+	if sim.on_mission():
+		sim.mission["night_home"] = true
+		sim.extract_now()
+	sim.night_chain = {}
+	sim.night_rules = []
+	sim.night_auto = false
+	sim.night_floor = Data.NIGHT_FLOOR
+	sim.signals = []
+	sim.insure_next = false
+	if sim.candidates.size() == 2:
+		sim.choose_runner(0)                   # after a death fixture: the next runner picked
+	sim.hp = sim.max_hp()
+	sim.rng.seed = 5050
+
+
+## The link out won, as a clear and Get out would end it: the gang and any head down, the clear, home to the break.
+func _n50_win(sim, secs := 30.0) -> void:
+	var m: Dictionary = sim.mission
+	if m.get("boss", null) is Dictionary:
+		m["boss"]["alive"] = false
+	m["remaining"] = 0
+	if not m["cleared"]:
+		sim._clear(m, m["t"])
+	m["elapsed"] = secs
+	m["event_at"] = -1.0
+	sim.extract_now()
+
+
+## A night carries the runner as they stand from link to link: HP, the meds in the rig, the pack - no rest at the break,
+## no gate top-up, no Charger; a held signal comes next, then one rolled at the reach + 1.
+func _n50_carry_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	var k0: int = _n50_sig(sim, sim.reach)
+	var k1_id: int = sim.signal_seq + 1
+	_n50_sig(sim, sim.reach - 1)
+	_check(sim.night_block(k0) == "" and sim.start_night(k0) and sim.night_on() and sim.night_link() == 1 and sim.mission.has("night"), "a night didn't start on a held signal: '%s'" % sim.night_block(k0))
+	var piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim._place_find(sim.mission, piece)
+	_n50_win(sim)
+	_check(sim.night_break() and sim.on_mission() and int(sim.night_chain["done"]) == 1 and Array(sim.night_chain["results"]) == [true], "link 1 won didn't stop at the break: %s" % str(sim.night_chain))
+	_check(int(sim.night_next_sig().get("id", -1)) == k1_id, "the next link isn't the next held signal: %s" % str(sim.night_next_sig()))
+	# what's carried: HP down, a med used out of the rig, one in the stash a top-up would bring
+	sim.hp = sim.max_hp() * 0.4
+	var hp0: float = sim.hp
+	sim.rig = sim.rig.filter(func(it): return not Items.is_medical(it))
+	sim.stash.append(sim._plain(Data.MEDICAL, "Bandage"))
+	var rig0: int = sim.rig.size()
+	var clock0: float = sim.night_clock_left()
+	var el0: float = float(sim.mission["elapsed"])
+	sim.advance(30.0)                          # the break: the world waits, no rest, the link done doesn't tick on
+	_check(is_equal_approx(sim.hp, hp0) and sim.night_break(), "the break rested the runner: %.0f → %.0f" % [hp0, sim.hp])
+	_check(is_equal_approx(float(sim.mission["elapsed"]), el0) and is_equal_approx(sim.night_clock_left(), clock0), "the break ticked the link on: %.0f → %.0f s, the clock %.0f → %.0f" % [el0, float(sim.mission["elapsed"]), clock0, sim.night_clock_left()])
+	_yard_ids(sim, [], "charger")              # the Pitch's Charger tops HP at a set-off: never a night's next link
+	_check(sim.night_next() and sim.night_link() == 2 and not sim.night_break(), "the next link didn't set off")
+	_check(is_equal_approx(sim.hp, hp0), "the next link set off rested: %.0f, was %.0f" % [sim.hp, hp0])
+	_check(sim.rig.size() == rig0 and not sim.rig.any(func(it): return Items.is_medical(it)), "the next link's gate topped up the rig: %d → %d" % [rig0, sim.rig.size()])
+	_check(sim.mission["found"].any(func(it): return int(it["id"]) == int(piece["id"])), "the pack didn't carry to link 2")
+	_check(not sim.signals.any(func(s): return int(s["id"]) == k1_id), "the held signal stayed on the Radio once run")
+	_yard_ids(sim, ["charger"], "")
+	_n50_win(sim)
+	# the held ones run: the next is rolled at the reach + 1
+	var nx: Dictionary = sim.night_next_sig()
+	_check(sim.signals.is_empty() and bool(nx.get("rolled", false)) and sim.signal_level(nx) == maxi(Data.REACH_START, sim.reach + 1), "the link after the held ones isn't rolled at the reach + 1: %s (reach %d)" % [str(nx), sim.reach])
+	sim.night_get_out()
+	print("n50 carry ok: HP, meds and the pack carried, no rest, no top-up, held then rolled at the reach + 1")
+
+
+## Each of the night's four ends: Get out (the haul home, the XP with its step), a death (the haul and the XP lost), the
+## clock (home at the link's end), a full pack (home at the break).
+func _n50_ends_checks(main) -> void:
+	var sim = main.sim
+	# Get out: the pack, the tins and the XP home
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim._place_find(sim.mission, piece)
+	sim.mission["cash"] = 1000.0
+	var cash0: float = sim.cash
+	var xp0: float = sim.xp + sim.paragon_xp
+	_n50_win(sim)
+	var held_xp: float = float(sim.mission["night_xp"])
+	_check(held_xp > 0.0 and is_equal_approx(sim.xp + sim.paragon_xp, xp0), "a link's XP wasn't held in the night: %.1f held, xp %.1f → %.1f" % [held_xp, xp0, sim.xp + sim.paragon_xp])
+	_check(sim.night_get_out() and not sim.on_mission() and not sim.night_on(), "Get out with the haul didn't bring the night home")
+	_check(sim.stash.any(func(it): return int(it["id"]) == int(piece["id"])) and sim.cash >= cash0 + 1000.0 - 0.5 and sim.xp + sim.paragon_xp >= xp0 + held_xp - 0.5, "the haul didn't come home: cash %.0f → %.0f, xp +%.1f of %.1f" % [cash0, sim.cash, sim.xp + sim.paragon_xp - xp0, held_xp])
+	# a death: the haul lost - the pack, the tins, the XP held
+	_n50_camp(sim)
+	var cash_pre: float = sim.cash
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var p2: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim._place_find(sim.mission, p2)
+	sim.mission["cash"] = 2000.0
+	_n50_win(sim)
+	sim.night_next()
+	cash0 = sim.cash
+	var xp_d: float = sim.xp
+	var lv_d: int = sim.level()
+	sim.hp = 0.0
+	sim._kia()
+	_check(not sim.night_on() and not sim.on_mission(), "a death left the night going")
+	_check(not sim.stash.any(func(it): return int(it["id"]) == int(p2["id"])) and is_equal_approx(sim.cash, cash0) and is_equal_approx(sim.cash, cash_pre), "a death kept the night's haul: cash %.0f → %.0f, the piece home %s" % [cash0, sim.cash, str(sim.stash.any(func(it): return int(it["id"]) == int(p2["id"])))])
+	_check(sim.xp <= xp_d + 0.01 or sim.level() < lv_d, "a death brought the night's XP home: %.1f → %.1f" % [xp_d, sim.xp])
+	_starter_kit(sim)
+	# the clock: home with the haul at the end of the link it runs out in
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach))
+	sim.night_chain["fight_s"] = Data.NIGHT_CLOCK - 20.0
+	_check(sim.night_clock_left() > 0.0, "the fixture: the clock's out before the link")
+	_n50_win(sim, 30.0)
+	_check(not sim.on_mission() and not sim.night_on(), "the night's clock out didn't bring it home at the link's end")
+	# a full pack at a break: home with it
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var guard := 0
+	while sim.pack_used(sim.mission) < sim.capacity() and guard < 200:
+		sim.mission["found"].append(sim._plain("Helmet", "Hard hat"))
+		guard += 1
+	_n50_win(sim)
+	_check(not sim.on_mission() and not sim.night_on(), "a full pack at the break didn't bring the night home")
+	sim.stash = sim.stash.filter(func(it): return str(it.get("base", "")) != "Hard hat")
+	print("n50 ends ok: get out, a death, the clock, a full pack")
+
+
+## The starter's kit back after a death fixture (the other checks want a runner who can fight).
+func _starter_kit(sim) -> void:
+	sim.hp = sim.max_hp()
+
+
+## A link's XP rises 5% a link past the first (NIGHT_XP_STEP).
+func _n50_xp_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var m: Dictionary = sim.mission
+	sim._gain_xp(100.0)
+	var g1: float = float(m["night_xp"])
+	_n50_win(sim)
+	sim.night_next()
+	var before: float = float(sim.mission["night_xp"])
+	sim._gain_xp(100.0)
+	var g2: float = float(sim.mission["night_xp"]) - before
+	_check(is_equal_approx(g1, 100.0) and is_equal_approx(g2, 100.0 * (1.0 + Data.NIGHT_XP_STEP)), "a link's XP doesn't rise 5%%: link 1 %.1f, link 2 %.1f" % [g1, g2])
+	sim.mission["night_home"] = true
+	sim.extract_now()
+	print("n50 xp ok: link 2 pays ×%.2f" % (g2 / maxf(g1, 0.001)))
+
+
+## The fifth links in turn: a head away from home (5), a stash (10: a room of crates, two finds a search), a fat drop
+## (15: quality ×2, a unique's chance ×3).
+func _n50_fifth_checks(main) -> void:
+	var sim = main.sim
+	_check(Sim.night_special(5) == "head" and Sim.night_special(10) == "stash" and Sim.night_special(15) == "fat" and Sim.night_special(20) == "head" and Sim.night_special(4) == "" and Sim.night_special(6) == "", "the fifths aren't a head, a stash, a fat drop in turn")
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach - 3))
+	sim.night_chain["link"] = 4                      # four done: the next is the fifth
+	_n50_win(sim)
+	var nx: Dictionary = sim.night_next_sig()
+	_check(bool(nx.get("head", false)), "the fifth link brings no head: %s" % str(nx))
+	sim.night_next()
+	_check(sim.mission.get("boss", null) is Dictionary and str(sim.mission["night_special"]) == "head", "the fifth link's run has no head in it")
+	sim.mission["night_home"] = true
+	sim.extract_now()
+	# the stash: the crates' searches doubled, two finds a search
+	var t: Dictionary = sim.effective(3)
+	var counts: Array = []
+	for sp in ["", "stash"]:
+		var m := {"tier": 3, "t": t, "found": [], "night_special": sp, "searches": 0, "search": 0.0, "cleared": true, "remaining": 0}
+		sim.rng.seed = 77
+		sim._roll_crates(m, t)
+		var n := 0
+		for c in m["crates"]:
+			if not c.get("locked", false):
+				n += int(c["searches"])
+		counts.append(n)
+	_check(counts[1] >= int(counts[0] * Data.NIGHT_STASH_CRATES) - 2, "the stash isn't a room of crates: %s searches" % str(counts))
+	var finds: Array = []
+	for sp in ["", "stash"]:
+		var m := {"tier": 3, "t": t, "found": [], "night_special": sp, "searches": 0, "search": 0.0, "cleared": true, "remaining": 0, "dry": false, "patrols": 0, "kills": 0, "left": 0, "cash": 0.0}
+		sim.rng.seed = 78
+		sim._roll_crates(m, t)
+		sim.mission = m
+		sim._search(m, t, sim.search_s(t) * 4.0 + 0.01)
+		finds.append(int(m.get("finds", 0)))
+		sim.mission = null
+	_check(finds[1] >= finds[0] * 2 and finds[0] > 0, "the stash's searches don't give two finds: %s" % str(finds))
+	# the fat drop: the finds' rarity up, the uniques three times as often
+	var rar: Array = []
+	var uniq: Array = []
+	var tq: Dictionary = t.duplicate(true)
+	tq["rarity"] = 0.6                          # a quality to double (the runner's own may be none)
+	tq["depth"] = 20                            # deep enough for the loose uniques
+	for sp in ["", "fat"]:
+		var m := {"tier": 3, "t": tq, "found": [], "night_special": sp, "dry": false, "floor": []}
+		sim.rng.seed = 79
+		var sum := 0.0
+		var u := 0
+		for i in range(1500):
+			var got: Dictionary = sim._find(m, tq, false, {}, true)
+			if not got.is_empty() and got.has("it"):
+				if got["it"].has("unique"):
+					u += 1
+				else:
+					sum += float(got["it"].get("rarity", 0))     # the plain finds' rarity: the quality's own
+		rar.append(sum)
+		uniq.append(u)
+	_check(rar[1] > rar[0] * 1.1, "the fat drop's finds aren't better: %s" % str(rar))
+	# fix 50 (review50a 8): the fat drop's ×3 sits inside UNIQUE_CAP - at a depth with loose uniques the chance is at the
+	# cap already, so the finds' count no longer moves; the chance is read instead: lifted under the cap, never past it
+	var tl: Dictionary = tq.duplicate(true)
+	tl["depth"] = 2
+	var lo: Array = [sim.loose_unique_chance(tl, 1.0, false), sim.loose_unique_chance(tl, 1.0, true)]
+	_check(uniq[0] > 0 and uniq[1] > 0 and lo[0] > 0.0 and is_equal_approx(lo[1], lo[0] * Data.NIGHT_FAT_UNIQUE) and sim.loose_unique_chance(tq, 1.0, true) > Data.UNIQUE_CAP and sim.loose_unique_chance(tq, 1.0, true) <= Data.UNIQUE_BOOST_CAP + 1e-9,
+		"the fat drop's unique chance: %s at depth 2, %.3f at 20 (×3 on the capped chance); uniques found %s" % [str(lo), sim.loose_unique_chance(tq, 1.0, true), str(uniq)])
+	print("n50 fifths ok: head, stash %s searches %s finds, fat rarity %s uniques %s" % [str(counts), str(finds), str(rar), str(uniq)])
+
+
+## The tuning rules: a wanted code on a rolled link, a refused one never; the first rule naming a code wins; a wager rule
+## takes Kev's offer at the break; the rolled link's crew is the town's want where one fits.
+func _n50_rules_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	var known: Array = sim.words_known()
+	_check(known.size() >= 3, "the fixture: %d codes known" % known.size())
+	var want: String = str(known[0])
+	var never: String = str(known[1])
+	sim.night_rules = [{"kind": "never", "code": never, "cond": "", "on": true}, {"kind": "want", "code": want, "cond": "", "on": true}, {"kind": "want", "code": never, "cond": "", "on": true}]
+	var hits_w := 0
+	var hits_n := 0
+	for i in range(20):
+		var sg: Dictionary = sim._night_roll()
+		var names: Array = sg["words"].map(func(x): return str(x["w"]))
+		if want in names:
+			hits_w += 1
+		if never in names:
+			hits_n += 1
+	_check(hits_w == 20 and hits_n == 0, "the tuning rules: wanted on %d of 20, never on %d (the first rule naming it wins)" % [hits_w, hits_n])
+	sim.night_rules = []
+	var free_n := 0
+	for i in range(40):
+		var sg2: Dictionary = sim._night_roll()
+		if never in sg2["words"].map(func(x): return str(x["w"])):
+			free_n += 1
+	_check(free_n > 0, "the fixture: '%s' never rolls without a rule" % never)
+	# a wager rule: Kev's offer on the next link taken at the break
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var offer_key := ""
+	_n50_win(sim)
+	offer_key = sim.night_wager_key()
+	_check(offer_key != "" and sim.wagers.get(offer_key, {}).get("taken", []).is_empty(), "a wager was taken with no rule: %s" % str(sim.wagers.get(offer_key, {})))
+	sim.night_get_out()
+	_n50_camp(sim)
+	sim.night_rules = []
+	for c in Data.WAGER_CONDS:
+		sim.night_rules.append({"kind": "wager", "code": "", "cond": str(c["id"]), "on": true})
+	sim.start_night(_n50_sig(sim, sim.reach))
+	_n50_win(sim)
+	offer_key = sim.night_wager_key()
+	_check(sim.wagers.get(offer_key, {}).get("taken", []).size() == sim.wager_offer(offer_key).size(), "the wager rules didn't take Kev's offer at the break: %s of %d" % [str(sim.wagers.get(offer_key, {})), sim.wager_offer(offer_key).size()])
+	# taken by hand at the break, off again
+	_check(sim.take_wager(offer_key, 0, false) and not sim.wager_taken(offer_key, 0), "a wager can't be dropped at the break")
+	sim.night_get_out()
+	sim.night_rules = []
+	# the town's want: the crew whose area's materials the next place still needs (fix 50: a town with nothing built and
+	# no materials held, so the check always runs - the substation wants copper cable)
+	var town_keep := {"rebuilt": sim.rebuilt.duplicate(), "mats": sim.materials.duplicate()}
+	sim.rebuilt = {}
+	sim.materials = {}
+	var z: int = sim._night_want_zone()
+	_check(z >= 1 and z == int(Data.MATERIALS["copper_wire"]["area"]), "the fixture: the town's want is crew %d, not copper cable's" % z)
+	var zs := {}
+	for i in range(10):
+		zs[int(sim._night_roll()["zone"])] = true
+	_check(zs.keys() == [z], "the rolled link's crew isn't the town's want (%d): %s" % [z, str(zs.keys())])
+	sim.rebuilt = town_keep["rebuilt"]
+	sim.materials = town_keep["mats"]
+	print("n50 rules ok: wanted %d/20, never %d/20, wagers by rule, the town's crew %d" % [hits_w, hits_n, z])
+
+
+## "Auto: keep going": the next link sets off by itself at or over the floor, and stops under it.
+func _n50_auto_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach - 5))
+	_n50_win(sim)
+	sim.night_auto = true
+	sim.night_floor = 1.01                     # over any odds: it waits
+	sim.advance(1.0)
+	_check(sim.night_break() and sim.night_link() == 1 and sim.events.any(func(e): return str(e).contains("Auto stopped")), "Auto didn't stop under the floor")
+	sim.night_floor = 0.0                       # under any odds: it goes
+	sim.advance(1.0)
+	_check(not sim.night_break() and sim.night_link() == 2, "Auto didn't keep going over the floor")
+	sim.night_auto = false
+	sim.mission["night_home"] = true
+	sim.extract_now()
+	print("n50 auto ok")
+
+
+## A night saves and loads mid-chain: the chain, the haul, the link, the clock, the next link.
+func _n50_save_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach))
+	var piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim._place_find(sim.mission, piece)
+	sim.mission["cash"] = 1234.0
+	_n50_win(sim, 45.0)
+	sim.night_rules = [{"kind": "never", "code": "Numbers", "cond": "", "on": true}]
+	sim.night_floor = 0.55
+	var nx0: Dictionary = sim.night_next_sig()
+	var was := {"next": [int(nx0["id"]), int(nx0["site"]), int(nx0["depth"]), str(nx0["words"].map(func(x): return [str(x["w"]), int(x["t"])]))], "xp": float(sim.mission["night_xp"]), "cash": float(sim.mission["cash"]), "clock": sim.night_clock_left()}
+	main.save_game(main.save_file)
+	main.load_game(main.save_file)
+	sim = main.sim
+	var nx1: Dictionary = sim.night_next_sig()
+	var now := {"next": [int(nx1.get("id", -1)), int(nx1.get("site", -1)), int(nx1.get("depth", -1)), str(nx1.get("words", []).map(func(x): return [str(x["w"]), int(x["t"])]))], "xp": float(sim.mission["night_xp"]), "cash": float(sim.mission["cash"]), "clock": sim.night_clock_left()}
+	_check(sim.night_break() and sim.night_link() == 1 and int(sim.night_chain["done"]) == 1 and now["next"] == was["next"] and is_equal_approx(float(now["xp"]), float(was["xp"])) and is_equal_approx(float(now["cash"]), float(was["cash"])) and absf(float(now["clock"]) - float(was["clock"])) < 0.5, "a night didn't load as it was saved: %s → %s" % [str(was), str(now)])
+	_check(sim.mission["found"].any(func(it): return int(it["id"]) == int(piece["id"])) and sim.night_rules.size() == 1 and is_equal_approx(sim.night_floor, 0.55), "the pack or the tuning rules didn't load")
+	_check(sim.night_next() and sim.night_link() == 2, "a loaded night's next link didn't set off")
+	sim.mission["night_home"] = true
+	sim.extract_now()
+	sim.night_rules = []
+	sim.night_floor = Data.NIGHT_FLOOR
+	print("n50 save ok")
+
+
+## The break screen and Start a night: they show the right things and fit, at 1920x1080 and 1920x1200.
+func _n50_ui_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	var rd = main._radio
+	var k0: int = _n50_sig(sim, sim.reach)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.COMMS)
+		rd._pick_view("air")
+		rd.selected = k0
+		rd._shown = ""
+		main.refresh()
+		_check(rd.night_btn.visible and not rd.night_btn.disabled and rd.night_btn.text == Words.NIGHT["start"] and is_equal_approx(rd.night_btn.position.y, rd._set_off.position.y) and rd.night_btn.position.x >= rd._set_off.position.x + rd._set_off.size.x and Rect2(Vector2.ZERO, rd._card.size).encloses(Rect2(rd.night_btn.position, rd.night_btn.size)), "Start a night isn't beside Set off on the card")
+		_check_fit(main, "the Radio, Start a night (%dx%d)" % [int(sz.x), int(sz.y)])
+		# the tuning rules: the panel at its fullest
+		sim.night_rules = []
+		for i in range(Data.NIGHT_RULES_MAX):
+			sim.night_rule_add("wager" if i % 3 == 2 else ("never" if i % 3 == 1 else "want"))
+		rd._on_rules()
+		main.refresh()
+		_check(rd.tuning_ov.visible and rd.tuning_ov.rows.filter(func(r): return r["panel"].visible).size() == Data.NIGHT_RULES_MAX and rd.tuning_ov.position.y + rd.tuning_ov.size.y <= rd.size.y + 0.5, "the tuning rules panel doesn't show its eight rules inside the room")
+		_check_fit(main, "the Radio, the tuning rules (%dx%d)" % [int(sz.x), int(sz.y)])
+		rd.tuning_ov.visible = false
+		sim.night_rules = []
+	rd._on_night()
+	_check(sim.night_on() and sim.on_mission(), "Start a night didn't start one")
+	var piece: Dictionary = sim._plain("Charm", str(Data.BASES["Charm"][0]["name"]))     # one cell (fix 50: a Hard hat's four and the bot camp's clear dropping a Full bergen's twelve filled the 15-cell pack, and the night went home at the break)
+	sim._place_find(sim.mission, piece)
+	sim.mission["cash"] = 18420.0
+	sim.night_chain["link"] = 4
+	_n50_win(sim)
+	_check(sim.night_break(), "the fixture: the night went home at link 4's end (%s)" % str(sim.events.back()))
+	for i in range(400):
+		if bool(sim.night_odds()[1]):
+			break
+	var run = main._run
+	if OS.get_environment("N50_SHOT") != "":
+		var fs := FileAccess.open(OS.get_environment("N50_SHOT"), FileAccess.WRITE)     # a save at the break, for tests/shot.gd's look
+		fs.store_string(JSON.stringify({"version": main.SAVE_VERSION, "saved": 0, "sim": sim.to_dict()}))
+		fs.close()
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		run.night._shown = ""
+		main.refresh()
+		var nb = run.night
+		var od: Array = sim.night_odds_now()
+		var nx: Dictionary = sim.night_next_sig()
+		_check(nb.visible and bool(od[1]) and nb._clear.text == Fmt.pct(float(od[0])) and nb._headline.text.begins_with("Link 4") and nb._next_kicker.text.contains("LINK 5") and nb._next_title.text.contains(sim.signal_place(nx)) and nb._head_name.visible and nb._head_name.text == sim.signal_head_name(nx), "the break doesn't show the next link: '%s' '%s' '%s' %s" % [nb._headline.text, nb._next_kicker.text, nb._clear.text, str(od)])
+		_check(nb.next_btn.text == Words.NIGHT["next_btn_fifth"] and nb.out_btn.text == Words.NIGHT["out_btn"] and nb._tiles[0]["value"].text == Words.group(18420), "the break's buttons or haul: '%s' '%s' '%s'" % [nb.next_btn.text, nb.out_btn.text, nb._tiles[0]["value"].text])
+		_check(nb._kit.filter(func(r): return r["panel"].visible).size() >= 1 and nb._chain[4]["label"].text == "5", "the haul's kit or the chain strip: %s" % str(nb._chain.map(func(c): return c["label"].text)))
+		_check_fit(main, "the night's break (%dx%d)" % [int(sz.x), int(sz.y)])
+		nb._on_tune()
+		main.refresh()
+		var prices: Array = Sim.SIGNAL_CRAFTS.map(func(ck): return Fmt.notes(sim.night_craft_cost(str(ck))))
+		_check(nb.tuning and range(3).all(func(i): return nb._row_btns[i].visible and str(nb._row_btns[i].text).ends_with(str(prices[i]))), "Tune it doesn't show the crafts at their prices: %s against %s" % [str(nb._row_btns.map(func(b): return b.text)), str(prices)])
+		_check_fit(main, "the night's break, tuning (%dx%d)" % [int(sz.x), int(sz.y)])
+		nb._on_tune()
+	sim.night_get_out()
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("n50 ui ok")
+
+
+# ------------------------------------------------------------------ merge 50: T's focus on N's night
+## A night's rolled link carries a signal's focus (act two §4 on §3's links), and the break's IT DROPS reads it first,
+## in the Radio card's words.
+func _m50_focus_night_checks(main) -> void:
+	var sim = main.sim
+	_n50_camp(sim)
+	var k0: int = _n50_sig(sim, sim.reach)
+	_check(sim.start_night(k0), "merge 50: a night didn't start")
+	_n50_win(sim)
+	var nx: Dictionary = sim.night_next_sig()
+	var ff: Array = load("res://scripts/ui/radio.gd").focus_forms(sim, nx)
+	_check(bool(nx.get("rolled", false)) and not (nx.get("focus", {}) as Dictionary).is_empty() and not ff.is_empty(), "merge 50: a night's rolled link has no focus: %s" % str(nx.get("focus", {})))
+	var run = main._run
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		run.night._shown = ""
+		main.refresh()
+		var nb = run.night
+		_check(nb.visible and nb._drops[0].visible and nb._drops[0].text in ff, "merge 50: the break's drops don't lead with the link's focus: '%s', not one of %s" % [nb._drops[0].text, str(ff)])
+		_check_fit(main, "the night's break, its focus (%dx%d)" % [int(sz.x), int(sz.y)])
+	sim.night_get_out()
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	print("m50 focus on a night ok")
+
+
+# ------------------------------------------------------------------ fix 50: the review of the merged act two (review50a)
+
+## Every round the runner owns, at home and in the run: the stash's boxes, the rig's magazines and boxes, the pack's.
+func _f50_rounds(sim) -> int:
+	var n := 0
+	var all: Array = sim.stash + sim.rig + (sim.mission["found"] if sim.on_mission() else [])
+	for it in all:
+		if Items.is_ammo(it) or Items.is_mag(it):
+			n += int(it.get("rounds", 0))
+	return n
+
+
+## The break's odds for the next link, read afresh till settled (the cached read dropped first).
+func _f50_odds(sim) -> float:
+	var nx: Dictionary = sim.night_next_sig()
+	sim._sig_odds.erase(int(nx["id"]))
+	sim._surv_cache.clear()
+	for i in range(600):
+		if bool(sim.night_odds()[1]):
+			break
+	var o: Array = sim.night_odds()
+	_check(bool(o[1]), "the fixture: the break's odds never settled")
+	return float(o[0])
+
+
+## The review's night bugs (review50a 1-5), each red without its fix: a link's set-off loses no rounds; the break's odds
+## read the runner as they stand (no Charger); Kev's notes wager pays on the link's own notes; a held signal given the
+## fifth's head gets it back as it was on Get out; the break says what a link's own clock out does, and it fits.
+func _f50_night_checks(main) -> void:
+	var sim = main.sim
+	var always: bool = sim.gate_box_always
+	sim.gate_box_always = false
+	# 1: the rounds across a link's set-off and Get out
+	_n50_camp(sim)
+	var gun0 = sim.equipped["Primary"]
+	var stash0: Array = sim.stash.duplicate()
+	var rig0: Array = sim.rig.duplicate()
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x) and not Items.is_mag(x))
+	for k in range(3):
+		var nails: Dictionary = sim._plain(Data.AMMO, "Nails")
+		Items.set_stack(nails, 200)
+		sim.stash.append(nails)
+	var total0: int = _f50_rounds(sim)
+	_check(sim.gate_box_on(3) and total0 == 600, "the fixture: no gate box for the nail gun (%s), %d rounds" % [str(sim.gate_box_on(3)), total0])
+	sim.start_night(_n50_sig(sim, sim.reach - 5))
+	_n50_sig(sim, sim.reach - 5)
+	_check(sim.on_mission() and sim.mission["found"].any(func(x): return Items.is_ammo(x)), "the fixture: link 1 packed no box")
+	_n50_win(sim)
+	var at_break: int = _f50_rounds(sim)
+	var home_left: int = sim.stash.filter(func(x): return Items.is_ammo(x)).reduce(func(a, x): return a + int(x["rounds"]), 0)
+	_check(sim.night_break() and home_left > 0, "the fixture: no break, or no rounds left at home to take (%d)" % home_left)
+	sim.night_next()
+	var after_next: int = _f50_rounds(sim)
+	_n50_win(sim)
+	sim.night_get_out()
+	var after_out: int = _f50_rounds(sim)
+	_check(at_break == total0 and after_next == total0 and after_out == total0, "rounds lost at a link's set-off: %d, at the break %d, after Next link %d, after Get out %d" % [total0, at_break, after_next, after_out])
+	sim.equipped["Primary"] = gun0
+	sim.stash = stash0
+	sim.rig = rig0
+	# 2: a hurt runner's break odds the same with the Charger and without it
+	var whole := 0.0
+	var lv_used := 0
+	for at in [[3, sim.reach], [3, sim.reach - 6], [0, sim.reach], [0, 1]]:     # a link the runner clears whole (the bot's camp, or a fresh one's)
+		_n50_camp(sim)
+		sim.start_night(_n50_sig(sim, maxi(1, int(at[1]))))
+		_n50_win(sim)
+		var nsg: Dictionary = sim.night_next_sig()           # the next link (rolled): laid on the site and level wanted, no codes
+		nsg["site"] = int(at[0])
+		nsg["depth"] = sim.depth_for_level(int(at[0]), maxi(1, int(at[1])))
+		nsg["words"] = []
+		sim.hp = sim.max_hp()
+		whole = _f50_odds(sim)
+		lv_used = sim.signal_level(nsg)
+		if whole >= 0.5:
+			break
+	sim.hp = sim.max_hp() * 0.1
+	var hp0: float = sim.hp
+	var bare: float = _f50_odds(sim)
+	_yard_ids(sim, [], "charger")
+	var charged: float = _f50_odds(sim)
+	_yard_ids(sim, ["charger"], "")
+	_check(absf(bare - charged) < 0.001 and is_equal_approx(sim.hp, hp0), "the Charger lifts a hurt runner's break odds: %.0f%% without, %.0f%% with" % [bare * 100.0, charged * 100.0])
+	_check(whole > bare + 0.05, "the fixture: HP doesn't move the break's odds at level %d (%.0f%% hurt, %.0f%% whole)" % [lv_used, bare * 100.0, whole * 100.0])
+	sim.night_get_out()
+	# 3: Kev's notes wager on a link's own notes: 100 before it, 10 on it, ×1.5 → 115
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach - 5))
+	_n50_win(sim)
+	sim.mission["notes"] = 100
+	sim.night_next()
+	_check(int(sim.mission["notes"]) == 100, "the fixture: link 2 set off with %d notes, not 100" % int(sim.mission["notes"]))
+	sim.mission["notes"] = 110
+	sim.mission["wager_notes"] = 1.5
+	_n50_win(sim)
+	_check(int(sim.mission["notes"]) == 115, "Kev's notes wager: 100 + 10 with it came to %d, not 115" % int(sim.mission["notes"]))
+	sim.night_get_out()
+	# 5: the fifth's head on a held signal, back as it was on Get out at that break
+	for was_head in [false, true]:
+		_n50_camp(sim)
+		sim.start_night(_n50_sig(sim, sim.reach - 5))
+		var held_id: int = sim.signal_seq + 1
+		_n50_sig(sim, sim.reach - 5, was_head)
+		sim.night_chain["link"] = 4
+		_n50_win(sim)
+		var nx5: Dictionary = sim.night_next_sig()
+		_check(int(nx5.get("id", -1)) == held_id and bool(nx5.get("head", false)), "the fixture: the fifth isn't the held signal with a head: %s" % str(nx5))
+		sim.night_get_out()
+		var held: Array = sim.signals.filter(func(sg): return int(sg["id"]) == held_id)
+		_check(held.size() == 1 and bool(held[0].get("head", false)) == was_head, "the held signal's head after Get out: %s, was %s" % [str(held.map(func(sg): return sg.get("head"))), str(was_head)])
+	# 4: the break says what a link's own clock out does, under the death line, and fits
+	_n50_camp(sim)
+	sim.start_night(_n50_sig(sim, sim.reach - 5))
+	_n50_win(sim)
+	var run = main._run
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.show_room(main.MISSIONS)
+		run.night._shown = ""
+		main.refresh()
+		var nb = run.night
+		var tl = nb.get("_timeout")
+		_check(tl != null and tl.visible and tl.text == Words.NIGHT["timeout_line"] and tl.position.y >= nb._death.position.y + nb._death.size.y and tl.position.y + tl.size.y <= tl.get_parent().size.y and UI.text_width(tl, tl.text) <= tl.size.x, "the break's timeout line isn't under the death line, whole: '%s'" % (tl.text if tl != null else "none"))
+		_check_fit(main, "the night's break, the timeout line (%dx%d)" % [int(sz.x), int(sz.y)])
+	sim.night_get_out()
+	main.layout(Vector2(1920, 1080))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	sim.gate_box_always = always
+	print("f50 night ok: rounds %d/%d/%d/%d, odds at level %d hurt %.2f charged %.2f whole %.2f" % [total0, at_break, after_next, after_out, lv_used, bare, charged, whole])
+
+
+## The unique boosts inside the cap (review50a 8): with a unique focus and a fat drop, a find's unique chance never
+## passes UNIQUE_CAP, and below it the boosts still lift it. The review's hard-coded words (11) in Words.
+func _f50_rules_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var t: Dictionary = sim.effective(0).duplicate(true)
+	var sg := {"id": 990501, "site": 0, "zone": 1, "depth": 1, "codes": [], "words": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 3, "focus": {"kind": "unique"}}
+	var plain: Array = []
+	var both: Array = []
+	for d in range(1, 40):
+		t["depth"] = d
+		plain.append(sim.loose_unique_chance(t, 1.0, false))
+		sim._sig_on(sg)
+		both.append(sim.loose_unique_chance(t, 2.0, true))
+		sim._sig_off()
+	_check(both.max() <= Data.UNIQUE_BOOST_CAP + 1e-9 and both.max() > Data.UNIQUE_CAP, "the unique boosts: %.3f at most, not over the cap's %.3f and inside the boosts' %.3f" % [both.max(), Data.UNIQUE_CAP, Data.UNIQUE_BOOST_CAP])
+	_check(range(plain.size()).any(func(k): return float(plain[k]) > 0.0 and float(both[k]) > float(plain[k]) * 2.0), "the fixture: the boosts never lift a chance under the cap: %s / %s" % [str(plain.slice(0, 4)), str(both.slice(0, 4))])
+	# the words: the reviewer's hard-coded strings read from Words, none left in the sim
+	var helm: Dictionary = sim._plain("Helmet", str(Data.BASES["Helmet"][1]["name"]))
+	_check(sim.resist_job_block(helm, "bogus_res") == Words.T50_RESIST["no_such"], "no such resist: '%s'" % sim.resist_job_block(helm, "bogus_res"))
+	helm["rarity"] = Data.RARITIES.size() - 1
+	_check(sim.resist_job_block(helm, "fire_res") == Words.T50_RESIST["top"], "at its top rarity: '%s'" % sim.resist_job_block(helm, "fire_res"))
+	var keep: Array = sim.signals.duplicate(true)
+	sim.signals = [{"id": 990502, "site": 0, "zone": 1, "depth": 1, "codes": [], "words": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 3, "order": "grid"}]
+	_check(sim.night_block(0) == Words.NIGHT["order_alone"], "an order's place: '%s'" % sim.night_block(0))
+	sim.signals = keep
+	var src: String = FileAccess.get_file_as_string("res://scripts/sim/sim.gd")
+	for lit in ["\"no such resist\"", "\"At its top rarity\"", "\"an order's place runs alone\""]:
+		_check(not src.contains(lit), "a hard-coded string in the sim: %s" % lit)
+	print("f50 rules ok: the unique chance at most %.3f (cap %.3f)" % [both.max(), Data.UNIQUE_CAP])
+
+
+## A gear tier deep enough that the unique chance sits at its cap (merge 50: the boosts on the capped chance).
+func _t50_deep(sim) -> Dictionary:
+	var t: Dictionary = sim.effective(0).duplicate(true)
+	t["depth"] = 30
+	return t

@@ -451,11 +451,11 @@ static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have:
 	while out.size() < n and not pool.is_empty():
 		var total := 0.0
 		for a in pool:
-			total += affix_weight(a, base_tier)
+			total += affix_weight(a, base_tier) * res_lift(a, slot)
 		var x := rng.randf() * total
 		var pick := 0
 		for k in range(pool.size()):
-			x -= affix_weight(pool[k], base_tier)
+			x -= affix_weight(pool[k], base_tier) * res_lift(pool[k], slot)
 			if x <= 0.0:
 				pick = k
 				break
@@ -471,6 +471,30 @@ static func affix_weight(a: Dictionary, base_tier := 0) -> float:
 	if tw is Array and base_tier > 0 and not (tw as Array).is_empty():
 		return float(tw[clampi(base_tier - 1, 0, (tw as Array).size() - 1)])
 	return float(a.get("weight", 1.0))
+
+
+## An element's resist on a body piece a third likelier (act two §5, BUILD50-T): RES_BODY_LIFT on RES_BODY_SLOTS, else 1.
+static func res_lift(a: Dictionary, slot: String) -> float:
+	var st: String = str(a["stat"])
+	if slot in Data.RES_BODY_SLOTS and st.ends_with("_res") and st.trim_suffix("_res") in Data.ELEMENTS:
+		return Data.RES_BODY_LIFT
+	return 1.0
+
+
+## "Add a resist" (act two §5, BUILD50-T): the element's resist on, its tier rolled as an affix's at the new rarity's cap,
+## the rarity up a step as "Add an affix" has it. False when it can't: the slot, the rarity at its top, the resist on it.
+static func add_resist(it: Dictionary, el: String, rng: RandomNumberGenerator) -> bool:
+	var stat: String = el + "_res"
+	var d: Dictionary = affix_def(stat)
+	if d.is_empty() or not (str(it.get("slot", "")) in Data.RESIST_JOB_SLOTS) or int(it["rarity"]) >= Data.RARITIES.size() - 1:
+		return false
+	for a in it["affixes"]:
+		if str(a["stat"]) == stat:
+			return false
+	it["rarity"] = int(it["rarity"]) + 1
+	it["affixes"].append(roll_affix(d, ilvl(it), rng, 0, rarity_cap(it)))
+	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
+	return true
 
 
 ## The best tier an item level opens: T1 always, T5 from level TIER_CAP[4].

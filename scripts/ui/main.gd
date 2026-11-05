@@ -51,7 +51,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 24              # 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 25              # 25 (5 Nov, BUILD50, act two): the town's wages (town_stopped), a signal's focus, the new levels and XP curve, a night on the air (night: the chain, its haul, the link, the clock; the tuning rules and the Auto floor); 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -565,6 +565,9 @@ func _dps_target_now(split := {}) -> float:
 ## The Runs screen's odds, a few milliseconds a frame (7 Oct: three dry runs a tier a refresh was half a second
 ## of stall at the top of the ladder): the zone on screen first, then the rest, until every open tier has settled.
 func _read_odds(budget_ms := ODDS_MS) -> void:
+	if room == MISSIONS and sim.night_break():
+		_read_night_odds(budget_ms)                # a night's break: the next link's odds (BUILD50 N)
+		return
 	if not (room == MISSIONS or room == COMMS) or sim.on_mission():
 		return
 	sim.live_guard()                              # the signature's odds_state is this frame's, whoever calls (review45a 8)
@@ -667,6 +670,19 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 		done = false                              # hurt: read each frame as before (the HP moves as the runner rests)
 	sim.odds_step = false
 	_odds_settle(what, done, sig)
+
+
+## A night's break (BUILD50 N): the next link's odds as the runner stands, stepped in the frame's few ms as the Radio's.
+func _read_night_odds(budget_ms: float) -> void:
+	if bool(sim.night_odds_now()[1]):
+		return
+	sim.live_guard()
+	sim.odds_time_ms = budget_ms
+	sim.odds_frame_start()
+	sim.odds_step = true
+	sim.night_odds()
+	sim.odds_step = false
+	sim.odds_time_ms = 0.0
 
 
 ## The odds' reads settled (BUILD45, perf44 #2 and #8: the Radio and the County asked their settled reads every frame,

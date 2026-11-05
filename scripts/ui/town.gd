@@ -30,6 +30,7 @@ const ROW_H := 30                   # the materials column's rows
 const WANT_ROWS := 2
 const RANK_W := 110                 # the rank's room at a card's top right
 const COUNT_W := 70                 # a count's room at a row's right
+const BACK_WANT_Y := 142            # the wants' head under the "came back" line (BUILD50-T; was 120, the chips 150)
 
 var sim
 var _kicker: Label
@@ -43,6 +44,8 @@ var _mat_rows: Array = []           # [name Label, count Label]
 var _key_head: Label
 var _key_rows: Array = []
 var _side_notes: Array = []        # the column's foot, a sentence over three lines
+var _bill: Label                    # the day's wages (BUILD50-T, act two §2)
+var _bill_sub: Label                # how they're paid and the days the tins cover
 var _shown := ""
 
 
@@ -55,6 +58,8 @@ func _init() -> void:
 	_headline = UI.label(head, Rect2(PAD, 32, 200, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 400, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_sub = UI.label(head, Rect2(PAD, 78, 820, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_bill = UI.label(head, Rect2(PAD, 108, 820, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_bill_sub = UI.label(head, Rect2(PAD, 140, 820, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(Data.REBUILDS.size()):
 		@warning_ignore("integer_division")
 		var x: float = (k % 3) * (CARD_W + GAP)
@@ -68,9 +73,10 @@ func _init() -> void:
 		UI.track(c["rank"], 1)              # once: a track on a tracked font nests (the review)
 		c["fx"] = [UI.label(p, Rect2(CP, 52, iw, 26), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
 			UI.label(p, Rect2(CP, 80, iw, 26), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)]
-		c["want_head"] = UI.head(p, Rect2(CP, 120, iw, UI.HEAD_H), "")
-		c["chips"] = Chips.new(iw, 4)
-		c["chips"].position = Vector2(CP, 150)
+		c["back"] = UI.label(p, Rect2(CP, 108, iw, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)     # what came back and its wage (BUILD50-T)
+		c["want_head"] = UI.head(p, Rect2(CP, BACK_WANT_Y, iw, UI.HEAD_H), "")
+		c["chips"] = Chips.new(iw, 5)     # the materials, the key and the tins (BUILD50-T: 4 to 5)
+		c["chips"].position = Vector2(CP, BACK_WANT_Y + 30)
 		p.add_child(c["chips"])
 		c["opens"] = UI.label(p, Rect2(CP, CARD_H - CP - Pal.BUTTON_H - 36, iw, 28), "", "Regular", Pal.CELL_TEXT_BIG, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["button"] = UI.button(p, Rect2(CP, CARD_H - CP - Pal.BUTTON_H, iw, Pal.BUTTON_H), true)
@@ -99,6 +105,7 @@ func _init() -> void:
 func show_state(s) -> void:
 	sim = s
 	var sig := "%s|%s|%s|%s|%d|%d" % [str(sim.materials), str(sim.key_items), str(sim.rebuilt), str(sim.rebuild_open()), int(sim.on_mission()), sim.reach]
+	sig += "|%s|%d|%d|%d" % [str(sim.town_stopped), sim.town_bill(), sim.town_days(), int(sim.cash)]     # the wages (BUILD50-T)
 	sig += "|" + str(Data.PINNACLES.map(func(pn): return sim.order_known(str(pn["key"]))))     # the names scramble with it (20 Oct)
 	if sig == _shown:
 		return
@@ -110,6 +117,7 @@ func show_state(s) -> void:
 	UI.fit(_unit, ["the town's worth", "worth"])
 	UI.fit(_sub, ["Put back the places that made it a town, one by one.", "Put the town back.", "Rebuild it."] if open
 		else ["Kev's story first: the town opens on his last line.", "After Kev's story."])
+	_show_bill()
 	for c in _cards:
 		_show_card(c, open)
 	for k in range(Data.MATERIAL_ORDER.size()):
@@ -141,10 +149,12 @@ func _show_card(c: Dictionary, open: bool) -> void:
 	var rank: int = sim.rebuild_rank(key)
 	# the caps pass (19 Oct, Matt): the rank in sentence case, the name given the room the rank leaves, and a name
 	# short of its "The" still capitalised
-	c["rank"].text = ("Rank %d" % rank) if rank > 0 else "Not built"
+	var stopped: bool = sim.town_stopped.has(key)     # unpaid (BUILD50-T)
+	c["rank"].text = Words.T50_TOWN["stopped"] if stopped else (("Rank %d" % rank) if rank > 0 else "Not built")
 	c["name"].size.x = c["rank"].size.x - ceilf(UI.text_width(c["rank"], c["rank"].text)) - 16
 	UI.fit(c["name"], [str(r["name"]), _cap(str(r["name"]).trim_prefix("The "))])
-	c["rank"].add_theme_color_override("font_color", Pal.GOOD if rank > 0 else Pal.TEXT_3)
+	c["rank"].add_theme_color_override("font_color", Pal.BAD if stopped else (Pal.GOOD if rank > 0 else Pal.TEXT_3))
+	_show_back(c, key, rank, stopped)
 	var fx: Array = sim.rebuild_words(key, maxi(1, rank))
 	for k in range(2):
 		UI.fit(c["fx"][k], [str(fx[k]) if k < fx.size() else ""])
@@ -158,6 +168,9 @@ func _show_card(c: Dictionary, open: bool) -> void:
 			var nm: String = sim.thing_label(k)
 			items.append({"forms": ["%s %d/%d" % [nm, have, int(cost[k])], "%s %d/%d" % [_cap(nm.trim_prefix("The ").get_slice(" ", 0)), have, int(cost[k])]],
 				"colour": "good" if have >= int(cost[k]) else "bad"})
+	var tins: int = sim.rebuild_tins(key)     # tins pay for the town (BUILD50-T): a chip of their own after the materials
+	if tins > 0:
+		items.append({"forms": [Fmt.money(tins), Fmt.money_k(tins)], "colour": "good" if sim.cash >= float(tins) else "bad"})
 	c["chips"].show_chips(items, WANT_ROWS, true)
 	c["items"] = items.size()
 	var opens: String = str(r.get("opens", ""))
@@ -174,8 +187,42 @@ func _show_card(c: Dictionary, open: bool) -> void:
 	c["note"].visible = not c["button"].visible
 	UI.fit_button(c["button"], ["Rebuild · rank %d" % (rank + 1) if rank > 0 else "Rebuild", "Rebuild"])
 	UI.fit(c["note"], [why, ""])
-	var sb := UI.box(Pal.PANEL, 8, 2 if rank > 0 else 1, Pal.GOOD if rank > 0 else Pal.CARD_LINE)
+	var sb := UI.box(Pal.PANEL, 8, 2 if rank > 0 else 1, Pal.BAD if stopped else (Pal.GOOD if rank > 0 else Pal.CARD_LINE))
 	c["panel"].add_theme_stylebox_override("panel", sb)
+
+
+## The day's wages under the headline (BUILD50-T, act two §2): the bill, how it's paid, the days the tins cover.
+func _show_bill() -> void:
+	var bill: int = sim.town_bill()
+	if bill <= 0:
+		_bill.text = ""
+		UI.fit(_bill_sub, [Words.T50_TOWN["bill_none"], ""])
+		return
+	var d: int = sim.town_days()
+	var days: String = Words.T50_TOWN["day"] if d == 1 else Words.T50_TOWN["days"] % maxi(0, d)
+	UI.fit(_bill, [Words.T50_TOWN["bill_head"] % Fmt.money(bill), Words.T50_TOWN["bill_head"] % Fmt.money_k(bill)])
+	UI.fit(_bill_sub, [Words.T50_TOWN["bill_sub"] % [Fmt.unit(), days], Words.T50_TOWN["bill_sub_short"] % days])
+	_bill_sub.add_theme_color_override("font_color", Pal.BAD if d < 1 else Pal.TEXT_2)
+
+
+## What came back with a place and its wage (BUILD50-T, act two §1): running, stopped (unpaid), or the wage to come.
+func _show_back(c: Dictionary, key: String, rank: int, stopped: bool) -> void:
+	var back: String = str(Words.T50_TOWN["back"].get(key, ""))
+	var w: String = Fmt.money(sim.town_wage(key) if rank > 0 else sim._inf(float(Data.TOWN_WAGES.get(key, 0))))
+	var wk: String = Fmt.money_k(sim.town_wage(key) if rank > 0 else sim._inf(float(Data.TOWN_WAGES.get(key, 0))))
+	if stopped:
+		UI.fit(c["back"], [Words.T50_TOWN["stopped_day"] % w, Words.T50_TOWN["stopped_day"] % wk, Words.T50_TOWN["stopped"]])
+		c["back"].add_theme_color_override("font_color", Pal.BAD)
+	elif rank > 0:
+		UI.fit(c["back"], ["%s · %s" % [back, Words.T50_TOWN["running"] % w], "%s · %s" % [back, Words.T50_TOWN["a_day"] % w], "%s · %s" % [back, Words.T50_TOWN["a_day"] % wk], back])
+		c["back"].add_theme_color_override("font_color", TOWN_LIT)
+	else:
+		var then: String = Words.T50_TOWN["then"] % w
+		UI.fit(c["back"], ["%s · %s" % [Words.T50_TOWN["next"], then] if key == sim.town_next_key() else then, then])
+		c["back"].add_theme_color_override("font_color", Pal.TEXT_3)
+
+
+const TOWN_LIT := Color("e9d3a1")    # a running place's line (the canvas's)
 
 
 func _build(key: String) -> void:
@@ -194,9 +241,9 @@ func card(key: String) -> Dictionary:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_kicker, _headline, _unit, _sub, _mat_head, _key_head] + _side_notes
+	var out: Array = [_kicker, _headline, _unit, _sub, _mat_head, _key_head, _bill, _bill_sub] + _side_notes
 	for c in _cards:
-		out.append_array([c["name"], c["rank"], c["want_head"], c["opens"]] + c["fx"])
+		out.append_array([c["name"], c["rank"], c["want_head"], c["opens"], c["back"]] + c["fx"])
 		out.append_array(c["chips"].text_nodes())
 		if c["button"].visible:
 			out.append(c["button"])

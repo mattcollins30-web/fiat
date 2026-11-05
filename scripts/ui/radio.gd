@@ -34,6 +34,7 @@ const People := preload("res://scripts/ui/people.gd")
 const RunScreen := preload("res://scripts/ui/run.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const WagerOdds := preload("res://scripts/ui/wager_odds.gd")
+const TuningPanel := preload("res://scripts/ui/tuning_panel.gd")     # a night's tuning rules (BUILD50 N)
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -220,10 +221,15 @@ var _card_codes_head: Label
 var _card_drops_head: Label
 var _card_drops: Array = []          # {panel, icon, text}
 var _card_drops_run: Label
+var _card_focus: Panel               # the signal's focus, first in its drops row (BUILD50-T, act two §4)
+var _card_focus_text: Label
 var _card_others: Label
 var _bin: Button
 var _wager_btn: Button              # Kev's wagers on the signal's run (29 Oct), between Set off and Bin it
 var _wagers_ov                      # their panel (wagers_panel.gd), over the papers and the decoder while open
+var night_btn: Button               # "Start a night" beside Set off (BUILD50 N)
+var rules_btn: Button               # the tuning rules, by the signals' title (BUILD50 N)
+var tuning_ov                       # their panel (tuning_panel.gd), over the papers and the decoder while open
 var _empty: Label
 var _empty2: Label
 var _others: Array = []             # {button, name, line, odds}
@@ -296,6 +302,15 @@ func _init() -> void:
 		_shown = ""
 		acted.emit())
 	_air.add_child(_wagers_ov)
+	rules_btn = UI.button(_signals_box, Rect2(SIGNALS_W - BP - 170, 6, 170, 32), false)     # a night's tuning rules (BUILD50 N)
+	rules_btn.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+	rules_btn.pressed.connect(_on_rules)
+	tuning_ov = TuningPanel.new()
+	tuning_ov.position = Vector2(0, BODY_Y)
+	tuning_ov.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	_air.add_child(tuning_ov)
 	# the tab bar over every view's band (28 Oct, RadioAir: "not small buttons lost in the painting")
 	_view_bar = UI.panel(self, Rect2(VIEWS_X - 6, VIEW_Y - 6, Pal.GRID_W - PAD - VIEWS_X + 12, VIEW_H + 12), UI.box(Color(Pal.BG, 0.86), 10, 1, Pal.CARD_LINE))
 	for k in range(VIEWS.size()):
@@ -629,11 +644,18 @@ func _build_card(cw: float) -> void:
 		var dl := UI.label(dp, Rect2(Chips.CHIP_H + 2, 0, 80, Chips.CHIP_H), "", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_card_drops.append({"panel": dp, "icon": ic, "text": dl})
 	_card_drops_run = UI.label(_card, Rect2(0, 0, 120, Chips.CHIP_H), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_focus = UI.panel(_card, Rect2(0, 0, 100, Chips.CHIP_H), UI.box(Color(Pal.ACCENT, 0.14), 6, 1, Pal.ACCENT))
+	_card_focus_text = UI.label(_card_focus, Rect2(8, 0, 80, Chips.CHIP_H), "", "Medium", Pal.CELL_TEXT - 1, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_card_focus.tooltip_text = Words.T50_FOCUS["tip"]
+	_card_focus.mouse_filter = Control.MOUSE_FILTER_PASS
 	_card_kev = UI.label(_card, Rect2(16, 0, cw, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_card_kev2 = UI.label(_card, Rect2(16, 0, cw, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_set_off = UI.button(_card, Rect2(16, 0, cw, SC_SET_H), true)
 	_set_off.text = "Set off"
 	_set_off.pressed.connect(_on_set_off)
+	night_btn = UI.button(_card, Rect2(16 + (cw + 8) / 2.0, 0, (cw - 8) / 2.0, SC_SET_H), false)     # a night on the air, beside Set off (BUILD50 N)
+	night_btn.pressed.connect(_on_night)
+	night_btn.tooltip_text = Words.NIGHT["start_tip"]
 	var n: int = SIM_CRAFTS.size()
 	var crw: float = (cw - (n - 1) * 8) / n
 	for k in range(n):
@@ -1141,6 +1163,9 @@ func _show_decoder() -> void:
 func _show_signals(od: Array) -> void:
 	var n: int = sim.signals.size()
 	UI.fit(_signals_title, ["SIGNALS · %d OF %d HELD" % [n, sim.signals_cap()]])
+	UI.fit_button(rules_btn, [Words.NIGHT["rules_btn"]])     # BUILD50 N
+	if tuning_ov.visible:
+		tuning_ov.show_state(sim)
 	_card.visible = n > 0
 	_empty.visible = n == 0
 	_empty2.visible = n == 0
@@ -1250,8 +1275,8 @@ func _show_card(od: Array) -> void:
 	var mats: Array = sim.signal_materials(selected)
 	var keys: Array = (mats[0] as Dictionary).keys()
 	_card_drops_head.position.y = y
-	_card_drops_head.visible = not keys.is_empty()
-	var x: float = 16 + SC_HEAD_W
+	var x: float = _focus_chip(sg, 16 + SC_HEAD_W, y, cw)     # the focus first (BUILD50-T)
+	_card_drops_head.visible = not keys.is_empty() or _card_focus.visible
 	for k in range(_card_drops.size()):
 		var d: Dictionary = _card_drops[k]
 		d["panel"].visible = k < keys.size()
@@ -1263,12 +1288,16 @@ func _show_card(od: Array) -> void:
 		d["text"].size.x = ceilf(UI.text_width(d["text"], d["text"].text)) + 2
 		d["panel"].size.x = Chips.CHIP_H + 2 + d["text"].size.x + 8
 		d["panel"].position = Vector2(x, y)
+		if x + d["panel"].size.x > 16 + cw:
+			d["panel"].visible = false         # past the card's edge with the focus in the row (BUILD50-T): the share goes, the focus stays
+			continue
 		x += d["panel"].size.x + 6
 	_card_drops_run.visible = not keys.is_empty()
 	if _card_drops_run.visible:
 		_card_drops_run.position = Vector2(x + 2, y)
 		_card_drops_run.size.x = maxf(1.0, 16 + cw - x - 2)
 		UI.fit(_card_drops_run, [Words.U49_SIGNAL["a_run"] % int(round(float(mats[1]) * 100.0)), "%d%%" % int(round(float(mats[1]) * 100.0)), ""])
+	if _card_drops_head.visible:
 		y += Chips.CHIP_H + 8
 	# Kev, then what's on (Kev's wagers taken) in his second line's place
 	_card_kev.position.y = y
@@ -1287,6 +1316,10 @@ func _show_card(od: Array) -> void:
 	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
 	_set_off.position.y = y
 	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
+	_set_off.size.x = (cw - 8) / 2.0          # Start a night beside it (BUILD50 N)
+	night_btn.position.y = y
+	night_btn.disabled = sim.night_block(selected) != ""
+	UI.fit_button(night_btn, [Words.NIGHT["start"], Words.NIGHT["start_short"]])
 	if sim.away() and not picking:
 		UI.fit_button(_set_off, ["Set off · " + Words.REPEAT["shut_away"].to_lower(), Words.REPEAT["shut_away"]])     # why it's shut (29 Oct)
 	else:
@@ -1318,6 +1351,39 @@ func _show_card(od: Array) -> void:
 	if not is_equal_approx(_card.size.y, h):
 		_card.size.y = h
 		_dec.size.y = h
+
+
+## A signal's focus as the drops row's first chip (BUILD50-T, act two §4): "+2 glass a run", "Helmets: 1 find in 2",
+## "Shock resist: 1 find in 3", "Uniques ×3" (long to short). The x after it.
+func _focus_chip(sg: Dictionary, x: float, y: float, cw: float) -> float:
+	var forms: Array = focus_forms(sim, sg)
+	_card_focus.visible = not forms.is_empty()
+	if forms.is_empty():
+		return x
+	_card_focus_text.size.x = maxf(40.0, 16 + cw - x - 16)
+	UI.fit(_card_focus_text, forms)
+	_card_focus_text.size.x = ceilf(UI.text_width(_card_focus_text, _card_focus_text.text)) + 2
+	_card_focus.size.x = _card_focus_text.size.x + 16
+	_card_focus.position = Vector2(x, y)
+	return x + _card_focus.size.x + 6
+
+
+## A signal's focus in words, long to short; [] for none (a story signal, or one from before act two).
+static func focus_forms(s, sg: Dictionary) -> Array:
+	var f: Dictionary = sg.get("focus", {})
+	match str(f.get("kind", "")):
+		"material":
+			var nm: String = str(s.thing_name(str(f["key"]))).to_lower()
+			return [Words.T50_FOCUS["material"] % [Data.FOCUS_MATERIAL, nm], Words.T50_FOCUS["material_short"] % [Data.FOCUS_MATERIAL, nm]]
+		"slot":
+			var sl: String = str(Words.T50_FOCUS["slot_names"].get(str(f["slot"]), str(f["slot"])))
+			return [Words.T50_FOCUS["slot"] % sl, Words.T50_FOCUS["slot_short"] % sl]
+		"resist":
+			var el: String = str(f["el"]).capitalize()
+			return [Words.T50_FOCUS["resist"] % el, Words.T50_FOCUS["resist_short"] % el, Words.T50_FOCUS["resist_least"] % el]
+		"unique":
+			return [Words.T50_FOCUS["unique"], Words.T50_FOCUS["unique_short"]]
+	return []
 
 
 ## The others' odds (21 Oct, Matt: "switch to your bleed paramedic and steam roll it"): every other class played, a face,
@@ -1470,6 +1536,21 @@ func _on_set_off() -> void:
 	acted.emit()
 
 
+## A night on the air from the picked signal (BUILD50 N).
+func _on_night() -> void:
+	if sim.start_night(selected):
+		selected = 0
+	_shown = ""
+	acted.emit()
+
+
+func _on_rules() -> void:
+	tuning_ov.open(sim)
+	tuning_ov.move_to_front()
+	_shown = ""
+	acted.emit()
+
+
 func _on_wagers() -> void:
 	var sg: Dictionary = sim.signal_at(selected)
 	if sg.is_empty():
@@ -1519,6 +1600,9 @@ func text_nodes() -> Array:
 	if _wagers_ov.visible and _air.visible:          # Kev's wagers over the air (29 Oct): what's under them isn't the screen's
 		var r: Rect2 = _wagers_ov.get_global_rect()
 		out = out.filter(func(n): return not r.intersects(n.get_global_rect())) + _wagers_ov.text_nodes()
+	if tuning_ov.visible and _air.visible:           # the tuning rules over the air (BUILD50 N), as the wagers
+		var r2: Rect2 = tuning_ov.get_global_rect()
+		out = out.filter(func(n): return not r2.intersects(n.get_global_rect())) + tuning_ov.text_nodes()
 	return out
 
 
@@ -1569,8 +1653,11 @@ func _text_nodes_base() -> Array:
 	for sl in _slots:
 		out.append_array([sl["n"], sl["name"], sl["code"]])
 	out.append(_signals_title)
+	if rules_btn.visible:
+		out.append(rules_btn)                       # BUILD50 N
 	if _card.visible:
 		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2, _set_off, _bin, _card_codes_head, _card_faces[0]["name"], _card_faces[1]["name"], _card_count])
+		out.append(night_btn)                       # BUILD50 N
 		if _wager_btn.visible:
 			out.append(_wager_btn)
 		for t in _card_tiles:
@@ -1578,6 +1665,8 @@ func _text_nodes_base() -> Array:
 		out.append_array(_card_codes.text_nodes())
 		if _card_drops_head.visible:
 			out.append_array([_card_drops_head, _card_drops_run])
+		if _card_focus.visible:
+			out.append(_card_focus_text)     # BUILD50-T
 		for d in _card_drops:
 			if d["panel"].visible:
 				out.append(d["text"])

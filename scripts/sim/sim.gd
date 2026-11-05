@@ -166,6 +166,7 @@ var _snaps := 0
 var rng := RandomNumberGenerator.new()
 var mythic_rng := RandomNumberGenerator.new()     # the mythics' own dice (16 Oct): the one roll a find leaves every other draw where it was
 var material_rng := RandomNumberGenerator.new()   # the rebuild's own dice (18 Oct): a run's material leaves every other draw where it was
+var focus_rng := RandomNumberGenerator.new()      # a signal's focus (BUILD50-T): its roll and its weighting on its own dice
 var mythics_on := true                  # off for the balance read: a read is never one (docs/design/mythics.md)
 
 
@@ -195,11 +196,13 @@ func _reseed() -> void:
 		rng.randomize()
 		mythic_rng.randomize()
 		material_rng.randomize()
+		focus_rng.randomize()
 		return
 	_seed_n += 1
 	rng.seed = fixed_seed + _seed_n
 	mythic_rng.seed = fixed_seed + _seed_n + 7919
 	material_rng.seed = fixed_seed + _seed_n + 104729
+	focus_rng.seed = fixed_seed + _seed_n + 130363
 
 
 func start() -> void:
@@ -391,6 +394,9 @@ func paragon_reset() -> bool:
 
 ## XP in: the runner's to the cap, the rest the crew's paragon.
 func _gain_xp(g: float) -> void:
+	if mission != null and mission.has("night") and not bool(mission.get("night_home", false)) and not mission.get("dry", false):
+		mission["night_xp"] = float(mission.get("night_xp", 0.0)) + g * night_xp_mult(int(mission["night"]))     # a night's XP held in its run, home with the haul (BUILD50 N)
+		return
 	if mission != null and bool(mission.get("unwatched", false)):
 		g *= float(repeat.get("share", repeat_xp_share()))     # a repeat run's share of a watched run's (29 Oct)
 		mission["xp_got"] = float(mission.get("xp_got", 0.0)) + g
@@ -2747,6 +2753,9 @@ func _craft_cost_raw(it: Dictionary, kind: String, _stat := "") -> int:
 		"add":
 			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
 				return -1
+		"resist":
+			if resist_job_block(it, _stat) != "":
+				return -1                       # "Add a resist" (BUILD50-T): its slots, its element not on it already
 		"socket":
 			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= socket_max(it):
 				return -1
@@ -3087,6 +3096,9 @@ func craft(id: int, kind: String, stat := "") -> bool:
 		"add":
 			if not Items.add_affix(it, rng, yard_has("masterwork")):
 				return false
+		"resist":
+			if not Items.add_resist(it, stat.trim_suffix("_res"), rng):
+				return false                    # BUILD50-T
 		"socket":
 			if not Items.add_socket(it, socket_max(it)):
 				return false
@@ -3121,7 +3133,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 func _craft_words(it: Dictionary, kind: String, _stat: String, before: Array, _sockets_before: int, level_before: int) -> String:
 	var after: Array = Items.affix_lines(it, false, true)
 	match kind:
-		"add":
+		"add", "resist":
 			for line in after:
 				if not (line in before):
 					return "Added %s" % line
@@ -7553,6 +7565,8 @@ func rebuild_block(key: String) -> String:
 	for k in cost:
 		if held_of(k) < int(cost[k]):
 			return "Short of %s" % ((Words.mid(thing_name(k)) if key_known(k) else thing_label(k)) if Data.KEY_ITEMS.has(k) else thing_name(k).to_lower())     # a key item's name keeps its proper noun
+	if cash < float(rebuild_tins(key)):
+		return Words.T50_TOWN["short_tins"] % money_word()     # tins pay for the town (BUILD50-T)
 	return ""
 
 
@@ -7569,11 +7583,13 @@ func rebuild_place(key: String) -> bool:
 		bag[k] = held_of(k) - int(cost[k])
 		if int(bag[k]) <= 0:
 			bag.erase(k)                       # none left: off the count, as a save keeps it
+	var tins: int = rebuild_tins(key)
+	cash -= float(tins)                        # tins pay for the town (BUILD50-T): with the materials, never into debt (rebuild_block)
 	rebuilt[key] = rebuild_rank(key) + 1
 	if rebuild_halves > 0:
 		rebuild_halves -= 1                   # Birmingham's quota spent (29 Oct)
 	var r: Dictionary = Data.rebuild(key)
-	chron("rebuild", {"key": key, "rank": rebuild_rank(key), "worth": town_worth(), "cost": cost.duplicate()})
+	chron("rebuild", {"key": key, "rank": rebuild_rank(key), "worth": town_worth(), "cost": cost.duplicate(), "tins": tins})
 	log_event(Words.REBUILD["built"] % [r["name"], rebuild_rank(key), town_worth()])
 	if rebuild_rank(key) == 1 and r.has("opens"):
 		var place: String = str(Data.pinnacle(str(r["opens"]))["place"])
@@ -7595,8 +7611,8 @@ func town_stat(stat: String) -> float:
 	var v := 0.0
 	for r in Data.REBUILDS:
 		var rk: int = int(rebuilt.get(r["key"], 0))
-		if rk <= 0:
-			continue
+		if rk <= 0 or town_stopped.has(str(r["key"])):
+			continue                           # a place stopped, unpaid, does nothing (BUILD50-T)
 		for fx in r["fx"]:
 			if fx["stat"] == stat:
 				v += fx_at(fx, rk)
@@ -7627,6 +7643,204 @@ func mint_tins() -> float:
 func mint_pays(m: Dictionary) -> bool:
 	return bool(m.get("cleared", false)) and not m.get("bailed", false) and not m.get("timed_out", false) and not m.get("ghost_pending", false) \
 		and not (m.has("boss") and bool(m["boss"].get("alive", false)))
+
+
+# ------------------------------------------------------------------ act two: tins pay for the town (BUILD50-T)
+
+## docs/design/act_two.md §1-2 (Matt, 4 Nov: "389,080 tins with nothing to buy"): a build costs tins with its materials,
+## every run home each place built draws its wage from the tins in hand in the town's order (Data.REBUILDS); one the
+## tins don't cover stops - its effects off, its pin unlit - till a day it's paid. Never debt. At today's prices (_inf):
+## fiat after the Issue (the_issue.md's price rule).
+var town_stopped := {}              # place key -> true: stopped, unpaid
+
+
+## A build's tins: REBUILD_TINS x REBUILD_GROWTH a rank past the first, at today's prices; half on Birmingham's quota.
+func rebuild_tins(key: String) -> int:
+	if not Data.REBUILD_TINS.has(key):
+		return 0
+	var t: float = float(Data.REBUILD_TINS[key]) * pow(Data.REBUILD_GROWTH, rebuild_rank(key))
+	if rebuild_halves > 0:
+		t = ceilf(t / 2.0)
+	return _inf(t)
+
+
+## A place's day's wage at its rank, at today's prices; 0 when not built.
+func town_wage(key: String) -> int:
+	var rk: int = rebuild_rank(key)
+	if rk <= 0 or not Data.TOWN_WAGES.has(key):
+		return 0
+	return _inf(float(Data.TOWN_WAGES[key]) * (1.0 + Data.TOWN_WAGE_RANK * (rk - 1)))
+
+
+## The day's bill: every place built, running or stopped (a stopped one runs again when it's paid).
+func town_bill() -> int:
+	var b := 0
+	for r in Data.REBUILDS:
+		b += town_wage(str(r["key"]))
+	return b
+
+
+## How many days the tins in hand cover the bill; -1 with nothing to pay.
+func town_days() -> int:
+	var b: int = town_bill()
+	if b <= 0:
+		return -1
+	return int(floor(maxf(0.0, cash) / float(b)))
+
+
+## A place running: built and paid.
+func town_on(key: String) -> bool:
+	return rebuild_rank(key) > 0 and not town_stopped.has(key)
+
+
+func town_running() -> int:
+	var n := 0
+	for r in Data.REBUILDS:
+		if town_on(str(r["key"])):
+			n += 1
+	return n
+
+
+## The next step on the town's road: the first place not built, "" when all are.
+func town_next_key() -> String:
+	for r in Data.REBUILDS:
+		if rebuild_rank(str(r["key"])) <= 0:
+			return str(r["key"])
+	return ""
+
+
+## The day's wages, at a run home (the exchange's day): each place built in the town's order, from the tins in hand;
+## one not covered stops (a toast), one stopped and paid runs again (a toast). Never into debt.
+func town_pay_day() -> void:
+	var paid := 0
+	var stopped: Array = []
+	var was: Dictionary = town_stopped.duplicate()
+	for r in Data.REBUILDS:
+		var k: String = str(r["key"])
+		var w: int = town_wage(k)
+		if w <= 0:
+			continue
+		if cash >= float(w):
+			cash -= float(w)
+			paid += w
+			if town_stopped.has(k):
+				town_stopped.erase(k)
+				log_event(Words.T50_TOWN["log_back"] % Words.mid(str(r["name"])))
+		else:
+			stopped.append(k)
+			if not town_stopped.has(k):
+				town_stopped[k] = true
+				log_event(Words.T50_TOWN["log_stopped"] % [Words.mid(str(r["name"])), money_word()])
+	if paid > 0 or not stopped.is_empty():
+		chron("wages", {"paid": paid, "stopped": stopped, "day": exchange_day})
+	if was != town_stopped:
+		_yard_changed("")                     # a place stopped or back: the shelf and the prices read the town
+
+
+# ------------------------------------------------------------------ act two: a signal's focus (BUILD50-T, §4)
+
+## A signal rolls what it drops: a material (the town's next step's first short, else its crew's area's), a slot, an
+## element's resist or a unique's chance, on its own dice. Saved with the signal. N's chain links call it too.
+func signal_focus_roll(sg: Dictionary) -> void:
+	var tot := 0.0
+	for w in Data.FOCUS_WEIGHTS:
+		tot += float(w)
+	var x: float = focus_rng.randf() * tot
+	var kind: String = Data.FOCUS_KINDS[0]
+	for k in range(Data.FOCUS_KINDS.size()):
+		x -= float(Data.FOCUS_WEIGHTS[k])
+		if x <= 0.0:
+			kind = Data.FOCUS_KINDS[k]
+			break
+	var f := {"kind": kind}
+	match kind:
+		"material":
+			f["key"] = focus_material(int(sg.get("zone", 1)))
+		"slot":
+			f["slot"] = Data.FOCUS_SLOTS[focus_rng.randi_range(0, Data.FOCUS_SLOTS.size() - 1)]
+		"resist":
+			f["el"] = Data.ELEMENTS[focus_rng.randi_range(0, Data.ELEMENTS.size() - 1)]
+	sg["focus"] = f
+
+
+## A material focus's material: the town's next step's first the camp is short of, else its first; with the town
+## whole, one of the crew's area's two.
+func focus_material(zone: int) -> String:
+	var nk: String = town_next_key()
+	if nk != "":
+		var cost: Dictionary = rebuild_cost(nk)
+		var mats: Array = Data.MATERIAL_ORDER.filter(func(k): return cost.has(k))
+		for k in mats:
+			if held_of(str(k)) < int(cost[k]):
+				return str(k)
+		if not mats.is_empty():
+			return str(mats[0])
+	var area: Array = Data.MATERIAL_ORDER.filter(func(k): return int(Data.MATERIALS[k]["area"]) == clampi(zone, 1, 3))
+	return str(area[focus_rng.randi_range(0, area.size() - 1)]) if not area.is_empty() else "fuses"
+
+
+## The focus of the signal on its run, {} for none.
+func _focus() -> Dictionary:
+	return _sig.get("focus", {}) if not _sig.is_empty() else {}
+
+
+func focus_unique_mult() -> float:
+	return Data.FOCUS_UNIQUE if str(_focus().get("kind", "")) == "unique" else 1.0
+
+
+## A find's chance of a loose unique: the site's, a crate's lift, a unique focus and a night's fat drop, all inside
+## UNIQUE_CAP (fix 50: the focus and the fat drop sat outside it).
+func loose_unique_chance(t: Dictionary, crate_mult := 1.0, fat := false) -> float:
+	return minf(Data.UNIQUE_BOOST_CAP, minf(Data.UNIQUE_CAP, unique_odds(t) * crate_mult) * focus_unique_mult() * (Data.NIGHT_FAT_UNIQUE if fat else 1.0))
+
+
+## A slot focus: a gear find's slot its slot one time in two (FOCUS_SLOT).
+func _focus_slot(slot: String) -> String:
+	var f: Dictionary = _focus()
+	if str(f.get("kind", "")) != "slot" or not (slot in Data.SLOTS):
+		return slot
+	return str(f["slot"]) if focus_rng.randf() < Data.FOCUS_SLOT else slot
+
+
+## A resist focus: a gear find that can carry the element's resist carries it one time in three (FOCUS_RESIST) - added,
+## the rarity a step up, or in a last affix's place at the top rarity. A unique, a set piece or a mythic as it is.
+func _focus_resist(it: Dictionary) -> void:
+	var f: Dictionary = _focus()
+	if str(f.get("kind", "")) != "resist" or it.is_empty() or not (str(it.get("slot", "")) in Data.SLOTS):
+		return
+	if it.has("unique") or it.has("set") or it.get("mythic", false) or not it.has("affixes"):
+		return
+	var stat: String = str(f["el"]) + "_res"
+	var d: Dictionary = Items.affix_def(stat)
+	if d.is_empty() or not (str(it["slot"]) in d["slots"]):
+		return
+	if focus_rng.randf() >= Data.FOCUS_RESIST:
+		return
+	for a in it["affixes"]:
+		if str(a["stat"]) == stat:
+			return
+	if int(it["rarity"]) < Data.RARITIES.size() - 1:
+		it["rarity"] = int(it["rarity"]) + 1
+		it["affixes"].append(Items.roll_affix(d, Items.ilvl(it), focus_rng, 0, Items.rarity_cap(it)))
+		it["value"] = int(round(Items.base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
+	else:
+		it["affixes"][it["affixes"].size() - 1] = Items.roll_affix(d, Items.ilvl(it), focus_rng, 0, Items.rarity_cap(it))
+
+
+## "Add a resist" (act two §5): why it can't go on this piece for this resist ("" when it can). `stat` an element's
+## resist ("fire_res"); "" asks only of the piece.
+func resist_job_block(it: Dictionary, stat := "") -> String:
+	if it.is_empty() or not (str(it.get("slot", "")) in Data.RESIST_JOB_SLOTS):
+		return Words.T50_RESIST["no_slot"]
+	if int(it.get("rarity", 0)) >= Data.RARITIES.size() - 1:
+		return Words.T50_RESIST["top"]
+	if stat != "":
+		if not (stat.trim_suffix("_res") in Data.ELEMENTS) or not stat.ends_with("_res"):
+			return Words.T50_RESIST["no_such"]
+		for a in it["affixes"]:
+			if str(a["stat"]) == stat:
+				return Words.T50_RESIST["has"]
+	return ""
 
 
 ## What a site's run can bring, as shares: the campaign site its own; a signal or the order's laid on it its crew's
@@ -7682,6 +7896,8 @@ func _run_materials(m: Dictionary) -> void:
 		_haul_find(m, material_at(i), material_rng.randi_range(Data.MATERIAL_HANDFUL[0], Data.MATERIAL_HANDFUL[1]))
 	if not _sig.is_empty() and int(_sig["site"]) == i and material_rng.randf() < Data.FUSE_SIGNAL:
 		_haul_find(m, "fuses", material_rng.randi_range(1, 2))
+	if not _sig.is_empty() and int(_sig["site"]) == i and str(_sig.get("focus", {}).get("kind", "")) == "material":
+		_haul_find(m, str(_sig["focus"]["key"]), Data.FOCUS_MATERIAL)     # a material focus (BUILD50-T): its handful in the pack
 
 
 ## A crew's head down: their handful of the site's material, into the pack as a find (1 Nov).
@@ -8328,6 +8544,7 @@ func decrypt(ids: Array, crew := -1) -> Dictionary:
 		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS * float(grade["extras"]), "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS * float(grade["extras"]),
 		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1), "grade": int(grade["papers"])}
 	_remix(sig, step + up)
+	signal_focus_roll(sig)                 # what it drops (BUILD50-T, act two §4)
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "codes": codes.duplicate(), "papers": names.duplicate()})
 	log_event(Words.SIGNAL_MADE % [Words.mid(signal_place(sig)), signal_level(sig)])
@@ -9217,7 +9434,8 @@ func _dry_begin(i: int, r: RandomNumberGenerator) -> Dictionary:
 	prof["snap_us"] += Time.get_ticks_usec() - p0
 	var live_kept: Array = _dry_live_out()
 	rng = r
-	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
+	if not night_on():
+		_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above); never at a night's break, where the runner stands as they are (fix 50)
 	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") or has_node("snare_and_wait") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	var m := {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": _gate_boxes(true, null, i) if gate_box_on(i) else [], "insured": false, "clock": clock_budget(t),
@@ -9364,7 +9582,8 @@ func deploy(i: int) -> void:
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
 	var odds_seen: float = _gate_odds(i)     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
-	_top_up(i if _repeat_going else -1, i)    # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9); the site's plan (BUILD46-R)
+	if not _night_going:
+		_top_up(i if _repeat_going else -1, i)    # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance; a repeat's for its site (S9); the site's plan (BUILD46-R)
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_stats_dirty()
@@ -9386,7 +9605,8 @@ func deploy(i: int) -> void:
 		insured = true
 		log_event(Words.LOG["insured"] % [_cash_words(insure_cost(i)), Words.FENCE["insured"]])
 	insure_next = false
-	_yard_setting_off()                       # before the run's record of its starting HP
+	if not _night_going:
+		_yard_setting_off()                       # before the run's record of its starting HP; never a night's next link (BUILD50 N)
 	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") or has_node("snare_and_wait") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured, "clock": clock_budget(t), "clock_max": clock_budget(t),
@@ -9395,7 +9615,7 @@ func deploy(i: int) -> void:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
-	if gate_box_on(i):
+	if gate_box_on(i) and not _night_going:     # never a night's next link: its pack is the night's (fix 50)
 		_pack_boxes(mission)                  # the plan's boxes of each worn gun's rounds into the pack, for the refills (30 Oct, the designer's A; BUILD46-R)
 	var warm_key := _combo_warm(mission)
 	if warm_key != "":
@@ -9464,6 +9684,10 @@ func advance(seconds: float) -> void:
 		if steps > 0:
 			live_guard()
 		steps += 1
+		if night_break():
+			if not _night_auto_step():
+				left = 0.0                        # a night's break: the world waits on the player, no rest (BUILD50 N)
+			continue
 		if mission != null:
 			var step := minf(1.0, left)
 			var p0 := Time.get_ticks_usec()
@@ -10291,7 +10515,7 @@ func wager_taken(key: String, k: int) -> bool:
 ## Take a wager, or drop one taken. Logged.
 func take_wager(key: String, k: int, on := true) -> bool:
 	var offer := wager_offer(key)
-	if k < 0 or k >= offer.size() or runner_busy():
+	if k < 0 or k >= offer.size() or (runner_busy() and key != night_wager_key()):     # at a night's break, the next link's (BUILD50 N)
 		return false
 	var w: Dictionary = wagers.get(key, {"seq": 0, "taken": []})
 	var taken: Array = w.get("taken", [])
@@ -13248,6 +13472,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var owned: Array = owned_ammo_types(m) if (slot == Data.AMMO or slot == Data.MAGAZINE) else []
 	if slot == Data.AMMO and owned.is_empty():
 		slot = gear_slot                      # rounds for no gun you have (17 Oct, Matt's playtest: three boxes, no gun): something else instead
+	slot = _focus_slot(slot)                  # a slot focus (BUILD50-T): one gear find in two its slot, on its own dice
 	var socket_find: bool = slot != Data.PAPER and rng.randf() < (0.5 if crate.get("socket", false) else Data.SOCKET_FIND)     # a socketable, its own kind of find, kills too (21 Oct); half of Breaker's yard's
 	if socket_find:
 		slot = Data.ATTACHMENT
@@ -13255,6 +13480,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		slot = Data.SUPPLIES                  # medical supplies (28 Oct): a medicine cabinet's, a site's leaning to meds
 	var said := ""
 	var quality: float = rarity_bonus() + float(t.get("rarity", 0.0)) + float(crate.get("rarity", 0.0))
+	var fat: bool = str(m.get("night_special", "")) == "fat"     # a night's fat drop (BUILD50 N): quality ×2, a unique's chance ×3
+	if fat:
+		quality *= Data.NIGHT_FAT_QUALITY
 	var it: Dictionary
 	var loose: Array = loose_at(int(t["depth"]), int(t["loot_tier"]))     # those whose range takes the find's tier (12 Oct)
 	var pieces: Array = set_pieces_at(int(t["depth"]))
@@ -13280,7 +13508,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	elif not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
 		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
 		said = "Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]]
-	elif not loose.is_empty() and rng.randf() < minf(Data.UNIQUE_CAP, unique_odds(t) * float(crate.get("unique", 1.0))):     # a Safe's double, inside the cap (the review)
+	elif not loose.is_empty() and rng.randf() < loose_unique_chance(t, float(crate.get("unique", 1.0)), fat):     # a Safe's double, a unique focus and a fat drop, inside the cap (the review; fix 50)
 		it = Items.roll_unique(pick_unique(loose, int(t["loot_tier"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the band's weight picks
 		said = "Found: %s" % it["unique"]
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < minf(Data.SET_CAP, Data.SET_DROP * (t["depth"] - 1)):
@@ -13327,6 +13555,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
+	_focus_resist(it)                         # a resist focus (BUILD50-T): one gear find in three carries it
 	if capture:
 		return {"it": it, "said": said}
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
@@ -13636,6 +13865,8 @@ func _roll_crates(m: Dictionary, t: Dictionary) -> void:
 	var queue: Array = []
 	var total := 0
 	var target: int = maxi(1, thin_after(t))
+	if str(m.get("night_special", "")) == "stash":
+		target = int(ceil(target * Data.NIGHT_STASH_CRATES))     # a night's fifth: a room of crates (BUILD50 N)
 	while total < target:
 		var x: float = rng.randf() * total_w
 		var key: String = str(w.keys()[0])
@@ -13745,6 +13976,8 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0) + (Data.MYTHIC_SEARCH_FINDS if has_rule("removal_van") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
+		if str(m.get("night_special", "")) == "stash":
+			finds *= Data.NIGHT_STASH_FINDS     # a night's stash: two finds a search (BUILD50 N)
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
 		m["extra"] = float(m.get("extra", 0.0)) + maxf(0.0, loot_bonus())
 		while m["extra"] >= 1.0:
@@ -13961,6 +14194,8 @@ func _seen_off(m: Dictionary) -> void:
 func _extract() -> void:
 	if mission != null and mission.get("dry", false):
 		return
+	if mission != null and mission.has("night") and _night_link_end(mission):
+		return                                # a night's link done: the break, or the night home from there (BUILD50 N)
 	var m: Dictionary = mission
 	_event_end(m)                         # the dogs off the record, his run-only goods back (the fix round)
 	var rep_pre: Dictionary = {"scrap": scrap, "mats": _materials_total()} if m.get("unwatched", false) else {}     # a repeat run's line (29 Oct)
@@ -13987,6 +14222,7 @@ func _extract() -> void:
 	if mint_pays(m):
 		m["cash"] += mint_tins()                                     # the mint (18 Oct): the town's worth pays on a run home - a clear's only (31 Oct)
 	_earn(float(m["cash"]))
+	_night_home_done(m)                       # a night's XP home with its haul (BUILD50 N)
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
 		run_notes += maxi(0, capacity_raw() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
@@ -13996,7 +14232,8 @@ func _extract() -> void:
 		run_notes *= Data.FX["rule/drivers_log"]
 	if float(m.get("wager_notes", 1.0)) != 1.0:
 		var before_w: int = run_notes
-		run_notes = int(round(run_notes * float(m["wager_notes"])))     # Kev's wager paid (29 Oct)
+		var held_w: int = mini(run_notes, int(m.get("notes_link0", 0)))     # a night's earlier links' notes: not the wager's (fix 50)
+		run_notes = held_w + int(round((run_notes - held_w) * float(m["wager_notes"])))     # Kev's wager paid (29 Oct)
 		log_event(Words.WAGERS["paid_notes"] % [run_notes - before_w, "" if run_notes - before_w == 1 else "s"])
 	notes += run_notes                        # before the takings: after the Issue the notes are this run's income (the review)
 	var base0: float = a_gamble_base()
@@ -14101,6 +14338,7 @@ func _extract() -> void:
 	_idle_tidy()
 	_say_next()
 	exchange_day += 1                         # a run home: the exchange's new day of rates (28 Oct, Matt's play-day)
+	town_pay_day()                            # and the town's wages (BUILD50-T)
 	restock()
 	_top_up()                                 # home, the rig loaded again: the card's odds read the rig that goes out (the review)
 	if not rep_pre.is_empty():
@@ -14324,6 +14562,7 @@ func _kia() -> void:
 	wounds = {}                          # theirs, gone with them
 	_stats_dirty()
 	hp = Data.BASE_HP
+	_night_dead(m)                            # a night's haul lost with the run (BUILD50 N)
 	_signal_done(m, true)
 	_sweep_papers()                           # a paper the insurance or the dog brought home: the Radio's pile
 	mission = null
@@ -14335,6 +14574,7 @@ func _kia() -> void:
 	# and no cash is a setback, not a dead end
 	_starter_loadout()
 	exchange_day += 1                         # home, if not whole: the exchange's new day (28 Oct)
+	town_pay_day()                            # and the town's wages (BUILD50-T)
 	restock()
 	# two turn up; one is who was brought home from a run, if anyone was
 	var pool: Array = []
@@ -17988,6 +18228,8 @@ static func _chron_item(it) -> Dictionary:
 func to_dict() -> Dictionary:
 	var d: Dictionary = _state().duplicate(true)      # a copy: the live items aren't shared with the save
 	d["expeditions"] = exp_state().duplicate(true)    # the expeditions and the hands (29 Oct)
+	d["town_stopped"] = town_stopped.keys()           # the town's places stopped, unpaid (BUILD50-T)
+	d["night"] = _night_save()                        # a night on the air (BUILD50 N)
 	return d
 
 
@@ -18307,6 +18549,10 @@ func load_dict(d: Dictionary) -> void:
 		restock()
 	_skills_known_only()                  # a slot the runner can't use is free (25 Oct, the review)
 	exp_load(d.get("expeditions", {}))    # the expeditions and the hands (29 Oct)
+	town_stopped = {}
+	for k in d.get("town_stopped", []):
+		town_stopped[str(k)] = true       # the town's places stopped, unpaid (BUILD50-T)
+	_night_load(d.get("night", {}) if d.get("night", {}) is Dictionary else {})     # a night on the air (BUILD50 N)
 
 
 ## The crew's kit, the runners not out (21 Oct): their worn pieces, their rigs, what's fitted in them - for the load's
@@ -19809,3 +20055,579 @@ func exp_load(d: Dictionary) -> void:
 	for k in quota_done.keys():
 		quota_done[k] = int(quota_done[k])
 	Items._next_id = maxi(Items._next_id, top + 1)
+
+
+# ------------------------------------------------------------------ a night on the air (BUILD50 N, act_two.md §3)
+
+## Signals chained (Matt, 4 Nov: "being done in 30secs then having to repeat the whole process to go again - think we
+## need to be able to chain them together"): a night starts on a held signal; each link is a signal's fight as a run is;
+## between them the break, where the runner stands as they are - HP, meds, magazines, the pack, the wounds - no rest, no
+## gate top-up, no Clinic. The next link is the next held signal, then one rolled at the reach + 1. Every fifth link
+## brings something special. It ends on Get out at a break, a death, the night's clock out or a full pack.
+## The night's run is one run that goes on: the pack, the tins, the notes and the salvage carried from link to link in the
+## run itself, so whatever ends it is a run's end - home through _extract, or lost through _kia. Its XP is held in the run
+## (night_xp) and comes home with it; a death loses it with the rest of the haul.
+var night_chain := {}                  # the night in progress: {link, done, results, fight_s, kills, next, next_id, cls, start_link_lv}
+var night_rules: Array = []      # the tuning rules: [{"kind": "want"|"never"|"wager", "code": name, "cond": wager cond id, "on": bool}]
+var night_floor := Data.NIGHT_FLOOR     # "Auto: keep going" while the odds stay at or over this
+var night_auto := false          # the tick on the break
+var _night_going := false        # a link after the first setting off: no gate top-up, no Yard's setting-off
+
+
+func night_on() -> bool:
+	return not night_chain.is_empty()
+
+
+## At a break: a link won or lost and the next not yet set off; the world waits on the player (no rest).
+func night_break() -> bool:
+	return not night_chain.is_empty() and mission != null and bool(mission.get("night_break", false))
+
+
+## The link under way (or the one just done, at a break), from 1.
+func night_link() -> int:
+	return int(night_chain.get("link", 0))
+
+
+## A link's special: every NIGHT_FIFTH link in turn a head away from home, a stash, a fat drop; "" for the rest.
+static func night_special(link: int) -> String:
+	if link <= 0 or link % Data.NIGHT_FIFTH != 0:
+		return ""
+	return str(Data.NIGHT_FIFTHS[(floori(link / float(Data.NIGHT_FIFTH)) - 1) % Data.NIGHT_FIFTHS.size()])
+
+
+## The next fifth link from `link` on (the chain strip's dashed one).
+static func night_next_fifth(link: int) -> int:
+	return (floori(link / float(Data.NIGHT_FIFTH)) + 1) * Data.NIGHT_FIFTH
+
+
+## A link's XP: 5% more a link past the first (NIGHT_XP_STEP).
+static func night_xp_mult(link: int) -> float:
+	return 1.0 + Data.NIGHT_XP_STEP * maxi(0, link - 1)
+
+
+## The night's fight time left on its clock, in seconds.
+func night_clock_left() -> float:
+	var used: float = float(night_chain.get("fight_s", 0.0))
+	if mission != null and mission.has("night") and not bool(mission.get("night_break", false)):
+		used += float(mission.get("elapsed", 0.0)) - float(mission.get("paused_s", 0.0))
+	return maxf(0.0, Data.NIGHT_CLOCK - used)
+
+
+## Why a night can't start on held signal `k` now ("" when it can).
+func night_block(k: int) -> String:
+	var sg := signal_at(k)
+	if sg.is_empty():
+		return "no such signal"
+	if sg.has("order"):
+		return Words.NIGHT["order_alone"]
+	if not can_deploy() or not _sig.is_empty():
+		return busy_words() if busy_words() != "" else "The runner is out"
+	if candidates.size() == 2:
+		return "Pick a trait first"
+	return ""
+
+
+## Start a night on held signal `k`: its run is the first link, the one out the night's runner.
+func start_night(k: int) -> bool:
+	if night_block(k) != "":
+		return false
+	var sg := signal_at(k)
+	night_chain = {"link": 1, "done": 0, "results": [], "fight_s": 0.0, "kills": 0, "next": {}, "next_id": -1, "cls": cls}
+	if night_special(1) == "head":
+		sg["head"] = true
+	if not deploy_signal(k):
+		night_chain = {}
+		return false
+	_night_mark(mission)
+	log_event(Words.NIGHT["log_start"] % [Words.mid(signal_place(sg)), signal_level(sg)])
+	chron("night", {"what": "start", "id": int(sg["id"]), "level": signal_level(sg)})
+	return true
+
+
+## A link's run marked as the night's: its number, its special, the XP it holds.
+func _night_mark(m: Dictionary) -> void:
+	var link: int = night_link()
+	m["night"] = link
+	m["night_special"] = night_special(link)
+	m["night_xp"] = float(m.get("night_xp", 0.0))
+
+
+## A link's end, from _extract (true: held at the break, or the night's sent home from here; the caller's done). Out of
+## time ends the night as a run out of time (the clock's taken the pack already): false, and _extract goes on.
+func _night_link_end(m: Dictionary) -> bool:
+	if bool(m.get("night_home", false)) or bool(m.get("night_break", false)):
+		return false
+	if bool(m.get("timed_out", false)):
+		m["night_home"] = true
+		m["night_end"] = "time"
+		return false
+	_event_end(m)                              # as _extract: the dogs off the record, his run-only goods back
+	_bailiff_keeps_deeds(m)
+	_floor_mythics_in(m)
+	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or (crates_done(m) and not m.get("crates_none", false))):
+		m["ghost_pending"] = false
+		_clear(m, m["t"])                      # Ghost: a full pack is the clear, as _extract reads it
+	m["left"] = int(m["left"]) + m.get("floor", []).size()     # the floor stays with its site
+	m["floor"] = []
+	if float(m.get("wager_notes", 1.0)) != 1.0:
+		var held_n: int = int(m.get("notes_link0", 0))     # the earlier links' notes: the wager's not on them (fix 50)
+		m["notes"] = held_n + int(round((int(m.get("notes", 0)) - held_n) * float(m["wager_notes"])))     # Kev's notes wager paid on its own link's notes
+		m["wager_notes"] = 1.0
+	var lv: int = signal_level(_sig) if not _sig.is_empty() else 0
+	var won: bool = bool(m["cleared"]) and not m.get("ghost_pending", false) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
+	_signal_done(m)                            # the reach counted link by link, the papers home, Kev's story
+	m.erase("signal")
+	night_chain["done"] = int(night_chain.get("done", 0)) + 1
+	night_chain["results"] = Array(night_chain.get("results", [])) + [won]
+	night_chain["fight_s"] = float(night_chain.get("fight_s", 0.0)) + float(m["elapsed"]) - float(m.get("paused_s", 0.0))
+	night_chain["kills"] = int(night_chain.get("kills", 0)) + int(m["kills"])
+	m["night_break"] = true
+	log_event((Words.NIGHT["log_won"] if won else Words.NIGHT["log_lost"]) % [night_link(), Words.mid(str(m["t"]["name"]))])
+	chron("night", {"what": "link", "link": night_link(), "level": lv, "won": won, "special": str(m.get("night_special", "")), "hp": int(hp), "pack": pack_used(m)})
+	if night_clock_left() <= 0.0:
+		_night_home(m, "clock")
+	elif pack_used(m) >= capacity():
+		_night_home(m, "full")
+	else:
+		_night_prepare_next()
+	return true
+
+
+## A held signal given the fifth's head at a break put back as it was, the night ending there (fix 50).
+func _night_head_back() -> void:
+	var hb: Array = night_chain.get("head_back", [])
+	night_chain.erase("head_back")
+	if hb.size() < 2:
+		return
+	for sg in signals:
+		if int(sg["id"]) == int(hb[0]):
+			sg["head"] = bool(hb[1])
+
+
+## The night home with its haul: at a break, the run's end as a run home.
+func _night_home(m: Dictionary, why: String) -> void:
+	_night_head_back()
+	m["night_home"] = true
+	m["night_end"] = why
+	log_event(Words.NIGHT["end_" + why])
+	_extract()
+
+
+## Get out with the haul (the break's button).
+func night_get_out() -> bool:
+	if not night_break():
+		return false
+	_night_home(mission, "out")
+	return true
+
+
+## The night's XP home, its record, the night done: from _extract once the night's run comes home.
+func _night_home_done(m: Dictionary) -> void:
+	if not m.has("night") or night_chain.is_empty():
+		return
+	var g: float = float(m.get("night_xp", 0.0))
+	m["xp"] = g                                # the card's XP: the night's, each link's step in it
+	var before := level()
+	_gain_xp(g)
+	_earn_points(before)
+	chron("night", {"what": "home", "end": str(m.get("night_end", "out")), "links": int(night_chain.get("done", 0)), "won": Array(night_chain.get("results", [])).count(true), "xp": int(g), "tins": int(m["cash"]), "pack": pack_used(m)})
+	night_chain = {}
+
+
+## A death on a link: the night's haul goes with the run (_kia loses the pack, the tins and notes were never earned,
+## the XP was held in the run).
+func _night_dead(m: Dictionary) -> void:
+	if not m.has("night") or night_chain.is_empty():
+		return
+	_night_head_back()
+	log_event(Words.NIGHT["end_dead"] % int(m.get("night_xp", 0.0)))
+	chron("night", {"what": "dead", "link": night_link(), "links": int(night_chain.get("done", 0))})
+	night_chain = {}
+
+
+## The next link at a break: the next held signal, else one rolled at the reach + 1; a fifth's head on it; Kev's wagers
+## the tuning rules accept taken.
+func _night_prepare_next() -> void:
+	var link: int = night_link() + 1
+	night_chain["next"] = {}
+	night_chain["next_id"] = -1
+	if not signals.is_empty():
+		night_chain["next_id"] = int(signals[0]["id"])
+	else:
+		night_chain["next"] = _night_roll()
+	var sg: Dictionary = night_next_sig()
+	if night_special(link) == "head":
+		if int(night_chain["next_id"]) >= 0 and not night_chain.has("head_back"):
+			night_chain["head_back"] = [int(sg["id"]), bool(sg.get("head", false))]     # a held signal's head as it was, put back if the night ends at this break (fix 50)
+		sg["head"] = true                      # a head away from home: the crew's, at the link's level, his drops
+	var key: String = "sig:%d" % int(sg["id"])
+	var offer: Array = wager_offer(key)
+	for k in range(offer.size()):
+		if _night_rule_takes(offer[k]) and not wager_taken(key, k):
+			take_wager(key, k)
+
+
+## The next link's signal: the held one by its id, or the rolled one. {} when none.
+func night_next_sig() -> Dictionary:
+	if night_chain.is_empty():
+		return {}
+	var id: int = int(night_chain.get("next_id", -1))
+	if id >= 0:
+		for sg in signals:
+			if int(sg["id"]) == id:
+				return sg
+		return {}
+	return night_chain.get("next", {})
+
+
+## The crew whose area's materials the town's next step still wants (act_two.md §3: "at a site the town's next step needs
+## materials from where one fits"); -1 when none does.
+func _night_want_zone() -> int:
+	for key in Words.U49_TOWN_ROAD:
+		if rebuild_rank(str(key)) > 0:
+			continue
+		var cost: Dictionary = rebuild_cost(str(key))
+		for mk in cost:
+			if Data.MATERIALS.has(mk) and held_of(str(mk)) < int(cost[mk]):
+				return int(Data.MATERIALS[mk]["area"])
+		return -1
+	return -1
+
+
+## A link rolled at the reach + 1: an open site, the crew the town wants materials from where one fits, its codes by the
+## tuning rules.
+func _night_roll() -> Dictionary:
+	var open: Array = range(Data.TIERS.size()).filter(func(i): return tier_open(int(i)))
+	var site: int = int(open[rng.randi_range(0, open.size() - 1)]) if not open.is_empty() else rng.randi_range(0, Data.TIERS.size() - 1)
+	var zone: int = _night_want_zone()
+	if zone < 1 or zone >= Data.ZONES.size():
+		zone = rng.randi_range(0, Data.ZONES.size() - 1)
+	signal_seq += 1
+	var sg := {"id": signal_seq, "site": site, "zone": zone, "depth": depth_for_level(site, maxi(Data.REACH_START, reach + 1)), "codes": [], "papers": [],
+		"head": false, "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS, "line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1), "grade": 3, "rolled": true}
+	_sig_on(sg)
+	sg["words"] = _night_codes(site, max_words(site))
+	_sig_off()
+	signal_focus_roll(sg)                  # what it drops, as a decrypted signal's (merge 50: T's focus on N's rolled link)
+	return sg
+
+
+## The codes a rolled link carries, `n` of them by the tuning rules: each code decided by the first rule naming it
+## (checked top down, as the loot rules); the wanted ones on first, in the rules' order, where known and deep enough;
+## the rest rolled, never one refused.
+func _night_codes(i: int, n: int) -> Array:
+	var decided := {}
+	for r in night_rules:
+		if bool(r.get("on", true)) and str(r.get("kind", "")) in ["want", "never"] and not decided.has(str(r.get("code", ""))):
+			decided[str(r["code"])] = str(r["kind"])
+	var out: Array = []
+	for name in decided:
+		if out.size() >= n:
+			break
+		if decided[name] == "want" and knows_word(str(name)) and int(depth[i]) >= int(Data.word_of(str(name)).get("depth", 0)):
+			out.append({"w": str(name), "t": _roll_tier(i)})
+	var never: Array = decided.keys().filter(func(nm): return decided[nm] == "never")
+	while out.size() < n:
+		var wd := _roll_word(i, out.map(func(x): return str(x["w"])) + never)
+		if wd.is_empty():
+			break
+		out.append(wd)
+	return out
+
+
+## Whether the tuning rules take Kev's wager `w` at a break: the first rule naming its cost decides.
+func _night_rule_takes(w: Dictionary) -> bool:
+	for r in night_rules:
+		if bool(r.get("on", true)) and str(r.get("kind", "")) == "wager" and str(r.get("cond", "")) == str(w["cond"]):
+			return true
+	return false
+
+
+## A tuning rule added (a code wanted by default, the first code known), moved up, changed or taken off.
+func night_rule_add(kind := "want", code := "", cond := "") -> bool:
+	if night_rules.size() >= Data.NIGHT_RULES_MAX:
+		return false
+	if kind == "wager":
+		if cond == "":
+			cond = str(Data.WAGER_CONDS[0]["id"])
+		night_rules.append({"kind": "wager", "code": "", "cond": cond, "on": true})
+		return true
+	if code == "":
+		var known: Array = words_known()
+		code = str(known[0]) if not known.is_empty() else str(Data.WORDS[0]["name"])
+	night_rules.append({"kind": kind, "code": code, "cond": "", "on": true})
+	return true
+
+
+func night_rule_up(k: int) -> bool:
+	if k <= 0 or k >= night_rules.size():
+		return false
+	var r = night_rules[k]
+	night_rules[k] = night_rules[k - 1]
+	night_rules[k - 1] = r
+	return true
+
+
+func night_rule_drop(k: int) -> bool:
+	if k < 0 or k >= night_rules.size():
+		return false
+	night_rules.remove_at(k)
+	return true
+
+
+## A rule's kind or its code (or wager) stepped on by `by`; its on switch.
+func night_rule_step(k: int, what: String, by := 1) -> bool:
+	if k < 0 or k >= night_rules.size():
+		return false
+	var r: Dictionary = night_rules[k]
+	match what:
+		"kind":
+			var kinds := ["want", "never", "wager"]
+			r["kind"] = kinds[(kinds.find(str(r["kind"])) + by + kinds.size()) % kinds.size()]
+			if str(r["kind"]) == "wager" and str(r.get("cond", "")) == "":
+				r["cond"] = str(Data.WAGER_CONDS[0]["id"])
+			if str(r["kind"]) != "wager" and str(r.get("code", "")) == "":
+				var known: Array = words_known()
+				r["code"] = str(known[0]) if not known.is_empty() else str(Data.WORDS[0]["name"])
+		"value":
+			if str(r["kind"]) == "wager":
+				var ids: Array = Data.WAGER_CONDS.map(func(c): return str(c["id"]))
+				r["cond"] = ids[(ids.find(str(r["cond"])) + by + ids.size()) % ids.size()]
+			else:
+				var known: Array = words_known()
+				if known.is_empty():
+					return false
+				r["code"] = known[(known.find(str(r["code"])) + by + known.size()) % known.size()]
+		"on":
+			r["on"] = not bool(r.get("on", true))
+	return true
+
+
+## The odds floor for "Auto: keep going", in steps of 5%.
+func night_floor_step(by: int) -> void:
+	night_floor = clampf(snappedf(night_floor + 0.05 * by, 0.05), 0.05, 1.0)
+
+
+## The next link set off from the break: its signal laid on its site and run as a run is, with the run's pack, tins,
+## notes, salvage and held XP carried in; no rest, no gate top-up. False when it can't go.
+func night_next() -> bool:
+	if not night_break():
+		return false
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty():
+		return false
+	var old: Dictionary = mission
+	var k: int = signals.find(sg)
+	var rolled: bool = k < 0
+	if rolled:
+		signals.append(sg)                     # laid on the Radio's list for the set-off only: deploy_signal takes it off
+		k = signals.size() - 1
+	mission = null
+	_night_going = true
+	var went: bool = deploy_signal(k)
+	_night_going = false
+	if not went:
+		if rolled:
+			signals.erase(sg)
+		mission = old
+		return false
+	var m: Dictionary = mission
+	for key in ["found", "pack_key", "night_xp", "wounded", "salvage"]:
+		if old.has(key):
+			m[key] = old[key]                  # the pack and what's held, as they stand
+	for key in ["cash", "notes", "scrap", "meds_used", "finds", "ditched", "left", "xp", "cures_used"]:
+		if old.has(key):
+			m[key] = old[key] + m.get(key, 0)  # the night's so far and this link's start (a convoy's, a tip's)
+	m["hp_start"] = float(old.get("hp_start", hp))
+	m["notes_link0"] = int(old.get("notes", 0))     # the night's notes before this link: a notes wager pays on the rest (fix 50)
+	night_chain.erase("head_back")             # the held signal's run now: its head goes with it
+	night_chain["link"] = night_link() + 1
+	night_chain["next"] = {}
+	night_chain["next_id"] = -1
+	_night_mark(m)
+	log_event(Words.NIGHT["log_next"] % [night_link(), Words.mid(signal_place(sg)), signal_level(sg)])
+	return true
+
+
+## The odds to clear the next link as the runner stands - their HP, the meds and magazines in the rig, the wagers taken
+## on it - read a few dry runs at a time as the Radio's are (the shell steps them). [odds, settled].
+func night_odds() -> Array:
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty() or not _sig.is_empty():
+		return [0.0, false]
+	var held_m = mission
+	mission = null                             # read as a set-off would be: no run out
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var home = _surv_cache.get(i, null)
+	if _sig_odds.has(int(sg["id"])):
+		_surv_cache[i] = _sig_odds[int(sg["id"])]
+	else:
+		_surv_cache.erase(i)
+	var o: float = survival(i)
+	var done: bool = odds_settled(i)
+	_sig_odds[int(sg["id"])] = _surv_cache[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	_sig_off()
+	mission = held_m
+	return [o, done]
+
+
+## The odds read so far, running none (the break's screen).
+func night_odds_now() -> Array:
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty() or not _sig.is_empty() or not _sig_odds.has(int(sg["id"])):
+		return [0.0, false]
+	var held_m = mission
+	mission = null
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var c: Array = _sig_odds[int(sg["id"])]
+	var out: Array = [float(c[1]), int(c[2]) >= mini(odds_runs(), Data.ODDS_RUNS)] if c[0] == _odds_key(i) else [0.0, false]
+	_sig_off()
+	mission = held_m
+	return out
+
+
+## A break with "Auto: keep going" ticked: the next link sets off by itself while the odds stay at or over the floor;
+## under it the night waits for the player, said once. True when it set off.
+func _night_auto_step() -> bool:
+	if not night_auto or not night_break():
+		return false
+	var o: Array = night_odds()
+	if not bool(o[1]):
+		return false
+	if float(o[0]) >= night_floor - 0.0001:
+		return night_next()
+	if int(night_chain.get("auto_said", -1)) != night_link():
+		night_chain["auto_said"] = night_link()
+		log_event(Words.NIGHT["auto_stop"] % [roundi(float(o[0]) * 100.0), roundi(night_floor * 100.0)])
+	return false
+
+
+## Kev's wager offered on the next link at a break: taken there as on the Radio.
+func night_wager_key() -> String:
+	var sg: Dictionary = night_next_sig()
+	return ("sig:%d" % int(sg["id"])) if night_break() and not sg.is_empty() else ""
+
+
+## The Radio's tune, retune and twist on the next link at a break, at their prices (signal_craft's, the run's held off
+## the Radio for the craft).
+func night_craft_block(key: String) -> String:
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty() or not night_break() or not (key in SIGNAL_CRAFTS):
+		return "no next link"
+	var held_m = mission
+	mission = null
+	_sig_on(sg)
+	var why: String = word_craft_block(int(sg["site"]), key)
+	_sig_off()
+	mission = held_m
+	return why
+
+
+func night_craft_cost(key: String) -> int:
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty() or not _sig.is_empty():
+		return 0
+	var held_m = mission
+	mission = null
+	_sig_on(sg)
+	var c: int = word_craft_cost(int(sg["site"]), key)
+	_sig_off()
+	mission = held_m
+	return c
+
+
+func night_craft(key: String) -> bool:
+	if night_craft_block(key) != "":
+		return false
+	var sg: Dictionary = night_next_sig()
+	var held_m = mission
+	mission = null
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var ok: bool = word_craft(i, key)
+	if ok:
+		sg["words"] = words[i].duplicate(true)
+		sg["sealed"] = sealed[i]
+	_sig_off()
+	mission = held_m
+	return ok
+
+
+## The night's haul so far, for the break: tins, notes, XP, the pack's materials by kind and its kit.
+func night_haul() -> Dictionary:
+	if mission == null or not mission.has("night"):
+		return {}
+	var m: Dictionary = mission
+	var mats := {}
+	var kit: Array = []
+	for it in m["found"]:
+		if it.get("carried", false) or it.get("from_rig", false):
+			continue
+		if Items.is_material(it):
+			mats[str(it["base"])] = int(mats.get(str(it["base"]), 0)) + Items.stack_size(it)
+		elif str(it.get("slot", "")) in Data.SLOTS:
+			kit.append(it)
+	kit.sort_custom(func(a, b): return int(a.get("rarity", 0)) > int(b.get("rarity", 0)))
+	return {"tins": float(m["cash"]), "notes": int(m.get("notes", 0)), "xp": float(m.get("night_xp", 0.0)), "materials": mats, "kit": kit}
+
+
+func _night_save() -> Dictionary:
+	return {"night": night_chain.duplicate(true), "rules": night_rules.duplicate(true), "floor": night_floor, "auto": night_auto}
+
+
+func _night_load(d: Dictionary) -> void:
+	night_chain = d.get("night", {}).duplicate(true) if d.get("night", {}) is Dictionary else {}
+	if not night_chain.is_empty():
+		for k in ["link", "done", "kills", "next_id", "auto_said"]:
+			if night_chain.has(k):
+				night_chain[k] = int(night_chain[k])
+		night_chain["fight_s"] = float(night_chain.get("fight_s", 0.0))
+		night_chain["results"] = Array(night_chain.get("results", [])).map(func(x): return bool(x))
+		if night_chain.get("next", {}) is Dictionary and not night_chain["next"].is_empty():
+			_sig_ints(night_chain["next"])
+			for wd in night_chain["next"].get("words", []):
+				wd["t"] = int(wd["t"])
+	if mission is Dictionary and mission.has("night"):
+		mission["night"] = int(mission["night"])
+	night_rules = []
+	for r in d.get("rules", []):
+		if r is Dictionary:
+			night_rules.append({"kind": str(r.get("kind", "want")), "code": str(r.get("code", "")), "cond": str(r.get("cond", "")), "on": bool(r.get("on", true))})
+	night_floor = float(d.get("floor", Data.NIGHT_FLOOR))
+	night_auto = bool(d.get("auto", false))
+
+
+## What the next link brings: its crew's area's materials as shares and the chance a link brings one. [{}, 0.0].
+func night_materials() -> Array:
+	var sg: Dictionary = night_next_sig()
+	if sg.is_empty() or not _sig.is_empty():
+		return [{}, 0.0]
+	var held_m = mission
+	mission = null
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var out: Array = [material_split(i), material_odds(i)]
+	_sig_off()
+	mission = held_m
+	return out
+
+
+## The runner as they stand at a break: the meds in the rig, the magazines full and the rounds loaded.
+func night_carried() -> Dictionary:
+	var meds := 0
+	var mags := 0
+	var rounds := 0
+	for it in rig:
+		if Items.is_medical(it):
+			meds += Items.stack_size(it)
+		elif Items.is_mag(it):
+			rounds += int(it.get("rounds", 0))
+			if int(it.get("rounds", 0)) >= Items.mag_cap(it):
+				mags += 1
+	return {"meds": meds, "mags": mags, "rounds": rounds, "meds_used": int(mission.get("meds_used", 0)) if mission != null else 0}

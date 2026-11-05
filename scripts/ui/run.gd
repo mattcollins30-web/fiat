@@ -27,6 +27,7 @@ const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const EventPanel := preload("res://scripts/ui/event_panel.gd")
+const NightBreak := preload("res://scripts/ui/night_break.gd")     # a night on the air's break (BUILD50 N)
 
 const BODY_W := Pal.RUN_W - Inventory.WIDTH - 24               # 832: the run beside the folded rail (15 Oct, frame_mockup_B)
 const GAP := 24
@@ -283,6 +284,12 @@ func _init() -> void:
 	_countdown = UI.label(_left, Rect2(VIEW_X + VIEW_W - COUNTDOWN_W - BOX_PAD, FIGHT_BOX_Y + 66, COUNTDOWN_W, ch), "", "SemiBold", COUNTDOWN_FONT, Pal.BAD, HORIZONTAL_ALIGNMENT_CENTER)
 	UI.shadow(_countdown)
 	_countdown.visible = false
+	night = NightBreak.new()                  # a night's break over the whole run screen (BUILD50 N)
+	night.acted.connect(func(): acted.emit())
+	add_child(night)
+
+
+var night                                     # the break between a night's links (night_break.gd, BUILD50 N)
 
 
 ## The run view in place of the two boxes: the frame, the bars and the chips over it, six tiles under it.
@@ -370,6 +377,9 @@ func show_state(s) -> void:
 	sim = s
 	if not sim.on_mission():
 		return
+	night.show_state(sim)
+	if night.visible:
+		return                                # a night's break: the board over the run (BUILD50 N)
 	if _view != null and _view.placing:
 		return                            # the placement tool holds the frame clear (_on_placing)
 	var m: Dictionary = sim.mission
@@ -1672,6 +1682,8 @@ func _on_inv_acted() -> void:
 
 ## For the tests: every label and visible button with text.
 func text_nodes() -> Array:
+	if night.visible:
+		return night.text_nodes()             # a night's break covers the run (BUILD50 N)
 	var out: Array = _pick.text_nodes()
 	out.append_array(_band.text_nodes())
 	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _rig_head])
@@ -1704,6 +1716,8 @@ func text_nodes() -> Array:
 
 ## Label + value pairs that share a line, and the headline + unit, for the fit check.
 func line_pairs() -> Array:
+	if night.visible:
+		return []
 	var out: Array = _pick.line_pairs()
 	out.append([_band.headline, _band.unit])
 	if _take_head.visible:

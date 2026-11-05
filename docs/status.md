@@ -4,11 +4,26 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (3 Nov):** 0.12.2 - the skill web (0.12.0) with its art back (0.12.1) and every region's name with its emblem
-  centred above it, the class portrait centred on the class name (0.12.2): small nodes' pictures and glyphs, the regions'
-  emblems, the class portrait. Fresh save from 0.12.0 (SAVE_VERSION 23). The spec: docs/design/skill_web.md. Art
-  flagged: one job (Guarded, the centre's Guard small).
-- **Next (4 Nov, Matt: "ok go for it"):** 0.13.0 for a fresh save - Matt's playtest of 0.12.2 ended at the act-two wall
+- **Now (5 Nov):** 0.13.0 for a fresh save (SAVE_VERSION 25), not yet played - the skill web version two (phase 1)
+  and act two (phase 2, build 50; docs/design/act_two.md): the town on the Map (pins ringed / dashed / lit, the goal
+  line counting places running), tins paying builds and a day's wages at every run home (an unpaid place stops till
+  paid, never debt), a night on the air (Start a night on a held signal's card: links chained, a break between with
+  Next link / Get out with the haul / Tune it and Auto at the odds floor, every fifth link a head, a hoard or a fat
+  drop, the tuning rules on the Radio), signals' focus (a material, a slot, a resist or a unique's chance, on the card
+  and in the loot), the Workshop's "Add a resist", the order's heads at 30/34/38, the County 40-75, XP_TAPER_END 4.5,
+  REPEAT_XP back to 25-60%. Matt plays fresh; his play sets the figures.
+- **Matt's word wanted (act two, 5 Nov):** (a) the wages' size - all six places at rank 1 draw 6,300 tins a day and a
+  repeat run pays a full day each run home while a whole night pays one (the reviewer: places may stop during repeats,
+  nights the cheap way to play) - watch it in play; (b) a stopped place still opens its order and still counts in the
+  town's worth (pinnacle levels, the Robes, the Mint) - "its effects off" read as the place's own effects; (c) a link
+  out of its own site's clock ends the night as a run out of time (the break says so); (d) the unique focus and the fat
+  drop are ×3 on the capped chance (4% → 12%, both together never past 12%) - inside the cap they did nothing from
+  depth 6; (e) gloves can roll all five element resists now (the resists' weight up a third on body pieces);
+  (f) the break's dry run still counts the gate's boxes in its pack (a small lift on the odds); (g) Kev's wagers at the
+  break are a row of take/drop buttons, not the build-49 panel; (h) "a hoard" names the fifth's room of crates (stash
+  is home storage). Art: the town's lit places and the 18 new web names by art.flag after the slice reads.
+- **Next (5 Nov): Matt plays 0.13.0 fresh; then the town's art by art.flag.** Done of the plan below: (1) part 1, (2), (3).
+  The plan (4 Nov, Matt: "ok go for it"): 0.13.0 for a fresh save - Matt's playtest of 0.12.2 ended at the act-two wall
   (the Doorman, level 28, 5.7 h). In order: (1) the fix round, playtest items 1-28 below; (2) the skill web version two
   (docs/design/skill_web.md); (3) act two (docs/design/act_two.md: the town as the goal with tins paying its wages, a
   night on the air - chained signals, every fifth link special - signals that say what they drop, aimed resists, the
@@ -6397,6 +6412,19 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 5 Nov (late): 0.13.0 phase 2 - act two (build 50; SAVE_VERSION 25)
+
+Matt: "take your picks across the board and build it" (act two's picks: the town as the goal and the Issue as the turn;
+chain C, every fifth link special; tins paying for the town; longer targets). Two builders side by side (T the town,
+the numbers, signals' focus, "Add a resist"; N a night on the air), merged (the merge put a focus on a night's rolled
+links and on the break's IT DROPS). The reviewer's findings fixed, each with a check proved red: rounds lost at a
+link's set-off (the gate's boxes packed then dropped), the Charger and the Field kit lifting the break's odds, Kev's
+notes wager paying on the whole night's notes, the fifth's head left on a held signal, the unique boosts (now ×3 on
+the capped chance, to 12%), a skipped crew check, three hard-coded strings; a link out of its own clock now says so on
+the break. The language pass (two reviewers; the editor's calls: "a hoard" for the fifth's crates, "odds" not "to
+clear", "Next step", "Running, %s a day", "Unique chance ×3", "%s resist 1 in 3", full stops on two-sentence log
+lines, none on one-line labels). Smoke green in the cloud and on Matt's machine; lint 0. Open calls on the board.
 
 ## 5 Nov (night): 0.13.0 phase 1 - the skill web version two, its screen, the UI reworks (build 49)
 

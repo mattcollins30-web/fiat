@@ -1943,6 +1943,10 @@ static func toast_tone(line: String) -> String:
 		return ""
 	if line.begins_with("Dead in "):
 		return "bad"
+	if line.begins_with("Wages unpaid: "):
+		return "warn"                           # a town's place stopped (BUILD50-T)
+	if line.begins_with("Wages paid: "):
+		return "good"
 	if line.begins_with(RADIO_LEAD):
 		return "none"                           # the radio line under the top bar plays it (13 Oct): no toast
 	return "none"
@@ -2201,7 +2205,7 @@ const U49_NEXT := {
 	"signals": "Signals that bring them", "have": "%s %d of %d",
 }
 ## The town's road (act_two.md §1): the substation, the three that run the town, the library, the mint.
-const U49_TOWN_ROAD := ["substation", "pumping", "bus_depot", "market_hall", "library", "mint"]
+const U49_TOWN_ROAD := ["substation", "pumping", "bus_depot", "market_hall", "library", "mint"]     # Data.REBUILDS' order (BUILD50-T: the smoke holds them equal)
 
 ## The Expeditions' place card, layout B (item 15). Drafts for the language pass.
 const U49_EXP := {
@@ -2214,4 +2218,84 @@ const U49_EXP := {
 	"why_fine": "The lead's kit holds it", "held": "A hold-up %d%% of the time",
 	"bad_note": "At %d%% risk: send less, or a lead with better kit", "bad_note_short": "Send less, or a lead with better kit",
 	"out_small": "Out · %d of %d",
+}
+
+## Act two (4 Nov, BUILD50-T; docs/design/act_two.md §1-2, §4-5): the town's places on the Map and their wages, a
+## signal's focus, the Workshop's "Add a resist". Drafts for the language pass.
+const T50_TOWN := {
+	# what came back with each place (act_two.md §1's examples, one short line each)
+	"back": {"substation": "A face at the switchgear", "pumping": "Water at the Pitch", "bus_depot": "A bus that takes runners further",
+		"market_hall": "Stalls lit in the market", "library": "Books on the shelves again", "mint": "The presses turning"},
+	"running": "Running, %s a day", "a_day": "%s a day", "stopped": "Stopped: unpaid", "stopped_day": "Stopped: %s a day unpaid",
+	"next": "Next step", "not_yet": "Not built yet", "then": "%s a day once running",
+	"bill": "Wages %s a day · %s covered", "bill_short": "%s a day · %s covered", "bill_tiny": "%s a day · %s covered", "bill_least": "%s a day · %s",
+	"days": "%d days", "day": "1 day",
+	"bill_head": "The day's wages: %s", "bill_sub": "Paid from the %s in hand at every run home, in the town's order · %s covered",
+	"bill_sub_short": "Paid at every run home · %s covered", "bill_none": "No wages yet: each place running draws its wage at every run home",
+	"log_stopped": "Wages unpaid: %s stopped. It runs again on a day the %s cover it.",
+	"log_back": "Wages paid: %s running again",
+	"goal_stopped": "Stopped: unpaid · %s", "goal_stopped_n": "Stopped: unpaid · %d places", "goal_unpaid": "Unpaid: %s",
+	"short_tins": "Short of %s",
+}
+const T50_FOCUS := {
+	"material": "+%d %s a run", "material_short": "+%d %s",
+	"slot": "%s: 1 find in 2", "slot_short": "%s: 1 in 2",
+	"resist": "%s resist: 1 find in 3", "resist_short": "%s resist 1 in 3", "resist_least": "%s 1 in 3",
+	"unique": "Unique chance ×3", "unique_short": "Uniques ×3",
+	"tip": "This signal's focus: its run's finds lean this way",
+	"slot_names": {"Primary": "Primaries", "Secondary": "Sidearms", "Helmet": "Helmets", "Armour": "Armour", "Gloves": "Gloves", "Rig": "Rigs",
+		"Backpack": "Packs", "Charm": "Charms"},
+}
+const T50_RESIST := {
+	"job": "Add a resist", "words": "A resist you pick · a step rarer", "pick": "Which resist?", "el": "%s resist", "cancel": "Back",
+	"note": "The resist goes on at a rolled tier, as an affix does. The piece goes up a rarity.",
+	"no_slot": "Armour, helmets, gloves and charms only", "top": "At its top rarity", "no_such": "No such resist", "no_tile": "Not for this slot", "has": "On it already",
+}
+
+
+## A night on the air (BUILD50 N, act_two.md §3; the canvas's Night board). Drafts for the language pass.
+const NIGHT := {
+	# the log
+	"log_start": "A night on the air: the first link, %s at level %d",
+	"log_won": "Link %d won at %s. At the break: the next link, or home with the haul.",
+	"log_lost": "Link %d lost at %s. At the break: the next link, or home with the haul.",
+	"log_next": "Link %d: %s, level %d",
+	"end_out": "Out with the night's haul",
+	"end_clock": "The night's clock is out: home with the haul",
+	"end_full": "The pack's full: home with the night's haul",
+	"end_dead": "The night's haul is lost with the runner, and %d XP with it",
+	"auto_stop": "Auto stopped: odds on the next link %d%%, under your %d%%",
+	# the Radio's signal card
+	"start": "Start a night", "order_alone": "An order's place runs alone", "start_short": "A night", "start_tip": "Signals chained: this one, then the next, till you get out with the haul",
+	# the break
+	"kicker": "A NIGHT ON THE AIR · THE %s", "kicker_short": "A NIGHT ON THE AIR",
+	"won": "Link %d won. Next, %s.", "lost": "Link %d lost. Next, %s.", "won_short": "Link %d won", "lost_short": "Link %d lost",
+	"the_fifth": "the fifth", "link_n": "link %d",
+	"clock_head": "The night's clock", "clock_left": "%s left",
+	"next_kicker": "NEXT · LINK %d", "next_kicker_fifth": "NEXT · LINK %d, THE FIFTH",
+	"title": "%s · level %d", "head_away": "A head off his own site",
+	"clear_head": "ODDS AS YOU STAND", "reading": "Reading…", "rest_since": "%s · no rest since link 1",
+	"codes_head": "ITS CODES · BY YOUR RULES", "codes_held": "ITS CODES", "no_codes": "No codes",
+	"rules_line": "Your tuning rules: %d", "rules_none": "No tuning rules: rolled as they come", "held_line": "A held signal: its own codes",
+	"drops_head": "IT DROPS", "drop_mat": "%s %d%%", "drop_head": "%s's drops", "drop_stash": "A hoard: a room of crates, 2 finds a search",
+	"drop_fat": "A fat drop: loot quality ×2, a unique's chance ×3", "drop_none": "Finds as the level gives",
+	"hp_head": "YOUR HP", "meds_head": "MEDS IN THE RIG", "mags_head": "MAGAZINES", "pack_head": "THE PACK",
+	"meds": "%d", "meds_used": "%d used tonight", "mags": "%d loaded", "mags_rounds": "%s rounds", "pack": "%d / %d cells", "pack_sub": "Full ends the night",
+	"haul_head": "THE NIGHT'S HAUL · %d LINK%s", "tins": "Tins", "xp": "XP", "materials": "Materials", "no_materials": "None yet",
+	"kit": "Kit · %d piece%s", "no_kit": "No kit yet", "kit_more": "and %d more",
+	"death": "A death tonight loses the haul and the kit worn",
+	"timeout_line": "Out of time on a link: as a run out of time",
+	"wagers_head": "KEV'S WAGERS ON LINK %d", "wagers_none": "Kev has nothing on this one", "wager_on": "On", "wager_off": "Take it",
+	"crafts_head": "TUNE LINK %d",
+	"next_btn": "Next link", "next_btn_fifth": "Next link: the fifth", "out_btn": "Get out with the haul", "tune_btn": "Tune it", "tune_close": "Done tuning",
+	"auto": "Auto: keep going", "auto_floor": "at %d%% or over", "auto_under": "Auto stopped: under %d%%",
+	"foot": "Every fifth link: a head, a hoard or a fat drop",
+	"fifth_head": "The fifth: a head", "fifth_stash": "The fifth: a hoard", "fifth_fat": "The fifth: a fat drop",
+	# the tuning rules (the Radio)
+	"rules_btn": "Tuning rules", "rules_title": "Tuning rules", "rules_kicker": "A NIGHT ON THE AIR",
+	"rules_sub": "Checked top down: the first rule naming a code or a wager decides it. Rolled links only.",
+	"rule_want": "Wanted", "rule_never": "Never", "rule_wager": "Take the wager",
+	"rule_none": "No rules: the codes come as they're rolled, and no wager is taken",
+	"add": "Add a rule", "up": "Up", "drop": "Remove", "on": "On", "off": "Off",
+	"floor_head": "Auto: keep going while the odds stay at", "floor": "%d%% or over", "done": "Done",
 }

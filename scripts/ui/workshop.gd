@@ -62,11 +62,11 @@ const JOB_H := 104                 # a job tile
 const JOB_GAP := 8
 @warning_ignore("integer_division")
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP * (JOB_COLS - 1)) / JOB_COLS        # 136
-const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap", "stamp"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct); the stamp (26 Oct)
-const JOB_NAMES := {"add": "Add an affix", "socket": "Socket", "bump": "Item lvl +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip", "stamp": "Stamp"}
+const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap", "stamp", "resist"]     # "Add a resist" the eighth (BUILD50-T, act two §5)      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct); the stamp (26 Oct)
+const JOB_NAMES := {"add": "Add an affix", "socket": "Socket", "bump": "Item lvl +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip", "stamp": "Stamp", "resist": "Add a resist"}
 const SOCK_IN := 10                 # a socket tile's words in from its sides
 const JOB_WORDS := {"add": "One more affix, rarer", "socket": "Up to %d sockets", "strip": "Every affix gone",
-	"bump": "Lowest tiers stop rolling", "temper": "+1 item level, it grows", "scrap": "To scrap, gone for good", "stamp": "Counts as issued kit"}
+	"bump": "Lowest tiers stop rolling", "temper": "+1 item level, it grows", "scrap": "To scrap, gone for good", "stamp": "Counts as issued kit", "resist": "An element's resist, rarer"}
 const RE_ROLLS := ["values", "affixes"]
 const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
@@ -233,6 +233,7 @@ func _init() -> void:
 		t["price"] = UI.label(b, Rect2(12, JOB_H - 30, JOB_W - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 		_job_tiles.append(t)
 		_job_actions.append(Callable())
+	_build_res_pick(jy)
 	@warning_ignore("integer_division")
 	var fy := jy + ((JOBS.size() + JOB_COLS - 1) / JOB_COLS) * (JOB_H + JOB_GAP) + 4
 	_build = UI.button(_jobs, Rect2(BODY_W - PAD - 100, fy, 100, FOOT_H), false)
@@ -985,6 +986,10 @@ func _craftable() -> Array:
 ## priced under it, the pick panel at the right with the piece's figures.
 func _show_craft(it: Dictionary) -> void:
 	var on_bench: bool = not sim.runner_busy()     # away on a repeat too (30 Oct, refactor 5): as the sim's guards
+	if _res_pick.visible and int(it.get("id", -2)) != _res_id:
+		_res_pick_on(false)                   # another piece picked: the resist's row shuts (BUILD50-T)
+	elif _res_pick.visible:
+		_show_res_pick()
 	for l in _piece_words:
 		l.text = ""
 	_piece_figure.text = ""
@@ -1091,10 +1096,20 @@ func _show_craft(it: Dictionary) -> void:
 		var kind: String = JOBS[k]
 		var t: Dictionary = _job_tiles[k]
 		var b: Button = t["button"]
-		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind)), str(JOB_NAMES.get(kind, kind)).replace("Add an affix", "Add affix")])
+		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind)), str(JOB_NAMES.get(kind, kind)).replace("Add an affix", "Add affix").replace("Add a resist", "Add resist")])
+		b.visible = not _res_pick.visible       # the resist's pick over the tiles while it's open (BUILD50-T)
 		if kind == "stamp":
 			_stamp_tile(k, it, on_bench)
 			continue
+		if kind == "resist" and not it.is_empty() and sim.resist_job_block(it) != "":
+			UI.wrap(t["words"], Words.T50_RESIST["no_tile"] if sim.resist_job_block(it) == Words.T50_RESIST["no_slot"] else sim.resist_job_block(it))     # why not (BUILD50-T); the whole reason on the hover
+			b.tooltip_text = sim.resist_job_block(it)
+			t["price"].text = ""
+			_job_actions[k] = Callable()
+			_job_state(t, "none")
+			continue
+		if kind == "resist":
+			b.tooltip_text = ""
 		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
 		if kind == "temper" and not it.is_empty() and sim.temper_block(it) != "":
 			jw = sim.temper_block(it)                  # why it can't, in its words: nothing grows, a mythic, Item level +3 first, past your level (the second review)
@@ -1117,7 +1132,7 @@ func _show_craft(it: Dictionary) -> void:
 					UI.fit(t["price"], [Fmt.notes(cost), "%s notes" % Fmt.short_num(cost)])
 				else:
 					UI.fit(t["price"], Fmt.money_forms(cost))
-			_job_actions[k] = _do_craft.bind(it["id"], kind, "")          # scrap too: main runs it, toasts it
+			_job_actions[k] = _do_craft.bind(it["id"], kind, "") if kind != "resist" else _open_res_pick.bind(int(it["id"]))          # scrap too: main runs it, toasts it; a resist picks its element first (BUILD50-T)
 		else:
 			t["price"].text = ""
 			_job_actions[k] = Callable()
@@ -1178,6 +1193,89 @@ func _stamp_tile(k: int, it: Dictionary, on_bench: bool) -> void:
 
 func _do_craft(id: int, kind: String, stat: String) -> void:
 	craft.emit(id, kind, stat)
+
+
+# ------------------------------------------------------------------ "Add a resist" (BUILD50-T, act two §5)
+
+## The tile opens a row of the five elements over the jobs: the one picked goes on (its tier rolled as an affix's), one
+## on the piece already shut; Back shuts the row.
+var _res_pick: Panel
+var _res_title: Label
+var _res_back: Button
+var _res_btns: Array = []            # five Buttons, Data.ELEMENTS' order
+var _res_note: Array = []            # two lines under them: how it goes on
+var _res_id := -1
+
+
+func _build_res_pick(jy: float) -> void:
+	var w: float = BODY_W - 2 * PAD
+	_res_pick = UI.panel(_jobs, Rect2(PAD, jy, w, 2 * JOB_H + JOB_GAP), UI.box(Pal.CARD, 8, 2, Pal.ACCENT))
+	_res_pick.visible = false
+	_res_title = UI.label(_res_pick, Rect2(16, 14, w - 32 - 120, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_res_back = UI.button(_res_pick, Rect2(w - 16 - 110, 10, 110, 40), false)
+	_res_back.text = Words.T50_RESIST["cancel"]
+	_res_back.pressed.connect(_res_pick_on.bind(false))
+	var n: int = Data.ELEMENTS.size()
+	var bw: float = (w - 32 - (n - 1) * 8) / n
+	for k in range(n):
+		var b := UI.button(_res_pick, Rect2(16 + k * (bw + 8), 70, bw, 64), false)
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+		b.pressed.connect(_press_res.bind(k))
+		_res_btns.append(b)
+	for i in range(2):
+		_res_note.append(UI.label(_res_pick, Rect2(16, 146 + i * 22, w - 32, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	UI.wrap(_res_note, Words.T50_RESIST["note"])
+
+
+func _open_res_pick(id: int) -> void:
+	_res_id = id
+	_res_pick_on(true)
+	_show_res_pick()
+
+
+## The pick shown over the tiles, the tiles hidden under it; or shut, the tiles back.
+func _res_pick_on(on: bool) -> void:
+	_res_pick.visible = on
+	for t in _job_tiles:
+		t["button"].visible = not on
+
+
+func _show_res_pick() -> void:
+	var it: Dictionary = sim.item_by_id(_res_id) if sim != null else {}
+	if it.is_empty() or view != "craft":
+		_res_pick_on(false)
+		return
+	var cost: int = sim.craft_cost(it, "resist")
+	UI.fit(_res_title, ["%s · %s" % [Words.T50_RESIST["pick"], Fmt.money(cost)], "%s · %s" % [Words.T50_RESIST["pick"], Fmt.money_k(cost)], Words.T50_RESIST["pick"]])
+	for k in range(_res_btns.size()):
+		var el: String = Data.ELEMENTS[k]
+		var b: Button = _res_btns[k]
+		UI.fit_button(b, [Words.T50_RESIST["el"] % el.capitalize(), el.capitalize()])
+		var why: String = sim.resist_job_block(it, el + "_res")
+		b.disabled = why != "" or not sim.can_craft(_res_id, "resist", el + "_res")
+		b.tooltip_text = why
+
+
+func _press_res(k: int) -> void:
+	if _res_id < 0:
+		return
+	_do_craft(_res_id, "resist", Data.ELEMENTS[k] + "_res")
+	_res_pick_on(false)
+	acted.emit()
+
+
+## A job tile's look by its state: "on" payable, "off" short, "none" can't take it (as _show_craft lays them).
+func _job_state(t: Dictionary, state: String) -> void:
+	var b: Button = t["button"]
+	t["name"].add_theme_color_override("font_color", Pal.TEXT if state != "none" else Pal.TEXT_3)
+	for l in t["words"]:
+		l.add_theme_color_override("font_color", Pal.TEXT_2 if state != "none" else Pal.TEXT_3)
+	b.disabled = state != "on"
+	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var bg: Color = Pal.CARD if state != "none" else Color.TRANSPARENT
+		if state == "on" and st in ["hover", "hover_pressed"]:
+			bg = Pal.BUTTON_HOVER
+		b.add_theme_stylebox_override(st, UI.box(bg, 7, 1, Pal.CARD_LINE if state != "none" else Pal.RAIL_RULE))
 
 
 ## A row's padlock on or off (20 Oct): the re-rolls leave a locked affix as it is.
@@ -1336,6 +1434,8 @@ func text_nodes() -> Array:
 					out.append(l)
 			if t["price"].text != "":
 				out.append(t["price"])
+		if _res_pick.visible:
+			out.append_array([_res_title, _res_back] + _res_btns + _res_note)     # BUILD50-T
 	elif view == "build":
 		out.append(_builds_head)
 		for t in _kind_tiles:

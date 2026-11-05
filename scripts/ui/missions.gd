@@ -95,6 +95,7 @@ func _init() -> void:
 	_map = MapView.new(Rect2(0, TOP, MAP_W, Pal.ROOM_H - TOP))
 	_map.picked.connect(select)
 	_map.picked_order.connect(select_order)
+	_map.picked_town.connect(func(_k): to_town.emit())     # a town's place's pin: the Radio's Town tab (BUILD50-T)
 	add_child(_map)
 	_goal_build()
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
@@ -869,7 +870,7 @@ func _text_nodes_under() -> Array:
 	if not _skill_pick.visible and not rounds_panel.visible:
 		out.append_array(_map.text_nodes())     # the picker covers the map; the rounds picker too (BUILD46-R)
 		if _goal.visible:
-			out.append_array([_goal_text, _goal_next] + ([_goal_btn] if _goal_btn.visible else []))
+			out.append_array([_goal_text, _goal_next] + ([_goal_btn] if _goal_btn.visible else []) + ([_goal_bill] if _goal_bill.visible else []))
 	if _pick.visible:
 		out.append_array([_pick_kicker, _pick_title, _pick_line, _pick_line2, _pick_head, _pick_go])
 		for c in _pick_cards:
@@ -1005,6 +1006,7 @@ var _goal_text: Label
 var _goal_pips: Array = []
 var _goal_next: Label
 var _goal_btn: Button
+var _goal_bill: Label               # the day's wages and the days the tins cover (BUILD50-T, act two §2)
 
 
 func _goal_build() -> void:
@@ -1014,19 +1016,16 @@ func _goal_build() -> void:
 		var pp := UI.panel(_goal, Rect2(0, (GOAL_H - GOAL_PIP) / 2.0, GOAL_PIP, GOAL_PIP), UI.box(Color(0, 0, 0, 0), GOAL_PIP_R, 2, Pal.ACCENT))
 		_goal_pips.append(pp)
 	_goal_next = UI.label(_goal, Rect2(0, 0, 100, GOAL_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_goal_bill = UI.label(_goal, Rect2(14, GOAL_H - 6, MAP_W - 16 - 28, GOAL_BILL_H), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_goal_btn = UI.button(_goal, Rect2(MAP_W - 16 - 6 - GOAL_BTN_W, 5, GOAL_BTN_W, GOAL_H - 10), false)
 	_goal_btn.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
 	_goal_btn.text = Words.U49_NEXT["signals"]
 	_goal_btn.pressed.connect(func(): to_radio.emit())
 
 
-## The places running: built at their first rank (the goal line counts a place at its first rank, act two §1).
+## The places running: built at their first rank and paid (act two §1-2: a place stopped, unpaid, doesn't count).
 static func town_running(s) -> int:
-	var n := 0
-	for r in Data.REBUILDS:
-		if int(s.rebuild_rank(str(r["key"]))) > 0:
-			n += 1
-	return n
+	return int(s.town_running())
 
 
 var _goal_sig := ""
@@ -1037,7 +1036,7 @@ func _goal_show() -> void:
 		return
 	var radio: bool = sim.room_open("radio")
 	var run: int = town_running(sim)
-	var gs: String = "%s|%d|%s|%s|%s" % [str(radio), run, str(sim.rebuilt), str(sim.materials), str(sim.key_items)]
+	var gs: String = "%s|%d|%s|%s|%s|%s|%d|%d" % [str(radio), run, str(sim.rebuilt), str(sim.materials), str(sim.key_items), str(sim.town_stopped), sim.town_bill(), sim.town_days()]
 	if gs == _goal_sig:
 		return                                 # laid out once a change (the Map's frame budget: BUILD43)
 	_goal_sig = gs
@@ -1053,15 +1052,30 @@ func _goal_show() -> void:
 		pp.visible = radio
 		pp.position.x = x
 		x += GOAL_PIP + 5
-		pp.add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < run else Color(0, 0, 0, 0), GOAL_PIP_R, 0 if k < run else 2, Pal.ACCENT))
+		var pk: String = str(Data.REBUILDS[k]["key"])     # a pip a place, in the town's order (BUILD50-T): lit running, red stopped
+		var lit: bool = sim.town_on(pk)
+		pp.add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if lit else Color(0, 0, 0, 0), GOAL_PIP_R, 0 if lit else 2, Pal.BAD if sim.town_stopped.has(pk) else Pal.ACCENT))
 	var nk: String = KevStory.town_next(sim) if radio else ""
 	_goal_btn.visible = radio and nk != ""
 	_goal_next.visible = radio
+	_goal_bill.visible = radio and sim.town_bill() > 0
+	_goal.size.y = GOAL_H + (GOAL_BILL_H - 6 if _goal_bill.visible else 0)     # a second row for the wages (BUILD50-T)
 	if not radio:
 		return
 	x += 10
 	_goal_next.position.x = x
-	_goal_next.size.x = (_goal_btn.position.x - 12.0 if _goal_btn.visible else _goal.size.x - 14.0) - x
+	var right: float = _goal_btn.position.x - 12.0 if _goal_btn.visible else _goal.size.x - 14.0
+	if _goal_bill.visible:
+		_goal_bill_show()
+	_goal_next.size.x = right - x
+	_goal_next.add_theme_color_override("font_color", Pal.TEXT_2)
+	var stop: Array = Data.REBUILDS.filter(func(r): return sim.town_stopped.has(str(r["key"])))
+	if not stop.is_empty():
+		_goal_next.add_theme_color_override("font_color", Pal.BAD)     # a place stopped, unpaid: said first (BUILD50-T)
+		var names: Array = stop.map(func(r): return Words.mid(str(r["name"])))
+		UI.fit(_goal_next, [Words.T50_TOWN["goal_stopped"] % ", ".join(names), Words.T50_TOWN["goal_unpaid"] % ", ".join(names),
+			Words.T50_TOWN["goal_stopped_n"] % stop.size() if stop.size() > 1 else Words.T50_TOWN["goal_unpaid"] % names[0], Words.T50_TOWN["stopped"]])
+		return
 	if nk == "":
 		UI.fit(_goal_next, [Words.U49_NEXT["goal_done"]])
 		return
@@ -1071,3 +1085,15 @@ func _goal_show() -> void:
 		forms.append((Words.U49_NEXT["goal_next"] % what) + (" · " + str(w) if str(w) != "" else ""))
 	forms.append(Words.U49_NEXT["goal_next"] % what)
 	UI.fit(_goal_next, forms)
+
+
+## The day's wages on the goal line's second row (BUILD50-T, act two §2): the bill and the days the tins cover.
+const GOAL_BILL_H := 24
+func _goal_bill_show() -> void:
+	var bill: int = sim.town_bill()
+	var d: int = sim.town_days()
+	var days: String = Words.T50_TOWN["day"] if d == 1 else Words.T50_TOWN["days"] % maxi(0, d)
+	var forms: Array = [Words.T50_TOWN["bill"] % [Fmt.money(bill), days], Words.T50_TOWN["bill_short"] % [Fmt.money_k(bill), days],
+		Words.T50_TOWN["bill_tiny"] % [Fmt.money_k(bill), days], Words.T50_TOWN["bill_least"] % [Fmt.short_num(bill) if not Fmt.fiat else Fmt.money_k(bill), days]]
+	UI.fit(_goal_bill, forms)
+	_goal_bill.add_theme_color_override("font_color", Pal.BAD if d < 1 else Pal.TEXT_2)
