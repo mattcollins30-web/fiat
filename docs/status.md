@@ -1,10 +1,13 @@
-# Fiat — status
+# Lesser England — status (Fiat till 0.14.2)
 
 The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\mattc\Documents\fiat`.
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (6 Nov, evening):** 0.14.1, not yet played - the County gets the campaign's stages (status below, 6 Nov
+- **Now (6 Nov, late):** 0.14.2 - the game is **Lesser England** (Fiat was trademarked across the board; Pay the Bearer
+  and Crownless dropped; Matt's UKIPO and domain checks clean). Next: Matt's wordmark into art/wordmark.png (up to
+  190 x 104, the smoke checks it fits), export as LesserEngland.exe; the save copied to Roaming\Lesser England.
+- **Then (6 Nov, evening):** 0.14.1, not yet played - the County gets the campaign's stages (status below, 6 Nov
   evening): its places 1/3-3/3, its heads' own fights, its themed finds and 24 new bases, the site card on the County,
   Matt's painting as its map (places seeded by eye: F3 to move). Next: Matt plays it and fixes the places with F3; then
   the County's art by art.flag (~$7), then the 24 borrows off.
@@ -6521,6 +6524,16 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 6 Nov (late): 0.14.2 - the rename to Lesser England
+
+Matt: "Fiat is trademarked across the board"; then, of the names, "Path of exile for example doesn't share anything with
+anything"; Lesser England checked clean (games, media, US marks; his UKIPO and the domain). "I'll take your answers on
+those 3 as agreed": the project, the window and the exe are Lesser England (LesserEngland.exe, the product name set);
+the title's heading and its foot "LESSER ENGLAND · v0.14.2"; the save folder follows the name (Roaming\Lesser England,
+his 0.14 save copied across once); the money keeps its in-world word (fiat, "a true FIAT note"), the saves their file
+names (fiat.save), the repo and its folder theirs (fiat). A check: no Fiat on the title, the exports' names, and a
+wordmark up to 190 x 104 fits the column clear of the rows (proved red). The wordmark itself is Matt's to paint.
 
 ## 6 Nov (evening): 0.14.1 - the County gets the campaign's stages
 

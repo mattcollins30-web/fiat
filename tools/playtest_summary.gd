@@ -7,7 +7,7 @@ extends SceneTree
 ##
 ##     godot --headless --path . -s tools/playtest_summary.gd -- [save]
 ##
-## The save defaults to the autosave: the exported build's (%APPDATA%/Fiat/fiat.save, 19 Oct: its own folder) when
+## The save defaults to the autosave: the exported build's (%APPDATA%/Lesser England/fiat.save, 19 Oct: its own folder) when
 ## there is one, else the editor's (user://fiat.save), its record beside it; a slot
 ## or a copied file works too, its record beside it. A record's earlier games are kept as fiat.record.<time>.jsonl.
 ## tools\playtest.bat runs it, and the watcher does on docs\balance\playtest.flag.
@@ -37,7 +37,7 @@ func _init() -> void:
 	else:
 		var d = JSON.parse_string(f.get_as_text())
 		if not (d is Dictionary) or not d.has("sim"):
-			out = "# Playtest record\n\n%s isn't a Fiat save.\n" % path
+			out = "# Playtest record\n\n%s isn't a Lesser England save.\n" % path
 		else:
 			var ch: Array = read_record(record_path(path))
 			ch.append_array(d["sim"].get("chronicle", []))     # a save written by a script (the bot's), lines and all

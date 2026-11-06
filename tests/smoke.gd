@@ -934,6 +934,7 @@ func _init() -> void:
 	_c61_theme_checks()                       # BUILD61-C (6 Nov): the County's lists - 60% of a stage's plain gear, the head's fight on his place's
 	_c61_top_checks()                         # BUILD61-C: a County 3/3's quarter from its T9 alone; signals' finds as before
 	_c61_bases_checks()                       # BUILD61-C: the County's 24 new bases roll, wear, sit by their neighbours, borrow a picture
+	_r62_rename_checks(main)                  # 0.14.2 (6 Nov): the rename - Lesser England on the title, the window, the exe; a wordmark up to 190 x 104 fits
 	_m61_review_checks(main)                  # BUILD61 merge review: the County card's odds read, a stage's pick re-reads, the hurt repeat, a County repeat's name and host
 	_finish()
 
@@ -9957,7 +9958,7 @@ func _check_fit(main, where: String) -> void:
 				# the wordmark is drawn at the painting's own 3x, whole pixels (the 29 Oct wordmark, 167 x 88: 501 x 264)
 				_check(typeof(mn.WORDMARK_SCALE) == TYPE_INT and mn.WORDMARK_SCALE == 3 and (not mn._wordmark.visible or mn._wordmark.size == mn._wordmark.texture.get_size() * mn.WORDMARK_SCALE), "%s menu: the wordmark is not drawn at %dx (%s)" % [where, mn.WORDMARK_SCALE, str(mn._wordmark.size)])
 				# the wordmark loads wherever the file is (the editor, a pack): the Deck's builds had none (8 Oct)
-				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size() == Vector2(167, 88)), "%s menu: the wordmark did not load from %s (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
+				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size().x <= mn.WORDMARK_MAX.x and mn._wordmark.texture.get_size().y <= mn.WORDMARK_MAX.y), "%s menu: the wordmark did not load from %s, or is past 190 x 104 (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
 			"drawer":
 				# the drawer is the rail's rect exactly, its kicker up, names only
 				var rail := Rect2(main._rail.position, Vector2(Pal.RAIL_W, main._rail_panel.size.y))     # the rail unfolded's, folded or not (15 Oct)
@@ -23531,7 +23532,7 @@ func _card_frame_checks(main) -> void:
 	main._armoury.selected = {}
 	main.refresh()
 	var Menu = load("res://scripts/ui/menu.gd")
-	_check(Menu._build_words() == "FIAT · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
+	_check(Menu._build_words() == "LESSER ENGLAND · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
 	print("card frames ok: the label over the card, one frame picked; the title's version")
 
 ## The pasts as cards (14 Oct, Matt; two rows of three from 24 Oct, the Band board): a face, the name and its tag in each
@@ -25342,7 +25343,7 @@ func _paper_pile_checks(_main) -> void:
 
 
 ## The exported build saves in a folder of its own (19 Oct, Matt: play while the smoke runs): exported, Godot's
-## custom user dir (%APPDATA%/Fiat); from the editor, as the smoke runs, Godot's app_userdata - never the same files.
+## custom user dir (%APPDATA%/Lesser England); from the editor, as the smoke runs, Godot's app_userdata - never the same files.
 func _save_folder_checks() -> void:
 	var f := FileAccess.open("res://project.godot", FileAccess.READ)
 	var text: String = f.get_as_text() if f != null else ""
@@ -41687,7 +41688,8 @@ func _a61_repeat_wager_save_checks(main) -> void:
 	var s4 = Sim.new()
 	s4.load_dict(d26)
 	_check(s4.cs_done.is_empty() and s4.county_heads.is_empty() and s4.county_stage_pick("toll_plaza") == 1, "a fresh 26 save's County isn't fresh: %s" % str(s4.cs_done))
-	_check(load("res://scripts/ui/menu.gd").VERSION == "0.14.1", "VERSION isn't 0.14.1: %s" % load("res://scripts/ui/menu.gd").VERSION)
+	var vp: PackedStringArray = str(load("res://scripts/ui/menu.gd").VERSION).split(".")     # (0.14.2) at least the County's 0.14.1: CLAUDE.md's line checks the rest
+	_check(vp.size() == 3 and (int(vp[1]) > 14 or (int(vp[1]) == 14 and int(vp[2]) >= 1)), "VERSION is before 0.14.1: %s" % load("res://scripts/ui/menu.gd").VERSION)
 	sim.load_dict(saved)
 	print("a61 repeat, wagers and save ok: the repeat on a cleared stage, Kev on first clears and the head, the stages saved")
 
@@ -42447,3 +42449,41 @@ func _m61_review_checks(main) -> void:
 	_u61_put_back(sim, cs_keep)
 	main.refresh()
 	print("m61 review ok: the County card's odds and his gang read off the place, a stage's pick re-reads, hurt the repeat reads, a County repeat its own")
+
+
+# ------------------------------------------------------------------ 0.14.2 (6 Nov): the rename (Fiat was taken)
+## The game's name off the title screen, the window and the exe; the money keeps its in-world word (fiat, its notes), the
+## saves their file names. A wordmark painting up to Menu.WORDMARK_MAX fits the column clear of the rows. `-- only r62_rename`.
+func _r62_rename_checks(main) -> void:
+	var Menu = load("res://scripts/ui/menu.gd")
+	_check(str(ProjectSettings.get_setting("application/config/name")) == "Lesser England", "the project's name: '%s'" % ProjectSettings.get_setting("application/config/name"))
+	var presets: String = FileAccess.get_file_as_string("res://export_presets.cfg")
+	_check(presets.contains("LesserEngland.exe") and presets.contains("LesserEngland.x86_64") and presets.contains("product_name=\"Lesser England\"") and not presets.contains("Fiat."), "the exports still go out as Fiat")
+	main.show_title()
+	_check_fit(main, "r62 title (the wordmark as painted)")     # Matt's wordmark (6 Nov, 175 x 82) in the column, clear of the rows
+	var ls: Array = []
+	_labels_under(main._menu, ls)
+	for l in ls + main._menu.text_nodes():     # (the review) the menu's own text nodes too: wrapped labels are past _labels_under
+		var t: String = str(l.text) if "text" in l else ""
+		_check(not (t.contains("Fiat") or t.contains("FIAT")), "the title screen still says '%s'" % t)
+	_check(Menu._build_words().begins_with("LESSER ENGLAND · v"), "the title's foot: '%s'" % Menu._build_words())
+	# the biggest wordmark the slot takes, drawn at 3x: inside the column, clear of the rows
+	var mn = main._menu
+	if mn.shape() == "title":
+		var keep: Texture2D = mn._wordmark.texture
+		var was_v: bool = mn._wordmark.visible
+		var img := Image.create(int(mn.WORDMARK_MAX.x), int(mn.WORDMARK_MAX.y), false, Image.FORMAT_RGBA8)
+		mn._wordmark.texture = ImageTexture.create_from_image(img)
+		mn._wordmark.size = mn.WORDMARK_MAX * mn.WORDMARK_SCALE
+		mn._wordmark.visible = true
+		mn.layout(Vector2(1920, 1080))
+		var x0 := 0.0                          # laid out at 1920 above: the column at the screen's left
+		_check(mn._wordmark.position.y + mn._wordmark.size.y <= mn.panel_rect().position.y and mn._wordmark.position.x + mn._wordmark.size.x <= x0 + mn.COLUMN_W + 0.5, "a %s wordmark doesn't fit the title's column: %s at %s, rows at %s" % [str(mn.WORDMARK_MAX), str(mn._wordmark.size), str(mn._wordmark.position), str(mn.panel_rect().position)])
+		mn._wordmark.texture = keep
+		mn._wordmark.visible = was_v
+		if keep != null:
+			mn._wordmark.size = keep.get_size() * mn.WORDMARK_SCALE
+		main.layout(Vector2(1920, 1080))
+	main._menu.close()
+	main.refresh()                         # (the review) the title's sound flag off before the next area
+	print("r62 rename ok: Lesser England on the title and the exe, a wordmark up to %s fits" % str(mn.WORDMARK_MAX))

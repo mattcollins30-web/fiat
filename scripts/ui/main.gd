@@ -874,7 +874,7 @@ func show_title() -> void:
 	# hardcore is hidden for now (21 Oct, Matt: "we're struggling to balance soft core"); new_game(true) still works
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
-	_menu.open("Fiat", "Let it be done", items, Callable(), true, Rect2(), true)
+	_menu.open("Lesser England", "Let it be done", items, Callable(), true, Rect2(), true)
 	_sound.title()                     # the title's music, the world quiet (13 Oct)
 
 

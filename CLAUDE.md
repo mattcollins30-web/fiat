@@ -1,4 +1,4 @@
-# Working rules for Fiat
+# Working rules for Lesser England (the repo and its folder keep the old name, `fiat`)
 
 Matt's standing conventions for any session on this repo (house rule, 21 Oct: they live here so they survive a new
 chat or a compacted one). Read this first. Design is in docs/design/ (the statement: docs/design/vision.md); what's
@@ -104,7 +104,7 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
 - One bot pass, then Matt's playtest, and iterate from his play - not pass after pass with bots his play upends.
   A second pass only when the first shows something drastically wrong (a runaway, a wall, an unwinnable stretch).
 - Balancing: always read Matt's latest save alongside the bot's figures, as the comparison (his saves:
-  `C:\Users\mattc\AppData\Roaming\Fiat`; `tools\playtest.bat` / `playtest.flag` summarises one).
+  `C:\Users\mattc\AppData\Roaming\Lesser England`; `tools\playtest.bat` / `playtest.flag` summarises one).
 - While iterating: `balance.flag` with `16 1 quick` (28 Oct: 16 h, one read a build, each stopped at 20 min of wall, no
   gauntlet; ~25 min against a full pass's ~1 h 40). A final: `32` (two reads a build, the gauntlet).
 - Old saves: no compatibility work. When the save's shape changes, bump `SAVE_VERSION` in scripts/ui/main.gd so the
@@ -134,7 +134,7 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   fix that grows a feature in the designing: the fix goes in, the growth to the backlog.
 - Balance passes are bought time: shorter reads while iterating, the full pass for a final.
 - The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>; the build counts the commits
-  Matt plays within a milestone. 0.14.1 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
+  Matt plays within a milestone. 0.14.2 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
   count. Claude bumps the version in the commit Matt plays and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")
@@ -168,7 +168,7 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
 - Player luck is the point of the itemisation: don't retune numbers off one lucky run; read fresh saves first (12 Oct).
 - The bot plays the campaign the way a person does (12 Oct).
 - The campaign grind is intended - it's an ARPG (13 Oct); ARPGs live and die by their length (14 Oct).
-- Fiat is an auto-battler ARPG: active play - no offline progress (removed 24 Oct). The world waits while the game is
+- Lesser England (Fiat till 0.14.2) is an auto-battler ARPG: active play - no offline progress (removed 24 Oct). The world waits while the game is
   shut. Changed 28 Oct (Matt, in words): repeat runs the player starts and trips (docs/design/trips.md) come after his
   playtest; a watched run always pays more.
 - Balance is judged on element builds; plain builds only have to finish (11 Oct).

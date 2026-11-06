@@ -46,6 +46,7 @@ const WORDMARK_ART := "res://art/wordmark.png"
 const COLUMN_W := 650                     # the title's column over the painting
 const COLUMN_X := 60                      # the rows and the wordmark in it
 const COLUMN_ROW_W := 570
+const WORDMARK_MAX := Vector2(190, 104)     # (0.14.2) the most a wordmark painting can be: 570 wide in the column, clear of the rows, at 3x
 const WORDMARK_SCALE := 3                 # the painting's own scale (640 x 360 drawn at 1920 x 1080)
 const WORDMARK_Y := 50
 const COLUMN_ROWS_Y := 375
@@ -56,7 +57,7 @@ var _dim: ColorRect
 var _backdrop: Panel
 var _picture: TextureRect          # the title's painting, when there is one
 var _column: TextureRect           # the dark column over the painting's left, fading into it
-var _wordmark: TextureRect         # "FIAT - let it be done" at the column's head
+var _wordmark: TextureRect         # the wordmark ("LESSER ENGLAND", "Let it be done") at the column's head
 var _foot_left: Label
 var _foot_right: Label
 var _panel: Panel
@@ -178,11 +179,11 @@ static func _load_art(path: String, from_file := false) -> Texture2D:
 
 ## The game's version, on the title's foot (Matt, 11 Oct: the window line went with the Deck's fix). Raise it with
 ## each build Matt plays: the second number for a playtest build, the first for a milestone.
-const VERSION := "0.14.1"     # 0.<milestone>.<build> (CLAUDE.md, the project manager): 7 the web; 8 the skills, the Recruit, the unlocks; 9 the endgame chase; 10 the itemisation, repeat runs, expeditions, wagers, magazines, materials in the pack, run events; 12 the skill web; 13 act two (the web version two, the town, a night on the air); 14 stages per site; bumped in the commit Matt plays
+const VERSION := "0.14.2"     # 0.<milestone>.<build> (CLAUDE.md, the project manager): 7 the web; 8 the skills, the Recruit, the unlocks; 9 the endgame chase; 10 the itemisation, repeat runs, expeditions, wagers, magazines, materials in the pack, run events; 12 the skill web; 13 act two (the web version two, the town, a night on the air); 14 stages per site; bumped in the commit Matt plays
 
 
 static func _build_words() -> String:
-	return "FIAT · v%s" % VERSION
+	return "LESSER ENGLAND · v%s" % VERSION     # (0.14.2, the rename: Fiat was taken)
 
 
 ## items: [{name, detail, action: Callable, enabled (true), confirm (""), color (the name's), glyph ("")}].

@@ -2,8 +2,8 @@ extends SceneTree
 ## The hands test saves (17 Oct, Matt: "a save file with the new items in a stash so i can load in and test each on
 ## the Parade"). Every gun base in the stash with its rounds, a camp with the Parade open - too many for one stash (91
 ## cells; 284 for the guns alone), so a save a kind: rifles, shotguns, SMGs, improvised, melee and pistols. Written to
-## docs/test_saves/<kind>.save; copy one over a slot (%APPDATA%\Fiat\fiat_slot2.save or 3 for the exported
-## build, %APPDATA%\Godot\app_userdata\Fiat for the editor's) and load it.
+## docs/test_saves/<kind>.save; copy one over a slot (%APPDATA%\Lesser England\fiat_slot2.save or 3 for the exported
+## build, %APPDATA%\Godot\app_userdata\Lesser England for the editor's) and load it.
 ##   godot --headless --path . -s tools/make_hands_test_saves.gd
 
 const Sim := preload("res://scripts/sim/sim.gd")
