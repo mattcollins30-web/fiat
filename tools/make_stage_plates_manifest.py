@@ -67,7 +67,7 @@ SCENES = {
         "gates hanging open, straw on the floor, a dusty feed trough, the big doors open on a grey muddy yard, a dark "
         "tack-room doorway on the left",                                            # LESSON: feed sacks are printed
         # The farmhouse, the gun cabinet open and empty
-        "into a farmhouse's stone-floored back kitchen: a big range cooker, a long scrubbed table, coats on pegs, wellies "
+        "into a farmhouse's stone-floored back kitchen: a big plain range cooker with no maker's badge on it, a long scrubbed table, coats on pegs, wellies "
         "by the door, a tall plain steel gun cabinet standing open and empty, a dark passage doorway on the left"),
     "ransacked_streets": (
         # A house with the copper chased out of its walls
@@ -99,7 +99,7 @@ SCENES = {
     "the_pleasure_park": (
         # The arcade, lit off a generator
         "into a seaside amusement arcade lit off a generator: rows of arcade cabinets, a few glowing with soft plain "
-        "coloured light on their dark blank screens, no pictures or words on them, a penny-falls machine, a fat cable "
+        "coloured light on their dark blank screens, no pictures or words on them, a plain penny-falls machine with no lettering on it, a fat cable "
         "snaking across the patterned carpet to a small generator, a dark doorway on the left",   # LESSON: arcade screens and fronts carry lettering
         # The log flume as a guarded reservoir
         "across a pleasure park's log flume made into a reservoir: the long fibreglass trough brimming with still grey "
@@ -179,11 +179,14 @@ def used_seeds():
 def main():
     keys = [k for k, _s, _c in kit.SITES]
     assert sorted(keys) == sorted(SCENES), "SCENES aren't the kit's twelve sites"
+    # Rerolled 6 Nov (the runner): the allotments' 2/3 came back bordered and near the site plate's own scene, the
+    # farm's 3/3 bordered, the parade's 3/3 framed as if through a window. Seed +10000 so the reroll differs (+1000 lands on the stage items' seeds).
+    REROLL = {"the_allotments_2": 10000, "top_farm_3": 10000, "the_parade_3": 10000}
     jobs = []
     seed = SEED0
     for key in keys:
         for st, scene in zip((2, 3), SCENES[key]):
-            jobs.append(plate_job(key, st, scene, seed))
+            jobs.append(plate_job(key, st, scene, seed + REROLL.get("%s_%d" % (key, st), 0)))
             seed += 1
     used = used_seeds()
     clash = {j["seed"]: used[j["seed"]] for j in jobs if j["seed"] in used}

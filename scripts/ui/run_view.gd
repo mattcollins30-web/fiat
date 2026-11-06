@@ -1398,7 +1398,7 @@ static func hands_scale(t: Texture2D) -> float:
 ## kind's pictures; a muzzle the finder misses is put right here, [at, dir] in the picture's pixels.
 const MUZZLE_AT := {
 	"police_carbine": [Vector2(117, 84), Vector2(-1, -0.5)],     # the finder takes its sight's top; the barrel's end is lower left
-	"security_guard_s_carbine": [Vector2(77, 92), Vector2(-1, -0.15)],     # and the front sight's, here and below
+	"security_guard_s_carbine": [Vector2(130, 101), Vector2(-1, -0.3)],     # the barrel's end past the front sight (6 Nov, the reroll; was 77, 92)
 	"army_smg": [Vector2(77, 79), Vector2(-1, -0.2)],     # the suppressor's end
 	"riot_squad_s_smg": [Vector2(131, 84), Vector2(-1, -0.35)],
 	"close_protection_smg": [Vector2(103, 84), Vector2(-1, -0.15)],     # the suppressor's end, not the receiver's top (17 Oct, the reroll)
@@ -1408,6 +1408,14 @@ const MUZZLE_AT := {
 	"broomhandle_pistol": [Vector2(140, 57), Vector2(0, -1)],     # held straight up: the muzzle is its top; the top-left rule finds the glove
 	# BUILD51-C (5 Nov, the flash contact sheet, docs/art/smg_flash_sheet.png): the one gun the sheet showed off its muzzle
 	"castle_guard_rifle": [Vector2(126, 70), Vector2(-1, -0.5)],     # the flash hider's end; the top-left rule found the left sleeve (90, 128)
+	# 6 Nov: the rerolled and new kit pictures (art.done), each read off by eye at the muzzle's middle - the finder lands
+	# on a corner of it, or on the bow's arm
+	"regimental_rifle": [Vector2(104, 80), Vector2(-1, -0.55)],     # the flash hider's end
+	"three_round_pistol": [Vector2(93, 63), Vector2(-1, -0.3)],     # the suppressor's end
+	"select_fire_pistol": [Vector2(101, 46), Vector2(-1, -0.4)],     # the barrel's end
+	"humane_killer": [Vector2(93, 50), Vector2(-1, -0.45)],     # the bolt tube's face
+	"hand_me_down_nail_gun": [Vector2(73, 59), Vector2(-1, -0.1)],     # the nose's tip
+	"compound_bow": [Vector2(87, 94), Vector2(-1, -0.34)],     # the arrow's tip; the top-left rule found the left arm (60, 129)
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:

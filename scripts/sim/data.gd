@@ -2133,15 +2133,7 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
-const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
-	# (BUILD55-C) the stages' 24 new bases on a neighbour's picture until the art manifest (docs/design/stages.md §5-6)
-	"Garden fork": "Billhook", "Bone saw": "Machete", "Humane killer": "Derringer", "Scalpel": "Knife",
-	"Flat cap": "Beekeeper's hat", "Strimmer visor": "Welder's mask", "Delivery rider's helmet": "Riot helmet", "Go-kart helmet": "Cycle helmet",
-	"Donkey jacket": "Work jacket", "Staff fleece": "Padded jacket", "Waxed coat": "Slash-proof jacket", "Lined hoodie": "Padded jacket",
-	"Sheepskin coat": "Foundry coat", "Mascot suit": "Riot suit", "Rose gauntlets": "Gardening gloves",
-	"Joiner's apron": "Bum bag", "Hi-vis tabard": "Lifeguard's vest", "Security van vest": "Door staff vest",
-	"Bank bag": "Holdall", "Grab bag": "Daysack",
-	"Arcade token": "Lucky penny", "Branch key": "Pocket watch", "Hospital wristband": "Dog tag", "Cap badge": "St Christopher"}
+const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear"}     # the stages' 24 new bases have their own pictures (6 Nov, art.done): their borrows gone
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [

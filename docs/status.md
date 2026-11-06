@@ -6518,6 +6518,17 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 6 Nov (midday): the art for 0.14.0 wired in
+
+Matt: "all that art is done" (art.done: the stage plates 24 + 3 rerolled for borders, the 24 icons, the 4 hands; the
+six gun rerolls from the 10:45 run). The 24 ART_AS borrows came off (the new items show their own pictures, a check
+each: its picture, its footprint at 64 a cell, a gun's or a blade's in hand); the stage plates show by name on their
+site's wall; the muzzle flash points set by eye on the rerolled and new hands (the carbine, the
+regimental rifle, the three-round and select-fire pistols, the humane killer, the nail gun, the compound bow's arrow
+tip); the checks that assumed no
+stage plates mask them instead. Smoke green in the cloud and on Matt's machine; lint 0. For Matt's eye (art.done):
+the nail gun's red bottle, the bow's arrow across the frame, the bone saw reading as a hacksaw, the small scalpel.
+
 ## 6 Nov: the art for 0.14.0 flagged, and six guns rerolled
 
 Matt: "these need re rolling" (six first-person guns side-on, doubled or wrong: tools/pixellab_reroll_6nov_manifest.json,

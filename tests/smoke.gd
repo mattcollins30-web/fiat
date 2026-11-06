@@ -18538,8 +18538,11 @@ func _full_art_checks(main, v) -> void:
 	print("the run view: %d of %d sites have their own plate and cover" % [own, Data.TIERS.size()])
 	# out on the site the check's on: its plate, its cover's top on the line
 	var m: Dictionary = sim.mission
-	var key0: String = Items.slug(str(Data.TIERS[int(m["tier"])]["name"]))
-	_check(v._plate.texture == RunView.tex_of([key0 + "_plate", "parade_plate"]) and v._cover.texture == RunView.tex_of([key0 + "_cover", "parade_cover"]), "%s's plate or cover isn't up" % key0)
+	# the stage's scene when the run stands on a stage with its own plate (BUILD57: its own plate, its site's wall), else
+	# the site's (m58: the stage plates landed, so a key built from the tier alone no longer names what's up)
+	var key0: String = RunView.stage_key(m)
+	var own0: bool = RunView.tex(key0 + "_plate") != null and RunView.scene_cover(key0) != null
+	_check(v._plate.texture == (RunView.tex(key0 + "_plate") if own0 else RunView.tex("parade_plate")) and v._cover.texture == (RunView.scene_cover(key0) if own0 else RunView.tex("parade_cover")), "%s's plate or cover isn't up" % key0)
 	_check(absf(v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s - RunView.COVER_TOP) < 0.5, "the cover's body isn't on its line: %.0f" % (v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s))
 	# the zone's gang, when it's drawn
 	var zone: String = RunView.ZONE_KEYS[int(Data.TIERS[int(m["tier"])]["zone"])]
@@ -31169,6 +31172,8 @@ func _r4_art_names_checks() -> void:
 	var keys := {}
 	for t in Data.TIERS:
 		keys[Items.slug(str(t["name"]))] = true
+		for st in range(2, Data.STAGES + 1):     # a stage's own plate: <site>_2, <site>_3 (BUILD57, RunView.stage_key)
+			keys["%s_%d" % [Items.slug(str(t["name"])), st]] = true
 	for z in Data.ZONES:
 		keys[Items.slug(str(z["name"]))] = true
 	for b in Data.BOSSES:
@@ -40734,7 +40739,15 @@ func _u55_backdrop_checks(main) -> void:
 	_u55_camp(sim, 3)
 	var v = main._run._view
 	var was_key: String = v._site_key
-	# no stage files exist yet: every stage falls back to the site's own pair
+	# the art landed (6 Nov): every 2/3 and 3/3 reads its own plate on disk ...
+	for i in range(Data.TIERS.size()):
+		var sk: String = Items.slug(str(Data.TIERS[i]["name"]))
+		for st in [2, 3]:
+			_check(RunView.stage_key({"tier": i, "stage": st}) == "%s_%d" % [sk, st], "%s %d/3 doesn't read its drawn plate: '%s'" % [Data.TIERS[i]["name"], st, RunView.stage_key({"tier": i, "stage": st})])
+	# ... and with the stage plates masked (a cached null, as a missing file reads), every stage falls back to the site's own pair
+	for i in range(Data.TIERS.size()):
+		for st in [2, 3]:
+			RunView._tex["%s_%d_plate" % [Items.slug(str(Data.TIERS[i]["name"])), st]] = null
 	for i in range(Data.TIERS.size()):
 		var key: String = Items.slug(str(Data.TIERS[i]["name"]))
 		for st in [1, 2, 3]:
@@ -40746,9 +40759,9 @@ func _u55_backdrop_checks(main) -> void:
 	RunView._tex["the_allotments_2_cover"] = ct
 	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments_2" and RunView.stage_key({"tier": 0, "stage": 3}) == "the_allotments" and RunView.stage_key({"tier": 0, "stage": 1}) == "the_allotments", "a drawn 2/3 pair isn't read for the 2/3 alone")
 	_check(RunView.stage_key({"tier": 0, "stage": 2, "signal": {"zone": 0}}) == "the_allotments", "a signal's run took the stage's plate")
-	RunView._tex.erase("the_allotments_2_cover")
+	RunView._tex["the_allotments_2_cover"] = null
 	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments_2", "a stage's plate with no wall of its own wasn't read (BUILD57: it stands on the site's wall)")
-	RunView._tex.erase("the_allotments_2_plate")
+	RunView._tex["the_allotments_2_plate"] = null
 	RunView._tex["the_allotments_2_cover"] = ct
 	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments", "a stage's wall with no plate was read")
 	RunView._tex["the_allotments_2_plate"] = pt
@@ -40760,8 +40773,8 @@ func _u55_backdrop_checks(main) -> void:
 		v.show_state(sim, sim.mission)
 		_check(v._site_key == ("the_allotments_2" if int(sim.mission.get("stage", sim.mission["t"].get("depth", 1))) == 2 else "?"), "the 2/3's run isn't on its own plate: '%s'" % v._site_key)
 		sim.extract_now()
-	RunView._tex.erase("the_allotments_2_plate")
-	RunView._tex.erase("the_allotments_2_cover")
+	RunView._tex["the_allotments_2_plate"] = null
+	RunView._tex["the_allotments_2_cover"] = null
 	sim.hp = sim.max_hp()
 	sim.set_stage_pick(0, 2)
 	sim.deploy(0)
@@ -40782,6 +40795,11 @@ func _u55_backdrop_checks(main) -> void:
 	_check(RunView.head_den({"tier": hs}) == "" and RunView.head_den({"tier": hs, "head_fight": true}) == Items.slug(str(b["name"])), "the den's read off the flag")
 	v._site(was_key if was_key != "" else "the_parade")
 	sim.load_dict(saved)
+	for i in range(Data.TIERS.size()):     # the masks off: the drawn plates read from disk again (6 Nov)
+		for st in [2, 3]:
+			var sk: String = Items.slug(str(Data.TIERS[i]["name"]))
+			RunView._tex.erase("%s_%d_plate" % [sk, st])
+			RunView._tex.erase("%s_%d_cover" % [sk, st])
 	print("u55 backdrop ok: the stage's plate when drawn, else the site's; the head's den from the first man")
 
 
@@ -40942,7 +40960,7 @@ func _c55_tier_up_checks() -> void:
 
 
 ## The new bases (§5 "Gaps"): each a gear base on a site's list that rolls there, wears, carries its line and shows its
-## borrowed picture (the neighbour's, until the art) at the borrowed one's footprint.
+## own picture (6 Nov: the art landed) at its footprint's size, and a gun's or a blade's in hand.
 func _c55_bases_checks() -> void:
 	var sim = _c55_sim()
 	_check(Data.C55_NEW_BASES.size() == 24, "the new bases: %d" % Data.C55_NEW_BASES.size())
@@ -40976,12 +40994,14 @@ func _c55_bases_checks() -> void:
 		sim.stash_put(pc)
 		_check(sim.equip_item(int(pc["id"])) and sim.equipped[slot] != null and str(sim.equipped[slot]["base"]) == str(nm), "%s won't wear" % nm)
 		_check(Items.score(pc) > 0.0, "%s scores nothing worn" % nm)
-		# its picture: the borrowed one's, at that one's footprint
-		var lent: String = str(Data.ART_AS.get(str(nm), ""))
-		_check(lent != "" and not Items.base_named(slot, lent).is_empty(), "%s borrows no picture of its slot (%s)" % [nm, lent])
+		# its own picture (6 Nov, the art landed): no borrow left, art/items/<slug>.png at its footprint's size
+		_check(not Data.ART_AS.has(str(nm)), "%s still borrows %s's picture" % [nm, str(Data.ART_AS.get(str(nm), ""))])
 		var tex: Texture2D = Items.art(pc)
-		_check(tex != null and tex == Items.art(sim._plain(slot, lent)), "%s doesn't show %s's picture" % [nm, lent])
-		_check(Items.footprint(pc) == Items.footprint(sim._plain(slot, lent)), "%s is %s, its picture's %s %s" % [nm, str(Items.footprint(pc)), lent, str(Items.footprint(sim._plain(slot, lent)))])
+		_check(tex != null and tex == Items._art_named(Items.slug(str(nm))), "%s doesn't show its own picture (art/items/%s.png)" % [nm, Items.slug(str(nm))])
+		var fp: Vector2i = Items.footprint(pc)
+		_check(tex != null and tex.get_width() == fp.x * 64 and tex.get_height() == fp.y * 64, "%s's picture %s isn't its footprint %s at 64 a cell" % [nm, str(tex.get_size()) if tex != null else "-", str(fp)])
+		if slot in ["Primary", "Secondary"]:
+			_check(FileAccess.file_exists("res://art/fight/hands/%s.png" % Items.slug(str(nm))), "%s has no picture in hand" % nm)
 		_check(str(Words.ITEMS.get(str(nm), "")).ends_with("."), "%s has no line" % nm)
 	# the built-in figures read and count: the Hi-vis tabard's later gangs, the Waxed coat's bleed resist
 	var hv: Dictionary = sim._plain("Rig", "Hi-vis tabard")
@@ -41211,7 +41231,7 @@ func _f55_words_checks(main) -> void:
 		var sl: String = renamed[nm][0]
 		var was: String = renamed[nm][1]
 		_check(not Items.base_named(sl, nm).is_empty() and Items.base_named(sl, was).is_empty(), "%s isn't the %s base (or %s still is)" % [nm, sl, was])
-		_check(Words.ITEMS.has(nm) and not Words.ITEMS.has(was) and nm in Data.C55_NEW_BASES and not (was in Data.C55_NEW_BASES) and Data.ART_AS.has(nm) and not Data.ART_AS.has(was), "%s's line, its place in the new bases or its borrowed picture is missing" % nm)
+		_check(Words.ITEMS.has(nm) and not Words.ITEMS.has(was) and nm in Data.C55_NEW_BASES and not (was in Data.C55_NEW_BASES) and not Data.ART_AS.has(nm) and not Data.ART_AS.has(was) and Items.art({"base": nm, "slot": sl}) != null and Items.art({"base": nm, "slot": sl}).resource_path == "res://art/items/%s.png" % Items.slug(nm), "%s's line, its place in the new bases or its own picture is missing (6 Nov: its own, no borrow)" % nm)
 		var on_list := false
 		for site in Data.SITE_THEMES:
 			_check(not (was in Data.SITE_THEMES[site]), "%s's list still names %s" % [site, was])
@@ -41288,7 +41308,8 @@ func _a57_stage_wall_checks(main) -> void:
 	var placed := {site + "@kit": [[101.0, 201.0, 0.61], [301.0, 251.0, 0.91], [251.0, 161.0, 0.31]],
 		site: [[102.0, 202.0, 0.62], [302.0, 252.0, 0.92], [252.0, 162.0, 0.32]]}
 	RunView.use_saved(placed)
-	RunView._tex.erase(stage + "_cover")
+	RunView._tex[stage + "_cover"] = null     # masked: a cached null reads as no file (the art landed 6 Nov)
+	RunView._tex[site + "_3_plate"] = null
 	RunView._tex[stage + "_plate"] = fixture
 	var kit_key: String = site + ("@kit" if RunView.kit_pair(site) else "")
 	var want: Array = placed[kit_key]
@@ -41330,19 +41351,20 @@ func _a57_stage_wall_checks(main) -> void:
 	if run_at.call(2):
 		_check(v._site_key == stage and v._plate.texture == fixture and v._cover.texture == other_ct, "the 2/3's own wall isn't read when there")
 		_check(slots_are.call(want), "the 2/3's own pair, its figures not on the site's placed slots: '%s'" % v.slot_key())
-	RunView._tex.erase(stage + "_cover")
+	RunView._tex[stage + "_cover"] = null
 	# the 3/3 (no plate of its own) and the 1/3: the site's pair and slots
 	for st in [3, 1]:
 		if run_at.call(st):
 			_check(v._site_key == site and v._plate.texture == site_pt and v._cover.texture == site_ct and slots_are.call(want), "the %d/3 with no plate isn't on the site's pair and slots: '%s'" % [st, v._site_key])
 	# no stage plate: the 2/3 is the site's pair
-	RunView._tex.erase(stage + "_plate")
+	RunView._tex[stage + "_plate"] = null
 	if run_at.call(2):
 		_check(v._site_key == site and v._plate.texture == site_pt and v._cover.texture == site_ct and slots_are.call(want), "the 2/3 with no plate isn't on the site's pair: '%s'" % v._site_key)
 	if sim.on_mission():
 		sim.extract_now()
 	RunView._tex.erase(stage + "_plate")
 	RunView._tex.erase(stage + "_cover")
+	RunView._tex.erase(site + "_3_plate")
 	_check(RunView.stage_base(stage) == site and RunView.stage_base(stage + "@kit") == site and RunView.stage_base(site) == site and RunView.stage_base("the_manager") == "the_manager", "stage_base: '%s'" % RunView.stage_base(stage))
 	RunView.use_saved(slots0)
 	v._site(was_key if was_key != "" and was_key != "-" else "the_parade")

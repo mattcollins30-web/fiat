@@ -46,7 +46,7 @@ LOOKS = {
     # Armour
     "Donkey jacket": "a black wool donkey jacket with a plain black leather yoke across the shoulders, no lettering",    # LESSON: council yokes are lettered
     "Staff fleece": "a dark green zip-up fleece with no name badge, " + PLAIN,                                            # LESSON: staff fleeces carry a logo
-    "Waxed coat": "an olive waxed cotton country coat with a brown cord collar and big bellows pockets",
+    "Waxed coat": "an olive waxed cotton country coat with a brown cord collar and big bellows pockets, plain, no maker's badge, label or lettering on it",
     "Lined hoodie": "a grey zip-up hoodie with a thick cream fleece lining showing at the open front, " + PLAIN,           # LESSON: usually printed
     "Sheepskin coat": "a long brown sheepskin coat with a shaggy cream fleece collar and cuffs",
     "Mascot suit": "an empty furry animal mascot costume in faded yellow, its big round head off and hanging at its side, " + PLAIN,   # LESSON: mascots carry a club's lettering
