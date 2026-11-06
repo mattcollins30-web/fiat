@@ -1318,7 +1318,7 @@ const UNIQUES := [
 	{"name": "The Doorman's Jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans", "band": "levelling", "range": [2, 3],
 		"words": "Take 25% less damage with three or more on you", "short": "−25% damage taken, 3+ on you", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 20}]},
 	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap", "band": "levelling", "range": [1, 3],
-		"words": "Finds are half as likely to be common", "short": "Half the commons", "affixes": [{"stat": "loot_pct", "value": 20}, {"stat": "cash_per_kill", "value": 6}]},
+		"words": "Finds are half as likely to be common", "short": "Half the commons", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "cash_per_kill", "value": 6}]},     # 0.14.3 (Matt: "Lucky cap should be quality not quantity"): as the tree's Lucky went (0.13.1)
 	# the bosses' - only from them; their rules are the affixes, for now
 	# the Gamekeeper's (15 Oct, Matt: "killing him and getting absolutely nothing felt bad")
 	{"name": "The Keeper's Twelve-Bore", "slot": "Primary", "base": "Pump shotgun", "rule": "keepers_gun", "band": "levelling", "range": [1, 3], "boss": true,
@@ -1924,7 +1924,7 @@ const AFFIXES := [
 	{"stat": "cure_frost", "label": "Stops a chill too", "short": "stops chill", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
 	{"stat": "cure_shock", "label": "Stops a shock too", "short": "stops shock", "min": 1, "max": 1, "slots": ["Medical"], "weight": 0.2, "flag": true},
 	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
-	{"stat": "guard_pct", "label": "Guard cap", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
+	{"stat": "guard_pct", "label": "Guard cap", "short": "Guard cap", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
 	# the rig's swap (BUILD46-R, 2 Nov, Matt's call: a rig affix): a gun with a second loaded magazine swaps with no reload,
 	# the spent one refilled from the pack's box as it fires, at a hand refill's pace (Sim.hot_swap). On or off. `tier_w`:
 	# its weight by the rig's base tier, 1 to 9 - likelier on the better rigs (drafts)
@@ -1932,7 +1932,7 @@ const AFFIXES := [
 		"weight": 0.4, "tier_w": [0.08, 0.12, 0.18, 0.25, 0.32, 0.4, 0.5, 0.6, 0.7]},
 	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
 	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
-	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
+	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy gain", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"], "weight": 0.5},
 	{"stat": "energy_max", "label": "max energy", "short": "max energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "flat": true, "weight": 0.5},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from

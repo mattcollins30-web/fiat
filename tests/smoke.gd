@@ -935,6 +935,7 @@ func _init() -> void:
 	_c61_top_checks()                         # BUILD61-C: a County 3/3's quarter from its T9 alone; signals' finds as before
 	_c61_bases_checks()                       # BUILD61-C: the County's 24 new bases roll, wear, sit by their neighbours, borrow a picture
 	_r62_rename_checks(main)                  # 0.14.2 (6 Nov): the rename - Lesser England on the title, the window, the exe; a wordmark up to 190 x 104 fits
+	_f63_words_checks()                       # 0.14.3 (6 Nov): an affix's short form keeps its kind ("energy gain", "Guard cap"); lucky means quality
 	_m61_review_checks(main)                  # BUILD61 merge review: the County card's odds read, a stage's pick re-reads, the hurt repeat, a County repeat's name and host
 	_finish()
 
@@ -19844,7 +19845,7 @@ func _growth_checks(main) -> void:
 	_check(is_equal_approx(Items.ilvl_mult(Data.ILVL_FROM + 10), 1.0 + Data.ILVL_SCALE * 10.0) and is_equal_approx(Items.ilvl_mult(5), 1.0), "the item level's multiplier is off")
 	var u_shallow: Dictionary = Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng, 5)
 	var u_deep: Dictionary = Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng, Data.ILVL_FROM + 20)
-	_check(Items.ilvl(u_deep) == Data.ILVL_FROM + 20 and str(u_deep["affixes"][0]["stat"]) == "loot_pct" and int(u_deep["affixes"][0]["value"]) == int(round(20 * Items.ilvl_mult(mini(Data.ILVL_FROM + 20, Data.PCT_LINE_TOP)))) and int(u_shallow["affixes"][0]["value"]) == 20, "a unique found deep does not carry the depth: %d / %d" % [int(u_shallow["affixes"][0]["value"]), int(u_deep["affixes"][0]["value"])])
+	_check(Items.ilvl(u_deep) == Data.ILVL_FROM + 20 and str(u_deep["affixes"][0]["stat"]) == "rarity_pct" and int(u_deep["affixes"][0]["value"]) == int(round(10 * Items.ilvl_mult(mini(Data.ILVL_FROM + 20, Data.PCT_LINE_TOP)))) and int(u_shallow["affixes"][0]["value"]) == 10, "a unique found deep does not carry the depth: %d / %d" % [int(u_shallow["affixes"][0]["value"]), int(u_deep["affixes"][0]["value"])])
 	# the find carries the site's level into a unique
 	_bd(sim, 11, 30)
 	_sd(sim, 11, 25)
@@ -31231,6 +31232,8 @@ func _r4_art_names_checks() -> void:
 		for f in ["place", "who"]:
 			if c.has(f):
 				keys[Items.slug(str(c[f]))] = true
+		for st in range(2, Data.STAGES + 1):     # a County stage's own plate: the_toll_plaza_2 (BUILD61-U, RunView.stage_key)
+			keys["%s_%d" % [Items.slug(str(c["place"])), st]] = true
 	for z in Data.COUNTY_ZONES:
 		keys[Items.slug(str(z["name"]))] = true
 		keys[Items.slug(str(z["head"]))] = true
@@ -42487,3 +42490,30 @@ func _r62_rename_checks(main) -> void:
 	main._menu.close()
 	main.refresh()                         # (the review) the title's sound flag off before the next area
 	print("r62 rename ok: Lesser England on the title and the exe, a wordmark up to %s fits" % str(mn.WORDMARK_MAX))
+
+
+# ------------------------------------------------------------------ 0.14.3 (6 Nov): Matt's two from play
+## An affix's short form (an item's chip) keeps the word that says what kind of more it is: "+4% energy" read as more
+## energy, not quicker energy (Matt, the Box of matches). And lucky is loot quality, never quantity: the Lucky Cap gave
+## +20% quantity, as the tree's Lucky once did. `-- only f63_words`.
+func _f63_words_checks() -> void:
+	for a in Data.AFFIXES:
+		var lab: String = str(a.get("label", "")).to_lower()
+		var sh: String = str(a.get("short", "")).to_lower()
+		for w in ["cap", "gain"]:             # a rate or a ceiling, not the thing itself ("max HP" reads "+20 HP": the HP is the max)
+			if (" %s " % w) in (" %s " % lab):
+				_check((" %s " % w) in (" %s " % sh), "the %s affix's short form '%s' drops '%s' (its label '%s')" % [a["stat"], a["short"], w, a["label"]])
+	var lucky: Array = []
+	for u in Data.UNIQUES:
+		if str(u["name"]).to_lower().contains("lucky"):
+			lucky.append(str(u["name"]))
+			for af in u.get("affixes", []):
+				_check(str(af["stat"]) != "loot_pct", "%s gives loot quantity, not quality" % u["name"])
+			_check(u.get("affixes", []).any(func(af): return str(af["stat"]) == "rarity_pct"), "%s gives no loot quality" % u["name"])
+	for slot in Data.BASES:
+		for b in Data.BASES[slot]:
+			if str(b["name"]).to_lower().contains("lucky"):
+				lucky.append(str(b["name"]))
+				_check(not b.get("stats", {}).has("loot_pct") and (int(b.get("find", 0)) > 0 or b.get("stats", {}).has("rarity_pct")), "%s gives loot quantity, not quality" % b["name"])
+	_check(lucky.has("Lucky Cap") and lucky.has("Lucky penny"), "the lucky things weren't found: %s" % str(lucky))
+	print("f63 words ok: every affix's short form keeps cap / gain; %s give loot quality" % ", ".join(lucky))

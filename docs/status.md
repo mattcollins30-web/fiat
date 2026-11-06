@@ -4,7 +4,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (6 Nov, late):** 0.14.2 - the game is **Lesser England** (Fiat was trademarked across the board; Pay the Bearer
+- **Now (6 Nov, night):** 0.14.3 - Matt's two from play, fixed: "+4% energy" read as more energy (it's energy gain:
+  the chip now says so, and "Guard cap" too); the Lucky Cap gave loot quantity, now +10% loot quality. Then the County's
+  art (art.flag down 17:35, ~$7).
+- **Before (6 Nov, late):** 0.14.2 - the game is **Lesser England** (Fiat was trademarked across the board; Pay the Bearer
   and Crownless dropped; Matt's UKIPO and domain checks clean). Next: Matt's wordmark into art/wordmark.png (up to
   190 x 104, the smoke checks it fits), export as LesserEngland.exe; the save copied to Roaming\Lesser England.
 - **Then (6 Nov, evening):** 0.14.1, not yet played - the County gets the campaign's stages (status below, 6 Nov
@@ -6524,6 +6527,15 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 6 Nov (night): 0.14.3 - energy gain and the Lucky Cap
+
+Matt, from play: the Box of matches' "+4% energy" with energy still 100 / 100 - the affix is energy gain (quicker to
+refill), its chip had dropped "gain"; and "Lucky cap should be quality not quantity - same as the skill tree changes we
+discussed for the lucky nodes". The chip reads "+4% energy gain" (and "Guard cap", the one other short form that lost its
+kind); the Lucky Cap's +20% loot quantity is +10% loot quality (its "Half the commons" is quality already, so not 20).
+The Lucky penny was already quality (a charm's "find" is magic find). A check: a short form keeps "cap" or "gain" when
+its label has it, and every lucky-named unique or base gives quality, never quantity (proved red on 0.14.2).
 
 ## 6 Nov (late): 0.14.2 - the rename to Lesser England
 
