@@ -612,6 +612,9 @@ static func stage_base(key: String) -> String:
 			for t in Data.TIERS:
 				if Items.slug(str(t["name"])) == b:
 					return b
+			for c in Data.COUNTY:
+				if Items.slug(str(c["place"])) == b:
+					return b                     # a County place's stage (BUILD61-U)
 	return k
 
 
@@ -629,6 +632,8 @@ static func head_den(m: Dictionary) -> String:
 	if not bool(m.get("head_fight", false)):
 		return ""
 	var nm: String = str(m.get("boss", {}).get("name", ""))
+	if nm == "" and not Data.county(str(m.get("county", ""))).is_empty():
+		nm = str(Data.county(str(m["county"])).get("who", ""))     # a County head's own fight (BUILD61-U): his, not the host site's head
 	if nm == "":
 		for b in Data.BOSSES:
 			if int(b["tier"]) == int(m["tier"]):
@@ -655,6 +660,19 @@ static func county_gang(m: Dictionary) -> String:
 	var k: String = str(sg.get("order", ""))     # a County run's own crew; a remixed signal brings the crew it was aimed with (the third review's E1)
 	var c: Dictionary = Data.county(k)
 	return Items.slug(str(Data.COUNTY_ZONES[int(c["cz"])]["name"])) if not c.is_empty() else ""
+
+
+## A County run's scene (BUILD61-U, docs/design/county_stages.md §5): `<place>_2` / `<place>_3` for the 2/3 and the 3/3
+## when that stage's plate is drawn (art/fight_county/), standing on the place's wall unless it has its own; else the
+## place's own. The 1/3, a head's fight (his den first, show_state) and a remixed signal read the place's.
+static func county_scene(m: Dictionary) -> String:
+	var pk: String = county_key(m)
+	if pk == "":
+		return ""
+	var st: int = int(m.get("stage", 1)) if m.has("county") and not bool(m.get("head_fight", false)) else 1
+	if st >= 2 and st <= Data.STAGES and tex("%s_%d_plate" % [pk, st]) != null:
+		return "%s_%d" % [pk, st]
+	return pk
 
 
 ## The County place a run is on (its own, or a remixed signal's), "" for none.
@@ -839,7 +857,7 @@ func show_state(sim, m: Dictionary) -> void:
 	_boss_key = Items.slug(str(m["boss"]["name"])) if boss_on else ""
 	var place_key: String = county_key(m)
 	var den: String = head_den(m) if _boss_key == "" else _boss_key     # the head's own fight: his den from the first man (BUILD55-U)
-	var scene_key: String = den if den != "" and _pair_in(BOSS_DIR, den) else (place_key if place_key != "" and _pair_in(COUNTY_DIR, place_key) else stage_key(m))     # his den while he's out, when it's drawn; a County place's own (26 Oct); the stage's own plate, else the site's (BUILD55-U)
+	var scene_key: String = den if den != "" and _pair_in(BOSS_DIR, den) else (county_scene(m) if place_key != "" and _pair_in(COUNTY_DIR, place_key) else stage_key(m))     # his den while he's out, when it's drawn; a County place's stage's own plate, else the place's (26 Oct, BUILD61-U); the stage's own plate, else the site's (BUILD55-U)
 	if scene_key != _site_key:
 		_site(scene_key)
 	_zone_key = ZONE_KEYS[mini(int(m.get("signal", {}).get("zone", site["zone"])), ZONE_KEYS.size() - 1)]     # the signal's crew, the one the Radio names

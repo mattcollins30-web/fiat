@@ -194,7 +194,7 @@ const COUNTY := {
 	"sub": "Past the City, where the new money's made to stick. Each zone wants issued kit worn.",
 	"not_yet": "Not before the Issue", "zone_shut": "%s first", "place_shut": "Take %s first",
 	"want": "Wear %d issued pieces (%d worn)", "want_short": "Wear %d issued",
-	"taken": "%s is taken.", "again": "%s, taken again. It'll be harder next time.", "lost": "The County keeps %s.",
+	"taken": "%s is taken.", "again": "%s, taken again.", "lost": "The County keeps %s.",     # (BUILD61-A) "again": no "harder next time", a stage's level is fixed
 	"zone_opens": "The road's open to %s. It wants %d issued pieces worn.",
 	"remix": "The Treasurer's down. The Radio picks up both maps now: the remix is open.",
 	"head_down": "%s is down. Found: %s.", "let_go": "The Bailiff lets your %s go.",
@@ -1404,6 +1404,31 @@ const ITEMS := {
 	"Branch key": "The manager's key on a brass fob, from the back office. Every door it opens has something behind it.",
 	"Hospital wristband": "A patient's band, a name and a date, kept from the ward. The date's the day they walked out.",
 	"Cap badge": "The regiment's brass, polished by somebody who meant it. Luck goes where it goes.",
+	# (BUILD61-C) the County's new bases (docs/design/county_stages.md §4), for the language pass
+	"Highways coat": "Orange, the reflective bands gone grey, off the toll plaza's peg. Cars used to slow down for it.",
+	"Cat's eye": "A road stud prised out of the fast lane, its glass still catching the light. It's seen a lot of nights.",
+	"Loading hook": "A loader's hook with a wooden cross-handle, off the bay doors. It goes in, and it pulls.",
+	"Picker's harness": "The warehouse picker's harness, the scanner holster empty. Light, and made for walking miles of aisle.",
+	"Enforcement vest": "The bailiff's stab vest, the panel on the back peeled off. Heavy, and it's been through doors.",
+	"Seized keys": "A ring of other people's keys, off the hook in the pound. Every one of them opened something.",
+	"Lashing bar": "Two metres of steel for the container locks. It weighs what a man does and lands like one.",
+	"Crane driver's hat": "A white hard hat off the crane driver's hook, the chin strap still done up. Heavy, and it's had things dropped on it.",
+	"Ferry lifejacket": "The ferry crew's jacket, the whistle still on its cord. It holds what you need and keeps the cold off.",
+	"Duty-free bag": "A clear plastic carrier, sealed at the top, from the terminal's shop. It holds more than it should.",
+	"Examiner's gloves": "Blue gloves from the examination bench, a box of them. Quick fingers, and nothing gets through.",
+	"Seizure bag": "A clear evidence bag the size of a bin, the seal still on. Whatever went in stayed in.",
+	"Sidelock shotgun": "A pair of barrels in walnut, the locks engraved by a man long dead. It cost more than a house.",
+	"Shooting jacket": "Tweed with a leather shoulder patch, off the clubhouse hook. Warm, and the wind doesn't find a way in.",
+	"Cartridge bag": "Leather and canvas, the strap worn shiny, from the clay ground's hut. Light, and quick to the hand.",
+	"Gate fob": "A plastic fob on a ring, off a kitchen island in the close. It opened the gate, and the gate kept people out.",
+	"Deerstalker": "Tweed, the flaps tied up on top, from the manor's boot room. The keeper saw everything coming from under it.",
+	"Estate tweeds": "A three-piece suit in estate tweed, cut for walking the hill. Light on you, and it never wears out.",
+	"Cashier's visor": "A green eyeshade off the counting house's desk. You see every note, and every one that's missing.",
+	"Clerk's mitts": "Black fingerless mitts from the counting house, for a cold room and quick fingers. The hands in them never stop.",
+	"Bullion carbine": "The vault guard's short rifle, the strap cut through. Heavy rounds, and not many of them wasted.",
+	"Small ingot": "A gold bar the size of a matchbox, the stamp filed off. Worth more than the street it came from.",
+	"Treasury guard's helmet": "The Treasury guard's steel helmet, polished for the steps. Heavy, and nothing much gets past it.",
+	"Despatch box": "A red leather box with a brass lock, off a minister's desk. Small, and it holds what matters.",
 }
 
 
@@ -2356,4 +2381,15 @@ const U55 := {
 	"opens_short": "At level %d",     # (FIX55, the language pass)
 	"new": "New",                                   # a pin's mark: opened and not yet picked
 	"pin": "%s · %s",                               # "The Allotments · 2/3", "The Retail Park · New"
+}
+
+
+## BUILD61-U (6 Nov): the County's places on the site card (docs/design/county_stages.md §6) - for the language pass.
+const U61 := {
+	"kicker": "%s · The County",                    # the picture's kicker: "The Motorway · the County"
+	"issued_key": "Issued kit",                     # what it takes: the zone's want, against what's worn
+	"worn": "%d of %d worn", "worn_short": "%d worn",
+	"slots": {"Helmet": "Helmet", "Armour": "Armour", "Rig": "Rig", "Charm": "Charm", "Secondary": "Sidearm", "Primary": "Primary"},
+	"issued_short": "Issued kit",                   # the Head's bring-home tile, short
+	"here": "Your record: taken %s", "here_once": "Your record: taken once", "here_never": "Your record: never taken",                # "Your record: taken 3 times"
 }

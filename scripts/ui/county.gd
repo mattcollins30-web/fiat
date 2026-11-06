@@ -1,16 +1,21 @@
 extends Control
-## The County on the Map (26 Oct, the drawn map on Matt's painting, art/map/county.png; docs/design/county_map_brief.md):
-## the painting at the left, as the first campaign's (512 x 424 drawn x2), its four zones traced (a first pass - Matt
-## plays and corrects), a pin a place in its odds' colour, a head's place a diamond; a shut zone dark and hatched, its
-## names scrambled; the picked place's zone lit. The picked place's card at the right: its own card picture (else its
-## host's), its name and line, its zone's head and the issued kit it wants, the level and the odds, and Go, or what
-## keeps it shut. Without the painting, the zones drawn flat.
+## The County on the Map (26 Oct, the drawn map on Matt's painting, art/map/county.png): its four zones traced, a pin a
+## place in its odds' colour, a head's place a diamond; a shut zone dark and hatched, its names scrambled; the picked
+## place's zone lit. Without the painting, the zones drawn flat.
 ##
-## Signals: `acted` after a run sets off.
+## BUILD61-U (6 Nov, docs/design/county_stages.md §6): the campaign's treatment. The picked place's card is the Map's site
+## card (missions.gd shows it in the right third, site_card.gd's show_county: the picture, the stage picker, "Head" on a
+## zone's last place, Set off and "Run it ×N"); the County's own card is gone. The pins say "· 2/3", the done colour at
+## 3/3, "· New" breathing (map_view.gd's marks, shared). The painting is drawn x2 from its top left, its size read from
+## the texture (today's 512 x 424 till Matt's 688 x 384 lands), the land panned and centred as the Map's. The places,
+## the zones' names and shapes come from data/county_places.tres (map_places.gd's schema, in the painting's pixels,
+## rescaled if the painting's size changes), this file's tables the fallback; F3/F5/F4 move and save them
+## (map_placement.gd, debug builds only), the hatch off and every name plain while placing.
+##
+## Signals: `picked(k)` a place picked (its card), `card_changed` the card on or off.
 
-signal acted
-signal to_issuer                       # the card's "The Issuer, at the Fence" (the third review, the canvas 'The County board')
-signal to_bench                        # its "Stamp your own, at the Bench"
+signal picked(k: String)
+signal card_changed
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -18,44 +23,37 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
+const Items := preload("res://scripts/sim/items.gd")
 const MapPan := preload("res://scripts/ui/map_pan.gd")
 const MapViewRef := preload("res://scripts/ui/map_view.gd")
-## The land at twice today's (BUILD51-U, item 2: the County as the Map - its own sheet, the same rules): the painting's
-## 512 x 424 drawn x4 nearest, the pins, names and key at today's size; panned in its frame, the card toggled.
-const LAND := 2.0
-const PAINT_SIZE := Vector2(1024, 848)   # the painting on today's sheet (drawn x2 from MAP_AT)
+const MapPlacement := preload("res://scripts/ui/map_placement.gd")
+
+const PX := 2.0                              # a painting's pixel on the screen, as the Map's (BUILD61-U)
+const OLD_PAINT := Vector2(512, 424)         # the tables below are in today's painting's pixels: rescaled to another's
+const PAINT_FALLBACK := Vector2(512, 424)    # the land's painting size with no painting (the flat drawing stands in)
 
 const COL_GAP := 16
 @warning_ignore("integer_division")
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3
 const MAP_W := 2 * COL_W + COL_GAP
-const PAD := 20
-const INNER := COL_W - 2 * PAD
-const ART_H := 220
-const LINE_H := 26
 const PIN_R := 12.0
 const PIN_R_SHUT := 7.0
 const HIT_R := 30.0
 const LABEL_W := 260.0
 const LABEL_H := 24.0
-const MAP_AT := Vector2(-3, -2)          # the painting drawn x2 from here, as the first map
 const PAINTING := "res://art/map/county.png"
 const LIT := Color(1.0, 0.86, 0.6, 0.08)
-const SLOT_ORDER := ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]
-const SLOT_WORDS := {"Helmet": "Helmet", "Armour": "Armour", "Rig": "Rig", "Charm": "Charm", "Secondary": "Sidearm", "Primary": "Gun"}
-const CHIP_H := 40.0
-const LINK_H := 46.0
 
-## The zones, in the painting's own 512 x 424 (26 Oct, a first pass off the painting), in Data.COUNTY_ZONES' order:
-## the Motorway along the top, the Docks down the right, the Big Houses the country west and south, the Treasury the town.
+## The fallback (data/county_places.tres rules), in today's painting's 512 x 424, in Data.COUNTY_ZONES' order: the
+## Motorway along the top, the Docks down the right, the Big Houses the country west and south, the Treasury the town.
 const ZONE_SHAPES := [
 	[Vector2(0, 0), Vector2(512, 0), Vector2(512, 92), Vector2(410, 92), Vector2(165, 100), Vector2(0, 92)],
 	[Vector2(410, 92), Vector2(512, 92), Vector2(512, 424), Vector2(330, 424), Vector2(345, 305), Vector2(360, 305), Vector2(400, 250)],
 	[Vector2(0, 92), Vector2(165, 100), Vector2(165, 305), Vector2(345, 305), Vector2(330, 424), Vector2(0, 424)],
 	[Vector2(165, 100), Vector2(410, 92), Vector2(400, 250), Vector2(360, 305), Vector2(165, 305)],
 ]
-const ZONE_NAME_AT := [Vector2(176, 6), Vector2(440, 396), Vector2(6, 104), Vector2(170, 240)]
-## A place's pin, in the painting's space, and where its name sits.
+const ZONE_NAME_AT := [Vector2(176, 6), Vector2(420, 396), Vector2(6, 104), Vector2(170, 240)]     # the Docks' in from the edge: the F3 tool grabs it (BUILD61-U)
+## A place's pin, in the painting's space, and where its name sits (the side stays here; the point is the file's).
 enum { BELOW, ABOVE, RIGHT, LEFT }
 const PLACE_AT := {
 	"toll_plaza": [Vector2(62, 42), BELOW], "distribution": [Vector2(264, 30), BELOW], "truck_stop": [Vector2(405, 32), BELOW],
@@ -69,14 +67,14 @@ var selected := ""
 var _map: Control
 var _pins: Control
 var _pin_labels := {}               # key -> Label
+var _pin_marks := {}                # key -> its "New" (BUILD61-U): a Label on its pin's label, amber, breathing
 var _zone_labels: Array = []        # a Label a zone
-var _card := {}                     # the picked place's card: panel, art, state, place, who, words, want, status, button, note
 var _shown := ""
-var _slots: Array = []              # the card's issued slots worn: [panel, label] a slot, ISSUED_FIRST's order
 var _key: Panel                     # the map's key strip, bottom left
 var _shut: Panel                    # a shut zone's card where it was clicked
 var _shut_lines: Array = []
 var _shut_zone := -1
+var pulse_t := 0.0                  # the "New" marks' breath (map_view.gd's)
 static var _painting = null
 static var _painting_read := false
 
@@ -84,7 +82,7 @@ static var _painting_read := false
 func _init(rect: Rect2) -> void:
 	position = rect.position
 	size = rect.size
-	mouse_filter = Control.MOUSE_FILTER_PASS
+	mouse_filter = Control.MOUSE_FILTER_IGNORE     # the card's column under it takes its own clicks (BUILD61-U)
 	_frame = Control.new()                   # the land's frame (BUILD51-U): the sheet's two columns, the width with the card off
 	_frame.size = Vector2(MAP_W, rect.size.y)
 	_frame.clip_contents = true
@@ -92,7 +90,7 @@ func _init(rect: Rect2) -> void:
 	add_child(_frame)
 	_map = Control.new()
 	_map.position = Vector2.ZERO
-	_map.size = Vector2(MAP_W, rect.size.y) * LAND
+	_map.size = land_size()                  # the painting's size x2 (BUILD61-U)
 	_map.mouse_filter = Control.MOUSE_FILTER_STOP
 	_map.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole
 	_map.draw.connect(_draw_map)
@@ -105,14 +103,18 @@ func _init(rect: Rect2) -> void:
 	_pins.draw.connect(_draw_pins)
 	_map.add_child(_pins)
 	for z in range(Data.COUNTY_ZONES.size()):
-		var at: Vector2 = _px(ZONE_NAME_AT[z])
-		var right: bool = at.x + 300.0 > _map.size.x          # the Docks' name against the map's right edge, set from it
-		var l := UI.label(_map, Rect2(Vector2(_map.size.x - 308.0 if right else at.x, at.y), Vector2(300, 30)), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, false)
+		var l := UI.label(_map, Rect2(0, 0, 300, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		UI.shadow(l)
 		_zone_labels.append(l)
-	for k in PLACE_AT:
-		_pin_labels[k] = _pin_label(_px(PLACE_AT[k][0]), int(PLACE_AT[k][1]))
-	_build_card()
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		var l := UI.label(_map, Rect2(0, 0, LABEL_W, LABEL_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		UI.shadow(l)
+		_pin_labels[k] = l
+		var mk := UI.label(l, Rect2(0, 0, 60, LABEL_H), Words.U55["new"], "SemiBold", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		UI.shadow(mk)
+		mk.visible = false
+		_pin_marks[k] = mk
 	_build_key()
 	for c in _map.get_children():
 		if c is CanvasItem:
@@ -124,6 +126,12 @@ func _init(rect: Rect2) -> void:
 	_shut_lines.append(UI.label(_shut, Rect2(16, 34, 398, 32), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for n in range(2):
 		_shut_lines.append(UI.label(_shut, Rect2(16, 70 + n * 24, 398, 24), "", "Regular", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_placer = MapPlacement.new()             # F3/F5 on the County (BUILD61-U): the Map's tool, on this land and this file
+	_placer.view = self
+	_placer.save_path = PLACES_FILE
+	_map.add_child(_placer)
+	relay()
+	set_process(false)
 
 
 ## The key strip (the canvas 'The County board', A): the pins' colours, shut and taken, bottom left of the map.
@@ -158,59 +166,8 @@ static func _tick(c: CanvasItem, at: Vector2, r: float) -> void:
 	c.draw_polyline(PackedVector2Array([at + Vector2(-0.45, 0.0) * r, at + Vector2(-0.1, 0.38) * r, at + Vector2(0.5, -0.38) * r]), Pal.BG, maxf(2.0, r * 0.28))
 
 
-func _build_card() -> void:
-	var x: float = MAP_W + COL_GAP
-	var panel := UI.panel(self, Rect2(x, 0, COL_W, size.y), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	panel.clip_contents = true
-	_card["panel"] = panel
-	var art := TextureRect.new()
-	art.position = Vector2(1, 1)
-	art.size = Vector2(COL_W - 2, ART_H)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(art)
-	_card["art"] = art
-	_card["state"] = UI.label(panel, Rect2(PAD, 14, INNER, 24), "", "SemiBold", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	UI.shadow(_card["state"])
-	_card["place"] = UI.label(panel, Rect2(PAD, ART_H - 52, INNER, 44), "", "SemiBold", Pal.HEADLINE - 6, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	UI.shadow(_card["place"])
-	var y := ART_H + 16.0
-	_card["who"] = UI.label(panel, Rect2(PAD, y, INNER, 32), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	y += 38
-	_card["words"] = []
-	for n in range(3):
-		_card["words"].append(UI.label(panel, Rect2(PAD, y + n * LINE_H, INNER, LINE_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	y += 3 * LINE_H + 14
-	_card["want"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	y += 34
-	_card["status"] = UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	y += 44
-	# the issued kit worn, slot by slot, then the two ways to meet the want (the canvas 'The County board', A)
-	_card["slots_head"] = UI.label(panel, Rect2(PAD, y, INNER, 22), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	y += 30
-	var cw: float = (INNER - 2 * 12.0) / 3.0
-	for k in range(SLOT_ORDER.size()):
-		@warning_ignore("integer_division")
-		var r := Rect2(PAD + (k % 3) * (cw + 12.0), y + (k / 3) * (CHIP_H + 8.0), cw, CHIP_H)
-		var cp := UI.panel(panel, r, UI.box(Pal.PANEL, 6, 2, Pal.CARD_LINE))
-		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var cl := UI.label(cp, Rect2(12, 0, cw - 16, CHIP_H), "", "SemiBold", Pal.CELL_TEXT + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_slots.append([cp, cl])
-	y += 2 * CHIP_H + 8 + 26
-	_card["to_issuer"] = UI.button(panel, Rect2(PAD, y, INNER, LINK_H), false)
-	_card["to_issuer"].pressed.connect(func(): to_issuer.emit())
-	y += LINK_H + 10
-	_card["to_bench"] = UI.button(panel, Rect2(PAD, y, INNER, LINK_H), false)
-	_card["to_bench"].pressed.connect(func(): to_bench.emit())
-	var fy: float = size.y - PAD - Pal.BUTTON_H
-	_card["button"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
-	_card["button"].pressed.connect(func(): _go(selected))
-	_card["note"] = UI.label(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
-
-
-func _pin_label(p: Vector2, side: int) -> Label:
+## A pin's name laid by its pin: below or above it hugging its own width, or to its right or left; inside the land.
+func _lay_label(l: Label, p: Vector2, side: int) -> void:
 	var r := Rect2(p.x - LABEL_W / 2.0, p.y + PIN_R + 6, LABEL_W, LABEL_H)
 	var align := HORIZONTAL_ALIGNMENT_CENTER
 	match side:
@@ -222,15 +179,19 @@ func _pin_label(p: Vector2, side: int) -> Label:
 		LEFT:
 			r = Rect2(p.x - PIN_R - 8 - LABEL_W, p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)
 			align = HORIZONTAL_ALIGNMENT_RIGHT
+	if side == BELOW or side == ABOVE:
+		var w: float = ceilf(UI.text_width(l, l.text)) + 4.0     # hugging the pin: the word's own width, centred
+		r.position.x = p.x - w / 2.0
+		r.size.x = w
 	r.position.x = clampf(r.position.x, 4.0, _map.size.x - 4.0 - r.size.x)
-	var l := UI.label(_map, r, "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, align, false)
-	UI.shadow(l)
-	return l
+	l.position = r.position
+	l.size = r.size
+	l.horizontal_alignment = align
 
 
-## The painting's point on the land: drawn x2 from MAP_AT on today's sheet, the land LAND times that (BUILD51-U).
+## A painting's point on the land: drawn x2 from the land's top left (BUILD61-U).
 static func _px(p: Vector2) -> Vector2:
-	return (MAP_AT + p * 2.0) * LAND
+	return p * PX
 
 
 static func painting() -> Texture2D:
@@ -245,8 +206,28 @@ static func painting() -> Texture2D:
 	return _painting
 
 
+## The painting's size in its own pixels, read from the texture (BUILD61-U: 512 x 424 today, Matt's 688 x 384 when it lands).
+static func paint_size() -> Vector2:
+	var pic := painting()
+	return pic.get_size() if pic != null else PAINT_FALLBACK
+
+
+## The land's size on the screen: the painting's x PX.
+static func land_size() -> Vector2:
+	return paint_size() * PX
+
+
 static func zone_of(k: String) -> int:
 	return int(Data.county(k).get("cz", -1))
+
+
+static func zone_key(z: int) -> String:
+	return Items.slug(str(Data.COUNTY_ZONES[z]["name"]))
+
+
+## The land the F3 tool lays its outlines on (map_placement.gd's _land).
+func land() -> Control:
+	return _map
 
 
 ## A pin's tone: the odds as read, grey while they're read, hollow when shut.
@@ -260,6 +241,11 @@ func _tone(k: String) -> Color:
 	return Pal.GOOD if o >= 0.9 else (Pal.WARN if o >= 0.6 else Pal.BAD)
 
 
+## A zone's names plain: open, or the F3 tool's on (every name plain while placing).
+func _known(z: int) -> bool:
+	return placing or sim.county_zone_open(z)
+
+
 func show_state(s) -> void:
 	sim = s
 	if sim == null:
@@ -269,39 +255,55 @@ func show_state(s) -> void:
 	var reads := ""
 	for c in Data.COUNTY:
 		reads += str(sim.order_odds_now(str(c["key"])))
-	var sig := "%s|%s|%s|%d|%d|%d|%s|%d" % [selected, str(sim.order_beaten), reads, sim.reach, sim.issued_worn(), int(sim.on_mission()), str(sim.can_deploy()), int(sim.issued)]
+	var sig := "%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%s|%s|%d" % [selected, str(sim.order_beaten), reads, sim.reach, sim.issued_worn(), int(sim.on_mission()), str(sim.can_deploy()), int(sim.issued),
+		str(sim.cs_done), str(sim.cs_new), str(sim.cs_pick), str(sim.county_heads), int(placing)]
 	if _shut_zone >= 0 and sim.county_zone_open(_shut_zone):
 		hide_shut()                              # its zone opened: the card's wrong now
 	if sig == _shown:
 		return
 	_shown = sig
 	for z in range(_zone_labels.size()):
-		var open: bool = sim.county_zone_open(z)
 		var nm: String = str(Data.COUNTY_ZONES[z]["name"])
-		UI.fit(_zone_labels[z], [nm if open else Fmt.scramble(nm)])
-		_zone_labels[z].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_3)
+		UI.fit(_zone_labels[z], [nm if _known(z) else Fmt.scramble(nm)])
+		_zone_labels[z].add_theme_color_override("font_color", Pal.TEXT if _known(z) else Pal.TEXT_3)
+	var any_new := false
 	for k in _pin_labels:
 		var l: Label = _pin_labels[k]
-		var known: bool = sim.county_zone_open(zone_of(k))
+		var known: bool = _known(zone_of(k))
 		var place: String = str(Data.county(k)["place"]).trim_prefix("The ")
-		UI.fit(l, [place if known else Fmt.scramble(place)])
-		l.add_theme_color_override("font_color", Pal.ACCENT if k == selected else (Pal.TEXT if known else Pal.TEXT_3))
-		_snug(l, k)
-	_show_card()
-	_card_lay()
+		var mark: String = pin_mark(k) if known and not placing else ""     # "· 2/3", "· New" (BUILD61-U); the F3 tool its name only
+		l.text = place if known else Fmt.scramble(place)
+		if mark != "":
+			l.text = Words.U55["pin"] % [l.text, mark]
+		var done: bool = mark != "" and sim.county_stage_done(k) >= Data.STAGES
+		l.add_theme_color_override("font_color", Pal.ACCENT if k == selected else (Pal.GOOD if done else (Pal.TEXT if known else Pal.TEXT_3)))     # 3/3: the done colour
+		_lay_label(l, pin_at(k), int(PLACE_AT[k][1]))
+		var on: bool = mark == Words.U55["new"]
+		MapViewRef.lay_mark(l, _pin_marks[k], on, pulse_t)
+		any_new = any_new or on
+	set_process(any_new)                     # ticking only while a "New" shows
 	_map.queue_redraw()
 	_pins.queue_redraw()
 
 
-## A name above or below its pin hugs it: its box the word's own width, centred on the pin, inside the map.
-func _snug(l: Label, k: String) -> void:
-	var side: int = int(PLACE_AT[k][1])
-	if side != BELOW and side != ABOVE:
-		return
-	var p: Vector2 = _px(PLACE_AT[k][0])
-	var w: float = ceilf(UI.text_width(l, l.text)) + 4.0
-	l.size.x = w
-	l.position.x = clampf(p.x - w / 2.0, 4.0, _map.size.x - 4.0 - w)
+## A pin's mark after its name (BUILD61-U, as the Map's): "New" while opened and unpicked, else the furthest stage
+## cleared; "" in a shut zone or none cleared.
+func pin_mark(k: String) -> String:
+	if not sim.county_zone_open(zone_of(k)):
+		return ""
+	return MapViewRef.mark_of(sim.county_site_new(k), sim.county_stage_done(k))
+
+
+func _ready() -> void:
+	set_process(_pin_marks.values().any(func(m): return m.visible))     # a defined _process ticks from here unless told
+
+
+func _process(delta: float) -> void:
+	pulse_t = fmod(pulse_t + delta, MapViewRef.NEW_PULSE_S)
+	var a: float = MapViewRef.pulse_alpha(pulse_t)
+	for k in _pin_marks:
+		if _pin_marks[k].visible:
+			_pin_marks[k].modulate.a = a
 
 
 ## The place the board opens on: the furthest open place, else the first.
@@ -313,125 +315,66 @@ func _default_place() -> String:
 	return out
 
 
-func _show_card() -> void:
-	var k: String = selected
-	var d: Dictionary = Data.county(k)
-	var z: int = int(d["cz"])
-	var zone_open: bool = sim.county_zone_open(z)
-	var open: bool = sim.order_open(k)
-	var en := func(t: String) -> String: return t if zone_open else Fmt.scramble(t)
-	var own: Texture2D = UI.place_texture(str(d["place"]))
-	_card["art"].texture = own if own != null else UI.place_texture(str(Data.TIERS[int(d["site"])]["name"]))
-	_card["art"].modulate = Color(0.8, 0.8, 0.8) if open else Color(0.35, 0.35, 0.37)
-	var beaten: int = int(sim.order_beaten.get(k, 0))
-	_card["state"].text = ("TAKEN" if beaten > 0 else ("OPEN" if open else "SHUT"))
-	UI.fit(_card["place"], [en.call(str(d["place"])), en.call(str(d["place"]).trim_prefix("The "))])
-	var zone: Dictionary = Data.COUNTY_ZONES[z]
-	var who: String = (Words.COUNTY["head"] % str(d["who"])) if d.has("who") else str(zone["name"])
-	UI.fit(_card["who"], [en.call(who)])
-	var line: String = str(Words.COUNTY_WORDS.get(k, ""))
-	if d.has("who"):
-		line = "%s %s %s" % [line, str(Words.COUNTY["mech"].get(str(d.get("mech", "")), "")), Words.COUNTY["drops_issued"] + "."]     # his fight, before Go (the third review)
-	UI.wrap(_card["words"], line if zone_open else "")
-	var want: int = sim.county_want(z)
-	var worn: int = sim.issued_worn()
-	UI.fit(_card["want"], [Words.COUNTY["want"] % [want, worn], Words.COUNTY["want_short"] % want])
-	_card["want"].add_theme_color_override("font_color", (Pal.GOOD if worn >= want else Pal.BAD) if zone_open else Pal.TEXT_3)
-	var bits: Array = [Words.COUNTY["level"] % sim.order_level(k)]
-	if beaten > 0:
-		bits.append(Words.COUNTY["beaten"] % beaten)
-	var tone := Pal.TEXT_2
-	if open:
-		var od: Array = sim.order_odds_now(k)
-		if bool(od[1]):
-			bits.append("%s to clear" % Fmt.pct(float(od[0])))
-			tone = Pal.tone_color("good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad"))
-		else:
-			bits.append(Words.COUNTY["odds_reading"])
-	UI.fit(_card["status"], [" · ".join(bits), " · ".join(bits.slice(0, 1))] if zone_open else [""])
-	_card["status"].add_theme_color_override("font_color", tone)
-	_card["slots_head"].visible = zone_open
-	UI.fit(_card["slots_head"], [Words.COUNTY["slots_head"] % [worn, want, str(zone["name"]).to_upper().trim_prefix("THE "), want], Words.COUNTY["slots_short"] % [worn, want]])
-	for n in range(SLOT_ORDER.size()):
-		var it = sim.equipped.get(SLOT_ORDER[n])
-		var on: bool = it != null and (it.get("issued", false) or it.get("stamped", false))
-		_slots[n][0].visible = zone_open
-		(_slots[n][0].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if on else Pal.CARD_LINE
-		UI.fit(_slots[n][1], ["%s %s" % ["✓" if on else "—", SLOT_WORDS[SLOT_ORDER[n]]]])
-		_slots[n][1].add_theme_color_override("font_color", Pal.TEXT if on else Pal.TEXT_3)
-	for b in ["to_issuer", "to_bench"]:
-		_card[b].visible = zone_open
-		UI.fit_button(_card[b], [Words.COUNTY[b], Words.COUNTY[b + "_short"]])
-		UI.style_button(_card[b], false, "")
-	var why: String = sim.order_block(k)
-	_card["button"].visible = open and why == ""
-	_card["note"].visible = not _card["button"].visible
-	UI.fit_button(_card["button"], ["Go: %s" % Words.mid(str(d["place"])), "Go"])
-	var want_line: bool = why == Words.COUNTY["want"] % [want, worn]
-	UI.fit(_card["note"], [Words.COUNTY["want_how"], "The Issuer, at the Fence"] if want_line else [why, ""])     # where it comes from, not the want twice (the third review)
-	(_card["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.ACCENT if open else Pal.CARD_LINE
-
-
 func _draw_map() -> void:
 	var pic := painting()
 	if pic != null:
-		_map.draw_texture_rect(pic, Rect2(MAP_AT * LAND, PAINT_SIZE * LAND), false)
+		_map.draw_texture_rect(pic, Rect2(Vector2.ZERO, paint_size() * PX), false)     # x2 from the land's top left (BUILD61-U)
 	else:
 		_map.draw_rect(Rect2(Vector2.ZERO, _map.size), Color("181b1f"))
-		for z in range(ZONE_SHAPES.size()):
-			var pts := _scaled(ZONE_SHAPES[z])
-			_map.draw_colored_polygon(pts, [Color("282b30"), Color("262c34"), Color("222c25"), Color("2d2a2c")][z])
+		for z in range(Data.COUNTY_ZONES.size()):
+			var pts := _scaled(zone_points(z))
+			_map.draw_colored_polygon(pts, [Color("282b30"), Color("262c34"), Color("222c25"), Color("2d2a2c")][z % 4])
 			pts.append(pts[0])
 			_map.draw_polyline(pts, Pal.CARD_LINE, 2.0)
 	if sim == null:
 		return
 	var lit: int = zone_of(selected)
-	if lit >= 0 and sim.county_zone_open(lit):
-		_map.draw_colored_polygon(_scaled(ZONE_SHAPES[lit]), LIT)
-	for z in range(ZONE_SHAPES.size()):
-		if not sim.county_zone_open(z):
-			_hatch(ZONE_SHAPES[z])
+	if lit >= 0 and sim.county_zone_open(lit) and not placing:
+		_map.draw_colored_polygon(_scaled(zone_points(lit)), LIT)
+	for z in range(Data.COUNTY_ZONES.size()):
+		if not _known(z):
+			_hatch(zone_points(z))               # the hatch off while placing (BUILD61-U): the painting plain under the tool
 
 
 func _draw_pins() -> void:
 	if sim == null:
 		return
-	for k in PLACE_AT:
-		var c: Vector2 = _px(PLACE_AT[k][0])
-		var known: bool = sim.county_zone_open(zone_of(k))
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		var at: Vector2 = pin_at(k)
+		var known: bool = _known(zone_of(k))
 		var r: float = PIN_R if known else PIN_R_SHUT
-		var head: bool = Data.county(k).has("who")
+		var head: bool = c.has("who")
 		if k == selected:
-			_pins.draw_circle(c, r + 9.0, Color(Pal.ACCENT, 0.25))
-			_pins.draw_circle(c, r + 5.0, Pal.ACCENT)
+			_pins.draw_circle(at, r + 9.0, Color(Pal.ACCENT, 0.25))
+			_pins.draw_circle(at, r + 5.0, Pal.ACCENT)
 		var col: Color = _tone(k) if sim.order_open(k) else Pal.BUTTON
-		if head:
+		if head:                                 # a head's place keeps its diamond
 			var d := r + 3.0
-			_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
-			_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), col)
+			_pins.draw_colored_polygon(PackedVector2Array([at + Vector2(0, -d - 3), at + Vector2(d + 3, 0), at + Vector2(0, d + 3), at + Vector2(-d - 3, 0)]), Pal.BG)
+			_pins.draw_colored_polygon(PackedVector2Array([at + Vector2(0, -d), at + Vector2(d, 0), at + Vector2(0, d), at + Vector2(-d, 0)]), col)
 		else:
-			_pins.draw_circle(c, r + 3.0, Pal.BG)
-			_pins.draw_circle(c, r, col)
+			_pins.draw_circle(at, r + 3.0, Pal.BG)
+			_pins.draw_circle(at, r, col)
 		if pin_state(k) == "taken":
-			_tick(_pins, c, r)                    # taken: a tick on its pin (the canvas 'The County board', A)
+			_tick(_pins, at, r)                  # taken: a tick on its pin (the canvas 'The County board', A)
 		if not sim.order_open(k):
-			_pins.draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if known else Color("5a6068"), 2.0)
+			_pins.draw_arc(at, r, 0.0, TAU, 24, Pal.TEXT_3 if known else Color("5a6068"), 2.0)
 
 
-func _scaled(pts: Array) -> PackedVector2Array:
+func _scaled(pts) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for p in pts:
 		out.append(_px(p))
 	return out
 
 
-## A shut zone, darkened and hatched, the strokes clipped to its shape.
-func _hatch(points: Array) -> void:
-	var poly := PackedVector2Array(points)
+## A shut zone, darkened and hatched, the strokes clipped to its shape (in the painting's pixels).
+func _hatch(points: PackedVector2Array) -> void:
 	_map.draw_colored_polygon(_scaled(points), Color(0, 0, 0, 0.5))
 	var lo := Vector2(INF, INF)
 	var hi := Vector2(-INF, -INF)
-	for p in poly:
+	for p in points:
 		lo = lo.min(p)
 		hi = hi.max(p)
 	var c := lo.x - (hi.y - lo.y)
@@ -442,7 +385,7 @@ func _hatch(points: Array) -> void:
 		var from := Vector2.ZERO
 		for n in range(41):
 			var p: Vector2 = a.lerp(b, n / 40.0)
-			var now: bool = Geometry2D.is_point_in_polygon(p, poly)
+			var now: bool = Geometry2D.is_point_in_polygon(p, points)
 			if now and not inside:
 				from = p
 			elif not now and inside:
@@ -466,8 +409,9 @@ func _map_input(ev: InputEvent) -> void:
 	_press_hit = false
 	var hit := ""
 	var best := HIT_R
-	for k in PLACE_AT:
-		var dist: float = (ev.position as Vector2).distance_to(_px(PLACE_AT[k][0]))
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		var dist: float = (ev.position as Vector2).distance_to(pin_at(k))
 		if dist <= best and sim.county_zone_open(zone_of(k)):
 			best = dist
 			hit = k
@@ -482,11 +426,11 @@ func _map_input(ev: InputEvent) -> void:
 		show_shut(z, ev.position)
 
 
-## The zone under a point of the map (its painting space), or -1.
+## The zone under a point of the land, or -1.
 func zone_at(at: Vector2) -> int:
-	var p: Vector2 = (at / LAND - MAP_AT) / 2.0
-	for z in range(ZONE_SHAPES.size()):
-		if Geometry2D.is_point_in_polygon(p, PackedVector2Array(ZONE_SHAPES[z])):
+	var p: Vector2 = at / PX
+	for z in range(Data.COUNTY_ZONES.size()):
+		if Geometry2D.is_point_in_polygon(p, zone_points(z)):
 			return z
 	return -1
 
@@ -503,7 +447,11 @@ func show_shut(z: int, at: Vector2) -> void:
 	var line: String = Words.COUNTY["shut_line"] % [Words.mid(place) if known else Fmt.scramble(place), Words.mid(who) if known else Fmt.scramble(who), sim.county_want(z)]
 	UI.fit(_shut_lines[1], [nm])
 	UI.wrap([_shut_lines[2], _shut_lines[3]], line)
-	_shut.position = Vector2(clampf(at.x - 40.0, 8.0, _map.size.x - _shut.size.x - 8.0), clampf(at.y - 20.0, 8.0, _map.size.y - _shut.size.y - 60.0))
+	# kept on the view, not just the land (BUILD61 merge: on Matt's wider painting a shut zone's pin can sit past the
+	# frame's edge, under the site card's column)
+	var v0: Vector2 = pan.offset().max(Vector2.ZERO) if pan != null else Vector2.ZERO
+	var v1: Vector2 = (pan.offset() + pan.view).min(_map.size) if pan != null else _map.size
+	_shut.position = Vector2(clampf(at.x - 40.0, v0.x + 8.0, maxf(v0.x + 8.0, v1.x - _shut.size.x - 8.0)), clampf(at.y - 20.0, v0.y + 8.0, maxf(v0.y + 8.0, v1.y - _shut.size.y - 60.0)))
 	_shut.visible = true
 	_shut_zone = z
 	_shut.move_to_front()
@@ -517,7 +465,6 @@ func hide_shut() -> void:
 	_cover_labels()
 
 
-
 ## The map's names under the shut card hidden while it's up (it sits over them), shown again after.
 func _cover_labels() -> void:
 	var r := Rect2(_shut.position, _shut.size)
@@ -525,47 +472,33 @@ func _cover_labels() -> void:
 		l.visible = not (_shut.visible and r.intersects(Rect2(l.position, l.size)))
 
 
-## A place picked: its card at the right (a place in a shut zone doesn't pick).
+## A place picked: its card at the right (missions.gd's site card; a place in a shut zone doesn't pick); its "New" goes.
 func select(k: String) -> void:
 	if sim == null or Data.county(k).is_empty() or not sim.county_zone_open(zone_of(k)):
 		return
 	selected = k
 	hide_shut()
-	card_on = true                             # a place picked: its card (BUILD51-U)
 	picked_by_hand = true
+	sim.mark_county_seen(k)                    # its pin's "New" goes once picked (BUILD61-U, as the Map's)
 	_shown = ""
+	card_on = true                             # a place picked: its card (BUILD51-U)
+	_card_lay()
 	show_state(sim)
-
-
-func _go(k: String) -> void:
-	if sim != null and sim.deploy_order(k):
-		_shown = ""
-		acted.emit()
-
-
-## For the tests: the card, shown for `k` (picked first).
-func card(k: String) -> Dictionary:
-	if k != selected:
-		select(k)
-	return _card
+	picked.emit(k)
 
 
 func pin_at(k: String) -> Vector2:
-	return _px(PLACE_AT[k][0])
+	return _px(place_of("sites", k))
 
 
-## A pin as drawn: "taken", "open", "known" (its zone open, the place not yet) or "shut".
+## A pin as drawn: "taken" (its 2/3 cleared, BUILD61-U: the stage that takes a place), "open", "known" (its zone open,
+## the place not yet) or "shut".
 func pin_state(k: String) -> String:
-	if int(sim.order_beaten.get(k, 0)) > 0:
+	if sim.county_stage_done(k) >= Data.STAGE_OPENS:
 		return "taken"
 	if sim.order_open(k):
 		return "open"
 	return "known" if sim.county_zone_open(zone_of(k)) else "shut"
-
-
-## For the tests: the card's slot chips' words, the shut card, the key.
-func slot_words() -> Array:
-	return _slots.filter(func(s): return s[0].visible).map(func(s): return s[1].text)
 
 
 func shut_card() -> Panel:
@@ -584,14 +517,6 @@ func text_nodes() -> Array:
 		out.append(_pin_labels[k])
 	var vr := Rect2(pan.offset(), pan.view)     # the names on the view (BUILD51-U): those panned off it, or cut, aren't the screen's
 	out = out.filter(func(l): return l.text == "" or vr.encloses(MapViewRef.word_rect(l)))
-	if _card["panel"].visible:
-		out.append_array([_card["state"], _card["place"], _card["who"], _card["want"], _card["status"]] + _card["words"])
-		out.append(_card["button"] if _card["button"].visible else _card["note"])
-		out.append(_card["slots_head"])
-		for sl in _slots:
-			out.append(sl[1])
-		if _card_x != null:
-			out.append(_card_x)
 	for c in _key.get_children():
 		if c is Label:
 			out.append(c)
@@ -607,28 +532,18 @@ var _frame: Control
 var card_on := true
 var picked_by_hand := false
 var _press_hit := false
-var _card_x: Button
-const CARD_X_W := 48
-const CARD_X_H := 34
 
 
-## The card on or off: off, the land takes the width.
+## The card on or off (missions.gd shows the site card while it's on): off, the land takes the width.
 func set_card(on: bool) -> void:
 	if card_on == on:
 		return
 	card_on = on
 	_card_lay()
+	card_changed.emit()
 
 
 func _card_lay() -> void:
-	if _card_x == null:
-		_card_x = UI.button(_card["panel"], Rect2(COL_W - CARD_X_W - 10, 10, CARD_X_W, CARD_X_H), false)
-		_card_x.text = "×"
-		_card_x.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 4)
-		_card_x.tooltip_text = Words.U51["county_close"]
-		_card_x.pressed.connect(set_card.bind(false))
-		_card["state"].size.x -= CARD_X_W + 6
-	_card["panel"].visible = card_on
 	var w: float = float(MAP_W) if card_on else size.x
 	if not is_equal_approx(_frame.size.x, w):
 		_frame.size.x = w
@@ -640,5 +555,154 @@ func open_view() -> void:
 	if sim == null:
 		return
 	_card_lay()
-	pan.centre_on(_px(PLACE_AT[selected][0]) if PLACE_AT.has(selected) else _map.size / 2.0)
+	pan.centre_on(pin_at(selected) if Data.county(selected).has("key") else _map.size / 2.0)
 
+
+# ------------------------------------------------------------------ the places from data (BUILD61-U, as the Map's BUILD52)
+
+const PLACES_FILE := "res://data/county_places.tres"
+static var places_file: String = PLACES_FILE     # the tests point it at a fixture
+static var _places = null                        # {kind: {key: point}} in this painting's pixels, read once
+
+
+## What the file holds, read once (again after use_places / forget_places): "sites" (a place's key) and "zone_names" (a
+## zone's key) -> point, "zones" -> PackedVector2Array, rescaled to this painting.
+static func places() -> Dictionary:
+	if _places == null:
+		_places = {}
+		if ResourceLoader.exists(places_file):
+			var r = ResourceLoader.load(places_file, "", ResourceLoader.CACHE_MODE_IGNORE)
+			if r != null and r.get("sites") is Dictionary:
+				use_places(r)
+	return _places
+
+
+## A map_places.gd's points taken as the County's from now on (F5's save, a fresh read).
+static func use_places(r) -> void:
+	_places = {}
+	var from: Vector2 = r.paint_size if r.paint_size.x > 0.0 and r.paint_size.y > 0.0 else paint_size()
+	var k: Vector2 = paint_size() / from
+	for kind in ["sites", "zone_names"]:
+		var d: Dictionary = {}
+		var src: Dictionary = r.get(kind)
+		for key in src:
+			if src[key] is Vector2:
+				d[str(key)] = src[key] * k
+		_places[kind] = d
+	var zs: Dictionary = {}
+	for key in r.zones:
+		var pts := PackedVector2Array()
+		for p in PackedVector2Array(r.zones[key]):
+			pts.append(p * k)
+		if pts.size() >= 3:
+			zs[str(key)] = pts
+	_places["zones"] = zs
+
+
+static func forget_places() -> void:
+	_places = null
+
+
+## A place's point in the painting's pixels, from the file, else the tables rescaled from today's painting.
+static func placed(kind: String, key: String) -> Vector2:
+	var d: Dictionary = places().get(kind, {})
+	if d.has(key):
+		return d[key]
+	var k: Vector2 = paint_size() / OLD_PAINT
+	match kind:
+		"sites":
+			if PLACE_AT.has(key):
+				return PLACE_AT[key][0] * k
+		"zone_names":
+			for z in range(Data.COUNTY_ZONES.size()):
+				if zone_key(z) == key:
+					return ZONE_NAME_AT[z] * k
+	return Vector2.ZERO
+
+
+## A zone's shape in the painting's pixels: the file's, else the table's rescaled.
+static func zone_points(z: int) -> PackedVector2Array:
+	var d: Dictionary = places().get("zones", {})
+	if d.has(zone_key(z)):
+		return d[zone_key(z)]
+	var out := PackedVector2Array()
+	for p in ZONE_SHAPES[z]:
+		out.append(p * (paint_size() / OLD_PAINT))
+	return out
+
+
+## A place's point as it is now: the F3 tool's while placing, else placed().
+func place_of(kind: String, key: String) -> Vector2:
+	if placing and _edit.has(kind) and _edit[kind].has(key):
+		return _edit[kind][key]
+	return placed(kind, key)
+
+
+## Every place the F3 tool moves: [kind, key, its name on the tool] - the twelve places and the four zones' names.
+func all_places() -> Array:
+	var out: Array = []
+	for c in Data.COUNTY:
+		out.append(["sites", str(c["key"]), str(c["place"])])
+	for z in range(Data.COUNTY_ZONES.size()):
+		out.append(["zone_names", zone_key(z), str(Data.COUNTY_ZONES[z]["name"])])
+	return out
+
+
+# ------------------------------------------------------------------ the placement tool (F3, debug builds; BUILD61-U)
+
+var placing := false
+var top_clear := Callable()             # nothing laid over the County's land: the tool's line at the view's top
+var _edit: Dictionary = {}
+var _placer: Control                    # map_placement.gd
+
+
+## Whether F3 can start here: a debug build, the County up, a game on it.
+func can_place() -> bool:
+	return _placer != null and _placer.in_debug and on_screen() and sim != null
+
+
+func on_screen() -> bool:
+	var n: Node = self
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return false
+		n = n.get_parent()
+	return true
+
+
+## F3 on or off: every place's point copied to move, the names plain and the hatch off while it's on.
+func set_placing(on: bool) -> void:
+	placing = on
+	_edit = {}
+	if on:
+		hide_shut()
+		for e in all_places():
+			if not _edit.has(e[0]):
+				_edit[e[0]] = {}
+			_edit[e[0]][e[1]] = placed(e[0], e[1])
+	relay()
+	if sim != null:
+		_shown = ""
+		show_state(sim)
+
+
+func set_place(kind: String, key: String, p: Vector2) -> void:
+	if not (placing and _edit.has(kind)):
+		return
+	_edit[kind][key] = p.clamp(Vector2.ZERO, paint_size())
+	relay()
+
+
+## Every name back on its pin and the zones' names on their points, the pins redrawn.
+func relay() -> void:
+	for k in _pin_labels:
+		_lay_label(_pin_labels[k], pin_at(k), int(PLACE_AT[k][1]))
+	for z in range(_zone_labels.size()):
+		var at: Vector2 = _px(place_of("zone_names", zone_key(z)))
+		var right: bool = at.x + 300.0 > _map.size.x          # a name against the land's right edge, set from it
+		_zone_labels[z].position = Vector2(_map.size.x - 308.0 if right else at.x, at.y)
+		_zone_labels[z].horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
+	_map.queue_redraw()
+	_pins.queue_redraw()
+	if _placer != null:
+		_placer.queue_redraw()

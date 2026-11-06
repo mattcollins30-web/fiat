@@ -619,6 +619,11 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 	# without asking (BUILD45: each ask re-keys the runner, ~2 ms a County place a frame on a late save)
 	if room == MISSIONS and _missions.county_on:
 		sim.odds_step = true
+		var chz: int = _missions.county_head_zone()
+		if chz >= 0 and not bool(sim.county_head_odds_now(chz)[1]):
+			sim.county_head_fight_odds(chz)       # the Head picked on a County card (BUILD61-U): his fight's read first
+			if not bool(sim.county_head_odds_now(chz)[1]):
+				done = false
 		for c in Data.COUNTY:                     # the County's open places (25 Oct), each read to its count in turn
 			var ck: String = "order/" + str(c["key"])
 			if _odds_part.get(ck, []) == base:
@@ -632,6 +637,12 @@ func _read_odds(budget_ms := ODDS_MS) -> void:
 					done = false
 					continue
 			_odds_part[ck] = base
+		# hurt, the picked place's repeat gate reads the runner whole (BUILD61 review 3), as a site's: after the place's own
+		var cpk: String = _missions._county.selected
+		if chz < 0 and sim.is_county(cpk) and sim.order_open(cpk) and sim.hp < sim.max_hp() - 0.01 and sim.county_stage_done(cpk) >= sim.county_stage_pick(cpk):
+			if not sim._odds_time_up():
+				sim.county_repeat_read(cpk)
+			done = false                          # hurt: read each frame as a site's (the HP moves as the runner rests)
 		sim.odds_step = false
 		_odds_settle(what, done, sig)
 		return
@@ -730,7 +741,9 @@ func _odds_base() -> Array:
 		# what the odds key reads past the above (BUILD48 A, parked item 9: the Map's odds stopped reading): HP either side of
 		# half (the damage's memo reads it: resting across half moved the key and left the base, so a read the key threw away
 		# was never asked again), the rounds' plans and Kev's wagers (the key's per site)
-		sim.hp < sim.max_hp() * 0.5, hash(sim.rounds_plans), hash(sim.wagers)]
+		sim.hp < sim.max_hp() * 0.5, hash(sim.rounds_plans), hash(sim.wagers),
+		# the County's stages (BUILD61 review 2): a stage picked moves its place's key, cleared moves what opens, a head's fall the next zone
+		hash(sim.cs_pick), hash(sim.cs_done), hash(sim.county_heads)]
 
 
 ## A screen's whole read: the base, and what it picks - the Radio's signal as it stands and the crew, the Map's pin.
@@ -742,6 +755,8 @@ func _odds_sig(what: String, base: Array) -> Array:
 		# see can't leave its pin "Reading the odds"
 		var sel: int = _missions.selected
 		return [base, sel, _missions.order_key, hash(sim._odds_key(sel)) if sel >= 0 and sel < Data.TIERS.size() else 0, _missions.head_zone()]     # the Head picked reads his fight (FIX55)
+	if what == "county":
+		return [base, _missions.county_head_zone()]     # the Head picked on a County card reads his fight (BUILD61-U)
 	return [base]
 
 
@@ -1628,7 +1643,7 @@ static func top_hp_forms(h: float, top: float, guard_v: float) -> Array:
 static func away_site(s) -> String:
 	if s.unwatched():
 		return str(s.mission["t"].get("name", s.tier(s.mission["tier"])["name"]))
-	return str(s.tier(int(s.repeat["site"]))["name"])
+	return Sim.repeat_place_name(s.repeat) if str(s.repeat.get("county", "")) != "" else str(s.tier(int(s.repeat["site"]))["name"])     # (BUILD61 review) a County place's own name
 
 
 func _xp_words() -> String:

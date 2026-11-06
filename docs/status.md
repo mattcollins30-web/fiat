@@ -4,7 +4,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (5 Nov, night):** 0.14.0 for a fresh save (SAVE_VERSION 26), not yet played - stages per site
+- **Now (6 Nov, evening):** 0.14.1, not yet played - the County gets the campaign's stages (status below, 6 Nov
+  evening): its places 1/3-3/3, its heads' own fights, its themed finds and 24 new bases, the site card on the County,
+  Matt's painting as its map (places seeded by eye: F3 to move). Next: Matt plays it and fixes the places with F3; then
+  the County's art by art.flag (~$7), then the 24 borrows off.
+- **Before (5 Nov, night):** 0.14.0 for a fresh save (SAVE_VERSION 26) - stages per site
   (docs/design/stages.md and its "As built"): every campaign site 1/3, 2/3, 3/3 (a stage x1.22; 2/3 opens the next
   site, 3/3 the grind), the site card's picker (Matt's A) with "Head" on a zone's last site (his own fight, his gang
   then him, on his den), the Map's pins "· 2/3" / "· 3/3" / "· New", 60% of finds from a site's themed list and 24 new
@@ -6517,6 +6521,29 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 6 Nov (evening): 0.14.1 - the County gets the campaign's stages
+
+Matt: "We also need the same treatments for the county - stages, art, gear spread, full size map, UI changes from
+campaign", then "your picks" on the spec's six open calls, then "county map attached" (his 688 x 384 painting). Built
+as docs/design/county_stages.md says, three builders and a merge:
+- Stages: every County place 1/3, 2/3, 3/3 (x1.22 a stage on its own row's man; levels 40-77); 2/3 opens the next
+  place, a zone's last 2/3 opens its head's own fight (his gang then him), his fall the next zone; 3/3 for the grind.
+  Each stage wants the zone's issued kit worn. "Run it ×N" and Kev's wagers on a stage and on a head; the bot walks it.
+  Saves from 0.14.0 load: a place won counts as its 2/3, a head won as one fall (no SAVE_VERSION bump).
+- Finds: 60% of a stage's plain gear from the place's own list (Data.COUNTY_THEMES); on a 3/3 a quarter from its T9
+  (a tier up can't pass T9). 24 new bases at T8/T9 (borrowed pictures till their art).
+- The UI: a County place on the campaign's site card (the picker, Set off, the Head, the issued kit's six slots lit),
+  the pins' "· 2/3" / "· New", stage plates on the place's wall. Matt's painting is art/map/county.png; its places,
+  zones and names seeded by eye in data/county_places.tres - F3 on the County to move them, F5 to save.
+- The review's fixes: the card read its odds while the place was laid on (always "Reading the odds", his gang ×1); a
+  stage picked never re-read; hurt, a County repeat's read never ran; a County repeat disarmed its host site's head and
+  wore the host's name. A check each, proved red.
+- The language pass (two reviewers, the editor's call): Bullion carbine, Crane driver's hat, Ferry lifejacket,
+  Clerk's mitts (were Vault guard's carbine, Port hard hat, Crew lifejacket, Sleeve guards: near-twins, a faction's
+  word, a slot that read as arm armour); "Primary" on the want's slot (not "Gun": the Lashing bar is a primary);
+  "%d of %d worn"; "· The County"; "Your record: never taken" / "taken once"; four lore lines put right.
+Art next by art.flag once Matt has seen the build: 24 stage plates, 4 dens, 24 icons, 4 hands (~$7).
 
 ## 6 Nov (afternoon): the County's treatment specced (docs/design/county_stages.md)
 

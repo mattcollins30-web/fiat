@@ -1,0 +1,89 @@
+{
+ "_readme": [
+  "FIAT HANDS, THE COUNTY (6 Nov; docs/design/county_stages.md §5): the fight's hands for the County's 4 new weapons, 280x210 at $0.08 each (about $0.32).",
+  "The 6 Nov reroll's template: no style_image, the weapon in words, big_revolver.png the reference. Straight to art/fight/hands/<slug>.png; they show once the ART_AS entries for these bases come off (the wiring step).",
+  "Regenerate with python3 tools/make_hands_county_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight/hands/lashing_bar.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 644000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single long heavy steel lashing bar, a thick straight grey rod with a hooked forked end, held forward low in both hands like a battering pole, the right hand near the back end and the left hand further along the bar - a plain steel bar, not a crowbar, not a spear, not a gun, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the hands, strongly foreshortened: the bar's forked end points away into the scene towards the middle of the frame and its handle end comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint and framing as the reference image of the revolver. One bar only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Lashing bar (primary; falls back to hands_melee) - the County's new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/sidelock_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 644001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single side-by-side double-barrelled shotgun with a walnut stock and two long blued barrels side by side, shouldered, one hand at the stock's wrist and one under the barrels - two barrels side by side, not one over the other, no magazine, no pump, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Sidelock shotgun (primary; falls back to hands_shotgun) - the County's new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/bullion_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 644002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single short black and grey carbine with a folding stock unfolded, a short barrel and a straight magazine, shouldered, one hand at the pistol grip and one under the handguard - a short carbine, not a long rifle, no scope, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bullion carbine (primary; falls back to hands_rifle) - the County's new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/loading_hook.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 644003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single docker's cargo hook: a curved pointed steel hook coming out between the fingers of a wooden T-shaped cross handle, the handle gripped in the right fist with the hook curving forward, the left hand empty and held forward - a hook, not a knife, not a sickle, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the right hand, strongly foreshortened: the hook's point reaches away into the scene towards the middle of the frame and the handle comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint and framing as the reference image of the revolver. One hook only, and exactly two hands: the right hand holding it, the left hand empty and held forward. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Loading hook (secondary; falls back to hands_melee) - the County's new weapon, the 6 Nov reroll's template"
+  }
+ ]
+}

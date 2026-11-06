@@ -922,6 +922,19 @@ func _init() -> void:
 	_f55_words_checks(main)                   # FIX55: the tidy and the language pass
 	_f55_head_rule_checks()                   # FIX55b: each head on his site's 1/3 man, his gang on the 2/3's
 	_a57_stage_wall_checks(main)              # BUILD57 (6 Nov): a stage's own plate on the site's wall, the site's slots
+	_a61_figures_checks(main)                 # BUILD61-A (6 Nov): the County's own rows, x1.22 a stage, the heads
+	_a61_stages_checks(main)                  # BUILD61-A: the County's stages - 2/3 opens the next or the head, the want, the remix apart
+	_a61_repeat_wager_save_checks(main)       # BUILD61-A: "Run it ×N", Kev's wagers, the save, 0.14.1
+	_a61_bot_checks(main)                     # BUILD61-A: the bot's County path
+	_u61_card_checks(main)                    # BUILD61-U (6 Nov): a County place on the site card - the picker, Set off, the Head, the want
+	_u61_pin_checks(main)                     # BUILD61-U: the County's pins' "· 2/3", 3/3 and "· New"
+	_u61_map_checks(main)                     # BUILD61-U: the County's painting x2 from the texture, its places from data/county_places.tres
+	_u61_tool_checks(main)                    # BUILD61-U: the F3/F5 tool on the County
+	_u61_backdrop_checks(main)                # BUILD61-U: a County stage's plate on the place's wall, the head's den
+	_c61_theme_checks()                       # BUILD61-C (6 Nov): the County's lists - 60% of a stage's plain gear, the head's fight on his place's
+	_c61_top_checks()                         # BUILD61-C: a County 3/3's quarter from its T9 alone; signals' finds as before
+	_c61_bases_checks()                       # BUILD61-C: the County's 24 new bases roll, wear, sit by their neighbours, borrow a picture
+	_m61_review_checks(main)                  # BUILD61 merge review: the County card's odds read, a stage's pick re-reads, the hurt repeat, a County repeat's name and host
 	_finish()
 
 
@@ -28079,6 +28092,10 @@ func _county_checks(main) -> void:
 		_check(Words.COUNTY_WORDS.has(str(c["key"])) and int(c["site"]) < Data.TIERS.size(), "%s has no line or no host" % c["place"])
 	sim.issued = false
 	sim.order_beaten = {}
+	sim.cs_done = {}                              # (BUILD61-A) the County's stages and heads, fresh
+	sim.cs_pick = {}
+	sim.cs_new = {}
+	sim.county_heads = {}
 	_check(not sim.county_zone_open(0) and sim.order_block("toll_plaza") == Words.COUNTY["not_yet"], "the County open before the Issue")
 	sim.issue()
 	sim.reach = 30
@@ -28149,7 +28166,15 @@ func _county_checks(main) -> void:
 	_check(not main._missions._came.visible, "what came back sits over the County's board")
 	main._missions._came_open = false
 	main.refresh()
-	_check(cb.card("toll_plaza")["button"].visible and not cb.card("distribution")["button"].visible and cb.card("distribution")["note"].text.begins_with("Take"), "the County's cards: the Toll Plaza's Go %s, the next's note '%s'" % [cb.card("toll_plaza")["button"].visible, cb.card("distribution")["note"].text])
+	# (BUILD61-U: the County's own card went for the site card, missions.gd's column - Set off and its note)
+	var ccol: Dictionary = main._missions._cols[0]
+	cb.select("distribution")
+	main.refresh()
+	var dist_note: String = ccol["note"].text
+	var dist_go: bool = ccol["deploy"].visible
+	cb.select("toll_plaza")
+	main.refresh()
+	_check(ccol["deploy"].visible and not ccol["deploy"].disabled and not dist_go and dist_note.begins_with("After"), "the County's cards: the Toll Plaza's Set off %s, the next's note '%s'" % [ccol["deploy"].visible, dist_note])
 	for n in cb.text_nodes():
 		if n is Label:
 			_check(UI.text_width(n, n.text) <= n.size.x + 0.5, "the County's words run off: '%s'" % n.text)
@@ -28161,10 +28186,10 @@ func _county_checks(main) -> void:
 			_check(zl.text != str(Data.COUNTY_ZONES[z]["name"]), "a shut zone's name isn't scrambled: '%s'" % zl.text)
 			for k in sim.county_places(z):
 				_check(not str(cb._pin_labels[str(k)].text).contains(str(Data.county(str(k))["place"]).trim_prefix("The ")), "a shut zone's place reads plain: '%s'" % cb._pin_labels[str(k)].text)
-	var sw: Array = cb.slot_words()
-	_check(sw.size() == 6 and sw.filter(func(w): return str(w).begins_with("✓")).size() == mini(6, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])
+	var sw: Array = ccol["card"].want_words()     # the card's issued slots (BUILD61-U: the site card's what-it-takes rows)
+	_check(sw.size() == 6 and ccol["card"].want_lit().filter(func(w): return w).size() == mini(6, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])     # lit by their edge (BUILD61-U)
 	for c in Data.COUNTY:
-		_check((cb.pin_state(str(c["key"])) == "taken") == (int(sim.order_beaten.get(str(c["key"]), 0)) > 0), "%s's pin reads %s" % [c["place"], cb.pin_state(str(c["key"]))])
+		_check((cb.pin_state(str(c["key"])) == "taken") == (sim.county_stage_done(str(c["key"])) >= Data.STAGE_OPENS), "%s's pin reads %s" % [c["place"], cb.pin_state(str(c["key"]))])     # taken at its 2/3 (BUILD61-U)
 	var kp: Panel = cb.key_strip()
 	_check(kp.position.x >= 0.0 and kp.position.y >= 0.0 and kp.position.x + kp.size.x <= cb._frame.size.x and kp.position.y + kp.size.y <= cb._frame.size.y and kp.get_parent() == cb._frame, "the County's key runs off the map: %s" % str(Rect2(kp.position, kp.size)))     # on the view, not the land (BUILD51-U)
 	var shut_z := -1
@@ -28173,9 +28198,10 @@ func _county_checks(main) -> void:
 			shut_z = z
 	if shut_z >= 0:
 		var cen := Vector2.ZERO
-		for v in CountyRef.ZONE_SHAPES[shut_z]:
+		var shut_pts: PackedVector2Array = CountyRef.zone_points(shut_z)     # the file's shape (BUILD61-U)
+		for v in shut_pts:
 			cen += v
-		cen /= float(CountyRef.ZONE_SHAPES[shut_z].size())
+		cen /= float(shut_pts.size())
 		var clk := InputEventMouseButton.new()
 		clk.button_index = MOUSE_BUTTON_LEFT
 		clk.pressed = true
@@ -28197,15 +28223,22 @@ func _county_checks(main) -> void:
 		_check(not cb.shut_card().visible and hidden_names.is_empty(), "the shut card outlived the board: card %s, %d names hidden" % [cb.shut_card().visible, hidden_names.size()])
 		main._missions.set_county(true)
 		main.refresh()
-	cb.card("toll_plaza")["to_issuer"].pressed.emit()
-	_check(main.room == main.MARKET and main._fence._issuer != null and main._fence._issuer.visible, "the County card's Issuer link didn't open his counter")
-	main.show_room(main.MISSIONS)
-	main._missions.set_county(true)
+	# the third review: the head's fight said before Go (BUILD61-U: on the Head's picture, his gate's 2/3 cleared); where
+	# issued kit comes from, not the want twice; the came-back button on the board isn't dead
+	var cs_hold: Dictionary = sim.cs_done.duplicate()
+	var ob_hold: Dictionary = sim.order_beaten.duplicate()
+	sim.cs_done["distribution"] = 2
+	sim.order_beaten["distribution"] = 1      # the Truck Stop open (the old rule's win and A's 2/3)
+	sim.cs_done["truck_stop"] = 2
+	cb.select("truck_stop")
 	main.refresh()
-	# the third review: the head's fight said before Go; where issued kit comes from, not the want twice; the came-back
-	# button on the board isn't dead
-	var ts_words: String = " ".join(cb.card("truck_stop")["words"].map(func(l): return l.text))
-	_check(ts_words.replace("  ", " ").contains("seizes your best piece"), "the Truck Stop's card doesn't say the Bailiff's fight: '%s'" % ts_words)
+	ccol["card"]._seg_pressed(Data.STAGES)
+	main.refresh()
+	var ts_words: String = ccol["card"].foot.text
+	_check(ts_words.contains("seizes your best piece"), "the Truck Stop's Head doesn't say the Bailiff's fight: '%s'" % ts_words)
+	sim.cs_done = cs_hold
+	sim.order_beaten = ob_hold
+	ccol["card"].head_view = false
 	var off_kit: Dictionary = {}
 	for sl in Data.SLOTS:
 		var w = sim.equipped.get(sl)
@@ -28213,9 +28246,15 @@ func _county_checks(main) -> void:
 			off_kit[sl] = w
 			sim.equipped[sl] = null
 	cb._shown = ""
+	cb.select("toll_plaza")
 	main.refresh()
-	var tp: Dictionary = cb.card("toll_plaza")
-	_check(not off_kit.is_empty() and tp["note"].visible and tp["note"].text != tp["want"].text and tp["note"].text.contains("Issuer"), "the Toll Plaza short of issued kit: note '%s', want '%s'" % [tp["note"].text, tp["want"].text])
+	var tchips: Array = ccol["card"].chips.filter(func(b): return b.visible).map(func(b): return b.text)     # the Issuer and the Bench as its fix chips (BUILD61-U)
+	_check(not off_kit.is_empty() and ccol["deploy"].disabled and tchips.size() >= 2 and str(tchips[0]).begins_with("The Issuer") and str(tchips[1]).begins_with("Stamp your own"), "the Toll Plaza short of issued kit: Set off shut %s, chips %s" % [ccol["deploy"].disabled, str(tchips)])
+	ccol["card"].chips[0].pressed.emit()
+	_check(main.room == main.MARKET and main._fence._issuer != null and main._fence._issuer.visible, "the County card's Issuer chip didn't open his counter")
+	main.show_room(main.MISSIONS)
+	main._missions.set_county(true)
+	main.refresh()
 	for sl in off_kit:
 		sim.equipped[sl] = off_kit[sl]
 	cb._shown = ""
@@ -28229,14 +28268,15 @@ func _county_checks(main) -> void:
 	# the drawn County (26 Oct, Matt's painting): every pin inside its own zone and clear of its edge, the pins far
 	# enough apart to click, a click on a pin picks it
 	var CM = load("res://scripts/ui/county.gd")
+	var cps: Vector2 = CM.paint_size()     # the places from data/county_places.tres, on the painting's own size (BUILD61-U)
 	for c in Data.COUNTY:
-		var at: Vector2 = CM.PLACE_AT[str(c["key"])][0]
-		var shape := PackedVector2Array(CM.ZONE_SHAPES[int(c["cz"])])
+		var at: Vector2 = CM.placed("sites", str(c["key"]))
+		var shape: PackedVector2Array = CM.zone_points(int(c["cz"]))
 		var clear := INF
 		for n in range(shape.size()):
 			var a: Vector2 = shape[n]
 			var b: Vector2 = shape[(n + 1) % shape.size()]
-			if (a.x == 0 and b.x == 0) or (a.x == 512 and b.x == 512) or (a.y == 0 and b.y == 0) or (a.y == 424 and b.y == 424):
+			if (a.x == 0 and b.x == 0) or (is_equal_approx(a.x, cps.x) and is_equal_approx(b.x, cps.x)) or (a.y == 0 and b.y == 0) or (is_equal_approx(a.y, cps.y) and is_equal_approx(b.y, cps.y)):
 				continue                         # the painting's own edge isn't a zone's
 			clear = minf(clear, at.distance_to(Geometry2D.get_closest_point_to_segment(at, a, b)))
 		_check(Geometry2D.is_point_in_polygon(at, shape) and clear >= 12.0, "%s's pin isn't inside its zone, 12 px clear: %.0f" % [c["place"], clear])
@@ -28256,24 +28296,28 @@ func _county_checks(main) -> void:
 	cb._map_input(ev)
 	_check(cb.selected == "distribution", "a pin in a shut zone picked")
 	_check_fit(main, "the County")
-	# a place run: its host's crew, no head; won, the next opens
+	# a place run: its host's crew, no head; (BUILD61-A) its 1/3 won opens its 2/3, its 2/3 won the next place
 	sim.hp = sim.max_hp()
 	sim.wounds = {}
 	var e: Dictionary = sim.order_read("toll_plaza")
 	_check(not e.has("boss") and e["name"] == "The Toll Plaza" and bool(e.get("county", false)), "the Toll Plaza reads %s" % str(e.get("boss", {})))
-	_check(sim.deploy_order("toll_plaza") and sim.mission != null and not sim.mission.has("boss"), "the Toll Plaza would not set off: %s" % sim.order_block("toll_plaza"))
-	if sim.mission != null:
-		var mm: Dictionary = sim.mission
-		mm["remaining"] = 0
-		mm["cleared"] = true
-		sim.extract_now()
-		_check(int(sim.order_beaten.get("toll_plaza", 0)) == 1 and sim.order_open("distribution") and sim._sig.is_empty(), "the Toll Plaza's win didn't open the Distribution Centre")
-	# the head's place: his fight, issued kit off him, the next zone
-	sim.order_beaten["distribution"] = 1
+	for st_tp in [1, 2]:
+		sim.hp = sim.max_hp()
+		_check(sim.deploy_county("toll_plaza", st_tp) and sim.mission != null and not sim.mission.has("boss"), "the Toll Plaza %d/3 would not set off: %s" % [st_tp, sim.county_stage_block("toll_plaza", st_tp)])
+		if sim.mission != null:
+			var mm: Dictionary = sim.mission
+			mm["remaining"] = 0
+			mm["cleared"] = true
+			sim.extract_now()
+			_check(int(sim.order_beaten.get("toll_plaza", 0)) == st_tp and sim.county_stage_done("toll_plaza") == st_tp and sim.order_open("distribution") == (st_tp == 2) and sim._sig.is_empty(), "the Toll Plaza's %d/3 win: done %d, the Distribution Centre open %s" % [st_tp, sim.county_stage_done("toll_plaza"), sim.order_open("distribution")])
+	# the head's place: (BUILD61-A) his own fight after its 2/3, issued kit off him, the next zone
+	sim.cs_done["distribution"] = 2
+	sim.cs_done["truck_stop"] = 2
 	sim.hp = sim.max_hp()
-	var eh: Dictionary = sim.order_read("truck_stop")
+	_check(not sim.order_read("truck_stop").has("boss"), "the Truck Stop's stage run still fields the Bailiff (BUILD61-A: his own fight)")
+	var eh: Dictionary = sim.county_head_fight_preview(0)
 	_check(eh.has("boss") and str(eh["boss"]["name"]) == "The Bailiff" and str(eh["boss"].get("mech", "")) == "bailiff", "the Truck Stop's head reads %s" % str(eh.get("boss", {})))
-	_check(sim.deploy_order("truck_stop") and sim.mission != null and sim.mission.has("boss"), "the Truck Stop would not set off: %s" % sim.order_block("truck_stop"))
+	_check(sim.start_county_head(0) and sim.mission != null and sim.mission.has("boss"), "the Bailiff's fight would not set off: %s" % sim.county_head_fight_block(0))
 	if sim.mission != null:
 		main.refresh()
 		var outs: Array = sim.events.filter(func(line): return str(line[1]).begins_with("Out to"))
@@ -28291,9 +28335,9 @@ func _county_checks(main) -> void:
 		_check(sim.county_zone_open(1) and sim.order_open("container_port") and sim.order_block("container_port") == Words.COUNTY["want"] % [3, 2], "the Bailiff's fall didn't open the Docks, wanting three: '%s'" % sim.order_block("container_port"))
 	# the head's issued kit comes home on a death after him, as a mythic does (the third review: it was in the pack)
 	var hold_k: Dictionary = sim.to_dict()
-	sim.order_beaten["truck_stop"] = 0
+	sim.county_heads = {}
 	sim.hp = sim.max_hp()
-	if sim.deploy_order("truck_stop"):
+	if sim.start_county_head(0):
 		var md: Dictionary = sim.mission
 		md["remaining"] = 0
 		md["cleared"] = true
@@ -28303,9 +28347,9 @@ func _county_checks(main) -> void:
 		_check(sim.stash.filter(func(x): return x.get("issued", false)).size() >= n_iss + Data.COUNTY_HEAD_ISSUED, "the Bailiff's issued kit was lost on a death after him")
 	sim.load_dict(hold_k)
 	# a County run saved mid-fight and loaded finishes as the County's (the review)
-	sim.order_beaten["truck_stop"] = 0
+	sim.county_heads = {}
 	sim.hp = sim.max_hp()
-	if sim.deploy_order("truck_stop"):
+	if sim.start_county_head(0):
 		var ms: Dictionary = sim.mission
 		ms["remaining"] = 0
 		ms["boss"]["started"] = true
@@ -28318,11 +28362,11 @@ func _county_checks(main) -> void:
 		m5["cleared"] = true
 		s5._boss_down(m5, m5["t"])
 		s5.extract_now()
-		_check(int(s5.order_beaten.get("truck_stop", 0)) == 1 and s5._sig.is_empty(), "a loaded County run didn't finish as the County's")
+		_check(s5.county_head_falls(0) == 1 and s5._sig.is_empty(), "a loaded County run didn't finish as the County's")
 		sim.extract_now()
 	else:
-		_check(false, "the fixture: the Truck Stop wouldn't set off again: %s" % sim.order_block("truck_stop"))
-	sim.order_beaten["truck_stop"] = 1
+		_check(false, "the fixture: the Bailiff's fight wouldn't set off again: %s" % sim.county_head_fight_block(0))
+	sim.county_heads[0] = 1
 	var RVc = load("res://scripts/ui/run_view.gd")
 	# the County's art (tools3): every crew whole and its face, every head's three poses and his face, all twelve
 	# places' plates and walls once any are, the issued kit's pictures
@@ -28420,7 +28464,7 @@ func _county_checks(main) -> void:
 	sim._remix_issued(sim.reach + 5)
 	_check(sim.issued_serial == ser_r, "the remix brought issued kit before the Treasurer")
 	# the remix: the Treasurer down, signals on the County's places, its heads away from home
-	sim.order_beaten["treasury"] = 1
+	sim.county_heads[3] = 1                     # (BUILD61-A) his own falls
 	_check(sim.county_done(), "the Treasurer down and the County not done")
 	var on_county := false
 	var away := false
@@ -34270,25 +34314,26 @@ func _b45a_bot_checks() -> void:
 	var b = Bot.new()
 	b.after_death(s)
 	plant.call(s)
+	var kb := "toll_plaza@1"                  # (BUILD61-A) the bot's County key: the place's stage
 	var first: String = b._pick_order(s)
 	s.elapsed += 60.0
 	s.operators_lost += 1
 	var seen: bool = b.after_death(s)
 	plant.call(s)
 	var again: String = b._pick_order(s)
-	_check(s.order_block(k) == "" and first == k and seen and again == "", "after a death the bot ran the place again at once: first '%s', a minute after the death '%s' (block '%s')" % [first, again, s.order_block(k)])
+	_check(s.order_block(k) == "" and first == kb and seen and again == "", "after a death the bot ran the place again at once: first '%s', a minute after the death '%s' (block '%s')" % [first, again, s.order_block(k)])
 	s.elapsed += Bot.ORDER_EVERY
-	b.order_done(s, k, false)
-	b.order_done(s, k, false)
+	b.order_done(s, kb, false)
+	b.order_done(s, kb, false)
 	plant.call(s)
 	var off: String = b._pick_order(s)
 	s.elapsed += Bot.ORDER_BACK_OFF
 	plant.call(s)
 	var back_on: String = b._pick_order(s)
-	b.order_done(s, k, false)
-	b.order_done(s, k, true)
-	b.order_done(s, k, false)
-	_check(off == "" and back_on == k and not b.order_backed_off(s, k), "two lost in a row: read '%s' at once (want none), '%s' after %.0f h (want it); a win between left it off %s" % [off, back_on, Bot.ORDER_BACK_OFF / 3600.0, str(b.order_backed_off(s, k))])
+	b.order_done(s, kb, false)
+	b.order_done(s, kb, true)
+	b.order_done(s, kb, false)
+	_check(off == "" and back_on == kb and not b.order_backed_off(s, kb), "two lost in a row: read '%s' at once (want none), '%s' after %.0f h (want it); a win between left it off %s" % [off, back_on, Bot.ORDER_BACK_OFF / 3600.0, str(b.order_backed_off(s, k))])
 	# the build's element's socketables: the best three of a kind kept, the rest sold (the Drifter's 589 Lighter fluids)
 	var s3 = Sim.new()
 	s3.start()
@@ -34331,7 +34376,7 @@ func _b45a_bot_checks() -> void:
 	g.issued = true
 	g.equipped["Armour"] = g._plain("Armour", "Lineman's rubber coat")
 	for z in [0, 1]:
-		g.order_beaten[Sim.county_head_key(z)] = 1
+		g.county_heads[z] = 1                     # (BUILD61-A) the heads' own falls open the next zone
 	g.cash = 1.0e12
 	g._stats_dirty()
 	var gb = Bot.new()
@@ -37217,7 +37262,7 @@ func _t50_numbers_checks(sim) -> void:
 			_check(sim.order_level(str(p["key"])) == int(p["level"]), "%s's first fight at level %d, not its set %d" % [p["who"], sim.order_level(str(p["key"])), int(p["level"])])
 	for z in range(Data.COUNTY_ZONES.size()):
 		var ls: Array = Data.COUNTY.filter(func(c): return int(c["cz"]) == z).map(func(c): return int(c["level"]))
-		var want: Array = [40 + 10 * z, 42 + 10 * z, 45 + 10 * z]
+		var want: Array = [40 + 9 * z, 43 + 9 * z, 46 + 9 * z]     # (BUILD61-A, county_stages.md §3) a place's 1/3 at 40 + 3 a place: the zones 40-50 to 67-77 over their stages
 		_check(ls == want, "the County's zone %d at levels %s, not %s" % [z, str(ls), str(want)])
 	_check(sim.order_level("toll_plaza") == 40 or int(sim.order_beaten.get("toll_plaza", 0)) > 0, "the Toll Plaza's first fight at %d, not 40" % sim.order_level("toll_plaza"))
 	_check(is_equal_approx(Data.XP_TAPER_END, 4.5) and is_equal_approx(Data.xp_scale(Data.XP_TAPER_TO), 4.5) and is_equal_approx(Data.xp_scale(60), 4.5),
@@ -39288,13 +39333,17 @@ func _u51_county_checks(main) -> void:
 	if not sim.issued:
 		sim.issue()
 	sim.order_beaten = {"toll_plaza": 1, "distribution": 1, "truck_stop": 1}     # the Motorway and the Docks open
+	sim.cs_done = {"toll_plaza": 2, "distribution": 2, "truck_stop": 2}     # (BUILD61-A) the places taken at their 2/3, the Bailiff down
+	sim.county_heads = {0: 1}
 	var M = main._missions
 	main.show_room(main.MISSIONS)
 	M.set_county(true)
 	main.refresh()
 	var cb = M._county
 	var CM = load("res://scripts/ui/county.gd")
-	_check(cb.visible and cb._map.size == Vector2(CM.MAP_W, cb.size.y) * CM.LAND and cb._frame.clip_contents, "the County's land isn't twice today's: %s" % str(cb._map.size))
+	var pic: Texture2D = CM.painting()     # BUILD61-U: the painting x2, its size read from the texture (the Map's rule)
+	_check(cb.visible and pic != null and cb._map.size == pic.get_size() * 2.0 and cb._frame.clip_contents, "the County's land isn't its painting x2: %s against %s" % [str(cb._map.size), str(pic.get_size() if pic != null else Vector2.ZERO)])
+	var ccol: Dictionary = M._cols[0]
 	var press := func(at_land: Vector2, down: bool) -> void:
 		var ev := InputEventMouseButton.new()
 		ev.button_index = MOUSE_BUTTON_LEFT
@@ -39311,22 +39360,35 @@ func _u51_county_checks(main) -> void:
 		cb.pan.pan_to(Vector2(-50, -50))
 		var lo: Vector2 = cb.pan.offset()
 		cb.pan.pan_to(Vector2(1e5, 1e5))
-		_check(mo.x > 900.0 and lo == Vector2.ZERO and cb.pan.offset() == mo, "%s: the pan isn't clamped to the land: %s / %s of %s" % [where, str(lo), str(cb.pan.offset()), str(mo)])
+		var fit_off := Vector2(-roundf((cb.pan.view.x - cb._map.size.x) / 2.0) if cb._map.size.x < cb.pan.view.x else 0.0, -roundf((cb.pan.view.y - cb._map.size.y) / 2.0) if cb._map.size.y < cb.pan.view.y else 0.0)
+		_check(mo == (cb._map.size - cb.pan.view).max(Vector2.ZERO) and lo == fit_off and cb.pan.offset() == mo + fit_off.min(Vector2.ZERO), "%s: the pan isn't clamped to the land (centred where it fits): %s / %s of %s" % [where, str(lo), str(cb.pan.offset()), str(mo)])     # BUILD61-U: the land its painting's size x2
 		# opens on the picked place, centred
 		cb.select("distribution")
 		cb.open_view()
 		var want: Vector2 = cb.pin_at("distribution") - cb.pan.view / 2.0
-		want = Vector2(clampf(want.x, 0.0, mo.x), clampf(want.y, 0.0, mo.y))
+		var lo0: Vector2 = fit_off.min(Vector2.ZERO)     # (BUILD61 merge) a side the land fits sits centred (Matt's 688 x 384 fits the height)
+		want = Vector2(clampf(want.x, lo0.x, mo.x + lo0.x), clampf(want.y, lo0.y, mo.y + lo0.y))
 		_check(cb.pan.offset().distance_to(want) < 0.5, "%s: it didn't open on the picked place: %s, wanted %s" % [where, str(cb.pan.offset()), str(want)])
 		# the open land's click: the card away, the land the width
-		var empty: Vector2 = CM._px(Vector2(250, 60))           # the Motorway's open middle, clear of its pins
+		# the land's open ground furthest from every pin (BUILD61 merge: Matt's painting moved the places, and F3 moves them again)
+		var empty: Vector2 = Vector2.ZERO
+		var best := -1.0
+		for gx in range(1, 16):
+			for gy in range(1, 8):
+				var at: Vector2 = Vector2(cb._map.size.x * gx / 16.0, cb._map.size.y * gy / 8.0)
+				var near := 1e9
+				for k2 in CM.PLACE_AT:
+					near = minf(near, at.distance_to(cb.pin_at(str(k2))))
+				if near > best:
+					best = near
+					empty = at
 		for k in CM.PLACE_AT:
 			_check(empty.distance_to(cb.pin_at(str(k))) > 2.0 * CM.HIT_R, "the fixture: the empty land sits on %s's pin" % k)
 		cb.pan.centre_on(empty)
 		press.call(empty, true)
 		press.call(empty, false)
 		main.refresh()
-		_check(not cb.card_on and not cb._card["panel"].visible and is_equal_approx(cb._frame.size.x, cb.size.x) and is_equal_approx(cb.pan.view.x, cb.size.x), "%s: the open land's click didn't put the card away: %s, frame %s" % [where, str(cb.card_on), str(cb._frame.size)])
+		_check(not cb.card_on and not ccol["panel"].visible and is_equal_approx(cb._frame.size.x, cb.size.x) and is_equal_approx(cb.pan.view.x, cb.size.x), "%s: the open land's click didn't put the card away: %s, frame %s" % [where, str(cb.card_on), str(cb._frame.size)])     # the site card's column (BUILD61-U)
 		var kp: Panel = cb.key_strip()
 		_check(kp.get_parent() == cb._frame and Rect2(Vector2.ZERO, cb._frame.size).encloses(Rect2(kp.position, kp.size)), "%s: the key isn't on the view" % where)
 		_check_fit(main, "%s, the card off" % where)
@@ -39341,12 +39403,13 @@ func _u51_county_checks(main) -> void:
 			_check(cb.pan.shows(cb.pin_at(k), 20.0), "%s: %s's pin can't be brought into view" % [where, c["place"]])
 			press.call(cb.pin_at(k), true)
 			press.call(cb.pin_at(k), false)
-			_check(cb.selected == k and cb.card_on and cb._card["panel"].visible and is_equal_approx(cb._frame.size.x, float(CM.MAP_W)), "%s: %s's pin didn't pick after a pan, the card back" % [where, c["place"]])
+			_check(cb.selected == k and cb.card_on and ccol["panel"].visible and str(ccol["card"].county) == k and is_equal_approx(cb._frame.size.x, float(CM.MAP_W)), "%s: %s's pin didn't pick after a pan, its card back" % [where, c["place"]])
 			n += 1
 		_check(n >= 6, "%s: only %d open places picked" % [where, n])
 		main.refresh()
-		var xb: Button = cb._card_x
-		_check(xb != null and xb.visible and not Rect2(xb.position, xb.size).intersects(Rect2(cb._card["state"].position, Vector2(UI.text_width(cb._card["state"], cb._card["state"].text), cb._card["state"].size.y))), "%s: the card's × sits on its state" % where)
+		var xb: Button = ccol["close"]     # the site card's × (BUILD61-U)
+		var kick: Label = ccol["card"].kicker
+		_check(xb != null and xb.visible and not Rect2(xb.position, xb.size).intersects(Rect2(kick.position, Vector2(UI.text_width(kick, kick.text), kick.size.y))), "%s: the card's × sits on its kicker" % where)
 		_check_fit(main, "%s, the card on" % where)
 		xb.pressed.emit()
 		main.refresh()
@@ -41370,3 +41433,1017 @@ func _a57_stage_wall_checks(main) -> void:
 	v._site(was_key if was_key != "" and was_key != "-" else "the_parade")
 	sim.load_dict(saved)
 	print("a57 stage wall ok: a stage's plate on the site's wall and slots, its own wall and slots when there, else the site's pair")
+
+
+# ------------------------------------------------------------------ BUILD61-A (6 Nov): the County's stages (county_stages.md §2-3, §7)
+## The County's camp: the campaign done, the Issue, every issued slot worn (the want met everywhere), the County fresh.
+func _a61_camp(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	sim.repeat = {}
+	_u55_camp(sim, Data.STAGES)
+	sim.depot_cleared = true
+	sim.xp = maxf(sim.xp, Data.xp_for_level(Data.MAX_LEVEL))
+	sim.issue()
+	for u in Data.ISSUED:
+		sim.equipped[str(u["slot"])] = sim.issued_piece(str(u["slot"]))
+	sim._stats_dirty()
+	sim.order_beaten = {}
+	sim.cs_done = {}
+	sim.cs_pick = {}
+	sim.cs_new = {}
+	sim.county_heads = {}
+	sim.hp = sim.max_hp()
+
+
+## A County stage won (s 1-3) or, with s 0, its zone's head's fight won: the fixture's clear, as _county_checks' runs.
+func _a61_win(sim, k: String, s: int) -> bool:
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	var z: int = int(Data.county(k)["cz"])
+	var ok: bool = sim.start_county_head(z) if s == 0 else sim.deploy_county(k, s)
+	if not ok or sim.mission == null:
+		return false
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	if s == 0 and m.get("boss", null) is Dictionary:
+		sim._boss_down(m, m["t"])
+	sim.extract_now()
+	return true
+
+
+## §3: each place's own row - the Toll Plaza 1/3 and the Treasury 3/3 as 0.14.0's, x1.22 a stage, every step on the path
+## within x1.25 (HP and fire, a man and the whole), levels 40-77, one gang count a zone; the fight's figures are the
+## row's (the curve's gone); the heads as §3's table.
+func _a61_figures_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_a61_camp(sim)
+	var tp: Dictionary = sim.county_stage_figures("toll_plaza", 1)
+	var tr3: Dictionary = sim.county_stage_figures("treasury", 3)
+	_check(absf(float(tp["hp"]) - 3208700.0) < 2.0 and absf(float(tp["dps"]) - 3610.0) < 0.5, "the Toll Plaza 1/3 isn't 0.14.0's: %.0f HP, %.1f fire" % [float(tp["hp"]), float(tp["dps"])])
+	_check(absf(float(tr3["hp"]) - 138358129.0) < 50.0 and absf(float(tr3["dps"]) - 111181.0) < 1.0, "the Treasury 3/3 isn't 0.14.0's Treasury: %.0f HP, %.1f fire" % [float(tr3["hp"]), float(tr3["dps"])])
+	var path: Array = []
+	for c in Data.COUNTY:
+		for s in range(1, Data.STAGES):
+			path.append([str(c["key"]), s])
+	path.append(["treasury", 3])
+	var gangs_of := [12, 11, 10, 9]
+	for n in range(path.size()):
+		var f: Dictionary = sim.county_stage_figures(str(path[n][0]), int(path[n][1]))
+		_check(int(f["gangs"]) == gangs_of[int(Data.county(str(path[n][0]))["cz"])], "%s's gangs %d, not its zone's" % [path[n][0], int(f["gangs"])])
+		if n == 0:
+			continue
+		var p: Dictionary = sim.county_stage_figures(str(path[n - 1][0]), int(path[n - 1][1]))
+		for fig in ["man_hp", "man_dps", "hp", "dps"]:
+			var r: float = float(f[fig]) / float(p[fig])
+			_check(r >= 1.0 and r <= 1.25, "%s %d/3 to %s %d/3: %s x%.3f, not within x1.25" % [path[n - 1][0], int(path[n - 1][1]), path[n][0], int(path[n][1]), fig, r])
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		for s in range(2, Data.STAGES + 1):
+			var r2: float = float(sim.county_stage_figures(k, s)["man_hp"]) / float(sim.county_stage_figures(k, s - 1)["man_hp"])
+			_check(absf(r2 - 1.22) < 0.0001, "%s %d/3 isn't x1.22 its %d/3: x%.4f" % [c["place"], s, s - 1, r2])
+	_check(sim.county_stage_level("toll_plaza", 1) == 40 and sim.county_stage_level("treasury", 2) == 75 and sim.county_stage_level("treasury", 3) == 77 and sim.county_stage_level("customs_shed", 1) == 55, "the County's levels: %d, %d, %d" % [sim.county_stage_level("toll_plaza", 1), sim.county_stage_level("treasury", 2), sim.county_stage_level("treasury", 3)])
+	# the fight's figures are the row's, before the run's own; the pool its gangs; the level the stage's
+	for kk in ["toll_plaza", "customs_shed", "treasury"]:
+		for s in [1, 3]:
+			_a61_open_to(sim, kk, s)
+			sim.set_county_pick(kk, s)
+			var f2: Dictionary = sim.county_stage_figures(kk, s)
+			var e: Dictionary = sim.order_read(kk)
+			_check(sim.county_stage_pick(kk) == s and not e.is_empty() and absf(float(e["plain_hp"]) / float(f2["man_hp"]) - 1.0) < 1e-6 and int(e["plain_pool"]) == int(f2["gangs"]) and int(e["level"]) == int(f2["level"]) and int(e.get("stage", 0)) == s and str(e.get("county_key", "")) == kk,
+				"%s %d/3's fight: HP a man %.0f (row %.0f), gangs %d (%d), level %d (%d), stage %d" % [kk, s, float(e.get("plain_hp", 0.0)), float(f2["man_hp"]), int(e.get("plain_pool", 0)), int(f2["gangs"]), int(e.get("level", 0)), int(f2["level"]), int(e.get("stage", 0))])
+	# the heads (§3's table): his gang half the place's at its 2/3 man, him on its 1/3 man x his multipliers, at its 2/3 level
+	var heads := [[6903766.0, 1566.0, 6, 48], [21556677.0, 4553.0, 5, 57], [66810124.0, 11443.0, 5, 66], [185915250.0, 20750.0, 4, 75]]
+	for z in range(4):
+		var hk: String = sim.county_head_key(z)
+		sim.cs_done[hk] = 2
+		var eh: Dictionary = sim.county_head_fight_preview(z)
+		var two: Dictionary = sim.county_stage_figures(hk, 2)
+		var hb: Dictionary = eh.get("boss", {})
+		_check(not hb.is_empty() and absf(float(hb["hp"]) / float(heads[z][0]) - 1.0) < 0.001 and absf(float(hb["dps"]) / float(heads[z][1]) - 1.0) < 0.002 and int(eh["plain_pool"]) == int(heads[z][2]) and absf(float(eh["plain_hp"]) / float(two["man_hp"]) - 1.0) < 1e-6 and sim.county_head_level(z) == int(heads[z][3]) and int(eh["level"]) == int(heads[z][3]),
+			"%s's fight: him %.0f / %.0f (want %.0f / %.0f), his gang %d at %.0f (want %d at %.0f), level %d" % [Data.COUNTY_ZONES[z]["head"], float(hb.get("hp", 0.0)), float(hb.get("dps", 0.0)), float(heads[z][0]), float(heads[z][1]), int(eh.get("plain_pool", 0)), float(eh.get("plain_hp", 0.0)), int(heads[z][2]), float(two["man_hp"]), int(eh.get("level", 0))])
+	sim.load_dict(saved)
+	print("a61 figures ok: the County's own rows, x1.22 a stage, every step within x1.25, the ends as 0.14.0's, the heads as §3")
+
+
+## The County opened to place k's stage s: every place before it at its 2/3, every zone before its head down.
+func _a61_open_to(sim, k: String, s: int) -> void:
+	var cz: int = int(Data.county(k)["cz"])
+	for c in Data.COUNTY:
+		if int(c["cz"]) < cz or (int(c["cz"]) == cz and Sim.county_places(cz).find(str(c["key"])) < Sim.county_places(cz).find(k)):
+			sim.cs_done[str(c["key"])] = maxi(int(sim.cs_done.get(str(c["key"]), 0)), 2)
+	for z in range(cz):
+		sim.county_heads[z] = maxi(1, int(sim.county_heads.get(z, 0)))
+	sim.cs_done[k] = s - 1
+
+
+## §2: 1/3 then 2/3 then 3/3 on a place; 2/3 opens the next place ("· New"), on a zone's last the head's own fight; his
+## fall the next zone; 3/3 opens nothing; the want on every stage; no level a win; a stage run carries its place and
+## stage, his fight his zone; a signal's clear (the remix) never moves a stage.
+func _a61_stages_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_a61_camp(sim)
+	var W: Dictionary = Words.A55_STAGE
+	_check(sim.county_stage_open("toll_plaza", 1) and sim.county_stage_block("toll_plaza", 2) == W["after_stage"] % 1 and sim.county_stage_block("distribution", 1) == W["after_site"] % "the Toll Plaza" and sim.county_stage_block("container_port", 1) == W["after_head"] % "the Bailiff",
+		"a fresh County: Toll Plaza 2/3 '%s', the Distribution Centre '%s', the Container Port '%s'" % [sim.county_stage_block("toll_plaza", 2), sim.county_stage_block("distribution", 1), sim.county_stage_block("container_port", 1)])
+	var lv0: int = sim.order_level("toll_plaza")
+	_check(_a61_win(sim, "toll_plaza", 1), "the Toll Plaza 1/3 wouldn't set off: %s" % sim.county_stage_block("toll_plaza", 1))
+	_check(sim.county_stage_done("toll_plaza") == 1 and not sim.county_open("distribution") and sim.county_stage_open("toll_plaza", 2) and sim.county_stage_pick("toll_plaza") == 2, "the Toll Plaza 1/3 won: done %d, the Distribution Centre open %s, pick %d" % [sim.county_stage_done("toll_plaza"), sim.county_open("distribution"), sim.county_stage_pick("toll_plaza")])
+	var taken_line: String = Words.COUNTY["taken"] % "The Toll Plaza"
+	_check(not sim.cs_new.has("distribution") and not sim.events.any(func(l): return str(l[1]) == taken_line), "the Toll Plaza 1/3 won: taken already (New %s)" % str(sim.cs_new))
+	_check(sim.county_stage_level("toll_plaza", 1) == lv0 and sim.order_level("toll_plaza") == 42, "a win moved a stage's level: %d from %d (the '+1 a win' is gone)" % [sim.county_stage_level("toll_plaza", 1), lv0])
+	# a stage run carries its place and its stage
+	sim.hp = sim.max_hp()
+	_check(sim.deploy_county("toll_plaza", 2) and str(sim.mission.get("county", "")) == "toll_plaza" and int(sim.mission.get("stage", 0)) == 2 and not bool(sim.mission.get("head_fight", false)) and Sim.county_run_stage(sim.mission) == 2 and int(sim.mission["t"]["level"]) == 42 and not sim.mission.has("boss"),
+		"the Toll Plaza 2/3's run: county '%s', stage %s, level %s" % [str(sim.mission.get("county", "")) if sim.on_mission() else "-", str(sim.mission.get("stage", "-")) if sim.on_mission() else "-", str(sim.mission["t"].get("level", "-")) if sim.on_mission() else "-"])
+	if sim.on_mission():
+		sim.mission["remaining"] = 0
+		sim.mission["cleared"] = true
+		sim.extract_now()
+	_check(sim.county_stage_done("toll_plaza") == 2 and sim.county_open("distribution") and sim.county_site_new("distribution") and sim.county_taken_count() == 1 and sim.events.any(func(l): return str(l[1]) == taken_line), "the Toll Plaza 2/3 won: the Distribution Centre open %s, New %s, taken %d" % [sim.county_open("distribution"), sim.county_site_new("distribution"), sim.county_taken_count()])
+	sim.set_county_pick("distribution", 1)
+	_check(not sim.county_site_new("distribution") and sim.cs_pick.get("distribution", 0) == 1, "picking the Distribution Centre kept its New")
+	var new0: Dictionary = sim.cs_new.duplicate()
+	_check(_a61_win(sim, "toll_plaza", 3) and sim.county_stage_done("toll_plaza") == 3 and sim.cs_new == new0 and sim.county_heads.is_empty(), "the Toll Plaza 3/3 opened something: new %s, heads %s" % [str(sim.cs_new), str(sim.county_heads)])
+	# the zone's last place: 2/3 opens the head, his fall the next zone
+	_check(_a61_win(sim, "distribution", 1) and _a61_win(sim, "distribution", 2) and _a61_win(sim, "truck_stop", 1), "the fixture: the Motorway's road")
+	_check(sim.county_head_fight_block(0) == W["head_after"] and not sim.county_head_fight_open(0), "the Bailiff's fight before the Truck Stop 2/3: '%s'" % sim.county_head_fight_block(0))
+	_check(_a61_win(sim, "truck_stop", 2) and sim.county_head_fight_open(0) and not sim.county_zone_open(1), "the Truck Stop 2/3 won: the Bailiff's fight '%s', the Docks open %s" % [sim.county_head_fight_block(0), sim.county_zone_open(1)])
+	sim.hp = sim.max_hp()
+	_check(sim.start_county_head(0) and bool(sim.mission.get("head_fight", false)) and int(sim.mission.get("chead", -1)) == 0 and str(sim.mission.get("county", "")) == "truck_stop" and not sim.mission.has("stage") and sim.mission.get("boss", null) is Dictionary and int(sim.mission["t"]["level"]) == 48,
+		"the Bailiff's fight's run: head_fight %s, chead %s, level %s" % [str(sim.mission.get("head_fight", "-")) if sim.on_mission() else "-", str(sim.mission.get("chead", "-")) if sim.on_mission() else "-", str(sim.mission["t"].get("level", "-")) if sim.on_mission() else "-"])
+	if sim.on_mission():
+		var mh: Dictionary = sim.mission
+		mh["remaining"] = 0
+		mh["cleared"] = true
+		sim._boss_down(mh, mh["t"])
+		sim.extract_now()
+	_check(sim.county_head_falls(0) == 1 and sim.county_zone_open(1) and sim.county_open("container_port") and sim.county_site_new("container_port") and sim.county_stage_done("truck_stop") == 2, "the Bailiff's fall: falls %d, the Docks open %s, the Container Port New %s" % [sim.county_head_falls(0), sim.county_zone_open(1), sim.county_site_new("container_port")])
+	# the want on every stage and on his fight
+	var kit: Dictionary = sim.equipped.duplicate()
+	sim.equipped["Primary"] = null
+	sim.equipped["Secondary"] = null
+	sim.equipped["Helmet"] = null
+	sim.equipped["Charm"] = null
+	sim._stats_dirty()
+	sim.cs_done["container_port"] = 2
+	for s in range(1, Data.STAGES + 1):
+		_check(sim.county_stage_block("container_port", s) == Words.COUNTY["want"] % [3, 2] and sim.county_stage_open("toll_plaza", s), "%d/3 with two issued pieces worn: the Container Port '%s', the Toll Plaza '%s'" % [s, sim.county_stage_block("container_port", s), sim.county_stage_block("toll_plaza", s)])
+	sim.cs_done.erase("container_port")
+	sim.equipped = kit
+	sim._stats_dirty()
+	# a signal's clear never moves a stage: a remixed signal on a County place, won
+	sim.county_heads[3] = 1
+	var done0: Dictionary = sim.cs_done.duplicate()
+	var beaten0: Dictionary = sim.order_beaten.duplicate()
+	sim.hp = sim.max_hp()
+	var sg := {"id": 991, "site": int(Data.county("golf_club")["site"]), "zone": int(Data.county("golf_club")["zone"]), "depth": 45, "codes": [], "papers": [], "head": false, "convoy": false, "line": 0, "grade": 0, "county": "golf_club"}
+	var sig_hold: Array = sim.signals.duplicate(true)
+	sim.signals = [sg]
+	if sim.deploy_signal(0) and sim.on_mission():
+		_check(str(sim.mission.get("county", "")) == "" and not sim.mission.has("stage"), "a remixed County signal carries a County stage: %s" % str(sim.mission.get("stage", "")))
+		sim.mission["remaining"] = 0
+		sim.mission["cleared"] = true
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: a remixed County signal wouldn't set off")
+	sim.signals = sig_hold
+	_check(sim.cs_done == done0 and sim.order_beaten == beaten0, "a remixed signal's clear moved the County's stages: %s" % str(sim.cs_done))
+	sim.load_dict(saved)
+	print("a61 stages ok: 1/3 to 3/3, 2/3 opens the next or the head, his fall the zone, the want, no level a win, the remix's clears apart")
+
+
+## §2 and the save: "Run it ×N" on a County place (shut on a stage not yet cleared; a repeat's run is a County run at its
+## stage, unwatched); Kev's wagers on a stage's first clear and the head's fight, their own keys, put on the run; the
+## stage state through a save, and a 26 save (no "county") loads with defaults; 0.14.1.
+func _a61_repeat_wager_save_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_a61_camp(sim)
+	sim.unlocked.erase("radio")
+	_check(sim.county_repeat_block("toll_plaza") == Words.REPEAT["shut_new"], "the Toll Plaza 1/3 not cleared: the repeat reads '%s'" % sim.county_repeat_block("toll_plaza"))
+	_a61_win(sim, "toll_plaza", 1)
+	sim.set_county_pick("toll_plaza", 1)
+	_check(sim.county_repeat_block("toll_plaza") != Words.REPEAT["shut_new"] and sim.county_repeat_block("toll_plaza") != Words.REPEAT["shut_site"], "the Toll Plaza 1/3 cleared: the repeat still reads '%s'" % sim.county_repeat_block("toll_plaza"))
+	sim.set_county_pick("toll_plaza", 2)
+	_check(sim.county_repeat_block("toll_plaza") == Words.REPEAT["shut_new"], "the Toll Plaza 2/3 not cleared: the repeat reads '%s'" % sim.county_repeat_block("toll_plaza"))
+	# a repeat's run: the place's stage, laid on its host, unwatched; the report names the place
+	sim.set_county_pick("toll_plaza", 1)
+	sim.hp = sim.max_hp()
+	sim.repeat = {"site": int(Data.county("toll_plaza")["site"]), "county": "toll_plaza", "cstage": 1, "of": 5, "done": 0, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": sim.elapsed, "run_t0": sim.elapsed, "lv0": sim.level(), "wounds0": {}, "share": 0.12, "own_list": false, "first": true}
+	sim._repeat_go()
+	_check(sim.on_mission() and str(sim.mission.get("county", "")) == "toll_plaza" and int(sim.mission.get("stage", 0)) == 1 and bool(sim.mission.get("unwatched", false)) and str(sim._sig.get("order", "")) == "toll_plaza", "a County repeat's run: %s" % (str(sim.mission.get("county", "")) + "/" + str(sim.mission.get("stage", "")) if sim.on_mission() else "none"))
+	if sim.on_mission():
+		sim.repeat["stop"] = true
+		sim.mission["remaining"] = 0
+		sim.mission["cleared"] = true
+		sim.extract_now()
+	if sim.away():
+		sim._repeat_end("back")
+	_check(str(sim.repeat_report.get("county", "")) == "toll_plaza" and sim.events.any(func(l): return str(l[1]).contains("Toll Plaza")) and sim.county_stage_done("toll_plaza") == 1, "a County repeat's report: '%s'" % str(sim.repeat_report.get("county", "")))
+	sim.repeat_report = {}
+	# Kev's wagers: a stage's first clear and the head's fight, each its own key, put on the run
+	if not sim.room_open("radio"):
+		sim.unlocked.append("radio")
+	sim.set_county_pick("toll_plaza", 2)
+	_check(sim.wager_county_open("toll_plaza"), "the Toll Plaza 2/3's first clear: Kev has no offer")
+	var key: String = Sim.wager_county_key("toll_plaza")
+	_check(sim.take_wager(key, 0), "the Toll Plaza's wager wasn't taken")
+	sim.hp = sim.max_hp()
+	_check(sim.deploy_county("toll_plaza", 2) and sim.mission.get("wagers", []).size() == 1, "the County stage's wager didn't go on its run: %s" % (str(sim.mission.get("wagers", "none")) if sim.on_mission() else "no run"))
+	if sim.on_mission():
+		sim.mission["remaining"] = 0
+		sim.mission["cleared"] = true
+		sim.extract_now()
+	sim.set_county_pick("toll_plaza", 2)
+	_check(not sim.wager_county_open("toll_plaza"), "the Toll Plaza 2/3 cleared: Kev still offers")
+	sim.cs_done["distribution"] = 2
+	sim.cs_done["truck_stop"] = 2
+	var hkey: String = Sim.wager_county_head_key(0)
+	_check(sim.wager_county_head_open(0) and sim.take_wager(hkey, 0), "the Bailiff's fight: no wager")
+	sim.hp = sim.max_hp()
+	_check(sim.start_county_head(0) and sim.mission.get("wagers", []).size() == 1, "the Bailiff's wager didn't go on his fight")
+	if sim.on_mission():
+		sim.extract_now()
+	# the save: through JSON; and a 26 save with none
+	sim.cs_pick["distribution"] = 1
+	sim.cs_new["container_port"] = true
+	sim.county_heads[1] = 2
+	var s2 = Sim.new()
+	s2.load_dict(JSON.parse_string(JSON.stringify(sim.to_dict())))
+	_check(s2.cs_done == sim.cs_done and s2.cs_pick == sim.cs_pick and s2.cs_new == sim.cs_new and s2.county_heads == sim.county_heads, "the County's stages through a save: %s %s %s %s" % [str(s2.cs_done), str(s2.cs_pick), str(s2.cs_new), str(s2.county_heads)])
+	var d26: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	d26["stages"].erase("county")
+	d26["order_beaten"] = {"toll_plaza": 1, "truck_stop": 2}
+	var s3 = Sim.new()
+	s3.load_dict(d26)
+	_check(s3.county_stage_done("toll_plaza") == 2 and s3.county_stage_done("distribution") == 0 and s3.county_head_falls(0) == 2 and s3.cs_pick.is_empty() and s3.cs_new.is_empty(), "a 26 save's County: %s, heads %s" % [str(s3.cs_done), str(s3.county_heads)])
+	d26["order_beaten"] = {}
+	var s4 = Sim.new()
+	s4.load_dict(d26)
+	_check(s4.cs_done.is_empty() and s4.county_heads.is_empty() and s4.county_stage_pick("toll_plaza") == 1, "a fresh 26 save's County isn't fresh: %s" % str(s4.cs_done))
+	_check(load("res://scripts/ui/menu.gd").VERSION == "0.14.1", "VERSION isn't 0.14.1: %s" % load("res://scripts/ui/menu.gd").VERSION)
+	sim.load_dict(saved)
+	print("a61 repeat, wagers and save ok: the repeat on a cleared stage, Kev on first clears and the head, the stages saved")
+
+
+## §7: the bot's County path - the next uncleared stage at FIRST, the head after his place's 2/3 (ranked over the
+## stages), its highest cleared stage at PUSH; back-offs keyed by place and stage.
+func _a61_bot_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_a61_camp(sim)
+	var b = Bot.new()
+	var keys: Array = b.b61_county_keys(sim)
+	_check("toll_plaza@1" in keys and not keys.any(func(k): return str(k).begins_with("head@")) and b.b61_block(sim, "toll_plaza@1") == "" and b.b61_block(sim, "toll_plaza@2") != "", "the bot's County on a fresh Issue: %s" % str(keys))
+	_check(b.b61_first(sim, "toll_plaza@1") and b.b61_level(sim, "toll_plaza@1") == 40 and b.b61_place("head@0") == "truck_stop", "the bot's County keys read wrong")
+	for k in ["toll_plaza", "distribution", "truck_stop"]:
+		sim.cs_done[k] = 2
+	keys = b.b61_county_keys(sim)
+	_check("head@0" in keys and "truck_stop@3" in keys and "truck_stop@2" in keys and b.b61_rank(sim, "head@0", true) > b.b61_rank(sim, "toll_plaza@3", true) and b.b61_rank(sim, "toll_plaza@2", false) < b.b61_rank(sim, "toll_plaza@3", true),
+		"the bot's County after the Motorway's 2/3s: %s" % str(keys))
+	_check(b.b61_block(sim, "head@0") == "" and b.b61_first(sim, "head@0") and b.b61_level(sim, "head@0") == 48, "the bot's head key: '%s'" % b.b61_block(sim, "head@0"))
+	_check(b.b61_deploy(sim, "head@0") and bool(sim.mission.get("head_fight", false)), "the bot's head key didn't start his fight")
+	if sim.on_mission():
+		sim.extract_now()
+	b.order_done(sim, "toll_plaza@3", false)
+	b.order_done(sim, "toll_plaza@3", false)
+	_check(b.order_backed_off(sim, "toll_plaza@3") and not b.order_backed_off(sim, "toll_plaza@2"), "the bot's back-off isn't keyed by the stage")
+	sim.load_dict(saved)
+	print("a61 bot ok: the next uncleared stage, the head after the 2/3, back-offs by stage")
+
+
+
+# ------------------------------------------------------------------ BUILD61-U (6 Nov): the County gets the campaign's UI
+## docs/design/county_stages.md §6: the County's places on the site card (the 0.12.2 playtest's item 23), its pins'
+## marks, its map's size from the painting and its places from data/county_places.tres with the F3/F5 tool, its stage
+## backdrops' keys. Fixtures set the stage state through A's names (cs_done, cs_new, county_heads) and the old
+## order_beaten both, so the checks read the same on the stub and on A's sim. `-- only u61_card u61_pin u61_map
+## u61_tool u61_backdrop`.
+
+const CountyU61 := preload("res://scripts/ui/county.gd")
+const SiteCardU61 := preload("res://scripts/ui/site_card.gd")
+const MapViewU61 := preload("res://scripts/ui/map_view.gd")
+
+
+## A camp at the Issue: the campaign done, level 50, every issued slot worn stamped (the want met in every zone), the
+## County's state empty; `zones` of its zones open (the heads before them down).
+func _u61_camp(sim, zones: int) -> void:
+	_u55_camp(sim, 3)
+	sim.xp = maxf(sim.xp, Data.xp_for_level(50))
+	sim.hp = sim.max_hp()
+	if not sim.issued:
+		sim.issue()
+	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]:
+		if sim.equipped.get(sl) == null:
+			sim.equipped[sl] = sim._plain(sl, str(Data.BASES[sl][0]["name"]))
+		sim.equipped[sl]["stamped"] = true
+	sim._stats_dirty()
+	sim.order_beaten = {}
+	sim.cs_done = {}
+	sim.cs_pick = {}
+	sim.cs_new = {}
+	sim.county_heads = {}
+	for z in range(zones - 1):
+		_u61_head_down(sim, z)
+
+
+## The County's stage state held and put back round a check (BUILD61-U): A's saves it; the stub's doesn't.
+func _u61_hold(sim) -> Array:
+	return [sim.cs_done.duplicate(), sim.cs_pick.duplicate(), sim.cs_new.duplicate(), sim.county_heads.duplicate()]
+
+
+func _u61_put_back(sim, keep: Array) -> void:
+	sim.cs_done = keep[0]
+	sim.cs_pick = keep[1]
+	sim.cs_new = keep[2]
+	sim.county_heads = keep[3]
+
+
+## A County zone's head down: its next zone open (A's county_heads, and the old wins on his place).
+func _u61_head_down(sim, z: int) -> void:
+	sim.county_heads[z] = 1
+	sim.order_beaten[sim.county_head_key(z)] = 1
+	for k in sim.county_places(z):
+		sim.cs_done[str(k)] = maxi(int(sim.cs_done.get(str(k), 0)), Data.STAGE_OPENS)
+		sim.order_beaten[str(k)] = maxi(1, int(sim.order_beaten.get(str(k), 0)))
+
+
+## A County place's stages cleared to n (its win counted, so the old rule opens the next as A's does at 2/3).
+func _u61_done(sim, k: String, n: int) -> void:
+	sim.cs_done[k] = n
+	if n >= Data.STAGE_OPENS:
+		sim.order_beaten[k] = maxi(1, int(sim.order_beaten.get(k, 0)))
+	else:
+		sim.order_beaten.erase(k)
+
+
+## The County board up on a place, its card refreshed.
+func _u61_show(main, k: String) -> Dictionary:
+	var M = main._missions
+	main.show_room(main.MISSIONS)
+	if not M.county_on:
+		M.set_county(true)
+	M._county._shown = ""
+	M._county.select(k)
+	M._shown = ""
+	main.refresh()
+	return M._cols[0]
+
+
+## The County's places on the site card (item 23): its picture, the stage picker and its states, Set off and "Run it
+## ×N" on the picked stage, the Head on a zone's last place and his fight, the want's rows and its two links; every word
+## fits at both windows.
+func _u61_card_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var cs_keep: Array = _u61_hold(sim)     # the County's stage state as it was (the stub keeps it off the save)
+	var M = main._missions
+	_u61_camp(sim, 1)
+	var col: Dictionary = _u61_show(main, "toll_plaza")
+	var card = col["card"]
+	var cb = M._county
+	_check(M._county.visible and col["panel"].visible and card.county == "toll_plaza" and card.title.text == "The Toll Plaza" and card.pick_box.visible and not card.head_box.visible, "a County place isn't on the site card: panel %s, county '%s', title '%s'" % [col["panel"].visible, card.county, card.title.text])
+	_check(not is_instance_valid(cb.get("_card")) and not cb.has_method("card"), "the County's own card is still there")
+	_check(card._art.texture != null and card._art.texture == RunView.tex("the_toll_plaza_plate"), "the Toll Plaza's card isn't on its plate (art/fight_county)")
+	_check(card.kicker.text.begins_with("The Motorway"), "the County card's kicker: '%s'" % card.kicker.text)
+	# the picker: three stages, no Head on a first place; 1/3 open and picked, the rest "After"
+	var vis: Array = card.segs.filter(func(sg): return sg["button"].visible)
+	_check(vis.size() == Data.STAGES and not card.segs[0]["button"].disabled and card.segs[1]["button"].disabled and card.segs[1]["sub"].text == Words.A55_STAGE["after_stage"] % 1, "the Toll Plaza's picker: %d segments, 2/3 '%s'" % [vis.size(), card.segs[1]["sub"].text])
+	_check(card.picked_val.text == UI.dots(Words.U55["picked_line"] % [Words.U55["stage"] % [1, 3], sim.county_stage_level("toll_plaza", 1)]), "the picked stage's line: '%s'" % card.picked_val.text)
+	# 1/3 cleared: 2/3 opens; picked, Set off runs it
+	_u61_done(sim, "toll_plaza", 1)
+	col = _u61_show(main, "toll_plaza")
+	_check(not card.segs[1]["button"].disabled and card.segs[0]["top"].text.ends_with("✓"), "1/3 cleared, 2/3 still shut: '%s'" % card.segs[1]["sub"].text)
+	card._seg_pressed(1)
+	main.refresh()
+	_check(sim.county_stage_pick("toll_plaza") == 2 and card.picked_val.text.begins_with("2/3"), "picking 2/3 didn't take: pick %d, '%s'" % [sim.county_stage_pick("toll_plaza"), card.picked_val.text])
+	_check(col["deploy"].visible and not col["deploy"].disabled and col["deploy"].text.contains("Toll Plaza"), "the Toll Plaza's Set off: '%s', shut %s" % [col["deploy"].text, col["deploy"].disabled])
+	# a first clear: "Run it ×N" shut, its reason on the note (or Kev's wagers in its place)
+	var first_w: bool = sim.wager_county_open("toll_plaza")
+	_check(col["wager"].visible == first_w and (first_w or (col["repeat"].visible and col["repeat"].disabled and col["note"].text.contains(Words.REPEAT["shut_new"]))), "a first clear's repeat isn't shut: repeat %s/%s, note '%s'" % [col["repeat"].visible, col["repeat"].disabled, col["note"].text])
+	col["deploy"].pressed.emit()
+	_check(sim.on_mission() and sim.county_run_key(sim.mission) == "toll_plaza" and int(sim.mission.get("stage", 0)) == 2, "Set off didn't run the Toll Plaza's 2/3: %s" % (str(sim.mission.get("stage", "-")) if sim.mission != null else "no run"))
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	# 2/3 cleared: "Run it ×N" open on it
+	_u61_done(sim, "toll_plaza", 2)
+	sim.set_county_pick("toll_plaza", 2)
+	var rsg: Dictionary = sim.county_sig("toll_plaza", 2)     # (BUILD61 merge) the repeat waits on a finished full-HP read, as a site's: one planted at 100%
+	sim._sig_on(rsg)
+	var rkey: Array = sim._odds_key(int(rsg["site"]))
+	sim._sig_off()
+	sim._sig_odds[sim._b61_odds_key(rsg)] = [rkey, 1.0, 100000, 100000, RandomNumberGenerator.new(), 1.0]
+	col = _u61_show(main, "toll_plaza")
+	_check(col["repeat"].visible and not col["repeat"].disabled and not col["wager"].visible, "a cleared stage's repeat isn't open: visible %s, shut %s ('%s')" % [col["repeat"].visible, col["repeat"].disabled, sim.county_repeat_block("toll_plaza")])
+	# the want's rows: the issued kit against the zone's want, its six slots lit
+	_check(card.keys[3].text == Words.U61["issued_key"] and card.vals[3].text.begins_with(str(sim.issued_worn())) and card.want_words().size() == 6 and card.want_lit().all(func(w): return w), "the want's rows: '%s' '%s' %s %s" % [card.keys[3].text, card.vals[3].text, str(card.want_words()), str(card.want_lit())])
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.refresh()
+		_check_fit(main, "u61 County card %dx%d (a stage)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	# "Rounds ▾" on a County card: its host site's plan, over the County's land, kept on a refresh
+	col["rig"].pressed.emit()
+	main.refresh()
+	var host: int = int(Data.county("toll_plaza")["site"])
+	_check(M.rounds_panel.visible and M.rounds_panel.site == host and M.rounds_panel.get_index() > M._county.get_index(), "the County card's Rounds: shown %s, site %d (host %d), over the land %s" % [M.rounds_panel.visible, M.rounds_panel.site, host, M.rounds_panel.get_index() > M._county.get_index()])
+	M.rounds_panel.visible = false
+	# the Head on a zone's last place: shut "After 2/3", then free; his fight on the card and on Set off
+	_u61_done(sim, "distribution", 2)
+	_u61_done(sim, "truck_stop", 1)
+	col = _u61_show(main, "truck_stop")
+	var hs: Dictionary = card.segs[Data.STAGES]
+	_check(hs["button"].visible and hs["button"].disabled and hs["sub"].text == Words.U55["after_site_short"] % (Words.U55["stage"] % [2, 3]), "the Truck Stop's Head before its 2/3: shown %s, shut %s, '%s'" % [hs["button"].visible, hs["button"].disabled, hs["sub"].text])
+	_u61_done(sim, "truck_stop", 2)
+	col = _u61_show(main, "truck_stop")
+	_check(not hs["button"].disabled and hs["sub"].text == Words.U55["head_free"], "the Truck Stop's Head after its 2/3: shut %s, '%s'" % [hs["button"].disabled, hs["sub"].text])
+	card._seg_pressed(Data.STAGES)
+	main.refresh()
+	_check(card.head_view and card.them_name.text.contains("Bailiff") and card.gang_frame.visible and card.foot.text.contains("seizes") and card.picked_val.text == UI.dots(Words.U55["picked_line"] % [Words.U55["head"], sim.county_head_level(0)]), "the Head picked: them '%s', foot '%s', picked '%s'" % [card.them_name.text, card.foot.text, card.picked_val.text])
+	_check((col["repeat"].visible and col["repeat"].disabled and col["repeat"].text == Words.SITE_CARD["free"]) or col["wager"].visible, "the Head's fight beside Set off: '%s'" % col["repeat"].text)
+	_check(col["deploy"].text.contains("Bailiff") and not col["deploy"].disabled, "the Head's Set off: '%s'" % col["deploy"].text)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.refresh()
+		_check_fit(main, "u61 County card %dx%d (the Head)" % [int(sz.x), int(sz.y)])
+		sim._sig_odds.clear()                    # his fight not read yet (the full smoke's camp: "Reading the odds" sat on his gang's ×1)
+		M._ccard_sig = ""
+		main.refresh()
+		_check(not bool(sim.county_head_odds_now(0)[1]), "the fixture: the Head's odds read already")
+		_check_fit(main, "u61 County card %dx%d (the Head, unread)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	col["deploy"].pressed.emit()
+	_check(sim.on_mission() and bool(sim.mission.get("head_fight", false)) and int(sim.mission.get("chead", -1)) == 0, "Set off on the Head didn't start the Bailiff's own fight")
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	# the want short: Set off shut, the Issuer and the Bench as its fix chips, the slots unlit
+	card.head_view = false
+	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]:
+		sim.equipped[sl].erase("stamped")
+	sim._stats_dirty()
+	col = _u61_show(main, "toll_plaza")
+	var acts: Array = card._acts
+	_check(col["deploy"].disabled and acts.size() >= 2 and acts[0] == "issuer" and acts[1] == "bench" and card.vals[3].text.begins_with("0") and card.want_lit().all(func(w): return not w), "the want short: Set off shut %s, chips %s, '%s'" % [col["deploy"].disabled, str(acts), card.vals[3].text])
+	_check(card.segs[2]["button"].disabled and card.segs[2]["sub"].text in [Words.COUNTY["want_short"] % 2, Words.SITE_CARD["locked"]], "a stage shut by the want: '%s'" % card.segs[2]["sub"].text)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.refresh()
+		_check_fit(main, "u61 County card %dx%d (the want short)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	card.chips[1].pressed.emit()
+	_check(main.room == main.WORKSHOP, "the Bench's chip didn't go to the Bench: %s" % str(main.room))
+	# a shut place: Locked, why, no Set off - in a zone that's open (the Bailiff down: the Docks known, the Customs Shed
+	# after the Ferry Terminal's 2/3), so its card can be up at all (BUILD61 merge: A's zones open on the head's fall)
+	_u61_head_down(sim, 0)
+	col = _u61_show(main, "customs_shed")
+	_check(card.verdict.text == Words.SITE_CARD["locked"] and not col["deploy"].visible and col["note"].text.begins_with("After"), "a shut County place: '%s', Set off %s, note '%s'" % [card.verdict.text, col["deploy"].visible, col["note"].text])
+	_check_fit(main, "u61 County card (a shut place)")
+	# back on the Map: the campaign's card again, its rows its own, Set off its own words (the full smoke: "Set off: the
+	# Customs Shed" stayed on the Map's narrower button)
+	M.set_county(false)
+	M._shown = ""
+	main.refresh()
+	_check_fit(main, "u61 back on the Map after a shut County place")
+	_check(card.county == "" and card.keys[3].text == Words.SITE_CARD["keys"][3] and card.want_words().is_empty() and not card.head_view, "back on the Map the card kept the County's: '%s', %s" % [card.keys[3].text, str(card.want_words())])
+	sim.load_dict(saved)
+	_u61_put_back(sim, cs_keep)
+	M._shown = ""
+	main.refresh()
+	print("u61 card ok: a County place on the site card - its plate, the picker, Set off and the repeat on its stage, the Head, the want, fits")
+
+
+## The County's pins (§6): "· 2/3", the done colour at 3/3, "· New" breathing on a place a 2/3 opened till picked; the
+## longest ("Distribution Centre · 3/3") fits, and no two names cross with every zone open.
+func _u61_pin_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var cs_keep: Array = _u61_hold(sim)     # the County's stage state as it was (the stub keeps it off the save)
+	_u61_camp(sim, 1)
+	_u61_done(sim, "toll_plaza", 2)
+	sim.cs_new["distribution"] = true
+	_u61_show(main, "toll_plaza")
+	var cb = main._missions._county
+	var tl: Label = cb._pin_labels["toll_plaza"]
+	var dl: Label = cb._pin_labels["distribution"]
+	_check(tl.text == "Toll Plaza · 2/3" and tl.get_theme_color("font_color") != Pal.GOOD, "the Toll Plaza's pin at 2/3: '%s'" % tl.text)
+	_check(dl.text == "Distribution Centre · New" and cb._pin_marks["distribution"].visible and dl.visible_characters == "Distribution Centre · ".length(), "the next place's pin isn't New: '%s', mark %s" % [dl.text, cb._pin_marks["distribution"].visible])
+	cb._process(0.4)
+	_check(is_equal_approx(cb._pin_marks["distribution"].modulate.a, MapViewU61.pulse_alpha(cb.pulse_t)) and cb.pulse_t > 0.0, "the New mark doesn't breathe: %.2f" % cb._pin_marks["distribution"].modulate.a)
+	_check(cb._pin_labels["container_port"].text.find("·") < 0, "a shut zone's pin has a mark: '%s'" % cb._pin_labels["container_port"].text)
+	cb.select("distribution")
+	main.refresh()
+	_check(not sim.county_site_new("distribution") and not cb._pin_marks["distribution"].visible and dl.text == "Distribution Centre", "picked, the New stayed: '%s'" % dl.text)
+	_u61_done(sim, "toll_plaza", 3)
+	cb._shown = ""
+	main.refresh()
+	_check(tl.text == "Toll Plaza · 3/3" and tl.get_theme_color("font_color") == Pal.GOOD, "the Toll Plaza's pin at 3/3 isn't in the done colour: '%s'" % tl.text)
+	# every zone open, every place at 3/3 (the longest marks): each name inside the land, no two crossing, none on a pin
+	for z in range(Data.COUNTY_ZONES.size() - 1):
+		_u61_head_down(sim, z)
+	for c in Data.COUNTY:
+		_u61_done(sim, str(c["key"]), 3)
+	cb.selected = "toll_plaza"
+	cb._shown = ""
+	main.refresh()
+	var rects := {}
+	for k in cb._pin_labels:
+		var l: Label = cb._pin_labels[k]
+		var r: Rect2 = MapViewU61.word_rect(l)
+		rects[k] = r
+		_check(l.text.ends_with("· 3/3") and Rect2(Vector2.ZERO, cb._map.size).encloses(r) and UI.text_width(l, l.text) <= l.size.x + 0.5, "%s's pin name runs off: '%s' %s" % [k, l.text, str(r)])
+	for a in rects:
+		for b in rects:
+			if str(a) < str(b):
+				_check(not rects[a].intersects(rects[b]), "the County's names cross: %s and %s" % [a, b])
+		for c in Data.COUNTY:
+			var pr := Rect2(cb.pin_at(str(c["key"])) - Vector2(CountyU61.PIN_R, CountyU61.PIN_R), Vector2(2, 2) * CountyU61.PIN_R)
+			_check(not rects[a].intersects(pr), "%s's name sits on %s's pin" % [a, c["key"]])
+	_check(cb._pin_labels["distribution"].text == "Distribution Centre · 3/3", "the longest pin: '%s'" % cb._pin_labels["distribution"].text)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.refresh()
+		_check_fit(main, "u61 County pins %dx%d" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	main._missions.set_county(false)
+	sim.load_dict(saved)
+	_u61_put_back(sim, cs_keep)
+	main.refresh()
+	print("u61 pins ok: 2/3, 3/3 in the done colour, New breathing till picked, the longest fits, no names crossing")
+
+
+## The County's map (§6): the painting x2 with its size read from the texture - today's 512 x 424 and a 688 x 384 one
+## (Matt's, when it lands) - the places from data/county_places.tres, rescaled from the size they were placed on, the
+## tables the fallback for a place the file hasn't.
+func _u61_map_checks(_main) -> void:
+	var CM = CountyU61
+	var pic: Texture2D = CM.painting()
+	_check(pic != null and CM.paint_size() == pic.get_size() and CM.land_size() == pic.get_size() * 2.0, "the County's land isn't its painting x2: %s" % str(CM.land_size()))
+	var file = ResourceLoader.load(CM.PLACES_FILE, "", ResourceLoader.CACHE_MODE_IGNORE)
+	_check(file != null and file.sites.size() == Data.COUNTY.size() and file.zones.size() == Data.COUNTY_ZONES.size() and file.zone_names.size() == Data.COUNTY_ZONES.size(), "data/county_places.tres doesn't hold the twelve places, the four zones and their names")
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		_check(file.sites.has(k) and CM.placed("sites", k) == file.sites[k] * CM.paint_size() / file.paint_size, "%s isn't read from the file" % k)
+	# Matt's painting at 688 x 384: the land and every point rescaled from the file's 512 x 424
+	var keep_pic = CM._painting
+	var keep_read: bool = CM._painting_read
+	CM._painting = ImageTexture.create_from_image(Image.create(688, 384, false, Image.FORMAT_RGBA8))
+	CM._painting_read = true
+	CM.forget_places()
+	var kk: Vector2 = Vector2(688, 384) / file.paint_size
+	_check(CM.land_size() == Vector2(1376, 768) and CM.placed("sites", "toll_plaza") == file.sites["toll_plaza"] * kk and CM.zone_points(0)[1] == PackedVector2Array(file.zones["the_motorway"])[1] * kk, "the 688 x 384 painting: land %s, the Toll Plaza %s" % [str(CM.land_size()), str(CM.placed("sites", "toll_plaza"))])
+	var c2 = CM.new(Rect2(0, 0, Pal.GRID_W, 844))
+	_check(c2._map.size == Vector2(1376, 768) and c2.pin_at("treasury") == file.sites["treasury"] * kk * 2.0, "a County on the 688 x 384 painting: land %s" % str(c2._map.size))
+	c2.free()
+	CM._painting = keep_pic
+	CM._painting_read = keep_read
+	# a file without a place: the table's point for it, rescaled from 512 x 424
+	var fx = load("res://scripts/ui/map_places.gd").new()
+	fx.paint_size = file.paint_size
+	fx.sites = file.sites.duplicate()
+	fx.sites.erase("manor")
+	fx.sites["toll_plaza"] = Vector2(70, 50)
+	fx.zones = {}
+	ResourceSaver.save(fx, "user://smoke_u61_places.tres")
+	CM.places_file = "user://smoke_u61_places.tres"
+	CM.forget_places()
+	_check(CM.placed("sites", "toll_plaza") == Vector2(70, 50) * CM.paint_size() / file.paint_size and CM.placed("sites", "manor") == CM.PLACE_AT["manor"][0] * CM.paint_size() / CM.OLD_PAINT and CM.zone_points(2)[0] == CM.ZONE_SHAPES[2][0] * CM.paint_size() / CM.OLD_PAINT, "the fallbacks for a place and a zone the file hasn't")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://smoke_u61_places.tres"))
+	CM.places_file = CM.PLACES_FILE
+	CM.forget_places()
+	print("u61 map ok: the painting x2 from the texture, 688 x 384 rescaled, the places from data/county_places.tres")
+
+
+## The F3/F5 tool on the County (§6, as _b52_tool_checks): on with the County up (the Map's off), every place and zone
+## name grabbable, every name plain and the hatch off, a drag moves a place and its name, F5 saves to the County's file
+## (the zones kept), F3 off keeps it; leaving lets it go; not outside a debug build.
+func _u61_tool_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var cs_keep: Array = _u61_hold(sim)     # the County's stage state as it was (the stub keeps it off the save)
+	var M = main._missions
+	var MP = load("res://scripts/ui/map_placement.gd")
+	var CM = CountyU61
+	main.layout(Vector2(1920, 1080))
+	_u61_camp(sim, 1)
+	_u61_show(main, "toll_plaza")
+	var cb = M._county
+	var p = cb._placer
+	var md5_0: String = FileAccess.get_md5(CM.PLACES_FILE)
+	var keep_path: String = p.save_path
+	_check(keep_path == CM.PLACES_FILE, "the County's tool saves to '%s'" % keep_path)
+	p.save_path = "user://smoke_u61_tool.tres"
+	ResourceSaver.save(ResourceLoader.load(CM.PLACES_FILE, "", ResourceLoader.CACHE_MODE_IGNORE), p.save_path)
+	var f3 := InputEventKey.new()
+	f3.keycode = KEY_F3
+	f3.pressed = true
+	_check(cb.can_place() and not M._map.can_place() and not cb.placing, "F3 can't start on the County, or the Map's would too")
+	p._unhandled_input(f3)
+	_check(cb.placing and p.visible and p.mouse_filter == Control.MOUSE_FILTER_STOP and p.size == cb._map.size and p.get_parent() == cb._map, "F3 didn't turn placing on over the County's land")
+	var all: Array = cb.all_places()
+	_check(all.size() == Data.COUNTY.size() + Data.COUNTY_ZONES.size(), "the tool doesn't offer every County place: %d" % all.size())
+	for k in range(all.size()):
+		_check(Rect2(Vector2.ZERO, cb._map.size).encloses(p.grab_of(k).grow(-1.0)) and p.hit(p.at_of(k) + (Vector2(4, 4) if all[k][0] == "zone_names" else Vector2.ZERO)) == k, "%s can't be grabbed where it sits" % all[k][2])
+	_check(cb._zone_labels[3].text == str(Data.COUNTY_ZONES[3]["name"]) and cb._pin_labels["treasury"].text == "Treasury" and cb._known(3), "placing, a shut zone's names aren't plain: '%s'" % cb._zone_labels[3].text)
+	# a drag moves the Toll Plaza by the drag over x2, its name with it
+	var kt: int = all.find(all.filter(func(e): return e[0] == "sites" and e[1] == "toll_plaza")[0])
+	var t0: Vector2 = cb.place_of("sites", "toll_plaza")
+	var a0: Vector2 = p.at_of(kt)
+	p.press(a0)
+	p.move(a0 + Vector2(22, 10))
+	p.release()
+	var t1: Vector2 = t0 + Vector2(11, 5)
+	var tl: Label = cb._pin_labels["toll_plaza"]
+	_check(cb.place_of("sites", "toll_plaza") == t1 and cb.pin_at("toll_plaza") == t1 * CM.PX and absf(tl.position.x + tl.size.x / 2.0 - cb.pin_at("toll_plaza").x) < 2.0, "a drag didn't move the Toll Plaza or its name: %s from %s" % [str(cb.place_of("sites", "toll_plaza")), str(t0)])
+	# F5: the County's file, its painting's size, the move, the zones kept
+	_check(p.save() == OK, "F5 didn't save the County")
+	var back = ResourceLoader.load(p.save_path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	_check(back != null and back.paint_size == CM.paint_size() and back.sites.get("toll_plaza") == t1 and back.zones.size() == Data.COUNTY_ZONES.size() and back.sites.size() == Data.COUNTY.size(), "the County's F5 file: %s" % (str(back.sites) if back != null else "nothing"))
+	p._unhandled_input(f3)
+	_check(not cb.placing and not p.visible and cb.pin_at("toll_plaza") == t1 * CM.PX and cb._zone_labels[3].text != str(Data.COUNTY_ZONES[3]["name"]), "F3 again didn't end it, keep the saved place, or scramble the shut zone again")
+	# leaving the County lets the tool go
+	p.toggle()
+	main.show_room(main.MARKET)
+	p._process(0.0)
+	_check(not cb.placing and not p.visible, "leaving the County kept the tool on")
+	main.show_room(main.MISSIONS)
+	MP.in_debug = false
+	p._unhandled_input(f3)
+	_check(not cb.placing and not cb.can_place(), "F3 placed on the County outside a debug build")
+	MP.in_debug = true
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(p.save_path))
+	p.save_path = keep_path
+	CM.forget_places()
+	cb.relay()
+	_check(FileAccess.get_md5(CM.PLACES_FILE) == md5_0 and cb.pin_at("toll_plaza") == CM.placed("sites", "toll_plaza") * CM.PX, "the real data/county_places.tres changed, or the County's not on it again")
+	M.set_county(false)
+	sim.load_dict(saved)
+	_u61_put_back(sim, cs_keep)
+	main.refresh()
+	print("u61 tool ok: F3 on the County, a drag, F5 to data/county_places.tres, F3 off, leaving, debug only")
+
+
+## The County's stage backdrops (§5): `<place>_2` / `<place>_3` on the place's wall once drawn, else the place's pair;
+## the head's fight on his den once drawn, else his place's - never the host site's head's.
+func _u61_backdrop_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var cs_keep: Array = _u61_hold(sim)     # the County's stage state as it was (the stub keeps it off the save)
+	_u61_camp(sim, 1)
+	var v = main._run._view
+	var was_key: String = v._site_key
+	var pt: Texture2D = RunView.tex("the_toll_plaza_plate")
+	var ct: Texture2D = RunView.tex("the_toll_plaza_cover")
+	_check(pt != null and ct != null, "the fixture: the Toll Plaza's pair isn't drawn")
+	var run_m := func(st: int) -> Dictionary: return {"tier": 9, "signal": {"order": "toll_plaza"}, "county": "toll_plaza", "stage": st}
+	for st in [2, 3]:
+		RunView._tex["the_toll_plaza_%d_plate" % st] = null     # none drawn yet: the place's own
+	for st in [1, 2, 3]:
+		_check(RunView.county_scene(run_m.call(st)) == "the_toll_plaza", "the Toll Plaza's %d/3 with no plate of its own: '%s'" % [st, RunView.county_scene(run_m.call(st))])
+	RunView._tex["the_toll_plaza_2_plate"] = pt
+	_check(RunView.county_scene(run_m.call(2)) == "the_toll_plaza_2" and RunView.county_scene(run_m.call(3)) == "the_toll_plaza" and RunView.county_scene(run_m.call(1)) == "the_toll_plaza", "a drawn 2/3 plate isn't read for the 2/3 alone")
+	_check(RunView.stage_base("the_toll_plaza_2") == "the_toll_plaza" and RunView.scene_cover("the_toll_plaza_2") == ct, "the 2/3's plate doesn't stand on the place's wall")
+	_check(RunView.county_scene({"tier": 9, "signal": {"county": "toll_plaza", "zone": 3}}) == "the_toll_plaza", "a remixed signal took a stage's plate")
+	# a real run at 2/3 draws it; at 1/3 the place's
+	sim.hp = sim.max_hp()
+	_check(sim.deploy_county("toll_plaza", 1), "the fixture: no run at the Toll Plaza")
+	if sim.on_mission():
+		v.show_state(sim, sim.mission)
+		_check(v._site_key == "the_toll_plaza", "the 1/3's run isn't on the place's plate: '%s'" % v._site_key)
+		sim.extract_now()
+	_u61_done(sim, "toll_plaza", 1)
+	sim.hp = sim.max_hp()
+	if sim.deploy_county("toll_plaza", 2):
+		v.show_state(sim, sim.mission)
+		_check(v._site_key == "the_toll_plaza_2" and v._own_site, "the 2/3's run isn't on its own plate: '%s'" % v._site_key)
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: no run at the Toll Plaza's 2/3")
+	# the head's fight: his den once drawn (none yet: his place's pair), never the host site's head's den
+	var host: int = int(Data.county("truck_stop")["site"])
+	var host_head: Array = Data.BOSSES.filter(func(b): return int(b["tier"]) == host)
+	_check(RunView.head_den({"tier": host, "head_fight": true, "county": "truck_stop"}) == "the_bailiff", "the County head's den key: '%s'" % RunView.head_den({"tier": host, "head_fight": true, "county": "truck_stop"}))
+	_check(RunView._pair_in(RunView.BOSS_DIR, "the_bailiff") or SiteCardU61.county_picture_key("truck_stop", 1, true) == "the_truck_stop", "the Head's card picture with no den drawn isn't his place's")
+	_u61_done(sim, "distribution", 2)
+	_u61_done(sim, "truck_stop", 2)
+	sim.hp = sim.max_hp()
+	if sim.start_county_head(0):
+		v.show_state(sim, sim.mission)
+		var want: String = "the_bailiff" if RunView._pair_in(RunView.BOSS_DIR, "the_bailiff") else "the_truck_stop"
+		_check(v._site_key == want and (host_head.is_empty() or v._site_key != Items.slug(str(host_head[0]["name"]))), "the Bailiff's fight isn't on his den or his place: '%s'" % v._site_key)
+		sim.extract_now()
+	else:
+		_check(false, "the fixture: the Bailiff's fight didn't start")
+	for st in [2, 3]:
+		RunView._tex.erase("the_toll_plaza_%d_plate" % st)
+	v._site(was_key if was_key != "" else "the_parade")
+	sim.load_dict(saved)
+	_u61_put_back(sim, cs_keep)
+	main.refresh()
+	print("u61 backdrop ok: a County stage's plate when drawn on the place's wall, else the place's; the head's den, else his place's")
+
+
+
+# ------------------------------------------------------------------ BUILD61-C (6 Nov): the County's themed finds and new bases
+## A fresh sim for the County's finds: no mythic in the way, a runner at the cap so a fifth "at the level he wears" never
+## pulls a find under the County's T9 (FIND_AT_MINE).
+func _c61_sim():
+	var sim = Sim.new()
+	sim.start()
+	sim.mythics_on = false
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	return sim
+
+
+## A County place's row and its stage's level (spec §2: 40 + 3 a place + 2 a stage).
+func _c61_row(k: String) -> Dictionary:
+	return Data.county(k)
+
+
+func _c61_level(k: String, s: int) -> int:
+	var at := 0
+	for c in Data.COUNTY:
+		if str(c["key"]) == k:
+			break
+		at += 1
+	return 40 + 3 * at + 2 * (s - 1)
+
+
+## The County run's finds as _find rolls them: the run on its host site at the stage's level, loot tier 9 (a County find's,
+## spec §1), mission["county"] and mission["stage"] as A's run carries them (a61_notes.md). `s` 0: the place with no stage
+## (a remix's signal: no list); `head` the head's fight on it. [plain gear finds]
+func _c61_gear(sim, k: String, s: int, n: int, seed_v: int, head := false) -> Array:
+	var row: Dictionary = _c61_row(k)
+	var host: int = int(row["site"])
+	var t: Dictionary = sim.effective(host).duplicate()
+	t["loot_tier"] = 9
+	t["level"] = _c61_level(k, maxi(1, s))
+	t["depth"] = Data.SIGNAL_DEPTH
+	var m := {"found": [], "tier": host, "kills": 0, "patrols": 0, "county": k}
+	if head:
+		m["head_fight"] = true
+	elif s > 0:
+		m["stage"] = s
+	sim.rng.seed = seed_v
+	var out: Array = []
+	for i in range(n):
+		var got: Dictionary = sim._find(m, t, i % 2 == 0, {}, true)
+		if got.is_empty():
+			continue
+		var it: Dictionary = got["it"]
+		if str(it.get("slot", "")) in Data.SLOTS and not it.has("unique") and not it.has("set") and not it.has("piece"):
+			out.append(it)
+	return out
+
+
+## The lists (spec §4): a County stage's plain gear finds come THEME_SHARE from its place's list (plus the rest's chance of
+## landing on it anyway, read off the same place with no stage), not the host site's list; the head's fight on his place's;
+## the Motorway's lean T7-T8, the Treasury's nearly all T9; every list real bases, none another site's own or issued.
+func _c61_theme_checks() -> void:
+	var sim = _c61_sim()
+	_check(sim.wearable_level() >= 77, "the fixture: the runner wears level %d, under the County's top" % sim.wearable_level())
+	var on := func(arr: Array, lst: Array) -> float:
+		return float(arr.filter(func(it): return str(it["base"]) in lst).size()) / maxf(1.0, float(arr.size()))
+	var tp: Array = Data.COUNTY_THEMES["toll_plaza"]
+	var host_list: Array = Data.SITE_THEMES[str(Data.TIERS[int(_c61_row("toll_plaza")["site"])]["name"])]
+	var themed: Array = _c61_gear(sim, "toll_plaza", 1, 6000, 6101)
+	var plain: Array = _c61_gear(sim, "toll_plaza", 0, 6000, 6101)
+	var p0: float = on.call(plain, tp)
+	var p1: float = on.call(themed, tp)
+	var want: float = Data.THEME_SHARE + (1.0 - Data.THEME_SHARE) * p0
+	_check(themed.size() > 1500 and absf(p1 - want) < 0.04, "the Toll Plaza 1/3: %.2f of %d plain gear finds from its list, want %.2f (%.2f with no stage)" % [p1, themed.size(), want, p0])
+	_check(on.call(themed, host_list) < on.call(plain, host_list) + 0.05, "the Toll Plaza 1/3 rolled its host's list (%.2f against %.2f)" % [on.call(themed, host_list), on.call(plain, host_list)])
+	# the Treasury's 2/3, and the Bailiff's fight on the Truck Stop's list
+	var trl: Array = Data.COUNTY_THEMES["treasury"]
+	var tr2: Array = _c61_gear(sim, "treasury", 2, 4000, 6102)
+	var tr0: Array = _c61_gear(sim, "treasury", 0, 4000, 6102)
+	_check(on.call(tr2, trl) - on.call(tr0, trl) > 0.3, "the Treasury's 2/3: %.2f from its list against %.2f with no stage" % [on.call(tr2, trl), on.call(tr0, trl)])
+	var ts: Array = Data.COUNTY_THEMES["truck_stop"]
+	var hd: Array = _c61_gear(sim, "truck_stop", 0, 4000, 6103, true)
+	var hd0: Array = _c61_gear(sim, "truck_stop", 0, 4000, 6103)
+	_check(on.call(hd, ts) - on.call(hd0, ts) > 0.3, "the Bailiff's fight: %.2f from the Truck Stop's list against %.2f with none" % [on.call(hd, ts), on.call(hd0, ts)])
+	# the spread: the Motorway's list finds T7-T8, the Treasury's nearly all T9
+	var t9 := func(arr: Array, lst: Array) -> float:
+		var own: Array = arr.filter(func(it): return str(it["base"]) in lst)
+		return float(own.filter(func(it): return int(it["tier"]) == 9).size()) / maxf(1.0, float(own.size()))
+	_check(t9.call(themed, tp) == 0.0 and t9.call(tr2, trl) > 0.8, "the spread: %.2f of the Toll Plaza's list finds T9 (want 0), %.2f of the Treasury's (want most)" % [t9.call(themed, tp), t9.call(tr2, trl)])
+	# every place has a list: real gear bases, none another site's own, none of the issued six, each new base on one
+	var issued: Array = Data.ISSUED.map(func(p): return str(p["base"]))
+	_check(Data.COUNTY_THEMES.size() == Data.COUNTY.size(), "%d County lists for %d places" % [Data.COUNTY_THEMES.size(), Data.COUNTY.size()])
+	for c in Data.COUNTY:
+		var names: Array = Data.COUNTY_THEMES.get(str(c["key"]), [])
+		_check(names.size() >= 10, "%s has no list (%d)" % [c["place"], names.size()])
+		for nm in names:
+			var b := {}
+			for sl in Data.SLOTS:
+				if not Items.base_named(sl, str(nm)).is_empty():
+					b = Items.base_named(sl, str(nm))
+			_check(not b.is_empty() and int(b["tier"]) >= 7, "%s's list names %s, no T7-T9 gear base" % [c["place"], nm])
+			_check(Items.exclusive_to(str(nm)) == "", "%s's list holds %s, %s's own" % [c["place"], nm, Items.exclusive_to(str(nm))])
+			_check(not (str(nm) in issued), "%s's list holds the issued %s" % [c["place"], nm])
+	print("c61 theme ok: the Toll Plaza %.2f from its list (want %.2f, %.2f with no stage); T9 of the lists' finds %.2f / %.2f" % [p1, want, p0, t9.call(themed, tp), t9.call(tr2, trl)])
+
+
+## The 3/3's quarter (spec §4, open call 3): a County 3/3's plain gear at T9 rolls STAGE_TIER_UP from its list's T9 alone
+## (the slot's T9 where the list has none, the issued six off); its 1/3 and 2/3, a T8 find, a campaign site's stage and a
+## signal draw no dice for it; c55's tier-up draws none on a County 3/3; the Toll Plaza's 3/3 finds T9 its 2/3 doesn't.
+func _c61_top_checks() -> void:
+	var sim = _c61_sim()
+	var m3 := {"county": "treasury", "stage": 3}
+	var t := {"tier": 8, "depth": Data.SIGNAL_DEPTH}
+	sim.rng.seed = 6110
+	var top := 0
+	var off := []
+	for i in range(4000):
+		var lst: Array = sim.c61_theme(m3, t, "Helmet", 9)
+		var share: float = sim.c61_share(m3, t, "Helmet")
+		if share == 1.0:
+			top += 1
+			if lst != ["Surveillance helmet", "Treasury guard's helmet"]:
+				off.append(lst)
+		elif lst != Data.COUNTY_THEMES["treasury"] or share != Data.THEME_SHARE:
+			off.append(lst)
+	_check(off.is_empty(), "the Treasury's 3/3 rolled %d finds off its list or its top helmets, the first %s" % [off.size(), str(off[0]) if not off.is_empty() else ""])
+	_check(absf(float(top) / 4000.0 - Data.STAGE_TIER_UP) < 0.025, "a County 3/3's top-tier share is %.3f, not %.2f" % [float(top) / 4000.0, Data.STAGE_TIER_UP])
+	# the Motorway's list has no T9: the slot's T9, the issued six off
+	var tph: Array = Sim.c61_top("toll_plaza", "Helmet")
+	_check("Full EOD helmet" in tph and "Treasury guard's helmet" in tph and not ("Command helmet" in tph) and tph.all(func(nm): return int(Items.base_named("Helmet", str(nm))["tier"]) == 9),
+		"the Toll Plaza's top helmets: %s" % str(tph))
+	_check(Sim.c61_top("bullion_vault", "Charm") == ["Uncut diamond", "Small ingot"], "the Bullion Vault's top charms: %s" % str(Sim.c61_top("bullion_vault", "Charm")))
+	# no dice: a 1/3, a 2/3, a T8 find on a 3/3, a paper, a campaign site's 3/3, a head's fight, a signal, a remix
+	var cases := [[{"county": "treasury", "stage": 1}, "Helmet", 9], [{"county": "treasury", "stage": 2}, "Helmet", 9], [m3, "Helmet", 8],
+		[m3, Data.PAPER, 9], [{"stage": 3}, "Helmet", 9], [{"county": "manor", "head_fight": true}, "Helmet", 9], [{"found": []}, "Helmet", 9],
+		[{"county": "treasury"}, "Helmet", 9]]
+	for c in cases:
+		var s0: int = sim.rng.state
+		sim.c61_theme(c[0], {"tier": 0, "depth": 3}, str(c[1]), int(c[2]))
+		_check(sim.rng.state == s0 and sim.c61_share(c[0], t, str(c[1])) == Data.THEME_SHARE, "%s at %s, T%d drew the 3/3's dice" % [str(c[0]), c[1], c[2]])
+	var s1: int = sim.rng.state
+	_check(sim.c55_tier_up(m3, t, "Helmet", 9, 77) == 9 and sim.rng.state == s1, "c55's tier-up drew dice on a County 3/3")
+	# a signal (no county, no stage): no list and THEME_SHARE, so its finds roll as before
+	for d in [4, 9]:
+		var ms := {"found": []}
+		var s2: int = sim.rng.state
+		_check(sim.c61_theme(ms, {"tier": 11, "depth": d}, "Primary", 9).is_empty() and sim.c61_share(ms, {}, "Primary") == Data.THEME_SHARE and sim.rng.state == s2,
+			"a signal at depth %d has a County list or drew dice" % d)
+	# through the finds: the Toll Plaza's 3/3 finds T9 bases its list doesn't hold, its 2/3 hardly
+	var tp: Array = Data.COUNTY_THEMES["toll_plaza"]
+	var t9 := func(arr: Array) -> float:
+		return float(arr.filter(func(it): return int(it["tier"]) == 9).size()) / maxf(1.0, float(arr.size()))
+	var a2: Array = _c61_gear(sim, "toll_plaza", 2, 4000, 6111)
+	var a3: Array = _c61_gear(sim, "toll_plaza", 3, 4000, 6111)
+	var want: float = t9.call(a2) + Data.STAGE_TIER_UP * (1.0 - t9.call(a2))
+	_check(absf(t9.call(a3) - want) < 0.05, "the Toll Plaza's T9 finds: %.2f at 3/3, want %.2f (%.2f at 2/3)" % [t9.call(a3), want, t9.call(a2)])
+	_check(a3.size() > 1000 and _c61_on_list(a3, tp) < _c61_on_list(a2, tp), "the Toll Plaza's 3/3 quarter came off its T7-T8 list: %.2f against %.2f" % [_c61_on_list(a3, tp), _c61_on_list(a2, tp)])
+	print("c61 top ok: %d of 4000 at the top tier; the Toll Plaza's T9 %.2f at 3/3, %.2f at 2/3" % [top, t9.call(a3), t9.call(a2)])
+
+
+func _c61_on_list(arr: Array, lst: Array) -> float:
+	return float(arr.filter(func(it): return str(it["base"]) in lst).size()) / maxf(1.0, float(arr.size()))
+
+
+## The 24 new bases (spec §4 "Gaps"): each a T8/T9 gear base on one County list and no site's, that rolls at its place,
+## wears, carries its line, sits by its tier's neighbours and shows a borrowed picture (ART_AS) at its footprint's size -
+## a gun's in hand too - till its art.
+func _c61_bases_checks() -> void:
+	var sim = _c61_sim()
+	_check(Data.C61_NEW_BASES.size() == 24, "the County's new bases: %d" % Data.C61_NEW_BASES.size())
+	var r := RandomNumberGenerator.new()
+	r.seed = 6120
+	for nm in Data.C61_NEW_BASES:
+		var slot := ""
+		for sl in Data.SLOTS:
+			if not Items.base_named(sl, str(nm)).is_empty():
+				slot = sl
+		_check(slot != "", "%s isn't a gear base" % nm)
+		if slot == "":
+			continue
+		var b: Dictionary = Items.base_named(slot, str(nm))
+		_check(int(b["tier"]) in [8, 9], "%s is T%d" % [nm, int(b["tier"])])
+		var places: Array = Data.COUNTY.filter(func(c): return str(nm) in Data.COUNTY_THEMES.get(str(c["key"]), []))
+		_check(places.size() == 1, "%s is on %d County lists" % [nm, places.size()])
+		_check(not Data.SITE_THEMES.values().any(func(l): return str(nm) in l), "%s is on a campaign site's list" % nm)
+		if places.size() != 1:
+			continue
+		var host: String = str(Data.TIERS[int(places[0]["site"])]["name"])
+		var seen := false
+		for i in range(400):
+			var it := Items.roll(slot, 9, r, 0.0, false, false, host, "", 0.33, Data.SIGNAL_DEPTH, 60, Data.COUNTY_THEMES[str(places[0]["key"])], 1.0)
+			if str(it["base"]) == str(nm):
+				seen = true
+				break
+		_check(seen, "%s never rolled at %s" % [nm, places[0]["place"]])
+		# it sits by its tier's neighbours: a gun's dmg/s within 10% of its slot, tier and type's; armour within its tier's
+		var peers: Array = Data.BASES[slot].filter(func(o): return int(o["tier"]) == int(b["tier"]) and not (str(o["name"]) in Data.C61_NEW_BASES) and str(o.get("type", "")) == str(b.get("type", "")))
+		if slot in ["Primary", "Secondary"] and not peers.is_empty():
+			var mean: float = peers.reduce(func(a, o): return a + float(o["damage"]) * float(o["rof"]), 0.0) / float(peers.size())
+			var dps: float = float(b["damage"]) * float(b["rof"])
+			_check(absf(dps / mean - 1.0) < 0.1, "%s's %.0f dmg/s against its T%d %ss' %.0f" % [nm, dps, int(b["tier"]), b.get("type", ""), mean])
+		elif b.has("armour") and not peers.is_empty():
+			var lo: float = peers.reduce(func(a, o): return minf(a, float(o["armour"])), 9999.0)
+			var hi: float = peers.reduce(func(a, o): return maxf(a, float(o["armour"])), 0.0)
+			_check(float(b["armour"]) >= lo * 0.75 and float(b["armour"]) <= hi, "%s's armour %.0f outside its T%d's %.0f-%.0f" % [nm, float(b["armour"]), int(b["tier"]), lo, hi])
+		# it wears
+		var pc: Dictionary = sim._plain(slot, str(nm))
+		sim.stash = []
+		sim.stash_put(pc)
+		_check(sim.equip_item(int(pc["id"])) and sim.equipped[slot] != null and str(sim.equipped[slot]["base"]) == str(nm), "%s won't wear" % nm)
+		_check(Items.score(pc) > 0.0, "%s scores nothing worn" % nm)
+		# a borrowed picture till the art: ART_AS names one on disk at its footprint's size, a gun's in hand too
+		var borrow: String = str(Data.ART_AS.get(str(nm), ""))
+		_check(borrow != "" and borrow != str(nm), "%s borrows no picture" % nm)
+		var tex: Texture2D = Items.art(pc)
+		var fp: Vector2i = Items.footprint(pc)
+		_check(tex != null and tex == Items._art_named(Items.slug(borrow)) and tex.get_width() == fp.x * 64 and tex.get_height() == fp.y * 64,
+			"%s doesn't show %s's picture at its footprint %s (%s)" % [nm, borrow, str(fp), str(tex.get_size()) if tex != null else "-"])
+		if slot in ["Primary", "Secondary"]:
+			_check(FileAccess.file_exists("res://art/fight/hands/%s.png" % Items.slug(Items.art_name(str(nm)))), "%s has no picture in hand (borrowing %s)" % [nm, borrow])
+		_check(str(Words.ITEMS.get(str(nm), "")).ends_with("."), "%s has no line" % nm)
+	# the built-in figures read: the Highways coat's later gangs, the Examiner's gloves' poison resist
+	var hc: Dictionary = sim._plain("Armour", "Highways coat")
+	_check(Items.base_res_words(hc).contains("10% gangs later") and Items.base_res_words(hc).contains("+2% pace"), "the Highways coat reads '%s'" % Items.base_res_words(hc))
+	var eg: Dictionary = sim._plain("Gloves", "Examiner's gloves")
+	_check(Items.base_res_words(eg).contains("poison resist 20%"), "the Examiner's gloves read '%s'" % Items.base_res_words(eg))
+	print("c61 bases ok: %d new bases roll, wear and borrow a picture" % Data.C61_NEW_BASES.size())
+
+
+# ------------------------------------------------------------------ BUILD61 merge review (6 Nov)
+## A finished 100% read planted on a County sig's own key (as a settled read leaves it).
+func _m61_plant(sim, sg: Dictionary, whole := false) -> void:
+	sim._sig_on(sg)
+	var key: Array = sim._odds_key(int(sg["site"]))
+	sim._sig_off()
+	sim._sig_odds[sim._b61_odds_key(sg, whole)] = [key, 1.0, 100000, 100000, RandomNumberGenerator.new(), 1.0]
+
+
+## The review's findings: 1 the County card read its odds while the place was laid on (always "Reading the odds", his
+## gang ×1); 2 a stage picked never moved the Map's read's base; 3 hurt, a County repeat's full-HP read was never asked;
+## and a County repeat disarmed its host site's head and wore the host's name. `-- only m61_review`.
+func _m61_review_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var cs_keep: Array = _u61_hold(sim)
+	_u61_camp(sim, 1)
+	var k := "toll_plaza"
+	# 1: a read stage shows its odds on the card, not "Reading the odds"
+	_m61_plant(sim, sim.county_sig(k, 1))
+	var col: Dictionary = _u61_show(main, k)
+	var card = col["card"]
+	_check(card.odds_line.text.ends_with("to clear"), "a County stage read at 100%%: the card says '%s' / '%s'" % [card.verdict.text, card.odds_line.text])
+	# the language pass: never won reads "never taken" (tried and lost isn't "never tried"); once, "taken once"
+	_check(card.here.text == Words.U61["here_never"], "a County place never won: '%s'" % card.here.text)
+	sim.order_beaten[k] = 1
+	col = _u61_show(main, k)
+	_check(card.here.text == Words.U61["here_once"], "a County place won once: '%s'" % card.here.text)
+	sim.order_beaten.erase(k)
+	# ... and the Head's: his fight's odds and his gang's count
+	_u61_done(sim, "distribution", 2)
+	_u61_done(sim, "truck_stop", 2)
+	var hz := 0
+	_m61_plant(sim, sim.county_sig("truck_stop", Data.STAGE_OPENS, hz))
+	col = _u61_show(main, "truck_stop")
+	card._seg_pressed(Data.STAGES)
+	main.refresh()
+	var pool: int = maxi(1, int(sim.county_head_fight_preview(hz).get("pool", 1)))
+	_check(card.head_view and card.odds_line.text.ends_with("to clear") and card.gang_count.text == "×%d" % pool and pool > 1, "the Head read at 100%%: '%s', his gang '%s' (%d)" % [card.odds_line.text, card.gang_count.text, pool])
+	card.head_view = false
+	# 2: picking another stage moves the read's base (its key moved)
+	_u61_done(sim, k, 1)
+	sim.set_county_pick(k, 1)
+	var b0: Array = main._odds_base()
+	sim.set_county_pick(k, 2)
+	_check(main._odds_base() != b0, "picking the Toll Plaza's 2/3 left the read's base as it was")
+	# 3: hurt, a cleared stage's repeat gate reads the runner whole on the Map
+	_u61_done(sim, k, 2)
+	sim.set_county_pick(k, 2)
+	_m61_plant(sim, sim.county_sig(k, 2))
+	sim.hp = sim.max_hp() * 0.6
+	col = _u61_show(main, k)
+	var n: int = _b48a_frames(main, func(): return bool(sim.county_repeat_odds(k)[0]), 400)
+	_check(bool(sim.county_repeat_odds(k)[0]), "hurt, the Toll Plaza's repeat read never ran: %d frames, '%s'" % [n, sim.county_repeat_block(k)])
+	# 4: a County repeat keeps its host's head armed, and goes by its own name
+	sim.hp = sim.max_hp()
+	var host: int = int(Data.county(k)["site"])
+	sim.boss_armed[host] = true
+	_m61_plant(sim, sim.county_sig(k, 2))
+	var went: bool = sim.start_county_repeat(k)
+	if went:
+		_check(main.away_site(sim) == "The Toll Plaza", "the top bar's away place on a County repeat: '%s'" % main.away_site(sim))
+	_check(Sim.repeat_place_name({"site": host, "county": k}) == "The Toll Plaza", "a County repeat's name")
+	if sim.on_mission():
+		sim.extract_now()               # the run's place taken off its host: the host's head as he was (the sig keeps him)
+	_check(went and bool(sim.boss_armed.get(host, false)), "a County repeat (went %s) disarmed its host site's head" % went)
+	if went and not sim.repeat.is_empty() and not sim.on_mission():
+		_check(main.away_site(sim) == "The Toll Plaza", "the top bar's away place between a County repeat's runs: '%s'" % main.away_site(sim))
+	sim.repeat = {}
+	sim.load_dict(saved)
+	_u61_put_back(sim, cs_keep)
+	main.refresh()
+	print("m61 review ok: the County card's odds and his gang read off the place, a stage's pick re-reads, hurt the repeat reads, a County repeat its own")

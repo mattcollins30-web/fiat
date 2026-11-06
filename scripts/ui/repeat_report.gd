@@ -87,7 +87,7 @@ func show_state(s) -> void:
 	if not was:
 		unfolded = rep.get("runs", []).size() <= 2 * LINES_ROWS     # open when every run's line fits (the review: an empty card folded)
 	_site = int(rep["site"])
-	var site: String = str(Data.TIERS[_site]["name"])
+	var site: String = Sim.repeat_place_name(rep)     # (BUILD61 review) a County place's own name, not its host site's
 	var tot: Dictionary = Sim.repeat_totals(rep)
 	var n: int = int(tot["runs"])
 	UI.fit(title, [Words.REPEAT["title"] % Words.mid(site), Words.REPEAT["title"] % Words.mid(site.trim_prefix("The "))])

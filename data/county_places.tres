@@ -1,0 +1,35 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/map_places.gd" id="1_mplcs"]
+
+[resource]
+script = ExtResource("1_mplcs")
+paint_size = Vector2(688, 384)
+sites = {
+"bullion_vault": Vector2(370, 280),
+"container_port": Vector2(520, 120),
+"counting_house": Vector2(270, 235),
+"customs_shed": Vector2(615, 270),
+"distribution": Vector2(380, 30),
+"ferry_terminal": Vector2(635, 190),
+"gated_close": Vector2(150, 195),
+"golf_club": Vector2(165, 120),
+"manor": Vector2(85, 315),
+"toll_plaza": Vector2(200, 60),
+"treasury": Vector2(460, 240),
+"truck_stop": Vector2(390, 105)
+}
+order = {}
+town = {}
+zone_names = {
+"the_big_houses": Vector2(6, 250),
+"the_docks": Vector2(560, 360),
+"the_motorway": Vector2(20, 8),
+"the_treasury": Vector2(330, 360)
+}
+zones = {
+"the_big_houses": PackedVector2Array(0, 115, 140, 95, 250, 95, 330, 150, 230, 170, 240, 280, 250, 384, 0, 384),
+"the_docks": PackedVector2Array(550, 0, 688, 0, 688, 384, 590, 384, 560, 290, 500, 190, 430, 140, 500, 85),
+"the_motorway": PackedVector2Array(0, 0, 550, 0, 500, 85, 430, 140, 330, 150, 250, 95, 140, 95, 0, 115),
+"the_treasury": PackedVector2Array(330, 150, 430, 140, 500, 190, 560, 290, 590, 384, 250, 384, 240, 280, 230, 170)
+}

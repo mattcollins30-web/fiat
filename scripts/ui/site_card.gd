@@ -291,6 +291,9 @@ func _build_home() -> void:
 ## A segment pressed (BUILD55-U): a stage picks it for Set off; the Head shows his fight. Either marks the site seen
 ## (its "New" goes from the Map's pin).
 func _seg_pressed(k: int) -> void:
+	if county != "" and sim != null:
+		_county_seg(k)                           # a County place's picker (BUILD61-U)
+		return
 	if sim == null or site < 0 or order != "":
 		return
 	if k >= Data.STAGES:
@@ -320,6 +323,7 @@ func show_state(s, i: int, why: Array = []) -> void:
 	sim = s
 	site = i
 	_why = why
+	_county_off()                                # back to a site from a County place (BUILD61-U)
 	if order != "":
 		order = ""                              # back to a site from an order's place (BUILD49 U, item 23)
 		_art.modulate = Color.WHITE
@@ -653,7 +657,7 @@ static func rounds_read(s, i: int) -> Dictionary:
 func fix_rows(i: int, is_open: bool) -> Array:
 	if not is_open:
 		return []
-	var out: Array = []
+	var out: Array = _extra_fix.duplicate()      # a County place short of issued kit: its two links first (BUILD61-U)
 	var rd: Dictionary = rounds_read(sim, i)
 	if str(rd["state"]) == "short":
 		out.append({"forms": [Words.SITE_CARD["fix_rounds"]], "colour": "bad", "act": "rounds"})     # the figures are the Rounds row's: said once (the language pass)
@@ -827,6 +831,9 @@ func text_nodes() -> Array:
 	if count_box.visible:
 		out.append(count)
 	out.append_array(keys + vals)
+	for wc in _want_chips:                       # a County place's issued slots (BUILD61-U)
+		if wc[0].visible:
+			out.append(wc[1])
 	for b in chips:
 		if b.visible:
 			out.append(b)
@@ -858,6 +865,7 @@ var order := ""                         # the order's place shown ("grid", "arch
 ## card and picture, the figures greyed, the verdict "Locked" and the rebuild that opens it.
 func show_order(s, k: String, why: Array = []) -> void:
 	sim = s
+	_county_off()                                # (BUILD61-U)
 	order = k
 	_why = why
 	var p: Dictionary = Data.pinnacle(k)
@@ -1018,4 +1026,321 @@ func _order_here(k: String, _open: bool) -> void:
 	var beaten: int = int(sim.order_beaten.get(k, 0))
 	here_right.text = ""
 	UI.fit(here, [Words.U49_ORDER["beaten"] % Words.count_of(beaten, "time") if beaten > 0 else Words.SITE_CARD["here_never"]])
+	last.text = ""
+
+
+# ------------------------------------------------------------------ the County's places (BUILD61-U, 6 Nov)
+
+## The 0.12.2 playtest's item 23 for the County (docs/design/county_stages.md §6; Matt: "UI changes from campaign if not
+## already done so"): a County place on the campaign's card. Its picture (art/fight_county/<place>_plate.png, a stage's
+## own plate once drawn, his den on the Head), the stage picker (layout A) with "Head" on a zone's last place, you
+## against them, what it takes - its last two rows the issued kit the zone wants and its six slots - the fix chips (the
+## Issuer and the Bench first while the want's short), what you'll bring home, your record. Read on the place laid on
+## its host site at its picked stage, as a run there is (sim.order_sig).
+
+var county := ""                         # the County place shown ("toll_plaza" ...), "" for a site or an order's place
+var _extra_fix: Array = []               # the fix chips' first rows on a County place: its two ways to the want
+var _want_chips: Array = []              # [panel, label] an issued slot, built on a County place's first show
+var _county_pool := 1                    # the Head's gang's count, read before the place is laid on (BUILD61 review 1)
+const WANT_SLOTS := ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]
+const WANT_CHIP_GAP := 6
+
+
+## Back from a County place to a site or an order's place: its rows' words and the slots put back.
+func _county_off() -> void:
+	if county == "":
+		return
+	county = ""
+	_extra_fix = []
+	_art.modulate = Color.WHITE
+	for f in _figs:
+		f.modulate = Color.WHITE
+	for kk in range(keys.size()):
+		keys[kk].text = Words.SITE_CARD["keys"][kk]
+		keys[kk].add_theme_color_override("font_color", Pal.TEXT_2)
+	UI.fit(keys[0], [Words.SITE_CARD["keys"][0], Words.SITE_CARD["key_last_short"]])
+	for wc in _want_chips:
+		wc[0].visible = false
+
+
+func show_county(s, k: String, why: Array = []) -> void:
+	sim = s
+	order = ""
+	county = k
+	_why = why
+	var c: Dictionary = Data.county(k)
+	var i: int = int(c["site"])
+	var z: int = int(c["cz"])
+	site = i
+	has_head = c.has("who")
+	var open: bool = sim.order_open(k)
+	var showing_head: bool = head_view and has_head and open and sim.county_stage_done(k) >= Data.STAGE_OPENS
+	head_box.visible = false
+	pick_box.visible = true
+	var sg: Dictionary = sim.county_sig(k, Data.STAGE_OPENS, z) if showing_head else sim.order_sig(k)
+	# (BUILD61 review 1) the odds and his gang's count read before the place is laid on, as show_order's: both read nothing while one is
+	_order_od = (sim.county_head_odds_now(z) if showing_head else sim.order_odds_now(k)) if open else [0.0, false]
+	_county_pool = maxi(1, int(sim.county_head_fight_preview(z).get("pool", 1))) if showing_head else 1
+	var swapped := false
+	var home = null
+	if open and sim._sig.is_empty():
+		sim._sig_on(sg)                          # the place laid on its host, as show_order's
+		home = sim._surv_cache.get(i, null)
+		var key: String = sim._b61_odds_key(sg)     # (BUILD61 review) the Head's own key on his view, the stage's on a stage
+		if sim._sig_odds.has(key):
+			sim._surv_cache[i] = sim._sig_odds[key]
+		else:
+			sim._surv_cache.erase(i)
+		swapped = true
+	_county_picker(k, z, open, showing_head)
+	_county_picture(k, c, z, open, showing_head)
+	_county_match(k, c, z, open, showing_head)
+	_show_takes(i, open)
+	_order_takes_shut(open)
+	_county_want(z)
+	var worn: int = sim.issued_worn()
+	_extra_fix = []
+	if open and worn < sim.county_want(z):
+		for b in ["to_issuer", "to_bench"]:
+			_extra_fix.append({"forms": [str(Words.COUNTY[b]).trim_suffix("  ›"), str(Words.COUNTY[b + "_short"]).trim_suffix("  ›")], "colour": "bad" if b == "to_issuer" else "warn", "act": "issuer" if b == "to_issuer" else "bench"})
+	_show_fix(i, open)
+	_show_home(i, open, {}, false)
+	if showing_head:
+		var tl: Dictionary = tiles[1]             # his issued kit, in the second tile's place
+		tl["icon"].texture = Run.icon_tex(["res://art/crates/safe.png"])
+		UI.fit(tl["text"], [Words.COUNTY["drops_issued"], Words.U61["issued_short"]])
+		tl["text"].add_theme_color_override("font_color", Pal.WARN)
+		tl["edge"].visible = true
+	_county_here(k)
+	if swapped:
+		if home != null:
+			sim._surv_cache[i] = home
+		else:
+			sim._surv_cache.erase(i)
+		sim._sig_off()
+
+
+## A segment pressed on a County place: a stage picks it for Set off; the Head shows his fight. Either marks it seen.
+func _county_seg(k: int) -> void:
+	var c: Dictionary = Data.county(county)
+	if k >= Data.STAGES:
+		if not has_head or segs[k]["button"].disabled:
+			return                               # shut till his place's 2/3
+		head_view = true
+	else:
+		if not sim.county_stage_open(county, k + 1):
+			return
+		sim.set_county_pick(county, k + 1)
+		head_view = false
+	sim.mark_county_seen(str(c["key"]))
+	view_changed.emit()
+
+
+## The picker on a County place: "1/3 · 2/3 · 3/3" - cleared, open, or shut with county_stage_block's reason (the want
+## as "Wear 3 issued") - and "Head" on a zone's last place, shut "After 2/3", free (County runs cost nothing).
+func _county_picker(k: String, z: int, open: bool, showing_head: bool) -> void:
+	var n: int = Data.STAGES + (1 if has_head else 0)
+	var w: float = floorf((INNER - PICKED_W - 8 - (n - 1) * SEG_GAP) / float(n))
+	var pick: int = sim.county_stage_pick(k)
+	var done: int = sim.county_stage_done(k)
+	var want_line: String = Words.COUNTY["want"] % [sim.county_want(z), sim.issued_worn()]
+	for kk in range(segs.size()):
+		var sg: Dictionary = segs[kk]
+		var bt: Button = sg["button"]
+		bt.visible = kk < n
+		if not bt.visible:
+			continue
+		bt.position.x = kk * (w + SEG_GAP)
+		bt.size = Vector2(w, PICK_H)
+		for l in [sg["top"], sg["sub"]]:
+			l.size.x = w
+		var on: bool
+		var shut: bool
+		var top: String
+		var sub: Array
+		var sub_tone: Color = Pal.TEXT_2
+		if kk < Data.STAGES:
+			var st: int = kk + 1
+			var why: String = sim.county_stage_block(k, st)
+			shut = why != ""
+			on = open and not showing_head and st == pick
+			top = Words.U55["stage"] % [st, Data.STAGES] + (" ✓" if done >= st else "")
+			if done >= st:
+				sub = [Words.U55["cleared"]]
+				sub_tone = Pal.GOOD
+			elif shut:
+				sub = ([Words.COUNTY["want_short"] % sim.county_want(z)] if why == want_line else [why]) + [Words.SITE_CARD["locked"]]
+			else:
+				sub = [Words.U55["not_cleared"], Words.U55["not_cleared_short"]]
+		else:
+			shut = not open or done < Data.STAGE_OPENS
+			on = showing_head
+			top = Words.U55["head"] + (" ✓" if sim.county_head_falls(z) > 0 else "")
+			sub = [Words.U55["after_site_short"] % (Words.U55["stage"] % [Data.STAGE_OPENS, Data.STAGES])] if shut else [Words.U55["head_free"]]
+			sub_tone = Pal.TEXT_2 if shut else Pal.GOOD
+		bt.disabled = shut
+		UI.style_button(bt, on)
+		UI.fit(sg["top"], [top, top.trim_suffix(" ✓")])
+		UI.fit(sg["sub"], sub)
+		sg["top"].add_theme_color_override("font_color", Pal.ACCENT_TEXT if on else (Pal.TEXT_3 if shut else Pal.TEXT))
+		sg["sub"].add_theme_color_override("font_color", Pal.ACCENT_TEXT if on else (Pal.TEXT_3 if shut else sub_tone))
+	var lv: int = sim.county_head_level(z) if showing_head else sim.county_stage_level(k, pick)     # the head at his gate's level, the 2/3's
+	var what: String = Words.U55["head"] if showing_head else Words.U55["stage"] % [pick, Data.STAGES]
+	UI.fit(picked_val, [Words.U55["picked_line"] % [what, lv], Words.U55["picked_short"] % lv])
+	picked_val.add_theme_color_override("font_color", Pal.ACCENT if open else Pal.TEXT_3)
+
+
+## A County place's picture: a stage's own plate once drawn (art/fight_county/<place>_2_plate.png), else the place's
+## plate; on the Head his den once drawn (art/fight_boss/<head>_plate.png), else the place's; else the old card picture.
+static func county_picture_key(k: String, s: int, head: bool) -> String:
+	var c: Dictionary = Data.county(k)
+	var pk: String = Items.slug(str(c.get("place", "")))
+	if head:
+		var hk: String = Items.slug(str(c.get("who", "")))
+		if hk != "" and RunView._pair_in(RunView.BOSS_DIR, hk):
+			return hk
+	elif s >= 2 and RunView.tex("%s_%d_plate" % [pk, s]) != null:
+		return "%s_%d" % [pk, s]
+	return pk
+
+
+func _county_picture(k: String, c: Dictionary, z: int, open: bool, showing_head: bool) -> void:
+	var pk: String = county_picture_key(k, sim.county_stage_pick(k), showing_head)
+	var plate: Texture2D = RunView.tex(pk + "_plate")
+	if plate == null:
+		plate = UI.place_texture(str(c["place"]))
+	if plate == null:
+		plate = UI.place_texture(str(Data.TIERS[int(c["site"])]["name"]))
+	_art.texture = plate
+	_art.modulate = Color.WHITE if open else Color(0.55, 0.55, 0.58)
+	var zn: String = str(Data.COUNTY_ZONES[z]["name"])
+	UI.fit(kicker, [Words.U61["kicker"] % zn, zn])
+	UI.fit(title, [str(c["place"])])
+	title.add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
+	UI.fit(sky, [sim.clock_words() + " · " + (Words.SKY["night"] if sim.is_night() else Words.SKY["day"]), sim.clock_words()])
+	# the figures: his gang either side and him in the middle on the Head, else the zone's crew (the host's till drawn)
+	var crew: String = RunView.county_gang({"signal": {"order": k}})
+	var host: String = RunView.ZONE_KEYS[mini(int(Data.TIERS[int(c["site"])]["zone"]), RunView.ZONE_KEYS.size() - 1)]
+	var hk: String = Items.slug(str(c.get("who", ""))) if showing_head else ""
+	for kk in range(_figs.size()):
+		var f: TextureRect = _figs[kk]
+		var him: bool = hk != "" and kk == FIG_X.size() - 1
+		var w: String = "a" if kk % 2 == 0 else "b"
+		var t: Texture2D = RunView.tex("head_%s_stand" % hk) if him else RunView.tex_of(["gang_%s_%s_stand" % [crew, w], "gang_%s_%s_stand" % [host, w], "gang_stand"])
+		f.texture = t
+		f.visible = t != null
+		if t == null:
+			continue
+		var u: Rect2 = RunView.used_of(t)
+		if u.size.y <= 0.0:
+			u = Rect2(Vector2.ZERO, t.get_size())
+		var sc: float = (HEAD_FIG_H if him else FIG_H) / u.size.y
+		f.size = t.get_size() * sc
+		var fx: float = W * (FIG_X[1] if him else (FIG_X[[0, 2][kk]] if hk != "" else FIG_X[kk]))
+		f.position = Vector2(fx - (u.position.x + u.size.x / 2.0) * sc, PIC_H - 30 - u.end.y * sc)
+		f.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
+	foot.tooltip_text = ""
+	foot.add_theme_color_override("font_color", Pal.TEXT_2)
+	if showing_head:
+		var mech: String = str(Words.COUNTY["mech"].get(str(c.get("mech", "")), ""))     # his fight said before Set off (the third review)
+		UI.fit(foot, ([mech] if mech != "" else []) + [Words.U55["head_foot"]])
+	else:
+		var line: String = county_line(k, sim.county_stage_pick(k))
+		UI.fit(foot, [line, line.get_slice(", ", 0).trim_suffix(".") + "."])
+
+
+## A County stage's foot line: the language pass's line for the stage once written (Words.COUNTY_STAGE_WORDS, a list of
+## three a place, if it's there), else the place's own line's first sentence.
+static func county_line(k: String, s: int) -> String:
+	var lines = (Words as Script).get_script_constant_map().get("COUNTY_STAGE_WORDS", {})
+	if lines is Dictionary and lines.has(k) and s >= 1 and s <= lines[k].size():
+		return str(lines[k][s - 1])
+	return str(Words.COUNTY_WORDS.get(k, "")).get_slice(". ", 0).trim_suffix(".") + "."
+
+
+func _county_match(k: String, c: Dictionary, z: int, open: bool, showing_head: bool) -> void:
+	People.show(you_face, sim.cls)
+	UI.fit(you_name, ["The %s" % sim.cls, sim.cls] if sim.cls != "" else ["The runner"])
+	var crew_face: String = "gang " + str(Data.COUNTY_ZONES[z]["name"])
+	var them: String = str(c["who"]) if showing_head else crew_face
+	People.show(them_face, them)
+	UI.fit(them_name, [them, them.trim_prefix("The ")] if showing_head else [Words.SITE_CARD["the_gang"]])
+	(you_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD
+	count_box.visible = open and not showing_head
+	gang_frame.visible = open and showing_head
+	if count_box.visible:
+		count.text = "×%d" % int(sim.effective(int(c["site"]))["pool"])
+	if gang_frame.visible:
+		People.show(gang_face, crew_face)
+		gang_count.text = "×%d" % _county_pool
+	for l in [verdict, odds_line]:
+		l.tooltip_text = ""
+	if not open:
+		UI.fit(verdict, [Words.SITE_CARD["locked"]])
+		verdict.add_theme_color_override("font_color", Pal.TEXT_3)
+		(them_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.CARD_LINE
+		var why: String = sim.county_stage_block(k, 1)
+		UI.fit(odds_line, [why, Words.SITE_CARD["locked"]])
+		return
+	var od: Array = _order_od                    # read in show_county before the place was laid on (BUILD61 review 1)
+	var o: float = float(od[0])
+	var read_in: bool = bool(od[1])
+	var tone: Color = Pal.tone_color("good" if o >= 0.9 else ("warn" if o >= 0.6 else "bad"))
+	(them_frame.get_theme_stylebox("panel") as StyleBoxFlat).border_color = tone if read_in else Pal.CARD_LINE
+	UI.fit(verdict, [Words.odds_words(o)])     # as a site's: the words greyed, "Reading the odds" on the smaller line under
+	verdict.add_theme_color_override("font_color", tone if read_in else Pal.TEXT_3)
+	UI.fit(odds_line, ["%s to clear" % Fmt.pct(o)] if read_in else [Words.SITE_CARD["reading"]])
+	for l in [verdict, odds_line]:
+		l.tooltip_text = Words.U49_DEATH["odds_tip"]
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+## What it takes, the last two rows on a County place: the issued kit the zone wants against what's worn, then the six
+## slots that take it, each lit while an issued or stamped piece is in it.
+func _county_want(z: int) -> void:
+	if _want_chips.is_empty():
+		var iw: float = INNER - 24
+		var cw: float = floorf((iw - (WANT_SLOTS.size() - 1) * WANT_CHIP_GAP) / float(WANT_SLOTS.size()))
+		for n in range(WANT_SLOTS.size()):
+			var cp := UI.panel(takes_box, Rect2(12 + n * (cw + WANT_CHIP_GAP), keys[4].position.y, cw, ROW_H), UI.box(Pal.PANEL, 5, 1, Pal.CARD_LINE))
+			cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var cl := UI.label(cp, Rect2(4, 0, cw - 8, ROW_H), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+			_want_chips.append([cp, cl])
+	var want: int = sim.county_want(z)
+	var worn: int = sim.issued_worn()
+	for p in slots:
+		p.visible = false                        # the meds' pouches: the row's the want's here
+	keys[3].visible = true
+	vals[3].visible = true
+	UI.fit(keys[3], [Words.U61["issued_key"]])
+	keys[3].add_theme_color_override("font_color", Pal.TEXT_2)
+	UI.fit(vals[3], [Words.U61["worn"] % [worn, want], Words.U61["worn_short"] % worn])
+	vals[3].add_theme_color_override("font_color", Pal.GOOD if worn >= want else Pal.BAD)
+	keys[4].text = ""
+	vals[4].text = ""
+	for n in range(WANT_SLOTS.size()):
+		var it = sim.equipped.get(WANT_SLOTS[n])
+		var lit: bool = it != null and (it.get("issued", false) or it.get("stamped", false))
+		var wc: Array = _want_chips[n]
+		wc[0].visible = true
+		(wc[0].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if lit else Pal.CARD_LINE
+		var nm: String = str(Words.U61["slots"][WANT_SLOTS[n]])
+		UI.fit(wc[1], [nm])                     # lit by its edge and its words' tone (a tick doesn't fit a sixth of the row)
+		wc[1].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_3)
+
+
+## For the tests: the slots' words as shown.
+func want_words() -> Array:
+	return _want_chips.filter(func(wc): return wc[0].visible).map(func(wc): return wc[1].text)
+
+
+## For the tests: each shown slot lit (an issued or stamped piece in it): its edge in the good tone.
+func want_lit() -> Array:
+	return _want_chips.filter(func(wc): return wc[0].visible).map(func(wc): return (wc[0].get_theme_stylebox("panel") as StyleBoxFlat).border_color == Pal.GOOD)
+
+
+func _county_here(k: String) -> void:
+	var beaten: int = int(sim.order_beaten.get(k, 0))
+	here_right.text = ""
+	UI.fit(here, [Words.U61["here_never"] if beaten <= 0 else (Words.U61["here_once"] if beaten == 1 else Words.U61["here"] % Words.count_of(beaten, "time"))])     # (BUILD61 language pass) "never taken": tried and lost isn't "never tried"
 	last.text = ""

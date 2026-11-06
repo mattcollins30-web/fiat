@@ -89,6 +89,8 @@ const FOOTPRINTS := {
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 	# (BUILD55-C) the stages' new bases: their borrowed picture's footprint
 	"Garden fork": [2, 1], "Bone saw": [3, 1], "Scalpel": [1, 1], "Humane killer": [1, 1], "Mascot suit": [3, 4], "Bank bag": [2, 2],
+	# (BUILD61-C) the County's new bases: their borrowed picture's footprint
+	"Lashing bar": [3, 1], "Bullion carbine": [3, 1], "Duty-free bag": [2, 2], "Cartridge bag": [2, 2],
 }
 
 ## The pack as a grid (27 Oct): no bag wider than the screen's thirteen columns, and its rows in pages of seven - a
@@ -541,6 +543,14 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		{"name": "Ministerial SMG", "type": "smg", "tier": 9, "damage": 52.0, "rof": 3.7, "value": 2010, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art (before BUILD55-C's: a check wears the list's last)
+		{"name": "Lashing bar", "type": "melee", "ammo": "none", "tier": 9, "damage": 172.0, "rof": 0.94, "value": 1710, "conv_bleed_pct": 10,     # the T9 melee's 160-162: between the Door ram's blow and the Court sword
+			"attachments": ["grip", "business end"]},
+		{"name": "Sidelock shotgun", "type": "shotgun", "tier": 9, "damage": 235.0, "rof": 0.8, "value": 2040,     # the T9 shotguns' 189-190 (145 with reloads): two heavy barrels, between the Siege's slug and the Combat's rate
+			"attachments": ["optic", "muzzle", "sling", "stock"]},
+		{"name": "Bullion carbine", "type": "rifle", "tier": 9, "damage": 62.0, "rof": 2.9, "value": 2020, "mag": 20,     # the T9 rifles' 180 (129 with reloads): a carbine on rifle rounds (the SMG line holds two a tier past T4)
+			"attachments": ["optic", "muzzle", "sling", "handguard", "stock"]},
 		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
 		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
 		{"name": "Garden fork", "type": "melee", "ammo": "none", "tier": 2, "damage": 40.0, "rof": 0.68, "value": 65, "conv_bleed_pct": 15,     # the T2 melee's 27 dmg/s: a heavy tine, slow
@@ -664,6 +674,10 @@ const BASES := {
 			"attachments": []},
 		{"name": "Scalpel", "type": "melee", "ammo": "none", "tier": 4, "damage": 14.0, "rof": 2.15, "value": 145, "conv_bleed_pct": 25,     # the T4 knives' 30: the quickest, the most bleed
 			"attachments": ["grip"]},
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Loading hook", "type": "melee", "ammo": "none", "tier": 8, "damage": 66.0, "rof": 0.8, "value": 700, "conv_bleed_pct": 20,     # the T8 pistols' 78 x 0.68 (the T4 blades' 30 to the pistols' 44): 53, no rounds
+			"attachments": ["grip"]},
 	],
 	## Armour and helmets: armour, and weight as pace - a riot suit stops a lot and
 	## slows you; leathers stop less and don't.
@@ -706,6 +720,12 @@ const BASES := {
 		{"name": "Strimmer visor", "tier": 2, "armour": 9.0, "pace": 3, "value": 35, "role": "light"},     # the T2 light on pace (the Cycle helmet's line)
 		{"name": "Delivery rider's helmet", "tier": 2, "armour": 15.0, "pace": -4, "value": 40, "role": "heavy"},     # the T2 heavies' 12-14: more armour, slower (15 keeps the Scrum cap at 80%)
 		{"name": "Go-kart helmet", "tier": 3, "armour": 18.0, "pace": 3, "value": 95, "role": "light"},     # the T3 light on pace beside the Comms headset
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Crane driver's hat", "tier": 8, "armour": 78.0, "pace": -2, "value": 830, "role": "heavy"},     # the T8 heavy under the Special forces helmet (82, −3): a little less, a little quicker
+		{"name": "Deerstalker", "tier": 8, "armour": 50.0, "stats": {"patrol_pct": 19}, "value": 810, "role": "light"},     # the T8 light on later gangs (the Ghillie hood's 18, the Surveillance helmet's 20)
+		{"name": "Cashier's visor", "tier": 8, "armour": 44.0, "stats": {"search_pct": 23}, "value": 800, "role": "light"},     # beside the Search-team helmet (58, 20): less armour, more search
+		{"name": "Treasury guard's helmet", "tier": 9, "armour": 92.0, "pace": -3, "value": 1180, "role": "heavy"},     # the T9 heavy that drops (the Command helmet is issued): under it, a point quicker
 	],
 	"Armour": [
 		{"name": "Work jacket", "tier": 1, "armour": 6.0, "value": 10, "start": true},     # the start: the worst there is, never found
@@ -754,6 +774,12 @@ const BASES := {
 		{"name": "Lined hoodie", "tier": 3, "armour": 52.0, "pace": 5, "value": 200, "role": "light"},     # the T3 light under the Light plates (62, +2%): less armour, more pace
 		{"name": "Sheepskin coat", "tier": 3, "armour": 78.0, "pace": -4, "value": 230, "role": "heavy"},     # the T3 heavies' 60-85: between the Ballistic vest and the Riot suit
 		{"name": "Mascot suit", "tier": 4, "armour": 100.0, "pace": -8, "value": 380, "role": "heavy"},     # the T4 heavy outside the City (the Stab plates its own): under them, as slow
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Highways coat", "tier": 8, "armour": 178.0, "pace": 2, "stats": {"patrol_pct": 10}, "value": 1600, "role": "light"},     # under the Tailored body armour (190, +3): later gangs instead
+		{"name": "Shooting jacket", "tier": 8, "armour": 175.0, "pace": -2, "res": {"frost": 40}, "value": 1480, "role": "specialist"},     # beside the CBRN suit (175, two resists): one, quicker
+		{"name": "Enforcement vest", "tier": 9, "armour": 238.0, "pace": -9, "res": {"bleed": 20}, "value": 2200, "role": "heavy"},     # the T9 heavies' 250-260 at −12 to −16: less, quicker, stab-proof
+		{"name": "Estate tweeds", "tier": 9, "armour": 200.0, "pace": 4, "value": 2100, "role": "light"},     # beside the State protection vest (215, +3): less armour, more pace
 	],
 	## Gloves (29 Oct, §4): a role each - grip (quicker reloads), pace, rate of fire - its figure built in (`stats`, read beside the
 	## affixes); three a tier. Quicker reloads is the gloves' alone.
@@ -788,6 +814,10 @@ const BASES := {
 		# (BUILD55-C) the stages' themed finds (docs/design/stages.md §5): the gaps in the sites' lists, drafted by role against
 		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
 		{"name": "Rose gauntlets", "tier": 2, "stats": {"reload_pct": 22}, "res": {"bleed": 10}, "value": 55, "role": "grip"},     # the T2 grip under the Rigger gloves (28), thorn-proof
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Clerk's mitts", "tier": 8, "pace": 8, "stats": {"loot_pct": 6}, "value": 1080, "role": "pace"},     # under the Abseiling gloves' 9: a point of pace for loot
+		{"name": "Examiner's gloves", "tier": 9, "stats": {"reload_pct": 74}, "res": {"poison": 20}, "value": 1480, "role": "grip"},     # under the EOD gauntlets' 80: poison resist for it
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
@@ -827,6 +857,10 @@ const BASES := {
 		{"name": "Joiner's apron", "tier": 2, "capacity": 5, "pace": 2, "value": 65, "role": "light"},     # the Webbing's line a tier down: the Fishing vest's 5, light
 		{"name": "Hi-vis tabard", "tier": 3, "capacity": 5, "stats": {"patrol_pct": 8}, "value": 120, "role": "light"},     # the Comms headset's later gangs on a rig, a cell under the Webbing
 		{"name": "Security van vest", "tier": 4, "capacity": 8, "value": 215, "role": "heavy"},     # the T4 heavy outside the City (the Medic's harness its own): a cell under, no slower
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Picker's harness", "tier": 8, "capacity": 11, "pace": 4, "value": 980, "role": "light"},     # the Breacher's rig (13, +2) two cells down for pace
+		{"name": "Ferry lifejacket", "tier": 8, "capacity": 9, "stats": {"med_speed_pct": 22}, "res": {"frost": 20}, "value": 950, "role": "light"},     # under the Hostage-rescue rig (10, 24): frost resist for it
 	],
 	## a pack's "w" (Matt, 27 Oct, the pack as a real grid): its width in cells, never under 5 so a long gun lies flat;
 	## its capacity is its cells, row by row (the Plastic bag 9 to 15, 5x3: a rifle or a jacket; the School bag 12 to 18,
@@ -870,6 +904,12 @@ const BASES := {
 		# their tier's neighbours; each on a borrowed picture (ART_AS) until the art
 		{"name": "Bank bag", "tier": 3, "capacity": 28, "w": 7, "stats": {"loot_pct": 15}, "value": 115, "role": "specialist"},     # the Dumpy bag's line (36, +14%): smaller, a point more
 		{"name": "Grab bag", "tier": 5, "capacity": 54, "w": 9, "pace": 2, "value": 380, "role": "light"},     # the T5 light beside the drag bag (56, search): pace instead
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Cartridge bag", "tier": 8, "capacity": 60, "w": 10, "pace": 2, "stats": {"search_pct": 16}, "value": 1000, "role": "light"},     # under the Alpine pack (80, 20): smaller, quicker
+		{"name": "Duty-free bag", "tier": 8, "capacity": 70, "w": 10, "stats": {"loot_pct": 25}, "value": 1120, "role": "specialist"},     # the Strongroom bag's line (80, 24): smaller, a point more
+		{"name": "Despatch box", "tier": 9, "capacity": 80, "w": 10, "stats": {"search_pct": 25}, "value": 1400, "role": "light"},     # under the Freefall pack (100, 22): smaller, more search
+		{"name": "Seizure bag", "tier": 9, "capacity": 90, "w": 10, "stats": {"loot_pct": 28}, "value": 1480, "role": "specialist"},     # the Wax-sealed bag's line (100, 26): smaller, more loot
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.
@@ -909,6 +949,12 @@ const BASES := {
 		{"name": "Branch key", "tier": 4, "find": 9, "cash": 18, "value": 300, "role": "heavy"},     # beside the Pocket watch (8/20)
 		{"name": "Hospital wristband", "tier": 4, "find": 14, "cash": 10, "value": 310, "role": "light"},     # beside the Dog tag (15/8)
 		{"name": "Cap badge", "tier": 5, "find": 17, "cash": 16, "value": 510, "role": "light"},     # beside the Casino chip (18/15)
+		# (BUILD61-C) the County's themed finds (docs/design/county_stages.md §4): the gaps in its places' lists, drafted by role
+		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
+		{"name": "Cat's eye", "tier": 8, "find": 9, "cash": 0, "stats": {"frost_pct": 22}, "value": 1950, "role": "specialist"},     # the T8 specialist's line (the Sword knot 9, 22)
+		{"name": "Gate fob", "tier": 8, "find": 30, "cash": 32, "value": 1980, "role": "light"},     # beside the Regimental medal (32/30)
+		{"name": "Seized keys", "tier": 9, "find": 38, "cash": 24, "value": 2620, "role": "light"},     # beside the Uncut diamond (40/20)
+		{"name": "Small ingot", "tier": 9, "find": 22, "cash": 48, "value": 2640, "role": "heavy"},     # the T9 heavy that drops (the Gold sovereign is issued): more tins, less find
 	],
 	## Papers: the before, on paper. Worth their value to the Fence and nothing
 	## else; the deeds are dropped by the Bank once; what's done with them is the player's.
@@ -2133,7 +2179,15 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
-const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear"}     # the stages' 24 new bases have their own pictures (6 Nov, art.done): their borrows gone
+const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
+	# (BUILD61-C) the County's 24 new bases borrow till their art (docs/design/county_stages.md §4): these come off after art.done
+	"Highways coat": "Donkey jacket", "Cat's eye": "Glass insulator", "Loading hook": "Billhook", "Picker's harness": "Hi-vis tabard",
+	"Enforcement vest": "Stab vest", "Seized keys": "Branch key", "Lashing bar": "Demolition bar", "Crane driver's hat": "Hard hat",
+	"Ferry lifejacket": "Lifeguard's vest", "Duty-free bag": "Carrier bags", "Examiner's gloves": "Cut-resistant gloves",
+	"Seizure bag": "Strongroom bag", "Sidelock shotgun": "Over-and-under", "Shooting jacket": "Waxed coat", "Cartridge bag": "Bank bag",
+	"Gate fob": "Casino chip", "Deerstalker": "Flat cap", "Estate tweeds": "Sheepskin coat", "Cashier's visor": "Strimmer visor",
+	"Clerk's mitts": "Leather gloves", "Bullion carbine": "Security guard's carbine", "Small ingot": "Gold sovereign",
+	"Treasury guard's helmet": "Command helmet", "Despatch box": "Wax-sealed bag"}     # the stages' 24 new bases have their own pictures (6 Nov, art.done): their borrows gone
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [
@@ -4031,22 +4085,25 @@ const COUNTY_ZONES := [
 	{"name": "The Treasury", "head": "The Treasurer", "words": "The Counting House, the Bullion Vault, the Treasury - where it's made to stick."},
 ]
 ## Act two §6 (BUILD50-T): the zones 40-45, 50-55, 60-65, 70-75 (were 50-85), the same spread inside each.
+## (BUILD61-A, docs/design/county_stages.md §2-3) each place its own figures: `level` its 1/3 (40 + 3 a place), `gangs`
+## one count a zone (12/11/10/9), `man_hp` / `man_dps` its 1/3 man - the Toll Plaza 1/3 and the Treasury 3/3 as 0.14.0's,
+## x1.22 a stage, x1.113 HP / x1.080 fire from a 2/3 to the next 1/3. A head's `hp` / `dps` stay his multipliers.
 const COUNTY := [
-	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "level": 40},
-	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "level": 42},
-	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "level": 45,
+	{"key": "toll_plaza", "place": "The Toll Plaza", "cz": 0, "site": 9, "zone": 3, "level": 40, "gangs": 12, "man_hp": 267391.7, "man_dps": 300.83},
+	{"key": "distribution", "place": "The Distribution Centre", "cz": 0, "site": 5, "zone": 1, "level": 43, "gangs": 12, "man_hp": 363122.3, "man_dps": 396.23},
+	{"key": "truck_stop", "place": "The Truck Stop", "cz": 0, "site": 9, "zone": 3, "level": 46, "gangs": 12, "man_hp": 493126.1, "man_dps": 521.87,
 		"who": "The Bailiff", "mech": "bailiff", "hp": 14.0, "dps": 3.0},
-	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "level": 50},
-	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "level": 52},
-	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "level": 55,
+	{"key": "container_port", "place": "The Container Port", "cz": 1, "site": 11, "zone": 3, "level": 49, "gangs": 11, "man_hp": 730552.9, "man_dps": 749.84},
+	{"key": "ferry_terminal", "place": "The Ferry Terminal", "cz": 1, "site": 6, "zone": 2, "level": 52, "gangs": 11, "man_hp": 992103.0, "man_dps": 987.62},
+	{"key": "customs_shed", "place": "The Customs Shed", "cz": 1, "site": 7, "zone": 2, "level": 55, "gangs": 11, "man_hp": 1347292.3, "man_dps": 1300.79,
 		"who": "The Auditor", "mech": "auditor", "hp": 16.0, "dps": 3.5},
-	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "level": 60},
-	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "level": 62},
-	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "level": 65,
+	{"key": "golf_club", "place": "The Golf Club", "cz": 2, "site": 2, "zone": 0, "level": 58, "gangs": 10, "man_hp": 2012609.9, "man_dps": 1884.60},
+	{"key": "gated_close", "place": "The Gated Close", "cz": 2, "site": 3, "zone": 1, "level": 61, "gangs": 10, "man_hp": 2733157.7, "man_dps": 2482.20},
+	{"key": "manor", "place": "The Manor", "cz": 2, "site": 10, "zone": 3, "level": 64, "gangs": 10, "man_hp": 3711673.6, "man_dps": 3269.30,
 		"who": "The Collector", "mech": "collector", "hp": 18.0, "dps": 3.5},
-	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 70},
-	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 72},
-	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 75,
+	{"key": "counting_house", "place": "The Counting House", "cz": 3, "site": 8, "zone": 2, "level": 67, "gangs": 9, "man_hp": 5600571.5, "man_dps": 4784.44},
+	{"key": "bullion_vault", "place": "The Bullion Vault", "cz": 3, "site": 8, "zone": 2, "level": 70, "gangs": 9, "man_hp": 7605669.1, "man_dps": 6301.59},
+	{"key": "treasury", "place": "The Treasury", "cz": 3, "site": 8, "zone": 2, "level": 73, "gangs": 9, "man_hp": 10328625.0, "man_dps": 8299.81,
 		"who": "The Treasurer", "mech": "treasurer", "hp": 18.0, "dps": 2.5},     # fire 4.5 to 3.6 to 3.0 to 2.5, HP 22 to 18 (Matt, 27 Oct, the gauntlet: the County's one wall)
 ]
 ## The heads' fights (Matt, 25 Oct), each a different check:
@@ -4399,3 +4456,64 @@ const C55_NEW_BASES := ["Garden fork", "Bone saw", "Humane killer", "Scalpel", "
 	"Go-kart helmet", "Donkey jacket", "Staff fleece", "Waxed coat", "Lined hoodie", "Sheepskin coat", "Mascot suit", "Rose gauntlets",
 	"Joiner's apron", "Hi-vis tabard", "Security van vest", "Bank bag", "Grab bag", "Arcade token", "Branch key", "Hospital wristband",
 	"Cap badge"]
+
+## BUILD61-A (6 Nov): the County's stages (docs/design/county_stages.md §2-3). A County place's 1/3 at its row's `level`,
+## each stage COUNTY_STAGE_LEVELS up; HP and fire a man x(1 + DEPTH_HOSTILE) a stage on its row's 1/3 man. A head's own
+## fight opens on his place's STAGE_OPENS (2/3), at its level: his gang floor(gangs / 2) at the 2/3 man, him on the 1/3's.
+const COUNTY_STAGE_LEVELS := 2
+
+# ------------------------------------------------------------------ BUILD61-C (6 Nov): the County's themed finds (docs/design/county_stages.md §4)
+## Each County place's list, by its key (Data.COUNTY's "key"): THEME_SHARE of a stage's plain gear finds roll from it, the
+## head's fight on his place's list, as the campaign's SITE_THEMES. Everything in the County is T9-weighted, so the spread is
+## in the lists: the Motorway's lean T7-T8, the Treasury's nearly all T9. The issued kit's six bases stay off.
+const COUNTY_THEMES := {
+	"toll_plaza": ["Demolition bar", "Breaching shotgun", "Rescue axe", "Service rifle", "Close quarters pistol", "High-cut helmet",
+		"Search-team helmet", "Turnout coat", "Firefighter's gloves", "Hostage-rescue rig", "Assault pack", "Glass insulator",
+		"Highways coat", "Cat's eye"],
+	"distribution": ["Chain-driven repeater", "Workshop gauss", "Bench-made autocannon", "The engineer's piece", "Arctic helmet",
+		"Military plate carrier", "Abseiling gloves", "Clamshell pack", "Mountain-troop bergen", "Glass insulator",
+		"Loading hook", "Picker's harness"],
+	"truck_stop": ["Breaching shotgun", "Entry shotgun", "Door ram", "Siege shotgun", "Cavalry revolver", "Overcoat machine pistol",
+		"Search-team helmet", "Plainclothes vest", "Close-combat gloves", "Breacher's rig", "Long-range bergen", "Gold cigarette case",
+		"Enforcement vest", "Seized keys"],
+	"container_port": ["Big-game rifle", "Heavy-barrel rifle", "Bench-made autocannon", "Arctic helmet", "Military plate carrier",
+		"Abseiling gloves", "Flight-deck gloves", "Shield-team rig", "Long-range bergen", "Glass insulator",
+		"Lashing bar", "Crane driver's hat"],
+	"ferry_terminal": ["Marine shotgun", "Dragon's-breath gun", "Consular PDW", "Arctic helmet", "Chainmail shark suit", "Flight-deck gloves",
+		"Hostage-rescue rig", "Alpine pack", "Freefall pack", "Diamond tiepin",
+		"Ferry lifejacket", "Duty-free bag"],
+	"customs_shed": ["Briefcase SMG", "Security service SMG", "Spiral-mag SMG", "Legation machine pistol", "Overcoat machine pistol",
+		"CBRN helmet", "Plainclothes vest", "Tailored body armour", "CBRN suit", "Strongroom bag", "Diamond tiepin", "Uncut diamond",
+		"Examiner's gloves", "Seizure bag"],
+	"golf_club": ["Big-game rifle", "Heavy-barrel rifle", "Ambassador's revolver", "Ghillie hood", "Tailored body armour",
+		"Dress uniform gloves", "Royal escort rig", "Alpine pack", "Signet ring", "Diamond tiepin", "Gold cigarette case",
+		"Sidelock shotgun", "Shooting jacket", "Cartridge bag"],
+	"gated_close": ["Close protection SMG", "Special forces SMG", "Bodyguard's pistol", "Embassy PDW", "Protection squad PDW",
+		"Search-team helmet", "Surveillance helmet", "Tailored body armour", "State protection vest", "Counter-sniper gloves",
+		"Counter-terror rig", "Shield-team rig", "Assault pack", "Signet ring",
+		"Gate fob"],
+	"manor": ["Big-game rifle", "Felling axe", "Civic mace", "Court sword", "Castle guard rifle", "Cavalry revolver",
+		"Field marshal's revolver", "Ghillie hood", "Dress uniform gloves", "Royal escort rig", "Wax-sealed bag", "Regimental medal",
+		"Sword knot", "Apothecary's vial",
+		"Deerstalker", "Estate tweeds"],
+	"counting_house": ["Briefcase SMG", "Ministerial SMG", "Legation machine pistol", "Overcoat machine pistol", "Plainclothes vest",
+		"Tailored body armour", "Counter-terror rig", "Strongroom bag", "Diamond tiepin", "Gold cigarette case",
+		"Cashier's visor", "Clerk's mitts"],
+	"bullion_vault": ["Entry shotgun", "Combat shotgun", "Siege shotgun", "Special forces SMG", "Protection squad PDW",
+		"Special forces helmet", "Full EOD helmet", "Special forces plates", "Full EOD suit", "EOD gauntlets", "Special forces gloves",
+		"Shield-team rig", "Ingot sack", "Strongroom bag", "Wax-sealed bag", "Uncut diamond",
+		"Bullion carbine", "Small ingot"],
+	"treasury": ["Prototype rifle", "Castle guard rifle", "Ministerial SMG", "Protection squad PDW", "Crown PDW", "Field marshal's revolver",
+		"Surveillance helmet", "State protection vest", "Dress uniform gloves", "Royal escort rig", "Wax-sealed bag", "Uncut diamond",
+		"Apothecary's vial",
+		"Treasury guard's helmet", "Despatch box"],
+}
+## The 3/3's quarter (Matt, 6 Nov: "your picks" - the spec's open call 3, the first option): a tier up can't pass T9, so
+## STAGE_TIER_UP of a County 3/3's plain gear finds roll from its list's T9 bases for the slot alone - or, where the list
+## has none for it, from the slot's T9 bases (the issued six off).
+const COUNTY_TOP_TIER := 9
+## The 24 new bases (BUILD61-C), for the art manifests and the checks; each borrows a picture through ART_AS till its art.
+const C61_NEW_BASES := ["Highways coat", "Cat's eye", "Loading hook", "Picker's harness", "Enforcement vest", "Seized keys",
+	"Lashing bar", "Crane driver's hat", "Ferry lifejacket", "Duty-free bag", "Examiner's gloves", "Seizure bag", "Sidelock shotgun",
+	"Shooting jacket", "Cartridge bag", "Gate fob", "Deerstalker", "Estate tweeds", "Cashier's visor", "Clerk's mitts",
+	"Bullion carbine", "Small ingot", "Treasury guard's helmet", "Despatch box"]

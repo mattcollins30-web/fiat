@@ -200,9 +200,10 @@ func _init() -> void:
 	add_child(_order)
 	_county = County.new(Rect2(0, TOP, Pal.GRID_W, Pal.ROOM_H - TOP))
 	_county.visible = false
-	_county.acted.connect(func(): acted.emit())
-	_county.to_issuer.connect(func(): to_issuer.emit())
-	_county.to_bench.connect(func(): to_bench.emit())
+	_county.picked.connect(func(_k):             # a County place picked: its site card (BUILD61-U)
+		_shown = ""
+		acted.emit())
+	_county.card_changed.connect(func(): acted.emit())
 	add_child(_county)
 	_came = CameBack.new()
 	_came.visible = false
@@ -367,7 +368,7 @@ func show_state(s) -> void:
 		_skill_pick.show_state(sim)
 		_skill_pick.move_to_front()
 	if rounds_panel.visible:
-		if rounds_panel.site != selected or order_key != "":
+		if rounds_panel.site != rounds_site() or order_key != "":     # a County place's: its host's plan (BUILD61-U)
 			rounds_panel.visible = false             # another site picked: its own plan's behind its own button
 		rounds_panel.show_state(sim)
 		rounds_panel.move_to_front()
@@ -388,9 +389,14 @@ func show_state(s) -> void:
 		_county.show_state(sim)
 		_order.visible = false
 		_pick.visible = false
+		var card_on: bool = _county.card_on and not Data.county(_county.selected).is_empty()     # the place's site card in the column (BUILD61-U)
 		for c in _cols:
-			c["panel"].visible = false
+			c["panel"].visible = card_on
 			c["edge"].visible = false
+		for x in _panel_x:
+			x.visible = card_on
+		if card_on:
+			_show_county_card(_county.selected)
 		_shown = ""
 		_came.move_to_front()
 		_guide.move_to_front()
@@ -567,6 +573,9 @@ func _notification(what: int) -> void:
 
 func set_county(on: bool) -> void:
 	county_on = on and sim != null and sim.issued
+	_cols[0]["card"].head_view = false         # the Head picked on one sheet isn't the other's (BUILD61-U)
+	_cols[0]["deploy"].text = "Set off"        # the County card's "Set off: <place>" isn't the Map's (BUILD61-U: the site's never sets it)
+	_ccard_sig = ""
 	if county_on:
 		exp_on = false                         # one over the map at a time (29 Oct)
 	if not county_on and _county != null:
@@ -602,8 +611,8 @@ func _depth(k: int, by: int) -> void:
 
 
 ## The card's "Rounds ▾" and its red rounds chip (BUILD46-R): the rounds picker for the site.
-func _rig(k: int) -> void:
-	open_rounds(_tier(k))
+func _rig(_k: int) -> void:
+	open_rounds(rounds_site())                 # the picked site's, or a County place's host's (BUILD61-U)
 
 
 ## The rounds for the run over the map, on a site's plan (BUILD46-R, the canvas "Fiat – Rounds and magazines", board 2):
@@ -665,6 +674,14 @@ func _insure(_k: int) -> void:
 
 
 func _deploy(k: int) -> void:
+	if county_on and not Data.county(_county.selected).is_empty():
+		var ck: String = _county.selected     # a County place's picked stage, or its head's own fight (BUILD61-U)
+		var ok: bool = sim.start_county_head(County.zone_of(ck)) if _head_on(k) else sim.deploy_county(ck, sim.county_stage_pick(ck))
+		if ok:
+			_skill_pick.visible = false
+			rounds_panel.visible = false
+		acted.emit()
+		return
 	if order_key != "":
 		if sim.deploy_order(order_key):        # an order's place, laid on its host site (item 23)
 			_skill_pick.visible = false
@@ -736,6 +753,13 @@ func _death_lay(c: Dictionary, i: int, is_open: bool) -> void:
 func _repeat(k: int) -> void:
 	if _head_on(k):
 		return                                 # the head's fight is one run (BUILD55-U)
+	if county_on and not Data.county(_county.selected).is_empty():
+		if sim.start_county_repeat(_county.selected):     # a County place's picked stage, N times (BUILD61-U)
+			_skill_pick.visible = false
+			rounds_panel.visible = false
+		_shown = ""
+		acted.emit()
+		return
 	sim.set_stage_pick(_tier(k), sim.stage_pick(_tier(k)))     # the picked stage, ten times (BUILD55-U)
 	if sim.start_repeat(_tier(k)):
 		_skill_pick.visible = false
@@ -745,6 +769,14 @@ func _repeat(k: int) -> void:
 
 
 func _wager_open(k: int) -> void:
+	if county_on and not Data.county(_county.selected).is_empty():
+		var cd: Dictionary = Data.county(_county.selected)     # Kev's offer on a County stage or its head's fight (BUILD61-U)
+		var head_on: bool = _head_on(k)
+		_wagers.open(sim, county_wager_key(), str(cd["who"]) if head_on else str(cd["place"]))
+		_wagers.move_to_front()
+		_shown = ""
+		acted.emit()
+		return
 	var i := _tier(k)
 	var hz: int = int(Data.TIERS[i]["zone"]) if _head_on(k) else -1
 	_wagers.open(sim, wager_key(i), str(sim.zone_boss(hz)["name"]) if hz >= 0 else Data.TIERS[i]["name"])     # the head's fight: his name on the kicker (FIX55)
@@ -765,7 +797,9 @@ func _head_on(k: int) -> bool:
 	if k < 0 or k >= _cols.size() or order_key != "":
 		return false
 	var card = _cols[k]["card"]
-	return bool(card.head_view) and bool(card.has_head) and int(card.site) == selected
+	if county_on:
+		return bool(card.head_view) and bool(card.has_head) and str(card.county) == _county.selected and str(card.county) != ""     # (BUILD61-U)
+	return bool(card.head_view) and bool(card.has_head) and int(card.site) == selected and str(card.county) == ""
 
 
 ## Kev's offer the card shows for site i (FIX55, review 3): the head's fight's while the Head's picked, else the site's.
@@ -780,8 +814,8 @@ func wager_open(i: int) -> bool:
 ## The zone whose head's fight the card shows (the Head picked on the selected site), -1 for none (FIX55, review 1: the
 ## shell steps his read while it's picked).
 func head_zone() -> int:
-	if selected < 0 or selected >= Data.TIERS.size() or not _head_on(0) or not sim.tier_open(selected):
-		return -1
+	if county_on or selected < 0 or selected >= Data.TIERS.size() or not _head_on(0) or not sim.tier_open(selected):
+		return -1                                # (BUILD61-U) the County's head: county_head_zone
 	return int(Data.TIERS[selected]["zone"])
 
 
@@ -790,13 +824,17 @@ func head_zone() -> int:
 func _fix(act: String) -> void:
 	if sim == null:
 		return
-	if act.begins_with("site:"):
+	if act == "issuer":
+		to_issuer.emit()                       # a County place's want: the Issuer's counter (BUILD61-U)
+	elif act == "bench":
+		to_bench.emit()                        # or stamp your own at the Bench
+	elif act.begins_with("site:"):
 		select(int(act.trim_prefix("site:")))
 		acted.emit()
 	elif act == "rounds":
-		open_rounds(selected)
-	elif act == "meds" and not bool(sim.rounds_plan(selected).get("top", true)) and not sim.on_mission():
-		sim.plan_set_top(selected, true)       # the gate tops the rig up with meds: this site's plan's tick (merge 46, BUILD46-R's plans)
+		open_rounds(rounds_site())             # (BUILD61-U) a County place's host's plan
+	elif act == "meds" and not bool(sim.rounds_plan(rounds_site()).get("top", true)) and not sim.on_mission():
+		sim.plan_set_top(rounds_site(), true)       # the gate tops the rig up with meds: this site's plan's tick (merge 46, BUILD46-R's plans)
 		_shown = ""
 		acted.emit()
 	elif act == "clinic" and sim.room_open("clinic"):
@@ -959,6 +997,7 @@ func _text_nodes_under() -> Array:
 		return out
 	if _county.visible:
 		out.append_array(_county.text_nodes())
+		out.append_array(_col_nodes())            # the place's site card (BUILD61-U)
 		return out
 	if _exp_panel.visible:
 		out.append_array(_exp_panel.text_nodes())     # the Expeditions over the map (29 Oct)
@@ -968,16 +1007,7 @@ func _text_nodes_under() -> Array:
 		return out
 	out.append_array(_skill_pick.text_nodes())
 	out.append_array(rounds_panel.text_nodes())
-	for c in _cols:
-		if not c["panel"].visible:
-			continue                               # clicked off (BUILD51-U)
-		out.append_array(c["card"].text_nodes())
-		out.append(c["note"])
-		if c["death"].visible:
-			out.append(c["death"])
-		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"], c["close"]]:     # the × too (BUILD51-U)
-			if b.visible:
-				out.append(b)
+	out.append_array(_col_nodes())
 	if _came.visible:
 		# under the card is out of sight: the column's words there aren't the screen's (the card's own are)
 		var cr: Rect2 = room_rect(_came)
@@ -989,7 +1019,7 @@ func _text_nodes_under() -> Array:
 func line_pairs() -> Array:
 	var out: Array = []
 	for c in _cols:
-		if c["panel"].visible and not _pick.visible and not _order.visible and not _county.visible:
+		if c["panel"].visible and not _pick.visible and not _order.visible:     # the County's place card too (BUILD61-U)
 			out.append_array(c["card"].line_pairs())     # the card's rows, key and value (BUILD46-S)
 	return out
 
@@ -1187,6 +1217,9 @@ var _panel_x: Array = []                  # the card's ×, a card
 
 
 func set_panel(on: bool) -> void:
+	if county_on and _county != null:
+		_county.set_card(on)                   # the County's card is its own toggle (BUILD61-U)
+		return
 	if panel_on == on:
 		return
 	panel_on = on
@@ -1257,3 +1290,132 @@ func room_rect(n: Control) -> Rect2:
 	if q != self:
 		return Rect2(n.global_position - global_position, n.size)
 	return Rect2(p, n.size)
+
+
+# ------------------------------------------------------------------ the County's places on the card (BUILD61-U, 6 Nov)
+
+## Every label and button with words in the card's column, while it shows.
+func _col_nodes() -> Array:
+	var out: Array = []
+	for c in _cols:
+		if not c["panel"].visible:
+			continue                               # clicked off (BUILD51-U)
+		out.append_array(c["card"].text_nodes())
+		out.append(c["note"])
+		if c["death"].visible:
+			out.append(c["death"])
+		for b in [c["deploy"], c["insure"], c["rig"], c["skills"], c["repeat"], c["wager"], c["close"]]:     # the × too (BUILD51-U)
+			if b.visible:
+				out.append(b)
+	return out
+
+
+## The site whose rounds plan the card's "Rounds ▾" opens: a County place's host site while its card shows, else the
+## picked site (BUILD61-U).
+func rounds_site() -> int:
+	if county_on and not Data.county(_county.selected).is_empty():
+		return int(Data.county(_county.selected)["site"])
+	return selected
+
+
+## The zone whose County head's fight the card shows (the Head picked on its last place), -1 for none: the shell steps
+## his read while it's picked (main._read_odds), as the campaign's head_zone.
+func county_head_zone() -> int:
+	if not county_on or not _head_on(0) or not sim.order_open(_county.selected):
+		return -1
+	return County.zone_of(_county.selected)
+
+
+## Kev's offer on the County card: the head's fight's while the Head's picked, else the place's stage's.
+func county_wager_key() -> String:
+	var ck: String = _county.selected
+	return sim.wager_county_head_key(County.zone_of(ck)) if _head_on(0) else sim.wager_county_key(ck)
+
+
+func county_wager_open() -> bool:
+	var ck: String = _county.selected
+	return sim.wager_county_head_open(County.zone_of(ck)) if _head_on(0) else sim.wager_county_open(ck)
+
+
+## A County place on the card (docs/design/county_stages.md §6; the 0.12.2 playtest's item 23): the site card drawn for
+## it (site_card.gd's show_county), Set off for its picked stage or its head's fight, "Run it ×N" shut till the stage is
+## cleared (Kev's wagers in its place on a first clear or the head), Insure, Rounds and the skills for its host site,
+## the death line, and why it can't go on the note.
+var _ccard_sig := ""                        # what the County's card was last laid out on (the Map's frame budget, BUILD43)
+func _show_county_card(k: String) -> void:
+	var c: Dictionary = _cols[0]
+	var card = c["card"]
+	var d: Dictionary = Data.county(k)
+	var i: int = int(d["site"])
+	var z: int = int(d["cz"])
+	if str(card.county) != k:
+		card.head_view = false                    # another place: its picked stage, not the last one's head
+	var hz: int = z if _head_on(0) else -1
+	@warning_ignore("integer_division")
+	var sig: String = "%s|%s|%s|%s|%s|%s|%s|%s|%d|%d|%d|%d|%d|%s|%d|%d|%s|%d|%d|%s|%s|%d|%s|%s|%s" % [k, str(card.head_view), str(sim.cs_done), str(sim.cs_pick), str(sim.county_heads), str(sim.order_beaten),
+		str(sim.order_odds_now(k)), str(sim.county_head_odds_now(z)) if hz >= 0 else "", sim.issued_worn(), int(sim.hp), int(sim.on_mission()), sim.notes, int(sim.cash) / 50, str(sim.insure_next),
+		int(sim.elapsed / 60.0), sim.stat_v, str(sim.wagers.get(county_wager_key(), {})), sim.repeat_count(), sim.stash.size(), sim.cls, WagerOdds.state(), sim.rig.size(), str(sim.away()), str(sim.skill_slots), str(sim.equipped.values().map(func(it): return int(it.get("id", 0)) if it != null else 0))]
+	if sig == _ccard_sig and str(card.county) == k:
+		return
+	_ccard_sig = sig
+	var open: bool = sim.order_open(k)
+	var od: Array = sim.order_odds_now(k) if open else [0.0, false]
+	var why: Array = odds_reasons(sim, i).filter(func(r): return not str(r.get("act", "")).begins_with("site:")) if open and bool(od[1]) and float(od[0]) < WHY_UNDER else []     # no "Grind <host> first": the County's ladder is its stages
+	card.show_county(sim, k, why)
+	var head_on: bool = _head_on(0)
+	if head_on:
+		od = sim.county_head_odds_now(z)
+	c["edge"].visible = open
+	(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color("good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad")) if bool(od[1]) else Pal.CARD_LINE
+	c["town"].visible = false
+	var block: String = sim.county_head_fight_block(z) if head_on else sim.order_block(k)
+	c["deploy"].visible = open
+	c["deploy"].disabled = block != ""
+	c["deploy"].size.x = (INNER - REPEAT_W - 8.0) if open else float(INNER)     # its width before its words are fitted to it
+	var target: String = str(d["who"]) if head_on else str(d["place"])
+	UI.fit_button(c["deploy"], [Words.U49_ORDER["set_off"] % Words.mid(target), "Set off"])
+	# "Run it ×N" beside Set off, Kev's wagers in its place on a first clear or the head; with the Head picked his price's
+	# place says "Free", greyed - his fight's one run
+	var wager_on: bool = open and county_wager_open()
+	c["wager"].visible = wager_on
+	c["repeat"].visible = open and not wager_on
+	for b in [c["repeat"], c["wager"]]:
+		b.position.x = PAD + INNER - REPEAT_W
+	var rep_why := ""
+	if c["repeat"].visible and head_on:
+		c["repeat"].disabled = true
+		UI.fit_button(c["repeat"], [Words.SITE_CARD["free"], Words.SITE_CARD["free_short"]])
+	elif c["repeat"].visible:
+		var n: int = sim.repeat_count()
+		rep_why = sim.county_repeat_block(k)
+		c["repeat"].disabled = rep_why != ""
+		UI.fit_button(c["repeat"], [Words.REPEAT["button"] % n, Words.REPEAT["button_short"] % n] if n > 0 else [Words.REPEAT["button_full"], Words.REPEAT["button_full_short"], Words.REPEAT["button_full_tiny"]])
+	var wkey: String = county_wager_key()
+	if wager_on:
+		var taken: int = sim.wagers.get(wkey, {}).get("taken", []).size()
+		UI.fit_button(c["wager"], [Words.WAGERS["button_on"] % taken, Words.WAGERS["button_n"] % taken, "%d" % taken] if taken > 0 else [Words.WAGERS["button"]])
+	c["insure"].visible = open
+	c["rig"].visible = open
+	_foot_lay(c, open)
+	UI.fit_button(c["insure"], ["Insured ✓"] if sim.insure_next else ["Insure kit · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)), "Insure"])
+	c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
+	UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
+	c["rig"].disabled = sim.on_mission()
+	UI.fit_button(c["rig"], [Words.ROUNDS["button"], Words.ROUNDS["button_short"]])
+	UI.style_button(c["rig"], false, "bad" if open and not sim.rounds_short(i).is_empty() else "")
+	_death_lay(c, i, open)
+	var wstrip: Array = WagerOdds.strip_forms(sim, wkey) if wager_on else []
+	c["note"].add_theme_color_override("font_color", Pal.WARN if not wstrip.is_empty() and block == "" else Pal.TEXT_2)
+	if not open:
+		UI.fit(c["note"], [sim.county_stage_block(k, 1)])
+	elif block != "" and not sim.on_mission():
+		UI.fit(c["note"], [block])
+	elif sim.hp < sim.max_hp() * 0.5:
+		c["note"].text = "The runner is under half HP"
+	elif rep_why != "" and c["repeat"].visible:
+		var cnt: int = sim.repeat_count()
+		UI.fit(c["note"], [(Words.REPEAT["note"] % [cnt, rep_why]) if cnt > 0 else Words.REPEAT["note_full"] % rep_why, rep_why])
+	elif not wstrip.is_empty():
+		UI.fit(c["note"], wstrip)
+	else:
+		c["note"].text = ""

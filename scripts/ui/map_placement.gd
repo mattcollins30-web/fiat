@@ -18,8 +18,8 @@ const NAME_BOX := Vector2(170, 32)        # a zone's name's grab, from its top l
 const TOP_H := 40.0
 const TOP_LINE := "PLACING · drag a place to move it · F5 save · F4 print · F3 done"
 
-var view                                  # the Map (map_view.gd) this sits on
-var save_path: String = "res://data/map_places.tres"     # the tests point it elsewhere
+var view                                  # the Map (map_view.gd) this sits on, or the County (county.gd; BUILD61-U)
+var save_path: String = "res://data/map_places.tres"     # the tests point it elsewhere; the County's data/county_places.tres
 var _drag := -1                           # an index into view.all_places()
 var _hover := -1
 var _start_mouse := Vector2.ZERO
@@ -67,11 +67,16 @@ func _process(_dt: float) -> void:
 		toggle()
 
 
+## (BUILD61-U) The land the places sit on: the Map is its own land; the County hands its painting's layer (land()).
+func _land() -> Control:
+	return view.land() if view.has_method("land") else view
+
+
 func toggle() -> void:
 	view.set_placing(not view.placing)
 	visible = view.placing
 	mouse_filter = Control.MOUSE_FILTER_STOP if view.placing else Control.MOUSE_FILTER_IGNORE
-	size = view.size
+	size = _land().size
 	_drag = -1
 	_hover = -1
 	_panning = false
@@ -124,7 +129,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
 			_panning = mb.pressed
-			_pan_from = mb.position + view.position
+			_pan_from = mb.position + _land().position
 			_pan_off = view.pan.offset()
 			accept_event()
 			return
@@ -138,7 +143,7 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		var mm: InputEventMouseMotion = event
 		if _panning and (mm.button_mask & MOUSE_BUTTON_MASK_RIGHT) != 0:
-			view.pan.pan_to(_pan_off - (mm.position + view.position - _pan_from))
+			view.pan.pan_to(_pan_off - (mm.position + _land().position - _pan_from))
 		elif _drag >= 0:
 			move(mm.position)
 		else:

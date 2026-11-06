@@ -151,20 +151,47 @@ SCENES = {
 }
 
 
+# Rerolled 6 Nov (Matt: the stages "all look exactly the same"): five plates copied their site's own plate, their style
+# image. Each now takes another site's plate of the same zone (palette only), says the different spot in words, and a
+# style line that doesn't call the borrowed plate the same place (that fought the brief). Also written alone to
+# pixellab_stage_plates_reroll_6nov_manifest.json, the reroll's own run.
+REDO_OWN = "pixellab_stage_plates_reroll_6nov_manifest.json"
+REDO_STYLE_LINE = ("Only the palette, light and painting style of the style image - nothing of its view, its place or "
+                   "its subject, which is somewhere else entirely. A crouching viewpoint, with near, middle and far ground.")
+REDO = {   # "<site>_<stage>": (the style plate, the extra words, the seed)
+    "the_allotments_2": ("top_farm_plate", "A clearly different spot from the allotments' usual view: no polytunnel, "
+                         "the sheds on the left now, not the right.", 632000),
+    "the_garden_centre_2": ("top_farm_2_plate", "Inside the cafe itself, its walls and windows close around: no "
+                            "glasshouse frame filling the view, no long glass aisle.", 632001),
+    "the_garden_centre_3": ("top_farm_2_plate", "The bag walls fill the view from both sides like a dug-in position; "
+                            "the glass roof only a strip at the top; not the long glass aisle of the shop floor.", 632002),
+    "the_parade_2": ("ransacked_streets_3_plate", "Seen from a different angle: across the road towards the shopfronts "
+                     "at a slant, not straight down the middle of the street.", 632003),
+    "the_parade_3": ("ransacked_streets_2_plate", "Dim grey daylight from a grimy front window, the same muted, worn "
+                     "palette as the rest of the estate; not bright, not clean.", 632004),
+}
+
+
 def plate_job(key, st, scene, seed):
+    style, extra, style_line = "%s_plate" % key, [], STYLE_LINE
+    redo = REDO.get("%s_%d" % (key, st))
+    if redo:
+        style, extra, style_line, seed = redo[0], [redo[1]], REDO_STYLE_LINE, redo[2]
     return {"out": "art/fight_new/%s_%d_plate.png" % (key, st), "width": kit.PLATE_W, "height": kit.PLATE_H,
             "no_background": False, "seed": seed, "endpoint": "generate-image-v2", "single": True,
-            "style_options": kit.STYLE, "style_image": "res://art/fight_new/%s_plate.png" % key,
-            "description": " ".join([kit.POV + "looking " + scene + ".", kit.EMPTY, NOBODY, kit.LAYOUT, STYLE_LINE, FILL,
+            "style_options": kit.STYLE, "style_image": "res://art/fight_new/%s.png" % style,
+            "description": " ".join([kit.POV + "looking " + scene + "."] + extra + [kit.EMPTY, NOBODY, kit.LAYOUT,
+                                     style_line, FILL,
                                      "Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere.",
                                      kit.TAIL]),
-            "_where": "the %d/3's plate: %s (styled on art/fight_new/%s_plate.png; stands on the site's wall)" % (st, key, key)}
+            "_where": "the %d/3's plate: %s (styled on art/fight_new/%s.png; stands on the site's wall)" % (st, key, style)
+                      + (" - reroll 6 Nov: copied its site's plate" if redo else "")}
 
 
 def used_seeds():
     seen = {}
     for path in glob.glob(os.path.join(ROOT, "tools", "pixellab_*manifest.json")):
-        if os.path.basename(path) == OWN:
+        if os.path.basename(path) in (OWN, REDO_OWN):
             continue
         try:
             jobs = json.load(open(path, encoding="utf-8")).get("jobs", [])
@@ -181,7 +208,7 @@ def main():
     assert sorted(keys) == sorted(SCENES), "SCENES aren't the kit's twelve sites"
     # Rerolled 6 Nov (the runner): the allotments' 2/3 came back bordered and near the site plate's own scene, the
     # farm's 3/3 bordered, the parade's 3/3 framed as if through a window. Seed +10000 so the reroll differs (+1000 lands on the stage items' seeds).
-    REROLL = {"the_allotments_2": 10000, "top_farm_3": 10000, "the_parade_3": 10000}
+    REROLL = {"the_allotments_2": 10000, "top_farm_3": 10000, "the_parade_3": 10000}   # REDO's seeds win where both
     jobs = []
     seed = SEED0
     for key in keys:
@@ -207,7 +234,15 @@ def main():
     with open(os.path.join(ROOT, "tools", OWN), "w", encoding="utf-8") as f:
         json.dump({"_readme": readme, "jobs": jobs}, f, indent=1, ensure_ascii=False)
         f.write("\n")
-    print("stage plates: %d jobs, seeds %d-%d" % (len(jobs), SEED0, seed - 1))
+    redo = [j for j in jobs if " - reroll 6 Nov" in j["_where"]]
+    with open(os.path.join(ROOT, "tools", REDO_OWN), "w", encoding="utf-8") as f:
+        json.dump({"_readme": "Rerolls (6 Nov, Matt: the stages \"all look exactly the same\"): five stage plates that "
+                   "copied their site's own plate - the style image was that plate. Now another site's plate of the same "
+                   "zone (palette only), a clearly different spot said in words. %d jobs x $0.15. Run with --force. "
+                   "Written by make_stage_plates_manifest.py (REDO)." % len(redo), "jobs": redo},
+                  f, indent=1, ensure_ascii=False)
+        f.write("\n")
+    print("stage plates: %d jobs, seeds %d-%d; the reroll: %d" % (len(jobs), SEED0, seed - 1, len(redo)))
 
 
 if __name__ == "__main__":

@@ -649,7 +649,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	for e in sim.chronicle:
 		if str(e.get("k", "")) == "issue" and float(g["issue_at"]) < 0.0:
 			g["issue_at"] = snappedf(float(e.get("t", 0.0)) / 3600.0, 0.01)
-		if str(e.get("k", "")) == "county_done" and e.get("won", false):
+		if str(e.get("k", "")) == "county_done" and e.get("won", false) and int(e.get("stage", Data.STAGE_OPENS)) == Data.STAGE_OPENS and int(e.get("head", -1)) < 0:     # (BUILD61-A) a place taken: its 2/3
 			if not (str(e["key"]) in g["county_firsts"].map(func(x): return x[1])):
 				g["county_firsts"].append([snappedf(float(e.get("t", 0.0)) / 3600.0, 0.01), str(e["key"]), int(e.get("level", 0))])
 	g["orders_beaten"] = sim.order_beaten.duplicate()
@@ -1061,7 +1061,8 @@ func _gauntlet(cls: String, element: String, spec: Dictionary, read_n := "", sav
 	# before, on their ladder over the Treasury (Matt, 27 Oct)
 	var content: Array = ["grid", "archive", "mint"].filter(func(k): return int(sim.order_beaten.get(k, 0)) == 0)
 	for z in range(Data.COUNTY_ZONES.size()):
-		content.append_array(Sim.county_places(z))
+		content.append_array(Sim.county_places(z))     # (BUILD61-A) each place's 2/3, the stage that opens the next
+		content.append("head@%d" % z)                  # (BUILD61-A) then the zone's head, his own fight
 	content.append_array(["grid", "archive", "mint"].filter(func(k): return not content.has(k)))
 	var run: Dictionary = gauntlet_run(sim, bot, content, GAUNTLET_WALL_MIN * 60000)
 	var rows: Array = run["rows"]
@@ -1101,12 +1102,12 @@ static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 		if not cut and Time.get_ticks_msec() >= limit_ms:
 			cut = true
 		if cut:
-			rows.append({"key": k, "level": sim.order_level(k), "won": false, "tries": 0, "forced": false, "why": "cut short: the read's wall limit", "ends": []})
+			rows.append({"key": k, "level": b61_g_level(sim, k), "won": false, "tries": 0, "forced": false, "why": "cut short: the read's wall limit", "ends": []})
 			continue
 		var no_kit := ""
-		if Sim.is_county(k):
-			no_kit = _gauntlet_issued(sim, bot, sim.county_want(int(Data.county(k)["cz"])))
-		var row := {"key": k, "level": sim.order_level(k), "won": false, "tries": 0, "forced": false, "why": "", "ends": []}
+		if Sim.is_county(b61_g_place(k)):
+			no_kit = _gauntlet_issued(sim, bot, sim.county_want(int(Data.county(b61_g_place(k))["cz"])))
+		var row := {"key": k, "level": b61_g_level(sim, k), "won": false, "tries": 0, "forced": false, "why": "", "ends": []}
 		for n in range(GAUNTLET_TRIES):
 			if Time.get_ticks_msec() >= limit_ms:
 				cut = true
@@ -1115,8 +1116,8 @@ static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 					row["tries"] = 0             # shown cut, not lost three times (the merge's review)
 				break
 			bot.tidy(sim)
-			gauntlet_ready(sim, bot, k)
-			var why: String = sim.order_block(k)
+			gauntlet_ready(sim, bot, b61_g_place(k))
+			var why: String = b61_g_block(sim, k)     # (BUILD61-A) a County place at its 2/3, a head's own fight
 			if why != "":
 				row["why"] = why + ((" (the Issuer: %s)" % no_kit) if no_kit != "" else "")
 				break
@@ -1125,7 +1126,7 @@ static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 			row["hp"] = int(sim.max_hp())
 			row["dps"] = int(sim.dps())
 			var lost: int = sim.operators_lost
-			if not sim.deploy_order(k):
+			if not b61_g_deploy(sim, k):
 				row["why"] = "would not set off"
 				break
 			var guard := 0
@@ -1146,7 +1147,7 @@ static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 				row["ends"].append("%s %d/%d %.0fs" % [("timed out" if rep.get("timed_out", false) else str(rep.get("outcome", "?"))), int(rep.get("kills", 0)), int(rep.get("of", 0)), float(rep.get("time", 0.0))])
 			var last: Dictionary = {}
 			for e in sim.chronicle:
-				if str(e.get("k", "")) in ["order_done", "county_done"] and str(e.get("key", "")) == k:
+				if str(e.get("k", "")) in ["order_done", "county_done"] and str(e.get("key", "")) == b61_g_place(k) and (k.begins_with("head@") == (int(e.get("head", -1)) >= 0)):     # (BUILD61-A) a head's row his fight's
 					last = e
 			if bool(last.get("won", false)):
 				row["won"] = true
@@ -1158,7 +1159,7 @@ static func gauntlet_run(sim, bot, content: Array, limit_ms: int) -> Dictionary:
 				bot._hold_broken(sim)
 		if not row["won"]:
 			row["forced"] = true                  # opened anyway: the places after it get their fight
-			sim.order_beaten[k] = maxi(1, int(sim.order_beaten.get(k, 0)))
+			b61_g_force(sim, k)                   # (BUILD61-A) a County place to its 2/3, a head down
 			if k == "mint" and not sim.issued:
 				sim.issue()
 		rows.append(row)
@@ -1547,7 +1548,7 @@ func _build_read(hours: float, spec: Dictionary, plain: bool, full: bool) -> Dic
 				if e.get("won", false) and not beaten.has(str(e["key"])):
 					beaten[str(e["key"])] = h
 			"county_done":
-				if e.get("won", false) and not beaten.has(str(e["key"])):
+				if e.get("won", false) and not beaten.has(str(e["key"])) and int(e.get("stage", Data.STAGE_OPENS)) == Data.STAGE_OPENS and int(e.get("head", -1)) < 0:     # (BUILD61-A) a place taken: its 2/3
 					beaten[str(e["key"])] = h
 			"issue":
 				if not beaten.has("issue"):
@@ -1872,3 +1873,50 @@ func _long_gauntlet(cls: String, element: String, h20: bool) -> Dictionary:
 	if h20:
 		out["camp"] = camp
 	return out
+
+
+# ------------------------------------------------------------------ BUILD61-A (6 Nov): the gauntlet on the County's stages
+## A gauntlet key: an order's, a County place's (fought at its 2/3, the stage that opens the next; its 1/3 marked
+## cleared for it), or "head@<zone>" (his own fight).
+static func b61_g_place(k: String) -> String:
+	if k.begins_with("head@"):
+		return Sim.county_head_key(int(k.trim_prefix("head@")))
+	return k
+
+
+static func b61_g_level(sim, k: String) -> int:
+	if k.begins_with("head@"):
+		return sim.county_head_level(int(k.trim_prefix("head@")))
+	if Sim.is_county(k):
+		return sim.county_stage_level(k, Data.STAGE_OPENS)
+	return sim.order_level(k)
+
+
+static func b61_g_block(sim, k: String) -> String:
+	if k.begins_with("head@"):
+		return sim.county_head_fight_block(int(k.trim_prefix("head@")))
+	if Sim.is_county(k):
+		sim.cs_done[k] = maxi(1, sim.county_stage_done(k))
+		sim.set_county_pick(k, Data.STAGE_OPENS)
+		var why: String = sim.county_stage_block(k, Data.STAGE_OPENS)
+		return why if why != "" else sim.order_block(k)
+	return sim.order_block(k)
+
+
+static func b61_g_deploy(sim, k: String) -> bool:
+	if k.begins_with("head@"):
+		return sim.start_county_head(int(k.trim_prefix("head@")))
+	if Sim.is_county(k):
+		return sim.deploy_county(k, Data.STAGE_OPENS)
+	return sim.deploy_order(k)
+
+
+static func b61_g_force(sim, k: String) -> void:
+	if k.begins_with("head@"):
+		var z: int = int(k.trim_prefix("head@"))
+		sim.county_heads[z] = maxi(1, sim.county_head_falls(z))
+	elif Sim.is_county(k):
+		sim.cs_done[k] = maxi(Data.STAGE_OPENS, sim.county_stage_done(k))
+		sim.order_beaten[k] = maxi(1, int(sim.order_beaten.get(k, 0)))
+	else:
+		sim.order_beaten[k] = maxi(1, int(sim.order_beaten.get(k, 0)))

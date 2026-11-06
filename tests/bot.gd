@@ -372,18 +372,18 @@ func step(sim) -> int:
 		t = int(sim.mission["tier"])
 		last_tier = -1
 	var okey: String = _pick_order(sim) if sim.campaign_done() and not fetched else ""
-	var o_beaten: int = int(sim.order_beaten.get(okey, 0)) if okey != "" else 0
+	var o_beaten: int = b61_wins(sim, okey) if okey != "" else 0     # (BUILD61-A) a County stage's or head's own count
 	if okey != "":
-		var o_lv: int = sim.order_level(okey)
+		var o_lv: int = b61_level(sim, okey)
 		var o_ins: int = order_insure_cost(sim, okey)
-		if insure_for(sim, sim.is_county(okey), o_ins):
+		if insure_for(sim, sim.is_county(b61_place(okey)), o_ins):
 			sim.set_insure(true)                 # the County's runs insured when it can be afforded (BUILD41)
-		if not sim.deploy_order(okey):
+		if not b61_deploy(sim, okey):
 			sim.set_insure(false)                # the paper's not left armed for the next run (the review)
 		else:
-			t = int(Data.pinnacle(okey)["site"])
+			t = int(Data.pinnacle(b61_place(okey))["site"])
 			last_tier = -1
-			bought.append([sim.elapsed, "ran %s at level %d" % [str(Data.pinnacle(okey)["place"]), o_lv]])
+			bought.append([sim.elapsed, "ran %s at level %d" % [b61_words(okey), o_lv]])
 			_order_ran = okey
 			_order_beaten0 = o_beaten
 		t0 = _lap("step/order", t0)
@@ -452,7 +452,7 @@ func step(sim) -> int:
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still
 	if _order_ran != "":
-		order_done(sim, _order_ran, int(sim.order_beaten.get(_order_ran, 0)) > _order_beaten0)
+		order_done(sim, _order_ran, b61_wins(sim, _order_ran) > _order_beaten0)     # (BUILD61-A)
 		_order_ran = ""
 	_lap("step/run", t0)
 	if bool(sim.last_report.get("timed_out", false)) and float(sim.last_report.get("time", -1.0)) >= 0.0 and int(sim.runs_total) != _to_seen:
@@ -479,23 +479,21 @@ func _pick_order(sim) -> String:
 	if sim.elapsed - _order_read_at < ORDER_EVERY:
 		return ""
 	_order_read_at = sim.elapsed
-	var keys: Array = []
-	for c in Data.COUNTY:
-		keys.append(str(c["key"]))
+	var keys: Array = b61_county_keys(sim)     # (BUILD61-A) the County's stages and heads: "<place>@<stage>", "head@<zone>"
 	for p in Data.PINNACLES:
 		keys.append(str(p["key"]))
 	var best := ""
 	var best_rank := -1
 	for k in keys:
-		if sim.order_block(k) != "" or order_backed_off(sim, k):
+		if b61_block(sim, k) != "" or order_backed_off(sim, k):
 			continue
-		var county: bool = sim.is_county(k)
-		var first: bool = int(sim.order_beaten.get(k, 0)) == 0
+		var county: bool = "@" in k
+		var first: bool = b61_first(sim, k)
 		var need: float = FIRST if (first and (county or k == "mint" or (k == "grid" and not sim.issued))) else PUSH     # the Grid's key opens the Mint (the sixth pass)
-		var rank: int = (2000 if county and first else (1000 if (k == "mint" or (k == "grid" and first)) and not sim.issued else 0)) + sim.order_level(k)
+		var rank: int = b61_rank(sim, k, first) if county else ((1000 if (k == "mint" or (k == "grid" and first)) and not sim.issued else 0) + sim.order_level(k))
 		if rank <= best_rank:
 			continue
-		var od: Array = settled_odds(func(): return sim.order_odds(k))     # a finished read only (BUILD41)
+		var od: Array = settled_odds(func(): return b61_odds(sim, k))     # a finished read only (BUILD41)
 		if bool(od[1]) and float(od[0]) >= need:
 			best = k
 			best_rank = rank
@@ -519,7 +517,7 @@ func order_done(sim, k: String, won: bool) -> void:
 	if int(_order_lost[k]) >= ORDER_LOSSES:
 		_order_lost.erase(k)
 		_order_off[k] = sim.elapsed + ORDER_BACK_OFF
-		bought.append([sim.elapsed, "backed off %s for %.0f h: lost %d in a row" % [str(Data.pinnacle(k)["place"]), ORDER_BACK_OFF / 3600.0, ORDER_LOSSES]])
+		bought.append([sim.elapsed, "backed off %s for %.0f h: lost %d in a row" % [b61_words(k), ORDER_BACK_OFF / 3600.0, ORDER_LOSSES]])
 
 
 func order_backed_off(sim, k: String) -> bool:
@@ -1273,9 +1271,9 @@ func insure_for(sim, county: bool, cost: int) -> bool:
 
 ## An order's insurance at its own depth, as deploy_order charges it, or -1 when it can't be insured.
 func order_insure_cost(sim, k: String) -> int:
-	if sim.order_block(k) != "":
+	if b61_block(sim, k) != "":
 		return -1
-	var sg: Dictionary = sim.order_sig(k)
+	var sg: Dictionary = b61_sig(sim, k)     # (BUILD61-A) a County stage's or head's sig
 	sim._sig_on(sg)
 	var i: int = int(sg["site"])
 	var c: int = sim.insure_cost(i) if sim.can_insure(i) else -1
@@ -2632,3 +2630,129 @@ func _exp_send(sim) -> bool:
 		bought.append([sim.elapsed, "expedition: %s to %s, %d hands, worth %d, risk %.2f" % [lead, str(Data.EXP_PLACES[place]["short"]), hs.size(), int(worth), risk]])
 		return true
 	return false
+
+
+# ------------------------------------------------------------------ BUILD61-A (6 Nov): the County's path (county_stages.md §7)
+## The County's candidates: each place's next uncleared stage (first clears, at FIRST), its highest cleared stage (at
+## PUSH), and each zone's head once his place's 2/3 is cleared (his first fall at FIRST, after at PUSH). Keys
+## "<place>@<stage>" and "head@<zone>", so a back-off is a place's stage's or a head's own.
+func b61_county_keys(sim) -> Array:
+	var out: Array = []
+	for c in Data.COUNTY:
+		var k: String = str(c["key"])
+		var done: int = sim.county_stage_done(k)
+		if done < Data.STAGES:
+			out.append("%s@%d" % [k, done + 1])
+		if done >= 1:
+			out.append("%s@%d" % [k, done])
+	for z in range(Data.COUNTY_ZONES.size()):
+		if sim.county_stage_done(sim.county_head_key(z)) >= Data.STAGE_OPENS:
+			out.append("head@%d" % z)
+	return out
+
+
+static func b61_split(okey: String) -> Array:
+	var p: PackedStringArray = okey.split("@")
+	return [p[0], int(p[1])] if p.size() == 2 else [okey, 0]
+
+
+## The place a key runs on (a head's: his place).
+func b61_place(okey: String) -> String:
+	var sp: Array = b61_split(okey)
+	if sp[0] == "head":
+		var last := ""
+		for c in Data.COUNTY:
+			if int(c["cz"]) == int(sp[1]):
+				last = str(c["key"])
+		return last
+	return str(sp[0])
+
+
+func b61_sig(sim, okey: String) -> Dictionary:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return sim.order_sig(okey)
+	if sp[0] == "head":
+		return sim.county_sig(b61_place(okey), Data.STAGE_OPENS, int(sp[1]))
+	return sim.county_sig(str(sp[0]), int(sp[1]))
+
+
+func b61_block(sim, okey: String) -> String:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return sim.order_block(okey)
+	if sp[0] == "head":
+		return sim.county_head_fight_block(int(sp[1]))
+	var why: String = sim.county_stage_block(str(sp[0]), int(sp[1]))
+	if why != "":
+		return why
+	return "busy" if not sim.can_deploy() or not sim._sig.is_empty() else ""
+
+
+func b61_level(sim, okey: String) -> int:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return sim.order_level(okey)
+	if sp[0] == "head":
+		return sim.county_head_level(int(sp[1]))
+	return sim.county_stage_level(str(sp[0]), int(sp[1]))
+
+
+## A first clear: the stage not yet cleared, the head not yet down, an order not yet beaten.
+func b61_first(sim, okey: String) -> bool:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return int(sim.order_beaten.get(okey, 0)) == 0
+	if sp[0] == "head":
+		return sim.county_head_falls(int(sp[1])) == 0
+	return sim.county_stage_done(str(sp[0])) < int(sp[1])
+
+
+## The road first: a head's first fall, then the first 2/3s (the next place), then the first 1/3s, the 3/3s last; the
+## repeats under any first; deeper first within each.
+func b61_rank(sim, okey: String, first: bool) -> int:
+	var sp: Array = b61_split(okey)
+	var lv: int = b61_level(sim, okey)
+	if not first:
+		return lv
+	if sp[0] == "head":
+		return 4000 + lv
+	return (2000 if int(sp[1]) <= Data.STAGE_OPENS else 1500) + lv
+
+
+## Its odds, a few dry runs a call: [odds, settled].
+func b61_odds(sim, okey: String) -> Array:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return sim.order_odds(okey)
+	if sp[0] == "head":
+		return sim.county_head_fight_odds(int(sp[1]))
+	return sim._b61_odds(sim.county_sig(str(sp[0]), int(sp[1])), true)
+
+
+func b61_deploy(sim, okey: String) -> bool:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return sim.deploy_order(okey)
+	if sp[0] == "head":
+		return sim.start_county_head(int(sp[1]))
+	return sim.deploy_county(str(sp[0]), int(sp[1]))
+
+
+## What a win moves: a stage's clears count the place's wins, a head's his falls.
+func b61_wins(sim, okey: String) -> int:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return int(sim.order_beaten.get(okey, 0))
+	if sp[0] == "head":
+		return sim.county_head_falls(int(sp[1]))
+	return int(sim.order_beaten.get(str(sp[0]), 0))
+
+
+func b61_words(okey: String) -> String:
+	var sp: Array = b61_split(okey)
+	if not ("@" in okey):
+		return str(Data.pinnacle(okey)["place"])
+	if sp[0] == "head":
+		return str(Data.COUNTY_ZONES[int(sp[1])]["head"])
+	return "%s %d/3" % [str(Data.county(str(sp[0]))["place"]), int(sp[1])]

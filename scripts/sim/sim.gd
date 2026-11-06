@@ -7355,6 +7355,8 @@ func effective(i: int) -> Dictionary:
 	if sky != "" and yard_has("forecast"):
 		e["cash"] *= Data.FX["yard/forecast"]                     # the Radio's forecast: a run under the weather pays
 	# no wear (27 Oct, Matt: "kill drops should remain the same really"): a cleared site's picked over in its crates alone
+	if not _sig.is_empty() and int(_sig["site"]) == i and is_county(str(_sig.get("order", ""))):
+		_b61_figures(e, _sig)                # (BUILD61-A) a County stage or head: the place's own row, not the curve
 	if _a55_head == i:
 		e["pool"] = maxi(1, int(floor(float(e["pool"]) / 2.0)))     # (BUILD55-A) the head's own fight: half the site's gangs at his gate's man (FIX55b: the 2/3's), then him
 		e["head_fight"] = true
@@ -7371,8 +7373,12 @@ func effective(i: int) -> Dictionary:
 		e["name"] = Data.county(str(_sig["county"]))["place"]     # the remix: a signal on one of the County's places
 		e["county"] = true
 	if sig_here and _sig.has("order"):
-		if Data.pinnacle(str(_sig["order"])).has("who"):     # a County place without its head is its crew alone (25 Oct)
+		if Data.pinnacle(str(_sig["order"])).has("who") and (not is_county(str(_sig["order"])) or _sig.has("chead")):     # a County place without its head is its crew alone (25 Oct); (BUILD61-A) he's on his own fight only
 			e["boss"] = order_head(str(_sig["order"]), e)     # the order's true pinnacle (18 Oct): their own head, on the host site's crew
+			if _sig.has("chead"):
+				var d1: float = 1.0 / (1.0 + Data.DEPTH_HOSTILE)     # (BUILD61-A) him on the 1/3's man, his gang on the 2/3's
+				e["boss"]["hp"] = float(e["boss"]["hp"]) * d1
+				e["boss"]["dps"] = float(e["boss"]["dps"]) * d1
 		e["name"] = Data.pinnacle(str(_sig["order"]))["place"]
 		e["county"] = is_county(str(_sig["order"]))
 	elif sig_here and str(_sig.get("county_head", "")) != "" and is_county(str(_sig["county_head"])):
@@ -8057,6 +8063,8 @@ func order_level(k: String) -> int:
 
 ## A true pinnacle as a signal: laid on its host site the way a signal is, under its own name and head.
 func order_sig(k: String) -> Dictionary:
+	if is_county(k):
+		return county_sig(k, county_stage_pick(k))     # (BUILD61-A) a County place at its picked stage
 	var p: Dictionary = Data.pinnacle(k)
 	var site: int = int(p["site"])
 	return {"id": -1, "site": site, "zone": int(p["zone"]), "depth": depth_for_level(site, order_level(k)), "codes": [], "papers": [],
@@ -8155,6 +8163,8 @@ func deploy_order(k: String) -> bool:
 		_sig_off()
 		return false
 	mission["signal"] = sg
+	if is_county(k):
+		_b61_marks(mission, sg)                  # (BUILD61-A) the place and its stage on the mission
 	chron("order_run", {"key": k, "level": order_level(k)})
 	return true
 
@@ -8243,7 +8253,7 @@ static func county_head_key(z: int) -> String:
 func county_zone_open(z: int) -> bool:
 	if not issued or z < 0 or z >= Data.COUNTY_ZONES.size():
 		return false
-	return z == 0 or int(order_beaten.get(county_head_key(z - 1), 0)) > 0
+	return z == 0 or county_head_falls(z - 1) > 0     # (BUILD61-A) the head's own falls
 
 
 ## A place opens when its zone has and the place before it in the zone is taken.
@@ -8253,7 +8263,7 @@ func county_open(k: String) -> bool:
 		return false
 	var ks := county_places(int(c["cz"]))
 	var at: int = ks.find(k)
-	return at == 0 or int(order_beaten.get(str(ks[at - 1]), 0)) > 0
+	return at == 0 or county_stage_done(str(ks[at - 1])) >= Data.STAGE_OPENS     # (BUILD61-A) the place before at its 2/3
 
 
 func county_want(z: int) -> int:
@@ -8273,25 +8283,24 @@ func county_block(k: String) -> String:
 		return Words.COUNTY["place_shut"] % Words.mid(str(Data.county(str(ks[ks.find(k) - 1]))["place"]))
 	if issued_worn() < county_want(z):
 		return Words.COUNTY["want"] % [county_want(z), issued_worn()]
-	return ""
+	return county_stage_block(k, county_stage_pick(k))     # (BUILD61-A) its picked stage's
 
 
 ## A County place's level: its set level, and a level more every time it's been taken.
 func county_level(k: String) -> int:
-	var c: Dictionary = Data.county(k)
-	return int(c["level"]) + int(order_beaten.get(k, 0))     # set levels (Matt, 26 Oct, the seventh pass)
+	return county_stage_level(k, county_stage_pick(k))     # (BUILD61-A) its picked stage's: no level a win
 
 
 ## The Treasurer down: the County taken, and the Radio's remix open.
 func county_done() -> bool:
-	return int(order_beaten.get(county_head_key(Data.COUNTY_ZONES.size() - 1), 0)) > 0
+	return county_head_falls(Data.COUNTY_ZONES.size() - 1) > 0     # (BUILD61-A)
 
 
 ## The places taken, of the twelve.
 func county_taken_count() -> int:
 	var n := 0
 	for c in Data.COUNTY:
-		if int(order_beaten.get(str(c["key"]), 0)) > 0:
+		if county_stage_done(str(c["key"])) >= Data.STAGE_OPENS:     # (BUILD61-A) taken: its 2/3
 			n += 1
 	return n
 
@@ -8303,7 +8312,7 @@ func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 	if not bool(b.get("remix", false)) and c.has("who"):
 		_web_reward("head:" + str(c["who"]), Data.REWARD_HEAD, str(c["who"]))     # the County's four heads: their first fall
 	if not bool(b.get("remix", false)):
-		chron("county_head", {"key": k, "first": int(order_beaten.get(k, 0)) == 0, "level": int(t.get("level", 0))})
+		chron("county_head", {"key": k, "first": county_head_falls(int(c["cz"])) == 0, "level": int(t.get("level", 0))})     # (BUILD61-A) his own falls
 	_head_materials(m)
 	var lv: int = maxi(int(t.get("level", reach)), reach) + Data.ISSUED_OVER + 2     # a tier over the counter's (the third review: a head's was always weaker)
 	var got: Array = []
@@ -8326,22 +8335,11 @@ func _county_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
 ## the host site goes back to its campaign self.
 func _county_done(k: String, won: bool) -> void:
 	var c: Dictionary = Data.county(k)
-	chron("county_done", {"key": k, "won": won, "level": county_level(k)})
+	chron("county_done", {"key": k, "won": won, "level": lv_at(int(_sig.get("site", c["site"])), int(_sig.get("depth", 1))), "stage": int(_sig.get("stage", 0)), "head": int(_sig.get("chead", -1))})     # (BUILD61-A) the stage, the head
 	if not won:
 		log_event(Words.COUNTY["lost"] % str(c["place"]))
 		return
-	var first: bool = int(order_beaten.get(k, 0)) == 0
-	var was_done: bool = county_done()
-	order_beaten[k] = int(order_beaten.get(k, 0)) + 1
-	if not first:
-		log_event(Words.COUNTY["again"] % str(c["place"]))
-		return
-	log_event(Words.COUNTY["taken"] % str(c["place"]))
-	var z: int = int(c["cz"])
-	if k == county_head_key(z) and z + 1 < Data.COUNTY_ZONES.size():
-		log_event(Words.COUNTY["zone_opens"] % [str(Data.COUNTY_ZONES[z + 1]["name"]), county_want(z + 1)])
-	if county_done() and not was_done:
-		log_event(Words.COUNTY["remix"])
+	_b61_won(k)                                  # (BUILD61-A) the stage's tick or the head's fall
 
 
 # ------------------------------------------------------------------ signals (15 Oct, the Radio's endgame)
@@ -9688,8 +9686,9 @@ func deploy(i: int) -> void:
 		var line := Words.site_line(t["name"], int(t["depth"]))
 		if line != "":
 			log_event(line)
-	if not _repeat_going and not _dry_on and wager_gate:
-		_wagers_on(mission, ("sig:%d" % int(_sig["id"])) if sig_head else (wager_head_key(int(Data.TIERS[i]["zone"])) if _a55_head == i else wager_site_key(i)))     # Kev's wagers taken there (29 Oct): never a repeat's; (FIX55) the head's fight its own
+	var b61_wk: String = _b61_wager_key(i)     # (BUILD61-A) a County stage's first clear or a head's fight: its own key; none on any other County run
+	if not _repeat_going and not _dry_on and wager_gate and (b61_wk != "" or not (sig_head and is_county(str(_sig.get("order", ""))))):
+		_wagers_on(mission, b61_wk if b61_wk != "" else ("sig:%d" % int(_sig["id"])) if sig_head else (wager_head_key(int(Data.TIERS[i]["zone"])) if _a55_head == i else wager_site_key(i)))     # Kev's wagers taken there (29 Oct): never a repeat's; (FIX55) the head's fight its own
 	_a55_mission_marks(mission, i)            # (BUILD55-A) mission["stage"] and ["depth"]
 	mark_site_seen(i)
 
@@ -10207,7 +10206,7 @@ func bring_back() -> void:
 ## is never on a repeat run (locked while away; disarmed here whatever).
 func _repeat_go() -> void:
 	var i: int = int(repeat["site"])
-	if bool(boss_armed.get(i, false)):
+	if str(repeat.get("county", "")) == "" and bool(boss_armed.get(i, false)):     # (BUILD61 review) a County repeat leaves its host site's head as he was
 		boss_armed[i] = false
 		_surv_cache.erase(i)
 	var rp: Dictionary = rounds_plan(i)       # the site's plan (BUILD46-R): its grades; a repeat packs and fills whatever its tick
@@ -10221,14 +10220,17 @@ func _repeat_go() -> void:
 	insure_next = false                       # the paper's for a watched run
 	_repeat_going = true
 	_bg_hold = bg
-	deploy(i)
+	if str(repeat.get("county", "")) != "":
+		_b61_repeat_deploy()                     # (BUILD61-A) a County place's stage, laid on its host site
+	else:
+		deploy(i)
 	_bg_hold = null
 	_repeat_going = false
 	insure_next = ins
 	if mission == null:
 		var rep := repeat
 		repeat = {}                           # the real reason (U3): away, the gate only ever said "the runner is away"
-		var why: String = repeat_block(i)
+		var why: String = repeat_block(i) if str(rep.get("county", "")) == "" else county_stage_block(str(rep["county"]), int(rep.get("cstage", 1)))     # (BUILD61-A)
 		repeat = rep
 		_repeat_end("blocked", Words.mid_base(why if why != "" else Words.REPEAT["shut_out"]))     # said mid-sentence, its first letter down and HP kept: "Ended: the stash is full"
 		return
@@ -10442,10 +10444,11 @@ func _repeat_end(why: String, reason := "") -> void:
 	_rest_off_wounds()
 	repeat = {}
 	_a55_sync(int(r["site"]))                 # (FIX55, review 5) a stage first cleared while away: the site's depth follows its pick now
-	repeat_report = {"site": int(r["site"]), "of": int(r["of"]), "runs": r["runs"], "kept": r["kept"], "time": elapsed - float(r["t0"]), "ended": why, "reason": reason,
+	repeat_report = {"site": int(r["site"]), "county": str(r.get("county", "")), "of": int(r["of"]),     # (BUILD61-A) a County repeat's place
+		"runs": r["runs"], "kept": r["kept"], "time": elapsed - float(r["t0"]), "ended": why, "reason": reason,
 		"lv0": int(r["lv0"]), "lv1": level(), "share": float(r["share"])}
-	var tot := repeat_totals(repeat_report)
-	log_event(Words.REPEAT["back"] % [Words.mid(str(Data.TIERS[int(r["site"])]["name"])), int(tot["runs"]), "" if int(tot["runs"]) == 1 else "s", int(tot["bails"]), "" if int(tot["bails"]) == 1 else "s"])
+	var tot := repeat_totals(repeat_report)     # (BUILD61-A) the report and the line: a County repeat's place
+	log_event(Words.REPEAT["back"] % [Words.mid(repeat_place_name(r)), int(tot["runs"]), "" if int(tot["runs"]) == 1 else "s", int(tot["bails"]), "" if int(tot["bails"]) == 1 else "s"])
 	chron("repeat_back", {"site": str(Data.TIERS[int(r["site"])]["name"]), "runs": int(tot["runs"]), "bails": int(tot["bails"]), "ended": why, "xp": snappedf(float(tot["xp"]), 1.0), "tins": snappedf(float(tot["tins"]), 1.0)})
 
 
@@ -10638,9 +10641,11 @@ func _wagers_on(m: Dictionary, key: String) -> void:
 func wagers_read(i: int) -> Array:
 	var key := ""
 	if not _sig.is_empty() and int(_sig["site"]) == i:
-		if _sig.has("order") or str(_sig.get("county_head", "")) != "":
+		key = _b61_wager_key(i)                  # (BUILD61-A) a County stage's first clear, a County head's fight
+		if key == "" and (_sig.has("order") or str(_sig.get("county_head", "")) != ""):
 			return []
-		key = "sig:%d" % int(_sig["id"])
+		if key == "":
+			key = "sig:%d" % int(_sig["id"])
 	elif _a55_head == i:
 		key = wager_head_key(int(Data.TIERS[i]["zone"]))     # (FIX55) the head's fight: his own offer
 	elif f55_first_clear(i) or bool(boss_armed.get(i, false)):
@@ -13273,7 +13278,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	_gain_xp(t["xp"] * 10.0)
 	_earn_points(before)
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
-	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * (1 if bool(m.get("head_fight", false)) else int(t["depth"])) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))     # (BUILD55-A) the head's fight at 3/3 pays as at 1/3
+	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * (1 if bool(m.get("head_fight", false)) and str(m.get("county", "")) == "" else int(t["depth"])) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))     # (BUILD55-A) the head's fight at 3/3 pays as at 1/3
 	if str(b.get("order", "")) != "":
 		_order_down(m, t, b)                  # the order's true pinnacle: their own drops, none of a crew's
 		return
@@ -13555,7 +13560,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv,
-			c55_theme(m, t, slot), Data.THEME_SHARE)     # (BUILD55-C) the site's list
+			c61_theme(m, t, slot, find_tier), c61_share(m, t, slot))     # (BUILD55-C) the site's list; (BUILD61-C) a County place's, a 3/3's top quarter
 		if slot == Data.AMMO:
 			# rounds only for a gun you have (17 Oct): half for the one in your hands, as they always were, the rest any you
 			# own - a stash of guns kept to sell doesn't thin the hands' share (the review) - at the find's tier or under
@@ -18530,6 +18535,7 @@ func load_dict(d: Dictionary) -> void:
 	key_items = _counts(d.get("key_items", {}))
 	rebuilt = _counts(d.get("rebuilt", {}))
 	order_beaten = _counts(d.get("order_beaten", {}))
+	b61_load(d)                               # (BUILD61-A) the County's stages, after the wins (a 26 save's carry over)
 	_sig = {}
 	if mission != null and mission.get("signal", null) is Dictionary:
 		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it
@@ -21182,7 +21188,7 @@ func _a55_mission_marks(m: Dictionary, i: int) -> void:
 
 ## The saved stage state.
 func a55_save() -> Dictionary:
-	return {"done": a55_done.duplicate(), "pick": a55_pick.duplicate(), "new": a55_new.duplicate()}
+	return {"done": a55_done.duplicate(), "pick": a55_pick.duplicate(), "new": a55_new.duplicate(), "county": b61_save()}     # (BUILD61-A) the County's
 
 
 func a55_load(d: Dictionary) -> void:
@@ -21276,13 +21282,15 @@ func c55_stage(m: Dictionary, _t: Dictionary) -> int:
 func c55_theme(m: Dictionary, t: Dictionary, slot: String) -> Array:
 	if not (slot in Data.SLOTS) or (c55_stage(m, t) <= 0 and not bool(m.get("head_fight", false))):     # (FIX55, review 4) his site's list on the head's fight too
 		return []
+	if county_run_key(m) != "":
+		return Data.COUNTY_THEMES.get(county_run_key(m), [])     # (BUILD61-C) a County place's list, not its host site's (t["tier"] is the host)
 	return Data.SITE_THEMES.get(str(Data.TIERS[int(t["tier"])]["name"]), [])
 
 
 ## A plain gear find's tier on a 3/3: STAGE_TIER_UP of them one up, never past loot_cap at the find's level. Draws the
 ## dice only on a 3/3, so every other run's finds roll as before.
 func c55_tier_up(m: Dictionary, t: Dictionary, slot: String, tier_v: int, level_v: int) -> int:
-	if not (slot in Data.SLOTS) or c55_stage(m, t) != 3:
+	if not (slot in Data.SLOTS) or c55_stage(m, t) != 3 or county_run_key(m) != "":     # (BUILD61-C) a County 3/3's quarter is its top tier instead (c61_theme)
 		return tier_v
 	if rng.randf() < Data.STAGE_TIER_UP:
 		return mini(loot_cap(level_v), tier_v + 1)
@@ -21304,3 +21312,511 @@ static func wager_head_key(z: int) -> String:
 ## Whether Kev has an offer on the head's fight: the Radio open and the fight open (his site's 2/3, the runner home).
 func wager_head_open(z: int) -> bool:
 	return room_open("radio") and head_fight_open(z)
+
+
+# ------------------------------------------------------------------ BUILD61-C (6 Nov): the County's themed finds (docs/design/county_stages.md §4)
+var _c61_top := false        # the last c61_theme's pick: a County 3/3's top-tier quarter (its share is the whole find)
+
+
+## A plain gear find's themed list (the Items.roll call in _find): c55_theme's - the site's, or a County place's
+## (Data.COUNTY_THEMES) - and on a County 3/3, STAGE_TIER_UP of them its top tier alone (c61_top): a tier up can't pass
+## T9, so the quarter rolls from the list's T9 instead (Matt, 6 Nov: "your picks", open call 3). Draws dice only on a
+## County 3/3's plain gear at T9, so every other find rolls as before.
+func c61_theme(m: Dictionary, t: Dictionary, slot: String, tier_v: int) -> Array:
+	_c61_top = false
+	var lst: Array = c55_theme(m, t, slot)
+	if lst.is_empty() or county_run_key(m) == "" or county_run_stage(m) != Data.STAGES or tier_v < Data.COUNTY_TOP_TIER:
+		return lst
+	if rng.randf() < Data.STAGE_TIER_UP:
+		_c61_top = true
+		return c61_top(county_run_key(m), slot)
+	return lst
+
+
+## The share of a find that rolls from its list: THEME_SHARE, or all of it on a County 3/3's top-tier quarter. Read right
+## after c61_theme (the same find).
+func c61_share(_m: Dictionary, _t: Dictionary, _slot: String) -> float:
+	return 1.0 if _c61_top else Data.THEME_SHARE
+
+
+## A County place's top tier for a slot: its list's T9 bases there, else every T9 base of the slot (the issued six off,
+## never the start kit) - so the Motorway's 3/3, whose list is T7-T8, still finds its quarter at T9.
+static func c61_top(k: String, slot: String) -> Array:
+	var stamped: Array = Data.ISSUED.map(func(p): return str(p["base"]))
+	var own: Array = []
+	var any: Array = []
+	for b in Data.BASES.get(slot, []):
+		if int(b["tier"]) != Data.COUNTY_TOP_TIER or b.get("start", false) or str(b["name"]) in stamped:
+			continue
+		any.append(str(b["name"]))
+		if str(b["name"]) in Data.COUNTY_THEMES.get(k, []):
+			own.append(str(b["name"]))
+	return own if not own.is_empty() else any
+
+
+# ------------------------------------------------------------------ BUILD61-A (6 Nov): the County's stages (docs/design/county_stages.md §2-3, §7)
+# A County place's stage is 1/3, 2/3 or 3/3, keyed by its place key (Data.COUNTY "key"). 2/3 opens the next place; on a
+# zone's last place it opens the head's own fight, and his fall the next zone; 3/3 is for the grind. Each stage wants
+# the zone's issued kit worn. A signal's clear (the remix) never moves a stage. Run as the order's are: a sig on the host
+# site (order_sig), its figures the place's own row (_b61_figures), not the endgame curve.
+
+var cs_done: Dictionary = {}       # place key -> the furthest stage cleared (0-3)
+var cs_pick: Dictionary = {}       # place key -> the stage picked (1-3); none: the furthest open
+var cs_new: Dictionary = {}        # place key -> true: opened (a 2/3, a head's fall) and not yet picked - the pin's "· New"
+var county_heads: Dictionary = {}  # County zone -> its head's falls (was order_beaten[his place]; that stays the place's wins)
+
+
+func county_stage_done(k: String) -> int:
+	return int(cs_done.get(k, 0))
+
+
+## A stage's level: the place's 1/3 (its row's `level`), COUNTY_STAGE_LEVELS a stage up.
+func county_stage_level(k: String, s: int) -> int:
+	var c: Dictionary = Data.county(k)
+	if c.is_empty():
+		return 0
+	return int(c["level"]) + Data.COUNTY_STAGE_LEVELS * (clampi(s, 1, Data.STAGES) - 1)
+
+
+## A stage can be run: the zone and the place open, the stage before cleared, the zone's issued kit worn.
+func county_stage_open(k: String, s: int) -> bool:
+	return is_county(k) and s >= 1 and s <= Data.STAGES and county_stage_block(k, s) == ""
+
+
+## Why a stage is shut ("" when open), the card's words: "Not before the Issue", "After the Bailiff", "After the Toll
+## Plaza 2/3", "After 1/3", the issued want.
+func county_stage_block(k: String, s: int) -> String:
+	var c: Dictionary = Data.county(k)
+	if c.is_empty() or s < 1 or s > Data.STAGES:
+		return Words.COUNTY["not_yet"]
+	var z: int = int(c["cz"])
+	var w: Dictionary = Words.A55_STAGE
+	if not issued:
+		return Words.COUNTY["not_yet"]
+	if not county_zone_open(z):
+		return w["after_head"] % Words.mid(str(Data.COUNTY_ZONES[z - 1]["head"]))
+	if not county_open(k):
+		var ks := county_places(z)
+		return w["after_site"] % Words.mid(str(Data.county(str(ks[ks.find(k) - 1]))["place"]))
+	if s > 1 and county_stage_done(k) < s - 1:
+		return w["after_stage"] % (s - 1)
+	if issued_worn() < county_want(z):
+		return Words.COUNTY["want"] % [county_want(z), issued_worn()]
+	return ""
+
+
+## The furthest stage open (1 when none is).
+func county_stage_furthest(k: String) -> int:
+	for s in range(Data.STAGES, 0, -1):
+		if county_stage_open(k, s):
+			return s
+	return 1
+
+
+## The stage Go runs: the one picked while it's open, else the furthest open.
+func county_stage_pick(k: String) -> int:
+	var p: int = int(cs_pick.get(k, 0))
+	if p >= 1 and county_stage_open(k, p):
+		return p
+	return county_stage_furthest(k)
+
+
+func set_county_pick(k: String, s: int) -> void:
+	if not county_stage_open(k, s):
+		return
+	cs_pick[k] = s
+	mark_county_seen(k)
+
+
+func county_site_new(k: String) -> bool:
+	return bool(cs_new.get(k, false)) and county_open(k)
+
+
+func mark_county_seen(k: String) -> void:
+	cs_new.erase(k)
+
+
+## A stage's figures (§3's table): {level, gangs, man_hp, man_dps, hp, dps} - the row's 1/3 man x1.22 a stage, the whole
+## the man x gangs. Before the run's own (the night, the words, the issued plate).
+func county_stage_figures(k: String, s: int) -> Dictionary:
+	var c: Dictionary = Data.county(k)
+	if c.is_empty():
+		return {}
+	var st: float = pow(1.0 + Data.DEPTH_HOSTILE, clampi(s, 1, Data.STAGES) - 1)
+	var g: int = int(c["gangs"])
+	var mh: float = float(c["man_hp"]) * st
+	var md: float = float(c["man_dps"]) * st
+	return {"level": county_stage_level(k, s), "gangs": g, "man_hp": mh, "man_dps": md, "hp": mh * g, "dps": md * g}
+
+
+## A County place as a sig on its host site at stage `s`, or a head's own fight (`hz` his zone).
+func county_sig(k: String, s: int, hz := -1) -> Dictionary:
+	var c: Dictionary = Data.county(k)
+	var site: int = int(c["site"])
+	var st: int = Data.STAGE_OPENS if hz >= 0 else clampi(s, 1, Data.STAGES)
+	var sg := {"id": -1, "site": site, "zone": int(c["zone"]), "depth": depth_for_level(site, county_stage_level(k, st)), "codes": [], "papers": [],
+		"head": false, "convoy": false, "line": 0, "story": -1, "order": k, "stage": st}
+	if hz >= 0:
+		sg["chead"] = hz
+	return sg
+
+
+## The County's own figures on the fight (from effective, a County sig laid on its site): the row's man at the stage,
+## its gangs (half, rounded down, on the head's fight, at the 2/3's man). Marks the run's County key, stage and head.
+func _b61_figures(e: Dictionary, sg: Dictionary) -> void:
+	var k: String = str(sg["order"])
+	var hz: int = int(sg.get("chead", -1))
+	var s: int = int(sg.get("stage", 1))
+	var f: Dictionary = county_stage_figures(k, s)
+	if f.is_empty():
+		return
+	e["hp"] = float(f["man_hp"])
+	e["dps"] = float(f["man_dps"])
+	e["pool"] = maxi(1, int(floor(float(f["gangs"]) / 2.0))) if hz >= 0 else int(f["gangs"])
+	e["county_key"] = k
+	e["stage"] = 0 if hz >= 0 else s
+	e["chead"] = hz
+	if hz >= 0:
+		e["head_fight"] = true
+
+
+## A County run's place key ("" for none) and its stage (1-3; 0 on a head's fight or none), off a mission.
+static func county_run_key(m: Dictionary) -> String:
+	return str(m.get("county", ""))
+
+
+static func county_run_stage(m: Dictionary) -> int:
+	if str(m.get("county", "")) == "" or bool(m.get("head_fight", false)):
+		return 0
+	return int(m.get("stage", 0))
+
+
+## Run a County place at stage `s` (picked first).
+func deploy_county(k: String, s: int) -> bool:
+	if not county_stage_open(k, s):
+		return false
+	set_county_pick(k, s)
+	return deploy_order(k)
+
+
+## A County sig out: laid on its host site, the runner sent, the mission marked (the place, its stage or the head).
+func _b61_deploy(sg: Dictionary) -> bool:
+	_sig_on(sg)
+	deploy(int(sg["site"]))
+	if mission == null:
+		_sig_off()
+		return false
+	mission["signal"] = sg
+	_b61_marks(mission, sg)
+	return true
+
+
+func _b61_marks(m: Dictionary, sg: Dictionary) -> void:
+	var k: String = str(sg["order"])
+	m["county"] = k
+	if sg.has("chead"):
+		m["head_fight"] = true
+		m["chead"] = int(sg["chead"])
+		m.erase("stage")
+	else:
+		m["stage"] = int(sg.get("stage", 1))
+
+
+# --- the heads' own fights
+
+func county_head_place(z: int) -> String:
+	return county_head_key(z)
+
+
+func county_head_falls(z: int) -> int:
+	return int(county_heads.get(z, 0))
+
+
+## His fight's level: his place's 2/3 (48 / 57 / 66 / 75).
+func county_head_level(z: int) -> int:
+	return county_stage_level(county_head_key(z), Data.STAGE_OPENS)
+
+
+## Why his fight is shut ("" when it can go): his place's 2/3 not cleared, the issued want, the runner out.
+func county_head_fight_block(z: int) -> String:
+	var k: String = county_head_key(z)
+	var w: Dictionary = Words.A55_STAGE
+	if k == "" or not issued or not county_open(k) or county_stage_done(k) < Data.STAGE_OPENS:
+		return w["head_after"]
+	if issued_worn() < county_want(z):
+		return Words.COUNTY["want"] % [county_want(z), issued_worn()]
+	if not can_deploy() or not _sig.is_empty() or runner_busy():
+		return w["head_busy"]
+	if not tier_open(int(Data.county(k)["site"])):
+		return w["head_busy"]
+	return ""
+
+
+func county_head_fight_open(z: int) -> bool:
+	return county_head_fight_block(z) == ""
+
+
+## His fight as it would be formed ({} for none, or with a run out): effective() under his sig; e["boss"] is him.
+func county_head_fight_preview(z: int) -> Dictionary:
+	var k: String = county_head_key(z)
+	if k == "" or not _sig.is_empty():
+		return {}
+	var sg := county_sig(k, Data.STAGE_OPENS, z)
+	_sig_on(sg)
+	var e := effective(int(sg["site"]))
+	_sig_off()
+	return e
+
+
+## The read's key in _sig_odds for a County sig ("whole" for the repeat's full-HP read).
+static func _b61_odds_key(sg: Dictionary, whole := false) -> String:
+	var k: String = ("chead/%d" % int(sg["chead"])) if sg.has("chead") else ("order/%s" % str(sg["order"]))
+	return "%s/%d%s" % [k, int(sg["depth"]), "/whole" if whole else ""]
+
+
+## A County sig's odds: `step` runs a few dry runs (as order_odds), else reads what's there (as order_odds_now).
+## [odds, settled]; with `ready` [ready to show, odds, settled].
+func _b61_odds(sg: Dictionary, step: bool, whole := false, ready := false) -> Array:
+	var none: Array = [false, 0.0, false] if ready else [0.0, false]
+	if not _sig.is_empty():
+		return none
+	var key: String = _b61_odds_key(sg, whole)
+	if not step and not _sig_odds.has(key):
+		return none
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var h := hp
+	if whole:
+		hp = max_hp()
+	var home = _surv_cache.get(i, null)
+	if _sig_odds.has(key):
+		_surv_cache[i] = _sig_odds[key]
+	else:
+		_surv_cache.erase(i)
+	if step:
+		survival(i)
+	var out: Array = [odds_ready(i), odds_now(i), odds_settled(i)]
+	if _surv_cache.has(i):
+		_sig_odds[key] = _surv_cache[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	hp = h
+	_sig_off()
+	return out if ready else [float(out[1]), bool(out[2])]
+
+
+## His fight's odds, a few dry runs a call (the shell's budget; whole for the bot): [odds, settled].
+func county_head_fight_odds(z: int) -> Array:
+	var k: String = county_head_key(z)
+	if k == "" or county_stage_done(k) < Data.STAGE_OPENS:
+		return [0.0, false]
+	return _b61_odds(county_sig(k, Data.STAGE_OPENS, z), true)
+
+
+## His fight's odds read so far, running none (the card): [odds, settled].
+func county_head_odds_now(z: int) -> Array:
+	var k: String = county_head_key(z)
+	if k == "" or county_stage_done(k) < Data.STAGE_OPENS:
+		return [0.0, false]
+	return _b61_odds(county_sig(k, Data.STAGE_OPENS, z), false)
+
+
+## His own fight: his gang, then him, on his place at its 2/3's level; his den from the first man (mission["head_fight"],
+## mission["chead"]). Free, as County runs are.
+func start_county_head(z: int) -> bool:
+	if not county_head_fight_open(z):
+		return false
+	var k: String = county_head_key(z)
+	var c: Dictionary = Data.county(k)
+	if Words.BOSSES.has(c["who"]) and Words.BOSSES[c["who"]].has("armed"):
+		log_event(Words.LOG["head_armed"] % [c["who"], Words.BOSSES[c["who"]]["armed"]])
+	var sg := county_sig(k, Data.STAGE_OPENS, z)
+	if not _b61_deploy(sg):
+		return false
+	chron("order_run", {"key": k, "level": county_head_level(z), "head": z})
+	return true
+
+
+# --- the clear
+
+## A County run over (from _county_done, the sig still on): the stage's tick, the place's "taken" at its first 2/3 and
+## the next place New; a head's fall, the next zone and its first place New. True when it handled the win.
+func _b61_won(k: String) -> void:
+	var c: Dictionary = Data.county(k)
+	var z: int = int(c["cz"])
+	var hz: int = int(_sig.get("chead", -1))
+	var was_done: bool = county_done()
+	if hz >= 0:
+		var first: bool = county_head_falls(hz) == 0
+		county_heads[hz] = county_head_falls(hz) + 1
+		if first and hz + 1 < Data.COUNTY_ZONES.size():
+			log_event(Words.COUNTY["zone_opens"] % [str(Data.COUNTY_ZONES[hz + 1]["name"]), county_want(hz + 1)])
+			var nk: Array = county_places(hz + 1)
+			if not nk.is_empty():
+				cs_new[str(nk[0])] = true
+		if county_done() and not was_done:
+			log_event(Words.COUNTY["remix"])
+		return
+	order_beaten[k] = int(order_beaten.get(k, 0)) + 1     # the place's wins, any stage
+	var s: int = clampi(int(_sig.get("stage", 1)), 1, Data.STAGES)
+	if s <= county_stage_done(k):
+		log_event(Words.COUNTY["again"] % str(c["place"]))
+		return
+	cs_done[k] = s
+	cs_pick.erase(k)                               # a new stage open: the card goes to the furthest again
+	chron("county_stage", {"key": k, "stage": s, "level": county_stage_level(k, s)})
+	if s == Data.STAGE_OPENS:
+		log_event(Words.COUNTY["taken"] % str(c["place"]))
+		var ks: Array = county_places(z)
+		var at: int = ks.find(k)
+		if at >= 0 and at + 1 < ks.size():
+			cs_new[str(ks[at + 1])] = true
+
+
+# --- the repeat ("Run it ×N" on a County place)
+
+## A County stage's first clear: the picked stage not yet cleared. Kev bets on it; the repeat shuts on it.
+func county_first_clear(k: String) -> bool:
+	return is_county(k) and county_stage_done(k) < county_stage_pick(k)
+
+
+## The place's odds at full HP for the repeat's gate: [read, odds].
+func county_repeat_odds(k: String) -> Array:
+	var sg := county_sig(k, county_stage_pick(k))
+	return _b61_odds(sg, false, hp < max_hp() - 0.01, true).slice(0, 2)
+
+
+## The full-HP read, a step at a time (the shell's budget, as repeat_read).
+func county_repeat_read(k: String) -> void:
+	if mission != null or hp >= max_hp() - 0.01 or not is_county(k):
+		return
+	_b61_odds(county_sig(k, county_stage_pick(k)), true, true)
+
+
+## Why "Run it ×N" is shut on a County place ("" when it can go).
+func county_repeat_block(k: String) -> String:
+	if not is_county(k) or not county_stage_open(k, county_stage_pick(k)):
+		return Words.REPEAT["shut_site"]
+	if away():
+		return Words.REPEAT["shut_away"]
+	if mission != null or not _sig.is_empty():
+		return Words.REPEAT["shut_out"]
+	if candidates.size() == 2:
+		return Words.REPEAT["shut_trait"]
+	if county_first_clear(k):
+		return Words.REPEAT["shut_new"]
+	if not stash_room(REPEAT_ROOM):
+		return Words.REPEAT["shut_full"]
+	var o: Array = county_repeat_odds(k)
+	if not bool(o[0]):
+		return Words.REPEAT["shut_reading"]
+	if float(o[1]) < Data.REPEAT_ODDS:
+		return Words.REPEAT["shut_odds"] % int(floor(float(o[1]) * 100.0))
+	return ""
+
+
+func county_can_repeat(k: String) -> bool:
+	return county_repeat_block(k) == ""
+
+
+## Set off on a County repeat: its picked stage, each run a County run (deploy_order's), unwatched.
+func start_county_repeat(k: String) -> bool:
+	if not county_can_repeat(k):
+		return false
+	var s: int = county_stage_pick(k)
+	var c: Dictionary = Data.county(k)
+	repeat = {"site": int(c["site"]), "county": k, "cstage": s, "of": repeat_count(), "done": 0, "phase": "rest", "stop": false, "bails_row": 0, "bails": 0, "runs": [], "kept": [], "ups": {},
+		"t0": elapsed, "run_t0": elapsed, "lv0": level(), "wounds0": wounds.duplicate(true), "share": repeat_xp_share(), "own_list": yard_has("rr_list"), "first": true}
+	repeat_report = {}
+	var of: int = int(repeat["of"])
+	log_event(Words.REPEAT["set_off"] % [Words.mid(str(c["place"])), (Words.REPEAT["times"] % of) if of > 0 else Words.REPEAT["till_full"]])
+	chron("repeat", {"site": str(c["place"]), "of": of, "share": float(repeat["share"]), "county": k, "stage": s})
+	if hp >= max_hp() - 0.01:
+		_repeat_go()
+	return true
+
+
+## The repeat's run out on a County place (from _repeat_go, the rig packed): its stage's sig, sent.
+func _b61_repeat_deploy() -> void:
+	var k: String = str(repeat["county"])
+	var s: int = int(repeat.get("cstage", 1))
+	if county_stage_block(k, s) != "" or not can_deploy() or not _sig.is_empty():
+		return                                  # mission stays null: _repeat_go ends the repeat with the reason
+	_b61_deploy(county_sig(k, s))
+
+
+## The repeat's place name: a County repeat's place, else its site's.
+static func repeat_place_name(r: Dictionary) -> String:
+	if str(r.get("county", "")) != "" and not Data.county(str(r["county"])).is_empty():
+		return str(Data.county(str(r["county"]))["place"])
+	return str(Data.TIERS[int(r.get("site", 0))]["name"])
+
+
+# --- Kev's wagers
+
+static func wager_county_key(k: String) -> String:
+	return "county:%s" % k
+
+
+static func wager_county_head_key(z: int) -> String:
+	return "chead:%d" % z
+
+
+func wager_county_open(k: String) -> bool:
+	return room_open("radio") and not runner_busy() and county_stage_open(k, county_stage_pick(k)) and county_first_clear(k)
+
+
+func wager_county_head_open(z: int) -> bool:
+	return room_open("radio") and county_head_fight_open(z)
+
+
+## The wager key of the County sig on site `i` ("" for none): the head's own, or the place's on a stage's first clear.
+func _b61_wager_key(i: int) -> String:
+	if _sig.is_empty() or int(_sig["site"]) != i or not is_county(str(_sig.get("order", ""))):
+		return ""
+	if _sig.has("chead"):
+		return wager_county_head_key(int(_sig["chead"]))
+	var k: String = str(_sig["order"])
+	return wager_county_key(k) if county_stage_done(k) < int(_sig.get("stage", 1)) else ""
+
+
+# --- the save
+
+func b61_save() -> Dictionary:
+	var heads := {}
+	for z in county_heads:
+		heads[str(z)] = int(county_heads[z])
+	return {"done": cs_done.duplicate(), "pick": cs_pick.duplicate(), "new": cs_new.duplicate(), "heads": heads}
+
+
+## The County's stage state, defaults for a save from before it (26): nothing cleared. A 26 save's County wins (none on
+## Matt's fresh 0.14.0 save) carry over as the 2/3 on each place won and a fall for each head whose place was won.
+func b61_load(d: Dictionary) -> void:
+	cs_done = {}
+	cs_pick = {}
+	cs_new = {}
+	county_heads = {}
+	var st: Dictionary = d.get("stages", {}) if d.get("stages", {}) is Dictionary else {}
+	if not (st.get("county", null) is Dictionary):
+		for c in Data.COUNTY:
+			var k: String = str(c["key"])
+			if int(order_beaten.get(k, 0)) > 0:
+				cs_done[k] = Data.STAGE_OPENS
+				if c.has("who"):
+					county_heads[int(c["cz"])] = int(order_beaten[k])
+		return
+	var cd: Dictionary = st["county"]
+	for k in cd.get("done", {}):
+		if is_county(str(k)):
+			cs_done[str(k)] = clampi(int(cd["done"][k]), 0, Data.STAGES)
+	for k in cd.get("pick", {}):
+		if is_county(str(k)):
+			cs_pick[str(k)] = clampi(int(cd["pick"][k]), 1, Data.STAGES)
+	for k in cd.get("new", {}):
+		if is_county(str(k)) and bool(cd["new"][k]):
+			cs_new[str(k)] = true
+	for z in cd.get("heads", {}):
+		if int(z) >= 0 and int(z) < Data.COUNTY_ZONES.size():
+			county_heads[int(z)] = maxi(0, int(cd["heads"][z]))

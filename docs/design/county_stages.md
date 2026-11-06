@@ -193,19 +193,19 @@ STAGE_TIER_UP as a "top tier" pick (`c55_tier_up`, sim.gd:21284; open call 3).
 | The Toll Plaza | Demolition bar 7, Breaching shotgun 7, Rescue axe 8, Service rifle 8; Close quarters pistol 7; High-cut helmet 7, Search-team helmet 8; Turnout coat 7; Firefighter's gloves 7; Hostage-rescue rig 8; Assault pack 7; Glass insulator 7 | Highways coat (Armour 8), Cat's eye (Charm 8) |
 | The Distribution Centre | Chain-driven repeater 7, Workshop gauss 8, Bench-made autocannon 8, The engineer's piece 9; Arctic helmet 7 (the cold store); Military plate carrier 7; Abseiling gloves 8; Clamshell pack 7, Mountain-troop bergen 8; Glass insulator 7 | Loading hook (Secondary 8), Picker's harness (Rig 8) |
 | The Truck Stop | Breaching shotgun 7, Entry shotgun 8, Door ram 9, Siege shotgun 9; Cavalry revolver 7, Overcoat machine pistol 8; Search-team helmet 8; Plainclothes vest 7; Close-combat gloves 7; Breacher's rig 8; Long-range bergen 7; Gold cigarette case 8 | Enforcement vest (Armour 9), Seized keys (Charm 9) |
-| The Container Port | Big-game rifle 7, Heavy-barrel rifle 8, Bench-made autocannon 8; Arctic helmet 7 (the reefers); Military plate carrier 7; Abseiling gloves 8, Flight-deck gloves 8; Shield-team rig 8; Long-range bergen 7; Glass insulator 7 | Lashing bar (Primary 9), Port hard hat (Helmet 8) |
-| The Ferry Terminal | Marine shotgun 7, Dragon's-breath gun 8; Consular PDW 7; Arctic helmet 7; Chainmail shark suit 9; Flight-deck gloves 8; Hostage-rescue rig 8; Alpine pack 8, Freefall pack 9; Diamond tiepin 7 | Crew lifejacket (Rig 8), Duty-free bag (Backpack 8) |
+| The Container Port | Big-game rifle 7, Heavy-barrel rifle 8, Bench-made autocannon 8; Arctic helmet 7 (the reefers); Military plate carrier 7; Abseiling gloves 8, Flight-deck gloves 8; Shield-team rig 8; Long-range bergen 7; Glass insulator 7 | Lashing bar (Primary 9), Crane driver's hat (Helmet 8) |
+| The Ferry Terminal | Marine shotgun 7, Dragon's-breath gun 8; Consular PDW 7; Arctic helmet 7; Chainmail shark suit 9; Flight-deck gloves 8; Hostage-rescue rig 8; Alpine pack 8, Freefall pack 9; Diamond tiepin 7 | Ferry lifejacket (Rig 8), Duty-free bag (Backpack 8) |
 | The Customs Shed | Briefcase SMG 7, Security service SMG 7, Spiral-mag SMG 8; Legation machine pistol 7, Overcoat machine pistol 8; CBRN helmet 8; Plainclothes vest 7, Tailored body armour 8, CBRN suit 8; Strongroom bag 8; Diamond tiepin 7, Uncut diamond 9 | Examiner's gloves (Gloves 9), Seizure bag (Backpack 9) |
 | The Golf Club | Big-game rifle 7, Heavy-barrel rifle 8; Ambassador's revolver 8; Ghillie hood 7; Tailored body armour 8; Dress uniform gloves 9; Royal escort rig 9; Alpine pack 8; Signet ring 7, Diamond tiepin 7, Gold cigarette case 8 | Sidelock shotgun (Primary 9), Shooting jacket (Armour 8), Cartridge bag (Backpack 8) |
 | The Gated Close | Close protection SMG 8, Special forces SMG 9; Bodyguard's pistol 8, Embassy PDW 8, Protection squad PDW 9; Search-team helmet 8, Surveillance helmet 9; Tailored body armour 8, State protection vest 9; Counter-sniper gloves 8; Counter-terror rig 7, Shield-team rig 8; Assault pack 7; Signet ring 7 | Gate fob (Charm 8) |
 | The Manor | Big-game rifle 7, Felling axe 7, Civic mace 8, Court sword 9, Castle guard rifle 9; Cavalry revolver 7, Field marshal's revolver 9; Ghillie hood 7; Dress uniform gloves 9; Royal escort rig 9; Wax-sealed bag 9; Regimental medal 8, Sword knot 8, Apothecary's vial 9 | Deerstalker (Helmet 8), Estate tweeds (Armour 9) |
-| The Counting House | Briefcase SMG 7, Ministerial SMG 9; Legation machine pistol 7, Overcoat machine pistol 8; Plainclothes vest 7, Tailored body armour 8; Counter-terror rig 7; Strongroom bag 8; Diamond tiepin 7, Gold cigarette case 8 | Cashier's visor (Helmet 8), Sleeve guards (Gloves 8) |
-| The Bullion Vault | Entry shotgun 8, Combat shotgun 9, Siege shotgun 9, Special forces SMG 9; Protection squad PDW 9; Special forces helmet 8, Full EOD helmet 9; Special forces plates 8, Full EOD suit 9; EOD gauntlets 9, Special forces gloves 9; Shield-team rig 8; Ingot sack 7, Strongroom bag 8, Wax-sealed bag 9; Uncut diamond 9 | Vault guard's carbine (Primary 9), Small ingot (Charm 9) |
+| The Counting House | Briefcase SMG 7, Ministerial SMG 9; Legation machine pistol 7, Overcoat machine pistol 8; Plainclothes vest 7, Tailored body armour 8; Counter-terror rig 7; Strongroom bag 8; Diamond tiepin 7, Gold cigarette case 8 | Cashier's visor (Helmet 8), Clerk's mitts (Gloves 8) |
+| The Bullion Vault | Entry shotgun 8, Combat shotgun 9, Siege shotgun 9, Special forces SMG 9; Protection squad PDW 9; Special forces helmet 8, Full EOD helmet 9; Special forces plates 8, Full EOD suit 9; EOD gauntlets 9, Special forces gloves 9; Shield-team rig 8; Ingot sack 7, Strongroom bag 8, Wax-sealed bag 9; Uncut diamond 9 | Bullion carbine (Primary 9), Small ingot (Charm 9) |
 | The Treasury | Prototype rifle 9, Castle guard rifle 9, Ministerial SMG 9; Protection squad PDW 9, Crown PDW 9, Field marshal's revolver 9; Surveillance helmet 9; State protection vest 9; Dress uniform gloves 9; Royal escort rig 9; Wax-sealed bag 9; Uncut diamond 9, Apothecary's vial 9 | Treasury guard's helmet (Helmet 9), Despatch box (Backpack 9) |
 
 The bases are from data.gd (Primary 311-551, Secondary 552-669, Helmet 670-709, Armour 710-759, Gloves 760-793, Rig
 794-833, Backpack 834-875, Charm 876-914). **24 new bases**: 4 guns (Loading hook, Lashing bar, Sidelock shotgun,
-Vault guard's carbine), 5 helmets, 4 armour, 2 gloves, 2 rigs, 4 packs, 3 charms; stats by role against their tier's
+Bullion carbine), 5 helmets, 4 armour, 2 gloves, 2 rigs, 4 packs, 3 charms; stats by role against their tier's
 neighbours; borrowed pictures through ART_AS (data.gd:2136) till the art; the language pass first. Names checked
 against data.gd and words.gd ("Toll token" became "Cat's eye": too near "Arcade token").
 
@@ -251,7 +251,7 @@ clocks, notes and labels).
 
 **Costs** (pixellab_lessons.md's table): 24 plates at 744 x 320, $0.15 each, $3.60. 4 dens, plate and wall, $1.20. 24
 item icons at their footprint x 64 px (under 65k px), $0.08 each, $1.92. 4 hands at 280 x 210 (Loading hook, Lashing
-bar, Sidelock shotgun, Vault guard's carbine; the reroll template, no style image, big_revolver.png the reference),
+bar, Sidelock shotgun, Bullion carbine; the reroll template, no style image, big_revolver.png the reference),
 $0.32. **$7.04, about $9 with rerolls.** 56 jobs is about 1-1.5 h at `--parallel 3`. The map is Matt's own painting, no
 cost.
 
@@ -322,3 +322,14 @@ About a day with the canvas round; the art about 1.5 h of running.
 5. **The length**: 28 runs through the County against 12, taken as the longer County (act two's 9 h target to be read
    from Matt's play). Or trim, for example with the head's gate at the place's 1/3.
 6. **"Run it ×N" on the County** in this build (new plumbing). Or after Matt's play, leaving the County on watched runs.
+
+## As built (0.14.1, 6 Nov)
+
+- As §2-§7, with Matt's "your picks" on the open calls: the head's fight needs the issued kit (as a stage); the bot
+  clears the road's 2/3s before any 3/3; the three themed T9 primaries past the "two a type a tier" rule stand; the
+  Meds and Rounds rows stay off the County card; a 3/3's quarter rolls from the list's T9 (else the slot's T9).
+- No per-stage foot lines: the card's foot is the place's own line, as a campaign site's (site_card.county_line reads
+  Words.COUNTY_STAGE_WORDS if one is ever written).
+- The map: Matt's 688 x 384 painting, art/map/county.png; data/county_places.tres seeded by eye (F3 to move).
+- Renamed in the language pass: Bullion carbine, Crane driver's hat, Ferry lifejacket, Clerk's mitts.
+- No SAVE_VERSION bump: a 0.14.0 save's won places load as their 2/3, its heads won as one fall.

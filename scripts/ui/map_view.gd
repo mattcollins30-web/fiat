@@ -362,19 +362,28 @@ func _snug(l: Label) -> void:
 func pin_mark(i: int) -> String:
 	if not sim.tier_open(i):
 		return ""
-	if sim.site_new(i):
+	return mark_of(sim.site_new(i), sim.stage_done(i))     # (BUILD61-U) the words shared with the County's pins
+
+
+## (BUILD61-U) A pin's mark from its state, the Map's and the County's: "New" while opened and unpicked, else the furthest
+## stage cleared ("2/3"), else "".
+static func mark_of(is_new: bool, done: int) -> String:
+	if is_new:
 		return Words.U55["new"]
-	var d: int = sim.stage_done(i)
-	return Words.U55["stage"] % [d, Data.STAGES] if d > 0 else ""
+	return Words.U55["stage"] % [done, Data.STAGES] if done > 0 else ""
 
 
 ## The "New" mark on a pin's label: the label's own words to the dot, the mark drawn over the rest in amber, breathing.
 func _show_new(i: int, on: bool) -> void:
-	var l: Label = _pin_labels[i]
-	var mk: Label = pin_marks[i]
+	lay_mark(_pin_labels[i], pin_marks[i], on, pulse_t)     # (BUILD61-U) shared with the County's pins
+	set_process(pin_marks.any(func(m): return m.visible))     # ticking only while a "New" shows
+
+
+## (BUILD61-U) The "New" mark laid on a pin's label (the Map's and the County's): the label's own words to the dot, the
+## mark over the rest in amber at the breath's alpha for t.
+static func lay_mark(l: Label, mk: Label, on: bool, t: float) -> void:
 	mk.visible = on
 	l.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING     # the box keeps the whole words' layout
-	set_process(pin_marks.any(func(m): return m.visible))     # ticking only while a "New" shows
 	if not on:
 		l.visible_characters = -1
 		mk.modulate.a = 1.0
@@ -385,7 +394,7 @@ func _show_new(i: int, on: bool) -> void:
 	var x0: float = (l.size.x - w) / 2.0 if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER else (l.size.x - w if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0)
 	mk.position = Vector2(x0 + UI.text_width(l, lead), 0)
 	mk.size = Vector2(ceilf(UI.text_width(mk, mk.text)) + 2.0, l.size.y)
-	mk.modulate.a = pulse_alpha(pulse_t)
+	mk.modulate.a = pulse_alpha(t)
 
 
 ## The "New" mark's alpha at t seconds: 1 down to NEW_PULSE_LOW and back over NEW_PULSE_S, eased - a breath, not a blink.
