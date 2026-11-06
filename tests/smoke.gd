@@ -921,6 +921,7 @@ func _init() -> void:
 	_f55_repeat_sync_checks(main)             # FIX55: the review's 5 - the repeat's end syncs its site's depth
 	_f55_words_checks(main)                   # FIX55: the tidy and the language pass
 	_f55_head_rule_checks()                   # FIX55b: each head on his site's 1/3 man, his gang on the 2/3's
+	_a57_stage_wall_checks(main)              # BUILD57 (6 Nov): a stage's own plate on the site's wall, the site's slots
 	_finish()
 
 
@@ -40746,8 +40747,11 @@ func _u55_backdrop_checks(main) -> void:
 	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments_2" and RunView.stage_key({"tier": 0, "stage": 3}) == "the_allotments" and RunView.stage_key({"tier": 0, "stage": 1}) == "the_allotments", "a drawn 2/3 pair isn't read for the 2/3 alone")
 	_check(RunView.stage_key({"tier": 0, "stage": 2, "signal": {"zone": 0}}) == "the_allotments", "a signal's run took the stage's plate")
 	RunView._tex.erase("the_allotments_2_cover")
-	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments", "half a stage pair (no wall) was read")
+	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments_2", "a stage's plate with no wall of its own wasn't read (BUILD57: it stands on the site's wall)")
+	RunView._tex.erase("the_allotments_2_plate")
 	RunView._tex["the_allotments_2_cover"] = ct
+	_check(RunView.stage_key({"tier": 0, "stage": 2}) == "the_allotments", "a stage's wall with no plate was read")
+	RunView._tex["the_allotments_2_plate"] = pt
 	# a real run at 2/3 draws it; at 1/3 the site's
 	sim.set_stage_pick(0, 2)
 	sim.deploy(0)
@@ -41261,3 +41265,86 @@ func _f55_head_rule_checks() -> void:
 			"%s: %.0f HP, %.2f fire; want BOSSES x the 1/3 man, %.0f and %.2f" % [b["name"], float(hb.get("hp", 0.0)), float(hb.get("dps", 0.0)), float(d1["hp"]) * float(b["hp"]), float(d1["dps"]) * float(b["dps"])])
 		_check(absf(float(pv["hp"]) - float(d2["hp"])) < 0.01 and int(pv["pool"]) == maxi(1, floori(int(Data.TIERS[i]["pool"]) / 2.0)), "%s's gang: %d at %.0f HP, want %d at the 2/3 man %.0f" % [b["name"], int(pv["pool"]), float(pv["hp"]), maxi(1, floori(int(Data.TIERS[i]["pool"]) / 2.0)), float(d2["hp"])])
 		print("f55b %s: him %.0f HP %.2f fire, his gang %d x %.0f HP %.2f fire" % [b["name"], float(hb.get("hp", 0.0)), float(hb.get("dps", 0.0)), int(pv["pool"]), float(pv["hp"]), float(pv["dps"])])
+
+
+## The stage plate on the site's wall (BUILD57, docs/design/stages.md §6, call 7: a new plate per stage on the site's
+## existing wall). With a fixture plate under the 2/3's name (held in the picture cache, as the backdrop checks fake a
+## drawn file), a 2/3 run shows it on the site's own wall, its figures on the site's placed slots; a wall of the stage's
+## own, or slots placed for the stage, win once there; with no plate, the site's pair.
+func _a57_stage_wall_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var slots0: Dictionary = RunView.saved_sites().duplicate(true)
+	_u55_camp(sim, 3)
+	var v = main._run._view
+	var was_key: String = v._site_key
+	var site := "the_allotments"
+	var stage := site + "_2"
+	var fixture: Texture2D = RunView.tex("the_garden_centre_plate")     # not the site's plate: the check tells them apart
+	var other_ct: Texture2D = RunView.tex("the_garden_centre_cover")
+	var site_pt: Texture2D = RunView.tex(site + "_plate")
+	var site_ct: Texture2D = RunView.tex(site + "_cover")
+	_check(fixture != null and other_ct != null and site_pt != null and site_ct != null and fixture != site_pt and other_ct != site_ct, "the fixture: the pictures it borrows aren't on disk")
+	var placed := {site + "@kit": [[101.0, 201.0, 0.61], [301.0, 251.0, 0.91], [251.0, 161.0, 0.31]],
+		site: [[102.0, 202.0, 0.62], [302.0, 252.0, 0.92], [252.0, 162.0, 0.32]]}
+	RunView.use_saved(placed)
+	RunView._tex.erase(stage + "_cover")
+	RunView._tex[stage + "_plate"] = fixture
+	var kit_key: String = site + ("@kit" if RunView.kit_pair(site) else "")
+	var want: Array = placed[kit_key]
+	var run_at := func(st: int) -> bool:
+		if sim.on_mission():
+			sim.extract_now()
+		sim.hp = sim.max_hp()
+		sim.set_stage_pick(0, st)
+		sim.deploy(0)
+		if not sim.on_mission():
+			return false
+		v._site_key = "-"
+		v.show_state(sim, sim.mission)
+		return true
+	var slots_are := func(rows: Array) -> bool:
+		for k in range(3):
+			var s: Dictionary = v.slot_of(k)
+			if not (s["foot"].is_equal_approx(Vector2(rows[k][0], rows[k][1])) and is_equal_approx(float(s["scale"]), float(rows[k][2]))):
+				return false
+		return true
+	# the 2/3 with its own plate and no wall of its own: the plate, the site's wall, the site's slots
+	_check(RunView.stage_key({"tier": 0, "stage": 2}) == stage and RunView.stage_key({"tier": 0, "stage": 3}) == site and RunView.stage_key({"tier": 0, "stage": 1}) == site, "a 2/3 plate with no wall of its own isn't read for the 2/3 alone: '%s'" % RunView.stage_key({"tier": 0, "stage": 2}))
+	_check(run_at.call(2), "the fixture: no run at the Allotments' 2/3")
+	if sim.on_mission():
+		_check(v._site_key == stage and v._plate.texture == fixture, "the 2/3's run isn't on its own plate: '%s'" % v._site_key)
+		_check(v._cover.texture == site_ct, "the 2/3's plate isn't on the site's own wall")
+		_check(v._own_site and v.slot_key().begins_with(stage), "the 2/3's plate isn't its own scene: own %s, slots '%s'" % [str(v._own_site), v.slot_key()])
+		_check(slots_are.call(want), "the 2/3's figures aren't on the site's placed slots (%s): %s" % [kit_key, str([v.slot_of(0)["foot"], v.slot_of(1)["foot"], v.slot_of(2)["foot"]])])
+		_check(RunView.cover_reaches(v._cover.texture), "the site's wall under the 2/3's plate doesn't reach the frame's foot")
+		# slots placed for the stage (F3 on its plate) win over the site's
+		var own_rows: Array = [[111.0, 211.0, 0.6], [311.0, 261.0, 0.9], [261.0, 171.0, 0.3]]
+		var placed2: Dictionary = placed.duplicate(true)
+		placed2[v.slot_key()] = own_rows
+		RunView.use_saved(placed2)
+		_check(slots_are.call(own_rows), "the 2/3's own placed slots weren't read")
+		RunView.use_saved(placed)
+	# a wall of the stage's own, once drawn, wins over the site's
+	RunView._tex[stage + "_cover"] = other_ct
+	if run_at.call(2):
+		_check(v._site_key == stage and v._plate.texture == fixture and v._cover.texture == other_ct, "the 2/3's own wall isn't read when there")
+		_check(slots_are.call(want), "the 2/3's own pair, its figures not on the site's placed slots: '%s'" % v.slot_key())
+	RunView._tex.erase(stage + "_cover")
+	# the 3/3 (no plate of its own) and the 1/3: the site's pair and slots
+	for st in [3, 1]:
+		if run_at.call(st):
+			_check(v._site_key == site and v._plate.texture == site_pt and v._cover.texture == site_ct and slots_are.call(want), "the %d/3 with no plate isn't on the site's pair and slots: '%s'" % [st, v._site_key])
+	# no stage plate: the 2/3 is the site's pair
+	RunView._tex.erase(stage + "_plate")
+	if run_at.call(2):
+		_check(v._site_key == site and v._plate.texture == site_pt and v._cover.texture == site_ct and slots_are.call(want), "the 2/3 with no plate isn't on the site's pair: '%s'" % v._site_key)
+	if sim.on_mission():
+		sim.extract_now()
+	RunView._tex.erase(stage + "_plate")
+	RunView._tex.erase(stage + "_cover")
+	_check(RunView.stage_base(stage) == site and RunView.stage_base(stage + "@kit") == site and RunView.stage_base(site) == site and RunView.stage_base("the_manager") == "the_manager", "stage_base: '%s'" % RunView.stage_base(stage))
+	RunView.use_saved(slots0)
+	v._site(was_key if was_key != "" and was_key != "-" else "the_parade")
+	sim.load_dict(saved)
+	print("a57 stage wall ok: a stage's plate on the site's wall and slots, its own wall and slots when there, else the site's pair")

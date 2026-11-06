@@ -1,0 +1,89 @@
+{
+ "_readme": [
+  "FIAT HANDS, THE STAGES (6 Nov, Matt: \"include the new backdrops and items from yesterday\"): the fight's hands for the stages' 4 new weapons, 280x210 at $0.08 each (about $0.32).",
+  "The 6 Nov reroll's template: no style_image, the weapon in words, big_revolver.png the reference. Straight to art/fight/hands/<slug>.png; they show once the ART_AS entries for these bases come off (the wiring step).",
+  "Regenerate with python3 tools/make_hands_stages_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight/hands/garden_fork.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 614000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single garden digging fork with four steel tines, a wooden shaft and a D-shaped wooden handle, held forward low like a spear, the right hand on the D-handle and the left hand round the shaft near the tines - a fork, not a pitchfork, not a rake, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the hands, strongly foreshortened: the tines point away into the scene towards the middle of the frame and the handle comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint and framing as the reference image of the revolver. One fork only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Garden fork (primary; falls back to hands_melee) - the stages' new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/bone_saw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 614001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single surgeon's bone saw with a steel bow frame over a fine-toothed straight blade and a dark wooden handle, held forward in the right hand ready to saw, the left hand empty and held forward - a bow saw, not a hacksaw, not a knife, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the right hand, strongly foreshortened: the blade points away into the scene towards the middle of the frame and the handle comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint and framing as the reference image of the revolver. One saw only, and exactly two hands: the right hand holding it, the left hand empty and held forward. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bone saw (primary; falls back to hands_blade) - the stages' new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/humane_killer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 614002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single slaughterman's captive-bolt pistol: a fat short steel cylinder with a flat round muzzle and a short plain grip under its back end, held out forward in both hands wrapped together round its one grip - a stunning tool, not a revolver, not a torch, no cylinder, no magazine, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Humane killer (secondary; falls back to hands_pistol) - the stages' new weapon, the 6 Nov reroll's template"
+  },
+  {
+   "out": "art/fight/hands/scalpel.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 614003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single small steel surgical scalpel with a flat handle and a short curved blade, held low and forward in the right hand like a knife, the left hand empty and held forward - small and thin, not a kitchen knife, not a dagger, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the right hand, strongly foreshortened: the blade points away into the scene towards the middle of the frame and the handle comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint and framing as the reference image of the revolver. One scalpel only, and exactly two hands: the right hand holding it, the left hand empty and held forward. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Scalpel (secondary; falls back to hands_blade) - the stages' new weapon, the 6 Nov reroll's template"
+  }
+ ]
+}

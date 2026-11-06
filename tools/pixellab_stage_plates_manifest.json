@@ -1,0 +1,442 @@
+{
+ "_readme": [
+  "FIAT STAGE PLATES (6 Nov, Matt: \"include the new backdrops and items from yesterday\"; docs/design/stages.md §6): a plate for each site's 2/3 and 3/3, 24 jobs at 744x320, $0.15 each (about $3.60).",
+  "Out art/fight_new/<site>_2_plate.png / _3_plate.png: RunView.stage_key finds them by name and stands each on its site's own wall (art/fight_walls/), the site's placed slots till F3 places the stage's - nothing to wire.",
+  "Each styled on its site's plate (palette, light, painting style), the same viewpoint and layout family, a different spot of the same place. ++ --parallel 3.",
+  "Regenerate with python3 tools/make_stage_plates_manifest.py; check with python3 tools/art_lint.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_new/the_allotments_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_allotments_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking further into the overgrown allotments: plastic water butts tipped over on their sides, a puddle spread from them, sheds with their doors torn off and lying in the weeds, rows of broken bean canes, a dark open shed doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_allotments (styled on art/fight_new/the_allotments_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_allotments_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_allotments_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a freshly dug allotment plot fenced in with upright wooden pallets lashed together: a long earthed-up potato bed, a spade stood in the soil, an upturned crate for a lookout seat by a gap in the pallets on the left, a tarpaulin lean-to, the sheds of the allotments beyond. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_allotments (styled on art/fight_new/the_allotments_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_garden_centre_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_garden_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a garden centre's stripped cafe: tables and chairs stacked and toppled, an empty glass-fronted cake counter, a bare wooden menu board on the wall wiped blank, a dead coffee machine, a dark kitchen doorway on the left, the glasshouse roof beyond the far windows. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_garden_centre (styled on art/fight_new/the_garden_centre_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_garden_centre_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_garden_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking inside a garden centre's glasshouse: its glass roof with panes out, the walls heaped high with plain unprinted compost bags stacked like sandbags, empty plant benches, a dark gap between the bag walls on the left, grey daylight through the roof. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_garden_centre (styled on art/fight_new/the_garden_centre_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/top_farm_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/top_farm_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking inside a big stone barn: plain unprinted feed sacks stacked high on pallets, empty cattle pens with their gates hanging open, straw on the floor, a dusty feed trough, the big doors open on a grey muddy yard, a dark tack-room doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: top_farm (styled on art/fight_new/top_farm_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/top_farm_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/top_farm_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a farmhouse's stone-floored back kitchen: a big range cooker, a long scrubbed table, coats on pegs, wellies by the door, a tall plain steel gun cabinet standing open and empty, a dark passage doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: top_farm (styled on art/fight_new/top_farm_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/ransacked_streets_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/ransacked_streets_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into the ground floor of a terraced house stripped for its copper: the plaster hacked open in long channels where the pipes and wires were, floorboards up, a radiator gone from its wall leaving brackets, a dark stairway doorway on the left, a window onto the grey street. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: ransacked_streets (styled on art/fight_new/ransacked_streets_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/ransacked_streets_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/ransacked_streets_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a back street behind a row of terraces: brick back-yard walls and gates, wheelie bins with no numbers on them, a car up on bricks with its wheels gone and its number plates gone, a child's car seat still in the back, a dark ginnel on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: ransacked_streets (styled on art/fight_new/ransacked_streets_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_parade_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_parade_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking along a different stretch of the estate's parade of shops: every shop open and gutted but one, whose steel shutter alone is pulled down and padlocked, its fascia board above it a blank faded panel, the others' fascias blank too, a dark alley between two shops on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_parade (styled on art/fight_new/the_parade_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_parade_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_parade_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a gutted launderette on the parade: a row of front-loading washing machines along one wall, their round doors open, a mattress and blankets made up on the folding counter, a camping stove and a kettle, clothes hung to dry on a line, plain blank walls, a dark back-room doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_parade (styled on art/fight_new/the_parade_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_retail_park_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_retail_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down an aisle of a huge DIY warehouse store: tall orange steel racking half emptied, plain unprinted boxes torn open, timber lengths spilled across the floor, power-tool shelves stripped bare, a dark cross-aisle on the left, the roof lights grey overhead. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_retail_park (styled on art/fight_new/the_retail_park_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_retail_park_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_retail_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a looted supermarket: rows of empty shelving, chest freezers along one side with their lids open and dark inside, abandoned trolleys, plain blank price rails with no labels, a dark doorway to the stock room on the left, the roof lights out. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_retail_park (styled on art/fight_new/the_retail_park_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_pleasure_park_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_pleasure_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a seaside amusement arcade lit off a generator: rows of arcade cabinets, a few glowing with soft plain coloured light on their dark blank screens, no pictures or words on them, a penny-falls machine, a fat cable snaking across the patterned carpet to a small generator, a dark doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_pleasure_park (styled on art/fight_new/the_pleasure_park_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_pleasure_park_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_pleasure_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a pleasure park's log flume made into a reservoir: the long fibreglass trough brimming with still grey water, its splash pool dammed with sandbags, plastic jerrycans lined up along the edge, the flume's tower going up into the haze, a dark tunnel mouth on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_pleasure_park (styled on art/fight_new/the_pleasure_park_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/shopping_centre_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612014,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/shopping_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a ransacked jeweller's in the shopping centre: glass display counters smashed, empty velvet ring trays, wristwatches scattered across the floor with plain faces and no numbers, a small safe open behind the counter, the shop's fascia blank, a dark back-room doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: shopping_centre (styled on art/fight_new/shopping_centre_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/shopping_centre_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612015,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/shopping_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a children's clothes shop on the shopping centre's upper floor made into a camp: racks of small clothes pushed back, mattresses and sleeping bags on the floor, a camping stove, washing strung between the rails, plain blank walls, a dark fitting-room doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: shopping_centre (styled on art/fight_new/shopping_centre_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_bank_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612016,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking from behind a high-street bank's counter: the teller positions from the staff side, swivel chairs, cash drawers pulled open, plain blank paper on the desks, the starred glass screens looking out onto the empty banking hall, a dark staff doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_bank (styled on art/fight_new/the_bank_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_bank_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612017,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a bank's back office: desks pushed together, cash tills with their drawers open and their small displays lit with no numbers on them, cables running to a small generator on the carpet, filing cabinets, a dark corridor doorway on the left, blinds half down. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_bank (styled on art/fight_new/the_bank_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_services_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612018,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a motorway services lorry park: plain unpainted curtain-sided trailers parked in rows with no lettering on them, their curtains pulled back on beds and furniture inside, lorry cabs with their doors open and goods laid out on their steps, a dark gap between two trailers on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_services (styled on art/fight_new/the_services_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_services_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612019,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across the far side of a motorway services forecourt: the underground fuel tanks' steel covers prised open in the concrete, hand pumps and hoses run into them, plain pumps with their displays dark and no numbers, the canopy overhead, a dark shop doorway on the left, the slip road in haze. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_services (styled on art/fight_new/the_services_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_hospital_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612020,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_hospital_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a hospital's emergency entrance made into a gate: the ambulance bay outside, the sliding doors jammed open, a triage desk pushed across the entrance as a checkpoint, wheelchairs and trolleys stacked as a barrier, plain blank panels where the signs were, a dark corridor on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_hospital (styled on art/fight_new/the_hospital_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_hospital_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612021,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_hospital_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a hospital pharmacy: long rows of steel shelving almost bare, a few plain unprinted boxes left neatly spaced on them, a dispensing counter with its hatch open, a locked steel cupboard standing open, plain blank walls, a dark store-room doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_hospital (styled on art/fight_new/the_hospital_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_barracks_2_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612022,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into an army barracks' armoury corridor: a steel issue hatch in a brick wall with its shutter up, a closed plain ledger lying on its counter, empty rifle racks behind a mesh cage, a dark doorway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 2/3's plate: the_barracks (styled on art/fight_new/the_barracks_plate.png; stands on the site's wall)"
+  },
+  {
+   "out": "art/fight_new/the_barracks_3_plate.png",
+   "width": 744,
+   "height": 320,
+   "no_background": false,
+   "seed": 612023,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a barracks' wide parade square swept clean and marked out with painted lines for drill, a saluting dais at one side, brick accommodation blocks round it, a flagpole with no flag, a dark archway on the left. Nobody in the scene, empty and waiting. No people or figures anywhere. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later. Only the palette, light and painting style of the style image, not its view or its subject: this is a different spot of the same place, seen from the same crouching viewpoint, with the same layout of near, middle and far ground. The painting fills the whole canvas to all four edges, no border, frame or margin. Every board, panel, screen and label in it blank, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the 3/3's plate: the_barracks (styled on art/fight_new/the_barracks_plate.png; stands on the site's wall)"
+  }
+ ]
+}

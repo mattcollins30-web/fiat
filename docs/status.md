@@ -6518,6 +6518,16 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 6 Nov: the art for 0.14.0 flagged, and six guns rerolled
+
+Matt: "these need re rolling" (six first-person guns side-on, doubled or wrong: tools/pixellab_reroll_6nov_manifest.json,
+no style image, the weapon in words) and "include the new backdrops and items from yesterday - just drop the flag when
+ready": tools/pixellab_stage_plates_manifest.json (24 plates, the 2/3 and 3/3 of each site, 744x320), 
+pixellab_items_stages_manifest.json (the 24 new bases' icons), pixellab_hands_stages_manifest.json (the Garden fork, Bone
+saw, Humane killer, Scalpel in hand); all lint clean; about $6.32 in all. The code: a stage's plate stands on its site's
+wall and takes its site's figure slots till placed (run_view.gd stage_key / _site; a check proved red). After art.done:
+the 24 ART_AS borrows come off (data.gd) and _c55_bases_checks follows; the F3 tool places figures on the stage plates.
+
 ## 5 Nov (late night): 0.14.0 - stages per site (build 55; SAVE_VERSION 26, a fresh save)
 
 Matt: "i think the answer to campaign length/balance is more stages per site"; his calls (four, then "A, 0.7x, 5-5.5

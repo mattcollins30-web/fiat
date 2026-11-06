@@ -440,13 +440,15 @@ func slot_key() -> String:
 ## below, else the common one.
 static func site_slot(key: String, k: int) -> Dictionary:
 	var placed: Dictionary = saved_sites()
-	var at: String = key
-	if not (placed.has(at) and placed[at] is Array and placed[at].size() == 3):
-		at = key.trim_suffix("@kit")              # the kit's pair not placed yet: where the old pair's were, as a start
-	if placed.has(at) and placed[at] is Array and placed[at].size() == 3:
-		var row: Array = placed[at][k]
-		return {"foot": Vector2(float(row[0]), float(row[1])), "scale": float(row[2]), "lit": SLOTS[k]["lit"]}
-	key = key.trim_suffix("@kit")
+	var base: String = stage_base(key)
+	var tries: Array = [key, key.trim_suffix("@kit")]     # the kit's pair not placed yet: where the old pair's were, as a start
+	if base != key.trim_suffix("@kit"):
+		tries += [base + ("@kit" if key.ends_with("@kit") else ""), base]     # a stage not placed yet: its site's own (BUILD57)
+	for at in tries:
+		if placed.has(at) and placed[at] is Array and placed[at].size() == 3:
+			var row: Array = placed[at][k]
+			return {"foot": Vector2(float(row[0]), float(row[1])), "scale": float(row[2]), "lit": SLOTS[k]["lit"]}
+	key = base
 	if k == 2 and SITE_FAR.has(key):
 		return {"foot": SITE_FAR[key][0], "scale": SITE_FAR[key][1], "lit": SLOTS[2]["lit"]}
 	var own: Dictionary = (SITE_MID if k == 0 else SITE_NEAR) if k < 2 else {}
@@ -541,17 +543,20 @@ func _place_tick() -> void:
 		_placer.queue_redraw()
 
 
-## The site's plate and cover (its own, else the Parade's test pair), and the wall's fill cut from the cover.
+## The site's plate and cover (its own, else the Parade's test pair), and the wall's fill cut from the cover. A stage's
+## key (`<site>_2`) takes its own plate on its own wall when drawn, else the site's wall (BUILD57, stages.md §6).
 func _site(key: String) -> void:
 	_site_key = key
-	var own: bool = tex(key + "_plate") != null and tex(key + "_cover") != null     # the site's pair, or the Parade's: never one of each
+	var base: String = stage_base(key)
+	var own_ct: Texture2D = scene_cover(key)
+	var own: bool = tex(key + "_plate") != null and own_ct != null     # the site's pair, or the Parade's: never one of each
 	_own_site = own
-	_kit_site = own and kit_pair(key)
+	_kit_site = own and (kit_pair(key) or (base != key and kit_pair(base)))     # a stage's plate is drawn at the kit's size, on its site's ground
 	_plate.texture = tex(key + "_plate") if own else tex("parade_plate")
 	if _plate.texture != null:
 		_plate.size = _plate.texture.get_size()
 		_plate.scale = Vector2.ONE * (PLATE_VIEW_W / _plate.size.x)     # the kit's 744 drawn as the old 688: the slots and the pan keep their numbers
-	var ct: Texture2D = tex(key + "_cover") if own else tex("parade_cover")
+	var ct: Texture2D = own_ct if own else tex("parade_cover")
 	_cover.texture = ct
 	if ct == null:
 		return
@@ -585,14 +590,38 @@ static func kit_pair(key: String) -> bool:
 
 
 ## The run's scene for its stage (BUILD55-U, docs/design/stages.md §6): `<site>_2` / `<site>_3` for the 2/3 and the 3/3
-## when that pair is drawn, else the site's own (no stage plates exist yet: the fallback is what shows). A signal (depth
-## 4 and on) and the 1/3 read the site's.
+## when that stage's plate is drawn, else the site's own. A stage's plate stands on the site's wall unless the stage has
+## a wall of its own (BUILD57: §6's call 7, a new plate per stage on the site's existing wall). A signal (depth 4 and
+## on) and the 1/3 read the site's.
 static func stage_key(m: Dictionary) -> String:
 	var key: String = Items.slug(str(Data.TIERS[int(m["tier"])]["name"]))
 	var st: int = int(m.get("stage", m.get("t", {}).get("depth", 1))) if m.get("signal", {}).is_empty() else 1     # A's mission["stage"]; the depth a campaign run stands at else
-	if st >= 2 and st <= Data.STAGES and tex("%s_%d_plate" % [key, st]) != null and tex("%s_%d_cover" % [key, st]) != null:
+	if st >= 2 and st <= Data.STAGES and tex("%s_%d_plate" % [key, st]) != null:
 		return "%s_%d" % [key, st]
 	return key
+
+
+## The site a stage's key is of (`the_allotments_2` -> `the_allotments`, an "@kit" slot key's too); any other key as it
+## is (BUILD57).
+static func stage_base(key: String) -> String:
+	var k: String = key.trim_suffix("@kit")
+	for st in range(2, Data.STAGES + 1):
+		var suf: String = "_%d" % st
+		if k.ends_with(suf):
+			var b: String = k.trim_suffix(suf)
+			for t in Data.TIERS:
+				if Items.slug(str(t["name"])) == b:
+					return b
+	return k
+
+
+## A scene's wall: its own, else for a stage its site's (BUILD57).
+static func scene_cover(key: String) -> Texture2D:
+	var ct: Texture2D = tex(key + "_cover")
+	var base: String = stage_base(key)
+	if ct == null and base != key:
+		ct = tex(base + "_cover")
+	return ct
 
 
 ## The head's own fight (BUILD55-U, §4: mission["head_fight"]): his den's key from the first man, "" on any other run.
