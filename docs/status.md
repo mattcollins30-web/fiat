@@ -6518,6 +6518,16 @@ difficulty and length, the endgame placeholders.
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
 
+## 6 Nov (afternoon): the County's treatment specced (docs/design/county_stages.md)
+
+Matt: "We also need the same treatments for the county - stages, art, gear spread, full size map, UI changes from
+campaign". The spec: each County place its own figures, 1/3-3/3 at x1.22, x1.113 from a 2/3 to the next place's 1/3
+(the Toll Plaza and the Treasury as today at the ends), one gang count a zone (12/11/10/9), levels 40-77; the four
+heads' own fights after their place's 2/3 on new dens; 60% of finds from a place's list, 24 new bases at T8/T9; 24
+stage plates and 4 dens (~$7); the County's card becomes the site card (the 0.12.2 playtest's item 23, never done for
+it); the County map Matt paints (688 x 384) taken as the main map's, with its places in a data file and the F3 tool.
+Six open calls for Matt. Also today: five stage plates rerolled (they copied their site's plate).
+
 ## 6 Nov (midday): the art for 0.14.0 wired in
 
 Matt: "all that art is done" (art.done: the stage plates 24 + 3 rerolled for borders, the 24 icons, the 4 hands; the
