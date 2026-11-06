@@ -1,0 +1,125 @@
+{
+ "_readme": "Rerolls (6 Nov, Matt: \"these need re rolling\"): six first-person guns that came out side-on, doubled or wrong. Seeds +1000; no style_image (the side-on icon pulled each into profile) - the weapon described in words, big_revolver.png kept as the view's reference. 6 jobs x $0.08.",
+ "jobs": [
+  {
+   "out": "art/fight/hands/regimental_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single olive-drab military rifle with a short telescopic sight on top and a stubby grenade-launcher tube under its barrel, shouldered, one hand at the pistol grip and one under the launcher, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Regimental rifle (primary; falls back to hands_rifle) - reroll 6 Nov: two rifles overlapping: the launcher drawn as a second gun beside a scoped one, and side-on"
+  },
+  {
+   "out": "art/fight/hands/security_guard_s_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single black-and-grey carbine with a carry-handle rear sight and a slim round handguard, shouldered, one hand at the pistol grip and one under the handguard, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. The weapon sits low in the frame: its body and stock run down and back into the bottom right corner, tucked into the shoulder and mostly cut off by the frame's edge, never rising above the barrel; the top of the weapon stays below the middle of the frame. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Security guard's carbine (primary; falls back to hands_smg) - reroll 6 Nov: side-on, not down the barrel"
+  },
+  {
+   "out": "art/fight/hands/select_fire_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single long-barrelled dark steel pistol, held out forward in both hands wrapped together around its one grip, no stock fitted, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Select-fire pistol (secondary; falls back to hands_smg) - reroll 6 Nov: hands tangled round the grip, a stray wire stock, side-on"
+  },
+  {
+   "out": "art/fight/hands/three_round_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single compact machine pistol with a short silencer and a vertical fore-grip under its barrel, held out forward, the right hand on the pistol grip and the left hand on the fore-grip, both hands closed round the gun, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Three-round pistol (secondary; falls back to hands_smg) - reroll 6 Nov: hands not holding the gun - it floats between them; side-on"
+  },
+  {
+   "out": "art/fight/hands/hand_me_down_nail_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a single home-made nail gun: a long thin barrel, a taped wooden pistol grip, and a small red gas bottle clamped under the back of it with a black hose looping back past the wrist - a gun, not a fire extinguisher or a sprayer; held out forward in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind and just above the weapon, looking straight down the barrel, strongly foreshortened: the muzzle points away into the scene towards the middle of the frame and the back of the weapon comes towards the viewer at the bottom right; not a side view, not in profile. The same viewpoint, framing and grip as the reference image of the revolver. One weapon only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Hand-me-down nail gun (primary; falls back to hands_improvised) - reroll 6 Nov: reads as a fire-extinguisher sprayer, side-on"
+  },
+  {
+   "out": "art/fight/hands/compound_bow.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 611005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/hands/big_revolver.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a compound bow held upright, its limbs vertical with a pulley wheel at the top and the bottom, at arm's length in the left hand, the right hand drawing the string back to the cheek, the arrow pointing straight ahead into the scene - a bow, not a crossbow: no stock, nothing lying sideways, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Seen from behind the bow, the arrow pointing away into the middle of the frame, strongly foreshortened; not a side view. One bow only, held by exactly two hands. Only the hands and what they hold, coming in from the bottom edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Compound bow (primary; falls back to hands_improvised) - reroll 6 Nov: a crossbow and a bow mixed, the bow lying sideways"
+  }
+ ]
+}

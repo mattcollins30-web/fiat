@@ -14,6 +14,10 @@ cost at least one reroll.
   profile".
 - **Side-on style images pull shapes into profile.** A `style_image` of an `art/items/*.png` icon makes the model copy
   its silhouette: say "its parts and colours, but turned to point away into the scene", not "its shape and colours".
+- **A side-on item icon as the `style_image` still wins over the words** (6 Nov: six hands came back side-on, a
+  launcher drawn as a second rifle, a bow turned crossbow). For a reroll, drop the `style_image`, describe the weapon in
+  words (its parts, "one weapon only, held by exactly two hands", what it is not), keep `big_revolver.png` as the
+  reference.
 - **Long guns keep the stock low**: running into the bottom-right corner, cut off by the frame, the top of the weapon
   below mid-frame.
 
