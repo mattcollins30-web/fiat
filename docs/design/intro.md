@@ -1,5 +1,9 @@
 # The opening (14 Oct, Matt; agreed - the script with his one edit, the Pitch)
 
+> **Superseded 7 Nov (0.14.5):** the opening is now six remembered testimonies, Interstellar-style - the script, the
+> voice briefs and the heads' lines are in the doc "Lesser England - the opening" (https://claude.ai/artifact/QG9dX8qMVMC2AdUj2cnR5b),
+> the words in words.gd OPENING_SCENES. What follows is the 14 Oct narrator version, kept as history.
+
 Matt: on a new game, fade from black into an art sequence that sets the tone in five scenes - Fallout 2's opening as
 the model. Real-world threads, no world war, no bang: proxy wars backed by the big powers, an energy shock driving
 migration and squeezing food and water, AI as the bubble, and the money going when all of it lands at once -

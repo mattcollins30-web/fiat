@@ -18381,6 +18381,15 @@ func _opening_checks(main) -> void:
 			_check(l.position.y + 48 < op._pips[0].position.y, "scene %d's lines run into the pips" % i)
 	op._go(0)
 	print("the opening: %d of %d scenes have their picture" % [arts, op.scenes.size()])
+	# (0.14.5) the witnesses: each scene's speaker under its name, fitting; Ray's radio between his lines, in its colour
+	for i in range(op.scenes.size()):
+		op._go(i)
+		_check(op._speaker.text != "" and op._speaker.text == str(op.scenes[i].get("speaker", "")) and UI.text_width(op._speaker, op._speaker.text) <= op._speaker.size.x and op._speaker.position.y > op._title.position.y + op._title.size.y - 4.0, "scene %d's speaker isn't under its name: '%s'" % [i, op._speaker.text])
+		var ri: int = op.radio_index(i)
+		if ri >= 0:
+			_check(op._lines[ri].text == str(op.scenes[i]["radio"]) and op._lines[ri].get_theme_color("font_color") != op._lines[0 if ri > 0 else 1].get_theme_color("font_color"), "scene %d's radio line isn't at %d in its colour" % [i, ri])
+	_check(op.scenes.any(func(sc): return sc.has("radio") and int(sc.get("radio_at", -1)) == 1), "Ray's radio isn't between his lines")
+	op._go(0)
 	# no white band the generator left shows at the picture's top or foot (14 Oct)
 	for i in range(op.scenes.size()):
 		op._go(i)
@@ -18400,7 +18409,8 @@ func _opening_checks(main) -> void:
 	var voiced := 0
 	for i in range(op.scenes.size()):
 		var sc: Dictionary = op.scenes[i]
-		_check(sc.has("cues") and sc["cues"].size() == op.lines_of(i).size(), "scene %d's cues aren't one a line" % i)
+		# (0.14.5) a scene read aloud has a cue a line; one waiting for its take has neither (the old takes read old words)
+		_check((sc.has("voice") and sc.has("cues") and sc["cues"].size() == op.lines_of(i).size()) or (not sc.has("voice") and not sc.has("cues")), "scene %d's cues aren't one a line, or it has cues and no reading" % i)
 		for k in range(1, sc.get("cues", []).size()):
 			_check(float(sc["cues"][k]) > float(sc["cues"][k - 1]), "scene %d's cues go backwards" % i)
 		op._go(i)

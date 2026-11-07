@@ -2062,16 +2062,16 @@ const CURVE_LATE_GROW := 0.12     # 0.07 to 0.12 (the designer's call, 31 Oct, P
 ## and the Workshop. Until then the room is shut.
 const BOSSES := [
 	{"zone": 0, "name": "The Gamekeeper", "tier": 2, "hp": 5.0, "dps": 2.0, "notes": 10,     # the Outskirts' edge: soft
-		"words": "Top Farm's shoot had a keeper. It still has. He walks the hedges with the dogs and a gun, and he kept the vet's bag.",
+		"words": "Top Farm's shoot had a keeper. It still has. The barns are full and they're his, and the lorries pay him in notes to keep it that way.",
 		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
 	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 6.0, "dps": 2.0, "notes": 20,     # 8/2.5 to 6/2 (the fix round, 29 Oct: the Estate drops T2 now, his men the Retail Park's); D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
-		"words": "The crew in the carpet warehouse have a head. He had a van and a lock-up before; he has the car park now.",
+		"words": "The crew in the carpet warehouse have a head. He had a van before; now he has the car park, and every cupboard on the Estate pays him rent.",
 		"uniques": ["The Van's Spare", "Underlay"], "opens": {"workshop": "The fitter's kit"}},     # the Doorman his (24 Oct, milestone 8); the ledger went to the Manager's vault
 	{"zone": 2, "name": "The Manager", "tier": 8, "hp": 12.0, "dps": 3.5, "notes": 40,
-		"words": "The Bank's crew call themselves staff. He was. He's behind the vault, and he's not coming out for you.",
+		"words": "The Bank's crew call themselves staff. He was. He keeps the vault, and the lorries keep it full of notes. He's not coming out for you.",
 		"uniques": ["The Manager's Coat", "The Branch Pistol"], "opens": {"yard": "The deeds", "fence": "The Carpet Man's ledger"}},     # the Fence with the Yard (24 Oct, milestone 8: skills.md §6) - the Carpet Man banked with him
 	{"zone": 3, "name": "The Quartermaster", "tier": 11, "hp": 6.0, "dps": 2.5, "notes": 60,     # the Barracks went up; he came down to match: the pool before him is the fight
-		"words": "The lorry that never reached the Barracks reached him. He's been issuing it ever since, to people he chooses.",
+		"words": "The lorry that never reached the Barracks reached him. He's been issuing it ever since, to people he chooses, at the Issuer's prices.",
 		"uniques": ["The Quartermaster's Rifle", "Issue Webbing"], "opens": {"radio": "A military radio"}},     # the Workshop went to the Carpet Man (27 Oct, Matt: he opened nothing, this one two)
 ]
 const ROOMS_SHUT := ["clinic", "workshop", "fence", "yard", "radio"]     # the rooms a head opens, in the campaign's order
@@ -4074,7 +4074,7 @@ const ISSUED_WANT := [2, 3, 4, 6]      # issued pieces worn to stand in the Coun
 const COUNTY_ZONES := [
 	{"name": "The Motorway", "head": "The Bailiff", "words": "The Toll Plaza, the Distribution Centre, the Truck Stop - the road out, and what it carries."},
 	{"name": "The Docks", "head": "The Auditor", "words": "The Container Port, the Ferry Terminal, the Customs Shed - everything in, counted."},
-	{"name": "The Big Houses", "head": "The Collector", "words": "The Golf Club, the Gated Close, the Manor - where the money went to live."},
+	{"name": "The Big Houses", "head": "The Collector", "words": "The Golf Club, the Gated Close, the Manor - the people who never had to count tins."},
 	{"name": "The Treasury", "head": "The Treasurer", "words": "The Counting House, the Bullion Vault, the Treasury - where it's made to stick."},
 ]
 ## Act two §6 (BUILD50-T): the zones 40-45, 50-55, 60-65, 70-75 (were 50-85), the same spread inside each.

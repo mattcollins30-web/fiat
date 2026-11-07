@@ -4,7 +4,11 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (7 Nov, morning):** 0.14.4 - the County's art in (the 18:24 art.done, $7.34): its 24 stage plates on their
+- **Now (7 Nov, midday):** 0.14.5 - the opening rewritten as witnesses (the doc "Lesser England - the opening"): six
+  old voices and Kayleigh at the camp, the speaker under each scene's name, the old pictures re-matched; no voice till
+  Matt's takes (he records them on the website), then the cues. The heads' and gangs' lines give them a reason (the
+  lorries pay the holders in notes). Next: Matt reads it over the old art and decides on new art; the takes.
+- **Before (7 Nov, morning):** 0.14.4 - the County's art in (the 18:24 art.done, $7.34): its 24 stage plates on their
   stages, the four heads' dens, the 24 new items' own pictures (borrows off), the bullion carbine's and sidelock's muzzles.
   Next: Matt plays the County.
 - **Before (6 Nov, night):** 0.14.3 - Matt's two from play, fixed: "+4% energy" read as more energy (it's energy gain:
@@ -6530,6 +6534,20 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 7 Nov (midday): 0.14.5 - the opening as witnesses; why the gangs are there
+
+Matt: "redo the opening story ... more iconic and hard hitting and really explain the precursor and the world as it
+is when you pick it up", "something in the style of the intro to interstellar", tins kept as the money; the doc
+"Lesser England - the opening" (claude.ai artifact QG9dX8qMVMC2AdUj2cnR5b) drafted and agreed ("Build as is"), one line
+changed by him ("Where the money went to live" - too obvious: "They still had their lights on."). The six scenes are
+six remembered testimonies (Joan, Dennis, Pat, Ray with the Issuer's radio between his lines, Margaret, Kayleigh now),
+the speaker small under the scene's name; card 6 names the Pitch's first three rebuilds. The six pictures stay,
+re-matched (the cash-machine queue for "It stopped", the lorry for the radio, the lit block for the County's lights).
+The old readings read the old words, so no voice or cues till Matt's takes; the lines come up on their own time.
+Also from the doc: the four campaign heads' card lines and one new arrival line a gang say who pays them (the lorries,
+in notes - why heads drop notes), and the Big Houses' line loses "where the money went to live". Checks: a speaker
+under each name, the radio between Ray's lines in its colour (proved red), cues only with a reading.
 
 ## 7 Nov (morning): 0.14.4 - the County's art wired
 

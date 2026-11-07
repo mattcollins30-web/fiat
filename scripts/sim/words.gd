@@ -20,34 +20,40 @@ const OPENING := [
 ## reading of it (art/intro/voice/<voice>.mp3); `cues`: when in it each line starts, in seconds (read off the takes'
 ## word timings) - the lines come up as they're said.
 const OPENING_SCENES := [
-	{"year": "2028", "title": "Somewhere else", "art": "scene_1", "voice": "2028", "cues": [3.82, 7.34, 14.50], "lines": [
-		"The wars were always somewhere else.",
-		"Other people's wars. Their reasons, their profits, our money. We watched them on the news.",
-		"We felt them at the till."]},
-	{"year": "2029", "title": "The bills", "art": "scene_2", "voice": "2029", "cues": [3.74, 7.48, 13.80], "lines": [
-		"Then the petrol went up, and up again.",
-		"The heating went off in the flats. The boats kept coming; where they came from was worse.",
-		"Bread doubled. The reservoirs didn't fill."]},
-	{"year": "2031", "title": "The machines", "art": "scene_3", "voice": "2031", "cues": [3.92, 10.32, 16.52], "lines": [
-		"They said the machines would do the work. For a while the money said so too.",
-		"Fields of servers, drinking the rivers, burning the power we couldn't afford.",
-		"The jobs went first. The money went after them."]},
-	{"year": "2032", "title": "The money", "art": "scene_4", "voice": "2032", "cues": [3.40, 6.28, 13.26, 16.48], "lines": [
-		"It didn't crash. It stopped.",
-		"The cards stopped. The banks shut for a day, then a week. The pound was paper.",
-		"Then the radio broadcasts:"],
-		"radio": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
-	{"year": "2033", "title": "Let it be done", "art": "scene_5", "voice": "2033", "cues": [4.04, 9.60, 16.00, 20.14], "lines": [
-		"Nobody fired a shot. The lights just went out one town at a time.",
-		"The council stopped coming. The lorries stopped coming. The police stopped coming.",
-		"People kept to their own. The estate kept the estate.",
-		"A new currency was promised. Its value is as stated. Let it be done."]},
-	{"year": "Now", "title": "The Pitch", "art": "scene_6", "voice": "now", "cues": [2.52, 7.50, 13.46, 17.58, 20.80], "lines": [
-		"You keep a camp. A few vans, a fire, a fence of pallets.",
-		"You don't go out. Somebody does – whoever's willing, for a share of what comes back.",
-		"Tins are money now. What's in a tin is worth something.",
-		"Send them out. Bring back what you can.",
-		"When a place is picked clean, or someone wants it more than you do, you move on."]},
+	# 0.14.5 (7 Nov, docs: "Lesser England - the opening"): witnesses, not a narrator - old people remembering, as the
+	# dust-bowl testimony opens Interstellar; `speaker` under the scene's name. No `voice` or `cues` till Matt's new takes
+	# land (the old readings read the old words): the lines come up on LINE_S meanwhile. `radio_at`: where the radio's
+	# line falls among the lines (else last). The six pictures as they were, matched to the new
+	# words: the TV and the tea, the cash-machine queue, the street queue, the lorry, the lit block past the dark, the camp.
+	{"year": "2028", "title": "Somewhere else", "speaker": "Joan", "art": "scene_1", "lines": [
+		"The wars were always somewhere else. We watched them on the news with our tea.",
+		"Then you felt them at the till. Petrol. Bread. The heating.",
+		"You didn't notice it going. Nobody does. You noticed the prices."]},
+	{"year": "2032", "title": "It stopped", "speaker": "Dennis", "art": "scene_4", "lines": [
+		"They said the machines would do the work, and they did. Then there was nobody left being paid.",
+		"It didn't crash. It just stopped.",
+		"My dad had a card for everything. One Tuesday none of them worked.",
+		"He stood at the till with a full trolley and nothing in his hand."]},
+	{"year": "2032", "title": "The cupboard", "speaker": "Pat", "art": "scene_2", "lines": [
+		"First thing everyone did was go home and count the tins.",
+		"You knew what you were worth by your cupboard. Beans. Corned beef. Peaches, if you were lucky.",
+		"You can print paper. Nobody can print a tin of peaches.",
+		"So tins were money. Still are."]},
+	{"year": "2033", "title": "Let it be done", "speaker": "Ray", "art": "scene_5", "lines": [
+		"Then the voice on the radio. Every hour, the same words.",
+		"My mum said, \"Issued by who?\" Nobody ever told us.",
+		"He just had the lorries. And the men on them."],
+		"radio": "A new currency will be issued. Its value is as stated. Let it be done.", "radio_at": 1},
+	{"year": "After", "title": "Lesser England", "speaker": "Margaret", "art": "scene_3", "lines": [
+		"We called it Lesser England. Not to be clever. That's just what it was. Less of everything.",
+		"Every town kept to itself. Whoever held the shops held the street,",
+		"and whoever held the street had a gang.",
+		"And past the walls, the County. They still had their lights on."]},
+	{"year": "Now", "title": "The Pitch", "speaker": "Kayleigh", "art": "scene_6", "lines": [
+		"I never saw any of it. I just know the town's still under there.",
+		"The substation. The pumping station. The market hall.",
+		"We've a camp, a fire and a fence of pallets. Somebody goes out and brings back what they can.",
+		"Every tin that comes home puts a brick back. Somebody's got to start."]},
 ]
 
 ## On the air (14 Oct, docs/design/on_the_air.md): the campaign's close, the endgame's door - the Quartermaster's set
@@ -474,10 +480,10 @@ const GATES := {
 const GANG_IN_FROM := "in from %s"
 const GANG_HARD_CORE := "the hard core"
 const GANGS := [
-	{"name": "The field lads", "arrive": ["Wellies, a billhook, a dog somewhere behind.", "They come over the hedge, not round it.", "Mud to the knee. They've been waiting."]},
-	{"name": "The Parade boys", "arrive": ["Hoods up.", "One of them's filming it.", "They knew you were coming. Somebody always says."]},
-	{"name": "The High Street lot", "arrive": ["They smell of petrol before you see them.", "A bottle with a rag in it, lit.", "They've done this outside every shop on the street."]},
-	{"name": "The Garrison", "arrive": ["They come in pairs, covering.", "Somebody's still giving orders.", "Greatcoats, and the discipline to go with them."]},
+	{"name": "The field lads", "arrive": ["Wellies, a billhook, a dog somewhere behind.", "They come over the hedge, not round it.", "Mud to the knee. They've been waiting.", "The keeper feeds them. That's the whole arrangement."]},
+	{"name": "The Parade boys", "arrive": ["Hoods up.", "One of them's filming it.", "They knew you were coming. Somebody always says.", "Every shop on the Parade pays them. You haven't."]},
+	{"name": "The High Street lot", "arrive": ["They smell of petrol before you see them.", "A bottle with a rag in it, lit.", "They've done this outside every shop on the street.", "They're paid in his notes. They'd rather have your tins."]},
+	{"name": "The Garrison", "arrive": ["They come in pairs, covering.", "Somebody's still giving orders.", "Greatcoats, and the discipline to go with them.", "Still on the payroll. Somebody's still paying it."]},
 ]
 
 ## The traits: what the runner's like, said when they turn up.

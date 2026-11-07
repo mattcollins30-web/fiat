@@ -33,6 +33,7 @@ var _pic: TextureRect
 var _shade: TextureRect
 var _year: Label
 var _title: Label
+var _speaker: Label                     # (0.14.5) who's remembering it, small under the scene's name
 var _lines: Array = []
 var _pips: Array = []
 var _hint: Label
@@ -67,6 +68,7 @@ func _init(list: Array = []) -> void:
 	add_child(_shade)
 	_year = UI.label(self, Rect2(80, 64, 600, 56), "", "SemiBold", 44, Color(0.88, 0.88, 0.86), HORIZONTAL_ALIGNMENT_LEFT, false)
 	_title = UI.label(self, Rect2(82, 120, 600, 36), "", "Regular", 26, Color(0.65, 0.65, 0.63), HORIZONTAL_ALIGNMENT_LEFT, false)
+	_speaker = UI.label(self, Rect2(83, 160, 600, 28), "", "Regular", 20, Color(0.55, 0.55, 0.53), HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(5):
 		var l := UI.label(self, Rect2(0, 0, 1600, 48), "", "Medium", 36, Color(0.92, 0.92, 0.9), HORIZONTAL_ALIGNMENT_CENTER, false)
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -147,12 +149,13 @@ func _go(i: int) -> void:
 	_pic.visible = tex != null
 	_year.text = str(sc["year"])
 	_title.text = str(sc["title"])
+	_speaker.text = str(sc.get("speaker", ""))
 	var all: Array = lines_of(i)
 	for k in range(_lines.size()):
 		var l: Label = _lines[k]
 		l.text = all[k] if k < all.size() else ""
 		l.modulate.a = 0.0
-		var radio: bool = sc.has("radio") and k == all.size() - 1
+		var radio: bool = sc.has("radio") and k == radio_index(i)
 		l.add_theme_color_override("font_color", Color(0.55, 0.55, 0.53) if radio else Color(0.92, 0.92, 0.9))
 		l.add_theme_font_size_override("font_size", 26 if radio else 30)     # down twice (14 Oct, Matt: "smaller again")
 	_lay_lines()
@@ -225,13 +228,21 @@ func voiced() -> bool:
 	return _vlen > 0.0 and scenes[scene].has("cues") and scenes[scene]["cues"].size() >= lines_of(scene).size()
 
 
-## A scene's lines, its radio line last.
+## A scene's lines, its radio line at `radio_at` (0.14.5: Ray's card has it between his lines), else last.
 func lines_of(i: int) -> Array:
 	var sc: Dictionary = scenes[i]
 	var out: Array = sc["lines"].duplicate()
 	if sc.has("radio"):
-		out.append(sc["radio"])
+		out.insert(radio_index(i), sc["radio"])
 	return out
+
+
+## Where a scene's radio line falls among its lines (-1: none).
+func radio_index(i: int) -> int:
+	var sc: Dictionary = scenes[i]
+	if not sc.has("radio"):
+		return -1
+	return clampi(int(sc.get("radio_at", sc["lines"].size())), 0, sc["lines"].size())
 
 
 func _process(dt: float) -> void:
