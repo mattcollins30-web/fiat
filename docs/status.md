@@ -8,6 +8,16 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   old voices and Kayleigh at the camp, the speaker under each scene's name, the old pictures re-matched; no voice till
   Matt's takes (he records them on the website), then the cues. The heads' and gangs' lines give them a reason (the
   lorries pay the holders in notes). Next: Matt reads it over the old art and decides on new art; the takes.
+- **Parked (7 Nov, Matt: "park all that for now") - the market review's game work** (the doc "Lesser England - against
+  the market", claude.ai artifact ND731LxAxwBoDcmJ24d1LD, with "The route to Steam": Next Fest Feb 2027, launch ~Apr 2027).
+  For the demo, by its build date 25 Jan 2027: (1) the tutorial, the first twenty minutes; (2) gamepad and Steam Deck
+  support; (3) the Deck's 1280 x 800 - a text-size check and a UI scale setting; (4) a demo cut - the Outskirts and the
+  Gamekeeper, an end screen to the store page, the save carried into the full game; (5) save safety - rolling autosave
+  backups, the last good one loaded on a damaged save. For the store page and launch: (6) a capture mode - no debug
+  tools, a set-up run played the same way for screenshots and the trailer; (7) achievements and cloud saves through
+  GodotSteam (Matt's call first on the "no GDExtension" rule); (8) a settings check - fullscreen, volumes, rebinding,
+  text size. Not now: translation (a CJK font when it comes), offline progress (not coming back). Matt's own, not game
+  work: the EUIPO search, the Zoom contract's clauses, sole trader or Mundane Studios Ltd, the Steamworks sign-up.
 - **Before (7 Nov, morning):** 0.14.4 - the County's art in (the 18:24 art.done, $7.34): its 24 stage plates on their
   stages, the four heads' dens, the 24 new items' own pictures (borrows off), the bullion carbine's and sidelock's muzzles.
   Next: Matt plays the County.
