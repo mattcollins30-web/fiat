@@ -1434,6 +1434,9 @@ const MUZZLE_AT := {
 	"humane_killer": [Vector2(93, 50), Vector2(-1, -0.45)],     # the bolt tube's face
 	"hand_me_down_nail_gun": [Vector2(73, 59), Vector2(-1, -0.1)],     # the nose's tip
 	"compound_bow": [Vector2(87, 94), Vector2(-1, -0.34)],     # the arrow's tip; the top-left rule found the left arm (60, 129)
+	# 7 Nov: the County's two new guns in hand (the 18:24 art.done), read off by eye at the muzzle's middle
+	"bullion_carbine": [Vector2(128, 98), Vector2(-1, -0.2)],     # the barrel's end past the front sight; the top-left rule finds the front sight's ring
+	"sidelock_shotgun": [Vector2(71, 72), Vector2(-1, -0.4)],     # the barrels' ends, up and to the left
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:

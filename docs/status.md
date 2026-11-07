@@ -4,7 +4,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (6 Nov, night):** 0.14.3 - Matt's two from play, fixed: "+4% energy" read as more energy (it's energy gain:
+- **Now (7 Nov, morning):** 0.14.4 - the County's art in (the 18:24 art.done, $7.34): its 24 stage plates on their
+  stages, the four heads' dens, the 24 new items' own pictures (borrows off), the bullion carbine's and sidelock's muzzles.
+  Next: Matt plays the County.
+- **Before (6 Nov, night):** 0.14.3 - Matt's two from play, fixed: "+4% energy" read as more energy (it's energy gain:
   the chip now says so, and "Guard cap" too); the Lucky Cap gave loot quantity, now +10% loot quality. Then the County's
   art (art.flag down 17:35, ~$7).
 - **Before (6 Nov, late):** 0.14.2 - the game is **Lesser England** (Fiat was trademarked across the board; Pay the Bearer
@@ -6527,6 +6530,17 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## 7 Nov (morning): 0.14.4 - the County's art wired
+
+Matt: "Go for it" (the wiring after the 17:35 flag's art.done at 18:24: 60 pictures, $7.34 with the Collector's cover
+rerolled twice). The 24 ART_AS borrows came off: each new item shows art/items/<slug>.png, every one at its footprint
+(no footprint changed). The bullion carbine's and the sidelock shotgun's muzzles set by eye (128, 98) and (71, 72); the
+lashing bar and loading hook are blades, no flash. A check: every County place's 2/3 and 3/3 has its plate and a run
+on it reads it, each head's own fight is on his den, and every muzzle set by eye sits on its gun (proved red with one
+moved into the air). The art session's fixes to make_county_dens_manifest.py and make_county_stage_plates_manifest.py
+and the regenerated JSONs go in with it. Also: the radio's "catching the end" check drew 17 of 20 once in ~400 runs;
+it draws from a fixed seed now.
 
 ## 6 Nov (night): 0.14.3 - energy gain and the Lucky Cap
 

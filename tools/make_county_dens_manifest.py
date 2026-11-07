@@ -51,7 +51,7 @@ DENS = {
         "into a country manor's study: a fire lit in a stone fireplace, a heavy safe standing open and empty, a big "
         "desk covered in open ledgers with blank pages, leather armchairs, dark wood panelling, a dark doorway on the "
         "left",
-        "the side of a heavy wooden desk tipped onto its edge, its carved panels towards the viewer"),
+        "a long barricade of heavy carved wooden desks tipped onto their sides end to end, running off both the left and the right edges of the frame, their carved panels towards the viewer"),
     "The Treasurer": (
         "into a grand chamber under a high dome: a marble floor, a great desk raised on a dais at the back, plain metal "
         "printing plates with nothing engraved on them laid on a table, tall columns round the walls, a dark archway on "
@@ -116,21 +116,28 @@ def main():
     heads = [(who, cz) for _k, _p, cz, who in rows if who]
     if sorted(w for w, _z in heads) != sorted(DENS):
         sys.exit("data.gd COUNTY's heads are %s; this maker has dens for %s" % ([w for w, _z in heads], sorted(DENS)))
+    # Rerolled 6 Nov (the runner): the Collector's desk came back short of the left, right and bottom edges (opaque
+    # x 35-708, y to 243 of 744x256), and again at +10000 (x 72-670): one desk has ends, so it is a row of desks now. Seed +20000.
+    REROLL = {"The Collector": 20000}
     jobs = []
     seed = SEED0
     for who, cz in heads:
         first = next(p for _k, p, z, _w in rows if z == cz)      # the zone's first place
         scene, cover = DENS[who]
-        jobs += [plate_job(who, first, scene, seed), wall_job(who, first, cover, seed + 1)]
+        jobs += [plate_job(who, first, scene, seed), wall_job(who, first, cover, seed + 1 + REROLL.get(who, 0))]
         seed += 2
     used = used_seeds()
     clash = {j["seed"]: used[j["seed"]] for j in jobs if j["seed"] in used}
     if clash:
         sys.exit("seeds already used elsewhere: %s - move SEED0" % clash)
+    try:    # this maker's own outs, once run, are its to rewrite (a reroll); anything else on disk is someone else's
+        own_outs = {j["out"] for j in json.load(open(os.path.join(ROOT, "tools", OWN), encoding="utf-8"))["jobs"]}
+    except (ValueError, OSError):
+        own_outs = set()
     for j in jobs:
         if not os.path.exists(os.path.join(ROOT, j["style_image"].replace("res://", ""))):
             sys.exit("no %s on disk (%s)" % (j["style_image"], j["out"]))
-        if os.path.exists(os.path.join(ROOT, j["out"])):
+        if os.path.exists(os.path.join(ROOT, j["out"])) and j["out"] not in own_outs:
             sys.exit("on disk already (a new name was expected): %s" % j["out"])
     readme = [
         "FIAT COUNTY DENS (6 Nov; docs/design/county_stages.md §5): the four County heads' own fights, a plate (744x320) and "

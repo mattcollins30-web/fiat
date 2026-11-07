@@ -64,10 +64,10 @@ SCENES = {
          "left",
          "Up high on a steel mezzanine floor among conveyors: not the tall pallet racking at ground level.")),   # LESSON: totes carry labels
     "truck_stop": ("the_toll_plaza",
-        ("across a truck stop's lorry park at night: rows of parked lorry cabs in plain faded paint with no lettering, "
+        ("across a truck stop's lorry park at dusk on a grey day, the floodlights on: rows of parked lorry cabs in plain faded paint with no lettering, "
          "their curtains drawn behind the windscreens, a fuel island with plain pumps with dark displays and no numbers, "
          "puddles under tall floodlights, a dark gap between two cabs on the left",
-         "Outdoors at night under floodlights: no cafe, no tables, no counter."),     # LESSON: cabs carry livery, pumps numbers
+         "Outdoors at dusk under floodlights: no cafe, no tables, no counter."),     # LESSON: cabs carry livery, pumps numbers
         ("down a tiled corridor at the back of a truck stop to a caged lock-up: white tiles, a row of plain shower "
          "cubicle doors, then a steel mesh cage full of plain unprinted cardboard boxes and rows of keys on hooks with "
          "no tags, a dark doorway on the left",
@@ -77,10 +77,10 @@ SCENES = {
          "with no name or numbers on it, steel lashing bars racked on the quay, a bin of twist-locks, bollards and mooring "
          "ropes, dark water at the quay's edge, a dark gap between machinery on the left",
          "At the water's edge beside a ship's hull: not a corridor between container stacks."),   # LESSON: hulls carry names and draught marks
-        ("down a row of refrigerated shipping containers at night, each plugged into a power post by a thick cable, "
+        ("down a row of refrigerated shipping containers at dusk on a grey day, each plugged into a power post by a thick cable, "
          "their plain ribbed doors lit by small lamps, their little control panels dark and blank with no numbers, wet "
          "concrete, a dark gap between two containers on the left",
-         "Night, lamplight on refrigerated containers in one long row: no crane, no daylight.")),   # LESSON: reefer displays show numbers
+         "Dusk, lamplight on refrigerated containers in one long row: no crane.")),   # LESSON: reefer displays show numbers
     "ferry_terminal": ("the_customs_shed",
         ("inside a ferry's car deck: lanes of abandoned cars with no number plates and a coach in plain paint, lashing "
          "chains and wheel chocks on the steel floor, the steel ceiling low overhead, the bow door half down at the far "
@@ -127,7 +127,7 @@ SCENES = {
          "no faces or numbers, a note-sorting machine with a dark blank display, a concrete floor, a single strip light, "
          "a dark doorway on the left",
          "Underground among steel cages: no clerks' desks, no tall windows."),   # LESSON: notes and displays
-        ("looking down from a counting house's managers' gallery: glass-walled offices along a balcony, and below them "
+        ("down from a counting house's managers' gallery: glass-walled offices along a balcony, and below them "
          "the long room's rows of desks seen from above, the desks bare, plain paper, a stair going down on the left",
          "From above, high on the gallery looking down: not along the long room at desk height.")),
     "bullion_vault": ("the_treasury",

@@ -933,9 +933,10 @@ func _init() -> void:
 	_u61_backdrop_checks(main)                # BUILD61-U: a County stage's plate on the place's wall, the head's den
 	_c61_theme_checks()                       # BUILD61-C (6 Nov): the County's lists - 60% of a stage's plain gear, the head's fight on his place's
 	_c61_top_checks()                         # BUILD61-C: a County 3/3's quarter from its T9 alone; signals' finds as before
-	_c61_bases_checks()                       # BUILD61-C: the County's 24 new bases roll, wear, sit by their neighbours, borrow a picture
+	_c61_bases_checks()                       # BUILD61-C: the County's 24 new bases roll, wear, sit by their neighbours, show their own pictures
 	_r62_rename_checks(main)                  # 0.14.2 (6 Nov): the rename - Lesser England on the title, the window, the exe; a wordmark up to 190 x 104 fits
 	_f63_words_checks()                       # 0.14.3 (6 Nov): an affix's short form keeps its kind ("energy gain", "Guard cap"); lucky means quality
+	_w64_county_art_checks()                  # 0.14.4 (7 Nov): the County's art in - its stage plates, the heads' dens, the new guns' muzzles
 	_m61_review_checks(main)                  # BUILD61 merge review: the County card's odds read, a stage's pick re-reads, the hurt repeat, a County repeat's name and host
 	_finish()
 
@@ -5715,6 +5716,7 @@ func _events_more_checks(main) -> void:
 	_check(sim.thread_list("tips").size() == 1 and is_equal_approx(float(m["patrol_timer"]) - ptb, Data.RADIO_S), "listening left no tip, or not its 20 s: %s" % str(sim.event_threads))
 	sim.extract_now()
 	var shorts := 0
+	sim.rng.seed = 5724                       # (0.14.4) a fixed draw: unseeded, 17 of 20 came up once in ~400 runs (7 Nov, Matt's machine)
 	for k in range(20):
 		sim.event_threads = {}
 		m = _ev_force(sim, "broadcast")
@@ -42315,8 +42317,8 @@ func _c61_on_list(arr: Array, lst: Array) -> float:
 
 
 ## The 24 new bases (spec §4 "Gaps"): each a T8/T9 gear base on one County list and no site's, that rolls at its place,
-## wears, carries its line, sits by its tier's neighbours and shows a borrowed picture (ART_AS) at its footprint's size -
-## a gun's in hand too - till its art.
+## wears, carries its line, sits by its tier's neighbours and shows its own picture at its footprint's size - a gun's
+## in hand too (the borrows came off 7 Nov).
 func _c61_bases_checks() -> void:
 	var sim = _c61_sim()
 	_check(Data.C61_NEW_BASES.size() == 24, "the County's new bases: %d" % Data.C61_NEW_BASES.size())
@@ -42361,22 +42363,22 @@ func _c61_bases_checks() -> void:
 		sim.stash_put(pc)
 		_check(sim.equip_item(int(pc["id"])) and sim.equipped[slot] != null and str(sim.equipped[slot]["base"]) == str(nm), "%s won't wear" % nm)
 		_check(Items.score(pc) > 0.0, "%s scores nothing worn" % nm)
-		# a borrowed picture till the art: ART_AS names one on disk at its footprint's size, a gun's in hand too
-		var borrow: String = str(Data.ART_AS.get(str(nm), ""))
-		_check(borrow != "" and borrow != str(nm), "%s borrows no picture" % nm)
+		# its own picture (7 Nov, the 18:24 art.done): no borrow left, art/items/<slug>.png at its footprint's size, a gun's
+		# or a blade's in hand too
+		_check(not Data.ART_AS.has(str(nm)), "%s still borrows %s's picture" % [nm, str(Data.ART_AS.get(str(nm), ""))])
 		var tex: Texture2D = Items.art(pc)
 		var fp: Vector2i = Items.footprint(pc)
-		_check(tex != null and tex == Items._art_named(Items.slug(borrow)) and tex.get_width() == fp.x * 64 and tex.get_height() == fp.y * 64,
-			"%s doesn't show %s's picture at its footprint %s (%s)" % [nm, borrow, str(fp), str(tex.get_size()) if tex != null else "-"])
+		_check(tex != null and tex == Items._art_named(Items.slug(str(nm))) and tex.get_width() == fp.x * 64 and tex.get_height() == fp.y * 64,
+			"%s doesn't show its own picture at its footprint %s (%s)" % [nm, str(fp), str(tex.get_size()) if tex != null else "-"])
 		if slot in ["Primary", "Secondary"]:
-			_check(FileAccess.file_exists("res://art/fight/hands/%s.png" % Items.slug(Items.art_name(str(nm)))), "%s has no picture in hand (borrowing %s)" % [nm, borrow])
+			_check(FileAccess.file_exists("res://art/fight/hands/%s.png" % Items.slug(str(nm))), "%s has no picture in hand" % nm)
 		_check(str(Words.ITEMS.get(str(nm), "")).ends_with("."), "%s has no line" % nm)
 	# the built-in figures read: the Highways coat's later gangs, the Examiner's gloves' poison resist
 	var hc: Dictionary = sim._plain("Armour", "Highways coat")
 	_check(Items.base_res_words(hc).contains("10% gangs later") and Items.base_res_words(hc).contains("+2% pace"), "the Highways coat reads '%s'" % Items.base_res_words(hc))
 	var eg: Dictionary = sim._plain("Gloves", "Examiner's gloves")
 	_check(Items.base_res_words(eg).contains("poison resist 20%"), "the Examiner's gloves read '%s'" % Items.base_res_words(eg))
-	print("c61 bases ok: %d new bases roll, wear and borrow a picture" % Data.C61_NEW_BASES.size())
+	print("c61 bases ok: %d new bases roll, wear and show their own pictures" % Data.C61_NEW_BASES.size())
 
 
 # ------------------------------------------------------------------ BUILD61 merge review (6 Nov)
@@ -42517,3 +42519,37 @@ func _f63_words_checks() -> void:
 				_check(not b.get("stats", {}).has("loot_pct") and (int(b.get("find", 0)) > 0 or b.get("stats", {}).has("rarity_pct")), "%s gives loot quantity, not quality" % b["name"])
 	_check(lucky.has("Lucky Cap") and lucky.has("Lucky penny"), "the lucky things weren't found: %s" % str(lucky))
 	print("f63 words ok: every affix's short form keeps cap / gain; %s give loot quality" % ", ".join(lucky))
+
+
+# ------------------------------------------------------------------ 0.14.4 (7 Nov): the County's art wired (the 18:24 art.done)
+## Every County place's 2/3 and 3/3 has its own plate and a run on it reads it; each zone's head has his den, plate and
+## cover, and his own fight goes there; every muzzle set by eye sits on the gun, not in the air. `-- only w64_county_art`.
+func _w64_county_art_checks() -> void:
+	for c in Data.COUNTY:
+		var pk: String = Items.slug(str(c["place"]))
+		for st in range(2, Data.STAGES + 1):
+			_check(RunView.tex("%s_%d_plate" % [pk, st]) != null, "%s's %d/3 has no plate (art/fight_county/%s_%d_plate.png)" % [c["place"], st, pk, st])
+			var m := {"tier": int(c["site"]), "signal": {"order": str(c["key"])}, "county": str(c["key"]), "stage": st}     # a County stage's run, as the sim lays one
+			_check(RunView.county_scene(m) == "%s_%d" % [pk, st], "a run on %s's %d/3 reads '%s'" % [c["place"], st, RunView.county_scene(m)])
+		if c.has("who"):
+			var den: String = RunView.head_den({"head_fight": true, "county": str(c["key"]), "tier": int(c["site"])})
+			_check(den == Items.slug(str(c["who"])) and RunView._pair_in(RunView.BOSS_DIR, den), "%s's own fight isn't on his den: '%s'" % [c["who"], den])
+	var n := 0
+	for slug in RunView.MUZZLE_AT:
+		var t: Texture2D = load("res://art/fight/hands/%s.png" % slug) if ResourceLoader.exists("res://art/fight/hands/%s.png" % slug) else null
+		_check(t != null, "a muzzle set for %s, which has no picture in hand" % slug)
+		if t == null:
+			continue
+		var img: Image = t.get_image()
+		var at: Vector2 = RunView.MUZZLE_AT[slug][0]
+		var on := false
+		for dx in range(-4, 5):
+			for dy in range(-4, 5):
+				var x: int = int(at.x) + dx
+				var y: int = int(at.y) + dy
+				if x >= 0 and y >= 0 and x < img.get_width() and y < img.get_height() and img.get_pixel(x, y).a > 0.5:
+					on = true
+		_check(on, "%s's muzzle %s is in the air, not on the gun" % [slug, str(at)])
+		n += 1
+	_check(RunView.MUZZLE_AT.has("bullion_carbine") and RunView.MUZZLE_AT.has("sidelock_shotgun"), "the County's two new guns have no muzzle set")
+	print("w64 county art ok: 24 stage plates read on their stages, 4 dens for the heads' own fights, %d muzzles on their guns" % n)

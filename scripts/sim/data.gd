@@ -89,7 +89,7 @@ const FOOTPRINTS := {
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 	# (BUILD55-C) the stages' new bases: their borrowed picture's footprint
 	"Garden fork": [2, 1], "Bone saw": [3, 1], "Scalpel": [1, 1], "Humane killer": [1, 1], "Mascot suit": [3, 4], "Bank bag": [2, 2],
-	# (BUILD61-C) the County's new bases: their borrowed picture's footprint
+	# (BUILD61-C) the County's new bases: their own pictures' footprints (7 Nov, art.done)
 	"Lashing bar": [3, 1], "Bullion carbine": [3, 1], "Duty-free bag": [2, 2], "Cartridge bag": [2, 2],
 }
 
@@ -2180,14 +2180,7 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
 const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
-	# (BUILD61-C) the County's 24 new bases borrow till their art (docs/design/county_stages.md §4): these come off after art.done
-	"Highways coat": "Donkey jacket", "Cat's eye": "Glass insulator", "Loading hook": "Billhook", "Picker's harness": "Hi-vis tabard",
-	"Enforcement vest": "Stab vest", "Seized keys": "Branch key", "Lashing bar": "Demolition bar", "Crane driver's hat": "Hard hat",
-	"Ferry lifejacket": "Lifeguard's vest", "Duty-free bag": "Carrier bags", "Examiner's gloves": "Cut-resistant gloves",
-	"Seizure bag": "Strongroom bag", "Sidelock shotgun": "Over-and-under", "Shooting jacket": "Waxed coat", "Cartridge bag": "Bank bag",
-	"Gate fob": "Casino chip", "Deerstalker": "Flat cap", "Estate tweeds": "Sheepskin coat", "Cashier's visor": "Strimmer visor",
-	"Clerk's mitts": "Leather gloves", "Bullion carbine": "Security guard's carbine", "Small ingot": "Gold sovereign",
-	"Treasury guard's helmet": "Command helmet", "Despatch box": "Wax-sealed bag"}     # the stages' 24 new bases have their own pictures (6 Nov, art.done): their borrows gone
+	}     # the stages' 24 new bases (6 Nov) and the County's 24 (7 Nov, the 18:24 art.done) have their own pictures: their borrows gone
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [
@@ -4512,7 +4505,7 @@ const COUNTY_THEMES := {
 ## STAGE_TIER_UP of a County 3/3's plain gear finds roll from its list's T9 bases for the slot alone - or, where the list
 ## has none for it, from the slot's T9 bases (the issued six off).
 const COUNTY_TOP_TIER := 9
-## The 24 new bases (BUILD61-C), for the art manifests and the checks; each borrows a picture through ART_AS till its art.
+## The 24 new bases (BUILD61-C), for the art manifests and the checks; each with its own picture since 7 Nov.
 const C61_NEW_BASES := ["Highways coat", "Cat's eye", "Loading hook", "Picker's harness", "Enforcement vest", "Seized keys",
 	"Lashing bar", "Crane driver's hat", "Ferry lifejacket", "Duty-free bag", "Examiner's gloves", "Seizure bag", "Sidelock shotgun",
 	"Shooting jacket", "Cartridge bag", "Gate fob", "Deerstalker", "Estate tweeds", "Cashier's visor", "Clerk's mitts",
