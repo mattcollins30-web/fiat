@@ -8,6 +8,8 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   old voices and Kayleigh at the camp, the speaker under each scene's name, the old pictures re-matched; no voice till
   Matt's takes (he records them on the website), then the cues. The heads' and gangs' lines give them a reason (the
   lorries pay the holders in notes). Next: Matt reads it over the old art and decides on new art; the takes.
+- **Monday 9 Nov: the Zoom AI champions demo** (docs/design/zoom_demo.md): a targeted smoke on the watcher, the full smoke
+  in parallel, a demo-day dry run on the Legion. Matt picks it up Monday; nothing built yet.
 - **Parked (7 Nov, Matt: "park all that for now") - the market review's game work** (the doc "Lesser England - against
   the market", claude.ai artifact ND731LxAxwBoDcmJ24d1LD, with "The route to Steam": Next Fest Feb 2027, launch ~Apr 2027).
   For the demo, by its build date 25 Jan 2027: (1) the tutorial, the first twenty minutes; (2) gamepad and Steam Deck
