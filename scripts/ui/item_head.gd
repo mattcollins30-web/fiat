@@ -250,7 +250,7 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		chips_a.append({"forms": [Words.STAMP["tag"], Words.STAMP["tag_short"]], "colour": Pal.ACCENT})     # stamped at the Bench for the County (26 Oct)
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
-		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
+		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": Words.T67["mark"] if tier >= Data.T67_TIER else "T%d" % tier})     # (BUILD67-I) T6's ◆
 	# what its base does to every hit, in the element's colour, after the affixes - first with none, and the one left
 	# off before an affix when a full unique runs out of room (14 Oct, Matt: the claw hammer bleeds and its card didn't
 	# say; the top row had no room for it beside a long rarity)

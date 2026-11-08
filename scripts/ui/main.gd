@@ -51,7 +51,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 26              # 26 (5 Nov, BUILD55-A): stages per site (stages: done, picks, the New marks; clear_level keyed per stage; the re-cut sites); 25 (5 Nov, BUILD50, act two): the town's wages (town_stopped), a signal's focus, the new levels and XP curve, a night on the air (night: the chain, its haul, the link, the clock; the tuning rules and the Auto floor); 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 27              # 27 (8 Nov, BUILD67-K): boots, the ninth slot (equipped["Boots"]); the issued versions picked (issued_pick); 26 (5 Nov, BUILD55-A): stages per site (stages: done, picks, the New marks; clear_level keyed per stage; the re-cut sites); 25 (5 Nov, BUILD50, act two): the town's wages (town_stopped), a signal's focus, the new levels and XP curve, a night on the air (night: the chain, its haul, the link, the clock; the tuning rules and the Auto floor); 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -515,6 +515,8 @@ var _warm_wait := WARM_AFTER
 var _warm_done := false
 var _warm_sim = null
 func _warm_rooms() -> void:
+	if _warm_done and not _art_warm_done:
+		_warm_art_step()                       # (BUILD67-I) then the items' pictures
 	if _warm_done or _barracks == null:
 		return
 	if _menu != null and _menu.visible:
@@ -1545,6 +1547,7 @@ func refresh() -> void:
 		_event_labels[i].position.x = lx
 		_event_labels[i].size.x = PREV_X - 20 - lx
 		UI.fit(_event_labels[i], _by_sentence(str(ev[j][1])) if j >= 0 else [""])
+		_event_labels[i].add_theme_color_override("font_color", Pal.LEGENDARY if j >= 0 and str(ev[j][1]).begins_with(Words.T67["mark"]) else [Pal.TEXT, Pal.TEXT_2, Pal.TEXT_3][mini(i, 2)])     # (BUILD67-I) a top-tier find's line in the gold
 	# the line before starts where the latest ends (PREV_X at the latest's widest), and goes when it can't fit whole
 	var jp := ev.size() - 2
 	var cur: Label = _event_labels[0]
@@ -1556,6 +1559,7 @@ func refresh() -> void:
 	_prev_label.size.x = _events.size.x - 20 - px - (_speed_label.size.x + 20 if _speed_label.visible else 0.0)
 	var forms: Array = _by_sentence(str(ev[jp][1])) if jp >= 0 else [""]
 	UI.fit(_prev_label, forms)
+	_prev_label.add_theme_color_override("font_color", Pal.LEGENDARY if jp >= 0 and str(ev[jp][1]).begins_with(Words.T67["mark"]) else Pal.TEXT_3)     # (BUILD67-I)
 	if UI.text_width(_prev_label, _prev_label.text) > _prev_label.size.x:
 		# no form fits whole (the Legion's smoke caught one that slipped the fit by ten pixels): it goes rather than trails off
 		_prev_label.text = ""
@@ -1834,7 +1838,7 @@ func open_issuer() -> void:
 
 
 func open_stamp() -> void:
-	for sl in ["Primary", "Secondary", "Armour", "Helmet", "Rig", "Charm", "Backpack"]:
+	for sl in ["Primary", "Secondary", "Armour", "Helmet", "Rig", "Charm", "Backpack", "Gloves", "Boots"]:     # (BUILD67-K) gloves and boots stamp too
 		var it = sim.equipped.get(sl)
 		if it != null and not it.get("issued", false) and not it.get("stamped", false):
 			_open_workshop(int(it["id"]))
@@ -1879,3 +1883,26 @@ func open_radio_air() -> void:
 	show_room(COMMS)
 	_radio._pick_view("air")
 	refresh()
+
+
+## (BUILD67-I, the device smoke of 0.15.0: the Kit's first open 151 ms against 150, a ninth slot's pictures on top) The
+## items' pictures loaded ahead of the Kit's first open, a few a frame once Training's web is warm: the stash grid's
+## first show was most of the open, each picture's first load in it. Items caches them; nothing else changes.
+const ART_WARM_US := 3000                    # a frame's budget
+const ART_WARM_CELLS := 64                  # the stash grid's cells made ahead: a full page's pieces
+var _art_warm_done := false
+var _art_warm_list: Array = []
+var _art_warm_i := -1
+func _warm_art_step() -> void:
+	if _art_warm_i < 0:
+		for sl in Data.BASES:
+			for b in Data.BASES[sl]:
+				_art_warm_list.append({"slot": str(sl), "base": str(b["name"])})
+		_art_warm_i = 0
+	var t0 := Time.get_ticks_usec()
+	while _art_warm_i < _art_warm_list.size() and Time.get_ticks_usec() - t0 < ART_WARM_US:
+		Items.art(_art_warm_list[_art_warm_i])
+		_art_warm_i += 1
+	if _art_warm_i >= _art_warm_list.size() and _armoury != null and _armoury._inv._cells.size() < ART_WARM_CELLS:
+		_armoury._inv._cell(mini(_armoury._inv._cells.size() + 7, ART_WARM_CELLS - 1))     # and the stash grid's cells, pooled, eight a frame
+	_art_warm_done = _art_warm_i >= _art_warm_list.size() and (_armoury == null or _armoury._inv._cells.size() >= ART_WARM_CELLS)

@@ -4,7 +4,29 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (7 Nov, midday):** 0.14.5 - the opening rewritten as witnesses (the doc "Lesser England - the opening"): six
+- **Now (8 Nov, morning):** 0.15.1 for a fresh save (SAVE_VERSION 27) - the items, build 2 of 4: boots as the ninth
+  slot (30 bases, borrowed gloves pictures; pace, gangs later or leg armour; the Postman's Boots and Steel Toecaps),
+  the Kit with the charm top left above a shorter pack and boots bottom right (Matt's swap), 11 new affixes over
+  0.15.0's stats, the top tier T6 (1 in 40 affix rolls from level 50; the ◆ on the item, a sound, a gold log line), the
+  13 uniques (borrowed pictures; Grandad's .303 and The Station Revolver renamed by the language pass), issued gear as
+  27 versions over nine slots picked at the Issuer's counter. Delivered with 0.15.0 in one commit (0.15.0's own smoke
+  on Matt's machine failed two checks that 0.15.1 fixes: a headshot pop over "Your HP" at 1920x1200, the Kit's first
+  open at 151 ms - now ~16 ms with the pictures warmed ahead). Next: build 3, the web.
+- **For Matt (8 Nov):** (1) a bug found by a builder, not fixed (the house rule): a head's unique that drops when the
+  stash is full never comes home (the Lineman's Mule pack, stash 82 of 91) - fix it? (2) The County's want is still
+  [2, 3, 4, 6] while nine slots can now be issued or stamped (zone 4 needed every issued slot; now any 6 of 9) - raise
+  it to [3, 4, 6, 9]?
+- **Before (7 Nov, night):** 0.15.0 - the fight's shooter mechanics, build 1 of 4 of the endgame and the rail
+  (docs/design/endgame_rail.md; Matt on the mockups: "It's all good and approved except boots above the bag doesn't
+  make sense. Swap charm and boots and it makes sense. No need to mock up that change. Proceed."). In: headshots (5%,
+  x2), gang helmets and armour by level, pierce, leg and arm shots, suppression (fills with sustained fire, drains
+  when you stop), scavenger, the streak, Last legs, jams on the lowest tiers (not the Slam-fire), hard men (a name, one
+  or two of Armoured / First aider / Spotter / Messenger, more HP, one more find). The fight view: the headshot pop,
+  the jam tag, the hard man's plate and gold-edged bar, "Streak 7", Last legs ready/used, the log lines. Each mechanic
+  is a stat the affixes feed in build 2. Next: build 2, the items (new affixes, T6 and the ◆, 13 uniques, 24 issued,
+  boots in the charm's place, the charm above a shorter pack); then the web; then the endgame and the screens.
+- **Balance (7 Nov, Matt):** a short pass once the four 0.15 builds land; the full pass waits for a playtest build.
+- **Before (7 Nov, midday):** 0.14.5 - the opening rewritten as witnesses (the doc "Lesser England - the opening"): six
   old voices and Kayleigh at the camp, the speaker under each scene's name, the old pictures re-matched; no voice till
   Matt's takes (he records them on the website), then the cues. The heads' and gangs' lines give them a reason (the
   lorries pay the holders in notes). Next: Matt reads it over the old art and decides on new art; the takes.
@@ -188,6 +210,14 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   8. The release candidate: the version, a full smoke, the balance gates green, Matt's final play - to friends.
   Open (Matt, not urgent): how many friends and on what; how it reaches them (a zip, a private itch.io page, a Steam
   playtest); a date.
+- **For the balance pass (0.15.1, 8 Nov):** nothing caps how much later the gangs come: boots' base and affix, the
+  helmet and charm lines, then the Postman's x1.2, the Groundsman's x1.3 and the Lollipop multiply (~2.5-2.8x). T6's
+  rate (1 in 40 from level 50). The new stats don't count in Items.score yet (the bot and the arrows undervalue them;
+  build 4 takes the verdict off anyway).
+- **For the balance pass (0.15.0, 7 Nov):** suppression is on every build (full after SUPP66_FILL_S of fire,
+  20% slower enemy fire): the odds on Matt's lv28 save went 0.196 -> 0.250; the fill and drain times to read. A hard
+  man's x2.5 HP gets no extra gang clock. The smoke's bot cleared the depot in 13 missions (34 before) - likely a
+  lucky find, to read. All of section 1's figures are first guesses (data.gd, the *66 constants).
 - **For the balance pass (Matt's playtest, 4 Nov, slot 1: "I've hit a wall on the shopping center"):** the Pleasure
   Park to the Shopping Centre is the campaign's biggest step: a gang's HP 676 to 1,605 (x2.4), its fire 0.8 to 2.3 (x2.9),
   12 gangs to 16 - the site's whole HP x3.2, where every step before was x1.5-1.6. The 29 Oct fix round cut the
@@ -8057,3 +8087,45 @@ The changelogs that sat on scripts/sim/data.gd's const lines, moved here as they
 - `WEAR_PER_ILVL := 2.0`: 2.5 - 1.5 from D8 to 18 Oct (D8: x3 had the City's drops at wear 19-25); 2 - 2 now: the City's 12-16
 - `XP_SCALE := 3.3`: 22 Oct, the web pass: 2.9 to 3.3 (level 25-34 at the Quartermaster against 20-24; the sites cleared 5-8 levels over their gear). D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
 - `XP_TAPER_END := 3.1`: 3.4 to 3.1 (the third pass: level 50's median at 31 h, 11 of 24 never; want 12-24);  D29 3.4 (D28's slower pay: six ended at 41-49 at 24 h); D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
+
+## 0.15.0: the fight's shooter mechanics (2026-11-07)
+
+Matt (7 Nov), on the design canvas "Lesser England – Before the balance pass": "It's all good and approved except
+boots above the bag doesn't make sense. Swap charm and boots and it makes sense. No need to mock up that change.
+Proceed." The design: docs/design/endgame_rail.md (from the doc "Lesser England – the endgame and the rail"), four
+builds in milestone 0.15; this is the first.
+
+- The sim (builder F): headshots, helmets and armour on the deeper sites (rising to their top on the deepest), pierce, leg
+  shots on the gang clock, arm shots on the miss chance, suppression (a meter a gang, drains when you stop firing),
+  scavenger, the streak (a hit is 5% of max HP), Last legs (once a run, on 1 HP for its seconds), jams on T1-T3 guns
+  (the Slam-fire shotgun never), hard men (1 gang in 6 from level 10; their traits act from the back of the gang; a
+  hook for build 4's seeds, f66_hard_drop_hook). The live fight rolls on its own fight_rng; the odds on their own dice.
+  Every figure a named constant in data.gd (*66).
+- The view (builder V): the headshot pop, the jam tag over the gun (fire held while jammed), the hard man's plate and
+  gold-edged bar, the streak and Last legs pills at the frame's top right (the frame's top left holds "THE FIGHT" and
+  the "On them" chips; the game's dmg/s is in the top bar), sounds from the existing kill and dry click.
+- The reviewer's three bugs fixed with red checks (Last legs killing a healed runner; Last legs carried past a head's
+  kill; a head or dogs fight starting on a full suppression meter), and seven smaller ones.
+- The language pass: Runner -> Messenger and Medic -> First aider (glossary clashes), "Last Stand" -> "Last legs" (the
+  skills' "Last stand" chip), "Streak 7" (× is for multipliers), log lines state the effect and say "seconds", names
+  with no real people and some South Wales ones.
+- Smoke green, lint 0. VERSION 0.15.0; SAVE_VERSION unchanged (keys inside the mission, read with defaults).
+
+## 0.15.1: the items (2026-11-08)
+
+Build 2 of the four (docs/design/endgame_rail.md section 2), on Matt's "Proceed" (7 Nov).
+
+- Boots (builder K): "Boots" in every slot list (worn, stash, drops, themed finds, vendor, Bench, save, the bot, the
+  County's want); 30 bases, three kinds over nine tiers (pace; quiet: gangs later; heavy: leg armour) with gloves'
+  pictures borrowed (data.gd ART_AS); scored as a body piece; the Postman's Boots and Steel Toecaps. The Kit: the charm
+  top left above a pack cut from 240 to 128 high, boots bottom right under the rig.
+- Issued gear (K): today's six rules kept as version one, two new versions a slot, gloves, pack and boots added: 27,
+  picked at the Issuer's counter (nine rows of three), the pick saved and what Buy sells.
+- Affixes, T6, uniques (builder I): 11 affixes over 0.15.0's stats on the slots that fit; T6 on its own dice (no other
+  draw moves), the ◆ on the chip, the stash cell, the Bench and the log; the Bench never steps a T6 down; the 13
+  uniques with their rules (the Sling's spare goes home at the run's end, lost with the worn kit on a death).
+- The reviewer's bugs fixed with red checks (boots scored on pace alone; the Sling's spare lost; never-jams cancelling
+  the Zip Gun's jams; the Bench losing T6; the revolver's last round). The language pass: Grandad's .303 (no maker's
+  name), The Station Revolver (beside the Sergeant's Whistle), Keeper's brogues, the issued tags (Escort, Eye,
+  Headshot, Pin, Stride, Heavy, Leg shots), shorts led by the number and split with "·", figures not words.
+- Smoke green, lint 0. VERSION 0.15.1, SAVE_VERSION 27.

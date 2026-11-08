@@ -419,6 +419,7 @@ func _init() -> void:
 	_placer.view = self
 	_placer.size = Vector2(W, H)
 	add_child(_placer)
+	_v66_make()                                  # (BUILD66-V) the headshot's pop, the jam, the hard man's plate, the streak, Last Stand
 
 
 ## A slot on this site: the far one's on the site's own ground when its own plate's up.
@@ -974,6 +975,7 @@ func show_state(sim, m: Dictionary) -> void:
 	_open_c.visible = _open_left > 0.0
 	_open_sh.visible = _open_c.visible
 	_open_tag.visible = _open_c.visible
+	_v66_show(sim, m)                            # (BUILD66-V) the shooter mechanics' events and state
 
 
 ## The crate just opened, set down open at OPEN_SPOT for OPEN_S.
@@ -1147,6 +1149,7 @@ func _process(dt: float) -> void:
 				p.position = r.position + Vector2(sz.x * 0.5, sz.y * (0.55 if el == "fire" else 0.45)).rotated(r.rotation)     # the body's tilt (the kick, a throw): the flames on it, not where it stood
 				p.rotation = r.rotation
 	_lay_bars()
+	_v66_lay(dt)                                 # (BUILD66-V) the pops, the pills, the plate, the jam
 	# ducking: now and then under fire, and on a big hit - the wall comes up, the gun goes down, no shots
 	if _firing:
 		_duck_next -= dt
@@ -1189,7 +1192,7 @@ func _process(dt: float) -> void:
 		_glass.queue_redraw()
 	# your gun: a kick back at its rate while there's someone to shoot, the marker on the one you're hitting
 	_shot_t -= dt
-	if _firing and not _reloading and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
+	if _firing and not _reloading and _jam66_left <= 0.0 and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:     # (BUILD66-V) jammed: a beat with no shots
 		_shot_t = 1.0 / _rof
 		gun_fired.emit()
 		var ups: Array = range(SLOTS.size()).filter(func(k_in): return _figs[k_in]["state"] == "up")
@@ -1241,6 +1244,7 @@ func _lay_bars() -> void:
 		if ups.is_empty():
 			ups = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "pop")
 		_target_k = ups[randi() % ups.size()] if not ups.is_empty() else -1
+	_v66_pick()                                  # (BUILD66-V) which of them is the hard man, before the bars
 	_hp_tag.visible = false
 	for k in range(_figs.size()):
 		var f: Dictionary = _figs[k]
@@ -1251,12 +1255,14 @@ func _lay_bars() -> void:
 			continue
 		var hit: bool = k == _target_k
 		var head: bool = bool(_bar_info["boss"]) and str(f.get("boss", "")) != ""
+		var hard66: bool = k == _hard66_k            # (BUILD66-V) the hard man's bar: the head's size, gold-edged
+		fb.set_hard(hard66)
 		var u: Rect2 = used_of(r.texture)
 		if u.size.y <= 0.0:
 			u = Rect2(Vector2.ZERO, r.size)
 		var top: Vector2 = r.position + Vector2(u.get_center().x, u.position.y) * r.scale.x     # the head of the figure, in the frame
-		var w: float = BAR_W_HEAD if head else clampf(u.size.x * r.scale.x * s * 0.75, 48.0, 120.0)
-		var h: float = BAR_H_HEAD if head else (BAR_H_HIT if hit else BAR_H)
+		var w: float = BAR_W_HEAD if (head or hard66) else clampf(u.size.x * r.scale.x * s * 0.75, 48.0, 120.0)
+		var h: float = BAR_H_HEAD if (head or hard66) else (BAR_H_HIT if hit else BAR_H)
 		var at := Vector2(top.x * s - w * 0.5, top.y * s - h - 8.0)
 		var tag_h: float = 24.0 if hit else 0.0
 		at.x = clampf(at.x, 6.0, W * s - w - 6.0)
@@ -1271,10 +1277,10 @@ func _lay_bars() -> void:
 			for ty in _bar_info["dots"]:
 				dots[ty] = maxf(0.0, float(_bar_info["dots"][ty])) / of
 				ticking += maxf(0.0, float(_bar_info["dots"][ty]))
-		fb.look(clampf(float(_bar_info["hp"]) / of, 0.0, 1.0) if hit else 1.0, dots, float(_bar_info.get("shield", 0.0)) if (hit and head) else 0.0, hit,
+		fb.look(_v66_share(k, clampf(float(_bar_info["hp"]) / of, 0.0, 1.0) if hit else 1.0), dots, float(_bar_info.get("shield", 0.0)) if (hit and head) else 0.0, hit,
 			hit and float(_bar_info["hp"]) > 0.0 and ticking >= float(_bar_info["hp"]))     # the skull (11 Oct): the dots will finish them
 		if hit:
-			var tag: String = "%d / %d" % [ceili(float(_bar_info["hp"])), int(round(of))]
+			var tag: String = _v66_tag(k, "%d / %d" % [ceili(float(_bar_info["hp"])), int(round(of))])     # (BUILD66-V) the hard man's own
 			if tag != _hp_tag.text:
 				_hp_tag.text = tag
 				_hp_tag.size.x = ceilf(UI.text_width(_hp_tag, _hp_tag.text)) + 8.0
@@ -1305,6 +1311,7 @@ class FigBar extends Control:
 	var dots := {}
 	var hit := false
 	var finish := false
+	var hard := false                # (BUILD66-V) the hard man's: gold-edged
 
 	var redraws := 0                 # for the tests: redraws asked for (BUILD43: a bar standing still asks none)
 
@@ -1323,9 +1330,16 @@ class FigBar extends Control:
 		redraws += 1
 		queue_redraw()
 
+	## (BUILD66-V) The hard man's bar or not: drawn again only on the change.
+	func set_hard(on: bool) -> void:
+		if on != hard:
+			hard = on
+			redraws += 1
+			queue_redraw()
+
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
-		draw_style_box(UI.box(Color(Pal.BG, 0.88), 3, 2 if hit else 1, Pal.ACCENT if hit else Color(Pal.TEXT_3, 0.8)), r.grow(2.0))
+		draw_style_box(UI.box(Color(Pal.BG, 0.88), 3, 3 if hard else (2 if hit else 1), GOLD66 if hard else (Pal.ACCENT if hit else Color(Pal.TEXT_3, 0.8))), r.grow(3.0 if hard else 2.0))     # (BUILD66-V) gold round the hard man's
 		var fw: float = roundf(size.x * share)
 		draw_rect(Rect2(0, 0, fw, size.y), Pal.tone_color("bad"))
 		var right: float = fw
@@ -1901,3 +1915,440 @@ func figures_up() -> int:
 
 func state() -> Dictionary:
 	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck, "glass": _glass.visible, "search_p": _search_p, "open": _open_left > 0.0 and _open_c.visible}
+
+
+# ==================================================================== BUILD66-V: the shooter mechanics on the frame
+# (7 Nov, docs/design/endgame_rail.md §1 and the Fight mockup): a headshot pops gold over the man hit, a jam shows over
+# your gun with its time left, a hard man carries a plate (HARD MAN, his name, his trait chips) and a gold-edged bar,
+# the streak and Last Stand ride the head's row at the frame's top right. All in the bars' layer: the frame's pixels as
+# drawn (812 x 362), not its art's. The sim's side is F's (sim.f66_*); the log's lines are the sim's own.
+const Words66 := preload("res://scripts/sim/words.gd")
+const Fmt66 := preload("res://scripts/ui/fmt.gd")
+const GOLD66 := Color("f4c542")            # the headshot's pop and the hard man's edge (the mockup's gold)
+const POP66_S := 1.0                       # a headshot's pop: its rise and its fade
+const POP66_RISE := 30.0
+const POP66_FONT := 30
+const POP66_MAX := 3
+const POP66_BIG := 1.3                     # a pop's scale as it's born, settling to 1 (the 67 fix round: named, the clearing reads it)
+const POP66_SMALLER := [24, 20]            # a pop's sizes when there's no room at its own
+const PILL66_H := 28.0                     # the streak's and Last Stand's pills, on the head's row
+const PILL66_PAD := 8.0
+const PLATE66_PAD := 10.0
+const CHIP66_H := 24.0
+const STREAK66_FROM := 2                   # the streak shows from two kills: one isn't a streak
+const STALE66_S := 1.5                     # an event this old when first seen (back from another room) shows nothing
+signal sound66(id: String, pitch: float)   # a headshot's and a jam's sound (run.gd plays it)
+var _hud66: Control
+var _seq66 := 0
+var _run66 := -1
+var _pops66: Array = []                    # {label, left}
+var _jam66: Panel
+var _jam66_l: Label
+var _jam66_left := 0.0
+var _streak66: Panel
+var _streak66_n: Label
+var _streak66_w: Label
+var _streak66_b: Label
+var _ls66: Panel
+var _ls66_w: Label
+var _ls66_s: Label
+var _plate66: Panel
+var _plate66_kick: Label
+var _plate66_name: Label
+var _chips66: Array = []                   # [Panel, Label] a trait
+var _hard66 := {}                          # sim.f66_hard_man() as last read; {} with none up
+var _hard66_k := -1                        # the figure he is
+var _keep66: Array = []                    # what the counters and the plate keep off, the frame's pixels (run.gd's head, chips, countdown)
+var _fight66 := false                      # a gang's on you
+var _word66 := Rect2()                     # a skill's name across the frame while it shows (run.gd)
+
+
+func _v66_make() -> void:
+	_hud66 = Control.new()
+	_hud66.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bars_layer.add_child(_hud66)
+	_plate66 = UI.panel(_hud66, Rect2(0, 0, 10, 10), UI.box(Color(Pal.BG, 0.92), 6, 2, GOLD66))
+	_plate66.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate66_kick = UI.label(_plate66, Rect2(0, 5, 10, 18), Words66.V66["hard"], "SemiBold", 13, GOLD66, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_plate66_name = UI.label(_plate66, Rect2(0, 22, 10, 28), "", "SemiBold", 22, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	for i in range(2):
+		var cp := UI.panel(_plate66, Rect2(0, 0, 10, CHIP66_H), UI.box(Pal.CARD, 5, 1, Pal.CARD_LINE))
+		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var cl := UI.label(cp, Rect2(0, 0, 10, CHIP66_H), "", "Regular", 15, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		_chips66.append([cp, cl])
+	_plate66.visible = false
+	_streak66 = UI.panel(_hud66, Rect2(0, 0, 10, PILL66_H), UI.box(Color(Pal.BG, 0.85), 6, 1, Pal.CARD_LINE))
+	_streak66.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_streak66_n = UI.label(_streak66, Rect2(PILL66_PAD, 0, 10, PILL66_H), "", "Bold", 22, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_streak66_w = UI.label(_streak66, Rect2(0, 0, 10, PILL66_H), Words66.V66["streak"], "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_streak66_b = UI.label(_streak66, Rect2(0, 0, 10, PILL66_H), "", "Regular", Pal.CELL_TEXT, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_streak66.visible = false
+	_ls66 = UI.panel(_hud66, Rect2(0, 0, 10, PILL66_H), UI.box(Color(Pal.BG, 0.85), 6, 1, Pal.CARD_LINE))
+	_ls66.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ls66_w = UI.label(_ls66, Rect2(PILL66_PAD, 0, 10, PILL66_H), Words66.V66["last_stand"] + " ·", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_ls66_s = UI.label(_ls66, Rect2(0, 0, 10, PILL66_H), "", "SemiBold", Pal.CELL_TEXT, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_ls66.visible = false
+	_jam66 = UI.panel(_hud66, Rect2(0, 0, 10, PILL66_H), UI.box(Pal.WARN, 6))
+	_jam66.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_jam66_l = UI.label(_jam66, Rect2(0, 0, 10, PILL66_H), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.ACCENT_TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_jam66.visible = false
+
+
+## A label's box to its words (a few pixels' slack), at x; its right edge back.
+static func _fit66(l: Label, x: float) -> float:
+	l.size.x = ceilf(UI.text_width(l, l.text)) + 4.0
+	l.position.x = x
+	return x + l.size.x
+
+
+## Each look (show_state): the new events (the pops, the sounds), and what the frame shows of the rest.
+func _v66_show(sim, m: Dictionary) -> void:
+	if sim.runs_total != _run66 or sim.f66_last_seq() < _seq66:     # (the review of 66) or a save behind what was seen
+		_run66 = sim.runs_total                  # a new run: nothing seen of it yet (its first events are fresh)
+		_seq66 = 0
+		_jam66_left = 0.0
+		for p in _pops66:
+			p["label"].queue_free()
+		_pops66 = []
+	var now: float = float(m.get("elapsed", 0.0))
+	_fight66 = int(m["remaining"]) > 0
+	for e in sim.f66_events_since(_seq66):
+		_seq66 = maxi(_seq66, int(e["seq"]))
+		if now - float(e.get("at", now)) > STALE66_S:
+			continue
+		match str(e["kind"]):
+			"headshot":
+				_pop66(float(e.get("amount", 0.0)), bool(e.get("hard", false)))
+				sound66.emit("kill", 1.35)       # a kill's thump pitched up: the crack of a headshot
+			"jam":
+				sound66.emit("dry_click", 0.85)  # the dry click, lower: a round that won't go
+	# the jam: on the gun in hand (the other's, if that's the one jammed)
+	var gun = gun_in_hand(sim)
+	var slot: String = "Secondary" if gun != null and gun == sim.equipped["Secondary"] else "Primary"
+	_jam66_left = sim.f66_jam_left(slot) if _fight66 else 0.0
+	# the streak, from two kills; its bonus when the build has streak_dmg_pct
+	var n: int = sim.f66_streak()
+	_streak66.visible = n >= STREAK66_FROM
+	if _streak66.visible:
+		_streak66_n.text = Words66.V66["streak_n"] % n
+		_streak66_b.set_meta("pct", roundi(sim.f66_streak_bonus_pct()))
+		_fit66(_streak66_n, _fit66(_streak66_w, PILL66_PAD) + 6.0)     # (the fix round) sized with their words, before the frame's lay: the sweep reads them between
+	# Last Stand: only on a build that has it
+	var ls: String = sim.f66_last_stand_state()
+	_ls66.visible = ls != "none"
+	if _ls66.visible:
+		match ls:
+			"ready":
+				_ls66_s.text = Words66.V66["ls_ready"]
+				_ls66_s.add_theme_color_override("font_color", Pal.GOOD)
+			"on":
+				_ls66_s.text = Words66.V66["ls_on"] % ("%.1f" % maxf(0.0, sim.f66_last_stand_left()))
+				_ls66_s.add_theme_color_override("font_color", Pal.WARN)
+			_:
+				_ls66_s.text = Words66.V66["ls_used"]
+				_ls66_s.add_theme_color_override("font_color", Pal.TEXT_3)
+		_fit66(_ls66_s, _fit66(_ls66_w, PILL66_PAD) + 4.0)     # (the fix round) as the streak's
+	# the hard man, while his gang's on you
+	_hard66 = sim.f66_hard_man() if _fight66 else {}
+	if not _hard66.is_empty():
+		_plate66_name.text = str(_hard66["name"])
+		var words: Array = _hard66.get("trait_words", [])
+		for i in range(_chips66.size()):
+			_chips66[i][0].visible = i < words.size()
+			if i < words.size():
+				_chips66[i][1].text = str(words[i])
+
+
+## Which figure the hard man is (_lay_bars, before the bars): the one in front when he's the man being shot, else one
+## of the rest kept while he stands.
+func _v66_pick() -> void:
+	if _hard66.is_empty() or not _firing:
+		_hard66_k = -1
+		return
+	var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
+	if bool(_hard66.get("in_front", true)) and _target_k in ups:
+		_hard66_k = _target_k
+	elif not (_hard66_k in ups) or (_hard66_k == _target_k and ups.size() > 1):
+		var rest: Array = ups.filter(func(k): return k != _target_k)
+		_hard66_k = rest[0] if not rest.is_empty() else (_target_k if _target_k in ups else -1)
+
+
+## The bar's share for figure k: his own for the hard man, else what _lay_bars worked out.
+func _v66_share(k: int, share: float) -> float:
+	return clampf(float(_hard66.get("hp_share", share)), 0.0, 1.0) if k == _hard66_k and k >= 0 else share
+
+
+## The HP words over the one you're hitting: his own HP when it's the hard man.
+func _v66_tag(k: int, words: String) -> String:
+	if k != _hard66_k or k < 0 or not _hard66.has("hp"):
+		return words
+	return "%s / %s" % [Fmt66.group(ceili(float(_hard66["hp"]))), Fmt66.group(roundi(float(_hard66["hp_max"])))]
+
+
+## A headshot's pop: "HEADSHOT 4,120" in gold over the man hit, rising and fading.
+func _pop66(amount: float, hard: bool) -> void:
+	var s: float = scale.x if scale.x > 0.0 else 1.0
+	_hud66.size = Vector2(W * s, H * s)          # (the fix round) the pieces' box before the frame's first lay: a pop there sits inside it
+	var ups: Array = range(SLOTS.size()).filter(func(j): return _figs[j]["state"] in ["pop", "up"])
+	var k: int = _hard66_k if hard and _hard66_k in ups else (_target_k if _target_k in ups else (ups[0] if not ups.is_empty() else -1))
+	var spot := Vector2(W * 0.5, H * 0.4)
+	if k >= 0:
+		var r: TextureRect = _figs[k]["rect"]
+		var u: Rect2 = used_of(r.texture)
+		if u.size.y <= 0.0:
+			u = Rect2(Vector2.ZERO, r.size)
+		spot = r.position + Vector2(u.get_center().x, u.position.y + u.size.y * 0.3) * r.scale.x
+	var fig: String = Fmt66.group(roundi(amount)) if absf(amount) < 1e9 else Fmt66.num(amount)
+	var l := UI.label(_hud66, Rect2(0, 0, 10, 40), Words66.V66["headshot"] % fig, "Bold", POP66_FONT, GOLD66, HORIZONTAL_ALIGNMENT_CENTER, false)
+	l.add_theme_constant_override("outline_size", 7)
+	l.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.06, 1.0))
+	l.size.x = ceilf(UI.text_width(l, l.text)) + 12.0
+	var at := Vector2(spot.x * s - l.size.x * 0.5, spot.y * s - l.size.y * 0.5)
+	at.x = clampf(at.x, 6.0, W * s - l.size.x - 6.0)
+	at.y = clampf(at.y, 6.0 + POP66_RISE, H * s - l.size.y - 6.0)
+	var born: Array = []
+	for p in _pops66:
+		if p["label"].visible:
+			born.append(Rect2(p["label"].position - Vector2(0.0, POP66_RISE), p["label"].size + Vector2(0.0, POP66_RISE)))
+	at = _pop66_clear(at, l.size, born)          # (BUILD67-K) born clear of the pops already up: two headshots in one tick sat on one spot until the frame's lay
+	l.visible = clear66_ok
+	l.position = at
+	l.set_meta("from", at)
+	l.pivot_offset = l.size * 0.5
+	_pops66.append({"label": l, "left": POP66_S})
+	while _pops66.size() > POP66_MAX:
+		_pops66.pop_front()["label"].queue_free()
+
+
+## The nearest spot to `at` where a box of `sz` (grown `up` pixels upward: a pop's rise) sits in the frame clear of
+## every rect in `keep`: tried outward from where it wants to be, up and down first, then across.
+static var _offs66: Array = []
+var clear66_ok := true                     # the last _clear66 found a clear spot
+func _clear66(at: Vector2, sz: Vector2, keep: Array, up := 0.0) -> Vector2:
+	var s: float = scale.x if scale.x > 0.0 else 1.0
+	var fr := Rect2(Vector2(6.0, 6.0), Vector2(W * s - 12.0, H * s - 12.0))
+	if _offs66.is_empty():
+		for dx in range(-30, 31):
+			for dy in range(-40, 41):
+				_offs66.append(Vector2(dx * 12.0, dy * 6.0))
+		_offs66.sort_custom(func(a, b): return absf(a.x) * 1.5 + absf(a.y) < absf(b.x) * 1.5 + absf(b.y))
+	clear66_ok = false
+	for o in _offs66:
+		var r := Rect2(at + o - Vector2(0.0, up), sz + Vector2(0.0, up))
+		if fr.encloses(r) and keep.all(func(q): return not q.intersects(r)):
+			clear66_ok = true
+			return at + o
+	return at
+
+
+## A pop's spot clear of the bars, the HP words, the plate, what run.gd lays over the frame, the jam and the pops
+## before it, over its whole rise.
+func _pop66_clear(at: Vector2, sz: Vector2, before: Array = []) -> Vector2:
+	var keep: Array = pop66_keep() + _keep66 + before
+	for n in [_streak66, _ls66]:
+		if n.visible:
+			keep.append(Rect2(n.position, n.size))
+	if _word66.size.x > 0.0:
+		keep.append(_word66)
+	if _jam66.visible:
+		keep.append(Rect2(_jam66.position, _jam66.size))
+	var g: Vector2 = sz * (POP66_BIG - 1.0) * 0.5     # (the 67 fix round) cleared at its biggest: it pops in at x1.3 about its middle (the full smoke: 'Your HP' under a pop's first frames)
+	return _clear66(at - g, sz + 2.0 * g, keep, POP66_RISE) + g
+
+
+## What a headshot's pop keeps off: each bar up, the HP words, the hard man's plate (the frame's pixels).
+func pop66_keep() -> Array:
+	var out: Array = []
+	for f in _figs:
+		if f["bar"].visible:
+			out.append(Rect2(f["bar"].position, f["bar"].size).grow(3.0))
+	if _hp_tag.visible:
+		out.append(Rect2(_hp_tag.position, _hp_tag.size))
+	if _plate66.visible:
+		out.append(Rect2(_plate66.position, _plate66.size))
+	return out
+
+
+## Each frame, after the bars: the pops' rise, the pills on the head's row, the plate over the hard man, the jam's tag.
+func _v66_lay(dt: float) -> void:
+	var s: float = scale.x if scale.x > 0.0 else 1.0
+	var fw: float = W * s
+	var fh: float = H * s
+	_hud66.size = Vector2(fw, fh)                # the frame as drawn: the pieces' box
+	# the pills, right to left at the top right: Last Stand at the edge, the streak beside it
+	var x: float = fw - 8.0
+	if _ls66.visible:
+		var e: float = _fit66(_ls66_w, PILL66_PAD)
+		e = _fit66(_ls66_s, e + 4.0)
+		_ls66.size = Vector2(e + PILL66_PAD, PILL66_H)
+		x -= _ls66.size.x
+		_ls66.position = Vector2(x, 4.0)
+		x -= 8.0
+	if _streak66.visible:
+		var pct: int = int(_streak66_b.get_meta("pct", 0))
+		var forms: Array = [] if pct <= 0 else (Words66.V66["streak_bonus"] as Array).map(func(f): return "· " + str(f) % pct)
+		forms.append("")
+		for f in forms:
+			_streak66_b.text = f
+			var e: float = _fit66(_streak66_w, PILL66_PAD)     # "Streak 7" (the editor): the word, then the count
+			e = _fit66(_streak66_n, e + 6.0)
+			if f != "":
+				e = _fit66(_streak66_b, e + 5.0)
+			_streak66_b.visible = f != ""
+			_streak66.size = Vector2(e + PILL66_PAD, PILL66_H)
+			_streak66.position = Vector2(x - _streak66.size.x, 4.0)
+			if _keep66.all(func(r): return not r.intersects(Rect2(_streak66.position, _streak66.size))):
+				break
+		if not _keep66.all(func(r): return not r.intersects(Rect2(_streak66.position, _streak66.size))):
+			# (BUILD67-K) no form clear at the top right (a long head over the frame: "Picking it over · each gang bigger than
+			# the last" with a streak carried into the search): the nearest clear spot, else not over the words
+			_streak66.position = _clear66(_streak66.position, _streak66.size, _keep66)
+			_streak66.visible = clear66_ok
+	# the plate over the hard man, his bar under it (pushed down when the plate meets the head's row)
+	var k: int = _hard66_k
+	_plate66.visible = k >= 0 and _figs[k]["bar"].visible
+	if _plate66.visible:
+		var fb: FigBar = _figs[k]["bar"]
+		var cw := 0.0
+		var shown: Array = _chips66.filter(func(c): return c[0].visible)
+		for c in shown:
+			c[1].size.x = ceilf(UI.text_width(c[1], c[1].text)) + 4.0
+			c[0].size = Vector2(c[1].size.x + 16.0, CHIP66_H)
+			c[1].position = Vector2(8.0, 0.0)
+			cw += c[0].size.x
+		cw += 6.0 * maxf(0.0, shown.size() - 1.0)
+		_plate66_name.size.x = ceilf(UI.text_width(_plate66_name, _plate66_name.text)) + 4.0
+		_plate66_kick.size.x = ceilf(UI.text_width(_plate66_kick, _plate66_kick.text)) + 4.0
+		var pw: float = maxf(maxf(_plate66_name.size.x, _plate66_kick.size.x), cw) + 2.0 * PLATE66_PAD
+		var ph: float = 52.0 + (CHIP66_H + 8.0 if not shown.is_empty() else 4.0)
+		_plate66.size = Vector2(pw, ph)
+		_plate66_kick.position.x = (pw - _plate66_kick.size.x) * 0.5
+		_plate66_name.position.x = (pw - _plate66_name.size.x) * 0.5
+		var cx: float = (pw - cw) * 0.5
+		for c in shown:
+			c[0].position = Vector2(cx, 52.0)
+			cx += c[0].size.x + 6.0
+		var tag_h: float = 24.0 if _hp_tag.visible and k == _target_k else 0.0
+		var at := Vector2(clampf(fb.position.x + fb.size.x * 0.5 - pw * 0.5, 6.0, fw - pw - 6.0), fb.position.y - tag_h - 8.0 - ph)
+		at.y = maxf(at.y, 6.0)
+		var keep: Array = _keep66.duplicate()
+		for n in [_streak66, _ls66]:
+			if n.visible:
+				keep.append(Rect2(n.position, n.size))
+		at = _clear66(at, _plate66.size, keep)
+		_plate66.position = at
+		var bar_y: float = at.y + ph + 8.0 + tag_h
+		var over_bar: bool = at.x < fb.position.x + fb.size.x and at.x + pw > fb.position.x     # moved aside, it leaves the bar be
+		if over_bar and fb.position.y < bar_y:
+			fb.position.y = minf(bar_y, fh - fb.size.y - 6.0)     # under the plate; the HP words with it
+			if tag_h > 0.0:
+				_hp_tag.position.y = fb.position.y - tag_h
+	# the jam, over your gun
+	_jam66_left = maxf(0.0, _jam66_left - dt)
+	_jam66.visible = _jam66_left > 0.0 and _hands.visible and _fight66
+	if _jam66.visible:
+		_jam66_l.text = Words66.V66["jammed"] % ("%.1f" % _jam66_left)
+		_jam66_l.size.x = ceilf(UI.text_width(_jam66_l, _jam66_l.text)) + 4.0
+		_jam66.size = Vector2(_jam66_l.size.x + 20.0, PILL66_H)
+		_jam66_l.position.x = 10.0
+		var u: Rect2 = used_of(_hands.texture)
+		var top: Vector2 = (_hands.position + u.position * _hs) * s
+		var jat := Vector2(top.x + u.size.x * _hs * s * 0.5 - _jam66.size.x * 0.5, top.y - _jam66.size.y - 8.0)
+		jat.x = clampf(jat.x, 6.0, fw - _jam66.size.x - 6.0)
+		jat.y = clampf(jat.y, 40.0, fh - _jam66.size.y - 6.0)
+		var jkeep: Array = _keep66 + pop66_keep()
+		for n in [_streak66, _ls66]:
+			if n.visible:
+				jkeep.append(Rect2(n.position, n.size))
+		if _word66.size.x > 0.0:
+			jkeep.append(_word66)
+		_jam66.position = _clear66(jat, _jam66.size, jkeep)
+	# the pops, last: clear of the plate, the jam and the rest where they stand this frame
+	var gone: Array = []
+	var laid: Array = []
+	for p in _pops66:
+		p["left"] = float(p["left"]) - dt
+		var l: Label = p["label"]
+		var age: float = 1.0 - clampf(float(p["left"]) / POP66_S, 0.0, 1.0)
+		var from: Vector2 = _pop66_clear(Vector2(l.get_meta("from")), l.size, laid)
+		for fs in POP66_SMALLER:
+			if clear66_ok or l.get_theme_font_size("font_size") <= fs:
+				continue
+			l.add_theme_font_size_override("font_size", fs)     # no room at its size (a skill's name across the frame, the countdown): smaller
+			l.size = Vector2(ceilf(UI.text_width(l, l.text)) + 12.0, ceilf(l.get_theme_font("font").get_height(fs)) + 6.0)
+			l.pivot_offset = l.size * 0.5
+			from = _pop66_clear(Vector2(l.get_meta("from")), l.size, laid)
+		l.visible = clear66_ok                   # nowhere clear at the smallest: not over other words (its number and its sound still come)
+		laid.append(Rect2(from - Vector2(0.0, POP66_RISE), l.size + Vector2(0.0, POP66_RISE)))
+		l.position = from - Vector2(0.0, POP66_RISE * ease(age, 0.5))
+		l.scale = Vector2.ONE * (1.0 + (POP66_BIG - 1.0) * maxf(0.0, 1.0 - age / 0.15))     # pops in big, settles
+		l.modulate.a = clampf(float(p["left"]) / (POP66_S * 0.4), 0.0, 1.0)
+		if l.visible and _pop66_hits_words(l):
+			l.visible = false                    # (the 67 fix round) where it stands this frame, scaled, still on words: not shown
+		if float(p["left"]) <= 0.0:
+			gone.append(p)
+	for p in gone:
+		_pops66.erase(p)
+		p["label"].queue_free()
+
+
+## What run.gd lays over the frame, in the frame's pixels: the counters and the plate keep off `rects`; the jam and the
+## pops keep off those and `word` too (a skill's name across the frame, there a moment).
+func v66_keep(rects: Array, word := Rect2()) -> void:
+	_keep66 = rects
+	_word66 = word
+	if _hud66 != null:
+		_v66_lay(0.0)                            # (BUILD67-K) laid again on what they keep off now: a look's new head, chips or pops sat on the last frame's places till the next frame
+
+
+## The labels showing (the fit check's), and for the tests what each piece shows, in the frame's pixels.
+func v66_text_nodes() -> Array:
+	var out: Array = []
+	for p in _pops66:
+		if p["label"].visible:
+			out.append(p["label"])
+	if _jam66.visible:
+		out.append(_jam66_l)
+	if _streak66.visible:
+		out.append_array([_streak66_n, _streak66_w])
+		if _streak66_b.visible:
+			out.append(_streak66_b)
+	if _ls66.visible:
+		out.append_array([_ls66_w, _ls66_s])
+	if _plate66.visible:
+		out.append_array([_plate66_kick, _plate66_name])
+		for c in _chips66:
+			if c[0].visible:
+				out.append(c[1])
+	return out
+
+
+func v66_state() -> Dictionary:
+	var hb := Rect2()
+	if _hard66_k >= 0:
+		var fb: FigBar = _figs[_hard66_k]["bar"]
+		hb = Rect2(fb.position, fb.size) if fb.visible else Rect2()
+	return {"frame": Rect2(Vector2.ZERO, Vector2(W, H) * (scale.x if scale.x > 0.0 else 1.0)),
+		"pops": _pops66.map(func(p): return p["label"].text), "pop_rects": _pops66.filter(func(p): return p["label"].visible).map(func(p): return Rect2(p["label"].position, p["label"].size)),
+		"pops_shown": _pops66.filter(func(p): return p["label"].visible).size(),
+		"jam": _jam66.visible, "jam_text": _jam66_l.text if _jam66.visible else "", "jam_rect": Rect2(_jam66.position, _jam66.size),
+		"hands_rect": Rect2(_hands.position * (scale.x if scale.x > 0.0 else 1.0), _hands.size * _hands.scale * (scale.x if scale.x > 0.0 else 1.0)),
+		"streak": _streak66.visible, "streak_text": (_streak66_w.text + " " + _streak66_n.text + (" " + _streak66_b.text if _streak66_b.visible else "")) if _streak66.visible else "",
+		"streak_rect": Rect2(_streak66.position, _streak66.size),
+		"ls": _ls66.visible, "ls_text": (_ls66_w.text + " " + _ls66_s.text) if _ls66.visible else "", "ls_rect": Rect2(_ls66.position, _ls66.size),
+		"plate": _plate66.visible, "plate_rect": Rect2(_plate66.position, _plate66.size), "plate_name": _plate66_name.text,
+		"plate_chips": _chips66.filter(func(c): return c[0].visible).map(func(c): return c[1].text),
+		"chip_rects": _chips66.filter(func(c): return c[0].visible).map(func(c): return Rect2(_plate66.position + c[0].position, c[0].size)),
+		"hard_k": _hard66_k, "hard_bar": hb, "hard_edge": _hard66_k >= 0 and _figs[_hard66_k]["bar"].hard,
+		"jam_hold": _jam66_left > 0.0}
+
+
+
+## (the 67 fix round) A pop as drawn this frame - its rise and its scale about its middle - over the words it keeps off:
+## the last word on a pop (the full smoke at 1920x1080 with a skill's name: 'Your HP 437 / 437' under one by 12 px).
+func _pop66_hits_words(l: Label) -> bool:
+	var r := Rect2(l.position + l.pivot_offset * (Vector2.ONE - l.scale), l.size * l.scale)
+	var keep: Array = pop66_keep() + _keep66
+	if _word66.size.x > 0.0:
+		keep.append(_word66)
+	return keep.any(func(q): return Rect2(q).intersects(r))

@@ -11,7 +11,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
-const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Gloves": "GLV", "Rig": "RIG", "Backpack": "PCK",
+const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Gloves": "GLV", "Rig": "RIG", "Backpack": "PCK", "Boots": "BTS",     # (BUILD67-K) boots
 	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN", "Supplies": "SUP", "Magazine": "MAG", "Material": "MAT"}
 const INSET := 3                   # the picture sits inside the border
 const NAME_MIN := 9                # the smallest type a name steps down to in a cell of two or more across (29 Oct)
@@ -432,6 +432,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	_style(on, rarity_tone(it))
 	_dress(it, rarity_tone(it))
 	_lay_dot(it)
+	t67_lay(it)                                # (BUILD67-I) the top tier's ◆ in the corner
 	var tex: Texture2D = null if no_pics else Items.art(it)
 	for l in _lines:
 		l.visible = false
@@ -559,4 +560,40 @@ func text_nodes() -> Array:
 		out.append(_up)
 	if _lock.visible:
 		out.append(_lock)
+	if _t67 != null and _t67.visible:
+		out.append(_t67)                       # (BUILD67-I)
 	return out
+
+
+# ------------------------------------------------------------------ BUILD67-I (8 Nov): the top tier's mark
+## A piece with a T6 affix (docs/design/endgame_rail.md §2): the ◆ in the gold, top left on a dark disc (the upgrade's
+## arrow and the padlock are top right; a magazine's dot, top left, is never on gear). Smaller in a small pouch.
+const T67_D := 18
+const T67_D_SMALL := 12
+var _t67: Label = null
+
+
+func t67_lay(it: Dictionary) -> void:
+	var on: bool = Items.has_t6(it)
+	if _t67 == null:
+		if not on:
+			return
+		_t67 = UI.label(self, Rect2(0, 0, T67_D, T67_D), "◆", "SemiBold", 11, Pal.LEGENDARY, HORIZONTAL_ALIGNMENT_CENTER)
+		_t67.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_t67.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_t67.visible = on
+	if not on:
+		return
+	var small: bool = size.x < 48.0 or size.y < 48.0
+	var d: int = T67_D_SMALL if small else T67_D
+	_t67.size = Vector2(d, d)
+	_t67.position = Vector2(2, 2)
+	_t67.add_theme_font_size_override("font_size", 8 if small else 11)
+	@warning_ignore("integer_division")
+	_t67.add_theme_stylebox_override("normal", UI.box(Color(Pal.BG, 0.85), d / 2, 1, Pal.LEGENDARY))
+	_t67.move_to_front()
+
+
+## Whether the ◆ shows (the tests).
+func t67_shown() -> bool:
+	return _t67 != null and _t67.visible

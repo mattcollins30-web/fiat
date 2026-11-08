@@ -1363,7 +1363,7 @@ func _build_one(sim) -> void:
 ## there's room, then the dead affixes rolled away (the build's own lines padlocked first: the element's conversion,
 ## its increase, the dots), or, with nothing dead, the weakest's values - rolled again until the piece reads better
 ## than it did, BENCH_TRIES at most, while two grand stays. No undo: a run of bad rolls is kept, as a player's is.
-const BENCH_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Charm", "Rig", "Secondary"]     # the gloves (29 Oct): read by _power, pace and the reloads in
+const BENCH_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Charm", "Rig", "Secondary", "Boots"]     # (BUILD67-K) boots     # the gloves (29 Oct): read by _power, pace and the reloads in
 const BENCH_EVERY := 600.0      # sim seconds between the Bench's passes (the odds' reads are the wall's)
 const BENCH_TRIES := 6          # rolls on one piece a pass before it moves on
 const BENCH_JOBS := 16          # jobs a pass at most

@@ -302,6 +302,9 @@ func _view_make() -> void:
 		if sound != null:
 			sound.cue("duck"))
 	_view.placing_changed.connect(_on_placing)
+	_view.sound66.connect(func(id: String, pitch: float):
+		if sound != null:
+			sound.cue(id, 0.02, pitch))          # (BUILD66-V) a headshot's and a jam's sound
 	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
 	_view.scale = Vector2(VIEW_SCALE, VIEW_SCALE)
 	_left.add_child(_view)
@@ -522,6 +525,8 @@ func show_state(s) -> void:
 	_fight["chips"].visible = not them.is_empty()
 	if not them.is_empty():
 		_fight["chips"].show_chips(them)
+	if _view != null:
+		_view.v66_keep(_keep66(), _word66())     # (BUILD66-V) what the streak, Last Stand, the plate, the jam and the pops keep off
 	# on you: the line is the chips' alone (Matt, 6 Oct): what their fire has left on you, and the med in use as a muted one
 	var on_you: Array = []
 	for ty in ["fire", "poison", "bleed"]:
@@ -544,6 +549,8 @@ func show_state(s) -> void:
 	_runner["note"].visible = false
 	if not on_you.is_empty():
 		_runner["chips"].show_chips(on_you, 1, true)     # short of room beside the skills, every chip its short form first (25 Oct)
+	if _view != null:
+		_view.v66_keep(_keep66(), _word66())     # (BUILD67-K) again with the chips on you as they stand now (the first hand-over was before them)
 	# the take
 	UI.fit(_take_strip["tins"], Fmt.money_forms(m["cash"]))
 	var used_p: int = sim.pack_used(m)
@@ -1731,6 +1738,8 @@ func text_nodes() -> Array:
 			out.append(b)
 	if _countdown.visible:
 		out.append(_countdown)
+	if _view != null:
+		out.append_array(_view.v66_text_nodes())     # (BUILD66-V)
 	out.append_array(_inv.text_nodes())
 	if _crates.visible:
 		out.append_array(_crates.text_nodes())
@@ -1844,3 +1853,75 @@ func f51_heal_arrow() -> int:
 	if str(_rig_next.get_meta("ui_style", "")).ends_with("|warn"):
 		return 1
 	return -1 if str(_rig_prev.get_meta("ui_style", "")).ends_with("|warn") else 0
+
+
+# ==================================================================== BUILD66-V
+## What the frame's own pieces (the streak, Last Stand, the hard man's plate, the jam) keep off, in the frame's pixels:
+## the fight's head as written, the "On them" chips as laid, the countdown, the skills' buttons.
+func _keep66() -> Array:
+	var out: Array = []
+	var o := Vector2(VIEW_X, FIGHT_BOX_Y)
+	var hd: Label = _fight["head"]
+	if hd.visible:
+		out.append(Rect2(hd.position - o, Vector2(UI.text_width(hd, hd.text) + 8.0, hd.size.y)))
+	if _fight["key"].visible:
+		out.append(Rect2(_fight["key"].position - o, Vector2(KEY_W - 8, Chips.CHIP_H)))
+	if _fight["chips"].visible:
+		var u: Rect2 = _fight["chips"].used_rect()
+		out.append(Rect2(_fight["chips"].position + u.position - o, u.size))
+	if _countdown.visible:
+		out.append(Rect2(_countdown.position - o, _countdown.size))
+	var rb: Label = _runner["bar_text"]
+	if rb.visible and rb.text != "":
+		# (BUILD67-K) your HP's words where the frame's foot meets them (a headshot's pop at 1920x1200 sat 7 px over them)
+		var rtw: float = UI.text_width(rb, rb.text) + 8.0
+		var gt: Transform2D = rb.get_global_transform()     # (the 67 fix round) into the pops' own layer, wherever and however big the frame sits: at 1920x1080 the frame's offset read 108 px off
+		out.append(_to_hud66(Rect2(gt * Vector2((rb.size.x - rtw) * 0.5, 0.0), Vector2(rtw, rb.size.y) * gt.get_scale())))
+		out.append(_laid_hud66(rb, Rect2(Vector2((rb.size.x - rtw) * 0.5, 0.0), Vector2(rtw, rb.size.y))))     # and as the layout lays it, unscaled (the smoke's fit sweep reads it so)
+	if _runner["chips"].visible:
+		# (BUILD67-K) and the chips on you under them (Greed +30%: a pop sat 8 px over it on the live smoke)
+		var ru: Rect2 = _runner["chips"].used_rect()
+		var ct: Transform2D = _runner["chips"].get_global_transform()     # (the 67 fix round) as the HP words
+		out.append(_to_hud66(Rect2(ct * ru.position, ru.size * ct.get_scale())))
+		out.append(_laid_hud66(_runner["chips"], ru))
+	if _skills != null:
+		for r in _skills.keep_rects():
+			out.append(Rect2(r.position - o, r.size))
+	return out
+
+
+## The skill's name across the frame while it shows (skill_bar.gd's word), its words' own rect in the frame's pixels;
+## an empty rect when it's down. The jam and the pops keep off it; the plate doesn't move for it (it comes and goes).
+func _word66() -> Rect2:
+	if _skills == null or not _skills.visible or not _skills.word.visible or _skills.word.text == "":
+		return Rect2()
+	var wl: Label = _skills.word
+	var tw: float = UI.text_width(wl, wl.text)
+	return Rect2(_skills.position + wl.position + Vector2((wl.size.x - tw) * 0.5, 0.0) - Vector2(VIEW_X, FIGHT_BOX_Y), Vector2(tw, wl.size.y))
+
+
+
+## (the 67 fix round) A rect on screen in the fight view's pops' layer (its offset and its scale as drawn); as the frame's
+## old offset with no view yet.
+func _to_hud66(g: Rect2) -> Rect2:
+	if _view != null and is_instance_valid(_view) and _view._hud66 != null:
+		var inv: Transform2D = _view._hud66.get_global_transform().affine_inverse()
+		return Rect2(inv * g.position, g.size * inv.get_scale())
+	return Rect2(g.position - get_global_transform().origin - Vector2(VIEW_X, FIGHT_BOX_Y), g.size)
+
+
+
+## (the 67 fix round) A rect of `n`'s, as the controls' positions add up to the pops' layer with no scale on the way (the
+## shell's layout as the fit sweep walks it): kept off too, so a pop clears the words both as drawn and as laid.
+func _laid_hud66(n: Control, r: Rect2) -> Rect2:
+	var p := Vector2.ZERO
+	var q = n
+	while q is Control:
+		p += q.position
+		q = q.get_parent()
+	var h := Vector2.ZERO
+	var w = _view._hud66 if (_view != null and is_instance_valid(_view)) else null
+	while w is Control:
+		h += w.position
+		w = w.get_parent()
+	return Rect2(p - h + r.position, r.size)

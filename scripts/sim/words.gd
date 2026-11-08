@@ -885,6 +885,8 @@ const UNIQUES := {
 	"The Sparky's Gloves": "Rubber, to the elbow, tested and stamped. He never got a belt in thirty years. Neither will you.",
 	"The Milkman's Gloves": "Fingerless, from the dairy's last round. He was done by seven every morning and never once ran.",
 	"The Safecracker's Gloves": "Thin kid leather, the fingertips sanded. He opened the Bank's old vault in them, the story goes, and closed it again.",
+	"The Postman's Boots": "Black leather, resoled three times, forty years of the same round. He knew which gates squeaked and which dogs bit.",     # (BUILD67-K)
+	"Steel Toecaps": "Off a docker's feet, forty winters on the quay.",     # (BUILD67-K)
 	"The Quartermaster's Manual": "Every piece of kit the army ever issued, and how to use it, in a binder. He'd read it. Now so have you.",
 	"A Blue Plaque": "Off a wall in town: somebody lived here. It makes you a listed building. Nothing on you works but the listing.",
 	"The Lollipop Lady's Sign": "STOP, on a pole, scratched. She held it up for forty years and nobody went through. They still don't.",
@@ -917,6 +919,20 @@ const UNIQUES := {
 	"The Crash Bag": "Off the last ambulance in the county. However much you take out of it, it's full again by the next corner.",
 	"The Removal Van": "Seven and a half tonnes and it still has room. Whatever you find goes in, and comes out better.",
 	"The Freedom of the Borough": "A scroll and a key from the Town Hall. The gangs read it, stand aside, and pay you for the privilege.",
+	# (BUILD67-I, 8 Nov) the 13 over the fight's shooter mechanics - for the language pass
+	"Grandad's .303": "Brought home in 1946 and never handed in. He said it pulled to the left, and it never did.",
+	"The Groundsman's Shotgun": "Kept for the moles on the bowling green. He aimed low then and it still does.",
+	"The Range Officer's Rifle": "Zeroed every Sunday since the club opened. It doesn't care what they've got on their heads.",
+	"The Allotment Zip Gun": "Made in a shed from a bit of pipe and a door bolt. It works when it feels like it, and then it really works.",
+	"The Station Revolver": "Kept in the front office drawer under the lost property book. Six in the cylinder, and he always made the last one count.",
+	"The Armourer's Box": "Steel-cored rounds in a tin from the TA hall. Slow to load. Nothing they're wearing stops them.",
+	"The Magpie's Pouches": "Every pocket picked clean of brass on the way past. Less room for plasters.",
+	"The Gun Club Sling": "Two rifles on one strap, the way the club secretary carried them to the range. One for when the other's empty.",
+	"The Bin Man's Gloves": "Every Tuesday round since decimalisation. Whatever's in a bin, he'll find something useful in it.",
+	"The Bouncer's Knuckles": "Off the door at the Lion every Friday for a decade. Grab an arm and they forget what they were holding.",
+	"The Bonfire Box": "Left over from the last Fifth of November the council paid for. Somebody's still counting down.",
+	"The Football Rattle": "Off the terraces at the old ground. Wind it up and nobody in the street can think straight.",
+	"The Lifeboat Jacket": "From the lifeboat station down the coast. It's brought men back from worse than this.",
 }
 
 
@@ -1385,6 +1401,37 @@ const ITEMS := {
 	"EOD gauntlets": "The bomb squad's: thick on the back, fine in the fingers.",
 	"Dress uniform gloves": "White cotton from the parade ground. They've never been dirty and they're quick.",
 	"Special forces gloves": "The best there is, made for the trigger and nothing else.",
+	# (BUILD67-K) boots, the ninth slot, for the language pass
+	"Plimsolls": "Canvas and a rubber sole, from the school's PE cupboard. Light, and you feel every stone.",
+	"Carpet slippers": "Tartan, the backs trodden flat. Nobody hears a man in slippers.",
+	"Wellies": "Green rubber to the knee, off the back step. Something between you and whatever's on the floor.",
+	"Trainers": "White once. The laces don't match, but they still run.",
+	"Deck shoes": "Leather, grooved soles, off a boat that never left the marina. Quiet on any floor.",
+	"Work boots": "Brown leather, a steel shank, a builder's last pair. They'll take a kick to the shin.",
+	"Running shoes": "Club-bought, a season's miles in them. Somebody trained for a marathon that never came.",
+	"Crepe soles": "Thick and soft as a sponge. They go down a corridor without a sound.",
+	"Rigger boots": "Pull-on, toe-capped, from the oil rig's kit list. Heavy, and the shins are guarded.",
+	"Fell shoes": "Studded rubber for the hills. Up a bank of rubble quicker than anybody chasing you.",
+	"Desert boots": "Suede, a crepe sole, worn by every art student in the seventies. Quiet as you like.",
+	"Hobnail boots": "Iron-studded, from a farm's back porch. You hear them coming, and nothing gets at your shins.",
+	"Trail shoes": "Grippy and light, from the outdoor shop. Made for mud and quick through it.",
+	"Walking boots": "Broken in over a hundred Sunday walks. Steady, and they don't creak.",
+	"Bovver boots": "Fourteen eyelets and a yellow stitch. Bought for the look and good for the shins.",
+	"Running spikes": "Steel pins in a thin plate, off the athletics track. Every step is a sprint.",
+	"Keeper's brogues": "Soft leather, the soles worn quiet on keepers' land. He was never once caught.",
+	"Motorcycle boots": "Armoured at the ankle and the shin, made for the road. Heavy to walk in, hard to hurt.",
+	"Orienteering shoes": "Cleated, half-mesh, made for running through a wood at a map's pace.",
+	"Stalking boots": "Waxed leather and a soft sole, made for the hill and the deer. They're on you before you hear them.",
+	"Firefighter's boots": "Leather and steel, made to walk into a fire. Anything less than that just bounces off.",
+	"Patrol boots": "The army's newest, light and laced fast. Out of the door before the kettle's boiled.",
+	"Jungle boots": "Canvas sides, drain holes, a sole made for moving through the green and making no noise.",
+	"Riot boots": "Plates at the shin, a toe-cap past the knuckle. The front line's own.",
+	"Special forces boots": "The best there is: light, laced, and gone before anybody looks round.",
+	"Ghillie boots": "The sniper team's, wrapped in hessian. The gangs walk past the place you're standing.",
+	"EOD boots": "The bomb squad's: blast plates to the knee. Nothing gets through them.",
+	"Wading boots": "Felt-soled, from the boating lake's hut. Quiet in the shallows and quieter on the tiles.",
+	"Hospital clogs": "Rubber, wipe-clean, the porter's. Twelve-hour shifts at a walk that's nearly a run.",
+	"Parade boots": "Bulled to a mirror and steel-shod at the heel. For the Treasury's guard, who never stood easy.",
 	# (BUILD55-C) the stages' new bases (docs/design/stages.md §5), for the language pass
 	"Garden fork": "Four tines and an ash handle worn pale, off a plot by the railway. It goes in easier than it comes out.",
 	"Bone saw": "From the theatre trays, steel and heavy in the hand. It was made for bone.",
@@ -2005,6 +2052,8 @@ static func toast_tone(line: String) -> String:
 		return "good"
 	if line.begins_with(RADIO_LEAD):
 		return "none"                           # the radio line under the top bar plays it (13 Oct): no toast
+	if line.begins_with(T67["mark"]):
+		return "legendary"                      # (BUILD67-I) a top-tier find: the gold line
 	return "none"
 
 
@@ -2300,7 +2349,7 @@ const T50_FOCUS := {
 	"unique": "Unique chance ×3", "unique_short": "Uniques ×3",
 	"tip": "This signal's focus: its run's finds lean this way",
 	"slot_names": {"Primary": "Primaries", "Secondary": "Sidearms", "Helmet": "Helmets", "Armour": "Armour", "Gloves": "Gloves", "Rig": "Rigs",
-		"Backpack": "Packs", "Charm": "Charms"},
+		"Backpack": "Packs", "Boots": "Boots", "Charm": "Charms"},     # (BUILD67-K) boots
 }
 const T50_RESIST := {
 	"job": "Add a resist", "words": "A resist you pick · a step rarer", "pick": "Which resist?", "el": "%s resist", "cancel": "Back",
@@ -2395,7 +2444,78 @@ const U61 := {
 	"kicker": "%s · The County",                    # the picture's kicker: "The Motorway · the County"
 	"issued_key": "Issued kit",                     # what it takes: the zone's want, against what's worn
 	"worn": "%d of %d worn", "worn_short": "%d worn",
-	"slots": {"Helmet": "Helmet", "Armour": "Armour", "Rig": "Rig", "Charm": "Charm", "Secondary": "Sidearm", "Primary": "Primary"},
+	"slots": {"Helmet": "Helmet", "Armour": "Armour", "Rig": "Rig", "Charm": "Charm", "Secondary": "Sidearm", "Primary": "Primary",
+		"Gloves": "Gloves", "Backpack": "Pack", "Boots": "Boots"},     # (BUILD67-K) the nine issued slots
 	"issued_short": "Issued kit",                   # the Head's bring-home tile, short
 	"here": "Your record: taken %s", "here_once": "Your record: taken once", "here_never": "Your record: never taken",                # "Your record: taken 3 times"
+}
+
+
+## BUILD66-F (7 Nov): the fight's shooter mechanics (docs/design/endgame_rail.md §1) - for the language pass.
+## The hard men's names: plain English, no one real.
+const HARD66_NAMES := ["Big Terry Vance", "Mad Dave Pritchard", "Gary Hollins", "Kenny Rudd", "Lee Barlow", "Darren Coyle",
+	"Big Mick Tully", "Tony Haskins", "Carl Denby", "Shane Morley", "Dean Ashworth", "Barry Kemp", "Little Phil Grange",
+	"Ronnie Blake", "Neil Furness", "Colin Stubbs", "Wayne Bevan", "Huw Jenkins", "Gaz Whitlock", "Trev Oakes",
+	"Nobby Platt", "Dennis Pell", "Frank Doyle", "Stu Ingram", "Paul Fenner", "Glyn Probert", "Craig Lumb", "Rhys Prosser",
+	"Gethin Pugh", "Dougie Reid"]
+## His traits' chip words, by key (Data.HARD66_TRAITS).
+const HARD66_TRAITS := {"armoured": "Armoured", "medic": "First aider", "spotter": "Spotter", "runner": "Messenger"}     # (the editor, 7 Nov: "Runner" is the glossary's runner)
+const LOG66 := {
+	"headshot_kill": "Headshot kills %s: %s damage%s",    # "Headshot kills a man: 4,120 damage, through his helmet"
+	"a_man": "a man",
+	"helmet": ", through his helmet",
+	"jam": "Your %s jammed for %s seconds",                # "Your Pump shotgun jammed for 0.8 seconds"
+	"hard_in": "%s, a hard man, is with this gang: %s",    # "Big Terry Vance, a hard man, is with this gang: armoured, first aider"
+	"and": ", ",
+	"medic": "%s patches his gang up: they heal",
+	"runner": "%s sends for help: the next gang comes sooner",
+	"spotter": "%s calls your position: his gang misses less",
+	"hard_down": "%s is down: one more find, at better loot quality",
+	"last_stand": "Last legs: on your feet for %s seconds",     # (the editor: "Last stand" is the skills' chip)
+	"last_stand_held": "Last legs held: the gang's down",
+	"last_stand_out": "Last legs ran out",
+}
+
+
+## The fight view's shooter mechanics (BUILD66-V, 7 Nov; docs/design/endgame_rail.md §1, the Fight mockup): the headshot's
+## pop, the jam over your gun, the hard man's plate, the streak and Last Stand at the frame's top. The log's lines are
+## F's (Words.LOG66).
+const V66 := {
+	"headshot": "HEADSHOT %s",                       # the pop over the man hit: the shot's damage
+	"jammed": "Jammed · %s s",                       # over your gun while it's jammed: the time left
+	"hard": "HARD MAN",                              # the plate's kicker over his name
+	"streak_n": "%d",                                # the streak's count, after the word: "Streak 7" (the editor)
+	"streak": "Streak",
+	"streak_bonus": ["+%d%% damage until you're hit", "+%d%% damage"],     # its bonus, long to short (streak_dmg_pct builds)
+	"last_stand": "Last legs",                       # (the editor: the skills' chip is "Last stand")
+	"ls_ready": "Ready", "ls_on": "%s s", "ls_used": "Used",              # after "Last legs · "
+}
+
+
+# ------------------------------------------------------------------ BUILD67-K (8 Nov): boots, issued versions
+## The County card's want chips, nine to a row: a slot's short where its name won't go (as the stash cells say them).
+const K67_SLOT_SHORT := {"Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Charm": "CHM", "Secondary": "SEC", "Primary": "PRI",
+	"Gloves": "GLV", "Backpack": "PCK", "Boots": "BTS"}
+## The Issuer's counter: a version's one word on its pick button, by the piece's name.
+const K67_TAG := {
+	"Issued rifle": "Bounty", "Issued steady rifle": "Steady", "Issued marksman's rifle": "Headshot",
+	"Issued sidearm": "Rank", "Issued quick-draw pistol": "Quick", "Issued duty pistol": "Duty",
+	"Issued cap": "Fence", "Issued spotter's cap": "Eye", "Issued riot cap": "Riot",
+	"Issued plate": "Order", "Issued light plate": "Light", "Issued escort plate": "Escort",
+	"Issued webbing": "Medic", "Issued ammo webbing": "Reload", "Issued scavenger's webbing": "Scavenge",
+	"Issued seal": "Burner", "Issued medal": "Streak", "Issued bugle": "Pin",
+	"Issued gloves": "Grip", "Issued shooting gloves": "Rate", "Issued tracker's gloves": "Leg shots",
+	"Issued bergen": "Loot", "Issued search pack": "Search", "Issued light pack": "Stride",
+	"Issued boots": "Pace", "Issued quiet boots": "Quiet", "Issued combat boots": "Heavy",
+}
+
+
+## BUILD67-I (8 Nov, docs/design/endgame_rail.md §2): the top tier's mark and its log line, and the uniques' lines in the
+## log - for the language pass.
+const T67 := {
+	"mark": "◆",                                                   # on the item wherever its tiers show: the affix chip's tag, the cell's corner
+	"found": "◆ Top tier: %s, %s",                                 # "◆ Top tier: Riot shotgun, +28% damage"
+	"sling": "The Gun Club Sling: your %s takes over",             # a second primary out of the rig
+	"bonfire": "The fireworks go off: everyone on you burns",      # the Bonfire Box, the first time a run
+	"lifeboat": "Back on your feet at 20% HP",    # the Lifeboat Jacket's kill in Last legs
 }

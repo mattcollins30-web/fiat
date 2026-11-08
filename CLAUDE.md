@@ -38,6 +38,10 @@ getting wasting cycles on balancing, changing stuff and then running a pass." No
 is dropped until Matt has played a save through to the County and the Issue (fiat) and says one is wanted. Findings
 that would need a pass go on the status board's "For the balance pass" list instead.
 
+7 Nov, Matt: "I'd argue there's zero point in doing a full pass until we're ready to release a playtest build." Once
+the 0.15 builds land (docs/design/endgame_rail.md): a short pass only; the full multi-hour pass on the Legion waits for
+a playtest build being released; a second short pass only if the first finds a wall.
+
 ## Before you start (28 Oct, Matt: "we just need to reduce the misses here")
 
 At the start of every work item, and after every compaction, find its row and read what it names before writing
@@ -134,7 +138,7 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   fix that grows a feature in the designing: the fix goes in, the growth to the backlog.
 - Balance passes are bought time: shorter reads while iterating, the full pass for a final.
 - The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>; the build counts the commits
-  Matt plays within a milestone. 0.14.5 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
+  Matt plays within a milestone. 0.15.1 is current (the milestones' list: docs/pm_history.md). SAVE_VERSION is its own
   count. Claude bumps the version in the commit Matt plays and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")

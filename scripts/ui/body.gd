@@ -30,8 +30,8 @@ const CARD_H := 119
 const CARD_GAP := 8
 const PAD := 8
 const ART_INSET := 3                           # the art over the whole card, inside its line
-const LEFT := ["Backpack", "Primary", "Secondary"]            # Matt, 10 Oct: the pack big over the weapons down the left
-const RIGHT := ["Helmet", "Armour", "Gloves", "Rig", "Charm"]             # the charm where the pack was; the gloves between the armour and the rig, level with the hands (29 Oct, Matt: layout A)
+const LEFT := ["Charm", "Backpack", "Primary", "Secondary"]            # Matt, 10 Oct: the pack big over the weapons down the left; (BUILD67-K, Matt 8 Nov: "swap charm and boots") the charm on top, over a shorter pack
+const RIGHT := ["Helmet", "Armour", "Gloves", "Rig", "Boots"]             # the gloves between the armour and the rig, level with the hands (29 Oct, Matt: layout A); (BUILD67-K) boots at the foot, where the charm was
 const WIDTH := Inventory.SIDE_W    # 608
 const HEIGHT := 648                            # the column (the pack's map went, 10 Oct: 516 → 648); each card its own height, below
 const GLASS := Pal.PANEL
@@ -75,7 +75,7 @@ var _shown := ""
 ## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
 const LEFT_W := 246
 const RIGHT_W := 150
-const HEIGHTS := {"Backpack": 240, "Primary": 192, "Secondary": 184, "Helmet": 120, "Armour": 156, "Gloves": 104, "Rig": 116, "Charm": 104}     # each column fills the 648 with its gaps (29 Oct: five down the right, the armour's shorter)
+const HEIGHTS := {"Charm": 104, "Backpack": 128, "Primary": 192, "Secondary": 184, "Helmet": 120, "Armour": 156, "Gloves": 104, "Rig": 116, "Boots": 104}     # each column fills the 648 with its gaps (29 Oct: five down the right, the armour's shorter); (BUILD67-K) four down the left: the charm's 104 off the pack's 240, less a gap
 const HANDS := 0.55                            # the hands, down the drawn figure: the gloves' card sits level with them (29 Oct)
 
 
@@ -339,6 +339,8 @@ static func figure_forms(it: Dictionary) -> Array:
 	if slot == "Gloves":
 		var gh: Array = Items.glove_headline(it)     # their role's figure (29 Oct)
 		return ["%s %s" % [gh[0], gh[1]], "%s %s" % [gh[0], Items.glove_unit_short(it)], str(gh[0])]     # the unit short before none (the fix round)
+	if slot == Data.BOOTS:
+		return Items.k67_boots_forms(it)     # (BUILD67-K) pace, then leg armour or the gang clock
 	if slot == "Backpack":
 		return ["%d cells" % Items.capacity(it)]
 	if slot == "Rig":

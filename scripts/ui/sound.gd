@@ -678,6 +678,8 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 		if not (it["id"] in _seen["floor"]):
 			if it.get("mythic", false):
 				find_mythic()
+			elif Items.has_t6(it):
+				find_top()                     # (BUILD67-I) a top-tier find's own sound
 			else:
 				cue("find_unique" if it.has("unique") or it.has("set") else ("find_rare" if int(it.get("rarity", 0)) >= 2 else "find_common"))
 	for id in now["found"]:
@@ -688,9 +690,11 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 		cue("ditch")
 	# a rare off a kill, straight into the pack
 	for it in m["found"]:
-		if not (it["id"] in _seen["found"]) and not (it["id"] in _seen["floor"]) and (int(it.get("rarity", 0)) >= 2 or it.has("unique") or it.has("set")):
+		if not (it["id"] in _seen["found"]) and not (it["id"] in _seen["floor"]) and (int(it.get("rarity", 0)) >= 2 or it.has("unique") or it.has("set") or Items.has_t6(it)):
 			if it.get("mythic", false):
 				find_mythic()
+			elif Items.has_t6(it):
+				find_top()                     # (BUILD67-I)
 			else:
 				cue("find_unique" if it.has("unique") or it.has("set") else "find_rare")
 
@@ -807,3 +811,12 @@ func cued() -> Array:
 
 func clear_cued() -> void:
 	_cued = []
+
+
+## A top-tier find (BUILD67-I, 8 Nov, docs/design/endgame_rail.md §2: the ◆ "its own sound", from what exists): the rare's
+## sting high and the unique's under it a step up - its own, between a unique's and a mythic's.
+func find_top() -> void:
+	cue("find_rare", 0.0, 1.5)
+	cue("find_unique", 0.0, 1.12)
+	_last = "find_top"
+	_cued.append("find_top")

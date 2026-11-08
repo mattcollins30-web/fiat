@@ -13,8 +13,11 @@ extends RefCounted
 ## The body, in the order the Armoury shows it.
 ## Gloves (29 Oct, docs/design/itemisation.md §4): the eighth slot, pace and the like; the Kit room shows them on the right,
 ## level with the figure's hands.
-const SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"]
+## Boots (8 Nov, BUILD67-K, docs/design/endgame_rail.md §2): the ninth slot - pace, the gang clock, leg armour; the Kit shows
+## them bottom right, below the rig, where the charm was (the charm went top left, above a shorter pack).
+const SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Boots", "Charm"]     # (BUILD67-K) "Boots"
 const GLOVES := "Gloves"
+const BOOTS := "Boots"     # (BUILD67-K)
 ## The charm: one cell on the body for the thing kept for luck. It carries
 ## magic find (rarer finds) and cash, and nothing else does much of either.
 const CHARM := "Charm"
@@ -51,7 +54,7 @@ const RADIO_EVERY := 3             # the radio comes on every this many runs hom
 ## pack, and the size its picture is drawn at (64 px a cell). The slot gives
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
-const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Gloves": [2, 2], "Rig": [3, 2], "Backpack": [3, 3],
+const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Gloves": [2, 2], "Rig": [3, 2], "Backpack": [3, 3], "Boots": [2, 2],     # (BUILD67-K) boots 2x2, as the gloves
 	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1], "Supplies": [1, 1], "Magazine": [1, 1], "Material": [1, 1]}
 const FOOTPRINTS := {
 	# melee
@@ -265,8 +268,8 @@ const WAGER_PAYS := [
 	{"id": "slot", "chip": "×3 %s finds", "x": 3},
 	{"id": "quality", "chip": "+50% loot quality", "x": 0.5},
 ]
-const WAGER_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Backpack", "Rig", "Charm"]
-const WAGER_SLOT_WORDS := {"Primary": "gun", "Armour": "armour", "Helmet": "helmet", "Gloves": "gloves", "Backpack": "pack", "Rig": "rig", "Charm": "charm"}     # the slots as the chips say them (the language pass)
+const WAGER_SLOTS := ["Primary", "Armour", "Helmet", "Gloves", "Backpack", "Rig", "Boots", "Charm"]     # (BUILD67-K) boots
+const WAGER_SLOT_WORDS := {"Primary": "gun", "Armour": "armour", "Helmet": "helmet", "Gloves": "gloves", "Backpack": "pack", "Rig": "rig", "Boots": "boots", "Charm": "charm"}     # the slots as the chips say them (the language pass)
 const WAGER_GANG := 1.5
 const WAGER_HARD := 1.25
 const WAGER_CLOCK := 0.5
@@ -296,7 +299,7 @@ const RIG_CAP := 24
 
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
-	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour", "Gloves": "grip",     # gloves: the fight's damage a second, pace in (29 Oct)
+	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour", "Gloves": "grip", "Boots": "grip",     # gloves: the fight's damage a second, pace in (29 Oct); boots read as the gloves (BUILD67-K)
 	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw", "Supplies": "value", "Magazine": "mag", "Material": "value",
 	"Charm": "find",
 }
@@ -818,6 +821,42 @@ const BASES := {
 		# against their tier's neighbours; each on a borrowed picture (ART_AS) until the art
 		{"name": "Clerk's mitts", "tier": 8, "pace": 8, "stats": {"loot_pct": 6}, "value": 1080, "role": "pace"},     # under the Abseiling gloves' 9: a point of pace for loot
 		{"name": "Examiner's gloves", "tier": 9, "stats": {"reload_pct": 74}, "res": {"poison": 20}, "value": 1480, "role": "grip"},     # under the EOD gauntlets' 80: poison resist for it
+	],
+	## Boots (8 Nov, BUILD67-K, endgame_rail.md §2): the ninth slot. Pace is the headline - every pair carries some (base
+	## "pace", as the gloves' and the armour's) - and a role says what else: "pace" the most of it; "quiet" less, the gangs
+	## later (patrol_pct, built in); "heavy" the least, leg armour (flat armour). Three a tier; figures BOOTS67_* first guesses.
+	"Boots": [
+		{"name": "Plimsolls", "tier": 1, "pace": 3, "value": 25, "role": "pace"},
+		{"name": "Carpet slippers", "tier": 1, "pace": 1, "stats": {"patrol_pct": 6}, "value": 25, "role": "quiet"},
+		{"name": "Wellies", "tier": 1, "pace": 1, "armour": 6.0, "value": 30, "role": "heavy"},
+		{"name": "Trainers", "tier": 2, "pace": 4, "value": 55, "role": "pace"},
+		{"name": "Deck shoes", "tier": 2, "pace": 1, "stats": {"patrol_pct": 8}, "value": 55, "role": "quiet"},
+		{"name": "Work boots", "tier": 2, "pace": 1, "armour": 10.0, "value": 60, "role": "heavy"},
+		{"name": "Running shoes", "tier": 3, "pace": 5, "value": 110, "role": "pace"},
+		{"name": "Crepe soles", "tier": 3, "pace": 2, "stats": {"patrol_pct": 10}, "value": 110, "role": "quiet"},
+		{"name": "Rigger boots", "tier": 3, "pace": 1, "armour": 14.0, "value": 120, "role": "heavy"},
+		{"name": "Fell shoes", "tier": 4, "pace": 6, "value": 210, "role": "pace"},
+		{"name": "Desert boots", "tier": 4, "pace": 2, "stats": {"patrol_pct": 12}, "value": 210, "role": "quiet"},
+		{"name": "Hobnail boots", "tier": 4, "pace": 2, "armour": 19.0, "value": 220, "role": "heavy"},
+		{"name": "Trail shoes", "tier": 5, "pace": 7, "value": 350, "role": "pace"},
+		{"name": "Walking boots", "tier": 5, "pace": 3, "stats": {"patrol_pct": 14}, "value": 350, "role": "quiet"},
+		{"name": "Bovver boots", "tier": 5, "pace": 2, "armour": 24.0, "value": 360, "role": "heavy"},
+		{"name": "Running spikes", "tier": 6, "pace": 8, "value": 510, "role": "pace"},
+		{"name": "Keeper's brogues", "tier": 6, "pace": 3, "stats": {"patrol_pct": 16}, "value": 510, "role": "quiet"},
+		{"name": "Motorcycle boots", "tier": 6, "pace": 2, "armour": 30.0, "value": 520, "role": "heavy"},
+		{"name": "Orienteering shoes", "tier": 7, "pace": 9, "value": 790, "role": "pace"},
+		{"name": "Stalking boots", "tier": 7, "pace": 4, "stats": {"patrol_pct": 18}, "value": 790, "role": "quiet"},
+		{"name": "Firefighter's boots", "tier": 7, "pace": 3, "armour": 36.0, "value": 800, "role": "heavy"},
+		{"name": "Patrol boots", "tier": 8, "pace": 10, "value": 1090, "role": "pace"},
+		{"name": "Jungle boots", "tier": 8, "pace": 4, "stats": {"patrol_pct": 20}, "value": 1090, "role": "quiet"},
+		{"name": "Riot boots", "tier": 8, "pace": 3, "armour": 42.0, "value": 1100, "role": "heavy"},
+		{"name": "Special forces boots", "tier": 9, "pace": 12, "value": 1490, "role": "pace"},
+		{"name": "Ghillie boots", "tier": 9, "pace": 5, "stats": {"patrol_pct": 22}, "value": 1490, "role": "quiet"},
+		{"name": "EOD boots", "tier": 9, "pace": 3, "armour": 50.0, "value": 1500, "role": "heavy"},
+		# the sites' themed finds (BUILD67-K): drafted by role against their tier's neighbours, each on a borrowed picture (ART_AS)
+		{"name": "Wading boots", "tier": 3, "pace": 1, "stats": {"patrol_pct": 11}, "value": 110, "role": "quiet"},     # the Pleasure Park's: under the Crepe soles' pace, a point more clock
+		{"name": "Hospital clogs", "tier": 5, "pace": 6, "stats": {"med_speed_pct": 6}, "value": 350, "role": "pace"},     # the Hospital's: a point under the Trail shoes, quicker meds
+		{"name": "Parade boots", "tier": 9, "pace": 4, "armour": 46.0, "value": 1480, "role": "heavy"},     # the Treasury's (the County): under the EOD boots' armour, a point quicker
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
@@ -1433,6 +1472,41 @@ const UNIQUES := [
 		"words": "15% more pace until the site is cleared", "short": "+15% pace before the clear", "affixes": [{"stat": "reload_pct", "value": 10}, {"stat": "speed_pct", "value": 4}]},
 	{"name": "The Safecracker's Gloves", "slot": "Gloves", "base": "Leather gloves", "rule": "safecrackers", "band": "chase", "range": [5, 9], "depth": 12,
 		"words": "Reloads take no time · −15% rate of fire", "short": "No reloads · −15% rate of fire", "affixes": [{"stat": "attack_pct", "value": 10}, {"stat": "cdr_pct", "value": 5}]},
+	# (BUILD67-K) the boots' two (endgame_rail.md §2); their rules in the sim (search_s, patrol_s, the kill loop)
+	{"name": "The Postman's Boots", "slot": "Boots", "base": "Walking boots", "rule": "postmans", "band": "core", "range": [3, 7], "depth": 6,
+		"words": "Searches 25% quicker; gangs come 20% later", "short": "+25% quicker searches · +20% gangs later", "affixes": [{"stat": "speed_pct", "value": 4}, {"stat": "loot_pct", "value": 8}]},
+	{"name": "Steel Toecaps", "slot": "Boots", "base": "Hobnail boots", "rule": "steel_toecaps", "band": "chase", "range": [4, 9], "depth": 12,
+		"words": "Every man who reaches you takes a kick: 20% of his HP", "short": "A kick: 20% of each man's HP", "affixes": [{"stat": "armour", "value": 15}, {"stat": "hp", "value": 20}]},
+
+
+	# (BUILD67-I, 8 Nov, docs/design/endgame_rail.md §2) the 13 over the fight's shooter mechanics: bands as the others'
+	# (levelling 1-3; core 3-9 from depth 6; chase 5-9 from depth 12); a rule each, read by the sim's BUILD67-I block
+	{"name": "Grandad's .303", "slot": "Primary", "base": "Old .303", "rule": "lee_enfield", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Every 5th round is a headshot", "short": "Every 5th round a headshot", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "head_dmg_pct", "value": 30}]},
+	{"name": "The Groundsman's Shotgun", "slot": "Primary", "base": "Pump shotgun", "rule": "groundsmans", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Every hit is a leg shot: the next gang comes 30% later; 15% less damage", "short": "+30% gangs later · −15% damage", "affixes": [{"stat": "attack_pct", "value": 10}, {"stat": "life_per_kill", "value": 6}]},
+	{"name": "The Range Officer's Rifle", "slot": "Primary", "base": "Range rifle", "rule": "range_officer", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Headshots ignore their helmets", "short": "Headshots ignore helmets", "affixes": [{"stat": "head_pct", "value": 6}, {"stat": "damage_pct", "value": 20}]},
+	{"name": "The Allotment Zip Gun", "slot": "Secondary", "base": "Zip gun", "rule": "zip_gun", "band": "levelling", "range": [1, 3],
+		"words": "Jams 1 shot in 5; when it fires, triple damage", "short": "Jams 1 in 5 · ×3 damage", "affixes": [{"stat": "damage_pct", "value": 10}, {"stat": "attack_pct", "value": 5}]},
+	{"name": "The Station Revolver", "slot": "Secondary", "base": "Police revolver", "rule": "desk_sergeant", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Never jams; the last round in a cylinder is a headshot", "short": "No jams · Last round a headshot", "affixes": [{"stat": "head_dmg_pct", "value": 40}, {"stat": "damage_pct", "value": 15}]},
+	{"name": "The Armourer's Box", "slot": "Rig", "base": "Load carrier", "rule": "armourers_box", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Your rounds ignore half their armour; reloads take 33% longer", "short": "50% armour ignored · +33% reload time", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "armour", "value": 15}]},
+	{"name": "The Magpie's Pouches", "slot": "Rig", "base": "Webbing", "rule": "magpies", "band": "core", "range": [3, 9], "depth": 6,
+		"words": "A kill puts 2 rounds back in the magazine; 1 pouch fewer", "short": "2 rounds back a kill · −1 pouch", "affixes": [{"stat": "scav_pct", "value": 10}, {"stat": "loot_pct", "value": 10}]},
+	{"name": "The Gun Club Sling", "slot": "Rig", "base": "Quick-release rig", "rule": "gun_club_sling", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Your best primary in the stash rides in the rig; it takes over when the one in your hands runs dry", "short": "A second primary takes over", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "hp", "value": 20}]},
+	{"name": "The Bin Man's Gloves", "slot": "Gloves", "base": "Work gloves", "rule": "bin_mans", "band": "core", "range": [3, 9], "depth": 6,
+		"words": "Every crate searched fills a magazine", "short": "A crate fills a magazine", "affixes": [{"stat": "reload_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
+	{"name": "The Bouncer's Knuckles", "slot": "Gloves", "base": "Tactical gloves", "rule": "bouncers", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Men you hit in the arm miss 40% of their shots for 3 seconds", "short": "Arm shots: 40% misses", "affixes": [{"stat": "arm_pct", "value": 10}, {"stat": "attack_pct", "value": 8}]},
+	{"name": "The Bonfire Box", "slot": "Charm", "base": "Box of matches", "rule": "bonfire_box", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Every 8th kill in a run sets the fireworks off: everyone on you burns for 25% of a man's HP and stops firing for 1 second", "short": "Every 8th kill: all on you burn", "affixes": [{"stat": "fire_pct", "value": 20}, {"stat": "streak_dmg_pct", "value": 2}]},
+	{"name": "The Football Rattle", "slot": "Charm", "base": "Brass canary", "rule": "football_rattle", "band": "core", "range": [3, 9], "depth": 6,
+		"words": "Your fire pins them down twice as fast; pinned men fire 30% slower", "short": "Pins ×2 · Pinned men −30% rate of fire", "affixes": [{"stat": "suppress_pct", "value": 20}, {"stat": "patrol_pct", "value": 8}]},
+	{"name": "The Lifeboat Jacket", "slot": "Armour", "base": "Waxed coat", "rule": "lifeboat", "band": "chase", "range": [5, 9], "depth": 12,
+		"words": "Fight on for 5 seconds at 0 HP, once a run; a kill in that time brings you back at 20% HP", "short": "5 s Last legs · A kill: back at 20% HP", "affixes": [{"stat": "hp", "value": 30}, {"stat": "armour", "value": 15}]},
 	# the mythics (16 Oct, Matt: "a really powerful unique per slot ... a flat % drop rate across the entire game ... if
 	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
 	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
@@ -1875,8 +1949,8 @@ const AFFIXES := [
 	# the carry: pouches, meds, searches, gangs later, notes
 	{"stat": "med_cap", "label": "pouch", "short": "pouch", "min": 1, "max": 3, "slots": ["Rig"], "flat": true},
 	{"stat": "med_speed_pct", "label": "quicker meds", "short": "med spd", "min": 5, "max": 30, "slots": ["Rig", "Helmet", "Gloves"]},
-	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet", "Gloves"]},
-	{"stat": "patrol_pct", "label": "gangs later", "short": "gangs later", "min": 4, "max": 18, "slots": ["Helmet", "Charm"]},
+	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet", "Gloves", "Boots"]},     # (the 67 fix round) boots
+	{"stat": "patrol_pct", "label": "gangs later", "short": "gangs later", "min": 4, "max": 18, "slots": ["Helmet", "Charm", "Boots"]},     # (BUILD67-I) boots: the gang clock
 	{"stat": "notes_pct", "label": "notes", "short": "notes", "min": 5, "max": 25, "slots": ["Charm", "Backpack"]},
 	# the types: increased a type, a share of the hit as a type, resists
 	{"stat": "fire_pct", "label": "fire damage", "short": "fire", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
@@ -1890,11 +1964,11 @@ const AFFIXES := [
 	{"stat": "conv_poison_pct", "label": "of damage as poison", "short": "as poison", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_shock_pct", "label": "of damage as shock", "short": "as shock", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_bleed_pct", "label": "of damage as bleed", "short": "as bleed", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
-	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
-	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
-	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
-	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
-	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves"]},
+	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves", "Boots"]},
+	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves", "Boots"]},
+	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves", "Boots"]},
+	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves", "Boots"]},
+	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig", "Gloves", "Boots"]},
 	# act two §5 (BUILD50-T): an element's resist on the gloves too (the body pieces Matt names: helmet, armour, gloves),
 	# and RES_BODY_LIFT its weight on them (Items.pick_affixes)
 	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm", "Rig"], "weight": 0.3},
@@ -1910,7 +1984,7 @@ const AFFIXES := [
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 1, "max": 6, "slots": ["Gloves"], "flat": true, "weight": 0.6},     # the gloves' small armour (29 Oct, §4: "armour (small)")
 	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
 	{"stat": "capacity", "label": "pack cells", "short": "cells", "min": 1, "max": 6, "slots": ["Backpack"], "flat": true},
-	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Armour", "Gloves"]},     # off the guns (29 Oct)
+	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Armour", "Gloves", "Boots"]},     # off the guns (29 Oct); (BUILD67-I) boots: pace
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
 	# Guard (12 Oct): anyone's, a little
 	{"stat": "overflow_pct", "label": "of its overheal as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
@@ -1951,6 +2025,22 @@ const AFFIXES := [
 	{"stat": "rarity_pct", "label": "loot quality", "short": "quality", "min": 5, "max": 15, "slots": ["Charm", "Helmet", "Backpack"]},
 	{"stat": "cash_pct", "label": "tins", "short": "tins", "min": 5, "max": 15, "slots": ["Charm"]},
 	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 12, "slots": ["Charm"]},
+	# (BUILD67-I, 8 Nov, docs/design/endgame_rail.md §2) the affixes over 0.15.0's stats (Sim.f66_stat sums them): headshots on
+	# guns and helmets; pierce on guns and rigs; leg and arm shots on guns and gloves; pinning on guns and charms; the
+	# scavenger on rigs and gloves; the streak on charms and gloves; Last legs on armour; never jams on guns; the boots'
+	# small armour. Weights 1 (as the old ones) but the flag's; figures first guesses for the short pass
+	{"stat": "head_pct", "label": "headshot chance", "short": "headshot", "min": 1, "max": 8, "slots": ["Primary", "Secondary", "Helmet"]},
+	{"stat": "head_dmg_pct", "label": "headshot damage", "short": "head dmg", "min": 10, "max": 60, "slots": ["Primary", "Secondary", "Helmet"]},
+	{"stat": "helmet_ignore_pct", "label": "of their helmets ignored", "short": "helmet ignored", "min": 5, "max": 40, "slots": ["Primary", "Secondary", "Helmet"]},
+	{"stat": "pierce_pct", "label": "of their armour ignored", "short": "armour ignored", "min": 5, "max": 40, "slots": ["Primary", "Secondary", "Rig"]},
+	{"stat": "leg_pct", "label": "of hits are leg shots", "short": "leg shots", "min": 2, "max": 12, "slots": ["Primary", "Secondary", "Gloves"]},
+	{"stat": "arm_pct", "label": "of hits are arm shots", "short": "arm shots", "min": 2, "max": 12, "slots": ["Primary", "Secondary", "Gloves"]},
+	{"stat": "suppress_pct", "label": "quicker to pin them down", "short": "pin", "min": 10, "max": 50, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "scav_pct", "label": "chance a kill puts a round back", "short": "round back", "min": 5, "max": 30, "slots": ["Rig", "Gloves"]},
+	{"stat": "streak_dmg_pct", "label": "damage a kill in the streak", "short": "dmg/kill", "min": 1, "max": 5, "slots": ["Charm", "Gloves"]},
+	{"stat": "last_stand_s", "label": "seconds of Last legs", "short": "s Last legs", "min": 2, "max": 6, "slots": ["Armour"]},
+	{"stat": "no_jam", "label": "Never jams", "short": "No jams", "min": 1, "max": 1, "slots": ["Primary", "Secondary"], "flag": true, "weight": 0.4},
+	{"stat": "armour", "label": "armour", "short": "arm", "min": 2, "max": 12, "slots": ["Boots"], "flat": true},     # the boots' leg armour: the flat line, small
 ]
 ## Stats a unique or a set piece carries that no piece rolls (30 Oct, the review's I5: a card read "+20% first_pct"):
 ## their words for a card, as an affix's label and short.
@@ -2180,6 +2270,38 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
 const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
+	# (BUILD67-K) the 30 boots borrow a pair of gloves' picture (2x2, a role's own: pace the pace pair, quiet the grip pair,
+	# heavy the rate pair, of their tier) until the art manifest after Matt plays them
+	"Plimsolls": "Woolly gloves",
+	"Trainers": "Cycling mitts",
+	"Running shoes": "Goalkeeper gloves",
+	"Fell shoes": "Racing gloves",
+	"Trail shoes": "Fell-runner's gloves",
+	"Running spikes": "Pilot's gloves",
+	"Orienteering shoes": "Paratrooper's gloves",
+	"Patrol boots": "Abseiling gloves",
+	"Special forces boots": "Dress uniform gloves",
+	"Carpet slippers": "Gardening gloves",
+	"Deck shoes": "Rigger gloves",
+	"Crepe soles": "Leather gloves",
+	"Desert boots": "Roofer's gloves",
+	"Walking boots": "Cut-resistant gloves",
+	"Keeper's brogues": "Riot gauntlets",
+	"Stalking boots": "Firefighter's gloves",
+	"Jungle boots": "Flight-deck gloves",
+	"Ghillie boots": "EOD gauntlets",
+	"Wellies": "Work gloves",
+	"Work boots": "Driving gloves",
+	"Rigger boots": "Shooting gloves",
+	"Hobnail boots": "Tactical gloves",
+	"Bovver boots": "Armourer's gloves",
+	"Motorcycle boots": "Stalker's gloves",
+	"Firefighter's boots": "Close-combat gloves",
+	"Riot boots": "Counter-sniper gloves",
+	"EOD boots": "Special forces gloves",
+	"Wading boots": "Leather gloves",
+	"Hospital clogs": "Fell-runner's gloves",
+	"Parade boots": "Dress uniform gloves",
 	}     # the stages' 24 new bases (6 Nov) and the County's 24 (7 Nov, the 18:24 art.done) have their own pictures: their borrows gone
 
 const COMMON_TREE := "The Pitch"
@@ -2975,8 +3097,8 @@ const CRAFT := {
 	"temper": {"name": "Temper", "scrap": 100, "cash": 0, "words": "+1 item level past Item level +3: its damage, armour and flat lines grow as a deeper drop's; not a mythic, a rig, a pack or a charm"},     # scrap 20 to 100, priced by item level; tins a share of its sale (the second review)
 }
 const RESIST_JOB_PRICE := 1.5          # "Add a resist": CRAFT add's cash x this (CRAFT resist's 150; the smoke holds them equal)
-const RESIST_JOB_SLOTS := ["Armour", "Helmet", "Gloves", "Charm"]
-const RES_BODY_SLOTS := ["Helmet", "Armour", "Gloves"]   # an element's resist a third likelier in the affix pool on these
+const RESIST_JOB_SLOTS := ["Armour", "Helmet", "Gloves", "Charm", "Boots"]     # (the 67 fix round) boots
+const RES_BODY_SLOTS := ["Helmet", "Armour", "Gloves", "Boots"]   # an element's resist a third likelier in the affix pool on these
 const RES_BODY_LIFT := 4.0 / 3.0
 const GREED_QUALITY := 0.10          # greed after the clear (25 Oct): loot quality a gang that comes after it, for the rest of the run
 const GREED_QUANTITY := 0.05         # and quantity
@@ -4004,7 +4126,7 @@ const FOCUS_MATERIAL := 2                # a material focus: this many more of i
 const FOCUS_SLOT := 0.5                  # a slot focus: this share of the gear finds that slot
 const FOCUS_RESIST := 1.0 / 3.0          # a resist focus: this share of the gear finds that can carry it carry it
 const FOCUS_UNIQUE := 3.0                # a unique focus: the run's unique chance x this
-const FOCUS_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Charm"]
+const FOCUS_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Boots", "Charm"]     # (BUILD67-K) boots
 ## The order's things, kept as counts: what a true pinnacle drops for the next rebuild or rank.
 const KEY_ITEMS := {
 	"grid_key": {"name": "The Grid's key"},
@@ -4059,6 +4181,14 @@ const ISSUED := [
 		"words": "Meds heal more, and one more is carried", "short": "Meds heal more, +meds", "affixes": [{"stat": "heal_pct", "value": 50}, {"stat": "med_cap", "value": 1}]},
 	{"name": "Issued seal", "slot": "Charm", "base": "Gold sovereign", "rule": "issued_seal", "issued": true,
 		"words": "Your burns count double; finds come better", "short": "Burns ×2, better finds", "affixes": [{"stat": "rarity_pct", "value": 20}]},
+	# (BUILD67-K) gloves, the pack and boots get issued pieces: nine slots. Their rule is a fixed figure ("fixed", never scaled,
+	# carried on the piece as "fixed67" and read with the bases' built-in figures); the six above keep theirs as the first version
+	{"name": "Issued gloves", "slot": "Gloves", "base": "Special forces gloves", "rule": "issued_gloves", "issued": true,
+		"words": "Reloads 20% quicker", "short": "+20% quicker reloads", "affixes": [{"stat": "attack_pct", "value": 5}], "fixed": {"reload_pct": 20}},
+	{"name": "Issued bergen", "slot": "Backpack", "base": "Special forces bergen", "rule": "issued_bergen", "issued": true,
+		"words": "20% more loot", "short": "+20% loot quantity", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"loot_pct": 20}},
+	{"name": "Issued boots", "slot": "Boots", "base": "Special forces boots", "rule": "issued_boots", "issued": true,
+		"words": "8% more pace", "short": "+8% pace", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"speed_pct": 8}},
 ]
 const ISSUED_LIFT := 1.5
 const ISSUED_OVER := 5
@@ -4401,48 +4531,48 @@ const STAGE_TIER_UP := 0.25        # at 3/3, this share of the plain gear finds 
 const SITE_THEMES := {
 	"The Allotments": ["Billhook", "Lump hammer", "Knife", "Beekeeper's hat", "Spraying overalls", "Gardening gloves", "Gardening apron",
 		"Feed sack", "Box of matches", "Rabbit's foot", "Pipe wrench", "Screwdriver", "Tartan shopper",
-		"Garden fork", "Strimmer visor", "Donkey jacket", "Rose gauntlets", "Joiner's apron"],
+		"Garden fork", "Strimmer visor", "Donkey jacket", "Rose gauntlets", "Joiner's apron", "Wellies", "Work boots"],     # (BUILD67-K) boots
 	"The Garden Centre": ["Nail gun", "Bolt gun", "Billhook", "Knife", "Hard hat", "Beekeeper's hat", "Spraying overalls", "Gardening gloves",
 		"Work gloves", "Gardening apron", "Feed sack", "Lucky penny", "Speargun", "Screwdriver", "Rigger gloves", "Lifeguard's vest",
 		"Tartan shopper", "Old spark plug",
-		"Strimmer visor", "Staff fleece"],
+		"Strimmer visor", "Staff fleece", "Wellies", "Work boots"],     # (BUILD67-K) boots
 	"Top Farm": ["Farmer's shotgun", "Four-ten", "Bolt gun", "Billhook", "Knife", "Padded jacket", "Spraying overalls", "Work gloves",
 		"Woolly gloves", "Body warmer", "Feed sack", "Rabbit's foot", "Goose gun", "Over-and-under", "Old .303", "Lever-action rifle",
 		"Rigger gloves", "Tweed waistcoat", "Horseshoe nail",
-		"Flat cap", "Waxed coat", "Humane killer"],
+		"Flat cap", "Waxed coat", "Humane killer", "Wellies", "Work boots"],     # (BUILD67-K) boots; (BUILD67-K) boots
 	"Ransacked Streets": ["Pipe shotgun", "Carrier bags", "Nail gun", "Spiked bat", "Air pistol", "Cycle helmet", "Bum bag", "Body warmer",
 		"School bag", "Lucky penny", "Bike chain", "Pipe wrench", "Knuckle duster", "Bike lock", "Scrum cap", "Motorbike leathers",
 		"Cycling mitts", "Old spark plug", "Slam-fire shotgun", "Converted air rifle", "Zip gun", "Cosh", "Hatchet", "Welder's mask",
 		"Leather gloves", "Dumpy bag",
-		"Lined hoodie"],
+		"Lined hoodie", "Trainers", "Running shoes"],     # (BUILD67-K) boots
 	"The Parade": ["Sawn-off", "Holdall", "Pocket pistol", "Derringer", "Stab vest", "Bum bag", "Lucky penny", "Old revolver",
 		"Service pistol", "Knuckle duster", "Slash-proof jacket", "Driving gloves", "St Christopher", "Meat cleaver", "Big revolver",
 		"Target pistol", "Cosh", "Leather gloves", "Door staff vest", "Daysack", "Barber's razor", "Gold tooth", "Wedding ring",
-		"Delivery rider's helmet", "Sheepskin coat"],
+		"Delivery rider's helmet", "Sheepskin coat", "Trainers", "Crepe soles"],     # (BUILD67-K) boots
 	"The Retail Park": ["Garage-built rifle", "Nail gun", "Bolt gun", "Hard hat", "Work gloves", "Crossbow", "Speargun", "Machete",
 		"Pipe wrench", "Screwdriver", "Caving helmet", "Motorbike leathers", "Rigger gloves", "Hiking pack", "Old spark plug",
 		"Compound bow", "Converted air rifle", "Fire axe", "Hatchet", "Welder's mask", "Foundry coat", "Goalkeeper gloves",
 		"Shooting gloves", "Dumpy bag",
-		"Joiner's apron", "Hi-vis tabard"],
+		"Joiner's apron", "Hi-vis tabard", "Plimsolls", "Work boots", "Rigger boots"],     # (BUILD67-K) boots
 	"The Pleasure Park": ["Fishing vest", "Framed pack", "Pump shotgun", "Catapult", "Lifeguard's vest", "Riot shotgun", "Semi-auto shotgun",
 		"Converted air rifle", "Target pistol", "Goalkeeper gloves", "Paintball gun", "Pocket watch",
-		"Go-kart helmet", "Mascot suit", "Arcade token"],
+		"Go-kart helmet", "Mascot suit", "Arcade token", "Wading boots"],     # (BUILD67-K) boots
 	"Shopping Centre": ["Tactical pistol", "Ballistic vest", "Security guard's carbine", "Extendable baton", "Comms headset", "Visored helmet",
 		"Leather gloves", "Door staff vest", "Daysack", "Wedding ring", "Courier's SMG", "Polymer pistol", "Bump helmet",
-		"Low-profile vest", "Tactical gloves", "Messenger bag", "Pocket watch"],
+		"Low-profile vest", "Tactical gloves", "Messenger bag", "Pocket watch", "Running shoes", "Desert boots"],     # (BUILD67-K) boots
 	"The Bank": ["Compact pistol", "Light plates", "Machine pistol", "Police carbine", "Visored helmet", "Comms headset", "Leather gloves",
 		"Wedding ring", "Courier's SMG", "Police revolver", "Bump helmet", "Low-profile vest", "Tactical gloves", "Pocket watch",
-		"Bank bag", "Security van vest", "Branch key"],
+		"Bank bag", "Security van vest", "Branch key", "Crepe soles", "Desert boots"],     # (BUILD67-K) boots
 	"The Services": ["Cargo frame", "Courier's SMG", "Workshop carbine", "Police revolver", "Bump helmet", "Cold-store parka",
 		"Low-profile vest", "Racing gloves", "Quick-release rig", "Messenger bag", "Pocket watch", "Armoured car gun", "Belt-fed SMG",
-		"Automatic pistol", "Folding PDW", "Thermal headset", "Hazmat suit", "Load carrier", "Mule pack", "Casino chip"],
+		"Automatic pistol", "Folding PDW", "Thermal headset", "Hazmat suit", "Load carrier", "Mule pack", "Casino chip", "Fell shoes", "Hobnail boots"],     # (BUILD67-K) boots
 	"The Hospital": ["Medic's harness", "Fire axe", "Paramedic's rig", "Station helmet, visored", "Low-profile vest", "Tactical gloves",
 		"Messenger bag", "Respirator helmet", "Hazmat suit", "Cut-resistant gloves",
-		"Bone saw", "Scalpel", "Hospital wristband", "Grab bag"],
+		"Bone saw", "Scalpel", "Hospital wristband", "Grab bag", "Hospital clogs", "Desert boots"],     # (BUILD67-K) boots; (BUILD67-K) boots
 	"The Barracks": ["Section gun", "Stab plates", "Scoped .308", "Self-loading rifle", "Army SMG", "Bayonet on a stick", "Army helmet",
 		"Army plates", "Webbing", "Chest rig", "Bergen", "Tactical gloves", "Dog tag", "Regimental rifle", "Sniper rifle", "Belt-fed SMG",
 		"Automatic pistol", "Thermal headset", "Full plate carrier", "Plate rig", "Sniper's drag bag", "Armourer's gloves",
-		"Cap badge"],
+		"Cap badge", "Desert boots", "Walking boots"],     # (BUILD67-K) boots
 }
 ## The 24 new bases (BUILD55-C), for the art manifest: name -> the picture borrowed (ART_AS holds the same).
 const C55_NEW_BASES := ["Garden fork", "Bone saw", "Humane killer", "Scalpel", "Flat cap", "Strimmer visor", "Delivery rider's helmet",
@@ -4462,42 +4592,42 @@ const COUNTY_STAGE_LEVELS := 2
 const COUNTY_THEMES := {
 	"toll_plaza": ["Demolition bar", "Breaching shotgun", "Rescue axe", "Service rifle", "Close quarters pistol", "High-cut helmet",
 		"Search-team helmet", "Turnout coat", "Firefighter's gloves", "Hostage-rescue rig", "Assault pack", "Glass insulator",
-		"Highways coat", "Cat's eye"],
+		"Highways coat", "Cat's eye", "Firefighter's boots"],     # (BUILD67-K) boots
 	"distribution": ["Chain-driven repeater", "Workshop gauss", "Bench-made autocannon", "The engineer's piece", "Arctic helmet",
 		"Military plate carrier", "Abseiling gloves", "Clamshell pack", "Mountain-troop bergen", "Glass insulator",
-		"Loading hook", "Picker's harness"],
+		"Loading hook", "Picker's harness", "Patrol boots"],     # (BUILD67-K) boots
 	"truck_stop": ["Breaching shotgun", "Entry shotgun", "Door ram", "Siege shotgun", "Cavalry revolver", "Overcoat machine pistol",
 		"Search-team helmet", "Plainclothes vest", "Close-combat gloves", "Breacher's rig", "Long-range bergen", "Gold cigarette case",
-		"Enforcement vest", "Seized keys"],
+		"Enforcement vest", "Seized keys", "Stalking boots"],     # (BUILD67-K) boots
 	"container_port": ["Big-game rifle", "Heavy-barrel rifle", "Bench-made autocannon", "Arctic helmet", "Military plate carrier",
 		"Abseiling gloves", "Flight-deck gloves", "Shield-team rig", "Long-range bergen", "Glass insulator",
-		"Lashing bar", "Crane driver's hat"],
+		"Lashing bar", "Crane driver's hat", "Riot boots"],     # (BUILD67-K) boots
 	"ferry_terminal": ["Marine shotgun", "Dragon's-breath gun", "Consular PDW", "Arctic helmet", "Chainmail shark suit", "Flight-deck gloves",
 		"Hostage-rescue rig", "Alpine pack", "Freefall pack", "Diamond tiepin",
-		"Ferry lifejacket", "Duty-free bag"],
+		"Ferry lifejacket", "Duty-free bag", "Jungle boots"],     # (BUILD67-K) boots
 	"customs_shed": ["Briefcase SMG", "Security service SMG", "Spiral-mag SMG", "Legation machine pistol", "Overcoat machine pistol",
 		"CBRN helmet", "Plainclothes vest", "Tailored body armour", "CBRN suit", "Strongroom bag", "Diamond tiepin", "Uncut diamond",
-		"Examiner's gloves", "Seizure bag"],
+		"Examiner's gloves", "Seizure bag", "EOD boots"],     # (BUILD67-K) boots
 	"golf_club": ["Big-game rifle", "Heavy-barrel rifle", "Ambassador's revolver", "Ghillie hood", "Tailored body armour",
 		"Dress uniform gloves", "Royal escort rig", "Alpine pack", "Signet ring", "Diamond tiepin", "Gold cigarette case",
-		"Sidelock shotgun", "Shooting jacket", "Cartridge bag"],
+		"Sidelock shotgun", "Shooting jacket", "Cartridge bag", "Ghillie boots"],     # (BUILD67-K) boots
 	"gated_close": ["Close protection SMG", "Special forces SMG", "Bodyguard's pistol", "Embassy PDW", "Protection squad PDW",
 		"Search-team helmet", "Surveillance helmet", "Tailored body armour", "State protection vest", "Counter-sniper gloves",
 		"Counter-terror rig", "Shield-team rig", "Assault pack", "Signet ring",
-		"Gate fob"],
+		"Gate fob", "Patrol boots"],     # (BUILD67-K) boots
 	"manor": ["Big-game rifle", "Felling axe", "Civic mace", "Court sword", "Castle guard rifle", "Cavalry revolver",
 		"Field marshal's revolver", "Ghillie hood", "Dress uniform gloves", "Royal escort rig", "Wax-sealed bag", "Regimental medal",
 		"Sword knot", "Apothecary's vial",
-		"Deerstalker", "Estate tweeds"],
+		"Deerstalker", "Estate tweeds", "Ghillie boots"],     # (BUILD67-K) boots
 	"counting_house": ["Briefcase SMG", "Ministerial SMG", "Legation machine pistol", "Overcoat machine pistol", "Plainclothes vest",
 		"Tailored body armour", "Counter-terror rig", "Strongroom bag", "Diamond tiepin", "Gold cigarette case",
-		"Cashier's visor", "Clerk's mitts"],
+		"Cashier's visor", "Clerk's mitts", "Patrol boots"],     # (BUILD67-K) boots
 	"bullion_vault": ["Entry shotgun", "Combat shotgun", "Siege shotgun", "Special forces SMG", "Protection squad PDW",
-		"Special forces helmet", "Full EOD helmet", "Special forces plates", "Full EOD suit", "EOD gauntlets", "Special forces gloves",
+		"Special forces helmet", "Full EOD helmet", "Special forces plates", "Full EOD suit", "EOD gauntlets",     # (BUILD67-K) the Special forces gloves off: the issued gloves' base
 		"Shield-team rig", "Ingot sack", "Strongroom bag", "Wax-sealed bag", "Uncut diamond",
-		"Bullion carbine", "Small ingot"],
+		"Bullion carbine", "Small ingot", "EOD boots"],     # (BUILD67-K) boots
 	"treasury": ["Prototype rifle", "Castle guard rifle", "Ministerial SMG", "Protection squad PDW", "Crown PDW", "Field marshal's revolver",
-		"Surveillance helmet", "State protection vest", "Dress uniform gloves", "Royal escort rig", "Wax-sealed bag", "Uncut diamond",
+		"Surveillance helmet", "State protection vest", "Dress uniform gloves", "Royal escort rig", "Wax-sealed bag", "Uncut diamond", "Parade boots",     # (BUILD67-K) boots
 		"Apothecary's vial",
 		"Treasury guard's helmet", "Despatch box"],
 }
@@ -4510,3 +4640,113 @@ const C61_NEW_BASES := ["Highways coat", "Cat's eye", "Loading hook", "Picker's 
 	"Lashing bar", "Crane driver's hat", "Ferry lifejacket", "Duty-free bag", "Examiner's gloves", "Seizure bag", "Sidelock shotgun",
 	"Shooting jacket", "Cartridge bag", "Gate fob", "Deerstalker", "Estate tweeds", "Cashier's visor", "Clerk's mitts",
 	"Bullion carbine", "Small ingot", "Treasury guard's helmet", "Despatch box"]
+
+
+# ------------------------------------------------------------------ BUILD66-F (7 Nov): the fight's shooter mechanics
+# docs/design/endgame_rail.md §1. Every figure a first guess for the short balance pass; each stat is summed by
+# Sim.f66_stat (tree_sum + _affix_sum + _fitted_sum), so build 2's affixes and the web's nodes feed it with no more code.
+const HEAD66_PCT := 5.0             # head_pct's base: a hit's chance to land as a headshot
+const HEAD66_X := 2.0               # a headshot's damage; head_dmg_pct adds to it (+100 = x3)
+const HELMET66_DEPTH := 4           # gang helmets from this depth: they cut a headshot's extra damage
+const HELMET66_CUT := [25.0, 60.0]  # the cut at HELMET66_DEPTH, rising to the second at DEEP66; helmet_ignore_pct ignores a share
+const ARMOUR66_DEPTH := 6           # gang armour from this depth: it takes a share of each hit
+const ARMOUR66_TAKE := [10.0, 35.0] # the share at ARMOUR66_DEPTH, rising to the second at DEEP66; pierce_pct ignores a share
+const DEEP66 := 30                  # "the deepest" the helmet and armour climb to (a signal's depth past it holds the top)
+const LEG66_S := 0.5                # a leg shot: the next gang this many seconds later (leg_pct the share of hits)
+const LEG66_CAP_S := 30.0           # ...this many at most banked
+const ARM66_S := 3.0                # an arm shot: the man misses more for this long (arm_pct the share of hits)
+const ARM66_MISS := 0.3             # ...this share of his fire more misses (the one in front: a share of the gang's fire on you)
+const SUPP66_FILL_S := 10.0         # sustained fire fills a gang's meter in this many seconds; suppress_pct fills it faster
+const SUPP66_SLOW := 0.2            # full, they fire this much slower
+const STREAK66_HIT_PCT := 5.0       # the streak: "a hit" is this share of your max HP reaching it (the fight is a rate, not shots)
+const STREAK66_CAP_PCT := 50.0      # streak_dmg_pct's +damage a kill in the streak, capped here
+const JAM66_PCT := {1: 3.0, 2: 2.0, 3: 1.0}    # a shot's chance to jam, by the gun's tier (higher tiers never); jam_pct adds, no_jam stops it
+const JAM66_S := 0.8                # a jam: the beat lost
+const HARD66_LEVEL := 10            # hard men from this site level
+const HARD66_ODDS := 1.0 / 6.0      # a gang's chance to carry one
+const HARD66_HP := 2.5              # his HP, a man's times this
+const HARD66_TWO := 0.3             # his chance of a second trait
+const HARD66_RARITY := 0.5          # his drop: one more find, at this much better loot quality (the scale Chancer's 0.5 uses)
+const HARD66_TRAITS := ["armoured", "medic", "spotter", "runner"]
+const HARD66_ARMOUR_MIN := 10.0     # Armoured: his armour doubled, from this share where the gang wears none yet
+const MEDIC66_PCT := 1.0            # Medic: the man in front gets this share of a man's HP back a second, while he lives
+const SPOTTER66_PCT := 15.0         # Spotter: his gang's fire on you this much more, while he lives (fewer misses)
+const RUNNER66_RATE := 0.5          # Runner: the next gang this many seconds sooner for each second he lives
+const LAST66_HOLD := 1.0            # Last Stand: the HP you stand on while it holds
+const SUPP66_DRAIN_S := 5.0         # (the review of 66) not firing, a full meter drains in this many seconds
+const JAM66_NEVER := ["Slam-fire shotgun"]     # (the review of 66) guns that never jam: the Slam-fire's "nothing to jam"
+
+# ------------------------------------------------------------------ BUILD67-K (8 Nov): boots, the Kit, issued versions
+# docs/design/endgame_rail.md §2. Every figure a first guess for the short balance pass.
+const BOOTS67_SHARE := 1.0          # a site's boots weight in its finds: its gloves weight times this (no site list names boots)
+const POSTMAN67_SEARCH := 0.75      # The Postman's Boots: a search takes this much of its time
+const POSTMAN67_PATROL := 1.2       # ...and the gangs come this much later
+const TOECAP67_PCT := 20.0          # Steel Toecaps: each man who reaches you (each new one in front) loses this share of a man's HP
+## Issued versions (endgame_rail.md §2: "each issued slot gets three versions, each a different rule, picked at the Issuer's
+## counter"). A slot's first is its Data.ISSUED piece; these are its second and third, in order. Each carries its rule as
+## a fixed figure ("fixed": never scaled by item level, read with the bases' built-in figures), on the same base and
+## affixes as the first. Nine slots with boots: 27 pieces (the spec's 24 was before boots).
+const ISSUED67_MORE := [
+	{"name": "Issued steady rifle", "slot": "Primary", "base": "Anti-materiel rifle", "rule": "issued_rifle_steady", "issued": true,
+		"words": "Never jams; 10% slower rate of fire", "short": "Never jams · −10% rate of fire", "affixes": [{"stat": "damage_pct", "value": 25}], "fixed": {"no_jam": 1, "attack_pct": -10}},
+	{"name": "Issued marksman's rifle", "slot": "Primary", "base": "Anti-materiel rifle", "rule": "issued_rifle_marksman", "issued": true,
+		"words": "10% more headshot chance", "short": "+10% headshot chance", "affixes": [{"stat": "damage_pct", "value": 25}], "fixed": {"head_pct": 10}},
+	{"name": "Issued quick-draw pistol", "slot": "Secondary", "base": "Special issue pistol", "rule": "issued_sidearm_quick", "issued": true,
+		"words": "15% more rate of fire; jams 3% more", "short": "+15% rate of fire · +3% jam chance", "affixes": [{"stat": "damage_pct", "value": 20}], "fixed": {"attack_pct": 15, "jam_pct": 3}},
+	{"name": "Issued duty pistol", "slot": "Secondary", "base": "Special issue pistol", "rule": "issued_sidearm_duty", "issued": true,
+		"words": "Your rounds ignore 20% of their armour", "short": "20% of their armour ignored", "affixes": [{"stat": "damage_pct", "value": 20}], "fixed": {"pierce_pct": 20}},
+	{"name": "Issued spotter's cap", "slot": "Helmet", "base": "Command helmet", "rule": "issued_cap_spotter", "issued": true,
+		"words": "Headshots do 25% more damage", "short": "+25% headshot damage", "affixes": [{"stat": "all_res", "value": 15}], "fixed": {"head_dmg_pct": 25}},
+	{"name": "Issued riot cap", "slot": "Helmet", "base": "Command helmet", "rule": "issued_cap_riot", "issued": true,
+		"words": "Fight on for 3 seconds at 0 HP, once a run", "short": "+3 s Last legs", "affixes": [{"stat": "all_res", "value": 15}], "fixed": {"last_stand_s": 3}},
+	{"name": "Issued light plate", "slot": "Armour", "base": "Heavy armour suit", "rule": "issued_plate_light", "issued": true,
+		"words": "8% more pace; 20% less armour", "short": "+8% pace · −20% armour", "affixes": [{"stat": "hp", "value": 60}], "fixed": {"speed_pct": 8, "armour_pct": -20}},
+	{"name": "Issued escort plate", "slot": "Armour", "base": "Heavy armour suit", "rule": "issued_plate_guard", "issued": true,
+		"words": "10% of your hits are arm shots: those men miss more", "short": "+10% arm shots", "affixes": [{"stat": "hp", "value": 60}], "fixed": {"arm_pct": 10}},
+	{"name": "Issued ammo webbing", "slot": "Rig", "base": "Command rig", "rule": "issued_webbing_ammo", "issued": true,
+		"words": "Reloads 25% quicker", "short": "+25% quicker reloads", "affixes": [{"stat": "heal_pct", "value": 50}], "fixed": {"reload_pct": 25}},
+	{"name": "Issued scavenger's webbing", "slot": "Rig", "base": "Command rig", "rule": "issued_webbing_scav", "issued": true,
+		"words": "A kill puts a round back in the magazine, 1 kill in 4", "short": "+25% round back", "affixes": [{"stat": "heal_pct", "value": 50}], "fixed": {"scav_pct": 25}},
+	{"name": "Issued medal", "slot": "Charm", "base": "Gold sovereign", "rule": "issued_seal_medal", "issued": true,
+		"words": "3% more damage for each kill since you were last hit", "short": "+3% damage a kill in a streak", "affixes": [{"stat": "rarity_pct", "value": 20}], "fixed": {"streak_dmg_pct": 3}},
+	{"name": "Issued bugle", "slot": "Charm", "base": "Gold sovereign", "rule": "issued_seal_whistle", "issued": true,
+		"words": "Your fire pins them 30% quicker", "short": "+30% quicker to pin", "affixes": [{"stat": "rarity_pct", "value": 20}], "fixed": {"suppress_pct": 30}},
+	{"name": "Issued shooting gloves", "slot": "Gloves", "base": "Special forces gloves", "rule": "issued_gloves_rate", "issued": true,
+		"words": "8% more rate of fire", "short": "+8% rate of fire", "affixes": [{"stat": "attack_pct", "value": 5}], "fixed": {"attack_pct": 8}},
+	{"name": "Issued tracker's gloves", "slot": "Gloves", "base": "Special forces gloves", "rule": "issued_gloves_tracker", "issued": true,
+		"words": "10% of your hits are leg shots: the next gang comes later", "short": "+10% leg shots", "affixes": [{"stat": "attack_pct", "value": 5}], "fixed": {"leg_pct": 10}},
+	{"name": "Issued search pack", "slot": "Backpack", "base": "Special forces bergen", "rule": "issued_bergen_search", "issued": true,
+		"words": "Searches 25% quicker", "short": "+25% quicker searches", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"search_pct": 25}},
+	{"name": "Issued light pack", "slot": "Backpack", "base": "Special forces bergen", "rule": "issued_bergen_light", "issued": true,
+		"words": "6% more pace", "short": "+6% pace", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"speed_pct": 6}},
+	{"name": "Issued quiet boots", "slot": "Boots", "base": "Special forces boots", "rule": "issued_boots_quiet", "issued": true,
+		"words": "Gangs come 20% later", "short": "+20% gangs later", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"patrol_pct": 20}},
+	{"name": "Issued combat boots", "slot": "Boots", "base": "Special forces boots", "rule": "issued_boots_jump", "issued": true,
+		"words": "30 more armour", "short": "+30 armour", "affixes": [{"stat": "hp", "value": 20}], "fixed": {"armour": 30}}     # (the 67 fix round) flat: a pace base has no armour for a share to grow,
+]
+
+# ------------------------------------------------------------------ BUILD67-I (8 Nov): the items - T6, the uniques' rules
+# docs/design/endgame_rail.md §2. Every figure a first guess for the short balance pass.
+const T67_MARK := "◆"               # (the 67 fix round) T6's mark in the Bench's log, as Words.T67["mark"]
+const T67_TIER := 6                 # the top tier, above AFFIX_TIERS: a find's affix promoted to it now and then (Sim.t67_roll)
+const T67_FROM := 30                # none below this item level
+const T67_FULL := 50                # ...rising on a straight line to T67_ODDS here, and held
+const T67_ODDS := 1.0 / 40.0        # an affix roll's chance at T67_FULL and past it
+const T67_REACH := 1.0              # T6's figures: the span's next fifth past T5's top, this many fifths (Items.tier_range)
+const LEE67_EVERY := 5              # Grandad's .303: every this-many rounds of the primary a headshot
+const GROUNDS67_LATER := 1.3        # the Groundsman's Shotgun: the next gang this much later
+const GROUNDS67_DMG := 0.85         # ...and its damage this much
+const ZIP67_JAM_PCT := 20.0         # the Allotment Zip Gun: a shot's chance to jam
+const ZIP67_DMG := 3.0              # ...and its damage when it fires (backing the primary: times 1 - the jam chance, its jams unseen there)
+const BOX67_ARMOUR := 0.5           # the Armourer's Box: the share of their armour your rounds still meet
+const BOX67_RELOAD := 4.0 / 3.0     # ...its reloads this much longer
+const MAGPIE67_ROUNDS := 2          # the Magpie's Pouches: rounds back in the magazine a kill
+const MAGPIE67_POUCHES := 1         # ...pouches fewer
+const KNUCKLES67_MISS := 0.4        # the Bouncer's Knuckles: an arm shot's miss share (ARM66_MISS without them)
+const BONFIRE67_EVERY := 8          # the Bonfire Box: every this-many kills in a run
+const BONFIRE67_BURN := 0.25        # ...a burn on each man on you of this share of a man's HP
+const BONFIRE67_STUN_S := 1.0       # ...and their fire stops this long
+const RATTLE67_PIN_X := 2.0         # the Football Rattle: the meter fills this many times as fast
+const RATTLE67_SLOW := 0.3          # ...and pinned men fire this much slower (SUPP66_SLOW without it)
+const LIFEBOAT67_S := 5.0           # the Lifeboat Jacket: Last legs' seconds, at least
+const LIFEBOAT67_BACK := 0.2        # ...a kill in them: back on your feet at this share of max HP

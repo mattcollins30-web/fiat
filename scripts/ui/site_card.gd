@@ -1042,7 +1042,7 @@ var county := ""                         # the County place shown ("toll_plaza" 
 var _extra_fix: Array = []               # the fix chips' first rows on a County place: its two ways to the want
 var _want_chips: Array = []              # [panel, label] an issued slot, built on a County place's first show
 var _county_pool := 1                    # the Head's gang's count, read before the place is laid on (BUILD61 review 1)
-const WANT_SLOTS := ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]
+const WANT_SLOTS := ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary", "Gloves", "Backpack", "Boots"]     # (BUILD67-K) the nine issued slots
 const WANT_CHIP_GAP := 6
 
 
@@ -1325,7 +1325,7 @@ func _county_want(z: int) -> void:
 		wc[0].visible = true
 		(wc[0].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if lit else Pal.CARD_LINE
 		var nm: String = str(Words.U61["slots"][WANT_SLOTS[n]])
-		UI.fit(wc[1], [nm])                     # lit by its edge and its words' tone (a tick doesn't fit a sixth of the row)
+		UI.fit(wc[1], [nm, str(Words.K67_SLOT_SHORT.get(WANT_SLOTS[n], nm))])     # lit by its edge and its words' tone (a tick doesn't fit a sixth of the row); (BUILD67-K) nine: the short where the name won't go
 		wc[1].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_3)
 
 

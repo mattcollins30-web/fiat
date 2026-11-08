@@ -938,6 +938,23 @@ func _init() -> void:
 	_f63_words_checks()                       # 0.14.3 (6 Nov): an affix's short form keeps its kind ("energy gain", "Guard cap"); lucky means quality
 	_w64_county_art_checks()                  # 0.14.4 (7 Nov): the County's art in - its stage plates, the heads' dens, the new guns' muzzles
 	_m61_review_checks(main)                  # BUILD61 merge review: the County card's odds read, a stage's pick re-reads, the hurt repeat, a County repeat's name and host
+	_f66_hit_checks(main)                     # BUILD66-F (7 Nov): headshots, helmets, armour, pierce, leg and arm shots, the meter
+	_f66_kill_checks(main)                    # BUILD66-F: the streak, scavenger, jams, Last Stand
+	_f66_hard_checks(main)                    # BUILD66-F: hard men - the odds, his place and HP, his traits, his drop
+	_f66_api_checks(main)                     # BUILD66-F: the view's API - events, reads, forces; a live run finishes
+	_v66_view_checks(main)                    # BUILD66-V (7 Nov): the fight view - each of the headshot, the jam, the hard man, the streak, Last Stand shows on its event
+	_v66_fit_checks(main)                     # BUILD66-V: all of them at once, the longest hard man, at 1920x1080 and 1920x1200
+	_f66fix_checks(main)                      # the review of 66: Last legs healed and on a head, the meter, arm and leg shots, the jams, the words
+	_v66fix_checks(main)                      # the review of 66: the view's seen events reset
+	_k67_boots_checks(main)                   # BUILD67-K (8 Nov): boots, the ninth slot - bases, pace, the clock, armour, drops, the shelf, save, the uniques
+	_k67_kit_checks(main)                     # BUILD67-K: the Kit - charm top left over a shorter pack, boots bottom right; fits; drops for all nine
+	_k67_issued_checks(main)                  # BUILD67-K: issued versions - 27, each rule, picked and bought at the counter, its fit
+	_k67_view_checks(main)                    # BUILD67-K: the fight view's three overlaps a ninth slot's dice turned up - two pops born on one spot, the streak under a long head, a pop on your HP words
+	_i67_affix_checks(main)                   # BUILD67-I (8 Nov): the affixes over 0.15.0's stats - their slots, boots', tiers, shares, words
+	_i67_t6_checks(main)                      # BUILD67-I: T6 - its rate in a seeded sample, on finds, its figures, the gold line, the sound
+	_i67_mark_checks(main)                    # BUILD67-I: the ◆ on the pick panel, the stash cell, the floor, the log, at 1920x1080 and 1920x1200
+	_i67_unique_checks(main)                  # BUILD67-I: the 13 uniques - the table, the bands, the pictures, a check per rule
+	_f67_checks(main)                         # the 67 fix round (review67.md): boots scored as a body piece, the sling undone, the Zip Gun's jams, the Bench's T6, boots' lines, the last round, combat boots, the words
 	_finish()
 
 
@@ -3592,15 +3609,21 @@ func _capstone_checks(main) -> void:
 	sim.extract_now()
 	# Dead quiet: every gang the size of the first; Ghost: a run starts at the search and a full pack brought home is the clear
 	sim.tree = [Data.web_start(sim.cls), Data.node_id_named("Snares/Dead quiet")]     # Dead quiet alone (its path holds Snare and wait's one fewer)
-	sim.deploy(3)
-	m = sim.mission
-	m["remaining"] = 0
-	m["cleared"] = true
-	m["patrols"] = 4
-	m["patrol_timer"] = 1e9
-	sim.advance(0.5)
-	_check(m["remaining"] == sim.PATROL_BASE - (1 if sim.has_node("trapline") else 0), "Dead quiet let the fifth gang grow: %d" % m["remaining"])
-	sim.extract_now()
+	# (BUILD67-K) read as it arrives (a hundredth of a second, its kills counted back in) against the first gang read the same way - the
+	# bot's runner, a ninth slot moving its dice, had killed one inside the half second, and the camp's other gang-size rules
+	# (the Yard's Flares, a Traffic Warden's Hat) move both alike
+	var dq_sizes: Array = []
+	for pat in [0, 4]:
+		sim.deploy(3)
+		m = sim.mission
+		m["remaining"] = 0
+		m["cleared"] = true
+		m["patrols"] = pat
+		m["patrol_timer"] = 1e9
+		sim.advance(0.01)
+		dq_sizes.append(int(m["remaining"]) + int(m.get("kills", 0)))     # what came: those standing and any already down
+		sim.extract_now()
+	_check(dq_sizes[1] == dq_sizes[0] and dq_sizes[0] >= 1, "Dead quiet let the fifth gang grow: %d against the first's %d" % [dq_sizes[1], dq_sizes[0]])
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Stalking/"))
 	_set_cls(sim, "Drifter")
 	sim.tree.append(Data.node_id_named("Luck/Ghost"))
@@ -3847,7 +3870,8 @@ func _unique_rules_checks(main) -> void:
 	for u in Data.UNIQUES:
 		var it := Items.roll_unique(u, sim.rng)
 		_check(it["unique"] == u["name"] and Words.UNIQUES.has(u["name"]), "%s does not roll, or has no words" % u["name"])
-	_check(sim.loose_uniques(1).size() == 8 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
+	# (BUILD67-I) 8 to 9: the Allotment Zip Gun, a levelling unique loose from the first
+	_check(sim.loose_uniques(1).size() == 9 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
 	for i in range(sim.best_depth.size()):
 		_bd(sim, i, 1)
 	for k in range(20):
@@ -5568,6 +5592,7 @@ func _events_more_checks(main) -> void:
 		var clean := 0
 		var hurt := 0
 		var face_c := 0.0
+		sim.rng.seed = 6601                       # (the fix round) its own dice: the run's stream before it moved with 0.15.0's fights and drew 9 of 30
 		for k in range(30):
 			m = _ev_force(sim, "danger")
 			face_c = sim.event_clean_odds(float(row[2]))
@@ -9155,6 +9180,12 @@ func _buy_off_shelf(sim, med: String) -> bool:
 	if added:
 		pick = sim._plain(Data.MEDICAL, med)
 		sim.clinic.append(pick)
+	# (the 67 fix round) the fixture's tins and room: the bot's path decides how full the stash and the purse are
+	sim.cash = maxf(sim.cash, float(sim.clinic_price(pick)))
+	var guard := 0
+	while not sim.stash_fits(pick) and sim.stash.size() > 1 and guard < 40:
+		sim.sell(sim.stash.back())
+		guard += 1
 	var ok: bool = sim.buy_clinic(int(pick["id"]))
 	if not ok and added:
 		sim.clinic.erase(pick)                 # a refused buy leaves the shelf as it was (31 Oct, the tools review)
@@ -10557,6 +10588,7 @@ func _grade_checks(main) -> void:
 		m["t"]["res"] = {}                # the same target both times: the intel re-rolls between deploys (a Hardened word is 30% off physical)
 		m["t"]["pace"] = 1.0
 		sim.rng.seed = 11                 # the swing the same both times: deploy spent the dice differently
+		sim.fight_rng.seed = 11           # (BUILD66-F) and the headshots and jams the same both times
 		sim._fight(m, m["t"], 0.5)
 		drops.append(1e6 - m["target_hp"])
 		drops.append("%s rig %s rounds %s grade %.0f first %.0f melee %s rules %s dps %.1f physical %.1f pace %.2f site pace %.2f res %s fresh %s dealt_by %s" % [sim.equipped["Primary"]["base"], str(sim.rig.map(func(x): return x["base"])), str(sim.has_rounds(sim.equipped["Primary"])), sim.grade_bonus(sim.equipped["Primary"]), sim.grade_stat(sim.equipped["Primary"], "first_pct"), str(sim.melee()), str(sim.has_rule("qm_rifle")), sim.dps(), float(sim.type_dps()["physical"]), sim.pace(), float(m["t"]["pace"]), str(m["t"].get("res", {})), str(m["fresh"]), str(m.get("dealt_by", {}))])
@@ -11043,6 +11075,8 @@ func _floor_wear_checks(main) -> void:
 		sim.extract_now()
 	_check(not keeper_ids.is_empty() and keeper_ids.all(func(i): return sim.stash.any(func(x): return int(x["id"]) == i)), "the Keeper's unique left on the floor didn't come home: %s" % str(keeper_ids))
 	sim.hp = sim.max_hp()
+	while sim.stash_used() > sim.stash_cap() - 24 and not sim.stash.is_empty():
+		sim.stash.pop_back()                  # (the merge) room at home for the pinnacle's drop: the bot's stash ran it 82 of 91 full, and a Mule pack didn't fit
 	sim.deploy(3)
 	if sim.on_mission():
 		var mm: Dictionary = sim.mission
@@ -15759,7 +15793,7 @@ func _mythic_checks(sim) -> void:
 	var saved: Dictionary = sim.to_dict()
 	var myths: Array = Data.UNIQUES.filter(func(u): return u.get("mythic", false))
 	var slots: Array = myths.map(func(u): return str(u["slot"]))
-	var myth_slots: Array = Data.SLOTS.filter(func(sl): return sl != Data.GLOVES)     # the gloves have none (29 Oct: two uniques, no mythic)
+	var myth_slots: Array = Data.SLOTS.filter(func(sl): return sl != Data.GLOVES and sl != Data.BOOTS)     # the gloves have none (29 Oct: two uniques, no mythic); nor the boots (BUILD67-K)
 	_check(myths.size() == myth_slots.size() and myth_slots.all(func(sl): return sl in slots) and myths.all(func(u): return Words.UNIQUES.has(u["name"]) and str(u["band"]) == "mythic"),
 		"the mythics aren't one a slot with their words: %s" % str(slots))
 	_check(not sim.loose_uniques(99).any(func(u): return u.get("mythic", false)), "a mythic is in the loose pool")
@@ -17139,7 +17173,9 @@ func _crates_checks(main) -> void:
 		sim.put_down(int(movable.back()["id"]))
 		guard_room += 1
 	_check(sim.floor_fits(back), "the fixture: no room made for the ditched thing: %s %s in a %s %d wide, the pack %s" % [back["base"], str(Items.footprint(back)), str(sim.equipped["Backpack"]["base"]) if sim.equipped["Backpack"] != null else "-", sim.pack_w(), str(m["found"].map(func(x): return [x["base"], str(Items.footprint(x)), x.get("from_rig", false)]))])
-	_check(sim.take_floor(int(back["id"])) and m["found"].has(back) and not back.get("ditched", false), "a ditched thing couldn't be dragged back")
+	# (the merge) a stacking thing may join a stack already in the pack: taken all the same (the bot's path decides what's there)
+	var took_back: bool = sim.take_floor(int(back["id"]))
+	_check(took_back and not sim.floor_items().has(back) and ((m["found"].has(back) and not back.get("ditched", false)) or (Items.stacks(back) and m["found"].any(func(x): return Items.same_stack(x, back)))), "a ditched thing couldn't be dragged back")
 	# no room: it stays down
 	var hold_cap_pack = sim.equipped["Backpack"]
 	var floor_n: int = sim.floor_items().size()
@@ -21285,7 +21321,7 @@ func _backdrop_checks(main) -> void:
 			var fig_ok: bool = (b["fig"].text in sim.kit_mag_line(sim.equipped[slot])) if slot in ["Primary", "Secondary"] else b["fig"].text == ""     # a gun's magazines and rounds (30 Oct)
 			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and fig_ok and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - body.TOP_STRIP - body.FOOT_STRIP - 2 and not Rect2(b["cell"].position, b["cell"].size).intersects(Rect2(b["name"].position, Vector2(b["name"].size.x, 18))), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
 		var cr: Rect2 = body.box_rect(slot)
-		_check((cr.position.x < body.FIGURE_X) == (slot in ["Backpack", "Primary", "Secondary"]), "the %s card is on the wrong side" % slot)
+		_check((cr.position.x < body.FIGURE_X) == (slot in ["Charm", "Backpack", "Primary", "Secondary"]), "the %s card is on the wrong side" % slot)     # (BUILD67-K) the charm left now
 		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)
 		_check(b["cell"].glass, "the %s slot's cell is not glass" % slot)
 		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
@@ -21293,8 +21329,9 @@ func _backdrop_checks(main) -> void:
 	# Matt's order (10 Oct): the pack big over the primary and the secondary down the left; the helmet, the armour, the
 	# rig and the charm down the right; no worn card; the charm smaller than the armour; each column filling the loadout
 	var by := func(sl): return body.box_rect(sl).position.y
-	_check(by.call("Backpack") < by.call("Primary") and by.call("Primary") < by.call("Secondary") and by.call("Helmet") < by.call("Armour") and by.call("Armour") < by.call("Rig") and by.call("Rig") < by.call("Charm"), "the loadout's order is not Matt's")
-	_check(not body.has_method("worn_rect") and body.box_rect("Charm").size.y < body.box_rect("Armour").size.y and body.box_rect("Backpack").size.y >= body.box_rect("Primary").size.y, "the worn card is back, or the charm, armour or pack sized wrong")
+	# (BUILD67-K, Matt 8 Nov: "swap charm and boots") the charm over a shorter pack on the left, the boots under the rig on the right
+	_check(by.call("Charm") < by.call("Backpack") and by.call("Backpack") < by.call("Primary") and by.call("Primary") < by.call("Secondary") and by.call("Helmet") < by.call("Armour") and by.call("Armour") < by.call("Rig") and by.call("Rig") < by.call("Boots"), "the loadout's order is not Matt's")
+	_check(not body.has_method("worn_rect") and body.box_rect("Charm").size.y < body.box_rect("Armour").size.y and body.box_rect("Backpack").size.y > body.box_rect("Charm").size.y, "the worn card is back, or the charm, armour or pack sized wrong")
 	for col in [body.LEFT, body.RIGHT]:
 		_check(absf(body.box_rect(col.back()).end.y - (body.HEIGHT - body.PAD)) < 0.5, "the %s column does not fill the loadout" % col.back())
 	# the figure fills the gap between the columns (Matt, 10 Oct: his redraw looked too small), every past's the same
@@ -28201,7 +28238,7 @@ func _county_checks(main) -> void:
 			for k in sim.county_places(z):
 				_check(not str(cb._pin_labels[str(k)].text).contains(str(Data.county(str(k))["place"]).trim_prefix("The ")), "a shut zone's place reads plain: '%s'" % cb._pin_labels[str(k)].text)
 	var sw: Array = ccol["card"].want_words()     # the card's issued slots (BUILD61-U: the site card's what-it-takes rows)
-	_check(sw.size() == 6 and ccol["card"].want_lit().filter(func(w): return w).size() == mini(6, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])     # lit by their edge (BUILD61-U)
+	_check(sw.size() == 9 and ccol["card"].want_lit().filter(func(w): return w).size() == mini(9, sim.issued_worn()), "the County card's slots: %s with %d worn" % [str(sw), sim.issued_worn()])     # lit by their edge (BUILD61-U)
 	for c in Data.COUNTY:
 		_check((cb.pin_state(str(c["key"])) == "taken") == (sim.county_stage_done(str(c["key"])) >= Data.STAGE_OPENS), "%s's pin reads %s" % [c["place"], cb.pin_state(str(c["key"]))])     # taken at its 2/3 (BUILD61-U)
 	var kp: Panel = cb.key_strip()
@@ -28746,6 +28783,7 @@ func _edge_fight(cls: String, gun_base: String, pool: int, man: float, res: floa
 				s.rig.append_array(_rmags(s, s.ammo_box(ty)["name"], 8))
 			s.hp = s.max_hp()
 			s.rng.seed = seed_v
+			s.f66_extra = {"head_pct": -Data.HEAD66_PCT, "no_jam": 1.0}     # (BUILD66-F) the edge alone: no headshots' or jams' lumps in a short fight
 			s.deploy(0)
 			var m: Dictionary = s.mission
 			var t: Dictionary = m["t"].duplicate(true)
@@ -29057,7 +29095,7 @@ func _glove_checks(main) -> void:
 	_check(da.filter(func(d): return str(d[1]).ends_with("arm")).size() == 1 and da.any(func(d): return str(d[1]).ends_with("pace")), "the armour's deltas count its armour twice or miss its pace: %s" % str(da))
 	_check(not PickPanel.deltas_of(sim._plain("Helmet", "Caving helmet"), sim._plain("Helmet", "Hard hat")).is_empty() and PickPanel.deltas_of(sim._plain("Helmet", "Caving helmet"), sim._plain("Helmet", "Hard hat")).any(func(d): return str(d[1]).ends_with("search")), "a visor's quicker searches don't show in its deltas")
 	# the Kit room: the gloves' card between the armour and the rig, level with the hands, five cards in the column
-	_check(Body.RIGHT == ["Helmet", "Armour", "Gloves", "Rig", "Charm"], "the right column isn't helmet, armour, gloves, rig, charm")
+	_check(Body.RIGHT == ["Helmet", "Armour", "Gloves", "Rig", "Boots"], "the right column isn't helmet, armour, gloves, rig, boots")     # (BUILD67-K) boots where the charm was
 	var bottom := 0.0
 	var last_r := Rect2()
 	for sl in Body.RIGHT:
@@ -29120,14 +29158,14 @@ func _itemisation_fix_checks(main) -> void:
 	var pack: Dictionary = sim._plain("Backpack", "School bag")
 	var gloves: Dictionary = sim._plain("Gloves", "Work gloves")
 	var helm: Dictionary = sim._plain("Helmet", "Hard hat")
-	_check(sim.stamp_block(pack) == Words.STAMP["no_issue"] and sim.stamp_block(gloves) == Words.STAMP["no_issue"] and sim.stamp_block(helm) == "", "a pack or gloves can be stamped, or a helmet can't: '%s' '%s' '%s'" % [sim.stamp_block(pack), sim.stamp_block(gloves), sim.stamp_block(helm)])
+	_check(sim.stamp_block(pack) == "" and sim.stamp_block(gloves) == "" and sim.stamp_block(helm) == "" and sim.stamp_block(sim._plain("Medical", str(Data.BASES["Medical"][0]["name"]))) == Words.STAMP["not_kit"], "a pack, gloves or a helmet can't be stamped, or a med can: '%s' '%s' '%s'" % [sim.stamp_block(pack), sim.stamp_block(gloves), sim.stamp_block(helm)])     # (BUILD67-K) the pack and the gloves are issued now: stamped too
 	var hold_pack = sim.equipped["Backpack"]
 	pack["stamped"] = true
 	sim.equipped["Backpack"] = pack
 	var n_stamped: int = sim.issued_worn()
 	pack.erase("stamped")
 	var n_plain: int = sim.issued_worn()
-	_check(n_stamped == n_plain, "a stamped pack counts toward the County's want")
+	_check(n_stamped == n_plain + 1, "a stamped pack doesn't count toward the County's want")     # (BUILD67-K) the pack is an issued slot now
 	sim.equipped["Backpack"] = hold_pack
 	sim.issued = was_issued
 	# the Blue Plaque: no other affix counts, the bases' roles do
@@ -29794,7 +29832,7 @@ func _repeat_checks(main) -> void:
 	_bd(sim, site, 1)
 	var head_site := -1
 	for i in range(Data.TIERS.size()):
-		if not sim.boss_of(i).is_empty() and sim.tier_open(i) and int(sim.best_depth[i]) > 0:
+		if not sim.boss_of(i).is_empty() and sim.tier_open(i) and int(sim.best_depth[i]) > 0 and not sim.f55_first_clear(i):     # (BUILD67-I) its picked stage cleared too: else "Not cleared yet" comes first (the bot's path decides)
 			head_site = i
 			break
 	_check(head_site >= 0, "no site with a head to arm")
@@ -34507,7 +34545,9 @@ func _b45a_reads_checks(main) -> void:
 	# the Map's signature holds the picked site's own key, one a frame (BUILD48 A, the review of item 9): no read asked
 	_check(main._odds_done.has("map") and map_surv == 0 and map_idle <= 30, "the Map's settled odds were asked %d times in 30 frames, %d reads (settled in %d)" % [map_idle, map_surv, n_map])
 	var gun = sim.equipped["Primary"]
-	sim.unequip("Primary")
+	while not sim.stash_fits(gun) and not sim.stash.is_empty():
+		sim.stash.pop_back()                      # (BUILD67-K) the fixture: room for the gun (a ninth slot's finds filled the bot's stash; the snap puts it back)
+	_check(sim.unequip("Primary"), "the fixture: the gun didn't come off")
 	sim.advance(0.0)
 	main._read_odds(5.0)
 	var moved: bool = not main._odds_done.has("map")
@@ -37938,6 +37978,7 @@ func _n50_fifth_checks(main) -> void:
 	var counts: Array = []
 	for sp in ["", "stash"]:
 		var m := {"tier": 3, "t": t, "found": [], "night_special": sp, "searches": 0, "search": 0.0, "cleared": true, "remaining": 0}
+		sim.site_crates.erase("3")           # (BUILD67-I) fresh crates both times: what the site kept from the bot's runs read as the first's (the bot's path decides)
 		sim.rng.seed = 77
 		sim._roll_crates(m, t)
 		var n := 0
@@ -40601,6 +40642,7 @@ func _u55_picker_checks(main) -> void:
 	main.refresh()
 	sim._dry_memo.clear()
 	var gh := 0
+	_k67_room(sim)                            # (BUILD67-K) a repeat's room in the stash, whatever the bot's run left there
 	while not sim.odds_settled(gc) and gh < 300:
 		sim.survival(gc)
 		gh += 1
@@ -41605,6 +41647,8 @@ func _a61_stages_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	sim.equipped["Helmet"] = null
 	sim.equipped["Charm"] = null
+	for sl in ["Gloves", "Backpack", "Boots"]:
+		sim.equipped[sl] = null                  # (BUILD67-K) the camp stamps nine now: two worn, as before
 	sim._stats_dirty()
 	sim.cs_done["container_port"] = 2
 	for s in range(1, Data.STAGES + 1):
@@ -41756,7 +41800,8 @@ func _u61_camp(sim, zones: int) -> void:
 	sim.hp = sim.max_hp()
 	if not sim.issued:
 		sim.issue()
-	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]:
+	_k67_room(sim)                            # (BUILD67-K) a repeat's room in the stash, whatever the bot's run left there
+	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary", "Gloves", "Backpack", "Boots"]:     # (BUILD67-K) nine issued slots
 		if sim.equipped.get(sl) == null:
 			sim.equipped[sl] = sim._plain(sl, str(Data.BASES[sl][0]["name"]))
 		sim.equipped[sl]["stamped"] = true
@@ -41860,7 +41905,7 @@ func _u61_card_checks(main) -> void:
 	col = _u61_show(main, "toll_plaza")
 	_check(col["repeat"].visible and not col["repeat"].disabled and not col["wager"].visible, "a cleared stage's repeat isn't open: visible %s, shut %s ('%s')" % [col["repeat"].visible, col["repeat"].disabled, sim.county_repeat_block("toll_plaza")])
 	# the want's rows: the issued kit against the zone's want, its six slots lit
-	_check(card.keys[3].text == Words.U61["issued_key"] and card.vals[3].text.begins_with(str(sim.issued_worn())) and card.want_words().size() == 6 and card.want_lit().all(func(w): return w), "the want's rows: '%s' '%s' %s %s" % [card.keys[3].text, card.vals[3].text, str(card.want_words()), str(card.want_lit())])
+	_check(card.keys[3].text == Words.U61["issued_key"] and card.vals[3].text.begins_with(str(sim.issued_worn())) and card.want_words().size() == 9 and card.want_lit().all(func(w): return w), "the want's rows: '%s' '%s' %s %s" % [card.keys[3].text, card.vals[3].text, str(card.want_words()), str(card.want_lit())])
 	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
 		main.layout(sz)
 		main.refresh()
@@ -41903,7 +41948,7 @@ func _u61_card_checks(main) -> void:
 	sim.hp = sim.max_hp()
 	# the want short: Set off shut, the Issuer and the Bench as its fix chips, the slots unlit
 	card.head_view = false
-	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary"]:
+	for sl in ["Helmet", "Armour", "Rig", "Charm", "Secondary", "Primary", "Gloves", "Backpack", "Boots"]:     # (BUILD67-K) nine
 		sim.equipped[sl].erase("stamped")
 	sim._stats_dirty()
 	col = _u61_show(main, "toll_plaza")
@@ -42563,3 +42608,1684 @@ func _w64_county_art_checks() -> void:
 		n += 1
 	_check(RunView.MUZZLE_AT.has("bullion_carbine") and RunView.MUZZLE_AT.has("sidelock_shotgun"), "the County's two new guns have no muzzle set")
 	print("w64 county art ok: 24 stage plates read on their stages, 4 dens for the heads' own fights, %d muzzles on their guns" % n)
+
+
+# ------------------------------------------------------------------ BUILD66-F (7 Nov): the fight's shooter mechanics
+
+## A run at site 3 for the checks, its site's depth and level set; f66_extra cleared.
+func _f66_run(sim, depth_v := 1, level_v := 5) -> Dictionary:
+	if sim.mission != null:
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.f66_extra = {"no_jam": 1.0}     # (the fix round) no jam by chance: each check names its own figures
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")     # a gun with a magazine: jams and scavenger
+	sim.equipped["Rig"] = sim._plain("Rig", "Chest rig")
+	var mg: Dictionary = _mag_full(sim, "Shotgun magazine", "Shells")
+	mg["rounds"] = 200
+	sim.rig = [mg]
+	sim.deploy(3)
+	var m: Dictionary = sim.mission
+	sim._mags_tick(m, 0.0)
+	m["t"]["depth"] = depth_v
+	m["t"]["level"] = level_v
+	m["f66_gang"] = sim._f66_gang_key(m)     # this gang's roll taken: no hard man by chance
+	m.erase("f66_hard")
+	return m
+
+
+## One tick of hits through _f66_hits: [what lands of 100, the shots fired].
+func _f66_hit(sim, m: Dictionary, dt := 4.0) -> Array:
+	var st: Dictionary = sim._f66_stats(m)
+	var before: float = float(st["shots"])
+	m["target_hp"] = 1e12
+	m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}     # as _mags_tick leaves it each tick
+	var x: float = sim._f66_hits(m, m["t"], 100.0, ["physical", 100.0], dt)
+	return [x, float(st["shots"]) - before]
+
+
+func _f66_hit_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# headshots: none at 0%, about x2 at 100% (no helmets above depth 4), the event and the count
+	var m := _f66_run(sim)
+	sim.f66_extra = {"no_jam": 1.0, "head_pct": -Data.HEAD66_PCT}
+	var r0: Array = _f66_hit(sim, m)
+	_check(absf(float(r0[0]) - 100.0) < 1e-6 and float(r0[1]) > 0.5, "with no headshots and no armour 100 didn't land as 100: %.2f (%.2f shots)" % [float(r0[0]), float(r0[1])])
+	sim.f66_extra = {"no_jam": 1.0, "head_pct": 100.0 - Data.HEAD66_PCT}
+	var seq0: int = sim.f66_last_seq()
+	var r1: Array = _f66_hit(sim, m)
+	var ev: Array = sim.f66_events_since(seq0)
+	var shots1: float = float(r1[1])
+	var want_lo: float = 100.0 + 100.0 * floorf(shots1) / shots1
+	_check(float(r1[0]) >= want_lo - 1e-6 and float(r1[0]) <= 100.0 + 100.0 * ceilf(shots1) / shots1 + 1e-6, "every shot a headshot didn't double the hit: %.1f for %.2f shots" % [float(r1[0]), shots1])
+	_check(ev.size() == 1 and str(ev[0]["kind"]) == "headshot" and int(ev[0]["n"]) >= int(floorf(shots1)) and float(ev[0]["amount"]) > 0.0 and not bool(ev[0]["helmet"]), "a headshot tick's event: %s" % str(ev))
+	_check(int(sim.f66_fight_stats()["headshots"]) >= int(floorf(shots1)), "the fight's headshots weren't counted: %s" % str(sim.f66_fight_stats()))
+	# head_dmg_pct: +100 makes it x3
+	sim.f66_extra = {"no_jam": 1.0, "head_pct": 100.0 - Data.HEAD66_PCT, "head_dmg_pct": 100.0}
+	var r1b: Array = _f66_hit(sim, m)
+	_check(float(r1b[0]) >= 100.0 + 200.0 * floorf(float(r1b[1])) / float(r1b[1]) - 1e-6, "head_dmg_pct +100 didn't make a headshot x3: %.1f" % float(r1b[0]))
+	# the base: 5% of shots over a long stretch
+	sim.f66_extra = {"no_jam": 1.0}
+	var heads0: int = int(sim._f66_stats(m)["headshots"])
+	var shots0: float = float(sim._f66_stats(m)["shots"])
+	for k in range(400):
+		_f66_hit(sim, m)
+	var share: float = float(int(sim._f66_stats(m)["headshots"]) - heads0) / maxf(1.0, float(sim._f66_stats(m)["shots"]) - shots0)
+	_check(share > 0.035 and share < 0.065, "the base headshot share is %.3f of shots, not about 5%%" % share)
+	# helmets: none at depth 3, 25% at 4, 60% at the deepest; helmet_ignore_pct takes them off
+	_check(sim.f66_helmet({"depth": 3}) == 0.0 and absf(sim.f66_helmet({"depth": 4}) - 0.25) < 1e-6 and absf(sim.f66_helmet({"depth": Data.DEEP66}) - 0.6) < 1e-6 and absf(sim.f66_helmet({"depth": 99}) - 0.6) < 1e-6,
+		"the helmets by depth: %.3f %.3f %.3f" % [sim.f66_helmet({"depth": 3}), sim.f66_helmet({"depth": 4}), sim.f66_helmet({"depth": Data.DEEP66})])
+	m = _f66_run(sim, 4)
+	sim.f66_extra = {"no_jam": 1.0, "head_pct": 100.0 - Data.HEAD66_PCT}
+	var r2: Array = _f66_hit(sim, m)
+	_check(float(r2[0]) <= 100.0 + 75.0 * ceilf(float(r2[1])) / float(r2[1]) + 1e-6 and float(r2[0]) >= 100.0 + 75.0 * floorf(float(r2[1])) / float(r2[1]) - 1e-6, "a helmet at depth 4 didn't take a quarter of a headshot's extra: %.1f" % float(r2[0]))
+	sim.f66_extra = {"no_jam": 1.0, "head_pct": 100.0 - Data.HEAD66_PCT, "helmet_ignore_pct": 100.0}
+	_check(sim.f66_helmet(m["t"]) == 0.0, "helmet_ignore_pct 100 left a helmet: %.2f" % sim.f66_helmet(m["t"]))
+	# armour: none at depth 5, 10% at 6, 35% deepest; pierce_pct ignores it
+	m = _f66_run(sim, 5)
+	sim.f66_extra = {"head_pct": -Data.HEAD66_PCT, "no_jam": 1.0}
+	_check(absf(float(_f66_hit(sim, m)[0]) - 100.0) < 1e-6, "armour at depth 5")
+	m = _f66_run(sim, 6)
+	sim.f66_extra = {"head_pct": -Data.HEAD66_PCT, "no_jam": 1.0}
+	var a6: float = float(_f66_hit(sim, m)[0])
+	m["t"]["depth"] = Data.DEEP66
+	var a30: float = float(_f66_hit(sim, m)[0])
+	sim.f66_extra = {"head_pct": -Data.HEAD66_PCT, "pierce_pct": 100.0, "no_jam": 1.0}
+	var ap: float = float(_f66_hit(sim, m)[0])
+	_check(absf(a6 - 90.0) < 1e-4 and absf(a30 - 65.0) < 1e-4 and absf(ap - 100.0) < 1e-4, "the gang's armour: depth 6 %.1f (90), the deepest %.1f (65), pierced %.1f (100)" % [a6, a30, ap])
+	_check(float(sim.f66_fight_stats()["armour_hits"]) > 0.0, "shots into armour weren't counted")
+	# leg shots: the next gang later, capped
+	m = _f66_run(sim)
+	sim.f66_extra = {"no_jam": 1.0, "leg_pct": 100.0}
+	m["patrol_timer"] = 0.0
+	var rl: Array = _f66_hit(sim, m)
+	_check(float(m["patrol_timer"]) <= -Data.LEG66_S * floorf(float(rl[1])) + 1e-6 and float(m["patrol_timer"]) < 0.0, "leg shots didn't hold the next gang back: the timer %.2f after %.2f shots" % [float(m["patrol_timer"]), float(rl[1])])
+	for k in range(200):
+		_f66_hit(sim, m)
+	_check(absf(float(m["patrol_timer"]) + Data.LEG66_CAP_S) < 1e-6, "leg shots past the cap: %.1f" % float(m["patrol_timer"]))
+	# arm shots: 3 s of more misses
+	sim.f66_extra = {"no_jam": 1.0, "arm_pct": 100.0}
+	m["f66_supp"] = 0.0
+	_check(absf(sim._f66_in_mult(m, 1, 0.0) - 1.0) < 1e-6, "their fire cut before an arm shot")
+	_f66_hit(sim, m)
+	m["f66_supp"] = 0.0
+	_check(absf(float(m.get("f66_arm_t", 0.0)) - Data.ARM66_S) < 1e-6 and absf(sim._f66_in_mult(m, 1, 1.0) - (1.0 - Data.ARM66_MISS)) < 1e-6, "an arm shot didn't make the man miss more: %.2f s" % float(m.get("f66_arm_t", 0.0)))
+	sim._f66_in_mult(m, 1, 2.5)
+	_check(float(m.get("f66_arm_t", 0.0)) <= 0.0 and absf(sim._f66_in_mult(m, 1, 0.1) - 1.0) < 1e-6, "an arm shot lasted past its 3 s")
+	# suppression: SUPP66_FILL_S of sustained fire fills the meter; full, they fire 20% slower; suppress_pct faster
+	m = _f66_run(sim)
+	var seq1: int = sim.f66_last_seq()
+	var ticks := 0
+	while sim.f66_suppress() < 1.0 and ticks < 100:
+		m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}
+		_f66_hit(sim, m, 1.0)
+		ticks += 1
+	_check(ticks == int(Data.SUPP66_FILL_S) and absf(sim._f66_in_mult(m, 1, 0.0) - (1.0 - Data.SUPP66_SLOW)) < 1e-6 and sim.f66_events_since(seq1).any(func(e): return e["kind"] == "suppressed"),
+		"the meter: full after %d s (want %d), their fire x%.2f" % [ticks, int(Data.SUPP66_FILL_S), sim._f66_in_mult(m, 1, 0.0)])
+	m = _f66_run(sim)
+	sim.f66_extra = {"no_jam": 1.0, "suppress_pct": 100.0}
+	ticks = 0
+	while sim.f66_suppress() < 1.0 and ticks < 100:
+		m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}
+		_f66_hit(sim, m, 1.0)
+		ticks += 1
+	_check(ticks == int(Data.SUPP66_FILL_S / 2.0), "suppress_pct +100 didn't fill the meter twice as fast: %d s" % ticks)
+	sim.extract_now()
+	sim.f66_extra = {"no_jam": 1.0}
+	sim.load_dict(saved)
+	print("f66 hits ok: headshots x2 at 5 percent, helmets from depth 4, armour from 6, pierce, leg and arm shots, the meter")
+
+
+func _f66_kill_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# the streak: a kill counts, a hit (STREAK66_HIT_PCT of max HP reaching it) ends it; streak_dmg_pct capped
+	var m := _f66_run(sim)
+	for k in range(7):
+		sim._f66_on_kill(m, m["t"])
+	_check(sim.f66_streak() == 7 and int(sim.f66_fight_stats()["best_streak"]) == 7, "seven kills untouched aren't a streak of 7: %d" % sim.f66_streak())
+	_check(sim.f66_streak_bonus_pct() == 0.0, "a streak's damage with no streak_dmg_pct")
+	sim.f66_extra = {"streak_dmg_pct": 4.0}
+	_check(absf(sim.f66_streak_bonus_pct() - 28.0) < 1e-6, "streak_dmg_pct 4 at 7 kills: %.1f, not 28" % sim.f66_streak_bonus_pct())
+	m["target_hp"] = 1e12
+	var xs: float = sim._f66_hits(m, m["t"], 100.0, ["physical", 100.0], 1.0)
+	_check(xs >= 128.0 - 1e-6, "the streak's damage didn't reach the hit: %.1f" % xs)
+	sim.f66_extra = {"streak_dmg_pct": 20.0}
+	_check(absf(sim.f66_streak_bonus_pct() - Data.STREAK66_CAP_PCT) < 1e-6, "the streak's damage past its cap: %.1f" % sim.f66_streak_bonus_pct())
+	sim._f66_taken(m, sim.max_hp() * 0.02)
+	_check(sim.f66_streak() == 7, "a graze ended the streak")
+	var seq0: int = sim.f66_last_seq()
+	sim._f66_taken(m, sim.max_hp() * 0.04)
+	_check(sim.f66_streak() == 0 and sim.f66_events_since(seq0).any(func(e): return e["kind"] == "streak_end" and int(e["was"]) == 7), "a hit didn't end the streak: %d" % sim.f66_streak())
+	# scavenger: a kill puts a round back
+	m = _f66_run(sim)
+	sim._mags_tick(m, 0.0)
+	var slot: String = sim._f66_in_hand()[0]
+	var cur: Dictionary = sim.mag_in(slot)
+	_check(not cur.is_empty(), "no magazine in the %s at site 3 for scavenger's check" % slot)
+	if not cur.is_empty():
+		cur["rounds"] = 1
+		sim.f66_extra = {"scav_pct": 100.0}
+		sim._f66_on_kill(m, m["t"])
+		_check(int(cur["rounds"]) == 2, "scavenger didn't put a round back: %d" % int(cur["rounds"]))
+		sim.f66_extra = {}
+		sim._f66_on_kill(m, m["t"])
+		_check(int(cur["rounds"]) == 2, "a round back with no scav_pct")
+	# jams: a T1 gun jams, the beat is lost (no fire, no rounds), no_jam stops it
+	m = _f66_run(sim)
+	var gun = sim._f66_in_hand()[1]
+	var tr_was = gun.get("tier", 1)
+	gun["tier"] = 1
+	sim.f66_extra = {}
+	_check(absf(sim.f66_jam_pct(gun) - 3.0) < 1e-6, "a T1 gun's jam chance: %.1f" % sim.f66_jam_pct(gun))
+	gun["tier"] = 4
+	_check(sim.f66_jam_pct(gun) == 0.0, "a T4 gun jams")
+	gun["tier"] = 1
+	sim.f66_extra = {"jam_pct": 100.0, "head_pct": -Data.HEAD66_PCT}
+	var seq1: int = sim.f66_last_seq()
+	m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}
+	_f66_hit(sim, m)
+	var hs: String = sim._f66_in_hand()[0]
+	_check(absf(sim.f66_jam_left(hs) - Data.JAM66_S) < 1e-6 and sim.f66_events_since(seq1).any(func(e): return e["kind"] == "jam" and str(e["slot"]) == hs) and int(sim.f66_fight_stats()["jams"]) == 1, "a jam: %.2f s left on the %s" % [sim.f66_jam_left(hs), hs])
+	var jam_was: float = sim.f66_jam_left(hs)
+	var rz: Array = _f66_hit(sim, m, 0.5)
+	_check(float(rz[0]) == 0.0 and float(m["fire_x"][hs]) == 0.0, "a tick wholly jammed still hit: %.1f of 100 (the fix round: the no-shots path returned the hit whole)" % float(rz[0]))
+	m["f66_jam"][hs] = jam_was
+	var rj: Array = _f66_hit(sim, m, 1.0)
+	_check(absf(float(m["fire_x"][hs]) - 0.2) < 1e-6 and float(rj[0]) < 21.0, "the jam's beat wasn't lost: fire x%.2f, %.1f of 100 landed" % [float(m["fire_x"][hs]), float(rj[0])])
+	m["f66_jam"] = {}
+	sim.f66_extra = {"jam_pct": 100.0, "no_jam": 1.0}
+	_f66_hit(sim, m)
+	_check(sim.f66_jam_left(hs) == 0.0, "no_jam didn't stop a jam")
+	gun["tier"] = tr_was
+	# Last Stand: none without last_stand_s; with it, once a run at 0 HP you fight on; out of seconds, the next hit
+	m = _f66_run(sim)
+	sim.f66_extra = {}
+	_check(sim.f66_last_stand_state() == "none" and not sim._f66_last_stand(m), "Last Stand with no last_stand_s")
+	sim.f66_extra = {"last_stand_s": 5.0}
+	_check(sim.f66_last_stand_state() == "ready", "Last Stand isn't ready: %s" % sim.f66_last_stand_state())
+	sim.hp = sim.max_hp() * 0.01
+	m["remaining"] = maxi(1, int(m["remaining"]))
+	m["target_hp"] = 1e12
+	m["t"]["dps"] = sim.max_hp() * 50.0
+	var reached := 0.0
+	for k in range(3):
+		sim._fight(m, m["t"], 1.0)
+		reached = maxf(reached, sim.f66_last_stand_left())
+	_check(sim.mission != null and sim.f66_last_stand_state() == "on" and sim.hp > 0.0 and reached >= 4.0, "Last Stand at 0 HP: %s, %.1f s left, HP %.1f" % [sim.f66_last_stand_state(), sim.f66_last_stand_left(), sim.hp])
+	for k in range(5):
+		if sim.mission != null:
+			sim._fight(m, m["t"], 1.0)
+	_check(sim.mission == null or sim.f66_last_stand_state() == "used", "Last Stand didn't run out: %s" % (sim.f66_last_stand_state() if sim.mission != null else "home"))
+	_check(sim.mission == null, "Last Stand ran out and the runner stood on")
+	# held: the gang down in its seconds
+	sim.hp = sim.max_hp()
+	m = _f66_run(sim)
+	sim.f66_extra = {"last_stand_s": 5.0}
+	_check(sim._f66_last_stand(m) and sim.f66_last_stand_state() == "on", "Last Stand didn't take")
+	m["remaining"] = 0
+	sim._f66_on_kill(m, m["t"])
+	_check(sim.f66_last_stand_state() == "used" and sim.mission != null, "the gang down in Last Stand's seconds didn't hold it")
+	_check(not sim._f66_last_stand(m), "Last Stand twice in a run")
+	if sim.mission != null:
+		sim.extract_now()
+	sim.f66_extra = {}
+	sim.load_dict(saved)
+	print("f66 kills ok: the streak and its damage, scavenger, jams by tier, Last Stand once a run")
+
+
+func _f66_hard_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# the odds: none under level 10, about 1 gang in 6 from it
+	var m := _f66_run(sim, 1, 9)
+	var n_low := 0
+	for k in range(300):
+		m["patrols"] = 1000 + k
+		m.erase("f66_hard")
+		sim._f66_gang(m, m["t"])
+		n_low += 1 if m.has("f66_hard") else 0
+	m["t"]["level"] = Data.HARD66_LEVEL
+	var n_hi := 0
+	var two := 0
+	for k in range(1200):
+		m["patrols"] = 5000 + k
+		m.erase("f66_hard")
+		sim._f66_gang(m, m["t"])
+		if m.has("f66_hard"):
+			n_hi += 1
+			two += 1 if m["f66_hard"]["traits"].size() == 2 else 0
+			_check(str(m["f66_hard"]["name"]) in Words.HARD66_NAMES and m["f66_hard"]["traits"].size() >= 1 and m["f66_hard"]["traits"].all(func(x): return x in Data.HARD66_TRAITS), "a hard man's roll: %s" % str(m["f66_hard"]))
+	_check(n_low == 0, "%d hard men under level %d" % [n_low, Data.HARD66_LEVEL])
+	_check(n_hi > 150 and n_hi < 250 and two > 0 and two < n_hi, "hard men in 1200 gangs at level 10: %d (want about 200), %d with two traits" % [n_hi, two])
+	# him: the last of his gang, HP x2.5 when he steps up, a plate's figures, a better drop and the hook, then gone
+	m = _f66_run(sim, 1, 12)
+	var t: Dictionary = m["t"]
+	m["remaining"] = 3
+	m["target_hp"] = float(t["hp"])
+	var kills0: int = int(m["kills"])
+	var seq0: int = sim.f66_last_seq()
+	sim._f66_make_hard(m, t, "Little Phil Grange", ["medic", "runner"])
+	var hm: Dictionary = sim.f66_hard_man()
+	_check(int(m["f66_hard"]["at"]) == kills0 + 2 and not bool(hm.get("in_front", true)) and absf(float(hm.get("hp_share", 0.0)) - 1.0) < 1e-6 and hm.get("trait_words", []) == ["First aider", "Messenger"], "the hard man at his gang's back: %s" % str(hm))
+	_check(sim.f66_events_since(seq0).any(func(e): return e["kind"] == "hard_man" and str(e["name"]) == "Little Phil Grange"), "his arrival's event")
+	# Medic heals the man in front, Runner brings the next gang sooner
+	m["target_hp"] = float(t["hp"]) * 0.5
+	m["patrol_timer"] = 0.0
+	sim.f66_extra = {"head_pct": -Data.HEAD66_PCT}
+	sim._f66_hits(m, t, 0.0, ["physical", 0.0], 1.0)
+	_check(absf(float(m["target_hp"]) - float(t["hp"]) * (0.5 + Data.MEDIC66_PCT / 100.0)) < 1e-3 and absf(float(m["patrol_timer"]) - Data.RUNNER66_RATE) < 1e-6, "Medic and Runner while he lives: the man in front %.1f, the timer %.2f" % [float(m["target_hp"]), float(m["patrol_timer"])])
+	m["target_hp"] = float(t["hp"])
+	sim._f66_on_kill(m, t)                    # the first man down (kills not yet counted, as in the loop)
+	m["kills"] = int(m["kills"]) + 1
+	m["remaining"] = 2
+	sim._f66_on_kill(m, t)                    # the second: he steps up
+	m["kills"] = int(m["kills"]) + 1
+	m["remaining"] = 1
+	hm = sim.f66_hard_man()
+	_check(bool(hm.get("in_front", false)) and absf(float(m["target_hp"]) - float(t["hp"]) * Data.HARD66_HP) < 1e-3, "he stepped up without his HP: %.0f of a man's %.0f" % [float(m["target_hp"]), float(t["hp"])])
+	# Armoured doubles his armour; Spotter: his gang misses less
+	m["f66_hard"]["traits"] = ["armoured", "spotter"]
+	m["t"]["depth"] = 6
+	_check(absf(sim.f66_armour(m, t) - 0.2) < 1e-6, "Armoured at depth 6: %.2f, not 0.20" % sim.f66_armour(m, t))
+	m["t"]["depth"] = 1
+	_check(absf(sim.f66_armour(m, t) - Data.HARD66_ARMOUR_MIN * 2.0 / 100.0) < 1e-6, "Armoured with no gang armour: %.2f" % sim.f66_armour(m, t))
+	_check(absf(sim._f66_in_mult(m, 1, 0.0) - (1.0 + Data.SPOTTER66_PCT / 100.0)) < 1e-6, "a Spotter's gang doesn't miss less")
+	# his death: the better drop and build 4's hook
+	m["found"] = []                           # nothing his find could stack onto
+	m["floor"] = []
+	var found0: int = m["found"].size() + m.get("floor", []).size()
+	var seq1: int = sim.f66_last_seq()
+	m["remaining"] = 0
+	sim._f66_on_kill(m, t)
+	_check(sim.f66_hard_man().is_empty() and sim.f66_events_since(seq1).any(func(e): return e["kind"] == "hard_down"), "he didn't go down")
+	_check(m["found"].size() + m.get("floor", []).size() > found0, "his better drop didn't come: %d finds, %d before" % [m["found"].size() + m.get("floor", []).size(), found0])
+	_check(sim.has_method("f66_hard_drop_hook"), "build 4's hook for his seeds is gone")
+	_check(absf(sim._f66_in_mult(m, 1, 0.0) - 1.0) < 1e-6, "his Spotter outlived him")
+	sim.extract_now()
+	sim.f66_extra = {}
+	sim.load_dict(saved)
+	print("f66 hard men ok: 1 in 6 from level 10, at his gang's back with x2.5 HP, his traits, his drop")
+
+
+func _f66_api_checks(main) -> void:
+	var sim = main.sim
+	if sim.mission != null:
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_check(sim.f66_events_since(0).is_empty() and sim.f66_hard_man().is_empty() and sim.f66_streak() == 0 and sim.f66_jam_left("Primary") == 0.0 and sim.f66_last_seq() == 0, "the fight's reads with no run: %s %s %d" % [str(sim.f66_events_since(0)), str(sim.f66_hard_man()), sim.f66_streak()])
+	var m := _f66_run(sim)
+	var seq0: int = sim.f66_last_seq()
+	sim.f66_force("headshot", {"amount": 4120.0, "helmet": true})
+	sim.f66_force("jam", {"slot": "Primary", "s": 0.8})
+	sim.f66_force("hard_man", {"name": "Big Terry Vance", "traits": ["armoured", "runner"]})
+	sim.f66_force("streak", {"n": 7})
+	sim.f66_force("last_stand", {"state": "on", "s": 5.0})
+	sim.f66_force("suppress", {"v": 1.0})
+	var kinds: Array = sim.f66_events_since(seq0).map(func(e): return e["kind"])
+	_check(kinds == ["headshot", "jam", "hard_man", "last_stand", "suppressed"], "the forced events: %s" % str(kinds))
+	_check(bool(sim.f66_hard_man().get("in_front", false)) and sim.f66_streak() == 7 and sim.f66_last_stand_state() == "on" and absf(sim.f66_last_stand_left() - 5.0) < 1e-6 and absf(sim.f66_jam_left("Primary") - 0.8) < 1e-6, "the forced state: %s" % str(sim.f66_hard_man()))
+	sim.f66_force("last_stand", {"state": "used"})
+	_check(sim.f66_last_stand_state() == "used", "Last Stand forced used")
+	_check(sim.f66_events_since(sim.f66_last_seq()).is_empty(), "events past the newest")
+	for k in range(60):
+		sim.f66_force("headshot")
+	_check(m["fx66"].size() == sim.F66_EVENTS_KEPT, "the queue isn't capped: %d" % m["fx66"].size())
+	# the longest name with two traits, for the view's plate
+	var longest := ""
+	for n in Words.HARD66_NAMES:
+		longest = n if str(n).length() > longest.length() else longest
+	_check(Words.HARD66_NAMES.size() >= 30 and longest.length() <= 18, "the hard men's names: %d, the longest '%s'" % [Words.HARD66_NAMES.size(), longest])
+	# the live fight's dice: fight_rng from the seed, every other draw left where it was
+	_check(sim.fight_rng != sim.rng and sim.fight_rng.seed != 0, "the shooter mechanics' dice aren't their own")
+	sim.extract_now()
+	# a real run still finishes, the mechanics live: headshots counted at their share
+	m = _f66_run(sim)
+	m["t"]["dps"] = 0.0                       # the runner stands: the fight's own figures are what's read
+	sim.f66_extra = {"head_pct": 15.0}        # (the fix round) enough headshots that none is never luck
+	var n := 0
+	var fs: Dictionary = {}
+	while sim.mission != null and not bool(sim.mission["cleared"]) and n < 900:
+		sim._tick(1.0)
+		n += 1
+		if sim.mission != null:
+			fs = sim.f66_fight_stats()
+	_check(sim.mission != null and bool(sim.mission["cleared"]) and int(fs.get("headshots", 0)) > 0, "site 3's first gang in a live run: cleared %s after %d s, %s" % [str(sim.mission != null and bool(sim.mission["cleared"])), n, str(fs)])
+	if sim.mission != null:
+		sim.extract_now()
+	sim.load_dict(saved)
+	print("f66 api ok: the events, the reads, the forces, the cap, the names")
+# ==================================================================== BUILD66-V (7 Nov): the fight view's shooter mechanics
+# (docs/design/endgame_rail.md §1, the Fight mockup). The sim's side is F's (sim.f66_*, forced with f66_force).
+
+## A fight on the run screen at `sz` with a gang up in the frame; the run view, or null with no art.
+func _v66_fight(main, sz: Vector2):
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	main.layout(sz)
+	sim.deploy(0)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var v = main._run._view
+	if v == null:
+		return null
+	for i in range(4):
+		sim.advance(0.1)
+		main.refresh()
+		v._process(0.2)
+	return v
+
+
+## A look and a frame: what a forced event leaves on the screen.
+func _v66_look(main, v, dt := 0.016) -> Dictionary:
+	main.refresh()
+	v._process(dt)
+	return v.v66_state()
+
+
+## The longest hard man the words can roll: the longest name, his two longest traits (keys).
+func _v66_longest() -> Dictionary:
+	var cm: Dictionary = (load("res://scripts/sim/words.gd") as Script).get_script_constant_map()
+	var names: Array = cm.get("HARD66_NAMES", ["Big Terry Vance"])
+	var traits: Dictionary = cm.get("HARD66_TRAITS", {"armoured": "Armoured", "medic": "Medic", "spotter": "Spotter", "runner": "Runner"})
+	var name := ""
+	for n in names:
+		if str(n).length() > name.length():
+			name = str(n)
+	var keys: Array = traits.keys()
+	keys.sort_custom(func(a, b): return str(traits[a]).length() > str(traits[b]).length())
+	return {"name": name, "traits": keys.slice(0, 2)}
+
+
+## Where each piece sits: inside the frame, clear of the fight's head, the "On them" chips, the countdown, the skills,
+## each other, the bars; the streak and Last Stand never over the dmg/s (the top bar's, the six's Your fire).
+func _v66_geom(main, v, where: String) -> void:
+	var run = main._run
+	var st: Dictionary = v.v66_state()
+	var fr: Rect2 = st["frame"]
+	var keep: Array = run._keep66()
+	var pills: Array = []
+	for k in ["streak", "ls"]:
+		if st[k]:
+			var r: Rect2 = st[k + "_rect"]
+			pills.append(r)
+			_check(fr.encloses(r), "%s: the %s pill leaves the frame: %s in %s" % [where, k, str(r), str(fr)])
+			_check(keep.all(func(q): return not q.intersects(r)), "%s: the %s pill sits on the fight's head, chips or countdown: %s vs %s" % [where, k, str(r), str(keep)])
+			var node: Control = v._streak66 if k == "streak" else v._ls66
+			var g: Rect2 = node.get_global_rect()
+			for d in [main._top_labels["dps"], run._six[1]["panel"]]:
+				_check(not g.intersects(d.get_global_rect()), "%s: the %s pill is over the dmg/s (%s vs %s)" % [where, k, str(g), str(d.get_global_rect())])
+	if pills.size() == 2:
+		_check(not pills[0].intersects(pills[1]), "%s: the streak and Last Stand overlap: %s" % [where, str(pills)])
+	if st["plate"]:
+		var pr: Rect2 = st["plate_rect"]
+		_check(fr.encloses(pr), "%s: the hard man's plate leaves the frame: %s in %s" % [where, str(pr), str(fr)])
+		_check((keep + pills).all(func(q): return not q.intersects(pr)), "%s: the hard man's plate sits on the head, the chips or the pills: %s" % [where, str(pr)])
+		for c in st["chip_rects"]:
+			_check(pr.encloses(c), "%s: a trait chip leaves the plate: %s in %s" % [where, str(c), str(pr)])
+		var hb: Rect2 = st["hard_bar"]
+		_check(hb.size.x > 0.0 and fr.encloses(hb) and hb.position.y >= pr.end.y, "%s: the hard man's bar isn't in the frame under his plate: %s, plate %s" % [where, str(hb), str(pr)])
+	if st["jam"]:
+		var jr: Rect2 = st["jam_rect"]
+		_check(fr.encloses(jr), "%s: the jam's tag leaves the frame: %s" % [where, str(jr)])
+		_check((keep + pills).all(func(q): return not q.intersects(jr)), "%s: the jam's tag sits on the head, the chips, the countdown or the pills: %s" % [where, str(jr)])
+		if st["plate"]:
+			_check(not jr.intersects(st["plate_rect"]), "%s: the jam's tag sits on the hard man's plate" % where)
+	var word: Rect2 = run._word66()
+	for r in st["pop_rects"]:
+		_check(fr.encloses(r), "%s: a headshot's pop leaves the frame: %s" % [where, str(r)])
+		_check((keep + pills + v.pop66_keep()).all(func(q): return not q.intersects(r)) and not word.intersects(r), "%s: a headshot's pop sits on a bar, the plate, the head, the countdown or the skill's name: %s" % [where, str(r)])
+		if st["jam"]:
+			_check(not r.intersects(st["jam_rect"]), "%s: a headshot's pop sits on the jam's tag" % where)
+	if st["jam"]:
+		_check(not word.intersects(st["jam_rect"]), "%s: the jam's tag sits on the skill's name %s" % [where, str(word)])
+
+
+## Each piece shows when its event fires, and not before (red without it): the headshot's pop over the man hit and its
+## sound, the jam over your gun with its time (and the gun holds fire), the hard man's plate and gold-edged bar, the
+## streak from two kills with its bonus, Last Stand only on a build that has it (ready / on with seconds / used).
+func _v66_view_checks(main) -> void:
+	var sim = main.sim
+	var v = _v66_fight(main, Vector2(1920, 1080))
+	_check(v != null and sim.on_mission() and int(sim.mission["remaining"]) > 0 and v.figures_up() > 0, "v66: the fixture has no gang up in the fight's frame")
+	if v == null or not sim.on_mission():
+		return
+	var heard: Array = []
+	var ear := func(id: String, _p: float): heard.append(id)
+	v.sound66.connect(ear)
+	# before anything's forced: each piece shows exactly when the sim says so
+	var st: Dictionary = _v66_look(main, v)
+	_check(st["plate"] == not sim.f66_hard_man().is_empty(), "v66: the plate shows %s with the hard man %s" % [str(st["plate"]), str(sim.f66_hard_man())])
+	_check(st["streak"] == (sim.f66_streak() >= 2), "v66: the streak shows %s at %d" % [str(st["streak"]), sim.f66_streak()])
+	_check(st["ls"] == (sim.f66_last_stand_state() != "none"), "v66: Last Stand shows %s with the state '%s'" % [str(st["ls"]), sim.f66_last_stand_state()])
+	_check(sim.f66_last_stand_state() != "none" or not st["ls"], "v66: Last Stand shows on a build without it")
+	# the headshot: a gold pop, "HEADSHOT" and the figure, and its sound
+	var pops: int = st["pops"].size()
+	sim.f66_force("headshot", {"amount": 4120.0, "hard": false, "helmet": false})
+	st = _v66_look(main, v)
+	_check(st["pops"].size() == pops + 1 and str(st["pops"].back()) == Words.V66["headshot"] % "4,120" and int(st["pops_shown"]) == st["pops"].size(), "v66: a headshot didn't pop 'HEADSHOT 4,120': %s (%d shown)" % [str(st["pops"]), int(st["pops_shown"])])
+	_check(heard.has("kill") and load("res://scripts/ui/sound.gd").SOUNDS.has("kill"), "v66: a headshot made no sound (%s)" % str(heard))
+	if not st["pop_rects"].is_empty():
+		var pr: Rect2 = st["pop_rects"].back()
+		_check(v.pop66_keep().all(func(q): return not q.intersects(pr)), "v66: the headshot's pop sits on a bar, the HP words or the plate: %s" % str(pr))
+		_check(v._pops66.back()["label"].get_theme_color("font_color") == v.GOLD66, "v66: the headshot's pop isn't gold")
+	for i in range(80):
+		v._process(0.016)
+	_check(v.v66_state()["pops"].size() == 0, "v66: a headshot's pop never went")
+	# the jam: over your gun, its time left in the warning colour; the gun holds fire while it lasts
+	var shots: Array = [0]
+	var count := func(): shots[0] += 1
+	v.gun_fired.connect(count)
+	var ready_gun := func():
+		v._shot_t = 0.0                        # the next shot due, nothing else holding it: down, a swing, a reload
+		v._duck = 0.0
+		v._duck_t = 0.0
+		v._duck_next = 99.0
+		v._swing = -1.0
+		v._reloading = false
+	ready_gun.call()
+	v._process(0.016)
+	var free_fire: bool = shots[0] > 0
+	_check(free_fire, "v66: the fixture's gun didn't fire with no jam (firing %s)" % str(v._firing))
+	heard.clear()
+	sim.f66_force("jam", {"slot": "Primary", "s": 0.8})
+	st = _v66_look(main, v, 0.05)
+	_check(st["jam"] and str(st["jam_text"]).begins_with(Words.V66["jammed"].split("%")[0]) and str(st["jam_text"]).ends_with(" s"), "v66: a jam didn't show over the gun: '%s'" % str(st["jam_text"]))
+	_check(heard.has("dry_click") and load("res://scripts/ui/sound.gd").SOUNDS.has("dry_click"), "v66: a jam made no sound (%s)" % str(heard))
+	if st["jam"]:
+		var jr: Rect2 = st["jam_rect"]
+		var hr: Rect2 = st["hands_rect"]
+		_check(jr.get_center().x >= hr.position.x and jr.get_center().x <= hr.end.x and jr.position.y < hr.get_center().y, "v66: the jam's tag isn't over the gun: %s, the hands %s" % [str(jr), str(hr)])
+		_check(v._jam66.get_theme_stylebox("panel").bg_color == Pal.WARN, "v66: the jam's tag isn't in the warning colour")
+	shots[0] = 0
+	ready_gun.call()
+	v._process(0.016)
+	_check(st["jam_hold"] and shots[0] == 0, "v66: the gun fired while jammed (%d shots)" % shots[0])
+	v.gun_fired.disconnect(count)
+	# the hard man: the plate (HARD MAN, his name, his traits) and his gold-edged bar on his own HP
+	var lg: Dictionary = _v66_longest()
+	sim.f66_force("hard_man", {"name": lg["name"], "traits": lg["traits"]})
+	for i in range(3):
+		st = _v66_look(main, v, 0.05)
+	var hm: Dictionary = sim.f66_hard_man()
+	_check(not hm.is_empty() and st["plate"] and st["plate_name"] == lg["name"] and v._plate66_kick.text == Words.V66["hard"], "v66: the hard man's plate didn't show '%s': %s" % [lg["name"], str(st["plate_name"])])
+	_check(st["plate_chips"] == hm.get("trait_words", []) and st["plate_chips"].size() == 2, "v66: his trait chips read %s, not %s" % [str(st["plate_chips"]), str(hm.get("trait_words", []))])
+	_check(st["hard_edge"] and v._figs[st["hard_k"]]["bar"].share == clampf(float(hm.get("hp_share", -1.0)), 0.0, 1.0), "v66: his bar isn't gold-edged on his own HP (k %d)" % int(st["hard_k"]))
+	_check(v._figs.filter(func(f): return f["bar"].hard).size() == 1, "v66: more than one bar is gold-edged")
+	_v66_geom(main, v, "v66 the hard man")
+	# the streak: hidden at one, from two its count, its bonus when the build has streak_dmg_pct
+	sim.f66_force("streak", {"n": 1})
+	st = _v66_look(main, v)
+	_check(not st["streak"], "v66: a streak of one shows")
+	sim.f66_force("streak", {"n": 7})
+	st = _v66_look(main, v)
+	var pct: int = roundi(sim.f66_streak_bonus_pct())
+	var want_s: String = "%s %s" % [Words.V66["streak"], Words.V66["streak_n"] % 7]     # the editor's call: "Streak 7"
+	_check(st["streak"] and str(st["streak_text"]).begins_with(want_s) and (str(st["streak_text"]).contains("+%d%%" % pct) == (pct > 0)), "v66: the streak of 7 reads '%s' (bonus %d%%)" % [str(st["streak_text"]), pct])
+	# Last Stand: ready, on with its seconds, used
+	for ls in [["ready", Words.V66["ls_ready"]], ["on", Words.V66["ls_on"] % "2.4"], ["used", Words.V66["ls_used"]]]:
+		sim.f66_force("last_stand", {"state": ls[0], "s": 2.4})
+		st = _v66_look(main, v, 0.0)
+		_check(st["ls"] and str(st["ls_text"]) == "%s · %s" % [Words.V66["last_stand"], ls[1]], "v66: Last Stand %s reads '%s'" % [ls[0], str(st["ls_text"])])
+	_v66_geom(main, v, "v66 everything up")
+	v.sound66.disconnect(ear)
+	sim.extract_now()
+	main.refresh()
+
+
+## Everything at once at 1920x1080 and 1920x1200: the longest hard man with two traits, the streak with its bonus,
+## Last Stand on, a jam, a big headshot - every label fits, the plate inside the frame, the pills off the dmg/s.
+func _v66_fit_checks(main) -> void:
+	var sim = main.sim
+	var lg: Dictionary = _v66_longest()
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		var v = _v66_fight(main, sz)
+		_check(v != null and sim.on_mission() and int(sim.mission["remaining"]) > 0, "v66 fit: no fight at %s" % str(sz))
+		if v == null or not sim.on_mission():
+			continue
+		sim.f66_force("hard_man", {"name": lg["name"], "traits": lg["traits"]})
+		sim.f66_force("streak", {"n": 12})
+		sim.f66_force("last_stand", {"state": "on", "s": 2.4})
+		sim.f66_force("jam", {"slot": "Primary", "s": 0.8})
+		for i in range(3):
+			_v66_look(main, v, 0.05)
+		sim.f66_force("headshot", {"amount": 1234567.0, "hard": true})
+		var st: Dictionary = _v66_look(main, v)
+		var where := "v66 fit %dx%d" % [int(sz.x), int(sz.y)]
+		_check(st["plate"] and st["streak"] and st["ls"] and st["jam"] and st["pops"].size() >= 1, "%s: not everything showed: %s" % [where, str(st)])
+		_v66_geom(main, v, where)
+		_check_fit(main, where)
+		# the longest the streak's words get: a big count, the long bonus; the pills still off the head
+		sim.mission["clock"] = 9.0                  # the countdown up: the jam and the plate keep off it too
+		main.refresh()
+		v._process(0.016)
+		_v66_geom(main, v, where + " with the countdown")
+		_check_fit(main, where + " with the countdown")
+		# and a skill's name across the frame (the longest), as the full run's skills put one there: the jam and the pops
+		# keep off it (the first full smoke: 'Clean shot' on the jam's tag)
+		var run = main._run
+		if run._skills != null:
+			var longest := ""
+			for k in Data.SKILLS:
+				if str(Data.SKILLS[k].get("name", "")).length() > longest.length():
+					longest = str(Data.SKILLS[k]["name"])
+			run._skills.visible = true
+			run._skills.word.text = longest
+			run._skills._word_until = Time.get_ticks_msec() + 60000
+			sim.f66_force("headshot", {"amount": 1234567.0, "hard": false})
+			main.refresh()
+			run._skills.visible = true
+			run._skills.word.visible = true
+			v.v66_keep(run._keep66(), run._word66())     # as the next look would hand it over
+			v._process(0.016)
+			_check(run._word66().size.x > 0.0, "%s: the skill's name isn't up for the check" % where)
+			print("v66 fit %s with a skill's name: %d of %d pops shown" % [str(sz), int(v.v66_state()["pops_shown"]), v.v66_state()["pops"].size()])
+			var hp_l: Label = run._runner["bar_text"]
+			if hp_l.visible and hp_l.text != "":
+				var hp_g: Rect2 = hp_l.get_global_rect()
+				var hp_at: Vector2 = v._hud66.get_global_transform().affine_inverse() * hp_g.get_center()
+				_check(v._keep66.any(func(r): return Rect2(r).grow(1.0).has_point(hp_at)), "%s: the pops' keep misses your HP words where they are: %s not in %s" % [where, str(hp_at), str(v._keep66)])     # (the 67 fix round) the frame's offset read 108 px off
+			_v66_geom(main, v, where + " with a skill's name")
+			_check_fit(main, where + " with a skill's name")
+			run._skills._word_until = 0
+			run._skills.word.visible = false
+		sim.extract_now()
+		main.refresh()
+	main.layout(Vector2(1920, 1080))
+
+
+## The review of 66 (7 Nov): each fix with the check that would have caught it.
+func _f66fix_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# 1. Last legs out of seconds: a runner healed meanwhile lives; one still on the hold goes down
+	var m := _f66_run(sim)
+	sim.f66_extra = {"last_stand_s": 5.0}
+	sim._f66_last_stand(m)
+	sim.hp = sim.max_hp() * 0.8
+	m["f66_ls_t"] = 0.5
+	sim._f66_in_mult(m, 1, 1.0)
+	_check(sim.f66_last_stand_state() == "used" and sim.hp > sim.max_hp() * 0.79, "Last legs ran out on a healed runner: HP %.1f of %.1f" % [sim.hp, sim.max_hp()])
+	# 2. a head's kill ends Last legs held, not carried into the next gang
+	m = _f66_run(sim)
+	sim.f66_extra = {"last_stand_s": 5.0}
+	m["dry"] = true                              # the head's down without his pay: the fight's own path
+	sim._f66_last_stand(m)
+	m["boss"] = sim._boss_entry({"name": "The test head", "hp": 10.0, "dps": 0.0, "zone": 0})
+	m["boss"]["started"] = true
+	m["remaining"] = 1
+	m["target_hp"] = 0.5
+	m["t"]["dps"] = 0.0
+	sim._fight(m, m["t"], 0.5)
+	_check(sim.mission != null and str(m.get("f66_ls", "")) == "used", "a head's kill didn't end Last legs: %s" % str(m.get("f66_ls", "")))
+	m.erase("dry")
+	# 3. the meter and the gang's own state start again for a head and for the dogs
+	m = _f66_run(sim)
+	m["f66_supp"] = 1.0
+	m["boss"] = sim._boss_entry({"name": "The test head", "hp": 10.0, "dps": 0.0, "zone": 0})
+	m["boss"]["started"] = true
+	sim._f66_gang(m, m["t"])
+	_check(float(m["f66_supp"]) == 0.0, "the head came out to a full meter")
+	m.erase("boss")
+	m["f66_supp"] = 1.0
+	m["dogs_home"] = m["t"]
+	sim._f66_gang(m, m["t"])
+	_check(float(m["f66_supp"]) == 0.0, "the dogs came on to a full meter")
+	m.erase("dogs_home")
+	sim._f66_gang(m, m["t"])                    # the site's own gang again
+	# 4. the meter drains while you don't fire
+	m["f66_supp"] = 0.5
+	m["fire_x"] = {"Primary": 0.0, "Secondary": 0.0}
+	m["target_hp"] = 1e12
+	sim._f66_hits(m, m["t"], 0.0, ["physical", 0.0], 1.0)
+	_check(float(m["f66_supp"]) < 0.5 - 1e-6 and absf(float(m["f66_supp"]) - (0.5 - 1.0 / Data.SUPP66_DRAIN_S)) < 1e-6, "the meter held with no fire: %.2f" % float(m["f66_supp"]))
+	# 5. an arm shot's cut in a long tick: only its seconds of it
+	m["f66_supp"] = 0.0
+	m["f66_arm_t"] = 1.0
+	var am: float = sim._f66_in_mult(m, 1, 2.0)
+	_check(absf(am - (1.0 - Data.ARM66_MISS * 0.5)) < 1e-6, "an arm shot's last second cut a 2 s tick whole: x%.3f" % am)
+	# 7. the leg shots' cap never raises a deeper wait
+	sim.f66_extra = {"leg_pct": 100.0}
+	m["patrol_timer"] = -1e9
+	_f66_hit(sim, m)
+	_check(float(m["patrol_timer"]) <= -1e9 + 1.0, "a leg shot raised the next gang's wait to %.1f" % float(m["patrol_timer"]))
+	m["patrol_timer"] = 0.0
+	# 10. the Slam-fire shotgun's "nothing to jam"
+	var slam: Dictionary = sim._plain("Primary", "Slam-fire shotgun")
+	_check(sim.f66_jam_pct(slam) == 0.0 and str(Words.ITEMS.get("Slam-fire shotgun", "")).contains("nothing to jam"), "the Slam-fire shotgun jams: %.1f%%" % sim.f66_jam_pct(slam))
+	# 9. the stats read once a tick: a second look in the same tick reads none
+	sim.f66_extra = {"head_pct": 50.0, "leg_pct": 10.0, "arm_pct": 10.0, "streak_dmg_pct": 1.0}
+	_f66_hit(sim, m)
+	var reads0: int = sim.f66_reads
+	_f66_hit(sim, m)
+	sim._f66_in_mult(m, 1, 0.0)
+	_check(sim.f66_reads == reads0, "a tick's stats read again in the same tick: %d reads" % (sim.f66_reads - reads0))
+	# the words: the jam's line keeps the gun's name as it is
+	sim.f66_extra = {"jam_pct": 100.0}
+	m["f66_jam"] = {}
+	m["f66_jam_logged"] = false
+	var gun: Dictionary = sim._f66_in_hand()[1]
+	var tr_was = gun.get("tier", 1)
+	gun["tier"] = 1
+	m["elapsed"] = float(m["elapsed"]) + 1.0
+	_f66_hit(sim, m)
+	gun["tier"] = tr_was
+	_check(sim.events.slice(-3).any(func(e): return str(e[1]) == Words.LOG66["jam"] % [str(gun["base"]), "%.1f" % Data.JAM66_S]), "the jam's line: %s" % str(sim.events.slice(-3).map(func(e): return e[1])))
+	_check(Words.V66["last_stand"] == "Last legs" and Words.HARD66_TRAITS["medic"] == "First aider" and Words.HARD66_TRAITS["runner"] == "Messenger" and not str(Words.LOG66).contains("Last Stand"), "the editor's words aren't in")
+	sim.extract_now()
+	# 6. a primary jammed: the secondary neither fires its rounds nor lands for nothing
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	m = _f66_run(sim)
+	var pm: Dictionary = _mag_full(sim, "Pistol magazine", "Pistol rounds")
+	pm["rounds"] = 200
+	sim.rig.append(pm)
+	sim._mags_tick(m, 0.0)
+	sim.f66_extra = {"head_pct": -Data.HEAD66_PCT}
+	m["t"]["dps"] = 0.0
+	m["target_hp"] = 1e12
+	m["dots"] = {}
+	m["f66_jam"] = {"Primary": 10.0}
+	var sec_r: int = sim.rounds_for(sim.equipped["Secondary"])
+	var fired0: float = float(m.get("fired", {}).get("Secondary", 0.0))
+	for k in range(2):
+		sim._fight(m, m["t"], 4.0)                # 8 s inside the jam's 10
+	var spent: float = float(sec_r - sim.rounds_for(sim.equipped["Secondary"])) + float(m.get("fired", {}).get("Secondary", 0.0)) - fired0
+	var landed: float = 1e12 - float(m["target_hp"])
+	_check(spent <= 1e-6 or landed > 0.0, "a jammed primary's tick spent %.1f of the secondary's rounds and landed %.1f" % [spent, landed])
+	_check(sim.mag_in("Secondary").size() > 0, "the probe: no magazine in the secondary")
+	sim.extract_now()
+	sim.f66_extra = {}
+	sim.load_dict(saved)
+	print("f66 fixes ok: Last legs healed and on a head, the meter's starts and drain, arm in long ticks, the leg cap, the Slam-fire, one read a tick, the words")
+
+
+## The view's seen events start again when the sim's count is behind them (a save loaded at the same run count).
+func _v66fix_checks(main) -> void:
+	var sim = main.sim
+	var v = _v66_fight(main, Vector2(1920, 1080))
+	if v == null or not sim.on_mission():
+		_check(false, "v66fix: no fight")
+		return
+	var st: Dictionary = _v66_look(main, v)
+	var pops: int = st["pops"].size()
+	v._seq66 = sim.f66_last_seq() + 500        # what the view saw last, ahead of the sim's
+	sim.f66_force("headshot", {"amount": 4120.0})
+	st = _v66_look(main, v)
+	_check(st["pops"].size() == pops + 1, "the view swallowed a headshot when its seen count ran ahead of the sim's")
+	# a pop in a frame not yet laid (the full smoke, a run's first headshot): inside its box from the start
+	v._hud66.size = Vector2.ZERO
+	sim.f66_force("headshot", {"amount": 110.0})
+	main.refresh()
+	var lp: Label = v._pops66.back()["label"] if not v._pops66.is_empty() else null
+	_check(lp != null and Rect2(Vector2.ZERO, v._hud66.size).encloses(Rect2(lp.position, lp.size)), "a headshot's pop before the frame's lay sits outside its box: %s in %s" % [str(Rect2(lp.position, lp.size)) if lp != null else "none", str(v._hud66.size)])
+	sim.extract_now()
+	print("v66 fix ok: the seen events reset when the sim's count is behind")
+
+
+# ------------------------------------------------------------------ BUILD67-K (8 Nov): boots, the Kit, issued versions
+## A plain piece of a slot to wear in a check: its first non-start base at tier 1 (any tier if none).
+func _k67_plain(sim, slot: String) -> Dictionary:
+	var pick := ""
+	for b in Data.BASES[slot]:
+		if not b.get("start", false) and int(b["tier"]) == 1 and pick == "":
+			pick = str(b["name"])
+	if pick == "":
+		pick = str(Data.BASES[slot][0]["name"])
+	return sim._plain(slot, pick)
+
+
+func _k67_boots_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.mission != null:
+		sim.extract_now()
+	# the slot: in every list, a place on the body, about 30 bases over nine tiers, three roles a tier, a picture each
+	_check("Boots" in Data.SLOTS and sim.equipped.has("Boots") and Data.SIZE.get("Boots", []) == [2, 2] and Data.SLOT_SCORE.has("Boots"), "boots aren't a slot: %s" % str(Data.SLOTS))
+	var bb: Array = Data.BASES.get("Boots", [])
+	var tiers := {}
+	for b in bb:
+		tiers["%d/%s" % [int(b["tier"]), str(b.get("role", ""))]] = true
+		_check(Items.art(sim._plain("Boots", str(b["name"]))) != null, "the %s have no picture (a borrowed one till the art)" % b["name"])
+		_check(Items.base_pace(sim._plain("Boots", str(b["name"]))) > 0.0, "the %s carry no pace (every pair's headline)" % b["name"])
+	var three_a_tier := true
+	for t in range(1, 10):
+		for r in ["pace", "quiet", "heavy"]:
+			three_a_tier = three_a_tier and tiers.has("%d/%s" % [t, r])
+	_check(bb.size() >= 27 and bb.size() <= 33 and three_a_tier, "boots: %d bases, a role each a tier %s" % [bb.size(), str(three_a_tier)])
+	_check("Boots" in Data.WAGER_SLOTS and "Boots" in Data.FOCUS_SLOTS and "Boots" in sim.VAG_SLOTS and "Boots" in sim.JUNK_KEEPS["body"]
+		and load("res://scripts/ui/inventory.gd").KINDS.any(func(k): return k[0] == "Body" and "Boots" in k[1]) and Bot.BENCH_SLOTS.has("Boots")
+		and load("res://scripts/ui/item_cell.gd").SHORT.has("Boots") and Words.T50_FOCUS["slot_names"].has("Boots") and Words.U61["slots"].has("Boots"), "a slot list leaves the boots out")
+	# what they do: pace (every pair), the gang clock (quiet), leg armour (heavy); the headline says pace
+	var hold = sim.equipped["Boots"]
+	sim.equipped["Boots"] = null
+	sim._stats_dirty()
+	var t: Dictionary = Data.TIERS[0]
+	var pace0: float = sim.pace()
+	var pat0: float = sim.patrol_s(t)
+	var arm0: float = sim.armour()
+	sim.equipped["Boots"] = sim._plain("Boots", "Running shoes")
+	sim._stats_dirty()
+	_check(sim.pace() > pace0 * 1.04, "the Running shoes (+5%%) didn't quicken the pace: %.3f → %.3f" % [pace0, sim.pace()])
+	sim.equipped["Boots"] = sim._plain("Boots", "Desert boots")
+	sim._stats_dirty()
+	_check(sim.patrol_s(t) > pat0 * 1.1, "the Desert boots (gangs 12%% later) didn't hold the gangs: %.1f → %.1f" % [pat0, sim.patrol_s(t)])
+	sim.equipped["Boots"] = sim._plain("Boots", "Riot boots")
+	sim._stats_dirty()
+	_check(sim.armour() > arm0 + 30.0, "the Riot boots (42 armour) added no leg armour: %.1f → %.1f" % [arm0, sim.armour()])
+	var riot: Dictionary = sim._plain("Boots", "Riot boots")
+	_check(Items.headline(riot)[1] == "pace" and Items.headline(riot)[0] == "+3%" and load("res://scripts/ui/body.gd").figure_forms(riot)[0] == "+3% pace · 42 armour"
+		and load("res://scripts/ui/body.gd").figure_forms(sim._plain("Boots", "Desert boots"))[0] == "+2% pace · gangs +12% later",
+		"boots' headline isn't pace, or the card's figure: %s / %s" % [str(Items.headline(riot)), str(load("res://scripts/ui/body.gd").figure_forms(riot))])
+	sim.equipped["Boots"] = hold
+	sim._stats_dirty()
+	# found: a site's finds carry boots (its gloves' weight), the site's themed list has its own, the Fence's shelf has them
+	var n_boots := 0
+	for k in range(3000):
+		if sim._site_slot(Data.TIERS[2], false) == "Boots":
+			n_boots += 1
+	var gw: float = float(Data.TIERS[2]["drops"]["slots"]["Gloves"])
+	var tot := 0.0
+	for k in Data.TIERS[2]["drops"]["slots"]:
+		tot += float(Data.TIERS[2]["drops"]["slots"][k])
+	var want_share: float = gw * Data.BOOTS67_SHARE / (tot + gw * Data.BOOTS67_SHARE)
+	_check(absf(float(n_boots) / 3000.0 - want_share) < 0.03, "boots are %.3f of a site's finds, not about %.3f" % [float(n_boots) / 3000.0, want_share])
+	_check("Hospital clogs" in Data.SITE_THEMES["The Hospital"] and "Wellies" in Data.SITE_THEMES["Top Farm"] and "Wading boots" in Data.SITE_THEMES["The Pleasure Park"] and "Parade boots" in Data.COUNTY_THEMES["treasury"], "the sites' themed lists carry no boots")
+	var shelf_boots := false
+	for k in range(80):
+		if not shelf_boots:
+			sim._restock_market()
+			shelf_boots = sim.market.any(func(x): return str(x.get("slot", "")) == "Boots")
+	_check(shelf_boots, "80 restocks of the Fence's shelf and never a pair of boots")
+	# the bot's wear (equip_best over Data.SLOTS): bare feet and a pair in the stash, the pair goes on
+	sim.equipped["Boots"] = null
+	var shoes: Dictionary = sim._plain("Boots", "Running shoes")
+	var boots_aside: Array = sim.stash.filter(func(x): return str(x.get("slot", "")) == "Boots")     # (the merge) the bot's own finds aside: rolled lines (BUILD67-I) can make one better than the plain pair
+	for x in boots_aside:
+		sim.stash.erase(x)
+	sim.stash.append(shoes)
+	sim._stats_dirty()
+	_check(sim.equip_best("Boots") and sim.equipped["Boots"] != null and int(sim.equipped["Boots"]["id"]) == int(shoes["id"]), "the bot's wear left a pair of Running shoes in the stash on bare feet")
+	sim.stash.append_array(boots_aside)
+	# saved and loaded: the boots worn come back
+	var worn: Dictionary = sim._plain("Boots", "Trail shoes")
+	sim.equipped["Boots"] = worn
+	var back = Sim.new()
+	back.start()
+	back.load_dict(sim.to_dict())
+	_check(back.equipped.get("Boots") != null and str(back.equipped["Boots"]["base"]) == "Trail shoes", "the boots worn didn't save")
+	# the uniques: the Postman's Boots (searches quicker, gangs later), Steel Toecaps (a kick for each man who reaches you)
+	var post: Dictionary = Items.roll_unique(sim._unique_named("The Postman's Boots"), sim.rng, 20)
+	var toes: Dictionary = Items.roll_unique(sim._unique_named("Steel Toecaps"), sim.rng, 20)
+	_check(str(post.get("slot", "")) == "Boots" and str(toes.get("slot", "")) == "Boots" and str(post["rule"]) == "postmans" and str(toes["rule"]) == "steel_toecaps", "the boots' uniques aren't boots: %s %s" % [post.get("slot"), toes.get("slot")])
+	sim.equipped["Boots"] = sim._plain("Boots", str(post["base"]))     # its base without its rule: the rule's own share read alone
+	sim._stats_dirty()
+	var s_plain: float = sim.search_s(t)
+	var p_plain: float = sim.patrol_s(t)
+	var bare: Dictionary = post.duplicate(true)
+	bare["affixes"] = []
+	sim.equipped["Boots"] = bare
+	sim._stats_dirty()
+	_check(absf(sim.search_s(t) / s_plain - Data.POSTMAN67_SEARCH) < 1e-4 and absf(sim.patrol_s(t) / p_plain - Data.POSTMAN67_PATROL) < 1e-4,
+		"the Postman's Boots: search ×%.3f, gangs ×%.3f" % [sim.search_s(t) / s_plain, sim.patrol_s(t) / p_plain])
+	var kicks: Array = []
+	for on in [false, true]:
+		sim.equipped["Boots"] = toes if on else sim._plain("Boots", str(toes["base"]))
+		sim._stats_dirty()
+		var m: Dictionary = _f66_run(sim)
+		var tt: Dictionary = m["t"]
+		m["remaining"] = maxi(3, int(m["remaining"]))
+		m["target_hp"] = 0.0001
+		sim._fight(m, tt, 0.02)
+		kicks.append([int(m.get("k67_kicks", 0)), float(m["target_hp"]), float(tt["hp"])])
+		sim.extract_now()
+	_check(int(kicks[0][0]) == 0 and int(kicks[1][0]) >= 1 and float(kicks[1][1]) <= float(kicks[1][2]) * (1.0 - Data.TOECAP67_PCT / 100.0) + 1e-3,
+		"Steel Toecaps: no kick for the next man (off %s, on %s)" % [str(kicks[0]), str(kicks[1])])
+	sim.f66_extra = {}
+	sim.load_dict(saved)
+	sim._stats_dirty()
+	main.refresh()
+
+
+func _k67_kit_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.mission != null:
+		sim.extract_now()
+	var Body = load("res://scripts/ui/body.gd")
+	# the swap (Matt, 8 Nov): the charm top left above a shorter pack; boots bottom right below the rig
+	_check(Body.LEFT == ["Charm", "Backpack", "Primary", "Secondary"] and Body.RIGHT == ["Helmet", "Armour", "Gloves", "Rig", "Boots"], "the Kit's columns: %s | %s" % [str(Body.LEFT), str(Body.RIGHT)])
+	var cr: Rect2 = Body.card_rect("Charm")
+	var pr: Rect2 = Body.card_rect("Backpack")
+	var br: Rect2 = Body.card_rect("Boots")
+	var rr: Rect2 = Body.card_rect("Rig")
+	_check(cr.position == Vector2(Body.PAD, Body.PAD) and is_equal_approx(pr.position.y, cr.end.y + Body.CARD_GAP) and pr.size.y < 240.0 and pr.size.y >= 120.0,
+		"the charm isn't top left over a shorter pack: %s, %s" % [str(cr), str(pr)])
+	_check(is_equal_approx(br.end.y, Body.HEIGHT - Body.PAD) and is_equal_approx(br.position.x, rr.position.x) and br.position.y > rr.end.y, "the boots aren't bottom right below the rig: %s (rig %s)" % [str(br), str(rr)])
+	for col in [Body.LEFT, Body.RIGHT]:
+		_check(is_equal_approx(Body.card_rect(col.back()).end.y, Body.HEIGHT - Body.PAD), "a Kit column doesn't fill its height: %s ends %.0f" % [str(col), Body.card_rect(col.back()).end.y])
+	# all nine worn, then the Kit at both sizes: the boxes in the panel, none on another, the words fit
+	sim.xp = maxf(sim.xp, Data.xp_for_level(20))
+	for sl in Data.SLOTS:
+		if sim.equipped[sl] == null:
+			sim.equipped[sl] = _k67_plain(sim, sl)
+	sim.equipped["Boots"] = sim._plain("Boots", "Orienteering shoes")
+	sim._stats_dirty()
+	main.show_room(main.ARMOURY)
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		main.refresh()
+		main.refresh()
+		var body = main._armoury._body
+		for sl in Data.SLOTS:
+			_check(body._boxes.has(sl) and body._boxes[sl]["cell"].visible, "the Kit at %s doesn't show the %s worn" % [str(sz), sl])
+		_check(body.box_rect("Charm").position.y < body.box_rect("Backpack").position.y and body.box_rect("Boots").position.y > body.box_rect("Rig").position.y, "the Kit at %s isn't laid out as the swap" % str(sz))
+		_check_fit(main, "the Kit with boots (%dx%d)" % [int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	# drag and drop, all nine: a stash piece takes its own slot's box only, and dropped there it's worn
+	sim.stash = []                            # room for what comes off (the bot's stash can be full; saved puts it back)
+	var body2 = main._armoury._body
+	for sl in Data.SLOTS:
+		var it: Dictionary = _k67_plain(sim, sl)
+		sim.stash.append(it)
+		var data := {"id": int(it["id"]), "src": "stash"}
+		var other: String = "Boots" if sl != "Boots" else "Charm"
+		_check(body2._can_drop(Vector2.ZERO, data, sl) and not body2._can_drop(Vector2.ZERO, data, other), "the %s box won't take a %s, or the %s box will" % [sl, sl, other])
+		body2._drop(Vector2.ZERO, data, sl)
+		_check(sim.equipped[sl] != null and int(sim.equipped[sl]["id"]) == int(it["id"]), "a %s dropped on its box wasn't worn" % sl)
+	sim.load_dict(saved)
+	sim._stats_dirty()
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+
+
+func _k67_issued_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.mission != null:
+		sim.extract_now()
+	# 27: nine slots (gloves, the pack and boots now), three versions each, every name its own
+	var names := {}
+	for sl in Data.SLOTS:
+		var vs: Array = Sim.k67_versions(sl)
+		_check(vs.size() == 3, "the %s has %d issued versions, not three" % [sl, vs.size()])
+		for u in vs:
+			names[str(u["name"])] = true
+			_check(Words.K67_TAG.has(str(u["name"])) and str(u["words"]) != "" and str(u["short"]) != "", "the %s has no tag or words" % u["name"])
+	_check(names.size() == 27 and Data.ISSUED.size() == 9, "issued versions: %d names, %d slots" % [names.size(), Data.ISSUED.size()])
+	# each version's rule: picked, its piece carries it, worn it reads exactly (never scaled by the piece's level)
+	for sl in Data.SLOTS:
+		var vs2: Array = Sim.k67_versions(sl)
+		for v in range(vs2.size()):
+			_check(sim.k67_set_pick(sl, v) and sim.k67_pick(sl) == v and str(sim.issued_def(sl)["name"]) == str(vs2[v]["name"]), "picking the %s's version %d" % [sl, v])
+			var it: Dictionary = sim.issued_piece(sl, 60, true)
+			var fx: Dictionary = vs2[v].get("fixed", {})
+			_check(str(it.get("unique", "")) == str(vs2[v]["name"]) and it.get("fixed67", {}) == fx, "the %s's piece isn't its version: %s %s" % [vs2[v]["name"], it.get("unique"), str(it.get("fixed67"))])
+			var hold = sim.equipped[sl]
+			sim.equipped[sl] = null
+			sim._stats_dirty()
+			var before := {}
+			for st in fx:
+				before[st] = sim._affix_sum(st)
+			sim.equipped[sl] = it
+			sim._stats_dirty()
+			for st in fx:
+				var want: float = float(fx[st]) + Items.base_stat(it, st) + (0.0 if sim.has_rule("blue_plaque") else Items.affix_total(it, st))
+				_check(absf(sim._affix_sum(st) - float(before[st]) - want) < 1e-6, "the %s's rule: %s moved %.2f, not %.2f" % [vs2[v]["name"], st, sim._affix_sum(st) - float(before[st]), want])
+			sim.equipped[sl] = hold
+			sim._stats_dirty()
+		sim.k67_set_pick(sl, 0)
+	_check(not sim.k67_set_pick("Primary", 3) and not sim.k67_set_pick("Medical", 0), "a fourth version, or a slot the Issuer doesn't issue, could be picked")
+	# the rules at work: the steady rifle never jams, the quick-draw jams more, the light plate quickens, the quiet boots
+	# hold the gangs, the search pack searches quicker
+	var t: Dictionary = Data.TIERS[0]
+	var low_gun: Dictionary = sim._plain("Primary", "Pump shotgun")     # a low gun that jams (the fight checks' own)
+	sim.f66_extra = {}
+	var reads := {}
+	for pair in [["Primary", 0], ["Primary", 1], ["Secondary", 0], ["Secondary", 1], ["Armour", 0], ["Armour", 1], ["Boots", 0], ["Boots", 1], ["Backpack", 0], ["Backpack", 1]]:
+		var sl2: String = pair[0]
+		sim.k67_set_pick(sl2, int(pair[1]))
+		var hold2 = sim.equipped[sl2]
+		sim.equipped[sl2] = sim.issued_piece(sl2, 60, true)
+		sim._stats_dirty()
+		reads["%s%d" % pair] = {"jam": sim.f66_jam_pct(low_gun), "pace": sim.pace(), "patrol": sim.patrol_s(t), "search": sim.search_s(t), "armour": sim.armour()}
+		sim.equipped[sl2] = hold2
+		sim.k67_set_pick(sl2, 0)
+		sim._stats_dirty()
+	_check(not low_gun.is_empty() and float(reads["Primary1"]["jam"]) == 0.0 and float(reads["Primary0"]["jam"]) > 0.0, "the steady rifle: a low gun's jams %.1f%%, the plain one's %.1f%%" % [float(reads["Primary1"]["jam"]), float(reads["Primary0"]["jam"])])
+	_check(absf(float(reads["Secondary1"]["jam"]) - float(reads["Secondary0"]["jam"]) - 3.0) < 1e-6, "the quick-draw pistol's jams: %.1f vs %.1f" % [float(reads["Secondary1"]["jam"]), float(reads["Secondary0"]["jam"])])
+	_check(float(reads["Armour1"]["pace"]) > float(reads["Armour0"]["pace"]) and float(reads["Armour1"]["armour"]) < float(reads["Armour0"]["armour"]), "the light plate: pace %.3f vs %.3f, armour %.0f vs %.0f" % [float(reads["Armour1"]["pace"]), float(reads["Armour0"]["pace"]), float(reads["Armour1"]["armour"]), float(reads["Armour0"]["armour"])])
+	_check(float(reads["Boots1"]["patrol"]) > float(reads["Boots0"]["patrol"]) * 1.15 and float(reads["Boots0"]["pace"]) > float(reads["Boots1"]["pace"]), "the quiet boots: gangs %.1f vs %.1f s" % [float(reads["Boots1"]["patrol"]), float(reads["Boots0"]["patrol"])])
+	_check(float(reads["Backpack1"]["search"]) < float(reads["Backpack0"]["search"]) * 0.8, "the search pack: a search %.1f vs %.1f s" % [float(reads["Backpack1"]["search"]), float(reads["Backpack0"]["search"])])
+	# the counter: nine rows, three versions a row, a pick lights and is what Buy sells; the County's want counts as today
+	sim.issued = true
+	sim.cash = 1e12
+	sim.xp = maxf(sim.xp, Data.xp_for_level(80))
+	main.show_room(main.MARKET)
+	main._fence._show("issuer")
+	main.refresh()
+	var ic = main._fence._issuer
+	_check(ic != null and ic._rows.size() == 9, "the Issuer's counter doesn't have nine rows")
+	if ic != null:
+		for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+			main.layout(sz)
+			main.show_room(main.MARKET)
+			main._fence._show("issuer")
+			main.refresh()
+			ic._shown = ""
+			ic.show_state(sim)
+			for l in ic.labels():
+				_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "the counter's words run off at %s: '%s'" % [str(sz), l.text])
+			for k in range(ic._rows.size()):
+				var row: Dictionary = ic._rows[k]
+				var pr: Rect2 = Rect2(row["panel"].position, row["panel"].size)
+				_check(Rect2(Vector2.ZERO, ic.size).encloses(pr), "the counter's %s row runs out of it at %s: %s in %s" % [row["slot"], str(sz), str(pr), str(ic.size)])
+				var vs3: Array = Sim.k67_versions(str(row["slot"]))
+				for v in range(ic.version_buttons(k).size()):
+					var vb: Button = ic.version_buttons(k)[v]
+					_check(vb.text == str(Words.K67_TAG[str(vs3[v]["name"])]) and UI.text_width(vb, vb.text) + 24.0 <= vb.size.x and Rect2(Vector2.ZERO, row["panel"].size).encloses(Rect2(vb.position, vb.size)),
+						"the %s's version button '%s' doesn't fit at %s" % [row["slot"], vb.text, str(sz)])
+			_check(ic._want.position.y + ic._want.size.y <= ic.size.y + 0.5, "the counter's last line runs off at %s" % str(sz))
+			_check_fit(main, "the Issuer's counter, nine rows (%dx%d)" % [int(sz.x), int(sz.y)])
+		main.layout(Vector2(1920, 1080))
+		main.refresh()
+		var kb: int = -1
+		for k in range(ic._rows.size()):
+			if str(ic._rows[k]["slot"]) == "Boots":
+				kb = k
+		ic.version_buttons(kb)[1].pressed.emit()
+		_check(sim.k67_pick("Boots") == 1 and ic._rows[kb]["name"].text.begins_with("Issued quiet boots"), "the counter's Quiet didn't pick the quiet boots: %d '%s'" % [sim.k67_pick("Boots"), ic._rows[kb]["name"].text])
+		var n0: int = sim.stash.size()
+		ic._buy("Boots")
+		var got: Dictionary = sim.stash.back() if sim.stash.size() > n0 else {}
+		_check(str(got.get("unique", "")) == "Issued quiet boots" and got.get("fixed67", {}) == {"patrol_pct": 20} and got.get("issued", false), "Buy didn't sell the picked version: %s" % str(got.get("unique", "")))
+		var back = Sim.new()
+		back.start()
+		back.load_dict(sim.to_dict())
+		_check(back.k67_pick("Boots") == 1, "the counter's pick didn't save")
+
+		# the want counts them as today: a worn issued pair of boots is one more
+		var w0: int = sim.issued_worn()
+		var hb = sim.equipped["Boots"]
+		sim.equipped["Boots"] = got
+		_check(sim.issued_worn() == w0 + (0 if (hb != null and (hb.get("issued", false) or hb.get("stamped", false))) else 1), "the issued boots worn didn't count for the County's want")
+	sim.load_dict(saved)
+	sim._stats_dirty()
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+
+
+## (BUILD67-K) A fixture's stash room for a repeat: the bot's run can leave the stash full (a ninth slot's finds moved its dice);
+## the last pieces go until REPEAT_ROOM cells are free. Each caller's saved camp puts them back.
+func _k67_room(sim) -> void:
+	while not sim.stash_room(sim.REPEAT_ROOM) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+
+
+## (BUILD67-K) The fight view's overlaps the full smoke turned up once a ninth slot moved the bot's dice (V66's, latent): two
+## headshots in one tick were born on one spot and sat there until a frame's lay; the streak's pill had no clear form under a
+## long head ("Picking it over · each gang bigger than the last") and stayed on it; your HP words weren't kept off.
+func _k67_view_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var v = _v66_fight(main, Vector2(1920, 1080))
+	_check(v != null and sim.on_mission() and int(sim.mission["remaining"]) > 0, "k67 view: the fixture has no fight up")
+	if v != null and sim.on_mission():
+		var run = main._run
+		sim.f66_force("headshot", {"amount": 174.0, "hard": false, "helmet": false})
+		sim.f66_force("headshot", {"amount": 23.0, "hard": false, "helmet": false})
+		main.refresh()                           # both pops made, no frame laid yet
+		var shown: Array = v._pops66.filter(func(p): return p["label"].visible).map(func(p): return Rect2(p["label"].position, p["label"].size))
+		var apart := true
+		for i in range(shown.size()):
+			for j in range(i + 1, shown.size()):
+				apart = apart and not Rect2(shown[i]).intersects(Rect2(shown[j]))
+		_check(shown.size() >= 1 and apart, "k67 view: two headshots in one tick sit on one spot: %s" % str(shown))
+		# the streak under the longest head the fight shows
+		sim.f66_force("streak", {"n": 3})
+		main.refresh()
+		var hd: Label = run._fight["head"]
+		hd.visible = true
+		hd.text = "GANG 1"
+		v.v66_keep(run._keep66(), run._word66())
+		hd.text = "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST · PICKING IT OVER · EACH GANG BIGGER"     # past the frame's top right: no form of the pill clear there
+		v._process(0.016)                        # laid once on the short head's keep...
+		v.v66_keep(run._keep66(), run._word66())     # ...then the look hands over the long one, no frame between (the live smoke's case)
+		var hr: Rect2 = Rect2(hd.position - Vector2(run.VIEW_X, run.FIGHT_BOX_Y), Vector2(UI.text_width(hd, hd.text) + 8.0, hd.size.y))
+		var sk: Control = v._streak66
+		_check(not sk.visible or not hr.intersects(Rect2(sk.position, sk.size)), "k67 view: the streak's pill sits on the long head: %s on %s" % [str(Rect2(sk.position, sk.size)), str(hr)])
+		# your HP words are kept off
+		var rb: Label = run._runner["bar_text"]
+		var hk: float = rb.get_global_transform().get_scale().x / v._hud66.get_global_transform().get_scale().x     # (the 67 fix round) the keep is in the pops' layer, its scale as drawn
+		var want_w: float = (UI.text_width(rb, rb.text) + 8.0) * hk
+		_check(rb.text == "" or run._keep66().any(func(r): return absf(Rect2(r).size.x - want_w) < 0.5 and absf(Rect2(r).size.y - rb.size.y * hk) < 0.5), "k67 view: your HP words aren't kept off by the pops")
+		# and the chips on you (Greed's, once a gang's beaten past the clear)
+		run._runner["chips"].visible = true
+		run._runner["chips"].show_chips([{"forms": [Words.GREED["short"] % 30], "colour": Pal.GOOD}], 1, true)
+		var cu: Rect2 = run._runner["chips"].used_rect()
+		var ck: float = run._runner["chips"].get_global_transform().get_scale().x / v._hud66.get_global_transform().get_scale().x
+		_check(cu.size.x > 0.0 and run._keep66().any(func(r): return Rect2(r).size.is_equal_approx(cu.size * ck)), "k67 view: the chips on you aren't kept off by the pops: %s" % str(cu))
+		# a look that brings a chip on you hands the view a keep with it (the chips are laid after the first hand-over)
+		run._runner["chips"].visible = false
+		sim.mission["using"] = {"name": "Bandage", "left": 5.0}
+		main.refresh()
+		var cu2: Rect2 = run._runner["chips"].used_rect()
+		_check(run._runner["chips"].visible and v._keep66.any(func(r): return Rect2(r).size.is_equal_approx(cu2.size * ck)), "k67 view: the view's keep missed the chip on you this look: %s in %s" % [str(cu2), str(v._keep66)])
+		sim.mission["using"] = null
+		sim.extract_now()
+	sim.load_dict(saved)
+	sim._stats_dirty()
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+
+# ------------------------------------------------------------------ BUILD67-I (8 Nov): the items - affixes, T6, the uniques
+
+## The spec's slots for each new affix (docs/design/endgame_rail.md §2, the build's brief).
+const I67_SLOTS := {"head_pct": ["Primary", "Secondary", "Helmet"], "head_dmg_pct": ["Primary", "Secondary", "Helmet"],
+	"helmet_ignore_pct": ["Primary", "Secondary", "Helmet"], "pierce_pct": ["Primary", "Secondary", "Rig"],
+	"leg_pct": ["Primary", "Secondary", "Gloves"], "arm_pct": ["Primary", "Secondary", "Gloves"],
+	"suppress_pct": ["Primary", "Secondary", "Charm"], "scav_pct": ["Rig", "Gloves"], "streak_dmg_pct": ["Charm", "Gloves"],
+	"last_stand_s": ["Armour"], "no_jam": ["Primary", "Secondary"]}
+
+
+func _i67_affix_checks(main) -> void:
+	var sim = main.sim
+	for st in I67_SLOTS:
+		for slot in I67_SLOTS[st]:
+			_check(Items.allowed_affixes(slot).any(func(a): return str(a["stat"]) == st), "i67: %s doesn't roll on %s" % [st, slot])
+		_check(sim.F66_STATS.has(st), "i67: %s isn't one of the fight's stats" % st)
+	for st in ["speed_pct", "patrol_pct", "armour"]:
+		_check(Items.allowed_affixes("Boots").any(func(a): return str(a["stat"]) == st), "i67: boots don't roll %s" % st)
+	# (the merge) on K's real slot: a magic pair rolls its lines, each a boots line, on any base
+	_check("Boots" in Data.SLOTS and not Data.BASES.get("Boots", []).is_empty(), "i67: no boots slot or bases")
+	var brng := RandomNumberGenerator.new()
+	brng.seed = 6705
+	var boots_lines := 0
+	for b in Data.BASES.get("Boots", []):
+		var pair: Dictionary = Items.roll_on("Boots", b, brng, 0.0, true, false, 0, 10)
+		_check(pair["affixes"].size() == mini(int(Data.RARITIES[int(pair["rarity"])]["affixes"]), Items.allowed_affixes("Boots").size()) and pair["affixes"].all(func(a): return Items.allowed_affixes("Boots").any(func(d): return d["stat"] == a["stat"])),
+			"i67: a magic pair of %s rolled %s" % [b["name"], str(pair["affixes"])])
+		boots_lines += pair["affixes"].size()
+	_check(boots_lines > 0, "i67: no pair of boots rolled a line")
+	# tiered like the rest: each tier's figures above the one before, T6 above T5's top
+	for st in I67_SLOTS:
+		var d: Dictionary = Items.affix_def(st)
+		if d.get("flag", false):
+			continue
+		var prev := -1
+		for t in range(1, Data.AFFIX_TIERS + 1):
+			var r: Array = Items.tier_range(d, t)
+			_check(int(r[0]) > prev or t == 1, "i67: %s's T%d starts at %d, not above T%d" % [st, t, int(r[0]), t - 1])
+			prev = int(r[1])
+		var r6: Array = Items.tier_range(d, Data.T67_TIER)
+		_check(int(r6[0]) > int(d["max"]) and int(r6[1]) >= int(r6[0]), "i67: %s's T6 %s isn't past T5's top %d" % [st, str(r6), int(d["max"])])
+	# about as often as the old ones in their slots: each new line's share of a gun's rolls at least half the old lines' mean
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6701
+	var n := {}
+	var rolls := 6000
+	for k in range(rolls):
+		for a in Items.pick_affixes("Primary", 1, rng):
+			n[a["stat"]] = int(n.get(a["stat"], 0)) + 1
+	var old_w: Array = Items.allowed_affixes("Primary").filter(func(a): return not I67_SLOTS.has(str(a["stat"])) and float(a.get("weight", 1.0)) >= 1.0)
+	var old_mean: float = 0.0
+	for a in old_w:
+		old_mean += float(n.get(a["stat"], 0))
+	old_mean /= maxf(1.0, float(old_w.size()))
+	for st in I67_SLOTS:
+		if "Primary" in I67_SLOTS[st] and st != "no_jam":
+			_check(float(n.get(st, 0)) >= old_mean * 0.5 and float(n.get(st, 0)) <= old_mean * 1.5, "i67: %s rolled %d times on a primary in %d, the old lines' mean %.0f" % [st, int(n.get(st, 0)), rolls, old_mean])
+	# their words: no code word, the figure first
+	var it: Dictionary = sim._plain("Primary", "Pump shotgun")
+	it["affixes"] = []
+	for st in I67_SLOTS:
+		it["affixes"].append(Items.roll_affix(Items.affix_def(st), 20, rng, 3))
+	for line in Items.affix_lines(it) + Items.affix_lines(it, true):
+		_check(_code_word.search(str(line)) == null, "i67: an affix line reads code: '%s'" % line)
+	# rolled, they feed the fight's stats (0.15.0's sum): a worn piece's line is the stat
+	var saved: Dictionary = sim.to_dict()
+	var hat: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
+	hat["affixes"] = [Items.roll_affix(Items.affix_def("head_pct"), 5, rng, 2)]
+	sim.equipped["Helmet"] = hat
+	sim._stats_dirty()
+	_check(absf(sim.f66_stat("head_pct") - float(hat["affixes"][0]["value"])) < 1e-6, "i67: a helmet's headshot line isn't the fight's head_pct: %.1f" % sim.f66_stat("head_pct"))
+	sim.load_dict(saved)
+	print("i67 affixes ok: %d new lines on their slots and boots, tiered, a share like the old ones' (mean %.0f in %d)" % [I67_SLOTS.size(), old_mean, rolls])
+
+
+## A piece with its first affix at T6 (the checks' fixture).
+func _i67_t6_item(_sim, slot := "Primary", base := "Pump shotgun") -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6702
+	var it: Dictionary = Items.roll_on(slot, Items.base_named(slot, base), rng, 0.0, false, false, 0, 60)
+	var d: Dictionary = Items.allowed_affixes(slot).filter(func(a): return Items.t67_can(a))[0]
+	if it["affixes"].is_empty():
+		it["affixes"].append({})
+	it["affixes"][0] = Items.roll_affix(Items.affix_def_for(str(d["stat"]), slot), 60, rng, Data.T67_TIER)
+	return it
+
+
+func _i67_t6_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# the rate: 1 in 40 affix rolls at item level 50 and past, none under 30, between them on the way
+	var rate := func(lv: int, n_items: int) -> float:
+		sim.rng.seed = 6703 + lv
+		var n6 := 0
+		var all := 0
+		for k in range(n_items):
+			var it: Dictionary = sim._plain("Primary", "Pump shotgun")
+			it["ilvl"] = lv
+			it["affixes"] = []
+			for st in ["damage_pct", "attack_pct", "head_pct", "fire_pct"]:
+				it["affixes"].append(Items.roll_affix(Items.affix_def(st), lv, sim.rng, 3))
+			sim.t67_roll(it)
+			for a in it["affixes"]:
+				all += 1
+				n6 += 1 if int(a["tier"]) == Data.T67_TIER else 0
+		return float(n6) / maxf(1.0, float(all))
+	var r60: float = rate.call(60, 5000)
+	var r29: float = rate.call(29, 2000)
+	var r40: float = rate.call(40, 5000)
+	_check(absf(r60 - Data.T67_ODDS) < 0.005, "i67: T6 at item level 60 is %.4f of affix rolls, not about %.4f" % [r60, Data.T67_ODDS])
+	_check(r29 == 0.0, "i67: T6 under item level 30: %.4f" % r29)
+	_check(r40 > 0.0 and r40 < r60, "i67: T6 at item level 40 (%.4f) isn't between none and the top (%.4f)" % [r40, r60])
+	# a unique's lines stay as they are
+	var u: Dictionary = Items.roll_unique(_i67_u("Grandad's .303"), sim.rng, 60, 9)
+	var before: Array = u["affixes"].duplicate(true)
+	for k in range(200):
+		sim.t67_roll(u)
+	_check(u["affixes"] == before, "i67: a unique's lines went to T6")
+	# on real finds: a deep site's finds carry T6 now and then, their figures past T5's top
+	var m := _f66_run(sim)
+	m["t"]["level"] = 60
+	sim.rng.seed = 6704
+	var found := 0
+	var lines := 0
+	var past := true
+	for k in range(2500):
+		var got: Dictionary = sim._find(m, m["t"], false, {}, true)
+		var it: Dictionary = got.get("it", {})
+		if it.is_empty() or not (str(it.get("slot", "")) in Data.SLOTS) or it.has("unique") or it.has("set"):
+			continue
+		lines += it["affixes"].size()
+		for a in it["affixes"]:
+			if int(a.get("tier", 0)) == Data.T67_TIER:
+				found += 1
+				var d: Dictionary = Items.affix_def_for(str(a["stat"]), str(it["slot"]))
+				past = past and float(a["value"]) >= float(d["max"]) * Items.affix_mult(str(a["stat"]), Items.ilvl(it)) / float(d.get("div", 1)) - 0.5
+	_check(found > 0 and float(found) / maxf(1.0, float(lines)) < 0.06, "i67: %d T6 lines in %d at a level-60 site's finds" % [found, lines])
+	_check(past, "i67: a found T6 line isn't past T5's top")
+	# the gold line: a T6 find landed says so in the log, a plain one doesn't
+	var plain: Dictionary = sim._plain("Primary", "Pump shotgun")
+	var n0: int = sim.events_total
+	sim._land(m, plain)
+	_check(sim.events_total == n0 or not str(sim.events.back()[1]).begins_with(Words.T67["mark"]), "i67: a plain find made a top-tier line")
+	var six: Dictionary = _i67_t6_item(sim)
+	sim._land(m, six)
+	var line: String = str(sim.events.back()[1])
+	_check(line.begins_with(Words.T67["mark"]) and line.contains(Items.full_name(six)) and line.contains(str(Items.t67_lines(six)[0])), "i67: a T6 find's line: '%s'" % line)
+	_check(Words.toast_tone(line) == "legendary", "i67: the T6 line's tone is '%s', not the gold" % Words.toast_tone(line))
+	_check(int(m.get("t67_found", 0)) == 1, "i67: the run's T6 count: %d" % int(m.get("t67_found", 0)))
+	# its own sound: on the floor and into the pack
+	var snd = main._sound
+	_check(snd != null, "i67: no sound to hear the T6 by")
+	if snd != null:
+		snd.set_enabled(true)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		snd.clear_cued()
+		var six2: Dictionary = _i67_t6_item(sim)
+		m["floor"] = m.get("floor", []) + [six2]
+		main.refresh()
+		_check("find_top" in snd.cued(), "i67: a T6 on the floor made no sound of its own: %s" % str(snd.cued()))
+		snd.clear_cued()
+		var rare: Dictionary = sim._plain("Primary", "Pump shotgun")
+		rare["rarity"] = 2
+		m["floor"] = m["floor"] + [rare]
+		main.refresh()
+		_check(not ("find_top" in snd.cued()) and "find_rare" in snd.cued(), "i67: a plain rare sounded as a T6: %s" % str(snd.cued()))
+		snd.clear_cued()
+		var six3: Dictionary = _i67_t6_item(sim, "Helmet", Data.BASES["Helmet"][0]["name"])
+		six3["rarity"] = 0
+		m["found"] = m["found"] + [six3]
+		main.refresh()
+		_check("find_top" in snd.cued(), "i67: a T6 common into the pack made no sound: %s" % str(snd.cued()))
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("i67 T6 ok: %.4f of rolls at level 60 (%.4f at 40, none at 29), %d of %d lines on a deep site's finds, the gold line, its sound" % [r60, r40, found, lines])
+
+
+## The ◆ wherever an item's tiers show: the pick panel's affix chip, the stash cell, the floor's cell, the log; all fit.
+func _i67_mark_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		var where := "i67 mark %dx%d" % [int(sz.x), int(sz.y)]
+		main.layout(sz)
+		if sim.on_mission():
+			sim.extract_now()
+		var six: Dictionary = _i67_t6_item(sim)
+		var plain: Dictionary = sim._plain("Primary", "Pump shotgun")
+		sim.stash.append(six)
+		sim.stash.append(plain)
+		main.show_room(main.ARMOURY)
+		main.refresh()
+		var inv = main._armoury._inv
+		var ci: int = inv.cell_of(int(six["id"]))
+		var cp: int = inv.cell_of(int(plain["id"]))
+		_check(ci >= 0 and cp >= 0, "%s: the pieces aren't in the stash grid" % where)
+		if ci >= 0 and cp >= 0:
+			var c = inv._cells[ci]
+			_check(c.t67_shown() and not inv._cells[cp].t67_shown(), "%s: the stash cell's ◆ (T6 %s, plain %s)" % [where, str(c.t67_shown()), str(inv._cells[cp].t67_shown())])
+			if c.t67_shown():
+				_check(Rect2(Vector2.ZERO, c.size).encloses(Rect2(c._t67.position, c._t67.size)), "%s: the ◆ runs out of its cell" % where)
+			main._armoury._pick_cell(ci)
+			main.refresh()
+			var head = main._armoury._pick._heads[0]
+			var tags: Array = head._affixes._tags.filter(func(l): return l.visible).map(func(l): return l.text)
+			_check(Words.T67["mark"] in tags, "%s: the pick panel's affix chips have no ◆: %s" % [where, str(tags)])
+			_check(not ("T6" in tags), "%s: the pick panel says T6, not ◆: %s" % [where, str(tags)])
+			_check_fit(main, where + " stash")
+		sim._remove(six)
+		sim._remove(plain)
+		# the floor, in a run; the log's gold line
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var m: Dictionary = sim.mission
+		main.show_room(main.MISSIONS)
+		var fl: Dictionary = _i67_t6_item(sim)
+		m["floor"] = [fl]
+		sim._land(m, _i67_t6_item(sim, "Secondary", "Air pistol"))
+		main.refresh()
+		var run = main._run
+		var k: int = run._crates._floor_ids.find(int(fl["id"]))
+		_check(k >= 0 and run._crates._cells[k].t67_shown(), "%s: the floor's cell has no ◆" % where)
+		var lab: Label = main._event_labels[0]
+		_check(lab.text.begins_with(Words.T67["mark"]) and lab.get_theme_color("font_color") == Pal.LEGENDARY, "%s: the log's top line isn't the gold T6 line: '%s'" % [where, lab.text])
+		_check_fit(main, where + " floor and log")
+		sim.log_event("Something plain")
+		main.refresh()
+		_check(main._event_labels[0].get_theme_color("font_color") != Pal.LEGENDARY, "%s: the gold stuck to a plain line" % where)
+		_check(not main._prev_label.text.begins_with(Words.T67["mark"]) or main._prev_label.get_theme_color("font_color") == Pal.LEGENDARY, "%s: the line before, a T6's, isn't gold" % where)
+		sim.extract_now()
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	main.refresh()
+	print("i67 mark ok: the ◆ on the stash cell, the pick panel's chip and the floor, the gold line, at both sizes")
+
+
+## A unique's row in the table by name ({} for none).
+func _i67_u(name: String) -> Dictionary:
+	for u in Data.UNIQUES:
+		if str(u["name"]) == name:
+			return u
+	return {}
+
+
+## The 13 (endgame_rail.md §2): name -> [slot, band].
+const I67_UNIQUES := {"Grandad's .303": ["Primary", "chase"], "The Groundsman's Shotgun": ["Primary", "chase"],
+	"The Range Officer's Rifle": ["Primary", "chase"], "The Allotment Zip Gun": ["Secondary", "levelling"],
+	"The Station Revolver": ["Secondary", "chase"], "The Armourer's Box": ["Rig", "chase"], "The Magpie's Pouches": ["Rig", "core"],
+	"The Gun Club Sling": ["Rig", "chase"], "The Bin Man's Gloves": ["Gloves", "core"], "The Bouncer's Knuckles": ["Gloves", "chase"],
+	"The Bonfire Box": ["Charm", "chase"], "The Football Rattle": ["Charm", "core"], "The Lifeboat Jacket": ["Armour", "chase"]}
+
+
+## Wears a unique's rule on what's in a slot (a plain piece with the rule: the fight's magazines stay as _f66_run left them).
+func _i67_rule(sim, slot: String, name: String, base := "") -> Dictionary:
+	if base != "" or sim.equipped[slot] == null:
+		sim.equipped[slot] = sim._plain(slot, base if base != "" else Data.BASES[slot][0]["name"])
+	sim.equipped[slot]["rule"] = str(_i67_u(name).get("rule", ""))
+	sim._dry_memo.clear()
+	sim._stats_dirty()
+	return sim.equipped[slot]
+
+
+func _i67_unrule(sim, slot: String) -> void:
+	if sim.equipped[slot] != null:
+		sim.equipped[slot].erase("rule")
+	sim._dry_memo.clear()
+	sim._stats_dirty()
+
+
+func _i67_unique_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# the table: each in, on its slot and band, its range the band's, a rule, plain words, a borrowed picture
+	var ranges := {"levelling": [1, 3], "core": [3, 9], "chase": [5, 9]}
+	for nm in I67_UNIQUES:
+		var u: Dictionary = _i67_u(nm)
+		_check(not u.is_empty(), "i67: %s isn't in the uniques" % nm)
+		if u.is_empty():
+			continue
+		_check(str(u["slot"]) == I67_UNIQUES[nm][0] and str(u["band"]) == I67_UNIQUES[nm][1] and u["range"] == ranges[I67_UNIQUES[nm][1]], "i67: %s's slot, band or range: %s %s %s" % [nm, u["slot"], u["band"], str(u["range"])])
+		_check(str(u.get("rule", "")) != "" and Data.UNIQUES.filter(func(x): return str(x.get("rule", "")) == str(u["rule"])).size() == 1, "i67: %s's rule isn't its own" % nm)
+		_check(not Items.base_named(str(u["slot"]), str(u["base"])).is_empty(), "i67: %s's base %s isn't a %s" % [nm, u["base"], u["slot"]])
+		for w in [str(u["words"]), str(u["short"])]:
+			_check(_code_word.search(w) == null and not w.ends_with("."), "i67: %s's words: '%s'" % [nm, w])
+		var it: Dictionary = Items.roll_unique(u, sim.rng, -1, int(u["range"][0]))
+		_check(Items.art(it) != null, "i67: %s has no picture (its body's, %s, borrowed)" % [nm, it["base"]])
+		_check(sim.loose_uniques(12).has(u) and Items.unique_fits(u, int(u["range"][1])), "i67: %s doesn't drop loose at level 12 or its top tier" % nm)
+	_check(Data.UNIQUES.size() == Data.UNIQUES.map(func(u): return u["name"]).reduce(func(acc, x): return acc if acc.has(x) else acc + [x], []).size(), "i67: two uniques share a name")
+	var m := _f66_run(sim)
+	# Grandad's .303: every fifth round a headshot (no chance left of its own)
+	var lee := func(on: bool) -> Array:
+		var lm: Dictionary = _f66_run(sim)
+		if on:
+			_i67_rule(sim, "Primary", "Grandad's .303")
+		sim.f66_extra = {"no_jam": 1.0, "head_pct": -Data.HEAD66_PCT}
+		var h0: int = int(sim._f66_stats(lm)["headshots"])
+		var s0: float = float(sim._f66_stats(lm)["shots"])
+		for k in range(60):
+			_f66_hit(sim, lm, 1.0)
+		var r: Array = [int(sim._f66_stats(lm)["headshots"]) - h0, float(sim._f66_stats(lm)["shots"]) - s0]
+		_i67_unrule(sim, "Primary")
+		return r
+	var lee_r: Array = lee.call(true)
+	var lee_r0: Array = lee.call(false)
+	var lee_on: float = float(lee_r[0]) / maxf(1.0, float(lee_r[1]))
+	_check(float(lee_r[1]) > 20.0 and absi(int(lee_r[0]) - int(floor(float(lee_r[1]) / Data.LEE67_EVERY + 1e-6))) <= 1 and int(lee_r0[0]) == 0, "i67: the Lee-Enfield's headshots %d in %.1f rounds (want one in %d), without it %d" % [int(lee_r[0]), float(lee_r[1]), Data.LEE67_EVERY, int(lee_r0[0])])
+	# the Groundsman's Shotgun: the next gang 30% later, 15% less damage
+	m = _f66_run(sim)
+	var ps0: float = sim.patrol_s(m["t"])
+	var dp0: float = float(sim._gun_dps()[0])
+	_i67_rule(sim, "Primary", "The Groundsman's Shotgun")
+	_check(absf(sim.patrol_s(m["t"]) / ps0 - Data.GROUNDS67_LATER) < 1e-4 and absf(float(sim._gun_dps()[0]) / dp0 - Data.GROUNDS67_DMG) < 1e-4,
+		"i67: the Groundsman's gangs x%.2f later, damage x%.2f" % [sim.patrol_s(m["t"]) / ps0, float(sim._gun_dps()[0]) / maxf(0.0001, dp0)])
+	_i67_unrule(sim, "Primary")
+	# the Range Officer's Rifle: no helmet at the deepest
+	_check(sim.f66_helmet({"depth": Data.DEEP66}) > 0.0, "i67: no helmet at the deepest without the Range Officer's")
+	_i67_rule(sim, "Primary", "The Range Officer's Rifle")
+	_check(sim.f66_helmet({"depth": Data.DEEP66}) == 0.0, "i67: the Range Officer's headshots still meet a helmet: %.2f" % sim.f66_helmet({"depth": Data.DEEP66}))
+	_i67_unrule(sim, "Primary")
+	# the Allotment Zip Gun: jams one shot in five, triple damage (backing: times what it fires)
+	sim.f66_extra = {}
+	var zg: Dictionary = _i67_rule(sim, "Secondary", "The Allotment Zip Gun", "Zip gun")
+	var zx: Array = sim.u67_gun_x(true)
+	_check(absf(sim.f66_jam_pct(zg) - Data.ZIP67_JAM_PCT) < 1e-6 and absf(float(zx[1]) - Data.ZIP67_DMG * (1.0 - Data.ZIP67_JAM_PCT / 100.0)) < 1e-6 and absf(float(sim.u67_gun_x(false)[1]) - Data.ZIP67_DMG) < 1e-6,
+		"i67: the Zip Gun's jams %.1f%%, damage x%.2f backing" % [sim.f66_jam_pct(zg), float(zx[1])])
+	_i67_unrule(sim, "Secondary")
+	_check(sim.f66_jam_pct(zg) != Data.ZIP67_JAM_PCT and float(sim.u67_gun_x(true)[1]) == 1.0, "i67: a plain zip gun jams and hits as the unique")
+	# the Desk Sergeant's Revolver: never jams (a T1 gun would); the last round of each cylinder a headshot
+	var ds: Dictionary = _i67_rule(sim, "Secondary", "The Station Revolver", "Derringer")
+	var cyl: int = maxi(1, Items.mag_size(ds))
+	_check(sim.f66_jam_pct(ds) == 0.0, "i67: the Desk Sergeant's jams: %.1f%%" % sim.f66_jam_pct(ds))
+	# (the 67 fix round) its last round is the cylinder's own now: _f67_checks reads it round by round
+	_check(cyl >= 1, "i67: the Station Revolver's body has no cylinder")
+	_i67_unrule(sim, "Secondary")
+	_check(sim.f66_jam_pct(ds) > 0.0, "i67: a plain derringer never jams")
+	# the Armourer's Box: half their armour, reloads 33% longer
+	m = _f66_run(sim, Data.DEEP66)
+	var a0: float = sim.f66_armour(m, m["t"])
+	var rl0: float = sim.reload_s(sim.equipped["Primary"])
+	_i67_rule(sim, "Rig", "The Armourer's Box", "Chest rig")
+	_check(absf(sim.f66_armour(m, m["t"]) - a0 * Data.BOX67_ARMOUR) < 1e-6 and a0 > 0.0 and absf(sim.reload_s(sim.equipped["Primary"]) / rl0 - Data.BOX67_RELOAD) < 1e-4,
+		"i67: the Armourer's Box: armour %.3f of %.3f, reload x%.2f" % [sim.f66_armour(m, m["t"]), a0, sim.reload_s(sim.equipped["Primary"]) / rl0])
+	_i67_unrule(sim, "Rig")
+	# the Magpie's Pouches: 2 rounds back a kill, a pouch fewer
+	m = _f66_run(sim)
+	sim.f66_extra = {}
+	var cap0: int = sim.med_capacity()
+	_i67_rule(sim, "Rig", "The Magpie's Pouches")
+	var cur: Dictionary = sim.mag_in(sim._f66_in_hand()[0])
+	_check(not cur.is_empty() and sim.med_capacity() == cap0 - Data.MAGPIE67_POUCHES, "i67: the Magpie's pouches %d (from %d)" % [sim.med_capacity(), cap0])
+	if not cur.is_empty():
+		cur["rounds"] = 1
+		sim._f66_on_kill(m, m["t"])
+		_check(int(cur["rounds"]) == 1 + Data.MAGPIE67_ROUNDS, "i67: the Magpie's kill put %d back" % (int(cur["rounds"]) - 1))
+		_i67_unrule(sim, "Rig")
+		sim._f66_on_kill(m, m["t"])
+		_check(int(cur["rounds"]) == 1 + Data.MAGPIE67_ROUNDS, "i67: rounds back without the Magpie's")
+	# the Gun Club Sling: the primary dry, the stash's best fed primary takes over
+	var sling := func(on: bool) -> bool:
+		var lm: Dictionary = _f66_run(sim)
+		sim.f66_extra = {"no_jam": 1.0}
+		if on:
+			_i67_rule(sim, "Rig", "The Gun Club Sling")
+		var spare: Dictionary = sim._plain("Primary", "Spiked bat")
+		sim.stash.append(spare)
+		for mg in sim.rig:
+			mg["rounds"] = 0
+		sim._stats_dirty()
+		_f66_hit(sim, lm, 1.0)
+		var took: bool = str(sim.equipped["Primary"]["base"]) != "Pump shotgun" and sim.has_rounds(sim.equipped["Primary"]) and sim.stash.any(func(x): return str(x.get("base", "")) == "Pump shotgun")
+		_i67_unrule(sim, "Rig")
+		return took
+	var sl_on: bool = sling.call(true)
+	_check(sl_on and str(sim.events.back()[1]).begins_with(Words.T67["sling"].get_slice("%", 0)), "i67: the Gun Club Sling's spare didn't take over: '%s'" % str(sim.events.back()[1]))
+	_check(not sling.call(false), "i67: a spare took over with no Gun Club Sling")
+	# the Bin Man's Gloves: a crate searched fills a magazine
+	var bin := func(on: bool) -> int:
+		var lm: Dictionary = _f66_run(sim)
+		if on:
+			_i67_rule(sim, "Gloves", "The Bin Man's Gloves")
+		var mg: Dictionary = sim.mag_in(sim._f66_in_hand()[0])
+		mg["rounds"] = 3
+		sim.u67_crate_done(lm)
+		var r: int = int(mg["rounds"])
+		_i67_unrule(sim, "Gloves")
+		return r
+	var full: int = Items.mag_cap(sim.rig[0], sim.equipped["Primary"])
+	_check(bin.call(true) == full and bin.call(false) == 3, "i67: the Bin Man's crate didn't fill the magazine to %d" % full)
+	# the Bouncer's Knuckles: arm shots 40% misses
+	m = _f66_run(sim)
+	m["f66_arm_t"] = Data.ARM66_S
+	var x0: float = sim._f66_in_mult(m, 1, 0.0)
+	_i67_rule(sim, "Gloves", "The Bouncer's Knuckles")
+	var x1: float = sim._f66_in_mult(m, 1, 0.0)
+	_check(absf(x0 - (1.0 - Data.ARM66_MISS)) < 1e-6 and absf(x1 - (1.0 - Data.KNUCKLES67_MISS)) < 1e-6, "i67: the Knuckles' arm shots: %.2f (plain %.2f)" % [x1, x0])
+	_i67_unrule(sim, "Gloves")
+	# the Bonfire Box: every eighth kill, fire on everyone on you and a second's stun
+	var fw := func(on: bool) -> Array:
+		var lm: Dictionary = _f66_run(sim)
+		if on:
+			_i67_rule(sim, "Charm", "The Bonfire Box", Data.BASES["Charm"][0]["name"])
+		lm["remaining"] = 50
+		lm["dots"] = {}
+		for k in range(Data.BONFIRE67_EVERY - 1):
+			sim._f66_on_kill(lm, lm["t"])
+		var before: float = float(lm["dots"].get("fire", 0.0))
+		sim._f66_on_kill(lm, lm["t"])
+		var out: Array = [before, float(lm["dots"].get("fire", 0.0)), sim._f66_in_mult(lm, 1, 0.5)]
+		_i67_unrule(sim, "Charm")
+		return out
+	var bf: Array = fw.call(true)
+	var bf0: Array = fw.call(false)
+	_check(float(bf[0]) == 0.0 and float(bf[1]) > 0.0 and float(bf[2]) < 1e-6, "i67: the Bonfire Box's eighth kill: fire %.1f to %.1f, their fire x%.2f" % [float(bf[0]), float(bf[1]), float(bf[2])])
+	_check(float(bf0[1]) == 0.0 and float(bf0[2]) > 0.5, "i67: fireworks with no Bonfire Box")
+	# the Football Rattle: the meter twice as fast, pinned men 30% slower
+	var rattle := func(on: bool) -> Array:
+		var lm: Dictionary = _f66_run(sim)
+		if on:
+			_i67_rule(sim, "Charm", "The Football Rattle", Data.BASES["Charm"][0]["name"])
+		var ticks := 0
+		while sim.f66_suppress() < 1.0 and ticks < 100:
+			_f66_hit(sim, lm, 1.0)
+			ticks += 1
+		var out: Array = [ticks, sim._f66_in_mult(lm, 1, 0.0)]
+		_i67_unrule(sim, "Charm")
+		return out
+	var ra: Array = rattle.call(true)
+	var ra0: Array = rattle.call(false)
+	_check(int(ra[0]) == int(Data.SUPP66_FILL_S / Data.RATTLE67_PIN_X) and absf(float(ra[1]) - (1.0 - Data.RATTLE67_SLOW)) < 1e-6 and int(ra0[0]) == int(Data.SUPP66_FILL_S),
+		"i67: the Rattle pins in %d s (plain %d), pinned fire x%.2f" % [int(ra[0]), int(ra0[0]), float(ra[1])])
+	# the Lifeboat Jacket: Last legs for 5 s with no stat; a kill in them, back at 20%
+	var boat := func(on: bool) -> Array:
+		var lm: Dictionary = _f66_run(sim)
+		sim.f66_extra = {}
+		if on:
+			_i67_rule(sim, "Armour", "The Lifeboat Jacket", "Waxed coat")
+		var ready: String = sim.f66_last_stand_state()
+		sim.hp = 0.0
+		var stood: bool = sim._f66_last_stand(lm)
+		var secs: float = float(lm.get("f66_ls_t", 0.0))
+		lm["remaining"] = 5
+		sim._f66_on_kill(lm, lm["t"])
+		var out: Array = [ready, stood, secs, sim.hp, str(lm.get("f66_ls", ""))]
+		_i67_unrule(sim, "Armour")
+		return out
+	var lb: Array = boat.call(true)
+	var lb0: Array = boat.call(false)
+	_check(str(lb[0]) == "ready" and bool(lb[1]) and absf(float(lb[2]) - Data.LIFEBOAT67_S) < 1e-6 and absf(float(lb[3]) - sim.max_hp() * Data.LIFEBOAT67_BACK) < 1e-3 and str(lb[4]) == "used",
+		"i67: the Lifeboat Jacket: %s" % str(lb))
+	_check(str(lb0[0]) == "none" and not bool(lb0[1]), "i67: Last legs with no Lifeboat Jacket: %s" % str(lb0))
+	sim.f66_extra = {}
+	if sim.mission != null:
+		sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("i67 uniques ok: the 13 in, banded, pictured; each rule acts (Lee %.3f, Rattle %d s, Lifeboat back at %.0f HP)" % [lee_on, int(ra[0]), float(lb[3])])
+
+
+
+# ------------------------------------------------------------------ the 67 fix round (8 Nov, review67.md)
+func _f67_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.on_mission():
+		sim.extract_now()
+	# 1. boots as a body piece: armour and the gang clock each count, at the same pace
+	sim.equipped["Boots"] = sim._plain("Boots", "Plimsolls")
+	sim._stats_dirty()
+	var heavy: Dictionary = sim._plain("Boots", "EOD boots")
+	var quiet: Dictionary = sim._plain("Boots", "Walking boots")
+	_check(sim.compare(heavy) == 1 and sim.upgrade_gain(heavy) > 0.0, "f67: heavy boots don't beat plimsolls on armour: %d, %.3f" % [sim.compare(heavy), sim.upgrade_gain(heavy)])
+	_check(sim.compare(quiet) == 1 and sim.upgrade_gain(quiet) > 0.0, "f67: a quiet pair at the same pace isn't better for the gang clock: %d, %.3f" % [sim.compare(quiet), sim.upgrade_gain(quiet)])
+	var aside: Array = sim.stash.filter(func(x): return str(x.get("slot", "")) == "Boots")
+	for x in aside:
+		sim.stash.erase(x)
+	sim.stash.append(heavy)
+	_check(sim.equip_best("Boots") and int(sim.equipped["Boots"]["id"]) == int(heavy["id"]), "f67: the bot keeps plimsolls over EOD boots")
+	sim.stash.append_array(aside)
+	# 2. the Gun Club Sling undone at the run's end; a death takes the spare as worn kit, yours is home, nothing doubled
+	var sling := func(die: bool) -> Array:
+		var lm: Dictionary = _f66_run(sim)
+		var own: Dictionary = sim.equipped["Primary"]
+		_i67_rule(sim, "Rig", "The Gun Club Sling")
+		var spare: Dictionary = sim._plain("Primary", "Spiked bat")
+		sim.stash.append(spare)
+		for mg in sim.rig:
+			mg["rounds"] = 0
+		sim._stats_dirty()
+		_f66_hit(sim, lm, 1.0)
+		var swapped: bool = int(sim.equipped["Primary"]["id"]) != int(own["id"])
+		var spare_id: int = int(sim.equipped["Primary"]["id"])
+		if die:
+			lm["insured"] = false
+			sim.hp = 0.0
+			sim._kia()
+		else:
+			lm["remaining"] = 0
+			lm["cleared"] = true
+			sim.extract_now()
+		var count := func(id: int) -> int:
+			var n := 0
+			for x in sim.stash:
+				n += 1 if int(x["id"]) == id else 0
+			for sl in Data.SLOTS:
+				n += 1 if sim.equipped[sl] != null and int(sim.equipped[sl]["id"]) == id else 0
+			return n
+		var out: Array = [swapped, sim.equipped["Primary"] != null and int(sim.equipped["Primary"]["id"]) == int(own["id"]), count.call(int(own["id"])), count.call(spare_id), sim.stash.any(func(x): return int(x["id"]) == spare_id), sim.stash.any(func(x): return int(x["id"]) == int(own["id"]))]
+		_i67_unrule(sim, "Rig")
+		return out
+	var sa: Array = sling.call(false)
+	_check(bool(sa[0]) and bool(sa[1]) and int(sa[2]) == 1 and int(sa[3]) == 1 and bool(sa[4]), "f67: the sling's swap wasn't undone at the run's end: %s" % str(sa))
+	sim.load_dict(saved)
+	var sd: Array = sling.call(true)
+	_check(bool(sd[0]) and int(sd[2]) == 1 and bool(sd[5]) and int(sd[3]) <= 1, "f67: a death with the sling's spare lost your own gun or doubled a piece: %s" % str(sd))
+	sim.load_dict(saved)
+	if sim.on_mission():
+		sim.extract_now()
+	# 3. the Zip Gun jams 1 in 5 whatever says never
+	sim.f66_extra = {"no_jam": 1.0}
+	var zg: Dictionary = _i67_rule(sim, "Secondary", "The Allotment Zip Gun", "Zip gun")
+	_check(absf(sim.f66_jam_pct(zg) - Data.ZIP67_JAM_PCT) < 1e-6, "f67: never-jams cancelled the Zip Gun's jams: %.1f%%" % sim.f66_jam_pct(zg))
+	_i67_unrule(sim, "Secondary")
+	sim.f66_extra = {}
+	# 4. the Bench never steps a T6 down; its log says ◆
+	var six: Dictionary = _i67_t6_item(sim)
+	var brng := RandomNumberGenerator.new()
+	brng.seed = 6706
+	var st6: String = str(six["affixes"][0]["stat"])
+	var lost := 0
+	for k in range(400):
+		if Items.reroll_one(six, st6, brng) != Data.T67_TIER:
+			lost += 1
+	_check(lost == 0, "f67: the Bench stepped a T6 down %d times in 400" % lost)
+	var lines: Array = Items.affix_lines(six, false, true)
+	_check(str(lines[0]).contains(Words.T67["mark"]) and not str(lines[0]).contains("T6"), "f67: the Bench's line for a T6: '%s'" % str(lines[0]))
+	# 5. boots: searches and the body's resists, and "Add a resist"
+	for st in ["search_pct", "fire_res", "frost_res", "poison_res", "shock_res", "bleed_res"]:
+		_check(Items.allowed_affixes("Boots").any(func(a): return str(a["stat"]) == st), "f67: boots don't roll %s" % st)
+	var pr: Dictionary = sim._plain("Boots", "Plimsolls")
+	_check(Items.add_resist(pr, "fire", brng) and pr["affixes"].any(func(a): return str(a["stat"]) == "fire_res"), "f67: Add a resist won't go on boots")
+	# 6. the Station Revolver's last round: the cylinder's own, reset on a reload, scavenged rounds counted; never capped off
+	var m := _f66_run(sim)
+	var c1 := {"id": 996701, "slot": Data.MAGAZINE, "base": "x", "rounds": 2}
+	var c2 := {"id": 996702, "slot": Data.MAGAZINE, "base": "x", "rounds": 6}
+	sim.rig.append(c1)
+	sim.rig.append(c2)
+	m["mag_in"]["Secondary"] = 996701
+	var reads: Array = [sim.u67_last_round(m, "Secondary")]
+	c1["rounds"] = 1
+	reads.append(sim.u67_last_round(m, "Secondary"))
+	c1["rounds"] = 2                                  # a scavenged round: the cylinder isn't out
+	reads.append(sim.u67_last_round(m, "Secondary"))
+	c1["rounds"] = 0
+	reads.append(sim.u67_last_round(m, "Secondary"))  # its last round
+	m["mag_in"]["Secondary"] = 996702                 # the reload: a new cylinder
+	reads.append(sim.u67_last_round(m, "Secondary"))
+	c2["rounds"] = 3
+	reads.append(sim.u67_last_round(m, "Secondary"))
+	c2["rounds"] = 0
+	m["mag_in"]["Secondary"] = 996701                 # emptied and swapped in one tick
+	c1["rounds"] = 6
+	reads.append(sim.u67_last_round(m, "Secondary"))
+	_check(reads == [0, 0, 0, 1, 0, 0, 1], "f67: the Station Revolver's cylinder: %s, want [0, 0, 0, 1, 0, 0, 1]" % str(reads))
+	sim.rig.erase(c1)
+	sim.rig.erase(c2)
+	var lee_gun: Dictionary = sim._plain("Primary", "Pump shotgun")
+	lee_gun["rule"] = "lee_enfield"
+	m["u67_acc_Primary"] = 4.5
+	_check(sim.u67_heads(m, "Primary", lee_gun, 1.0, 1) == 2, "f67: a forced headshot dropped by the cap: %d" % sim.u67_heads(m, "Primary", lee_gun, 1.0, 1))
+	sim.extract_now()
+	# 7. the issued combat boots: flat armour on a base with none
+	sim.k67_set_pick("Boots", 0)
+	var b0: Dictionary = sim.issued_piece("Boots", 60, true)
+	sim.k67_set_pick("Boots", 2)
+	var b2: Dictionary = sim.issued_piece("Boots", 60, true)
+	sim.k67_set_pick("Boots", 0)
+	_check(Items.armour(b2) - Items.armour(b0) >= 30.0 - 1e-6 and str(b2.get("unique", "")) == "Issued combat boots", "f67: the combat boots' armour: %.0f against %.0f" % [Items.armour(b2), Items.armour(b0)])
+	sim.equipped["Boots"] = b0
+	sim._stats_dirty()
+	var a0: float = sim.armour()
+	sim.equipped["Boots"] = b2
+	sim._stats_dirty()
+	_check(sim.armour() > a0, "f67: the combat boots add no armour worn: %.0f against %.0f" % [sim.armour(), a0])
+	# 8 and the words: no pick hint; the renames; no ";" in a short; no "Last Stand" or "suppression" on an item
+	_check(not (load("res://scripts/sim/words.gd") as Script).get_script_constant_map().has("K67_PICK_HINT"), "f67: K67_PICK_HINT is still in")
+	_check(not _i67_u("The Station Revolver").is_empty() and not _i67_u("Grandad's .303").is_empty() and Data.BASES["Boots"].any(func(b): return b["name"] == "Keeper's brogues"), "f67: a rename didn't take")
+	for u in Data.UNIQUES.filter(func(x): return I67_UNIQUES.has(str(x["name"])) or str(x["slot"]) == "Boots") + Data.ISSUED67_MORE:
+		for w in [str(u.get("words", "")), str(u.get("short", ""))]:
+			_check(not w.contains("Last Stand") and not w.contains("suppression"), "f67: '%s' says Last Stand or suppression" % w)
+		_check(not str(u.get("short", "")).contains(";"), "f67: %s's short has a ';': '%s'" % [u["name"], u["short"]])
+	# a headshot's pop cleared at its biggest (it's born at x1.3 about its middle): a word just under it is kept off
+	var v = _v66_fight(main, Vector2(1920, 1080))
+	_check(v != null, "f67: no fight view for the pop's check")
+	if v != null:
+		var psz := Vector2(300.0, 46.0)
+		var pat := Vector2(150.0, 220.0)
+		var under := Rect2(pat.x, pat.y + psz.y + 2.0, psz.x, 20.0)          # a word 2 px under the pop's box at its own size
+		v._keep66 = [under]
+		var got: Vector2 = v._pop66_clear(pat, psz)
+		var big := Rect2(got - psz * (v.POP66_BIG - 1.0) * 0.5, psz * v.POP66_BIG)
+		_check(not big.intersects(under), "f67: a pop at its biggest sits on the word under it: %s on %s" % [str(big), str(under)])
+		v._keep66 = []
+		sim.extract_now()
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	main.refresh()
+	print("f67 ok: boots on armour and the clock, the sling undone, the Zip Gun's jams, the Bench's T6, boots' lines, the cylinder, combat boots, the words")

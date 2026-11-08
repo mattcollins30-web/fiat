@@ -742,10 +742,10 @@ func fight_text_nodes() -> Array:
 # ------------------------------------------------------------------ the collection (24 Oct, the endgame chase, phase 6)
 
 const COLL_BTN_W := 190
-const COLL_W := 1100
+const COLL_W := 1300                         # (BUILD67-I) 1100 to 1300 and four columns to five: the 13 new uniques (and the boots' two) ran it past its foot
 const COLL_H := 880
 const COLL_TILE_H := 84
-const COLL_COLS := 4                        # the uniques' names, in columns
+const COLL_COLS := 5                        # the uniques' names, in columns
 const COLL_ROW := 24                         # 26 to 24 (29 Oct: the gloves' two uniques put a fourteenth row in the grid)
 const COLL_MARK_W := 30
 

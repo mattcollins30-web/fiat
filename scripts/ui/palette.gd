@@ -46,7 +46,7 @@ const ELEMENT_COLOURS := {"physical": TEXT, "fire": Color("ff6b3d"), "frost": Co
 # an affix's tier as a band of colour on its whole line, T1 to T5: white,
 # green, blue, violet, gold - read at a glance; T1 reads as plain text, so the
 # first colour is the first step up
-const TIER_COLOURS := [TEXT, GOOD, Color("6fa8e6"), Color("c48ae8"), ACCENT]
+const TIER_COLOURS := [TEXT, GOOD, Color("6fa8e6"), Color("c48ae8"), ACCENT, LEGENDARY]     # (BUILD67-I) T6, the top tier: the gold
 const DIM := Color(0, 0, 0, 0.72)     # behind a full-screen moment
 # a grade of rounds by its own colour (BUILD46-R, 2 Nov, the canvas "Fiat – Rounds and magazines": a dot in a magazine's
 # corner says what it holds): the plain box of each type brass; the damage grades blue; the third-tier plain ones violet;

@@ -1041,7 +1041,8 @@ func _show_craft(it: Dictionary) -> void:
 				# its tier's figures at this piece's level, and where the roll sits in them (20 Oct, Matt: "we need a range displayed")
 				var rg: Array = tier_figures(it, k)
 				var st: String = str(it["affixes"][k]["stat"])
-				r["tag"].text = "T%d · %s–%s" % [tier, Items.fig(st, float(rg[0])), Items.fig(st, float(rg[1]))]
+				var ttag: String = Words.T67["mark"] if tier >= Data.T67_TIER else "T%d" % tier     # (BUILD67-I) T6's ◆
+				r["tag"].text = "%s · %s–%s" % [ttag, Items.fig(st, float(rg[0])), Items.fig(st, float(rg[1]))]
 				var room: float = r["label"].size.x - UI.text_width(r["tag"], r["tag"].text) - 16
 				r["label"].text = short_lines[k]
 				for o in [lines[k], short_lines[k]]:
@@ -1049,7 +1050,7 @@ func _show_craft(it: Dictionary) -> void:
 						r["label"].text = o
 						break
 				if UI.text_width(r["label"], r["label"].text) > room:
-					r["tag"].text = "T%d" % tier          # the words first: the range goes before the affix does
+					r["tag"].text = ttag                  # the words first: the range goes before the affix does
 				var span: float = maxf(0.1 if Items.is_tenths(st) else 1.0, float(rg[1]) - float(rg[0]))
 				var at: float = clampf((float(it["affixes"][k]["value"]) - float(rg[0])) / span, 0.0, 1.0) if float(rg[1]) > float(rg[0]) else 1.0
 				r["mark"].position.x = at * (r["track"].size.x - 4.0)

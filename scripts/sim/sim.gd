@@ -77,7 +77,7 @@ var auto_equip := false            # idle: the best of each slot goes on when a 
 ## the gear at or under `junk_upto`'s rarity (-1, nothing), never an upgrade on what's worn (is_upgrade), never a kind
 ## kept (`junk_keep`, one of JUNK_KEEPS), and never what the junk run never took (rounds, meds, grenades, papers,
 ## parts that socket, uniques, set pieces, the deeds, a built gun).
-const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Gloves", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
+const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Gloves", "Boots", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
 var junk_upto := -1
 var junk_keep := ""
 ## What came back (11 Oct, Matt's list): every run since the player last looked, added up for the Runs screen's card -
@@ -119,6 +119,7 @@ var fiat_issue_inf := 1.0               # the clock's prices on the day of the I
 var circulation := 0.0                 # fiat paid out since the Issue, less what's been burnt
 var fiat_rate := 1.0                   # the Issuer's rate: the Fence buys at it
 var issued_serial := 0                 # issued kit's numbers so far
+var issued_pick := {}                  # (BUILD67-K) slot -> the version picked at the Issuer's counter (0, 1, 2); 0 when unset
 var issue_moment := {}                 # the Issue's figures for its card: {pile, notes, fiat}; met as "issue"
 var scrap := 0                     # the Bench's material (34): found, stripped, ditched for
 var takings := 0.0                 # what the Yard takes a run, averaged over the last few: the run's cash and the Fence's money (the pass, 6 Oct)
@@ -197,12 +198,14 @@ func _reseed() -> void:
 		mythic_rng.randomize()
 		material_rng.randomize()
 		focus_rng.randomize()
+		fight_rng.randomize()                  # (BUILD66-F)
 		return
 	_seed_n += 1
 	rng.seed = fixed_seed + _seed_n
 	mythic_rng.seed = fixed_seed + _seed_n + 7919
 	material_rng.seed = fixed_seed + _seed_n + 104729
 	focus_rng.seed = fixed_seed + _seed_n + 130363
+	fight_rng.seed = fixed_seed + _seed_n + 155921     # (BUILD66-F) the shooter mechanics' dice
 
 
 func start() -> void:
@@ -524,7 +527,8 @@ func _gun_dps() -> Array:
 		sd = Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) * sec_share * fire_x("Secondary")
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
 			sd *= Data.FX["rule/branch_pistol"]
-	return [p, sd]
+	var u67: Array = u67_gun_x(primary_live)      # (BUILD67-I) the Groundsman's Shotgun's less, the Zip Gun's triple
+	return [p * float(u67[0]), sd * float(u67[1])]
 
 
 ## The gun type's edge (29 Oct, docs/design/itemisation.md §3): the primary's type when it's in hand and fed, else "" -
@@ -1215,6 +1219,7 @@ func med_capacity() -> int:
 	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (Data.FX["rule/issue_webbing"] if has_rule("issue_webbing") else 1)
 	n += (Data.FX["yard/rig_wiring"] if yard_has("rig_wiring") else 0) + (Data.RIG_ROW if yard_has("battery") else 0)    # the Generator's picks
 	n -= 1 if has_node("danger_area") else 0     # Grenadier (the Recruit's keystone): a pouch fewer
+	n -= Data.MAGPIE67_POUCHES if has_rule("magpies") else 0     # (BUILD67-I) the Magpie's Pouches
 	return clampi(n, 0, Data.RIG_CAP)
 
 
@@ -1943,7 +1948,7 @@ func _unique_named(name: String) -> Dictionary:
 	for u in Data.UNIQUES:
 		if u["name"] == name:
 			return u
-	for u in Data.ISSUED:
+	for u in Data.ISSUED + Data.ISSUED67_MORE:     # (BUILD67-K) the versions too
 		if u["name"] == name:
 			return u                         # issued kit (25 Oct): the Issuer's, read as a unique
 	return {}
@@ -1952,10 +1957,10 @@ func _unique_named(name: String) -> Dictionary:
 # ------------------------------------------------------------------ issued kit (25 Oct, the Issue)
 
 func issued_def(slot: String) -> Dictionary:
-	for u in Data.ISSUED:
-		if str(u["slot"]) == slot:
-			return u
-	return {}
+	var vs: Array = k67_versions(slot)     # (BUILD67-K) the version picked at the counter
+	if vs.is_empty():
+		return {}
+	return vs[clampi(int(issued_pick.get(slot, 0)), 0, vs.size() - 1)]
 
 
 ## The piece the counter offers for a slot, at the reach: rolled fresh (no number till it's bought).
@@ -1965,7 +1970,7 @@ func issued_piece(slot: String, at := -1, fresh := false) -> Dictionary:
 	if u.is_empty():
 		return {}
 	var lv: int = (maxi(1, reach) + Data.ISSUED_OVER) if at < 0 else at     # a County head's at his level (25 Oct)
-	var key := "%s|%d|%d" % [slot, lv, issued_serial]
+	var key := "%s|%d|%d|%s" % [slot, lv, issued_serial, str(u["name"])]     # (BUILD67-K) a version its own
 	var it: Dictionary = _issued_cache.get(key, {})
 	if it.is_empty():
 		var r := RandomNumberGenerator.new()
@@ -1975,6 +1980,8 @@ func issued_piece(slot: String, at := -1, fresh := false) -> Dictionary:
 		it["lift"] = Data.ISSUED_LIFT
 		it["issued"] = true
 		it["affixes"] = Items._scaled(u["affixes"], lv)
+		if not u.get("fixed", {}).is_empty():
+			it["fixed67"] = u["fixed"].duplicate()     # (BUILD67-K) the version's rule, a fixed figure on the piece
 		if _issued_cache.size() > 64:
 			_issued_cache.clear()
 		_issued_cache[key] = it                  # read once a key (the third review: a fresh roll and a new id on every price check)
@@ -2015,7 +2022,7 @@ func buy_issued(slot: String) -> bool:
 	stash.append(it)
 	_mag_with(it)
 	_read(it)
-	chron("issued", {"slot": slot, "serial": issued_serial, "fiat": int(paid)})
+	chron("issued", {"slot": slot, "serial": issued_serial, "fiat": int(paid), "version": str(it.get("unique", ""))})     # (BUILD67-K) the version
 	log_event(Words.ISSUED["bought"] % [Items.full_name(it), fiat_words(paid)])
 	return true
 
@@ -3976,7 +3983,8 @@ func contact(t: Dictionary) -> int:
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
 	return SEARCH_S * (Data.FX["rule/miners_lamp"] if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (Data.FX["node/never_there.search"] if has_node("never_there") else 1.0) * trait_mult("search") \
-		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_level("deeper_pockets")) * (Data.FX["yard/second_dog"] if yard_has("second_dog") else 1.0)
+		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_level("deeper_pockets")) * (Data.FX["yard/second_dog"] if yard_has("second_dog") else 1.0) \
+		* (Data.POSTMAN67_SEARCH if has_rule("postmans") else 1.0)     # (BUILD67-K) The Postman's Boots
 
 
 ## Seconds to the next lot. The first lot waits for the lookout too; "never
@@ -3993,7 +4001,9 @@ func patrol_s(t: Dictionary, first := false) -> float:
 		base *= Data.PATROL_FIRST * (1.0 + (Data.FX["yard/spotter"] if yard_has("spotter") else 0.0) + (Data.FX["yard/lookout_post"] if yard_has("lookout_post") else 0.0)) * (Data.FX["node/early_doors"] if has_node("early_doors") else 1.0) * (2.0 if has_node("b_roads") else 1.0)     # B-roads (22 Oct): the first takes 100% longer
 	if has_node("loud"):
 		base *= Data.FX["node/loud.patrol"]
-	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_level("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0)
+	base *= Data.GROUNDS67_LATER if has_rule("groundsmans") else 1.0     # (BUILD67-I) the Groundsman's Shotgun: every hit a leg shot
+	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_level("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0) \
+		* (Data.POSTMAN67_PATROL if has_rule("postmans") else 1.0)     # (BUILD67-K) The Postman's Boots
 
 
 func use_time(it: Dictionary) -> float:
@@ -4062,7 +4072,7 @@ func uses_mag(slot: String) -> bool:
 func reload_s(gun: Dictionary) -> float:
 	if has_rule("safecrackers"):
 		return 0.0                               # the Safecracker's Gloves: no reload at all
-	return Items.reload_base(gun) / (1.0 + (_affix_sum("reload_pct") + tree_sum("reload_pct")) / 100.0)     # quicker reloads is the gloves' (29 Oct): theirs, base and affixes
+	return Items.reload_base(gun) / (1.0 + (_affix_sum("reload_pct") + tree_sum("reload_pct")) / 100.0) * (Data.BOX67_RELOAD if has_rule("armourers_box") else 1.0)     # (BUILD67-I) the Armourer's Box; quicker reloads is the gloves' (29 Oct): theirs, base and affixes
 
 
 ## The rig's swap (BUILD46-R, 2 Nov, Matt's call: a rig affix, Data's hot_swap): a gun with a second loaded magazine swaps
@@ -6763,6 +6773,9 @@ func _base_stat_index_raw() -> Dictionary:
 			var st: Dictionary = Items.base_of(equipped[s]).get("stats", {})
 			for k in st:
 				out[k] = float(out.get(k, 0.0)) + float(st[k])
+			var fx67: Dictionary = equipped[s].get("fixed67", {})     # (BUILD67-K) an issued version's rule, read as a built-in figure
+			for k in fx67:
+				out[k] = float(out.get(k, 0.0)) + float(fx67[k])
 	return out
 
 
@@ -12383,7 +12396,7 @@ func _crew_paid(m: Dictionary) -> void:
 
 # ------------------------------------------------------------------ BUILD46-E: the Vagabond (the second trader)
 
-const VAG_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack"]
+const VAG_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig", "Backpack", "Boots"]     # (BUILD67-K) boots
 
 
 ## Which trader: the event's pinned one (a tip, the tests), else the Vagabond VAG_SHARE of them from VAG_FROM_RUN.
@@ -12686,6 +12699,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			if not m.has("dealt_by"):
 				m["dealt_by"] = {}
 			m["dealt_by"][str(single_top[0])] = float(m["dealt_by"].get(str(single_top[0]), 0.0)) + ob
+	landed_total = _f66_hits(m, t, landed_total, single_top, dt)     # (BUILD66-F) armour, headshots, the streak, leg and arm shots, the meter, jams
 	_joints_on_hit(m, t, landed_total, held, dt)
 	_count_src(m, _gun_src(), landed_total)
 	m["target_hp"] -= landed_total
@@ -12777,6 +12791,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["dots"] = carried                  # the next of them is a new target
 		m["chill_t"] = 0.0
 		m["shock_t"] = 0.0
+		_f66_on_kill(m, t)                   # (BUILD66-F) the streak, scavenger, the hard man, Last Stand held
 		_kill(m, t)
 		if exploit_on("first_of_many"):
 			_exploit_grow(m, "first_of_many")     # the Pistol's shot opens every man: each one the first, and Clocked never let go
@@ -12790,7 +12805,10 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			if not m.has("dealt_by"):
 				m["dealt_by"] = {}
 			m["dealt_by"][str(single_top[0])] = float(m["dealt_by"].get(str(single_top[0]), 0.0)) + printed_hit     # booked to the shot's own type
+		if m["remaining"] > 0 and has_rule("steel_toecaps"):
+			k67_kick(m, t)                     # (BUILD67-K) Steel Toecaps: the next man to reach you takes a kick
 	if m["remaining"] <= 0:
+		f66_fight_over(m)                    # (BUILD66-F, the review) a head's kill ends Last legs too
 		if m.get("way_out", false):
 			_seen_off(m)
 			return
@@ -12844,6 +12862,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	incoming *= crowd_mult(on_you)
 	incoming *= low_hp_mult()
 	incoming *= _skill_in_mult(m, on_you)        # the skills: out of sight, stunned, the decoy (milestone 8)
+	incoming *= _f66_in_mult(m, on_you, dt)      # (BUILD66-F) arm shots, the meter, a Spotter; Last Stand's seconds
 	incoming *= combo_guard(m)
 	if exploit_on("never_trips") and float(m.get("shock_t", 0.0)) > 0.0:
 		_exploit_grow(m, "never_trips", dt)     # the Ring main's jump lands on a man the Tester keeps shocked, and goes again
@@ -12909,6 +12928,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["taken"] = float(m.get("taken", 0.0)) + on_hp     # for the run screen's red numbers: what reached HP, Guard's share apart
 	if on_hp > 0.0:
 		m["roll"] = 0                         # On a roll: a hit taken ends the streak
+	_f66_taken(m, on_hp)                      # (BUILD66-F) the kill streak's hit
 	if has_node("off_the_canvas") and not m.get("canvas_done", false) and hp > 0.0 and hp <= max_hp() / 3.0:
 		m["canvas_done"] = true
 		_guard_add(m, max_hp() * 0.2)         # Off the canvas: Guard of 20% at a third HP, once a run
@@ -12923,6 +12943,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if hp <= 0.0:
 		if _skill_last_stand(m):
 			log_event(Words.LOG["code_blue"] % int(round(hp)))
+			return
+		if _f66_last_stand(m):                # (BUILD66-F) Last Stand: fight on for its seconds
 			return
 		_kia()
 
@@ -13598,6 +13620,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	_focus_resist(it)                         # a resist focus (BUILD50-T): one gear find in three carries it
+	t67_roll(it)                              # (BUILD67-I) now and then an affix at the top tier
 	if capture:
 		return {"it": it, "said": said}
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
@@ -13639,6 +13662,7 @@ func socket_find_roll(at_tier: int) -> Dictionary:
 func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void:
 	if said != "":
 		log_event(said)
+	t67_landed(m, it)                         # (BUILD67-I) a top-tier find's gold line
 	if to_floor:
 		m["floor"] = m.get("floor", [])
 		m["floor"].append(it)
@@ -13801,6 +13825,9 @@ func _site_slot(site: Dictionary, from_kill: bool) -> String:
 			v *= 0.5
 		w[slot] = v
 		total += v
+	if not w.has(Data.BOOTS):
+		w[Data.BOOTS] = float(w.get(Data.GLOVES, 0.0)) * Data.BOOTS67_SHARE     # (BUILD67-K) boots: a site's gloves weight, no site list touched
+		total += float(w[Data.BOOTS])
 	var x := rng.randf() * total
 	for slot in w:
 		x -= w[slot]
@@ -14042,6 +14069,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			continue
 		cr["done"] = int(cr["done"]) + 1
 		if int(cr["done"]) >= int(cr["searches"]):
+			u67_crate_done(m)                 # (BUILD67-I) the Bin Man's Gloves: a magazine filled
 			m["crate_i"] = int(m.get("crate_i", 0)) + 1
 			_pass_locked(m)
 			cr = crate_now(m)
@@ -14242,6 +14270,7 @@ func _extract() -> void:
 	if mission != null and mission.has("night") and _night_link_end(mission):
 		return                                # a night's link done: the break, or the night home from there (BUILD50 N)
 	var m: Dictionary = mission
+	u67_sling_home()                      # (the 67 fix round) the Gun Club Sling's swap undone: the spare home, your gun back
 	_event_end(m)                         # the dogs off the record, his run-only goods back (the fix round)
 	var rep_pre: Dictionary = {"scrap": scrap, "mats": _materials_total()} if m.get("unwatched", false) else {}     # a repeat run's line (29 Oct)
 	_site_remember(m)                     # the crates left for next time (27 Oct)
@@ -14491,6 +14520,7 @@ func _kia() -> void:
 	if m.get("dry", false):
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
+	u67_swap = {}                           # (the 67 fix round) a death: the spare in your hands goes as worn kit does; yours is at home
 	if m.get("unwatched", false):
 		_bail(m)                             # never a death unwatched (29 Oct, Matt's call 1): a bail
 		return
@@ -14776,7 +14806,7 @@ func _fit_value(it: Dictionary, slot: String, moved := false) -> float:
 ## better - armour and half the HP saw no regen, no resist): how many times over the runner stands the fight being
 ## pushed. HP, regen over the fight and HP a kill, against their fire through armour and resists over the same
 ## seconds - regen, resists, armour and HP in one currency, at the depth that's open. Read tried on (fit_value).
-const SURV_SLOTS := ["Helmet", "Armour", "Charm", "Rig"]
+const SURV_SLOTS := ["Helmet", "Armour", "Charm", "Rig", "Boots"]     # (the 67 fix round) boots: a body piece, their armour read
 ## `fight` is the fight's seconds, held at the worn kit's (front_fight) when a piece is tried on: what a piece does to
 ## the damage and the pace is the damage's own reading, not counted twice through a longer fight (the riot suit's -8
 ## pace read as less survival than a stab vest's 15 armour).
@@ -15056,7 +15086,16 @@ func _compare(it: Dictionary, slot: String, moved := false) -> int:
 		if not _cmp_cache.has("f0"):
 			_cmp_cache["f0"] = _try({}, fight_damage)
 		var frel: float = (_try(it, fight_damage) - float(_cmp_cache["f0"])) / maxf(float(_cmp_cache["f0"]), 0.01)
-		return 1 if frel > TRY_EPS else (-1 if frel < -TRY_EPS else 0)
+		var fway: int = 1 if frel > TRY_EPS else (-1 if frel < -TRY_EPS else 0)
+		if slot != "Boots":
+			return fway
+		# (the 67 fix round) boots: the fight's figure, the body's (their armour) and the gang clock, each a way
+		var bways: Array = [fway]
+		var bs: float = survival_gain(it)
+		bways.append(1 if bs > TRY_EPS else (-1 if bs < -TRY_EPS else 0))
+		var bc: float = clock_gain(it)
+		bways.append(1 if bc > TRY_EPS else (-1 if bc < -TRY_EPS else 0))
+		return 1 if (bways.has(1) and not bways.has(-1)) else (-1 if (bways.has(-1) and not bways.has(1)) else 0)
 	# each way it's read (12 Oct): the damage, the piece's own job, and for what's on the body the survival figure (a
 	# body piece's job is that figure). Up on one and down on none, better; the reverse, worse; both, a trade
 	var ways: Array = [g]
@@ -15088,6 +15127,8 @@ func upgrade_gain(it: Dictionary, moved := false) -> float:
 	var g: float = (fit_value(it, "", -1, moved) - v0) / maxf(v0, 0.000001)
 	if slot in SURV_SLOTS and Data.SLOT_SCORE.get(slot, "") != "armour":
 		g = maxf(g, survival_gain(it, moved))       # a charm or rig bought for its regen or resists (the review: the bot never would)
+	if slot == "Boots":
+		g = maxf(g, clock_gain(it))                 # (the 67 fix round) a quiet pair bought for the gang clock
 	return g
 
 
@@ -17055,7 +17096,7 @@ func loot_rule_fits(r: Dictionary, it: Dictionary) -> bool:
 	var rar: int = int(it.get("rarity", 0))
 	if rar < int(r.get("rarity", 0)) or rar > int(r.get("upto", 4)):
 		return false
-	if str(r.get("slot", "")) != "" and str(it["slot"]) != str(r["slot"]) and not (str(r["slot"]) == "Body" and str(it["slot"]) in ["Helmet", "Armour", "Gloves", "Charm"]) and not (str(r["slot"]) == "Bags" and str(it["slot"]) in ["Rig", "Backpack"]):
+	if str(r.get("slot", "")) != "" and str(it["slot"]) != str(r["slot"]) and not (str(r["slot"]) == "Body" and str(it["slot"]) in ["Helmet", "Armour", "Gloves", "Boots", "Charm"]) and not (str(r["slot"]) == "Bags" and str(it["slot"]) in ["Rig", "Backpack"]):
 		return false
 	if str(r.get("gun", "")) != "" and str(Items.base_of(it).get("type", "")) != str(r["gun"]):
 		return false
@@ -18292,7 +18333,7 @@ func to_dict() -> Dictionary:
 
 func _state() -> Dictionary:
 	return {
-		"cash": cash, "issued": issued, "fiat_issue_inf": fiat_issue_inf, "circulation": circulation, "fiat_rate": fiat_rate, "issued_serial": issued_serial, "issue_moment": issue_moment,
+		"cash": cash, "issued": issued, "fiat_issue_inf": fiat_issue_inf, "circulation": circulation, "fiat_rate": fiat_rate, "issued_serial": issued_serial, "issued_pick": issued_pick, "issue_moment": issue_moment,
 		"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
@@ -18331,6 +18372,10 @@ func load_dict(d: Dictionary) -> void:
 	circulation = float(d.get("circulation", 0.0))
 	fiat_rate = float(d.get("fiat_rate", 1.0))
 	issued_serial = int(d.get("issued_serial", 0))
+	issued_pick = {}
+	var ip: Dictionary = d.get("issued_pick", {})     # (BUILD67-K)
+	for k in ip:
+		issued_pick[str(k)] = int(ip[k])
 	issue_moment = d.get("issue_moment", {})
 	cash = float(d.get("cash", Data.STARTING_CASH))
 	xp = float(d.get("xp", 0.0))
@@ -21820,3 +21865,770 @@ func b61_load(d: Dictionary) -> void:
 	for z in cd.get("heads", {}):
 		if int(z) >= 0 and int(z) < Data.COUNTY_ZONES.size():
 			county_heads[int(z)] = maxi(0, int(cd["heads"][z]))
+
+
+# ------------------------------------------------------------------ BUILD66-F (7 Nov): the fight's shooter mechanics
+# docs/design/endgame_rail.md §1. The fight is a rate over ticks (the bot's 1 s, the odds' 2 s, a player's frames), not
+# single shots: a tick fires rof x pace x dt shots of its in-hand gun, and each mechanic's count of them is that many
+# times its chance, rounded up or down by one roll (the mean kept, one roll a mechanic a tick, whatever the tick's
+# length). Headshots, leg and arm shots and jams so land on whole shots, with real numbers for the view; armour, the
+# streak and suppression act as shares, as the fight's other cuts do. The rolls: the live fight on fight_rng (its own
+# dice, seeded beside rng in _reseed, so a run's loot and every other draw stay where they were); a dry run (the odds)
+# on rng, which it swaps for its own dice. The view's API: f66_events_since and the reads below ($S/f66_notes.md).
+var fight_rng := RandomNumberGenerator.new()     # (BUILD66-F) the shooter mechanics' own dice in the live fight
+
+const F66_EVENTS_KEPT := 40
+
+
+func _f66_rng(m: Dictionary) -> RandomNumberGenerator:
+	return rng if (m.get("dry", false) or _dry_on) else fight_rng
+
+
+## A stat of section 1, summed the way the fight's others are: the web's nodes, the affixes, the fitted parts.
+var f66_extra := {}     # figures on top, by stat: the smoke's (and build 4's dummy may set them); never saved
+var f66_reads := 0     # the stats' reads, counted (the smoke: once a tick)
+func f66_stat(key: String) -> float:
+	f66_reads += 1
+	return float(_memo("f66/" + key, _f66_stat_raw.bind(key))) + float(f66_extra.get(key, 0.0))
+
+
+func _f66_stat_raw(key: String) -> float:
+	return tree_sum(key) + _affix_sum(key) + _fitted_sum(key)
+
+
+const F66_STATS := ["head_pct", "head_dmg_pct", "helmet_ignore_pct", "pierce_pct", "leg_pct", "arm_pct", "suppress_pct", "scav_pct",
+	"streak_dmg_pct", "last_stand_s", "no_jam", "jam_pct"]
+
+
+## (the review of 66) The twelve stats, read once a tick: kept on the mission against its clock and the smoke's figures.
+func _f66_sv(m: Dictionary) -> Dictionary:
+	var k: String = "%s/%d" % [str(m.get("elapsed", 0.0)), f66_extra.hash()]
+	var c: Dictionary = m.get("f66_sv", {})
+	if str(c.get("k", "")) == k:
+		return c["v"]
+	var v := {}
+	for key in F66_STATS:
+		v[key] = f66_stat(key)
+	m["f66_sv"] = {"k": k, "v": v}
+	return v
+
+
+## A stat from the tick's read when there is one, else read now.
+func _f66_v(sv: Dictionary, key: String) -> float:
+	return float(sv[key]) if sv.has(key) else f66_stat(key)
+
+
+## `n` expected (a count of shots times a chance): its whole part, and one more on a roll of what's left.
+func _f66_count(m: Dictionary, n: float) -> int:
+	if n <= 0.0:
+		return 0
+	var whole: int = int(floor(n))
+	return whole + (1 if _f66_rng(m).randf() < n - float(whole) else 0)
+
+
+## A gang's helmet or armour figure at the site's depth: none before `from_d`, then from the span's first to its
+## second at Data.DEEP66 (a share, 0..1).
+static func f66_by_depth(t: Dictionary, from_d: int, span: Array) -> float:
+	var d: int = int(t.get("depth", 1))
+	if d < from_d:
+		return 0.0
+	var f: float = clampf(float(d - from_d) / float(maxi(1, Data.DEEP66 - from_d)), 0.0, 1.0)
+	return lerpf(float(span[0]), float(span[1]), f) / 100.0
+
+
+## What a gang man's helmet takes off a headshot's extra damage, after helmet_ignore_pct.
+func f66_helmet(t: Dictionary, sv := {}) -> float:
+	if has_rule("range_officer"):
+		return 0.0                                # (BUILD67-I) the Range Officer's Rifle: headshots ignore their helmets
+	return f66_by_depth(t, Data.HELMET66_DEPTH, Data.HELMET66_CUT) * clampf(1.0 - _f66_v(sv, "helmet_ignore_pct") / 100.0, 0.0, 1.0)
+
+
+## The share of each hit the man in front's armour takes, after pierce_pct: an Armoured hard man's doubled.
+func f66_armour(m: Dictionary, t: Dictionary, sv := {}) -> float:
+	var a: float = f66_by_depth(t, Data.ARMOUR66_DEPTH, Data.ARMOUR66_TAKE)
+	if _f66_front(m) and "armoured" in m["f66_hard"]["traits"]:
+		a = maxf(a, Data.HARD66_ARMOUR_MIN / 100.0) * 2.0
+	if has_rule("armourers_box"):
+		a *= Data.BOX67_ARMOUR                    # (BUILD67-I) the Armourer's Box: your rounds ignore half their armour
+	return clampf(a * (1.0 - _f66_v(sv, "pierce_pct") / 100.0), 0.0, 0.9)
+
+
+## The gun firing now and its slot: the primary while it has rounds, else the secondary.
+func _f66_in_hand() -> Array:
+	if equipped["Primary"] != null and has_rounds(equipped["Primary"]):
+		return ["Primary", equipped["Primary"]]
+	return ["Secondary", equipped["Secondary"]]
+
+
+## A shot's chance to jam (%) for a gun: its tier's (Data.JAM66_PCT; higher tiers never), jam_pct added; no_jam none.
+func f66_jam_pct(gun, sv := {}) -> float:
+	if gun is Dictionary and str(gun.get("rule", "")) in ["desk_sergeant", "zip_gun"]:
+		return 0.0 if str(gun["rule"]) == "desk_sergeant" else Data.ZIP67_JAM_PCT     # (BUILD67-I) the Station Revolver never; the Zip Gun 1 in 5, whatever else says never (the 67 fix round)
+	if not (gun is Dictionary) or _f66_v(sv, "no_jam") > 0.0 or str(gun.get("base", "")) in Data.JAM66_NEVER:
+		return 0.0     # (the review of 66) the Slam-fire's "nothing to jam"
+	var g_tier: int = int(gun.get("tier", Items.base_of(gun).get("tier", 9)))
+	return clampf(float(Data.JAM66_PCT.get(g_tier, 0.0)) + _f66_v(sv, "jam_pct"), 0.0, 100.0)
+
+
+func _f66_stats(m: Dictionary) -> Dictionary:
+	if not m.has("f66_stats"):
+		m["f66_stats"] = {"shots": 0.0, "headshots": 0, "jams": 0, "best_streak": 0, "armour_hits": 0.0}
+	return m["f66_stats"]
+
+
+func _f66_push(m: Dictionary, kind: String, d := {}) -> void:
+	if m.get("dry", false):
+		return
+	m["f66_seq"] = int(m.get("f66_seq", 0)) + 1
+	d["seq"] = int(m["f66_seq"])
+	d["kind"] = kind
+	d["at"] = float(m.get("elapsed", 0.0))
+	if not m.has("fx66"):
+		m["fx66"] = []
+	m["fx66"].append(d)
+	while m["fx66"].size() > F66_EVENTS_KEPT:
+		m["fx66"].pop_front()
+
+
+func _f66_log(m: Dictionary, text: String) -> void:
+	if not m.get("dry", false):
+		log_event(text)
+
+
+## Whether the hard man is the one being shot now.
+func _f66_front(m: Dictionary) -> bool:
+	var hm: Dictionary = m.get("f66_hard", {})
+	return not hm.is_empty() and bool(hm.get("alive", false)) and bool(hm.get("front", false))
+
+
+func _f66_alive(m: Dictionary) -> bool:
+	var hm: Dictionary = m.get("f66_hard", {})
+	return not hm.is_empty() and bool(hm.get("alive", false)) and int(m.get("remaining", 0)) > 0
+
+
+## A new gang (the first, a patrol): its meter empty, and now and then a hard man at its back.
+func _f66_gang(m: Dictionary, t: Dictionary) -> void:
+	var key: String = _f66_gang_key(m)
+	if str(m.get("f66_gang", "")) == key:
+		return
+	m["f66_gang"] = key
+	m["f66_supp"] = 0.0
+	m["f66_jam_logged"] = false
+	m["f66_head_logged"] = false
+	if _f66_alive(m) or (m.has("boss") and m["boss"]["started"]) or bool(t.get("dogs", false)):
+		return
+	if int(t.get("level", 1)) < Data.HARD66_LEVEL:
+		return
+	var r := _f66_rng(m)
+	if r.randf() >= Data.HARD66_ODDS:
+		return
+	_f66_make_hard(m, t, Words.HARD66_NAMES[r.randi_range(0, Words.HARD66_NAMES.size() - 1)], [])
+
+
+## Which gang this is: the patrol's count, a head out, the dogs on (the review of 66: each a gang of its own).
+func _f66_gang_key(m: Dictionary) -> String:
+	return "%d/%s/%s" % [int(m.get("patrols", 0)), str(m.has("boss") and bool(m["boss"]["started"])), str(m.has("dogs_home"))]
+
+
+## The hard man joins the gang as its last man: his name, one or two traits (rolled when `traits` is empty).
+func _f66_make_hard(m: Dictionary, t: Dictionary, name_v: String, traits: Array) -> void:
+	var r := _f66_rng(m)
+	var traits_v: Array = traits.duplicate()
+	if traits_v.is_empty():
+		var pool: Array = Data.HARD66_TRAITS.duplicate()
+		traits_v.append(pool.pop_at(r.randi_range(0, pool.size() - 1)))
+		if r.randf() < Data.HARD66_TWO:
+			traits_v.append(pool[r.randi_range(0, pool.size() - 1)])
+	var at: int = int(m.get("kills", 0)) + maxi(1, int(m.get("remaining", 1))) - 1
+	m["f66_hard"] = {"name": name_v, "traits": traits_v, "at": at, "alive": true, "front": false, "hp_max": float(t["hp"]) * Data.HARD66_HP, "acted": {}}
+	if int(m.get("kills", 0)) == at:
+		_f66_hard_up(m, t)
+	_f66_push(m, "hard_man", {"name": name_v, "traits": traits_v.duplicate()})
+	var trait_lines: Array = traits_v.map(func(k): return str(Words.HARD66_TRAITS.get(k, k)).to_lower())
+	_f66_log(m, Words.LOG66["hard_in"] % [name_v, Words.LOG66["and"].join(trait_lines)])
+
+
+## He steps up: the one in front is him, with his HP.
+func _f66_hard_up(m: Dictionary, t: Dictionary) -> void:
+	m["f66_hard"]["front"] = true
+	m["target_hp"] = float(m["target_hp"]) + float(t["hp"]) * (Data.HARD66_HP - 1.0)
+
+
+## The tick's hits (after their types, before they land): the armour's share, headshots, the streak's damage, leg and
+## arm shots, the meter, jams, and the hard man's Medic and Runner. Returns what lands; called from _fight.
+func _f66_hits(m: Dictionary, t: Dictionary, landed_total: float, single_top: Array, dt: float) -> float:
+	_f66_gang(m, t)
+	u67_sling(m)                                 # (BUILD67-I) the Gun Club Sling: a dry primary's spare takes over
+	var sv := _f66_sv(m)
+	var st := _f66_stats(m)
+	var hand: Array = _f66_in_hand()
+	var slot: String = hand[0]
+	var gun = hand[1]
+	if not m.has("f66_jam"):
+		m["f66_jam"] = {}
+	var jam_left: float = float(m["f66_jam"].get(slot, 0.0))
+	var jam_share := 0.0
+	var px_before: float = float(m.get("fire_x", {}).get(slot, 1.0))     # what the gun would have fired: a reload's pause has nothing to jam
+	if jam_left > 0.0:
+		jam_share = minf(jam_left, dt) / maxf(dt, 0.0001)     # the beat lost: this much of the tick the gun doesn't fire
+		jam_left -= dt
+		if jam_left > 0.0:
+			m["f66_jam"][slot] = jam_left
+		else:
+			m["f66_jam"].erase(slot)
+		if m.has("fire_x") and m["fire_x"].has(slot):
+			m["fire_x"][slot] = float(m["fire_x"][slot]) * (1.0 - jam_share)     # no rounds spent while it's jammed
+		if slot == "Primary" and m.has("fire_x") and m["fire_x"].has("Secondary"):
+			m["fire_x"]["Secondary"] = float(m["fire_x"]["Secondary"]) * (1.0 - jam_share * px_before)     # (the review of 66) its backing share of the jammed beat isn't in the hit either: neither fires
+	var fx: float = float(m.get("fire_x", {}).get(slot, 1.0))
+	var rof: float = float(Items.base_of(gun).get("rof", 1.0)) if gun is Dictionary else 1.0
+	var shots: float = rof * pace() * float(t["pace"]) * dt * fx * rate_x()
+	st["shots"] = float(st["shots"]) + shots
+	# the hard man's traits, while he lives
+	if _f66_alive(m):
+		var hm: Dictionary = m["f66_hard"]
+		if "medic" in hm["traits"] and float(m["target_hp"]) > 0.0:
+			var cap: float = float(hm["hp_max"]) if bool(hm["front"]) else float(t["hp"])
+			var before: float = float(m["target_hp"])
+			m["target_hp"] = minf(cap, before + Data.MEDIC66_PCT / 100.0 * float(t["hp"]) * dt)
+			if float(m["target_hp"]) > before and not hm["acted"].has("medic"):
+				hm["acted"]["medic"] = true
+				_f66_log(m, Words.LOG66["medic"] % str(hm["name"]))
+		if "runner" in hm["traits"]:
+			m["patrol_timer"] = float(m.get("patrol_timer", 0.0)) + Data.RUNNER66_RATE * dt     # the next gang sooner
+			if not hm["acted"].has("runner"):
+				hm["acted"]["runner"] = true
+				_f66_log(m, Words.LOG66["runner"] % str(hm["name"]))
+	# the meter: sustained fire fills it, full they fire slower (in _f66_in_mult)
+	var supp: float = float(m.get("f66_supp", 0.0))
+	var was_full: bool = supp >= 1.0
+	var firing: float = fx if shots > 0.0 else 0.0
+	supp += dt / Data.SUPP66_FILL_S * (1.0 + _f66_v(sv, "suppress_pct") / 100.0) * (Data.RATTLE67_PIN_X if has_rule("football_rattle") else 1.0) * firing - dt / Data.SUPP66_DRAIN_S * (1.0 - firing)     # (the review of 66) it drains while you don't fire
+	supp = clampf(supp, 0.0, 1.0)
+	if supp >= 1.0 - 1e-6:
+		supp = 1.0                                   # the sum of a float's steps
+	m["f66_supp"] = supp
+	if supp >= 1.0 and not was_full:
+		_f66_push(m, "suppressed")
+	var x: float = landed_total * (1.0 - jam_share * px_before)     # the gun in hand jammed: that much of the tick's hits not fired (a reload's pause had none)
+	if x <= 0.0 or shots <= 0.0:
+		_f66_book(m, str(single_top[0]), x - landed_total)
+		return x
+	var arm: float = f66_armour(m, t, sv)
+	if arm > 0.0:
+		x *= 1.0 - arm
+		st["armour_hits"] = float(st["armour_hits"]) + shots
+	x *= 1.0 + f66_streak_bonus_pct(sv) / 100.0
+	var one: float = x / maxf(shots, 0.0001)                   # one shot's worth, after the armour and the streak
+	var heads: int = _f66_count(m, shots * clampf(Data.HEAD66_PCT + float(sv["head_pct"]), 0.0, 100.0) / 100.0)
+	heads = u67_heads(m, slot, gun, shots, heads)     # (BUILD67-I) the Lee-Enfield's fifth round, the Desk Sergeant's last
+	if heads > 0:
+		var cut: float = f66_helmet(t, sv)
+		var add_one: float = one * maxf(0.0, Data.HEAD66_X + float(sv["head_dmg_pct"]) / 100.0 - 1.0) * (1.0 - cut)
+		x += add_one * heads
+		st["headshots"] = int(st["headshots"]) + heads
+		var kill: bool = x >= float(m["target_hp"])
+		_f66_push(m, "headshot", {"amount": one + add_one, "n": heads, "hard": _f66_front(m), "helmet": cut > 0.0, "kill": kill})
+		if kill and not m.get("f66_head_logged", false):
+			m["f66_head_logged"] = true              # one line a gang, the first headshot that kills
+			_f66_log(m, Words.LOG66["headshot_kill"] % [str(m["f66_hard"]["name"]) if _f66_front(m) else Words.LOG66["a_man"], _group(int(round(one + add_one))), Words.LOG66["helmet"] if cut > 0.0 else ""])
+	var legs: int = _f66_count(m, shots * clampf(float(sv["leg_pct"]), 0.0, 100.0) / 100.0)
+	if legs > 0:
+		var cur: float = float(m.get("patrol_timer", 0.0))
+		m["patrol_timer"] = maxf(minf(cur, -Data.LEG66_CAP_S), cur - Data.LEG66_S * legs)     # the next gang later; (the review of 66) the cap never raises a deeper wait
+	var arms: int = _f66_count(m, shots * clampf(float(sv["arm_pct"]), 0.0, 100.0) / 100.0)
+	if arms > 0:
+		m["f66_arm_t"] = Data.ARM66_S
+	var jp: float = f66_jam_pct(gun, sv) if uses_mag(slot) else 0.0
+	if jp > 0.0 and not m["f66_jam"].has(slot) and _f66_count(m, shots * jp / 100.0) > 0:
+		m["f66_jam"][slot] = Data.JAM66_S
+		st["jams"] = int(st["jams"]) + 1
+		_f66_push(m, "jam", {"slot": slot, "s": Data.JAM66_S})
+		if not m.get("f66_jam_logged", false):
+			m["f66_jam_logged"] = true               # one line a gang
+			_f66_log(m, Words.LOG66["jam"] % [str(gun["base"]), "%.1f" % Data.JAM66_S])     # (the review of 66) the gun's name as it is
+	_f66_book(m, str(single_top[0]), x - landed_total)
+	return x
+
+
+## The breakdown's types add up to what was dealt: a change to the tick's hits booked to the shot's type, a cut taken
+## from it first and from the rest after.
+func _f66_book(m: Dictionary, by: String, delta: float) -> void:
+	if absf(delta) < 1e-9:
+		return
+	if not m.has("dealt_by"):
+		m["dealt_by"] = {}
+	var db: Dictionary = m["dealt_by"]
+	if delta > 0.0:
+		db[by] = float(db.get(by, 0.0)) + delta
+		return
+	var left: float = -delta
+	var order: Array = [by] + db.keys().filter(func(k): return str(k) != by)
+	for k in order:
+		if left <= 0.0:
+			break
+		var off: float = minf(left, float(db.get(k, 0.0)))
+		if off > 0.0:
+			db[k] = float(db[k]) - off
+			left -= off
+
+
+## Their fire's share after an arm shot (the man in front misses more), the meter (full, slower) and a Spotter
+## (fewer misses); and Last Stand's seconds run here, where their fire meets you. Called from _fight.
+func _f66_in_mult(m: Dictionary, on_you: int, dt: float) -> float:
+	var x := 1.0
+	if str(m.get("f66_ls", "")) == "on":
+		m["f66_ls_t"] = float(m.get("f66_ls_t", 0.0)) - dt
+		if float(m["f66_ls_t"]) <= 0.0:
+			m["f66_ls"] = "used"
+			if hp <= Data.LAST66_HOLD:
+				hp = 0.0                                # out of seconds still on the hold: the hit below is the last
+				_f66_push(m, "last_stand_end", {"saved": false})
+				_f66_log(m, Words.LOG66["last_stand_out"])
+			else:
+				_f66_push(m, "last_stand_end", {"saved": true})     # (the review of 66) healed meanwhile: through
+				_f66_log(m, Words.LOG66["last_stand_held"])
+	var arm_t: float = float(m.get("f66_arm_t", 0.0))
+	if arm_t > 0.0:
+		x *= 1.0 - (Data.KNUCKLES67_MISS if has_rule("bouncers") else Data.ARM66_MISS) / float(maxi(1, on_you)) * (minf(arm_t, dt) / dt if dt > 0.0 else 1.0)     # (the review of 66) its seconds of a long tick
+		m["f66_arm_t"] = maxf(0.0, float(m["f66_arm_t"]) - dt)
+	if float(m.get("f66_supp", 0.0)) >= 1.0:
+		x *= 1.0 - (Data.RATTLE67_SLOW if has_rule("football_rattle") else Data.SUPP66_SLOW)     # (BUILD67-I) the Football Rattle
+	x *= u67_stun(m, dt)                          # (BUILD67-I) the Bonfire Box's fireworks: their fire stops a second
+	if _f66_alive(m) and "spotter" in m["f66_hard"]["traits"]:
+		x *= 1.0 + Data.SPOTTER66_PCT / 100.0
+		if not m["f66_hard"]["acted"].has("spotter"):
+			m["f66_hard"]["acted"]["spotter"] = true
+			_f66_log(m, Words.LOG66["spotter"] % str(m["f66_hard"]["name"]))
+	return x
+
+
+## What reached your HP this tick: enough of it (STREAK66_HIT_PCT of max HP) is a hit, and the streak ends.
+func _f66_taken(m: Dictionary, on_hp: float) -> void:
+	if on_hp <= 0.0:
+		return
+	m["f66_hurt"] = float(m.get("f66_hurt", 0.0)) + on_hp
+	if float(m["f66_hurt"]) >= max_hp() * Data.STREAK66_HIT_PCT / 100.0:
+		m["f66_hurt"] = 0.0
+		if int(m.get("f66_streak", 0)) > 0:
+			_f66_push(m, "streak_end", {"was": int(m["f66_streak"])})
+		m["f66_streak"] = 0
+
+
+## A man down (from the kill loop, before _kill counts him): the streak, scavenger, the hard man, Last Stand held.
+func _f66_on_kill(m: Dictionary, t: Dictionary) -> void:
+	var st := _f66_stats(m)
+	m["f66_streak"] = int(m.get("f66_streak", 0)) + 1
+	st["best_streak"] = maxi(int(st["best_streak"]), int(m["f66_streak"]))
+	var sc: float = _f66_v(_f66_sv(m), "scav_pct")
+	if sc > 0.0 and _f66_rng(m).randf() < sc / 100.0:
+		var slot: String = _f66_in_hand()[0]
+		var cur: Dictionary = mag_in(slot)
+		if not cur.is_empty() and equipped[slot] != null and int(cur.get("rounds", 0)) < Items.mag_cap(cur, equipped[slot]):
+			cur["rounds"] = int(cur.get("rounds", 0)) + 1     # a round back in the magazine
+	u67_on_kill(m, t)                            # (BUILD67-I) the Magpie's rounds, the Bonfire Box, the Lifeboat Jacket
+	var hm: Dictionary = m.get("f66_hard", {})
+	if not hm.is_empty() and bool(hm.get("alive", false)):
+		var k: int = int(m.get("kills", 0))
+		if k == int(hm["at"]):
+			hm["alive"] = false
+			hm["front"] = false
+			_f66_push(m, "hard_down", {"name": str(hm["name"])})
+			_f66_log(m, Words.LOG66["hard_down"] % str(hm["name"]))
+			if not m.get("dry", false):
+				var better: Dictionary = t.duplicate()
+				better["rarity"] = float(t.get("rarity", 0.0)) + Data.HARD66_RARITY
+				_find(m, better, true)                   # his drop: one more find, a rarity better
+				f66_hard_drop_hook(m, t, hm)
+		elif k + 1 == int(hm["at"]) and int(m["remaining"]) > 0:
+			_f66_hard_up(m, t)
+	if int(m["remaining"]) <= 0:
+		f66_fight_over(m)
+
+
+## (the review of 66) The fight's down (a gang's last man, a head, a convoy's): Last legs through, if it was on.
+func f66_fight_over(m: Dictionary) -> void:
+	if str(m.get("f66_ls", "")) == "on":
+		m["f66_ls"] = "used"
+		_f66_push(m, "last_stand_end", {"saved": true})
+		_f66_log(m, Words.LOG66["last_stand_held"])
+
+
+## Build 4's hook (the allotments' seeds): called once a hard man's better drop is in, with the mission, the site and
+## the man ({name, traits, ...}). Nothing yet.
+func f66_hard_drop_hook(_m: Dictionary, _t: Dictionary, _hm: Dictionary) -> void:
+	pass
+
+
+## Last Stand (last_stand_s): once a run, at 0 HP you fight on for its seconds, standing on LAST66_HOLD; the gang
+## down in that time, you're through; out of seconds, the next hit is the last. Called from _fight at 0 HP.
+func _f66_last_stand(m: Dictionary) -> bool:
+	var s: String = str(m.get("f66_ls", ""))
+	if s == "on":
+		hp = Data.LAST66_HOLD
+		return true
+	var secs: float = _f66_v(_f66_sv(m), "last_stand_s")
+	if has_rule("lifeboat"):
+		secs = maxf(secs, Data.LIFEBOAT67_S)      # (BUILD67-I) the Lifeboat Jacket
+	if s == "used" or secs <= 0.0:
+		return false
+	m["f66_ls"] = "on"
+	m["f66_ls_t"] = secs
+	hp = Data.LAST66_HOLD
+	_f66_push(m, "last_stand", {"s": secs})
+	_f66_log(m, Words.LOG66["last_stand"] % ("%d" % int(round(secs))))
+	return true
+
+
+# ---- the view's reads ($S/f66_notes.md). Each safe with no mission.
+
+func f66_events_since(seq: int) -> Array:
+	if mission == null:
+		return []
+	return mission.get("fx66", []).filter(func(e): return int(e["seq"]) > seq)
+
+
+func f66_last_seq() -> int:
+	return int(mission.get("f66_seq", 0)) if mission != null else 0
+
+
+func f66_jam_left(slot: String) -> float:
+	return float(mission.get("f66_jam", {}).get(slot, 0.0)) if mission != null else 0.0
+
+
+func f66_hard_man() -> Dictionary:
+	if mission == null or not _f66_alive(mission):
+		return {}
+	var hm: Dictionary = mission["f66_hard"]
+	var front: bool = bool(hm["front"])
+	var mx: float = float(hm["hp_max"])
+	var now: float = clampf(float(mission["target_hp"]), 0.0, mx) if front else mx
+	return {"name": str(hm["name"]), "traits": hm["traits"].duplicate(), "trait_words": hm["traits"].map(func(k): return str(Words.HARD66_TRAITS.get(k, k))),
+		"hp": now, "hp_max": mx, "hp_share": now / maxf(mx, 0.0001), "in_front": front}
+
+
+func f66_streak() -> int:
+	return int(mission.get("f66_streak", 0)) if mission != null else 0
+
+
+func f66_streak_bonus_pct(sv := {}) -> float:
+	var per: float = _f66_v(sv, "streak_dmg_pct")
+	if per <= 0.0:
+		return 0.0
+	return minf(Data.STREAK66_CAP_PCT, per * f66_streak())
+
+
+func f66_last_stand_state() -> String:
+	if mission != null and mission.has("f66_ls"):
+		return str(mission["f66_ls"])
+	return "ready" if (f66_stat("last_stand_s") > 0.0 or has_rule("lifeboat")) else "none"     # (BUILD67-I) the Lifeboat Jacket
+
+
+func f66_last_stand_left() -> float:
+	return maxf(0.0, float(mission.get("f66_ls_t", 0.0))) if mission != null and str(mission.get("f66_ls", "")) == "on" else 0.0
+
+
+func f66_suppress() -> float:
+	return float(mission.get("f66_supp", 0.0)) if mission != null else 0.0
+
+
+func f66_fight_stats() -> Dictionary:
+	return _f66_stats(mission).duplicate() if mission != null else {}
+
+
+## For the smoke: each event forced on the live mission, its state set as the fight would.
+func f66_force(kind: String, arg := {}) -> void:
+	if mission == null:
+		return
+	var m: Dictionary = mission
+	match kind:
+		"headshot":
+			_f66_push(m, "headshot", {"amount": float(arg.get("amount", 100.0)), "n": 1, "hard": bool(arg.get("hard", false)), "helmet": bool(arg.get("helmet", false)), "kill": bool(arg.get("kill", false))})
+		"jam":
+			var slot: String = str(arg.get("slot", "Primary"))
+			if not m.has("f66_jam"):
+				m["f66_jam"] = {}
+			m["f66_jam"][slot] = float(arg.get("s", Data.JAM66_S))
+			_f66_push(m, "jam", {"slot": slot, "s": float(m["f66_jam"][slot])})
+		"hard_man":
+			if int(m.get("remaining", 0)) <= 0:
+				m["remaining"] = 1
+				m["target_hp"] = float(m["t"]["hp"])
+			m["remaining"] = 1                                   # he's the man in front
+			m["f66_gang"] = _f66_gang_key(m)                     # this gang's roll taken: him, not a second
+			_f66_make_hard(m, m["t"], str(arg.get("name", Words.HARD66_NAMES[0])), arg.get("traits", ["armoured"]))
+		"streak":
+			m["f66_streak"] = int(arg.get("n", 5))
+		"last_stand":
+			var state: String = str(arg.get("state", "on"))
+			m["f66_ls"] = state
+			m["f66_ls_t"] = float(arg.get("s", 5.0)) if state == "on" else 0.0
+			if state == "on":
+				_f66_push(m, "last_stand", {"s": float(m["f66_ls_t"])})
+			elif state == "ready":
+				m["f66_ls"] = "ready"
+		"suppress":
+			m["f66_supp"] = clampf(float(arg.get("v", 1.0)), 0.0, 1.0)
+			if float(m["f66_supp"]) >= 1.0:
+				_f66_push(m, "suppressed")
+
+
+# ------------------------------------------------------------------ BUILD67-K (8 Nov): boots, issued versions
+## A slot's issued versions, in the counter's order: its Data.ISSUED piece, then its two in Data.ISSUED67_MORE. [] for a
+## slot the Issuer doesn't issue.
+static func k67_versions(slot: String) -> Array:
+	var out: Array = []
+	for u in Data.ISSUED:
+		if str(u["slot"]) == slot:
+			out.append(u)
+	if out.is_empty():
+		return out
+	for u in Data.ISSUED67_MORE:
+		if str(u["slot"]) == slot:
+			out.append(u)
+	return out
+
+
+## The version picked for a slot at the counter (0 its first).
+func k67_pick(slot: String) -> int:
+	return clampi(int(issued_pick.get(slot, 0)), 0, maxi(0, k67_versions(slot).size() - 1))
+
+
+## Pick a slot's version at the counter: what it shows and sells from now. What's bought stays what it is.
+func k67_set_pick(slot: String, v: int) -> bool:
+	var vs: Array = k67_versions(slot)
+	if v < 0 or v >= vs.size():
+		return false
+	issued_pick[slot] = v
+	return true
+
+
+## Steel Toecaps: the man who's just reached you takes a kick - TOECAP67_PCT of a man's HP off the one in front.
+func k67_kick(m: Dictionary, t: Dictionary) -> void:
+	var kick: float = Data.TOECAP67_PCT / 100.0 * float(t["hp"])
+	m["target_hp"] = float(m["target_hp"]) - kick
+	_count_src(m, "rule:steel_toecaps", kick)
+	m["dealt"] = float(m.get("dealt", 0.0)) + kick
+	m["k67_kicks"] = int(m.get("k67_kicks", 0)) + 1
+
+
+# ------------------------------------------------------------------ BUILD67-I (8 Nov): the items - T6 and the uniques' rules
+# docs/design/endgame_rail.md §2. The top tier: a find's affix promoted to T6 now and then (Items.t67_odds by its item level),
+# its gold line in the log. The 13 uniques' rules over the fight's shooter mechanics (BUILD66-F), each hooked where its
+# mechanic already is (marked "(BUILD67-I)" there) and worked out here.
+
+## A find's affixes, each a chance at the top tier (gear only; a unique's or a set piece's lines are fixed). Its own dice,
+## seeded off the run's dice as they stand and the piece's id - read, never drawn - so every other roll (the loot, the
+## crates, a seeded check's) stays where it was; replayed, a run rolls the same T6s.
+func t67_roll(it: Dictionary) -> void:
+	if not (str(it.get("slot", "")) in Data.SLOTS) or it.has("unique") or it.has("set") or it.has("piece"):
+		return
+	var lv: int = Items.ilvl(it)
+	var p: float = Items.t67_odds(lv)
+	if p <= 0.0:
+		return
+	var dice := RandomNumberGenerator.new()
+	dice.seed = hash([rng.state, int(it.get("id", 0)), "t67"])
+	for k in range(it.get("affixes", []).size()):
+		var d: Dictionary = Items.affix_def_for(str(it["affixes"][k]["stat"]), str(it["slot"]))
+		if d.is_empty() or not Items.t67_can(d):
+			continue
+		if dice.randf() < p:
+			it["affixes"][k] = Items.roll_affix(d, lv, dice, Data.T67_TIER)
+
+
+## A top-tier find landed: its gold line in the log, and the run's count (the sound reads the piece itself).
+func t67_landed(m: Dictionary, it: Dictionary) -> void:
+	if m.get("dry", false) or not Items.has_t6(it):
+		return
+	m["t67_found"] = int(m.get("t67_found", 0)) + 1
+	var lines: Array = Items.t67_lines(it)
+	log_event(Words.T67["found"] % [Items.full_name(it), str(lines[0]) if not lines.is_empty() else ""])
+
+
+## The Gun Club Sling: the primary run dry, the best primary in the stash that's fed and wearable takes over - the dry
+## one back to the stash. Live runs only (a dry run's odds don't move the kit).
+func u67_sling(m: Dictionary) -> void:
+	if m.get("dry", false) or _dry_on or _trying or not has_rule("gun_club_sling"):
+		return
+	var g = equipped["Primary"]
+	if g == null or has_rounds(g):
+		return
+	var best = null
+	var best_v := -1.0
+	for it in stash:
+		if str(it.get("slot", "")) == "Primary" and can_wear(it) and has_rounds(it):
+			var v: float = Items.dps(it)
+			if v > best_v:
+				best = it
+				best_v = v
+	if best == null:
+		return
+	_remove(best)
+	stash.append(g)
+	equipped["Primary"] = best
+	if u67_swap.is_empty():
+		u67_swap = {"own": int(g["id"]), "spare": int(best["id"])}     # (the 67 fix round) undone at the run's end
+	for k in ["mag_in", "reload_t", "reload_to"]:
+		if m.has(k):
+			m[k].erase("Primary")
+	_dry_memo.clear()
+	_stats_dirty()
+	m["u67_slung"] = int(m.get("u67_slung", 0)) + 1
+	log_event(Words.T67["sling"] % Items.full_name(best))
+
+
+## Headshots a gun's own rule adds to a tick's: Grandad's .303 every LEE67_EVERY rounds, the Desk Sergeant's
+## Revolver the last round of each cylinder (its magazine's size) - counted over the rounds the gun in hand fires.
+func u67_heads(m: Dictionary, slot: String, gun, shots: float, heads: int) -> int:
+	if not (gun is Dictionary) or shots <= 0.0:
+		return heads
+	var forced := 0
+	match str(gun.get("rule", "")):
+		"lee_enfield":
+			var key: String = "u67_acc_" + slot
+			var acc: float = float(m.get(key, 0.0)) + shots
+			forced = int(floor(acc / float(Data.LEE67_EVERY)))
+			m[key] = acc - float(forced * Data.LEE67_EVERY)
+		"desk_sergeant":
+			forced = u67_last_round(m, slot)
+	return mini(heads, int(ceil(shots))) + forced     # (the 67 fix round) a forced headshot on top of the cap, never dropped by it
+
+
+## The Station Revolver's last round (the 67 fix round): the cylinder's own count - a headshot when the magazine in the
+## gun runs to nothing, read off its rounds as they stand (a reload starts a new cylinder; a scavenged round is one more).
+func u67_last_round(m: Dictionary, slot: String) -> int:
+	var cur: Dictionary = mag_in(slot)
+	var cyl: Array = m.get("u67_cyl", [-1, 0])
+	var id: int = int(cur.get("id", -1)) if not cur.is_empty() else -1
+	var now: int = int(cur.get("rounds", 0)) if not cur.is_empty() else 0
+	var out := 0
+	if int(cyl[0]) >= 0 and int(cyl[1]) > 0:
+		if id == int(cyl[0]) and now <= 0:
+			out = 1                                   # this cylinder ran out: its last round
+		elif id != int(cyl[0]):
+			for it in rig:
+				if int(it["id"]) == int(cyl[0]) and int(it.get("rounds", 0)) <= 0:
+					out = 1                           # the last one emptied, and the reload's in
+	m["u67_cyl"] = [id, now]
+	return out
+
+
+## The guns' damage from a rule, [the primary's, the secondary's]: the Groundsman's Shotgun's less; the Zip Gun's triple
+## (backing the primary its jams aren't seen, so times what it fires).
+func u67_gun_x(primary_live: bool) -> Array:
+	var pm := 1.0
+	var sm := 1.0
+	var pg = equipped["Primary"]
+	var sg = equipped["Secondary"]
+	if pg != null and str(pg.get("rule", "")) == "groundsmans":
+		pm = Data.GROUNDS67_DMG
+	if sg != null and str(sg.get("rule", "")) == "zip_gun":
+		sm = Data.ZIP67_DMG * ((1.0 - Data.ZIP67_JAM_PCT / 100.0) if primary_live else 1.0)
+	return [pm, sm]
+
+
+## Their fire's share left by the Bonfire Box's fireworks: none while its second runs.
+func u67_stun(m: Dictionary, dt: float) -> float:
+	var s: float = float(m.get("u67_stun_t", 0.0))
+	if s <= 0.0:
+		return 1.0
+	if dt <= 0.0:
+		return 0.0
+	m["u67_stun_t"] = maxf(0.0, s - dt)
+	return 1.0 - minf(s, dt) / dt
+
+
+## A man down: the Magpie's rounds back, the Bonfire Box's count, the Lifeboat Jacket's kill in Last legs.
+func u67_on_kill(m: Dictionary, t: Dictionary) -> void:
+	if has_rule("magpies"):
+		var slot: String = _f66_in_hand()[0]
+		var cur: Dictionary = mag_in(slot)
+		if not cur.is_empty() and equipped[slot] != null:
+			cur["rounds"] = mini(Items.mag_cap(cur, equipped[slot]), int(cur.get("rounds", 0)) + Data.MAGPIE67_ROUNDS)
+	if has_rule("bonfire_box"):
+		m["u67_kills"] = int(m.get("u67_kills", 0)) + 1
+		if int(m["u67_kills"]) % Data.BONFIRE67_EVERY == 0:
+			u67_fireworks(m, t)
+	if has_rule("lifeboat") and str(m.get("f66_ls", "")) == "on":
+		hp = maxf(hp, max_hp() * Data.LIFEBOAT67_BACK)
+		m["f66_ls"] = "used"
+		m["f66_ls_t"] = 0.0
+		m["u67_saved"] = int(m.get("u67_saved", 0)) + 1
+		_f66_push(m, "last_stand_end", {"saved": true})
+		_f66_log(m, Words.T67["lifeboat"])
+
+
+## The fireworks: a burn on everyone on you (a share of a man's HP each, into their fire pool) and their fire stopped.
+func u67_fireworks(m: Dictionary, t: Dictionary) -> void:
+	var on_you: int = maxi(1, mini(int(m.get("remaining", 1)), contact(t)))
+	if not m.has("dots"):
+		m["dots"] = {}
+	m["dots"]["fire"] = float(m["dots"].get("fire", 0.0)) + float(t["hp"]) * Data.BONFIRE67_BURN * on_you
+	m["u67_stun_t"] = Data.BONFIRE67_STUN_S
+	m["u67_fireworks"] = int(m.get("u67_fireworks", 0)) + 1
+	if not m.get("u67_fw_logged", false):
+		m["u67_fw_logged"] = true                  # one line a run
+		_f66_log(m, Words.T67["bonfire"])
+
+
+## The Bin Man's Gloves: a crate searched fills a magazine in the rig - the gun in hand's, else the emptiest loaded one
+## of either gun's.
+func u67_crate_done(m: Dictionary) -> void:
+	if not has_rule("bin_mans"):
+		return
+	var pick: Dictionary = {}
+	var gun_of = null
+	var slot: String = _f66_in_hand()[0]
+	var cur: Dictionary = mag_in(slot)
+	if not cur.is_empty() and equipped[slot] != null and int(cur.get("rounds", 0)) < Items.mag_cap(cur, equipped[slot]):
+		pick = cur
+		gun_of = equipped[slot]
+	else:
+		var low := INF
+		for s in ["Primary", "Secondary"]:
+			if equipped[s] == null:
+				continue
+			for it in mags_for(equipped[s]):
+				var gap: int = Items.mag_cap(it, equipped[s]) - int(it.get("rounds", 0))
+				if str(it.get("ammo", "")) != "" and gap > 0 and float(it.get("rounds", 0)) < low:
+					low = float(it.get("rounds", 0))
+					pick = it
+					gun_of = equipped[s]
+	if pick.is_empty():
+		return
+	pick["rounds"] = Items.mag_cap(pick, gun_of)
+	m["u67_filled"] = int(m.get("u67_filled", 0)) + 1
+
+
+
+# ------------------------------------------------------------------ the 67 fix round (8 Nov, review67.md)
+
+## The Gun Club Sling's swap, kept to undo at a run's end: {own: your gun's id, spare: the stash's}. Never saved (a run's).
+var u67_swap := {}
+
+
+## The run over, alive: the spare goes home, your own gun (in the stash since it ran dry) back in your hands.
+func u67_sling_home() -> void:
+	if u67_swap.is_empty():
+		return
+	var sw: Dictionary = u67_swap
+	u67_swap = {}
+	var g = equipped["Primary"]
+	if g == null or int(g["id"]) != int(sw["spare"]):
+		return                                    # swapped by hand since: as it stands
+	for it in stash:
+		if int(it["id"]) == int(sw["own"]):
+			_remove(it)
+			stash.append(g)
+			equipped["Primary"] = it
+			_dry_memo.clear()
+			_stats_dirty()
+			return
+
+
+## Boots' gang clock (the 67 fix round): the next gang's wait with `it` worn, as a share on the kit as it is.
+func clock_gain(it: Dictionary) -> float:
+	var t := surv_fight()
+	var c0: float = float(_try({}, func(): return patrol_s(t)))
+	return (float(_try(it, func(): return patrol_s(t))) - c0) / maxf(c0, 0.0001)

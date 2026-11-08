@@ -538,6 +538,8 @@ static func roll_tier(ilvl_v: int, rng: RandomNumberGenerator, rarity_cap_v := 0
 
 ## An affix's value range at a tier: the span cut in five, T5 the top fifth.
 static func tier_range(a: Dictionary, tier: int) -> Array:
+	if tier > Data.AFFIX_TIERS:
+		return t67_range(a)                       # (BUILD67-I) the top tier: past T5's top
 	var lo := float(a["min"])
 	var hi := float(a["max"])
 	var w := (hi - lo + 1.0) / float(Data.AFFIX_TIERS)
@@ -709,7 +711,7 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator,
 		var x := rng.randf()
 		if x < up and t < cap:
 			t += 1
-		elif x < up + 0.1 and t > lo and not no_down:       # Fine tuning: never down
+		elif x < up + 0.1 and t > lo and not no_down and t < Data.T67_TIER:       # Fine tuning: never down; (the 67 fix round) nor a T6
 			t -= 1
 		t = clampi(t, lo, cap)
 		it["affixes"][k] = roll_affix(d, ilvl(it), rng, t, 0, top)
@@ -1035,7 +1037,7 @@ static func dps(it: Dictionary) -> float:
 
 
 static func armour(it: Dictionary) -> float:
-	return base_of(it).get("armour", 0.0) * float(it.get("lift", 1.0)) * grow(ilvl(it)) + affix_total(it, "armour")     # a set piece's lift; past the deep tier, its level's (21 Oct)
+	return base_of(it).get("armour", 0.0) * float(it.get("lift", 1.0)) * grow(ilvl(it)) + affix_total(it, "armour") + float(it.get("fixed67", {}).get("armour", 0.0))     # (the 67 fix round) an issued version's flat armour     # a set piece's lift; past the deep tier, its level's (21 Oct)
 
 
 ## A med's healing, and the seconds it takes.
@@ -1335,7 +1337,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 		if d.get("flag", false):
 			line = label                         # on or off, no figure: a med's cure built in (28 Oct)
 		if tiers and a.has("tier"):
-			line += " · T%d" % int(a["tier"])
+			line += (" " + Data.T67_MARK) if int(a["tier"]) >= Data.T67_TIER else " · T%d" % int(a["tier"])     # (the 67 fix round) T6 is the ◆
 		out.append(line)
 	return out
 
@@ -1428,7 +1430,9 @@ static func base_res_words(it: Dictionary) -> String:
 	# a worn base's role figure (29 Oct): its pace and its built-in line, the number first - what the base gives before any
 	# affix; a pair of gloves' headline figure isn't said twice. A gun's edge is its own line (edge_words), walking fire too
 	if not is_gun(it):
-		var head: String = str(glove_headline(it)[1]) if str(it.get("slot", "")) == Data.GLOVES else ""
+		var head: String = str(glove_headline(it)[1]) if str(it.get("slot", "")) == Data.GLOVES else ("pace" if str(it.get("slot", "")) == Data.BOOTS else "")     # (BUILD67-K) boots' pace is their headline
+		if str(it.get("slot", "")) == Data.BOOTS and float(base_of(it).get("armour", 0.0)) > 0.0:
+			out.append("+%d armour" % int(round(armour(it))))     # (BUILD67-K) a heavy pair's leg armour
 		if base_pace(it) != 0.0 and head != "pace":
 			out.append("%s%d%% pace" % ["+" if base_pace(it) > 0.0 else "−", int(absf(base_pace(it)))])
 		var st: Dictionary = base_of(it).get("stats", {})
@@ -1454,6 +1458,8 @@ static func headline(it: Dictionary, gun = null) -> Array:
 	if it["slot"] == Data.MAGAZINE:
 		var cap: int = mag_cap(it, gun)          # against the gun it feeds, as the card reads it (the fix round); never over it
 		return ["%d" % mini(int(it.get("rounds", 0)), cap), "of %d rounds" % cap]
+	if it["slot"] == Data.BOOTS:
+		return k67_boots_headline(it)            # (BUILD67-K) boots: pace, whatever else the pair carries
 	if b.has("damage"):
 		return ["%.0f" % dps_whole(it), "dmg/s"]     # the style guide's form (25 Oct, the review); its own affixes in (BUILD51-A)
 	if b.has("armour"):
@@ -1751,7 +1757,7 @@ static func hand_lines(it: Dictionary, short := true, tiers := false, tight := f
 		else:
 			line = "+%d %s%s" % [v, label, "" if v == 1 else "s"]
 		if tiers and a.has("tier"):
-			line += " · T%d" % int(a["tier"])
+			line += (" " + Data.T67_MARK) if int(a["tier"]) >= Data.T67_TIER else " · T%d" % int(a["tier"])     # (the 67 fix round) T6 is the ◆
 		out.append(line)
 	return out
 
@@ -1802,6 +1808,8 @@ static func headline_folds(it: Dictionary) -> Array:
 		return []
 	if b.has("damage"):
 		return ["damage_pct", "attack_pct"] if is_gun(it) else []
+	if it["slot"] == Data.BOOTS:
+		return []                                # (BUILD67-K) boots fold nothing, as the gloves (their leg armour is a line)
 	if b.has("armour"):
 		return ["armour", "armour_pct"]
 	if b.has("heal"):
@@ -1813,3 +1821,72 @@ static func headline_folds(it: Dictionary) -> Array:
 	if it["slot"] == "Backpack":
 		return ["capacity"]
 	return []
+
+
+# ------------------------------------------------------------------ BUILD67-K (8 Nov): boots
+## A pair of boots' pace as worn: its base's and its affixes' (the gloves' read).
+static func k67_boots_pace(it: Dictionary) -> float:
+	return base_pace(it) + affix_total(it, "speed_pct")
+
+
+## Boots' headline: pace, every pair (endgame_rail.md §2: pace, the gang clock, leg armour - pace the one every pair has).
+static func k67_boots_headline(it: Dictionary) -> Array:
+	var p: float = k67_boots_pace(it)
+	return ["%s%d%%" % ["+" if p >= 0.0 else "−", int(round(absf(p)))], "pace"]
+
+
+## Boots' card figure, long to short: the pace, then the role's own (gangs later, or leg armour).
+static func k67_boots_forms(it: Dictionary) -> Array:
+	var h: Array = k67_boots_headline(it)
+	var lead: String = "%s %s" % [h[0], h[1]]
+	var second := ""
+	var clock: float = stat_total(it, "patrol_pct")
+	if float(base_of(it).get("armour", 0.0)) > 0.0:
+		second = "%d armour" % int(round(armour(it)))
+	elif clock > 0.0:
+		second = "gangs +%d%% later" % int(round(clock))
+	return ([lead + " · " + second] if second != "" else []) + [lead, str(h[0])]
+
+
+# ------------------------------------------------------------------ BUILD67-I (8 Nov): the top tier (T6, the ◆)
+# docs/design/endgame_rail.md §2: a tier above the five, rare - a find's affix promoted to it (Sim.t67_roll), its own
+# mark wherever an item's tiers show, its own sound and a gold line in the log.
+
+## T6's figures: the span's next fifth past T5's top (T67_REACH of them), so a T6 always beats any T5 of its line.
+static func t67_range(a: Dictionary) -> Array:
+	var lo := float(a["min"])
+	var hi := float(a["max"])
+	var w := (hi - lo + 1.0) / float(Data.AFFIX_TIERS)
+	var from := int(hi) + 1
+	var to := int(floor(hi + w * Data.T67_REACH))
+	return [from, maxi(from, to)]
+
+
+## An affix roll's chance to be T6 at an item level: none under T67_FROM, rising to T67_ODDS at T67_FULL, held there.
+static func t67_odds(ilvl_v: int) -> float:
+	if ilvl_v < Data.T67_FROM:
+		return 0.0
+	return Data.T67_ODDS * clampf(float(ilvl_v - Data.T67_FROM + 1) / float(Data.T67_FULL - Data.T67_FROM + 1), 0.0, 1.0)
+
+
+## Whether an affix line can be T6: a figure to grow (not a flag), on a piece of gear.
+static func t67_can(a: Dictionary) -> bool:
+	return not a.get("flag", false) and float(a.get("max", 0)) > float(a.get("min", 0))
+
+
+## Whether a piece carries a T6 affix (the ◆).
+static func has_t6(it: Dictionary) -> bool:
+	for a in it.get("affixes", []):
+		if int(a.get("tier", 0)) >= Data.T67_TIER:
+			return true
+	return false
+
+
+## A found piece's T6 lines, as words for the log: "+28% damage" (the first; "and N more" is not needed - two is rare).
+static func t67_lines(it: Dictionary) -> Array:
+	var out: Array = []
+	var lines: Array = affix_lines(it)
+	for k in range(it.get("affixes", []).size()):
+		if int(it["affixes"][k].get("tier", 0)) >= Data.T67_TIER and k < lines.size():
+			out.append(lines[k])
+	return out

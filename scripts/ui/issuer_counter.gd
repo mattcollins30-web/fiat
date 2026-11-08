@@ -16,18 +16,22 @@ const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const Arm := preload("res://scripts/ui/arm.gd")
+const Sim := preload("res://scripts/sim/sim.gd")     # (BUILD67-K) its versions (static)
 
 const PAD := 20
-const ROW_H := 62
-const ROW_GAP := 6
-const BUY_W := 190
+const ROW_H := 46                      # (BUILD67-K) nine rows now (gloves, the pack, boots): 62 → 46, the gap 6 → 3
+const ROW_GAP := 3
+const BURN_H := 62                     # the burn's row keeps the old height (two lines)
+const BUY_W := 150                     # (BUILD67-K) 190 → 150 for the versions
+const VER_W := 116                     # (BUILD67-K) a version's pick button, three a row
+const VER_GAP := 4
 const FIG_W := 230
 
 var sim
 var _w := 0.0
 var _said: Label
 var _figs: Array = []                  # [cap, value] x3: the rate, the circulation, the prices
-var _rows: Array = []                  # {panel, icon, name, rule, buy, slot}
+var _rows: Array = []                  # {panel, icon, name, rule, buy, slot, vers: [Button x3]}
 var _burn_title: Label
 var _burn_line: Label
 var _burn: Button
@@ -57,28 +61,35 @@ func _init(w: float, h: float) -> void:
 		var p := UI.panel(self, Rect2(PAD, y, w - 2 * PAD, ROW_H), UI.box(Pal.PANEL, 6))
 		row["panel"] = p
 		var icon := ItemCell.new()
-		icon.position = Vector2(8, 7)
+		icon.position = Vector2(8, 3)
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(icon)
 		row["icon"] = icon
-		var tw: float = w - 2 * PAD - 86 - BUY_W - 24
-		row["name"] = UI.label(p, Rect2(86, 6, tw, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		row["rule"] = UI.label(p, Rect2(86, 32, tw, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var b := UI.button(p, Rect2(w - 2 * PAD - BUY_W - 10, 10, BUY_W, ROW_H - 20), true)
+		var tw: float = w - 2 * PAD - 86 - BUY_W - 3 * (VER_W + VER_GAP) - 24
+		row["name"] = UI.label(p, Rect2(86, 1, tw, 24), "", "SemiBold", Pal.CELL_TEXT_BIG - 1, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		row["rule"] = UI.label(p, Rect2(86, 23, tw, 21), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		row["vers"] = []
+		var vx: float = 86 + tw + 8
+		for v in range(Sim.k67_versions(str(u["slot"])).size()):     # (BUILD67-K) the slot's three versions, picked here
+			var vb := UI.button(p, Rect2(vx + v * (VER_W + VER_GAP), 6, VER_W, ROW_H - 12), false)
+			vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+			vb.pressed.connect(_pick.bind(str(u["slot"]), v))
+			row["vers"].append(vb)
+		var b := UI.button(p, Rect2(w - 2 * PAD - BUY_W - 10, 6, BUY_W, ROW_H - 12), true)
 		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
 		b.pressed.connect(_buy.bind(str(u["slot"])))
 		row["buy"] = b
 		_rows.append(row)
 		y += ROW_H + ROW_GAP
 	y += 8
-	var bp := UI.panel(self, Rect2(PAD, y, w - 2 * PAD, ROW_H), UI.box(Pal.PANEL, 6))
+	var bp := UI.panel(self, Rect2(PAD, y, w - 2 * PAD, BURN_H), UI.box(Pal.PANEL, 6))
 	_burn_title = UI.label(bp, Rect2(14, 6, w - 2 * PAD - BUY_W - 40, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_burn_line = UI.label(bp, Rect2(14, 32, w - 2 * PAD - BUY_W - 40, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_burn = UI.button(bp, Rect2(w - 2 * PAD - BUY_W - 10, 10, BUY_W, ROW_H - 20), false)
+	_burn = UI.button(bp, Rect2(w - 2 * PAD - BUY_W - 10, 10, BUY_W, BURN_H - 20), false)
 	_burn.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
 	_burn.text = Words.ISSUED["burn_go"]
 	_burn.pressed.connect(_on_burn)
-	y += ROW_H + 10
+	y += BURN_H + 10
 	_want = UI.label(self, Rect2(PAD, y, w - 2 * PAD, 26), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
@@ -86,7 +97,7 @@ func show_state(s) -> void:
 	sim = s
 	if sim == null:
 		return
-	var sig := "%d|%.3f|%d|%d|%d|%d|%d|%s" % [int(sim.cash), sim.fiat_rate, int(sim.circulation), sim.reach, sim.stash.size(), sim.issued_worn(), sim.level(), _burn_arm.sig()]
+	var sig := "%d|%.3f|%d|%d|%d|%d|%d|%s|%s" % [int(sim.cash), sim.fiat_rate, int(sim.circulation), sim.reach, sim.stash.size(), sim.issued_worn(), sim.level(), _burn_arm.sig(), str(sim.issued_pick)]     # (BUILD67-K) the picks
 	if sig == _shown:
 		return
 	_shown = sig
@@ -103,6 +114,12 @@ func show_state(s) -> void:
 		row["icon"].set_locked(wl)                    # over the runner's level: the padlock, as everywhere else (the third review)
 		UI.fit(row["name"], ["%s · %s · item level %d%s" % [u["name"], row["slot"], Items.ilvl(it), (" · wear at %d" % wl) if wl > 0 else ""], "%s · %s" % [u["name"], row["slot"]], str(u["name"])])
 		UI.fit(row["rule"], [str(u["words"]), str(u.get("short", u["words"]))])
+		var vs: Array = Sim.k67_versions(row["slot"])     # (BUILD67-K) the picked version lit
+		for v in range(row["vers"].size()):
+			var vb: Button = row["vers"][v]
+			UI.fit_button(vb, [str(Words.K67_TAG.get(str(vs[v]["name"]), str(v + 1))), str(v + 1)])
+			vb.tooltip_text = "%s: %s" % [vs[v]["name"], vs[v]["words"]]
+			UI.style_button(vb, false, "good" if v == sim.k67_pick(row["slot"]) else "")
 		var block: String = sim.issued_block(row["slot"])
 		var price: int = sim.issued_price(row["slot"])
 		UI.fit_button(row["buy"], (["Buy · %s" % Fmt.money(price), Fmt.money(price)]) if block == "" else [block, Fmt.money(price)])
@@ -121,6 +138,18 @@ func show_state(s) -> void:
 	UI.style_button(_burn, false, "bad" if armed else "")
 	var want: int = int(Data.ISSUED_WANT[0])
 	UI.fit(_want, [Words.ISSUED["want"] % [want, "" if want == 1 else "s"] + " · %d worn" % sim.issued_worn(), Words.ISSUED["want"] % [want, "" if want == 1 else "s"]])
+
+
+## (BUILD67-K) a version picked: the row shows it and Buy sells it.
+func _pick(slot: String, v: int) -> void:
+	if sim != null and sim.k67_set_pick(slot, v):
+		_shown = ""
+		show_state(sim)
+
+
+## For the tests: a row's version buttons.
+func version_buttons(k: int) -> Array:
+	return _rows[k]["vers"]
 
 
 func _buy(slot: String) -> void:
