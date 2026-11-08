@@ -51,7 +51,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 28              # 28 (8 Nov, BUILD68-W): the web's shorter roads - 1,374 nodes, the lesser nodes' ids moved, the fillers by family; 27 (8 Nov, BUILD67-K): boots, the ninth slot (equipped["Boots"]); the issued versions picked (issued_pick); 26 (5 Nov, BUILD55-A): stages per site (stages: done, picks, the New marks; clear_level keyed per stage; the re-cut sites); 25 (5 Nov, BUILD50, act two): the town's wages (town_stopped), a signal's focus, the new levels and XP curve, a night on the air (night: the chain, its haul, the link, the clock; the tuning rules and the Auto floor); 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
+const SAVE_VERSION := 29              # 29 (8 Nov, BUILD69-E): the convoys, the auction, the allotments (e69); 28 (8 Nov, BUILD68-W): the web's shorter roads - 1,374 nodes, the lesser nodes' ids moved, the fillers by family; 27 (8 Nov, BUILD67-K): boots, the ninth slot (equipped["Boots"]); the issued versions picked (issued_pick); 26 (5 Nov, BUILD55-A): stages per site (stages: done, picks, the New marks; clear_level keyed per stage; the re-cut sites); 25 (5 Nov, BUILD50, act two): the town's wages (town_stopped), a signal's focus, the new levels and XP curve, a night on the air (night: the chain, its haul, the link, the clock; the tuning rules and the Auto floor); 24 (4 Nov, BUILD49-W): the skill web version two - 1,549 nodes, the ids from its layout, two points a level and the reward points (web_rewards); 23 (3 Nov, BUILD47): the skill web - one pool a runner, the web's ids from the new layout, no element meters, element points, opened elements or the Pitch's spend; 22 (2 Nov, merge 46 of BUILD46-R/E/S): the rounds plans a site (rounds_plans; the old top_up_mode migrates as the camp's), the rig's swap affix; the rest of the run events - the threads as lists (tips, robbed crews, heads' weaknesses), the Vagabond's standing, a run's live event of the new families; the sites' own records (site_runs) and a head's thing left behind (left_behind); 20 (2 Nov, BUILD45): the past runners past the newest 100 folded into totals (past_folded); 19 (1 Nov, BUILD41): the XP curve (XP_TAPER_END 8) and the repeat XP halved - an old save's level-50 XP reads as level 44, its paragon read again on the new steps; 18 (1 Nov): run events (a trader's standing, the standing orders, a run's live event); 17 (1 Nov): scrap and the rebuild's materials as pack items (a run's found holds Material stacks; no m["scrap"] counter on the run); 16 (31 Oct, round 37): the death keeps the level past the Quartermaster, the curves and the paragon adding, percent lines topped at item level 20, worth, elements past two idle without the Manual, the Last Orders or the Cap; 15 (31 Oct): a class's own two elements open free (element_paid: what each starter cost); 14 (30 Oct): magazines as items (the rig holds magazines, no rounds pouches; the sling mount); 13 (29 Oct): the expeditions, the hands, the Bunkhouse's line B; 12 (29 Oct): the repeat runs (the runner away, the report), Kev's wagers, the Bunkhouse; 11: the itemisation; 10 (28 Oct): magazines in the rig, the cures, the Clinic's supplies, the exchange, two lines a building, two elements a class; 9 (24 Oct): joints B, the Pitch circle, the first skill on the starter - the same ids are other nodes; 8 (24 Oct): the skills on the Poacher's hung notables; 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region; 5 (22 Oct): the web; 4 (21 Oct): the crew
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -65,7 +65,8 @@ const BARRACKS := "Training"       # the Caravan's room (8 Oct, Matt: "caravan d
 const WORKSHOP := "Workshop"       # was the Bench (9 Oct); the Bench stays the Yard's building
 const COMMS := "Radio"
 const RUNNER := "Stats"            # the runner's sheet, attack, defence, the record (8 Oct); was the Runner room until 9 Oct
-const ROOMS := [RUNNER, ARMOURY, MISSIONS, BARRACKS, MEDIC, WORKSHOP, MARKET, OVERVIEW, COMMS]     # the order the rooms open (3 Nov, Matt: the Gamekeeper's Clinic, the Carpet Man's Workshop, the Manager's Fence and Home, the Quartermaster's Radio)
+const BUNKHOUSE := "Bunkhouse"     # (fix 69) "The Bunkhouse" overruns the row's 206 px name box at 30 px (the fit check): the short name stays     # (BUILD69-R) the hands, the expeditions and the far places, a room of its own after the Radio (endgame_rail.md §4)
+const ROOMS := [RUNNER, ARMOURY, MISSIONS, BARRACKS, MEDIC, WORKSHOP, MARKET, OVERVIEW, COMMS, BUNKHOUSE]     # (BUILD69-R) ten: the Bunkhouse last     # the order the rooms open (3 Nov, Matt: the Gamekeeper's Clinic, the Carpet Man's Workshop, the Manager's Fence and Home, the Quartermaster's Radio)
 
 ## The top bar: level and HP on the left, the purse right-justified on the right. The left group's slots are as wide
 ## as the widest text they can hold, so nothing there shifts; the purse lays out by its figures as they read
@@ -165,7 +166,7 @@ var _x0 := 0.0                     # the layout's left edge, for the fold
 var _cog_btn: Button               # the top bar's cog: the pause
 var _away                          # the runner away on a repeat (away_card.gd, 29 Oct): a card at the rail's foot
 var _away_laid := false            # whether the rail's rows were last laid with it showing
-const RAIL_ROW_MIN := 72.0          # a row's least, a badge under the name (rail_button.gd's STACK_H, 70, and its padding)
+const RAIL_ROW_MIN := 56.0          # a row's least (BUILD69-R, endgame_rail.md §4: "rows about 52 px"): the chip (1 + 23) over the name at the floor size (30)
 var _asked_runner := false         # the two-turn-up toast, said once per death
 
 
@@ -337,6 +338,7 @@ func _build() -> void:
 	_stats = StatsRoom.new()
 	_stats.visible = false
 	add_child(_stats)
+	_r69_build()     # (BUILD69-R) the Bunkhouse, the Radio's Set off to the Map, the dummy's ways in, the top bar's reach
 	_events = UI.panel(self, Rect2(0, 0, Pal.GRID_W, Pal.EVENTS_H), UI.box(Pal.PANEL, 8))
 	var tones := [Pal.TEXT, Pal.TEXT_2, Pal.TEXT_3]
 	var tw := ceilf(UI.font("Regular").get_string_size(EVENT_TIME_WORST, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x)
@@ -368,6 +370,8 @@ func _build() -> void:
 	_load_settings()
 	_menu = Menu.new()
 	add_child(_menu)
+	if has_method("_a69_rail_chips"):
+		call("_a69_rail_chips")     # (BUILD69-R) builder A's activity chips (r69_notes.md)
 
 
 # ------------------------------------------------------------------ layout
@@ -415,7 +419,7 @@ func layout(s: Vector2) -> void:
 	var band_y := Pal.TOP_H + Pal.RADIO_H + Pal.TOP_GAP + floorf(maxf(0.0, free) / 2.0)
 	_rail.position = Vector2(x0, band_y)
 	# the rail runs from the band's top to the log's bottom, the rows sharing what's under the heading (8 Oct)
-	var rail_h: float = maxf(s.y - Pal.BOTTOM - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * 72.0)     # a screen too short for the rows gets rows of 72 and a rail that runs under
+	var rail_h: float = maxf(s.y - Pal.BOTTOM - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * RAIL_ROW_MIN)     # (BUILD69-R) was 72 a row     # a screen too short for the rows gets rows of 72 and a rail that runs under
 	_rail_panel.size.y = rail_h
 	_lay_rail_rows()
 	_x0 = x0
@@ -430,6 +434,7 @@ func layout(s: Vector2) -> void:
 	_fence.position = _grid.position
 	_clinic.position = _grid.position
 	_stats.position = _grid.position
+	_bunk.position = _grid.position     # (BUILD69-R)
 	# the log sits under the grid, bottom right; the rail runs the full height beside it
 	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.BOTTOM - Pal.EVENTS_H)
 	_lay_fold()
@@ -495,7 +500,6 @@ func _process(delta: float) -> void:
 	_read_odds(ODDS_MS * (0.2 if paints else 1.0))
 	var fighting: bool = sim.on_mission() and int(sim.mission.get("remaining", 0)) > 0
 	sim.dogs_read_step(ODDS_MS * (0.2 if paints or fighting else 1.0))     # the dogs' read as they stand, a few ms a frame (BUILD43); a fight's frames give it 1 ms
-	_move_dps_line(delta)
 	_since_refresh += delta
 	if _since_refresh >= REFRESH_S:
 		_since_refresh = 0.0
@@ -515,8 +519,8 @@ var _warm_wait := WARM_AFTER
 var _warm_done := false
 var _warm_sim = null
 func _warm_rooms() -> void:
-	if _warm_done and not _art_warm_done:
-		_warm_art_step()                       # (BUILD67-I) then the items' pictures
+	if _warm_done and not _art_warm_done and not r69_fight_on() and _since_refresh + ART_WARM_PAINT_S < REFRESH_S:
+		_warm_art_step()                       # (BUILD67-I) then the items' pictures; (0.15.3 perf fix) never while a run's fight is on screen, nor on a frame that paints
 	if _warm_done or _barracks == null:
 		return
 	if _menu != null and _menu.visible:
@@ -541,7 +545,7 @@ var _dps_shown := -1.0
 ## frame were 3-6 ms of it); -1 until the first refresh.
 var _dps_target := -1.0
 func _move_dps_line(delta: float) -> void:
-	if not _top_lines.has("dps"):
+	if not _top_lines.has("dps") or not _top_lines["dps"][1].visible:     # (fix 69) the line's off the top bar with dmg/s: nothing to move, no stat read
 		return
 	if _dps_target < 0.0:
 		_dps_target = _dps_target_now()
@@ -569,6 +573,9 @@ func _dps_target_now(split := {}) -> float:
 func _read_odds(budget_ms := ODDS_MS) -> void:
 	if room == MISSIONS and sim.night_break():
 		_read_night_odds(budget_ms)                # a night's break: the next link's odds (BUILD50 N)
+		return
+	if room == BUNKHOUSE:
+		_r69_far_odds()                            # (BUILD69-R) the far places' send card, moved off the Map
 		return
 	if not (room == MISSIONS or room == COMMS) or sim.on_mission():
 		return
@@ -1369,6 +1376,8 @@ const ROOM_KEY := {MEDIC: "clinic", MARKET: "fence", OVERVIEW: "yard", COMMS: "r
 const ROOM_INTRO_KEY := {MISSIONS: "map", ARMOURY: "kit", RUNNER: "stats", BARRACKS: "training", MEDIC: "clinic",
 		MARKET: "fence", WORKSHOP: "workshop", OVERVIEW: "yard", COMMS: "radio"}
 func room_shut(nm: String) -> bool:
+	if nm == BUNKHOUSE:
+		return sim != null and not sim.expeditions_open()     # (BUILD69-R) opens with the Quartermaster's fall
 	return sim != null and ROOM_KEY.has(nm) and not sim.room_open(ROOM_KEY[nm])
 
 
@@ -1459,17 +1468,10 @@ func refresh() -> void:
 		_top_labels[k].text = Fmt.num(int(sim.salvage.get(k, 0)))
 	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
 	UI.fit(_top_labels["hp"], top_hp_forms(sim.hp_shown(), sim.max_hp_shown(), sim.guard()))     # Guard (12 Oct); shortened, never clipped (25 Oct, the review)
-	var split: Dictionary = sim.damage_split()
-	UI.fit(_top_labels["dps"], top_dps_forms(float(split["total"])))     # one figure, the hits and the dots' burn together (16 Oct, item 14)
-	for c in [_top_glyphs["dps"], _top_labels["dps"]]:
-		c.tooltip_text = sim.split_words(split)
-		c.mouse_filter = Control.MOUSE_FILTER_PASS
+	r69_show_reach()     # (BUILD69-R) the top bar's reach where dmg/s was: damage lives in the fight and on the dummy
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
-	_dps_target = _dps_target_now(split)
-	if _dps_shown < 0.0:
-		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share(float(split["total"]))     # the first paint; _move_dps_line has it from there
 	_top_labels["where"].text = ("Out: " + str(sim.mission["t"].get("name", sim.tier(sim.mission["tier"])["name"]))) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
 	if sim.away():
 		var rest_w: String = resting_words()     # between runs, hurt: the repeat's rest kept beside it
@@ -1477,13 +1479,14 @@ func refresh() -> void:
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()
+	r69_reach_fit()     # (fix 69) the reach's caption off if the purse came in over it
 	if room == OVERVIEW:
 		sim.yard_mark_seen()                  # before the rail is painted: the badge never shows on the Yard while it's open
 	for nm in ROOMS:
 		var b = _rail_buttons[nm]
 		b.set_selected(nm == room)
 		b.set_shut(room_shut(nm))
-		b.shut_words = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[nm]]) if room_shut(nm) else ""     # what opens it (the review)
+		b.shut_words = (Words.R69["bunk_shut"] if nm == BUNKHOUSE else ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[nm]])) if room_shut(nm) else ""     # what opens it (the review); (BUILD69-R) the Bunkhouse's
 		b.show_status(_rail_status(nm))
 	# the Lock-up, the Caravan, the Bench and Runs are screens of their own,
 	# in the grid's place: Runs is the tiers between runs and the live run
@@ -1504,7 +1507,8 @@ func refresh() -> void:
 	_fence.visible = room == MARKET
 	_clinic.visible = room == MEDIC
 	_stats.visible = room == RUNNER
-	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS or room == RUNNER)
+	_bunk.visible = room == BUNKHOUSE     # (BUILD69-R)
+	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS or room == RUNNER or room == BUNKHOUSE)
 	_radio.visible = room == COMMS
 	sim.odds_scope(true)                      # a paint: the odds' key worked once in it (19 Oct)
 	if room == COMMS:
@@ -1525,6 +1529,8 @@ func refresh() -> void:
 		_clinic.show_state(sim)
 	elif room == RUNNER:
 		_stats.show_state(sim)
+	elif room == BUNKHOUSE:
+		_bunk.show_state(sim)     # (BUILD69-R)
 	sim.odds_scope(false)
 	var cards: Array = []                     # the card grid's last room went to its own sheet (10 Oct, Stats-R A)
 	# each card set once to where it ends up: hiding them all and showing the used ones again, ten
@@ -1669,6 +1675,8 @@ func _lay_top_right() -> void:
 	for k in ["hp", "xp", "dps"]:
 		var lk: Label = _top_labels[k]
 		left_end = maxf(left_end, maxf(_top_lines[k][0].position.x + _top_lines[k][0].size.x, lk.position.x + UI.text_width(lk, lk.text)))
+	if _reach_box != null:
+		left_end = maxf(left_end, _reach_box.position.x + _reach_box.size.x)     # (BUILD69-R) the reach in dmg/s's place
 	var place: String = _top_labels["where"].text
 	_top_glyphs["where"].tooltip_text = place
 	for step in range(5):
@@ -1736,7 +1744,7 @@ func _time_of_day(stamp: float) -> String:
 	return "%02d:%02d" % [d["hour"], d["minute"]]
 
 
-func _rail_status(nm: String) -> Dictionary:
+func _rail_status_own(nm: String) -> Dictionary:     # (BUILD69-R) was _rail_status: the room's own chip; _rail_status adds the others'
 	if room_shut(nm):
 		return {}     # its name scrambled, no word under it (20 Oct, Matt)
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
@@ -1760,6 +1768,8 @@ func _rail_status(nm: String) -> Dictionary:
 			if (fine or sim.on_mission()) and sim.can_hand_in():
 				return {"badge": "Supplies", "badge_tone": "good"}     # supplies to hand in (28 Oct, Matt: as a ready contract's "Ready")
 			return {"badge": "" if fine or sim.on_mission() else "Hurt", "badge_tone": "warn"}
+		BUNKHOUSE:
+			return r69_bunk_chip(sim)     # (BUILD69-R)
 		# the Fence: no badge since the contracts went for the exchange (28 Oct) - nothing there waits on a decision
 	return {}
 
@@ -1889,6 +1899,8 @@ func open_radio_air() -> void:
 ## items' pictures loaded ahead of the Kit's first open, a few a frame once Training's web is warm: the stash grid's
 ## first show was most of the open, each picture's first load in it. Items caches them; nothing else changes.
 const ART_WARM_US := 3000                    # a frame's budget
+const ART_WARM_ONE_US := 1200                # (0.15.3 perf fix) a picture's load at most, kept in hand: the step stops while one still fits
+const ART_WARM_PAINT_S := 1.0 / 60.0         # a frame this close to the refresh's paint is left alone
 const ART_WARM_CELLS := 64                  # the stash grid's cells made ahead: a full page's pieces
 var _art_warm_done := false
 var _art_warm_list: Array = []
@@ -1900,9 +1912,175 @@ func _warm_art_step() -> void:
 				_art_warm_list.append({"slot": str(sl), "base": str(b["name"])})
 		_art_warm_i = 0
 	var t0 := Time.get_ticks_usec()
-	while _art_warm_i < _art_warm_list.size() and Time.get_ticks_usec() - t0 < ART_WARM_US:
+	while _art_warm_i < _art_warm_list.size() and Time.get_ticks_usec() - t0 < ART_WARM_US - ART_WARM_ONE_US:     # (0.15.3 perf fix) room left for one more picture's load, not past the budget
 		Items.art(_art_warm_list[_art_warm_i])
 		_art_warm_i += 1
 	if _art_warm_i >= _art_warm_list.size() and _armoury != null and _armoury._inv._cells.size() < ART_WARM_CELLS:
 		_armoury._inv._cell(mini(_armoury._inv._cells.size() + 7, ART_WARM_CELLS - 1))     # and the stash grid's cells, pooled, eight a frame
 	_art_warm_done = _art_warm_i >= _art_warm_list.size() and (_armoury == null or _armoury._inv._cells.size() >= ART_WARM_CELLS)
+
+
+# ------------------------------------------------------------------ (BUILD69-R) the rail at ten, the Bunkhouse, the reach
+
+const Bunkhouse := preload("res://scripts/ui/bunkhouse.gd")
+const REACH69_H := 44                  # the top bar's reach box (the Main mockup): its border round the caption and the level
+const REACH69_PAD := 12
+const REACH69_CAP_FONT := Pal.CELL_TEXT_BIG
+var _bunk                              # bunkhouse.gd: the room
+var _reach_box: Panel                  # the top bar's reach, where dmg/s was
+var _reach_cap: Label
+var _reach_val: Label
+var _reach_sub: Label
+var _chips69 := {}                     # room -> [[Callable(sim) -> {badge, badge_tone}, first: bool]]
+
+
+func _r69_build() -> void:
+	_bunk = Bunkhouse.new()
+	_bunk.acted.connect(refresh)
+	_bunk.went_out.connect(func(): show_room(MISSIONS))     # (fix 69) Fetch them: to the Map with the run open
+	add_child(_bunk)
+	_radio.went_out.connect(func(): show_room(MISSIONS))     # the Radio's Set off: to the Map with the run open, as the Map's own
+	# the reach in the damage figure's slot: its glyph, figure and line go
+	for c in [_top_glyphs["dps"], _top_labels["dps"], _top_lines["dps"][0], _top_lines["dps"][1]]:
+		c.visible = false
+	_reach_box = UI.panel(_top_row, Rect2(_top_glyphs["dps"].position.x, (Pal.TOP_H - REACH69_H) / 2.0, 100, REACH69_H), UI.box(Color(0, 0, 0, 0), 6, 2, Pal.ACCENT))
+	_reach_box.tooltip_text = Words.R69["reach_tip"]
+	_reach_box.mouse_filter = Control.MOUSE_FILTER_PASS
+	_reach_cap = UI.label(_reach_box, Rect2(REACH69_PAD, 0, 10, REACH69_H), Words.R69["reach_cap"], "SemiBold", REACH69_CAP_FONT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_reach_val = UI.label(_reach_box, Rect2(REACH69_PAD, 0, 10, REACH69_H), "", "SemiBold", Pal.TOP, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	_reach_sub = UI.label(_reach_box, Rect2(REACH69_PAD, 0, 10, REACH69_H), Words.R69["reach_sub"], "Regular", REACH69_CAP_FONT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)     # (fix 69) the mockup's "furthest cleared", when it fits
+	_r69_dummy_build()
+
+
+## The reach: the furthest level cleared ("none yet" before a first clear), the box hugging its words.
+func r69_show_reach() -> void:
+	if _reach_box == null:
+		return
+	var any_clear := false
+	for i in range(sim.best_depth.size()):
+		if int(sim.best_depth[i]) > 0:
+			any_clear = true
+			break
+	_reach_val.text = (Words.R69["reach_level"] % sim.deepest_cleared_level()) if any_clear else Words.R69["reach_none"]
+	var cw: float = ceilf(UI.text_width(_reach_cap, _reach_cap.text)) + 2.0
+	var vw: float = ceilf(UI.text_width(_reach_val, _reach_val.text)) + 2.0
+	_reach_cap.size.x = cw
+	_reach_val.position.x = REACH69_PAD + cw + 8.0
+	_reach_val.size.x = vw
+	_reach_box.size.x = REACH69_PAD * 2 + cw + 8.0 + vw
+	var sw: float = ceilf(UI.text_width(_reach_sub, _reach_sub.text)) + 2.0
+	_reach_sub.position.x = _reach_val.position.x + vw + 8.0
+	_reach_sub.size.x = sw
+	_reach_sub.visible = r69_reach_room() >= _reach_box.size.x + 8.0 + sw     # only where it fits clear of the purse
+	if _reach_sub.visible:
+		_reach_box.size.x += 8.0 + sw
+
+
+## A rail chip from another room's build (r69_notes.md): fn(sim) -> {"badge": word, "badge_tone": tone}; "" none.
+## `first`: ahead of the room's own chip. One chip a row: the first word that isn't empty.
+func add_rail_chip(room_name: String, fn: Callable, first := false) -> void:
+	if not _chips69.has(room_name):
+		_chips69[room_name] = []
+	_chips69[room_name].append([fn, first])
+
+
+## The row's chip: the first-placed chips added, the room's own, then the rest added (a shut room none).
+func _rail_status(nm: String) -> Dictionary:
+	if room_shut(nm):
+		return {}
+	var added: Array = _chips69.get(nm, [])
+	for pass_first in [true, false]:
+		if not pass_first:
+			var own: Dictionary = _rail_status_own(nm)
+			if str(own.get("badge", "")) != "":
+				return own
+		for f in added:
+			if bool(f[1]) != pass_first:
+				continue
+			var d: Dictionary = (f[0] as Callable).call(sim)
+			if str(d.get("badge", "")) != "":
+				return d
+	return {}
+
+
+## The Bunkhouse's chip: "1 back · 1 out", "Back" in the warn colour, "2 out" while they're away (the Main mockup).
+static func r69_bunk_chip(s) -> Dictionary:
+	var back := 0
+	var out := 0
+	for e in s.expeditions:
+		if str(e["state"]) == "out":
+			out += 1
+		else:
+			back += 1
+	if back > 0 and out > 0:
+		return {"badge": Words.R69["chip_both"] % [back, out], "badge_tone": "warn"}
+	if back > 0:
+		return {"badge": Words.R69["chip_back"], "badge_tone": "warn"}
+	if out > 0:
+		return {"badge": Words.R69["chip_out"] % out, "badge_tone": "info"}
+	return {}
+
+
+## The dummy's ways in (the Kit mockup): the Kit strip's "Test on the dummy ›" (the worn build) and the pick's "Try on the
+## dummy" (that piece on): to the Stats page, the read made there and then.
+func _r69_dummy_build() -> void:
+	_armoury.dummy.connect(r69_to_dummy)
+
+
+func r69_to_dummy(it: Dictionary) -> void:
+	show_room(RUNNER)
+	_stats.r69_dummy_go(_stats.dummy_kind, it)
+	refresh()
+
+
+## The far places' odds in the Bunkhouse (as the Map's tab read them): the picked place for the picked lead.
+func _r69_far_odds() -> void:
+	if sim.on_mission() or _bunk == null or _bunk.view != "far":
+		return
+	sim.live_guard()
+	var ep = _bunk.far
+	if ep.lead != "" and not bool(sim.exp_odds(ep.place, ep.lead, true)[1]):
+		sim.exp_odds(ep.place, ep.lead)
+	sim.odds_time_ms = 0.0
+# ------------------------------------------------------------------ (BUILD69-A) the activities' rail chips
+
+## The convoys', the auction's and the allotments' chips on the rail (r69_notes.md: R's add_rail_chip, called once from
+## R's _build): "Convoy heard" on the Radio till the board's been looked at, "Market day" on the Fence while it's on,
+## "Harvest" on the Workshop (where the allotments are a view) while a plot's ready to lift.
+const A69_CHIP_ROOMS := {"Radio": ["e69_chip_radio", "chip_convoy", "info"], "The Fence": ["e69_chip_fence", "chip_market", "warn"],
+	"Workshop": ["e69_chip_workshop", "chip_harvest", "good"]}
+
+
+func _a69_rail_chips() -> void:
+	for nm in A69_CHIP_ROOMS:
+		call("add_rail_chip", nm, a69_chip.bind(nm))     # R's (main.gd, BUILD69-R); called by name so the build parses without it
+
+
+## A room's activity chip: {"badge": word or "", "badge_tone": tone}; nothing for another room or a null sim.
+static func a69_chip(s, nm: String) -> Dictionary:
+	if s == null or not A69_CHIP_ROOMS.has(nm):
+		return {"badge": "", "badge_tone": ""}
+	var row: Array = A69_CHIP_ROOMS[nm]
+	var on: bool = str(s.call(str(row[0]))) != ""
+	return {"badge": str(Words.A69[str(row[1])]) if on else "", "badge_tone": str(row[2])}
+
+
+## (fix 69) The room the reach's box has: to the purse's first glyph as the top bar laid it, the gap kept.
+func r69_reach_room() -> float:
+	var first := 1920.0 - 2 * Pal.MARGIN - TOP_BTN - 16
+	for k in TOP_RIGHT:
+		if _top_glyphs[k].visible:
+			first = minf(first, _top_glyphs[k].position.x)
+	return first - TOP_GAP - _reach_box.position.x
+
+
+func r69_reach_fit() -> void:
+	if _reach_sub == null or not _reach_sub.visible or r69_reach_room() >= _reach_box.size.x:
+		return
+	_reach_sub.visible = false
+	_reach_box.size.x -= 8.0 + _reach_sub.size.x
+
+
+## (0.15.3 perf fix) A run's fight on screen: the Map with a watched run out. The art's warm-up waits for anything else.
+func r69_fight_on() -> bool:
+	return sim != null and room == MISSIONS and sim.on_mission() and not sim.unwatched()

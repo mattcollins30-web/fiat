@@ -2711,6 +2711,7 @@ func _wearing_off(m: Dictionary) -> void:
 	m.erase("wearing")
 	var it: Dictionary = e["item"]
 	it["spared"] = true                       # the runner's own come back: no loot rule touches it (the review)
+	it["r69_own"] = true                      # (0.15.3 fix) and home past a full stash: the runner's own, not a find
 	it["recovered"] = true                    # and no bag swap spills it (1 Nov, the review): off at home (_pack_unmark)
 	m["found"].append(it)
 	_read(it)
@@ -5602,6 +5603,7 @@ func put_down(id: int) -> bool:
 			mission["found"].remove_at(k)
 			pack_off(f)
 			f.erase("head_drop")                 # put down by hand: left if left, as a ditched thing (1 Nov)
+			f.erase("r69_home")                  # (0.15.3 fix) and no longer owed a place at home
 			mission["floor"] = mission.get("floor", [])
 			mission["floor"].append(f)
 			return true
@@ -7374,6 +7376,7 @@ func effective(i: int) -> Dictionary:
 	if _a55_head == i:
 		e["pool"] = maxi(1, int(floor(float(e["pool"]) / 2.0)))     # (BUILD55-A) the head's own fight: half the site's gangs at his gate's man (FIX55b: the 2/3's), then him
 		e["head_fight"] = true
+	e69_figures(i, e)                        # (BUILD69-E) a convoy's men and its clock
 	e["plain_pool"] = int(e["pool"])         # the clock reads the site as plain (9 Oct): the words bite through it; the heads are formed from the same
 	e["plain_hp"] = float(e["hp"])
 	var act: Array = active_words(i)
@@ -7422,6 +7425,9 @@ func effective(i: int) -> Dictionary:
 			e["boss"]["dps"] = float(e["boss"]["dps"]) * float(d1["dps"]) / maxf(0.001, float(dg["dps"]))
 	elif walks and not zone_boss(int(base["zone"])).is_empty():     # the zone's head walks (the Gamekeeper on the Outskirts since 13 Oct)
 		e["boss"] = boss_form(zone_boss(int(base["zone"])), e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
+	if bool(e.get("e69_convoy", false)):
+		e.erase("boss")                          # (fix 69) a convoy is its men alone: no head put back by the branches above (a walking one)
+		e.erase("boss_queue")
 	for name in e["intel"]:
 		if name == "Night":
 			continue                              # the clock's night is applied above
@@ -8973,12 +8979,17 @@ func deploy_signal(k: int) -> bool:
 ## a point on the Dial; the site goes back to its campaign self.
 func _signal_done(m: Dictionary, died := false) -> void:
 	_a55_run_end(m)                           # (BUILD55-A) a head's fight: his site back at its stage; the picks follow
+	e69_run_end(m, died)                      # (BUILD69-E) a run home: the convoys', the market's and the plots' clocks, the seeds
 	if not m.has("signal") or _sig.is_empty():
 		return
 	var d: int = signal_level(_sig)
 	var won: bool = bool(m["cleared"]) and not died and not m.get("ghost_pending", false) and not bool(m.get("timed_out", false)) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
 	if _sig.has("order"):
 		_order_done(won)
+		_sig_off()
+		return
+	if _sig.has("e69"):
+		e69_convoy_done(m, won)                # (BUILD69-E) a convoy's hit: the cargo or gone; never the reach
 		_sig_off()
 		return
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won, "grade": int(_sig.get("grade", 0)), "reach": reach, "story": _sig.has("story")})     # the grade and the reach it met (the pass, 20 Oct: the signals' gate)
@@ -13380,6 +13391,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 ## off the floor; on an auto-run or "Fill up, then go" into the pack whatever it holds (strapped on), as before. `mag`:
 ## a gun's magazine on it, as the crew heads' always were.
 func _head_drop(m: Dictionary, it: Dictionary, mag := true) -> void:
+	it["r69_home"] = true                     # (0.15.3 fix, Matt: "fix it") a head's drop comes home past a full stash, as a mythic does
 	if by_hand(m):
 		_floor_put(m, it)
 		it["head_drop"] = true                # left down, it still comes home (_floor_mythics_in; the review)
@@ -14330,8 +14342,11 @@ func _extract() -> void:
 	var own_home := 0                         # the runner's own kit home (the gate's box, the rig's own): neither loot nor left
 	for it in m["found"]:
 		var first: bool = it.get("first_gun", false) and (Items.is_gun(it) or Items.is_mag(it))     # and its magazine (30 Oct)
+		var owed: bool = bool(it.get("r69_home", false)) or bool(it.get("r69_own", false))     # (0.15.3 fix) a head's drop, or the runner's own piece back off a run's swap ("spared" is any find taken by hand: not owed)
 		it.erase("first_gun")
 		it.erase("spared")
+		it.erase("r69_home")
+		it.erase("r69_own")
 		if first:
 			stash.append(it)                  # the first gun comes home whatever the room, as a mythic does, and it's home: no more (17 Oct)
 			if Items.is_gun(it):
@@ -14372,8 +14387,8 @@ func _extract() -> void:
 				log_event(Words.DEEDS["held"])
 		elif stash_put(it):
 			stashed += 1
-		elif it.get("mythic", false) or it.get("issued", false):
-			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct); a head's issued piece too (the third review)
+		elif it.get("mythic", false) or it.get("issued", false) or owed:
+			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct); a head's issued piece too (the third review); (0.15.3 fix) a head's unique and the runner's own too
 			stashed += 1
 		elif m.get("unwatched", false):
 			stash.append(it)                 # a repeat's keeps never lost to a full stash (the review): home, and the repeat ends
@@ -14555,6 +14570,7 @@ func _kia() -> void:
 		last_report["lost_value"] = 0
 		for s in Data.SLOTS:
 			if equipped[s] != null:
+				equipped[s].erase("r69_own")     # (0.15.3 fix) home: no mark kept
 				stash.append(equipped[s])
 		for it in rig:
 			stash.append(it)
@@ -14563,6 +14579,8 @@ func _kia() -> void:
 			for it in m["found"]:
 				if _home_gate(it):
 					continue                     # a head's thing opens its room (13 Oct)
+				it.erase("r69_home")             # (0.15.3 fix) home: the gate's marks off
+				it.erase("r69_own")
 				stash.append(it)                 # the Fence's Insurance desk: the pack comes home too
 				if Items.is_deeds(it) and deeds_fate == "":
 					deeds_fate = "held"
@@ -14589,6 +14607,8 @@ func _kia() -> void:
 			log_event(Words.LOG["dog_rig"] % [rig.size(), "" if rig.size() == 1 else "es"])
 	if not m.get("pack_kept", false):
 		for it in m["found"].filter(func(x): return x.get("mythic", false) or x.get("issued", false)):
+			it.erase("r69_home")                 # (0.15.3 fix) home: the gate's marks off
+			it.erase("r69_own")
 			stash.append(it)                     # a mythic found on the run comes home, whatever (16 Oct); a head's issued piece too (the third review)
 			m["found"].erase(it)
 	if yard_has("fetch") and not m["found"].is_empty() and not m.get("pack_kept", false):
@@ -16165,8 +16185,11 @@ func equip_from_pack(id: int) -> bool:
 			m["found"].remove_at(k)
 			pack_off(it)
 			it.erase("head_drop")                    # worn: the runner's now
+			it.erase("r69_home")     # (0.15.3 fix) worn: the gate owes it nothing
+			it.erase("r69_own")     # (0.15.3 fix) worn: the gate owes it nothing
 			if was != null:
 				was["spared"] = true                 # what he had on: his, not loot
+				was["r69_own"] = true                # (0.15.3 fix) home past a full stash
 				if slot != "Backpack":
 					if spot.is_empty():
 						_floor_put(m, was)            # no place in the cells freed (1 Nov): down, not blocked
@@ -16289,9 +16312,12 @@ func wear_from_floor(id: int) -> bool:
 		fl.remove_at(k)
 		pack_off(it)
 		it.erase("head_drop")                 # worn: the runner's now
+		it.erase("r69_home")     # (0.15.3 fix) worn: the gate owes it nothing
+		it.erase("r69_own")     # (0.15.3 fix) worn: the gate owes it nothing
 		it["spared"] = true                   # taken off the floor by hand: chosen (as take_floor)
 		if was != null:
 			was["spared"] = true              # what he had on: his, not loot, should he pick it up again
+			was["r69_own"] = true             # (0.15.3 fix) home past a full stash
 			_floor_put(m, was)
 			log_event(Words.LOG["equipped_to_floor"] % [_log_name(it), _log_name(was, true)])
 		else:
@@ -18329,6 +18355,7 @@ func to_dict() -> Dictionary:
 	d["expeditions"] = exp_state().duplicate(true)    # the expeditions and the hands (29 Oct)
 	d["town_stopped"] = town_stopped.keys()           # the town's places stopped, unpaid (BUILD50-T)
 	d["night"] = _night_save()                        # a night on the air (BUILD50 N)
+	d["e69"] = e69_save()                             # (BUILD69-E) the convoys, the auction, the allotments
 	return d
 
 
@@ -18582,6 +18609,7 @@ func load_dict(d: Dictionary) -> void:
 	rebuilt = _counts(d.get("rebuilt", {}))
 	order_beaten = _counts(d.get("order_beaten", {}))
 	b61_load(d)                               # (BUILD61-A) the County's stages, after the wins (a 26 save's carry over)
+	e69_load(d)                               # (BUILD69-E) the convoys, the auction, the allotments
 	_sig = {}
 	if mission != null and mission.get("signal", null) is Dictionary:
 		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it
@@ -22260,8 +22288,8 @@ func f66_fight_over(m: Dictionary) -> void:
 
 ## Build 4's hook (the allotments' seeds): called once a hard man's better drop is in, with the mission, the site and
 ## the man ({name, traits, ...}). Nothing yet.
-func f66_hard_drop_hook(_m: Dictionary, _t: Dictionary, _hm: Dictionary) -> void:
-	pass
+func f66_hard_drop_hook(m: Dictionary, _t: Dictionary, _hm: Dictionary) -> void:
+	_e69_hard_seed(m)                         # (BUILD69-E) the allotments' seed, home with the run
 
 
 ## Last Stand (last_stand_s): once a run, at 0 HP you fight on for its seconds, standing on LAST66_HOLD; the gang
@@ -22703,3 +22731,903 @@ func s68_on_empty(m: Dictionary) -> void:
 	var before: float = hp
 	hp = minf(max_hp(), hp + max_hp() * Data.S68_DRESSING_PCT / 100.0)
 	m["s68_dressed"] = float(m.get("s68_dressed", 0.0)) + (hp - before)
+
+
+# ------------------------------------------------------------------ (BUILD69-R) the training dummy
+
+## The dummy on the Stats page (8 Nov, docs/design/endgame_rail.md §4; the Stats mockup): the real fight's code on a
+## scratch run (the dry run's: the live state put by and back as it was) against one man who never goes down and never
+## fires back - a gang man of the site at your reach, or a hard man (Armoured) - for DUMMY69_S seconds on fixed dice, so
+## the same build reads the same every time. The worn build, or the build with one piece swapped in (the try-on). What it
+## gives: dmg/s, a timeline of two-second bars with the reloads marked, the share of hits that were headshots, of the
+## damage from bleeds, the seconds reloading, and the damage under half HP against full. The bot's and the sim's own
+## figures (compare, fit_value) are untouched: this is the screen's only damage figure outside the fight.
+const DUMMY69_S := 30.0                # the set time
+const DUMMY69_BAR_S := 2.0             # a bar of the timeline
+const DUMMY69_HP := 1.0e12             # the straw: never down (put back every tick)
+const DUMMY69_SEED := 6969             # the dice: one seed, so a read is the same every time
+const DUMMY69_LOW_HP := 0.4            # the under-half-HP read stands the runner at this share
+const DUMMY69_KEPT := 3                # the dummy's last reads, on the page
+const DUMMY69_HARD_TRAIT := "armoured" # the hard man it stands up: the Armoured one (his plate the point)
+const DUMMY69_SIG_ID := -696969       # (fix 69) the signal the dummy's man stands on
+const DUMMY69_RELOAD_BAR := 0.5        # a bar more than this share reloading is a reload's bar
+var dummy69_last: Array = []          # [{gun, how, kind, dps}] newest first; this session's, not saved
+
+
+## The site the dummy's man comes from: the one your reach was cleared on (the front's before any clear).
+func dummy69_site() -> int:
+	var best := -1
+	var lv := 0
+	for i in range(best_depth.size()):
+		if int(best_depth[i]) > 0 and lv_at(i, int(best_depth[i])) > lv:
+			lv = lv_at(i, int(best_depth[i]))
+			best = i
+	return best if best >= 0 else clampi(front_tier(), 0, Data.TIERS.size() - 1)
+
+
+## The man's level as the dummy stands him (the site's own at its depth now).
+func dummy69_level() -> int:
+	var i: int = dummy69_site()
+	var laid: bool = _dummy69_sig_on(i)       # (fix 69) at the reach
+	var lv: int = int(effective(i).get("level", deepest_cleared_level()))
+	if laid:
+		_sig_off()
+	return lv
+
+
+## A read: kind "gang" or "hard"; `swap` a piece tried on in its slot ({} the worn build). Its parts moved over, as
+## the Kit's wear moves them. Kept in the last three.
+func dummy69_read(kind: String, swap := {}) -> Dictionary:
+	var res: Dictionary = _try(moved_over(swap) if not swap.is_empty() else {}, _dummy69_go.bind(kind))     # (fix 69) worn and tried both through _try: like for like
+	var gun = swap if not swap.is_empty() else equipped.get("Primary", null)     # the piece tried on, or the gun worn
+	res["gun"] = Items.full_name(gun) if gun is Dictionary else str(Words.R69["dummy_fists"])
+	res["how"] = "tried" if not swap.is_empty() else "worn"
+	dummy69_last.push_front({"gun": res["gun"], "how": res["how"], "kind": kind, "dps": float(res["dps"])})
+	while dummy69_last.size() > DUMMY69_KEPT:
+		dummy69_last.pop_back()
+	return res
+
+
+func _dummy69_go(kind: String) -> Dictionary:
+	var i: int = dummy69_site()
+	var full: Dictionary = _dummy69_run(i, kind, 1.0)
+	var low: Dictionary = _dummy69_run(i, kind, DUMMY69_LOW_HP)
+	full["low_x"] = float(low["dps"]) / maxf(float(full["dps"]), 0.0001) if float(full["dps"]) > 0.0 else 1.0
+	return full
+
+
+## One run of DUMMY69_S at the runner's HP share `hp_share`: the dry run's begin and finish round the ticks, the man
+## put back whole each tick (one man, none behind him, nothing fired back).
+func _dummy69_run(i: int, kind: String, hp_share: float) -> Dictionary:
+	var r := RandomNumberGenerator.new()
+	r.seed = DUMMY69_SEED
+	var laid: bool = _dummy69_sig_on(i)       # (fix 69) the man stands at your reach, as a signal's site does
+	var job := _dry_begin(i, r)
+	var m: Dictionary = job["m"]
+	var t: Dictionary = (m["t"] as Dictionary).duplicate(true)
+	t["dps"] = 0.0
+	m["t"] = t
+	m.erase("boss")
+	m.erase("boss_queue")
+	m["event"] = ""
+	m["remaining"] = 1
+	m["target_hp"] = DUMMY69_HP
+	m["f66_gang"] = _f66_gang_key(m)          # no hard man rolled at his back: the dummy picks who stands
+	if kind == "hard":
+		_f66_make_hard(m, t, str(Words.R69["dummy_hard_name"]), [DUMMY69_HARD_TRAIT])
+		m["f66_hard"]["hp_max"] = DUMMY69_HP
+		m["target_hp"] = DUMMY69_HP
+	var bars: Array = []
+	var bar_reload: Array = []
+	var per_bar: int = maxi(1, int(round(DUMMY69_BAR_S / DRY_STEP)))
+	var acc := 0.0
+	var acc_reload := 0.0
+	var reload_t := 0.0
+	var total := 0.0
+	var ticks: int = int(round(DUMMY69_S / DRY_STEP))
+	for k in range(ticks):
+		hp = max_hp() * hp_share
+		var d0: float = float(m.get("dealt", 0.0))
+		_tick(DRY_STEP)
+		var got: float = maxf(0.0, float(m.get("dealt", 0.0)) - d0)
+		var gun_slot: String = "Primary" if (equipped["Primary"] != null and has_rounds(equipped["Primary"])) else "Secondary"
+		var off: float = clampf(1.0 - float(m.get("fire_x", {}).get(gun_slot, 1.0)), 0.0, 1.0) if equipped.get(gun_slot) != null else 0.0
+		if float(m.get("reload_t", {}).get(gun_slot, 0.0)) > 0.0:
+			off = maxf(off, 1.0)                  # still reloading at the tick's end: the tick's a reload's
+		reload_t += off * DRY_STEP
+		acc_reload += off * DRY_STEP
+		total += got
+		acc += got
+		if (k + 1) % per_bar == 0:
+			bars.append(acc / DUMMY69_BAR_S)
+			bar_reload.append(acc_reload / DUMMY69_BAR_S > DUMMY69_RELOAD_BAR)
+			acc = 0.0
+			acc_reload = 0.0
+		m["target_hp"] = DUMMY69_HP               # the straw back up: never down, never a next man
+		m["remaining"] = 1
+		m["dead"] = false
+		if m.has("f66_hard") and kind == "hard":
+			m["f66_hard"]["alive"] = true
+			m["f66_hard"]["front"] = true
+	var st: Dictionary = _f66_stats(m)
+	var bleed: float = float(m.get("dealt_by", {}).get("bleed", 0.0))
+	var dealt: float = maxf(float(m.get("dealt", 0.0)), 0.0001)
+	var out := {"kind": kind, "site": i, "level": int(t.get("level", 1)), "dps": total / DUMMY69_S, "bars": bars, "bar_reload": bar_reload,
+		"head_pct": 100.0 * float(st["headshots"]) / maxf(float(st["shots"]), 0.0001) if float(st["shots"]) > 0.0 else 0.0,
+		"bleed_pct": 100.0 * bleed / dealt if total > 0.0 else 0.0, "reload_s": reload_t, "shots": float(st["shots"])}
+	_dry_finish(job)
+	if laid:
+		_sig_off()
+	return out
+
+
+## (fix 69) The dummy's site laid at the reach's depth, as _e69_sig lays a convoy: true when laid (a run's own signal
+## already on: the site as it stands).
+func _dummy69_sig_on(i: int) -> bool:
+	if not _sig.is_empty():
+		return false
+	_sig_on({"id": DUMMY69_SIG_ID, "site": i, "zone": int(Data.TIERS[i]["zone"]), "depth": depth_for_level(i, deepest_cleared_level()), "codes": [], "papers": [],
+		"head": false, "convoy": false, "line": 0, "grade": 1})
+	return true
+
+
+## The man's affix room: the rarity's count (the element seeds stop there).
+static func e69_affix_room(it: Dictionary) -> int:
+	return int(Data.RARITIES[clampi(int(it.get("rarity", 0)), 0, Data.RARITIES.size() - 1)]["affixes"])
+# ------------------------------------------------------------------ (BUILD69-E) the convoys, the auction, the allotments
+# docs/design/endgame_rail.md §4. Their state in one dict (`e69`, saved whole); their clocks run on runs home
+# (e69_run_end, from _signal_done: every run's end, a death and a night's link too, never a dry read). The API for the
+# screens: $S/e69_notes.md.
+
+var e69 := _e69_fresh()
+
+
+static func _e69_fresh() -> Dictionary:
+	return {"runs": 0, "convoys": [], "convoy_seq": 0, "convoy_next": 1, "heard_new": false,
+		"market": {"on": false, "closes": 0, "next": Data.AUCTION69_FIRST, "lots": [], "last": [], "seen": false},
+		"plots": [], "shed": {}, "lifted": {}, "ready_said": []}
+
+
+## Runs home since the save began (the activities' clock).
+func e69_runs() -> int:
+	return int(e69["runs"])
+
+
+# ---- the openings and the rail's chips
+
+func e69_convoys_open() -> bool:
+	return issued and county_taken_count() >= Data.CONVOY69_OPEN_TAKEN
+
+
+func e69_auction_open() -> bool:
+	return issued
+
+
+func e69_allot_open() -> bool:
+	return rebuild_rank("pumping") > 0
+
+
+func e69_allot_watered() -> bool:
+	return town_on("pumping")
+
+
+func e69_chip_radio() -> String:
+	return "heard" if e69_convoys_open() and bool(e69["heard_new"]) and not Array(e69["convoys"]).is_empty() else ""
+
+
+func e69_chip_fence() -> String:
+	return "market" if e69_auction_open() and bool(e69["market"]["on"]) else ""
+
+
+func e69_chip_workshop() -> String:
+	if not e69_allot_open():
+		return ""
+	for p in range(e69_plots_open()):
+		if e69_plot_ready(p):
+			return "harvest"
+	return ""
+
+
+func e69_convoys_looked() -> void:
+	e69["heard_new"] = false
+
+
+func e69_market_looked() -> void:
+	e69["market"]["seen"] = true
+
+
+# ---- the run's end: every clock a run
+
+func e69_run_end(m: Dictionary, died: bool) -> void:
+	if _dry_on or bool(m.get("dry", false)):
+		return
+	e69["runs"] = int(e69["runs"]) + 1
+	var seeds: Array = Array(m.get("e69_seeds", []))
+	if not died and e69_allot_open():
+		var dice := RandomNumberGenerator.new()
+		dice.seed = hash([rng.state, int(e69["runs"]), "e69_crates"])     # its own dice: every other roll stays where it was
+		for q in m.get("crates", []):
+			if int(q.get("searches", 0)) > 0 and int(q.get("done", 0)) >= int(q["searches"]) and not q.get("passed", false) and dice.randf() < Data.ALLOT69_CRATE_ODDS:
+				seeds.append(_e69_seed_roll(dice, false))
+		if not seeds.is_empty():
+			for sk in seeds:
+				e69["shed"][str(sk)] = int(e69["shed"].get(str(sk), 0)) + 1
+			log_event(Words.E69["log"]["seeds"] % ", ".join(seeds.map(func(x): return str(Words.E69["seeds_low"][str(x)]))))
+	m.erase("e69_seeds")
+	_e69_convoys_tick()
+	_e69_market_tick()
+	_e69_plots_tick()
+
+
+func _e69_seed_roll(dice: RandomNumberGenerator, hard: bool) -> String:
+	if hard and dice.randf() < Data.ALLOT69_MARROW_SHARE:
+		return "marrow"
+	var pool: Array = Data.SEEDS69_ORDER.filter(func(k): return k != "marrow")
+	return str(pool[dice.randi_range(0, pool.size() - 1)])
+
+
+## A hard man's seed (0.15.0's hook): into the run's, home with it (lost with a death).
+func _e69_hard_seed(m: Dictionary) -> void:
+	if _dry_on or not e69_allot_open() or bool(m.get("dry", false)):
+		return
+	var dice := RandomNumberGenerator.new()
+	dice.seed = hash([rng.state, int(m.get("kills", 0)), "e69_hard"])
+	if dice.randf() < Data.ALLOT69_HARD_ODDS:
+		var seeds: Array = Array(m.get("e69_seeds", []))
+		seeds.append(_e69_seed_roll(dice, true))
+		m["e69_seeds"] = seeds
+
+
+# ---- the convoys
+
+func _e69_convoys_tick() -> void:
+	var cs: Array = e69["convoys"]
+	for k in range(cs.size() - 1, -1, -1):
+		cs[k]["passes"] = int(cs[k]["passes"]) - 1
+		if int(cs[k]["passes"]) <= 0:
+			log_event(Words.E69["log"]["passed"] % str(Words.E69["routes"][int(cs[k]["route"])]))
+			cs.remove_at(k)
+	if not e69_convoys_open():
+		return
+	e69["convoy_next"] = int(e69["convoy_next"]) - 1
+	if int(e69["convoy_next"]) <= 0 and cs.size() < Data.CONVOY69_HELD:
+		e69_hear_convoy()
+		e69["convoy_next"] = Data.CONVOY69_EVERY
+
+
+## Kev hears one: its cargo rolled now (the same every read), its route, its level, when it passes.
+func e69_hear_convoy() -> Dictionary:
+	var dice := RandomNumberGenerator.new()
+	e69["convoy_seq"] = int(e69["convoy_seq"]) + 1
+	dice.seed = hash([rng.state, int(e69["convoy_seq"]), int(e69["runs"]), "e69_convoy"])
+	var lv: int = maxi(Data.REACH_START, deepest_cleared_level() + dice.randi_range(int(Data.CONVOY69_OVER[0]), int(Data.CONVOY69_OVER[1])))     # (merge 69) one reach: the top bar's, the furthest level cleared
+	var kind: String = _e69_pick_share(dice, Data.CONVOY69_KINDS)
+	var it: Dictionary = _e69_cargo(kind, lv, dice)
+	if it.is_empty():
+		kind = "slot"
+		it = _e69_cargo(kind, lv, dice)
+	var c := {"id": int(e69["convoy_seq"]), "kind": kind, "item": it, "level": lv, "route": dice.randi_range(0, Words.E69["routes"].size() - 1),
+		"site": dice.randi_range(0, Data.TIERS.size() - 1), "zone": dice.randi_range(0, Data.ZONES.size() - 1),
+		"passes": dice.randi_range(int(Data.CONVOY69_PASS_RUNS[0]), int(Data.CONVOY69_PASS_RUNS[1])), "men": Data.CONVOY69_MEN,
+		"clock_s": Data.CONVOY69_CLOCK_S, "line": dice.randi_range(0, Words.E69["kev"].size() - 1)}
+	c["cargo"] = {"kind": kind, "name": Items.full_name(it), "slot": str(it.get("slot", ""))}
+	e69["convoys"].append(c)
+	e69["heard_new"] = true
+	log_event(Words.E69["log"]["heard"] % [Items.full_name(it), str(Words.E69["routes"][int(c["route"])])])
+	chron("convoy_heard", {"id": int(c["id"]), "kind": kind, "level": lv, "name": Items.full_name(it)})
+	return c
+
+
+static func _e69_pick_share(dice: RandomNumberGenerator, shares: Dictionary) -> String:
+	var total := 0.0
+	for k in shares:
+		total += float(shares[k])
+	var x: float = dice.randf() * total
+	for k in shares:
+		x -= float(shares[k])
+		if x <= 0.0:
+			return str(k)
+	return str(shares.keys()[0])
+
+
+## A cargo or a lot: "slot" a legendary for a slot with one affix at the top tier; "unique" a unique (not a mythic,
+## not issued kit); "set" a set piece; "issued" an issued piece. At level `lv`. {} if none can be made.
+func _e69_cargo(kind: String, lv: int, dice: RandomNumberGenerator) -> Dictionary:
+	var tier_v: int = loot_tier_at(lv)
+	var it := {}
+	if kind == "unique":
+		var us: Array = Data.UNIQUES.filter(func(u): return not u.get("mythic", false) and str(u.get("slot", "")) in Data.SLOTS and not u.get("boss", false))
+		if us.is_empty():
+			return {}
+		it = Items.roll_unique(us[dice.randi_range(0, us.size() - 1)], dice, lv, tier_v)
+	elif kind == "set":
+		var st: Dictionary = Data.SETS[dice.randi_range(0, Data.SETS.size() - 1)]
+		var pcs: Array = st["pieces"]
+		it = Items.roll_set_piece(str(st["name"]), pcs[dice.randi_range(0, pcs.size() - 1)], dice, lv, tier_v)
+	elif kind == "issued":
+		var sls: Array = Data.SLOTS.filter(func(s): return not issued_def(s).is_empty())
+		if sls.is_empty():
+			return {}
+		it = issued_piece(str(sls[dice.randi_range(0, sls.size() - 1)]), lv, true)
+	else:
+		var gear: Array = ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Boots", "Charm"]
+		var slot: String = str(gear[dice.randi_range(0, gear.size() - 1)])
+		it = Items.roll(slot, tier_v, dice, 0.0, true, false, "", "", 0.0, 0, lv)
+		var tries := 0
+		while int(it["rarity"]) < Data.RARITIES.size() - 1 and tries < 8:
+			if not Items.add_affix(it, dice):
+				break
+			tries += 1
+		var best := -1
+		for k in range(it["affixes"].size()):
+			var d: Dictionary = Items.affix_def_for(str(it["affixes"][k]["stat"]), slot)
+			if not d.is_empty() and Items.t67_can(d):
+				best = k
+				break
+		if best >= 0:
+			it["affixes"][best] = Items.roll_affix(Items.affix_def_for(str(it["affixes"][best]["stat"]), slot), Items.ilvl(it), dice, Data.T67_TIER)
+	if it.is_empty():
+		return {}
+	it["ilvl"] = maxi(Items.ilvl(it), lv) if kind != "issued" else lv
+	return it
+
+
+func e69_convoy(k: int) -> Dictionary:
+	var cs: Array = e69["convoys"]
+	return cs[k] if k >= 0 and k < cs.size() else {}
+
+
+func e69_convoy_cargo_item(k: int) -> Dictionary:
+	return Dictionary(e69_convoy(k).get("item", {}))
+
+
+## The crew who can take a role: every class played but the runner's.
+func e69_crew_for_roles() -> Array:
+	return crew_played().filter(func(c): return str(c) != cls)
+
+
+func e69_role_effect(who: String, role: String) -> Dictionary:
+	var r: Dictionary = Data.CONVOY69_ROLES.get(who, {})
+	if role == "hold":
+		return {"clock_pct": int(r.get("hold", 0))}
+	if role == "crack":
+		return {"men_pct": int(r.get("crack", 0))}
+	return {}
+
+
+func _e69_men(c: Dictionary, crack: String) -> int:
+	return maxi(1, int(round(float(c["men"]) * (1.0 + float(e69_role_effect(crack, "crack").get("men_pct", 0)) / 100.0))))
+
+
+func _e69_clock(c: Dictionary, hold: String) -> float:
+	return float(c["clock_s"]) * (1.0 + float(e69_role_effect(hold, "hold").get("clock_pct", 0)) / 100.0)
+
+
+## The convoy as a signal on its site for a read or the hit (the signals' own path: its level, its crew).
+func _e69_sig(c: Dictionary, hold: String, crack: String) -> Dictionary:
+	var site: int = int(c["site"])
+	return {"id": -int(c["id"]), "site": site, "zone": int(c["zone"]), "depth": depth_for_level(site, int(c["level"])), "codes": [], "papers": [],
+		"head": false, "convoy": false, "line": 0, "grade": 1, "e69": int(c["id"]), "e69_men": _e69_men(c, crack), "e69_clock": _e69_clock(c, hold)}
+
+
+## effective()'s convoy (BUILD69-E): the men on the lorry and its clock, whatever the site would have.
+func e69_figures(i: int, e: Dictionary) -> void:
+	if _sig.is_empty() or int(_sig["site"]) != i or not _sig.has("e69"):
+		return
+	e["pool"] = int(_sig["e69_men"])
+	e.erase("boss")
+	var plain: float = (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * (int(e["pool"]) + Data.CLOCK_GANGS)) * (0.5 if e.get("clock_half", false) else 1.0)
+	e["clock_mult"] = float(_sig["e69_clock"]) / maxf(1.0, plain)
+	e["e69_convoy"] = true
+
+
+func _e69_roles_block(hold: String, crack: String) -> String:
+	var crew: Array = e69_crew_for_roles()
+	for who in [hold, crack]:
+		if who != "" and not (who in crew):
+			return Words.E69["block"]["not_crew"]
+	if hold != "" and hold == crack:
+		return Words.E69["block"]["roles"]
+	return ""
+
+
+## The read on a hit: {"men", "clock_s", "fight_s", "odds" (a first guess: the fight's estimate against the clock), "word"}.
+var _e69_reads := {}                 # (fix 69) the last camp read a convoy and roles: what the board keeps while a run's out (not saved)
+func e69_convoy_read(k: int, hold: String, crack: String) -> Dictionary:
+	var c := e69_convoy(k)
+	if c.is_empty():
+		return {}
+	var out := {"men": _e69_men(c, crack), "clock_s": _e69_clock(c, hold), "fight_s": -1.0, "odds": 0.0, "word": ""}
+	var rkey := "%s|%s|%s" % [str(c.get("id", -1)), hold, crack]
+	if not (_sig.is_empty() and mission == null):
+		# (fix 69) a run out: the last read made at camp stands, else "after the run" - never a red Long shot from odds 0
+		if _e69_reads.has(rkey):
+			return (_e69_reads[rkey] as Dictionary).duplicate()
+		out["word"] = "after"
+		out["after"] = true
+		return out
+	if _sig.is_empty() and mission == null:
+		var sg := _e69_sig(c, hold, crack)
+		_sig_on(sg)
+		var i: int = int(sg["site"])
+		var t := effective(i)
+		var dps_v: float = dps() * edge_read(t) * pace() * float(t["pace"])
+		var fight: float = float(t["pool"]) * float(t["hp"]) / dps_v if dps_v > 0.0 else 1e9
+		var clk: float = clock_budget(t)
+		_sig_off()
+		out["fight_s"] = fight
+		out["clock_s"] = clk
+		out["odds"] = clampf(1.5 - fight / maxf(1.0, clk), 0.05, 0.95)
+	for row in Data.CONVOY69_ODDS_WORDS:
+		if float(out["odds"]) >= float(row[0]):
+			out["word"] = str(row[1])
+			break
+	_e69_reads[rkey] = out.duplicate()
+	return out
+
+
+func e69_convoy_block(k: int, hold := "", crack := "") -> String:
+	if not e69_convoys_open():
+		return Words.E69["block"]["shut"]
+	if e69_convoy(k).is_empty():
+		return Words.E69["block"]["no_convoy"]
+	if not can_deploy() or not _sig.is_empty() or away():
+		return Words.E69["block"]["on_a_run"]
+	return _e69_roles_block(hold, crack)
+
+
+## Hit the lorry: a timed run on its route at its level; mission["e69_convoy"] holds the convoy. Off the Radio whatever happens.
+func e69_convoy_hit(k: int, hold: String, crack: String) -> bool:
+	if e69_convoy_block(k, hold, crack) != "":
+		return false
+	var c: Dictionary = e69_convoy(k)
+	var sg := _e69_sig(c, hold, crack)
+	_sig_on(sg)
+	deploy(int(sg["site"]))
+	if mission == null:
+		_sig_off()
+		return false
+	e69["convoys"].remove_at(k)
+	mission["signal"] = sg
+	mission["e69_convoy"] = c
+	mission["e69_roles"] = [hold, crack]
+	chron("convoy_hit", {"id": int(c["id"]), "level": int(c["level"]), "hold": hold, "crack": crack})
+	return true
+
+
+func e69_convoy_pass(k: int) -> bool:
+	var c := e69_convoy(k)
+	if c.is_empty():
+		return false
+	e69["convoys"].remove_at(k)
+	log_event(Words.E69["log"]["passed"] % str(Words.E69["routes"][int(c["route"])]))
+	return true
+
+
+## The hit's end (from _signal_done): won, the cargo home whatever the room, a seed now and then; else it's gone.
+func e69_convoy_done(m: Dictionary, won: bool) -> void:
+	var c: Dictionary = m.get("e69_convoy", {})
+	if c.is_empty():
+		return
+	var it: Dictionary = Items.one_of(Dictionary(c["item"]))
+	chron("convoy_done", {"id": int(c["id"]), "won": won, "name": Items.full_name(it)})
+	if not won:
+		log_event(Words.E69["log"]["lost"] % Items.full_name(it))
+		return
+	stash.append(it)
+	_read(it, true)
+	log_event(Words.E69["log"]["won"] % Items.full_name(it))
+	if e69_allot_open():
+		var dice := RandomNumberGenerator.new()
+		dice.seed = hash([rng.state, int(c["id"]), "e69_seed"])
+		if dice.randf() < Data.CONVOY69_SEED_ODDS:
+			var sk := _e69_seed_roll(dice, false)
+			e69["shed"][sk] = int(e69["shed"].get(sk, 0)) + 1
+			log_event(Words.E69["log"]["seeds"] % str(Words.E69["seeds_low"][sk]))
+
+
+# ---- the auction
+
+func e69_lot(k: int) -> Dictionary:
+	var ls: Array = e69["market"]["lots"]
+	return ls[k] if k >= 0 and k < ls.size() else {}
+
+
+func _e69_step(lot: Dictionary) -> int:
+	return maxi(1, int(round(float(lot["open"]) * Data.AUCTION69_STEP_PCT / 100.0)))
+
+
+func e69_bid_min(k: int) -> int:
+	var lot := e69_lot(k)
+	return 0 if lot.is_empty() else int(lot["high"]) + _e69_step(lot)
+
+
+func e69_fiat_held() -> int:
+	var n := 0
+	for lot in e69["market"]["lots"]:
+		n += int(lot.get("held", 0))
+	return n
+
+
+func e69_sealed_odds_in() -> int:
+	return Data.AUCTION69_SEALED_MYTHIC_IN
+
+
+func e69_bid_block(k: int, amount: int) -> String:
+	if not e69_auction_open() or not bool(e69["market"]["on"]):
+		return Words.E69["block"]["closed"]
+	var lot := e69_lot(k)
+	if lot.is_empty():
+		return Words.E69["block"]["no_lot"]
+	if str(lot["by"]) == "you":
+		return Words.E69["block"]["leading"]
+	if amount < e69_bid_min(k):
+		return Words.E69["block"]["low"] % fiat_words(float(e69_bid_min(k)))
+	if cash + float(lot.get("held", 0)) < float(amount):
+		return Words.E69["block"]["short"]
+	return ""
+
+
+## A bid: the fiat held from your cash at once (a raise holds only the difference).
+func e69_bid(k: int, amount: int) -> bool:
+	if e69_bid_block(k, amount) != "":
+		return false
+	var lot := e69_lot(k)
+	cash -= float(amount - int(lot.get("held", 0)))
+	lot["held"] = amount
+	lot["you"] = amount
+	lot["high"] = amount
+	lot["by"] = "you"
+	chron("bid", {"lot": k, "fiat": amount})
+	return true
+
+
+## Out of a lot: a held bid back; leading, the best rival's bid stands as the high.
+func e69_drop(k: int) -> bool:
+	var lot := e69_lot(k)
+	if lot.is_empty() or not bool(e69["market"]["on"]) or int(lot.get("you", 0)) <= 0:
+		return false
+	cash += float(lot.get("held", 0))
+	lot["held"] = 0
+	lot["you"] = 0
+	if str(lot["by"]) == "you":
+		_e69_high_of_rivals(lot)
+	return true
+
+
+func _e69_high_of_rivals(lot: Dictionary) -> void:
+	var best := 0
+	var by := ""
+	for r in lot["rivals"]:
+		if int(r["bid"]) > best:
+			best = int(r["bid"])
+			by = str(r["key"])
+	lot["high"] = best
+	lot["by"] = by
+
+
+func _e69_market_open() -> void:
+	var dice := RandomNumberGenerator.new()
+	dice.seed = hash([rng.state, int(e69["runs"]), "e69_market"])
+	var lv: int = maxi(Data.REACH_START, deepest_cleared_level() + Data.AUCTION69_OVER)     # (merge 69) one reach
+	var lots: Array = []
+	var rk: Array = Words.E69["rivals"].keys()
+	var ref: int = e69_lot_ref()     # (merge 69) off the fiat held at the Issue, not the counter's primary (ƒ9-ƒ161 in A's camp)
+	for kind in Data.AUCTION69_KINDS:
+		var it: Dictionary = {} if kind == "sealed" else _e69_cargo(str(kind), lv, dice)
+		if kind != "sealed" and it.is_empty():
+			continue
+		var open: int = maxi(1, int(round(float(maxi(1, ref)) * float(Data.AUCTION69_OPEN_K[kind]))))
+		var a: String = str(rk[dice.randi_range(0, rk.size() - 1)])
+		var b: String = str(rk[dice.randi_range(0, rk.size() - 1)])
+		while b == a:
+			b = str(rk[dice.randi_range(0, rk.size() - 1)])
+		var rivals := [
+			{"key": a, "style": "steady", "bid": open, "top": int(round(open * dice.randf_range(float(Data.AUCTION69_TOP_K[0]), float(Data.AUCTION69_TOP_K[1]))))},
+			{"key": b, "style": "late", "bid": 0, "top": int(round(open * dice.randf_range(float(Data.AUCTION69_TOP_K[0]), float(Data.AUCTION69_TOP_K[1]))))},
+		]
+		lots.append({"kind": kind, "item": it, "name": Words.E69["sealed"] if kind == "sealed" else Items.full_name(it), "level": lv,
+			"open": open, "high": open, "by": a, "you": 0, "held": 0, "rivals": rivals})
+	var mk: Dictionary = e69["market"]
+	mk["on"] = true
+	mk["closes"] = Data.AUCTION69_OPEN_RUNS
+	mk["lots"] = lots
+	mk["seen"] = false
+	log_event(Words.E69["log"]["market"])
+	chron("market", {"lots": lots.size(), "level": lv})
+
+
+func _e69_market_tick() -> void:
+	var mk: Dictionary = e69["market"]
+	if not e69_auction_open():
+		return
+	if not bool(mk["on"]):
+		mk["next"] = int(mk["next"]) - 1
+		if int(mk["next"]) <= 0:
+			_e69_market_open()
+		return
+	var last_run: bool = int(mk["closes"]) <= 1
+	for lot in mk["lots"]:
+		for r in lot["rivals"]:
+			var step := _e69_step(lot)
+			if str(lot["by"]) == str(r["key"]):
+				continue
+			var want: int = int(lot["high"]) + (step * Data.AUCTION69_LATE_STEPS if str(r["style"]) == "late" else step)
+			if str(r["style"]) == "late" and not last_run:
+				continue
+			want = mini(want, int(r["top"]))
+			if want > int(lot["high"]):
+				if str(lot["by"]) == "you" and int(lot.get("held", 0)) > 0:
+					cash += float(lot["held"])           # outbid: your bid back that moment
+					log_event(Words.E69["log"]["outbid"] % [str(lot["name"]), fiat_words(float(lot["held"]))])
+					lot["held"] = 0
+				r["bid"] = want
+				lot["high"] = want
+				lot["by"] = str(r["key"])
+	mk["closes"] = int(mk["closes"]) - 1
+	if int(mk["closes"]) <= 0:
+		_e69_market_close()
+
+
+func _e69_market_close() -> void:
+	var mk: Dictionary = e69["market"]
+	var last: Array = []
+	for lot in mk["lots"]:
+		if str(lot["by"]) == "you":
+			var it: Dictionary = _e69_lot_item(lot)
+			stash.append(it)
+			_read(it, true)
+			last.append({"name": Items.full_name(it), "won": true, "fiat": int(lot["held"])})
+			log_event(Words.E69["log"]["lot_won"] % [Items.full_name(it), fiat_words(float(lot["held"]))])
+			chron("lot_won", {"name": Items.full_name(it), "fiat": int(lot["held"])})
+			lot["held"] = 0                          # spent: out of the game
+		elif int(lot.get("you", 0)) > 0:
+			last.append({"name": str(lot["name"]), "won": false, "fiat": int(lot["you"])})
+			log_event(Words.E69["log"]["lot_lost"] % str(lot["name"]))
+	mk["last"] = last
+	mk["lots"] = []
+	mk["on"] = false
+	mk["next"] = Data.AUCTION69_EVERY
+
+
+## What a won lot hands over: its piece, or the sealed crate opened (one in AUCTION69_SEALED_MYTHIC_IN a mythic, else a unique).
+func _e69_lot_item(lot: Dictionary) -> Dictionary:
+	if str(lot["kind"]) != "sealed":
+		return Items.one_of(Dictionary(lot["item"]))
+	var dice := RandomNumberGenerator.new()
+	dice.seed = hash([rng.state, int(e69["runs"]), int(lot["high"]), "e69_sealed"])
+	if dice.randi_range(1, Data.AUCTION69_SEALED_MYTHIC_IN) == 1:
+		var mu := mythic_pick()
+		if not mu.is_empty():
+			var my := Items.roll_unique(mu, dice, int(lot["level"]))
+			log_event(Words.E69["log"]["sealed_mythic"] % Items.full_name(my))
+			return my
+	var u := _e69_cargo("unique", int(lot["level"]), dice)
+	return u if not u.is_empty() else _e69_cargo("slot", int(lot["level"]), dice)
+
+
+# ---- the allotments
+
+func e69_plots_most() -> int:
+	return Data.ALLOT69_PLOT_REACH.size()
+
+
+func e69_plots_open() -> int:
+	if not e69_allot_open():
+		return 0
+	var n := 0
+	for at in Data.ALLOT69_PLOT_REACH:
+		if deepest_cleared_level() >= int(at):     # (merge 69) one reach
+			n += 1
+	return n
+
+
+func e69_next_plot_reach() -> int:
+	for at in Data.ALLOT69_PLOT_REACH:
+		if deepest_cleared_level() < int(at):
+			return int(at)
+	return -1
+
+
+func e69_plot(p: int) -> Dictionary:
+	var ps: Array = e69["plots"]
+	while ps.size() < e69_plots_open():
+		ps.append({"seed": "", "grown": 0})
+	return ps[p] if p >= 0 and p < e69_plots_open() else {}
+
+
+func e69_plot_left(p: int) -> int:
+	var pl := e69_plot(p)
+	if pl.is_empty() or str(pl["seed"]) == "":
+		return -1
+	return maxi(0, int(Data.SEEDS69[str(pl["seed"])]["runs"]) - int(pl["grown"]))
+
+
+func e69_plot_ready(p: int) -> bool:
+	return e69_plot_left(p) == 0
+
+
+func _e69_plots_tick() -> void:
+	if not e69_allot_open() or not e69_allot_watered():
+		return
+	var said: Array = []
+	for p in range(e69_plots_open()):
+		var pl := e69_plot(p)
+		if str(pl["seed"]) == "" or e69_plot_ready(p):
+			continue
+		pl["grown"] = int(pl["grown"]) + 1
+		if e69_plot_ready(p):
+			said.append(str(Words.E69["seeds_low"][str(pl["seed"])]))
+	if not said.is_empty():
+		log_event(Words.E69["log"]["ready"] % ", ".join(said))
+
+
+func e69_plant(p: int, key: String) -> bool:
+	var pl := e69_plot(p)
+	if pl.is_empty() or str(pl["seed"]) != "" or int(e69["shed"].get(key, 0)) <= 0 or not Data.SEEDS69.has(key):
+		return false
+	e69["shed"][key] = int(e69["shed"][key]) - 1
+	pl["seed"] = key
+	pl["grown"] = 0
+	return true
+
+
+func e69_lift(p: int) -> bool:
+	if not e69_plot_ready(p):
+		return false
+	var pl := e69_plot(p)
+	var key: String = str(pl["seed"])
+	e69["lifted"][key] = int(e69["lifted"].get(key, 0)) + 1
+	pl["seed"] = ""
+	pl["grown"] = 0
+	return true
+
+
+## Why harvest `key` can't be used on the piece (and `stat`, for take-off and raise), or "". `plot` >= 0: that plot's.
+func e69_craft_block(key: String, item_id: int, stat := "", plot := -1) -> String:
+	if not e69_allot_open() or not Data.SEEDS69.has(key):
+		return Words.E69["block"]["shut"]
+	if mission != null:
+		return Words.E69["block"]["on_a_run"]
+	if plot >= 0:
+		if not e69_plot_ready(plot) or str(e69_plot(plot)["seed"]) != key:
+			return Words.E69["block"]["no_harvest"]
+	elif int(e69["lifted"].get(key, 0)) <= 0:
+		return Words.E69["block"]["no_harvest"]
+	var it := item_by_id(item_id)
+	if it.is_empty():
+		return Words.E69["block"]["no_item"]
+	if not (str(it.get("slot", "")) in Data.SLOTS) or Items.is_mag(it):
+		return Words.E69["block"]["not_gear"]
+	if it.has("unique") or it.has("set") or it.get("issued", false) or it.get("mythic", false):
+		return Words.E69["block"]["fixed"]
+	var sd: Dictionary = Data.SEEDS69[key]
+	var affs: Array = it.get("affixes", [])
+	if str(sd["craft"]) == "element":
+		var st: String = "%s_pct" % str(sd["el"])
+		if affs.any(func(a): return str(a["stat"]) == st):
+			return Words.E69["block"]["has_el"]
+		if Items.affix_def_for(st, str(it["slot"])).is_empty() or not (str(it["slot"]) in Items.affix_def_for(st, str(it["slot"])).get("slots", [])):
+			return Words.E69["block"]["no_room"]
+		if affs.size() >= e69_affix_room(it):
+			return Words.E69["block"]["full"]     # (fix 69) at its rarity's count: no stacking elements past it
+		return ""
+	var at: int = _e69_aff_at(it, stat)
+	if at < 0:
+		return Words.E69["block"]["no_stat"]
+	if str(sd["craft"]) == "remove" and affs.size() <= 1:
+		return Words.E69["block"]["last"]
+	if str(sd["craft"]) == "tier" and int(affs[at].get("tier", 1)) >= _e69_tier_cap(it, stat):
+		return Words.E69["block"]["top"]
+	return ""
+
+
+static func _e69_aff_at(it: Dictionary, stat: String) -> int:
+	var affs: Array = it.get("affixes", [])
+	for k in range(affs.size()):
+		if str(affs[k]["stat"]) == stat:
+			return k
+	return -1
+
+
+static func _e69_tier_cap(it: Dictionary, stat: String) -> int:
+	var d: Dictionary = Items.affix_def_for(stat, str(it.get("slot", "")))
+	var top: int = Data.T67_TIER if not d.is_empty() and Items.t67_can(d) else Data.AFFIX_TIERS
+	return mini(top, Items.tier_cap(Items.ilvl(it)))     # (fix 69) never past what the piece's item level opens
+
+
+## The affixes after the craft: sure, its own dice off the piece and the stat, so the preview is what's made.
+func _e69_after(key: String, it: Dictionary, stat: String) -> Array:
+	var affs: Array = Array(it.get("affixes", [])).duplicate(true)
+	var sd: Dictionary = Data.SEEDS69[key]
+	var dice := RandomNumberGenerator.new()
+	dice.seed = hash([int(it.get("id", 0)), key, stat, "e69_craft"])
+	var lv: int = Items.ilvl(it)
+	if str(sd["craft"]) == "element":
+		var st: String = "%s_pct" % str(sd["el"])
+		var t: int = mini(Items.rarity_cap(it), Items.tier_cap(lv))
+		affs.append(Items.roll_affix(Items.affix_def_for(st, str(it["slot"])), lv, dice, maxi(1, t)))
+	elif str(sd["craft"]) == "remove":
+		affs.remove_at(_e69_aff_at(it, stat))
+	else:
+		var at: int = _e69_aff_at(it, stat)
+		var was: Dictionary = affs[at]
+		var nw: Dictionary = Items.roll_affix(Items.affix_def_for(stat, str(it["slot"])), lv, dice, int(was.get("tier", 1)) + 1)
+		if float(nw["value"]) < float(was["value"]):
+			nw["value"] = was["value"]                # a tier up never reads lower
+		affs[at] = nw
+	return affs
+
+
+func e69_craft_preview(key: String, item_id: int, stat := "") -> Dictionary:
+	var it := item_by_id(item_id)
+	if it.is_empty() or not Data.SEEDS69.has(key):
+		return {}
+	var sd: Dictionary = Data.SEEDS69[key]
+	if str(sd["craft"]) != "element" and _e69_aff_at(it, stat) < 0:
+		return {"before": Array(it.get("affixes", [])).duplicate(true), "after": Array(it.get("affixes", [])).duplicate(true)}
+	return {"before": Array(it.get("affixes", [])).duplicate(true), "after": _e69_after(key, it, stat)}
+
+
+func e69_craft(key: String, item_id: int, stat := "", plot := -1) -> bool:
+	if e69_craft_block(key, item_id, stat, plot) != "":
+		return false
+	var it := item_by_id(item_id)
+	it["affixes"] = _e69_after(key, it, stat)
+	if plot >= 0:
+		e69_lift(plot)
+	e69["lifted"][key] = int(e69["lifted"].get(key, 0)) - 1
+	_stats_dirty()
+	log_event(Words.E69["log"]["craft"] % [str(Words.E69["seeds"][key]), Items.full_name(it)])
+	chron("harvest", {"seed": key, "item": Items.full_name(it), "stat": stat})
+	return true
+
+
+# ---- the save
+
+func e69_save() -> Dictionary:
+	return e69.duplicate(true)
+
+
+func e69_load(d: Dictionary) -> void:
+	e69 = _e69_fresh()
+	var s = d.get("e69", {})
+	if not (s is Dictionary):
+		return
+	for k in ["runs", "convoy_seq", "convoy_next"]:
+		e69[k] = int(s.get(k, e69[k]))
+	e69["heard_new"] = bool(s.get("heard_new", false))
+	for c in s.get("convoys", []):
+		var cc: Dictionary = Dictionary(c).duplicate(true)
+		for k in ["id", "level", "route", "site", "zone", "passes", "men", "line"]:
+			cc[k] = int(cc.get(k, 0))
+		cc["clock_s"] = float(cc.get("clock_s", Data.CONVOY69_CLOCK_S))
+		e69["convoys"].append(cc)
+	var mk: Dictionary = Dictionary(s.get("market", {}))
+	var em: Dictionary = e69["market"]
+	em["on"] = bool(mk.get("on", false))
+	em["seen"] = bool(mk.get("seen", false))
+	em["closes"] = int(mk.get("closes", 0))
+	em["next"] = int(mk.get("next", Data.AUCTION69_FIRST))
+	em["last"] = Array(mk.get("last", [])).duplicate(true)
+	for lot in mk.get("lots", []):
+		var l2: Dictionary = Dictionary(lot).duplicate(true)
+		for k in ["open", "high", "you", "held", "level"]:
+			l2[k] = int(l2.get(k, 0))
+		for r in l2.get("rivals", []):
+			r["bid"] = int(r.get("bid", 0))
+			r["top"] = int(r.get("top", 0))
+		em["lots"].append(l2)
+	for pl in s.get("plots", []):
+		e69["plots"].append({"seed": str(pl.get("seed", "")), "grown": int(pl.get("grown", 0))})
+	for k in s.get("shed", {}):
+		e69["shed"][str(k)] = int(s["shed"][k])
+	for k in s.get("lifted", {}):
+		e69["lifted"][str(k)] = int(s["lifted"][k])
+
+
+## (merge 69) The auction's yardstick: the fiat the Issue gave this camp (its card's figure; AUCTION69_FIAT_FLOOR when
+## it has none), at today's prices. A lot opens at it x AUCTION69_OPEN_K: a unique at AUCTION69_UNIQUE_SHARE of it.
+func e69_lot_ref() -> int:
+	var at_issue: float = maxf(float(issue_moment.get("fiat", 0.0)), Data.AUCTION69_FIAT_FLOOR)
+	return maxi(1, int(round(at_issue * Data.AUCTION69_UNIQUE_SHARE * circ_mult())))     # already fiat: the circulation's rise only

@@ -134,6 +134,16 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	var h := Items.headline(it, sim_in.mag_gun(it) if (sim_in != null and Items.is_mag(it)) else null)
 	if Items.is_cure(it):
 		h = [str(Words.CURE_CLEARS.get(Items.cure_of(it), str(h[0]) + " " + str(h[1]))), ""]     # the whole line big (30 Oct, parked item 6): "Stops a bleed"
+	var own_units: Array = []
+	if gun_own and Items.is_gun(it) and sim_in != null:
+		var own: Array = r69_gun_figures(sim_in, it)     # (BUILD69-R) the gun's own figures in its dmg/s's place: a shot, the rate, the magazine, the jams
+		h = [str(own[0][0]).get_slice(" ", 0), ""]     # the figure; its words the unit's first clause
+		var su: String = Words.R69G["shot_unit"]
+		var ss: String = Words.R69G["shot_unit_short"]
+		var rest_long: Array = own.slice(1).map(func(f): return str(f[0]))
+		var rest_short: Array = own.slice(1).map(func(f): return str(f[1]))
+		own_units = [" · ".join([su] + rest_long), " · ".join([su] + rest_short), " · ".join([ss] + rest_short), " · ".join([ss] + rest_short.slice(0, 2)), " · ".join([ss, rest_short[0]]), ss]
+		h[1] = own_units[0]
 	if Items.is_paper(it) and sim_in != null:
 		h = paper_headline(it, sim_in)
 	if (tail is String and tail == "") and Items.base_res_words(it) != "":
@@ -228,6 +238,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		if grade != "" and bonus > 0.0:
 			tchips.append({"forms": ["%s: +%d%% damage" % [grade, int(bonus)], "+%d%% %s" % [int(bonus), Words.mid_base(grade)]], "colour": Pal.ACCENT})
 	_unit.text = h[1]
+	if not own_units.is_empty():
+		_unit.size.x = maxf(10.0, _unit.size.x - 6.0)     # the line check's figure-and-unit read wants a few px spare
+		UI.fit(_unit, own_units)     # (BUILD69-R) the longest of the gun's own figures that fits
 	if mag_grade != "" and sim_in != null and sim_in.mag_gun(it) is Dictionary:
 		var uw: float = ceilf(UI.text_width(_unit, str(h[1])))
 		_unit_tail.text = UI.dots(Words.MAG_WORDS["feeds_low"] % Words.mid_base(str(sim_in.mag_gun(it)["base"])))     # the house capital after "·", measured as shown
@@ -486,3 +499,27 @@ func text_nodes() -> Array:
 ## The figure and its unit share a row: the pair the fit check judges.
 func line_pairs() -> Array:
 	return [[_figure, _unit]]
+
+
+# ------------------------------------------------------------------ (BUILD69-R) a gun's own figures
+
+## Set by the gear screens' compare (the pick panel): a gun's headline is its own figures - damage a shot, then the rate,
+## the magazine and the jams - in its dmg/s's place (the Kit mockup's table; endgame_rail.md §4). Elsewhere as it was.
+var gun_own := false
+const Fmt := preload("res://scripts/ui/fmt.gd")
+
+
+## A gun's own figures, each [long, short]: "1,840 a shot", "0.9 a second", "8 rounds", "jams 1 in 60" / "never jams".
+static func r69_gun_figures(sim, gun: Dictionary) -> Array:
+	var b: Dictionary = Items.base_of(gun)
+	var rof: float = maxf(float(b.get("rof", 1.0)), 0.0001)
+	var shot: float = Items.dps_whole(gun) / rof
+	var out: Array = [[Words.R69G["shot"] % Fmt.group(int(round(shot))), Words.R69G["shot_short"] % Fmt.short_num(shot)],
+		[Words.R69G["rate"] % rof, Words.R69G["rate_short"] % rof]]
+	var mag: int = Items.mag_size(gun)
+	if mag > 0:
+		out.append([Words.R69G["mag"] % mag, Words.R69G["mag_short"] % mag])
+	var jam: float = sim.f66_jam_pct(gun) if sim != null else 0.0
+	var every: int = int(round(100.0 / jam)) if jam > 0.0 else 0
+	out.append([Words.R69G["jams"] % every, Words.R69G["jams_short"] % every] if jam > 0.0 else [Words.R69G["never"], Words.R69G["never_short"]])
+	return out

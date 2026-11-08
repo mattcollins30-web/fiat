@@ -17,6 +17,7 @@ extends Control
 ## Signals: `acted` after anything changes.
 
 signal acted
+signal went_out                     # (BUILD69-R) Set off sent the runner: the shell goes to the Map with the run open
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -118,7 +119,7 @@ const VIEW_W := 152
 const VIEW_H := 44
 const VIEW_GAP := 8
 const VIEW_Y := 30
-const VIEWS_X := Pal.GRID_W - PAD - 4 * VIEW_W - 3 * VIEW_GAP
+const VIEWS_X := Pal.GRID_W - PAD - 5 * VIEW_W - 4 * VIEW_GAP     # (BUILD69-A) five: the convoys
 const HEARD_X := 470
 const HEARD_Y := HEAD_H - 44
 const BITE := Color("ee7663")
@@ -134,7 +135,7 @@ var selected := 0                   # the signal picked, by its place on the Rad
 var chosen: Array = []              # the papers in the decoder, by id, in order
 var paper_page := 0
 var view := "air"                   # "air": papers and signals; "map": the Dial; "town": the rebuild (18 Oct)
-const VIEWS := ["air", "map", "town", "story"]     # Kev's story its own (20 Oct, Matt: no payoff on screen)
+const VIEWS := ["air", "map", "town", "story", "convoys"]     # Kev's story its own (20 Oct, Matt: no payoff on screen); (BUILD69-A) the convoys
 var _kicker: Label
 var _headline: Label
 var _unit: Label
@@ -312,6 +313,11 @@ func _init() -> void:
 		acted.emit())
 	_air.add_child(tuning_ov)
 	_u51_build_loot()                             # the Kit's loot rules by the signals' title (BUILD51-U, item 4)
+	_convoys = ConvoysView.new()                  # (BUILD69-A) the convoys, the fifth view (with the County)
+	_convoys.visible = false
+	_convoys.acted.connect(func(): acted.emit())
+	_convoys.went_out.connect(func(): went_out.emit())     # (fix 69) a convoy hit lands on the Map, as Set off
+	add_child(_convoys)
 	# the tab bar over every view's band (28 Oct, RadioAir: "not small buttons lost in the painting")
 	_view_bar = UI.panel(self, Rect2(VIEWS_X - 6, VIEW_Y - 6, Pal.GRID_W - PAD - VIEWS_X + 12, VIEW_H + 12), UI.box(Color(Pal.BG, 0.86), 10, 1, Pal.CARD_LINE))
 	for k in range(VIEWS.size()):
@@ -848,6 +854,7 @@ func show_state(s) -> void:
 	UI.fit_button(_views[3], ["The story"] if open else ["The story · locked", "The story"])
 	for k in range(1, VIEWS.size()):
 		_views[k].disabled = not open
+	_a69_tab()                                    # (BUILD69-A) the convoys' tab: shut till the County
 	UI.fit(_view_note, ["" if open else "The Dial, the town and the story open after the Quartermaster", "" if open else "Locked till the Quartermaster"])
 	_view_note.visible = not open
 	for k in range(VIEWS.size()):
@@ -856,6 +863,11 @@ func show_state(s) -> void:
 	_atlas.visible = view == "map"
 	_town.visible = view == "town"
 	_story.visible = view == "story"
+	_convoys.visible = view == "convoys"          # (BUILD69-A)
+	if view == "convoys":
+		_shown = ""
+		_convoys.show_state(sim)
+		return
 	if view == "story":
 		_shown = ""
 		_story.show_state(sim)
@@ -1532,10 +1544,13 @@ func _on_crew(k: int) -> void:
 
 
 func _on_set_off() -> void:
-	if sim.deploy_signal(selected):
+	var sent: bool = sim.deploy_signal(selected)
+	if sent:
 		selected = 0
 	_shown = ""
 	acted.emit()
+	if sent:
+		went_out.emit()     # (BUILD69-R) as the Map's Set off: the run on screen
 
 
 ## A night on the air from the picked signal (BUILD50 N).
@@ -1587,6 +1602,8 @@ func _pick_other(k: int) -> void:
 func _pick_view(v: String) -> void:
 	if v != "air" and not sim.campaign_done():
 		return
+	if v == "convoys" and not sim.e69_convoys_open():     # (BUILD69-A)
+		return
 	view = v
 	_shown = ""
 	show_state(sim)
@@ -1620,6 +1637,8 @@ func _text_nodes_base() -> Array:
 		return out + _town.text_nodes()
 	if view == "story":
 		return out + _story.text_nodes()
+	if view == "convoys":
+		return out + _convoys.text_nodes()        # (BUILD69-A)
 	out.append_array([_kicker, _headline, _unit, _sub, _heard])
 	out.append_array(_chips.text_nodes())
 	for l in _quiet:
@@ -1702,6 +1721,8 @@ func line_pairs() -> Array:
 		return _town.line_pairs()
 	if view == "story":
 		return _story.line_pairs()
+	if view == "convoys":
+		return _convoys.line_pairs()              # (BUILD69-A)
 	return [[_headline, _unit]]
 
 
@@ -1770,3 +1791,24 @@ func close_loot() -> void:
 	_shown = ""
 	acted.emit()
 
+
+# ------------------------------------------------------------------ (BUILD69-A) the convoys, the fifth view
+
+const ConvoysView := preload("res://scripts/ui/convoys_view.gd")
+var _convoys                                      # convoys_view.gd
+
+
+## The convoys' tab: open with the County's first place (sim.e69_convoys_open); shut, it says so and can't be pressed;
+## a shut tab never holds the view.
+func _a69_tab() -> void:
+	var on: bool = sim.e69_convoys_open()
+	var k: int = VIEWS.find("convoys")
+	UI.fit_button(_views[k], [Words.A69["c_tab"]] if on else [Words.A69["c_tab_locked"], Words.A69["c_tab"]])
+	_views[k].disabled = not on
+	if view == "convoys" and not on:
+		view = "air"
+
+
+## For the tests: the convoys' view.
+func convoys_view():
+	return _convoys

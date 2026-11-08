@@ -25,10 +25,22 @@ const NAME_H := 38
 const BADGE_H := 30
 const BADGE_GAP := 2
 const STACK_H := NAME_H + BADGE_GAP + BADGE_H
+## (BUILD69-R) The status as a chip at the row's top right (8 Nov, docs/design/endgame_rail.md §4, the Main mockup): a
+## word in its tone's colour on a dark tint of it, so ten rows fit and the name keeps the row's middle. The name drops
+## under the chip only when the two would meet; in a row too short for that the name goes to the floor size.
+const CHIP_FONT := Pal.CELL_TEXT_BIG    # 18: the mockup's 13 at its 1920 (a floor-sized chip ran into the names)
+const CHIP_H := 23
+const CHIP_PAD := 8                     # each side of the chip's word
+const CHIP_TOP := 1
+const CHIP_RIGHT := 8                   # the chip's right edge to the row's
+const CHIP_TINT := 0.26                 # the chip's ground: its tone at this share over the panel
+const NAME_SMALL := Pal.FLOOR           # the name in a row too short for the chip over it
+const NAME_SMALL_H := 31
+const STAMP_PAD := 4                    # the stamp's least space above and below in a short row (the glyph's space cut)
 ## The rail's glyphs (13 Oct, the campaign manifest): art/rail/, drawn for the rooms as they're named now; the five a
 ## boss opens are the things that open them (the deeds, the fitter's kit, the vet's bag, the ledger, the military radio).
 const GLYPH_OF := {"The Pitch": "rail/yard", "Stats": "rail/stats", "The Kit": "rail/runner", "The Map": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
-	"The Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio"}
+	"The Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio", "Bunkhouse": "rail/bunkhouse"}     # the Bunkhouse (BUILD69-R): the Pitch's own picture
 const STAMP_PAINTED := Color("4b525a")   # a painting's stamp, lighter (13 Oct, Matt: the dark ones sank into the dark)
 
 var room: String
@@ -58,8 +70,9 @@ func _init(room_name: String) -> void:
 	_stamp = UI.panel(self, Rect2(STAMP_X, 0, STAMP, STAMP), UI.box(Pal.STAMP, 8, 1, Pal.CARD_LINE))
 	_glyph = UI.glyph(_stamp, Rect2(9, 9, STAMP - 18, STAMP - 18), GLYPH_OF.get(room_name, "yard"), Pal.TEXT_2)
 	_name = UI.label(self, Rect2(TEXT_X, 0, Pal.RAIL_W - TEXT_X - 18, NAME_H), room_name, "SemiBold", Pal.NAME, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_badge = UI.panel(self, Rect2(TEXT_X, NAME_H + BADGE_GAP, 96, BADGE_H), UI.box(Pal.WARN, 15))
-	_badge_label = UI.label(_badge, Rect2(0, 0, 96, BADGE_H), "", "SemiBold", Pal.FLOOR, Pal.ACCENT_TEXT,
+	_badge = UI.panel(self, Rect2(TEXT_X, CHIP_TOP, 96, CHIP_H), UI.box(Pal.WARN, 6))     # the chip (BUILD69-R)
+	_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_badge_label = UI.label(_badge, Rect2(0, 0, 96, CHIP_H), "", "SemiBold", CHIP_FONT, Pal.WARN,
 			HORIZONTAL_ALIGNMENT_CENTER, false)
 	_badge.visible = false
 	_dot = UI.panel(self, Rect2(STAMP_X + STAMP - 12, 0, 18, 18), UI.box(Pal.WARN, 9, 2, Pal.PANEL))
@@ -79,7 +92,12 @@ func _init(room_name: String) -> void:
 func set_row_height(h: float) -> void:
 	custom_minimum_size.y = h
 	size.y = h
-	_stamp.position.y = floorf((h - STAMP) / 2.0)
+	var st: float = minf(STAMP, h - 2 * STAMP_PAD)     # (BUILD69-R) a short row's stamp gives up its space first
+	_stamp.size = Vector2(st, st)
+	_glyph.position = Vector2(9, 9) * st / STAMP
+	_glyph.size = Vector2(st, st) - 2 * _glyph.position
+	_stamp.position.x = STAMP_X + floorf((STAMP - st) / 2.0)
+	_stamp.position.y = floorf((h - st) / 2.0)
 	_dot.position.y = _stamp.position.y - 6
 	_rule.position.y = h - 1
 	_place()
@@ -109,15 +127,25 @@ func _tip() -> void:
 	tooltip_text = "\n".join(lines)
 
 
-## The name centred in the row; with a badge, the name up and the badge under it.
+## (BUILD69-R) The name centred in the row; the chip at the top right. When the chip reaches back over the name's
+## words the name goes under it, at the floor size if the row's too short for the name whole under the chip.
 func _place() -> void:
 	var h: float = size.y
-	if _badge.visible:
-		var top := floorf((h - STACK_H) / 2.0)
-		_name.position.y = top
-		_badge.position.y = top + NAME_H + BADGE_GAP
-	else:
-		_name.position.y = floorf((h - NAME_H) / 2.0)
+	_badge.position = Vector2(size.x - CHIP_RIGHT - _badge.size.x, CHIP_TOP)
+	_name.add_theme_font_size_override("font_size", Pal.NAME)
+	_name.size.y = NAME_H
+	_name.position.y = floorf((h - NAME_H) / 2.0)
+	if not _badge.visible:
+		return
+	var chip_foot: float = CHIP_TOP + CHIP_H
+	if TEXT_X + UI.text_width(_name, _name.text) + 6.0 <= _badge.position.x or _name.position.y >= chip_foot:
+		return
+	if chip_foot + NAME_H <= h - 1.0:
+		_name.position.y = chip_foot
+		return
+	_name.add_theme_font_size_override("font_size", NAME_SMALL)
+	_name.size.y = NAME_SMALL_H
+	_name.position.y = maxf(chip_foot, floorf((h - NAME_SMALL_H) / 2.0))
 
 
 ## A room a head hasn't opened yet (13 Oct): not pressable, its glyph dimmed, its name scrambled (20 Oct, Matt: no "Shut").
@@ -150,12 +178,19 @@ func show_status(d: Dictionary) -> void:
 		(_dot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(d.get("badge_tone", "warn"))
 	_tip()
 	if word != "":
-		# the pill hugs its word, under the name
-		var w := ceilf(UI.text_width(_badge_label, word)) + 2 * BADGE_PAD
+		# the chip hugs its word (BUILD69-R): the tone's colour on a dark tint of it
+		var w := ceilf(UI.text_width(_badge_label, word)) + 2 * CHIP_PAD
 		_badge.size.x = w
 		_badge_label.size.x = w
-		(_badge.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(d.get("badge_tone", "warn"))
+		var tone: Color = Pal.tone_color(d.get("badge_tone", "warn"))
+		(_badge.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.PANEL.lerp(tone, CHIP_TINT)
+		_badge_label.add_theme_color_override("font_color", tone)
 	_place()
+
+
+## (BUILD69-R) The chip's word as shown ("" none; a folded row's is the dot's).
+func chip_word() -> String:
+	return _badge_label.text
 
 
 func _style(on: bool) -> void:
@@ -177,7 +212,13 @@ func _style(on: bool) -> void:
 func badge_gap() -> float:
 	if not _badge.visible:
 		return INF
-	return Pal.RAIL_W - 18 - (_badge.position.x + _badge.size.x)
+	# (BUILD69-R) the chip at the top right: INF when the name sits under it or clear of it on the line, else the
+	# pixels between the name's words and the chip
+	var fh: float = _name.get_theme_font("font").get_height(_name.get_theme_font_size("font_size"))
+	var top: float = _name.position.y + (maxf(_name.size.y, fh) - fh) / 2.0
+	if top >= _badge.position.y + _badge.size.y - 0.5:
+		return INF
+	return _badge.position.x - (_name.position.x + UI.text_width(_name, _name.text))
 
 
 func text_nodes() -> Array:

@@ -25,8 +25,11 @@ func _row_said(b, slot: float, where: String) -> void:
 	var fh: float = n.get_theme_font("font").get_height(n.get_theme_font_size("font_size"))
 	var top: float = n.position.y + (maxf(n.size.y, fh) - fh) / 2.0
 	var bottom: float = top + fh
-	var foot: float = b._badge.position.y if b._badge.visible else slot - 1.0
-	if top < 0.0 or bottom > foot or (b._badge.visible and b._badge.position.y + b._badge.size.y > slot - 1.0):
+	# (BUILD69-R) the chip at the row's top right: the name's words clear of it, both inside the row
+	var UIv = load("res://scripts/ui/ui.gd")
+	var name_drawn := Rect2(n.position.x, top, UIv.text_width(n, n.text), fh)
+	var chip_meets: bool = b._badge.visible and name_drawn.intersects(Rect2(b._badge.position, b._badge.size))
+	if top < 0.0 or bottom > slot - 0.5 or chip_meets or (b._badge.visible and b._badge.position.y + b._badge.size.y > slot - 1.0):
 		bad.append("%s %s: the name drawn %.0f-%.0f, the badge %s, the row %.0f" % [b.room, where, top, bottom, str([b._badge.position.y, b._badge.position.y + b._badge.size.y]) if b._badge.visible else "-", slot])
 
 

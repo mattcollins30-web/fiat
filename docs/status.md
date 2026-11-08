@@ -4,7 +4,23 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (8 Nov, midday):** 0.15.2 for a fresh save (SAVE_VERSION 28) - the web, build 3 of 4: paths halved (1,549 nodes
+- **Now (8 Nov, afternoon):** 0.15.3 for a fresh save (SAVE_VERSION 29) - the endgame and the screens, build 4 of 4,
+  the last of milestone 0.15's list: the convoys (the Radio's fifth tab, from the County's first place), the auction
+  (the Fence's "Back room", from the Issue), the plots (the Workshop's sixth view, from the pumping station), the
+  training dummy (the Stats page's Attack card; "Test on the dummy ›" from the Kit and the pick), the totals and the
+  Upgrade verdict off every gear screen (the Kit, the pick, the Fence, the Workshop, the stash's ▲; a gun shows its own
+  figures), REACH in the top bar, the Bunkhouse as the rail's tenth room, every status a chip at its row's top right,
+  the Radio's Set off (and a convoy's hit, the Bunkhouse's Fetch) landing on the Map. Next: Matt plays 0.15 from fresh;
+  the short balance pass (Matt, 7 Nov); the art manifest for the borrowed pictures (boots, the uniques, the routes and
+  plots) once it reads with test art.
+- **Matt's calls (8 Nov): "1-fix it, 2-fix it, 3-keep it, 4-keep it."** Built into 0.15.3 before its commit: (1) a
+  head's drop (and the runner's own piece swapped out) comes home past a full stash, marked r69_home / r69_own, nothing
+  else does; (2) the County's want is 3/4/6/9 (all nine slots wear and stamp at the Counting House's level). Kept: the
+  Harvest chip on the Workshop row; the dummy in the Attack card. Also fixed: a fight frame-time spike on Matt's machine
+  since 0.15.1 (p95 26-32 ms against 16; the Kit's picture warm-up ran during fights, and the headshot pop's spot
+  search tried all 4,941 spots) - the warm-up waits out a fight, the pop search the nearest 600. Open: the Bunkhouse
+  room laid out as its mockup (a follow-up after the playtest).
+- **Before (8 Nov, midday):** 0.15.2 for a fresh save (SAVE_VERSION 28) - the web, build 3 of 4: paths halved (1,549 nodes
   to 1,374; a track keystone 10 steps from the start, was 14; the capstone 14, was 18), fillers in 25 families by the
   notable each path leads to, 3-4 kinds rotating, never three of a kind (by name or by effect) in a row (the Poacher's
   12 Practised in a row is gone), each class's power within 2.4% of 0.15.1 (more a point); six new notables, one a
@@ -218,6 +234,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   8. The release candidate: the version, a full smoke, the balance gates green, Matt's final play - to friends.
   Open (Matt, not urgent): how many friends and on what; how it reaches them (a zip, a private itch.io page, a Steam
   playtest); a date.
+- **For the balance pass (0.15.3, 8 Nov):** the convoys' odds are an estimate off the fight and the clock (the tile says
+  "about"), the auction's lots price off the fiat the Issue gave x0.25 (a unique; set 0.45, issued 0.25, sealed 0.625
+  of that), the plots' growth (runs a seed), the dummy's 30 s; all *69 constants.
 - **For the balance pass (0.15.1, 8 Nov):** nothing caps how much later the gangs come: boots' base and affix, the
   helmet and charm lines, then the Postman's x1.2, the Groundsman's x1.3 and the Lollipop multiply (~2.5-2.8x). T6's
   rate (1 in 40 from level 50). The new stats don't count in Items.score yet (the bot and the arrows undervalue them;
@@ -8156,3 +8175,27 @@ Build 3 of the four (docs/design/endgame_rail.md section 3; Matt 22 Oct: "more n
   Crackling, Barbed, Laden, Full of beans (clashes with Charge, An edge, Deeper pockets, the Bench's Fit), Body count
   (the glossary's "never a headcount"), Covering fire (beside the Doorman's "Heads down"), lines in the sentence voice.
 - Smoke green, lint 0. VERSION 0.15.2, SAVE_VERSION 28.
+
+## 0.15.3: the endgame and the screens (2026-11-08)
+
+Build 4 of the four (docs/design/endgame_rail.md section 4), the last of the frozen list.
+
+- The activities' sim (builder E): the convoys (the cargo named ahead, two of the crew - one holds the road for more
+  clock, one cracks the cargo for fewer men - a timed run at your reach + a little, win the cargo or lose it; the
+  bot hits at "about 70%"), the auction (market day every few runs, 4 lots, rivals' bids rising as you run, an outbid
+  bid back, fiat spent on a win), the plots (seeds from crates and hard men, growing by runs while the pumping
+  station runs, a harvest a sure craft: an element, an affix off, a tier up to the item's cap; the preview the
+  result). One reach for all: the furthest level cleared.
+- The screens (builder A): the convoys, the back room, the plots, as their mockups; the chips Convoy heard, Market day,
+  Harvest.
+- The rest (builder R): the dummy (30 s on fixed dice against a man at your reach or an armoured hard man, off the
+  live state: dmg/s, a bar each 2 s with the reloads grey, headshots, bleeds, reloading, under half HP, the last three
+  reads); the totals and verdict off the gear screens (the bot's own scoring kept); REACH in the top bar; the
+  Bunkhouse room (shut and scrambled till the Quartermaster's fall); the rail at ten rooms with chips (rows at least
+  56 px, folded a dot); the Radio's Set off to the Map.
+- The reviewer's bugs fixed with red checks (the dummy's man at level 1; element harvests stacking past the rarity's
+  count; marrow past the item's tier cap; a convoy's hit leaving you on the Radio; the board's red "Long shot" during a
+  run; the Workshop and the stash still showing the verdict). The language pass: "Plots" (the Allotments is a site),
+  "convoy" throughout (Kev keeps "lorry"), "Test" for the dummy ("Run it" is the repeat), "Take it in" (Unload is the
+  rounds'), the Docks crew, figures not words, the Bench.
+- Smoke green, lint 0. VERSION 0.15.3, SAVE_VERSION 29.

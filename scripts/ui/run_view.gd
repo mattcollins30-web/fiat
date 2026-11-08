@@ -311,6 +311,7 @@ static func has_art() -> bool:
 
 
 func _init() -> void:
+	offs66_ready()     # (0.15.3 perf fix) the pop spots laid before any fight
 	size = Vector2(W, H)
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2124,21 +2125,51 @@ func _pop66(amount: float, hard: bool) -> void:
 ## every rect in `keep`: tried outward from where it wants to be, up and down first, then across.
 static var _offs66: Array = []
 var clear66_ok := true                     # the last _clear66 found a clear spot
-func _clear66(at: Vector2, sz: Vector2, keep: Array, up := 0.0) -> Vector2:
+func _clear66(at: Vector2, sz: Vector2, keep: Array, up := 0.0, tries := POP66_TRIES) -> Vector2:     # (0.15.3 fix) `tries`: the pops capped; the plate, the jam and the streak the whole search
 	var s: float = scale.x if scale.x > 0.0 else 1.0
 	var fr := Rect2(Vector2(6.0, 6.0), Vector2(W * s - 12.0, H * s - 12.0))
-	if _offs66.is_empty():
-		for dx in range(-30, 31):
-			for dy in range(-40, 41):
-				_offs66.append(Vector2(dx * 12.0, dy * 6.0))
-		_offs66.sort_custom(func(a, b): return absf(a.x) * 1.5 + absf(a.y) < absf(b.x) * 1.5 + absf(b.y))
+	offs66_ready()
 	clear66_ok = false
-	for o in _offs66:
-		var r := Rect2(at + o - Vector2(0.0, up), sz + Vector2(0.0, up))
-		if fr.encloses(r) and keep.all(func(q): return not q.intersects(r)):
+	# (0.15.3 perf fix: a fight's p95 on Matt's machine) the nearest POP66_TRIES spots only, a plain loop, no lambda: the
+	# whole 4,941 with nothing clear was 4-5 ms a call, several a frame
+	clear66_tried = 0
+	for k in range(mini(tries, _offs66.size())):
+		clear66_tried += 1
+		var r := Rect2(at + _offs66[k] - Vector2(0.0, up), sz + Vector2(0.0, up))
+		if not fr.encloses(r):
+			continue
+		var clear := true
+		for q in keep:
+			if (q as Rect2).intersects(r):
+				clear = false
+				break
+		if clear:
 			clear66_ok = true
-			return at + o
+			return at + _offs66[k]
 	return at
+
+
+## (0.15.3 perf fix) the spots, nearest first, laid once when the view is made, not on a fight's first pop (a 18 ms sort).
+const POP66_TRIES := 600
+const ALL66 := 1 << 20                     # every spot (the plate, the jam, the streak: one each a frame)
+
+
+## (0.15.3 fix) The hard man's plate and the jam's tag: one each a frame, so the whole search - never an overlapping
+## fallback where a far spot is clear (the pops alone are capped).
+func plate66_at(at: Vector2, sz: Vector2, keep: Array) -> Vector2:
+	return _clear66(at, sz, keep, 0.0, ALL66)
+
+
+func jam66_at(at: Vector2, sz: Vector2, keep: Array) -> Vector2:
+	return _clear66(at, sz, keep, 0.0, ALL66)
+var clear66_tried := 0                     # the spots the last search tried (the smoke's)
+static func offs66_ready() -> void:
+	if not _offs66.is_empty():
+		return
+	for dx in range(-30, 31):
+		for dy in range(-40, 41):
+			_offs66.append(Vector2(dx * 12.0, dy * 6.0))
+	_offs66.sort_custom(func(a, b): return absf(a.x) * 1.5 + absf(a.y) < absf(b.x) * 1.5 + absf(b.y))
 
 
 ## A pop's spot clear of the bars, the HP words, the plate, what run.gd lays over the frame, the jam and the pops
@@ -2202,7 +2233,7 @@ func _v66_lay(dt: float) -> void:
 		if not _keep66.all(func(r): return not r.intersects(Rect2(_streak66.position, _streak66.size))):
 			# (BUILD67-K) no form clear at the top right (a long head over the frame: "Picking it over · each gang bigger than
 			# the last" with a streak carried into the search): the nearest clear spot, else not over the words
-			_streak66.position = _clear66(_streak66.position, _streak66.size, _keep66)
+			_streak66.position = _clear66(_streak66.position, _streak66.size, _keep66, 0.0, ALL66)
 			_streak66.visible = clear66_ok
 	# the plate over the hard man, his bar under it (pushed down when the plate meets the head's row)
 	var k: int = _hard66_k
@@ -2235,7 +2266,7 @@ func _v66_lay(dt: float) -> void:
 		for n in [_streak66, _ls66]:
 			if n.visible:
 				keep.append(Rect2(n.position, n.size))
-		at = _clear66(at, _plate66.size, keep)
+		at = plate66_at(at, _plate66.size, keep)     # (0.15.3 fix) the plate: the whole search (one a frame), never the pops' cap
 		_plate66.position = at
 		var bar_y: float = at.y + ph + 8.0 + tag_h
 		var over_bar: bool = at.x < fb.position.x + fb.size.x and at.x + pw > fb.position.x     # moved aside, it leaves the bar be
@@ -2262,7 +2293,7 @@ func _v66_lay(dt: float) -> void:
 				jkeep.append(Rect2(n.position, n.size))
 		if _word66.size.x > 0.0:
 			jkeep.append(_word66)
-		_jam66.position = _clear66(jat, _jam66.size, jkeep)
+		_jam66.position = jam66_at(jat, _jam66.size, jkeep)     # (0.15.3 fix) the jam: the whole search
 	# the pops, last: clear of the plate, the jam and the rest where they stand this frame
 	var gone: Array = []
 	var laid: Array = []

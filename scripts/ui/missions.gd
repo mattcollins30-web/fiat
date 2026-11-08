@@ -1070,10 +1070,8 @@ func set_expeditions(on: bool) -> void:
 ## The tab's button, the panel over the map and the card, the report over everything: true when the panel has the room.
 func _exp_state(picking: bool) -> bool:
 	var E: Dictionary = Words.EXPEDITIONS
-	var open: bool = sim.expeditions_open()
-	_exp_btn.visible = open and not picking
-	if not open:
-		exp_on = false
+	_exp_btn.visible = false     # (BUILD69-R) the far places moved to the Bunkhouse's room: no tab on the Map
+	exp_on = false
 	var back: int = sim.expeditions.filter(func(e): return str(e["state"]) != "out").size()
 	UI.fit_button(_exp_btn, [E["tab_map"], E["tab_map_short"]] if exp_on else ([E["tab_back"] % back, E["tab_back_short"] % back] if back > 0 else [E["tab"], E["tab_short"]]))
 	UI.style_button(_exp_btn, exp_on or back > 0, "good" if exp_on else "")

@@ -4202,7 +4202,7 @@ const ISSUED := [
 const ISSUED_LIFT := 1.5
 const ISSUED_OVER := 5
 const ISSUED_PRICE := 6.0              # an issued piece's price: its worth x this, at the day's (fiat) prices
-const ISSUED_WANT := [2, 3, 4, 6]      # issued pieces worn to stand in the County's zones, one a zone
+const ISSUED_WANT := [3, 4, 6, 9]      # issued pieces worn to stand in the County's zones, one a zone; (0.15.3 fix, Matt: "fix it") from [2, 3, 4, 6]: nine slots can be issued now
 
 ## The County (25 Oct, the Issue's second campaign: docs/design/the_issue.md §4): four zones of three places past the
 ## City, each held by one of the Issuer's people. A place is fought as the order's are - laid on a host site's crew and
@@ -4925,3 +4925,61 @@ const S68_PINNED_X := 1.2          # Covering fire: a pinned gang takes this muc
 const S68_COUNT_EVERY := 5         # Body count: +1% damage for every this many kills this run
 const S68_COUNT_CAP_PCT := 25.0    # Body count: capped here
 const S68_DRESSING_PCT := 3.0      # Change of dressing: HP back (% of max) for each magazine emptied
+
+
+# ---- (BUILD69-E) the convoys, the auction, the allotments (docs/design/endgame_rail.md §4). First guesses for the
+# short balance pass; "runs" are runs home (Sim.e69_runs).
+
+## The convoys (the Radio, with the County): heard every CONVOY69_EVERY runs once the County's first place is taken,
+## CONVOY69_HELD at most; each passes in CONVOY69_PASS_RUNS runs, rolled; its level the reach and CONVOY69_OVER.
+const CONVOY69_OPEN_TAKEN := 1
+const CONVOY69_EVERY := 4
+const CONVOY69_HELD := 3
+const CONVOY69_PASS_RUNS := [6, 20]
+const CONVOY69_OVER := [-3, 11]
+const CONVOY69_MEN := 9                   # men on the lorry
+const CONVOY69_CLOCK_S := 180.0           # to crack it before it's gone
+const CONVOY69_KINDS := {"slot": 0.5, "unique": 0.3, "set": 0.2}     # what the cargo is, by share
+const CONVOY69_SEED_ODDS := 0.5           # a convoy won brings a seed home this often (the allotments open)
+## The two roles a crew member takes: "hold" (holds the road: the clock this much longer, %), "crack" (cracks the
+## load: this many fewer men, %). Every class has both; the picks are two different crew, never the runner.
+const CONVOY69_ROLES := {
+	"Poacher": {"hold": 30, "crack": -10}, "Doorman": {"hold": 20, "crack": -20}, "Paramedic": {"hold": 15, "crack": -10},
+	"Scrapper": {"hold": 10, "crack": -45}, "Recruit": {"hold": 15, "crack": -15}, "Drifter": {"hold": 25, "crack": -20},
+}
+const CONVOY69_ODDS_WORDS := [[0.8, "safe"], [0.6, "fair"], [0.35, "risky"], [0.0, "long shot"]]     # the read's word by its odds
+
+## The auction (the Fence's back room, with the Issue): market day AUCTION69_EVERY runs after the last closed (the first
+## AUCTION69_FIRST runs after the Issue), open AUCTION69_OPEN_RUNS runs; four lots, a lot's opening bid AUCTION69_OPEN_K
+## (by its kind) times the Issuer's counter's price for a primary today (the fiat's own scale); each rival's top
+## AUCTION69_TOP_K of it, its raises AUCTION69_STEP_PCT.
+const AUCTION69_FIRST := 2
+const AUCTION69_EVERY := 9
+const AUCTION69_OPEN_RUNS := 5
+const AUCTION69_KINDS := ["unique", "set", "issued", "sealed"]
+const AUCTION69_OPEN_K := {"unique": 1.0, "set": 0.45, "issued": 0.25, "sealed": 0.625}     # (merge 69) of e69_lot_ref (a unique's opening): the mockup's 9,500 / 4,000 / 2,200 kept as shares
+const AUCTION69_UNIQUE_SHARE := 0.25     # (merge 69) a unique opens at this share of the fiat the Issue gave (Sim.e69_lot_ref)
+const AUCTION69_FIAT_FLOOR := 4000.0     # (merge 69) the Issue's fiat when a camp has no figure: 0.8 x the root of a 25M-tin pile
+const AUCTION69_TOP_K := [1.3, 2.2]
+const AUCTION69_STEP_PCT := 10
+const AUCTION69_LATE_STEPS := 3           # the late bidder's one jump on the last run, in steps
+const AUCTION69_SEALED_MYTHIC_IN := 40    # a sealed crate: one in this a mythic, else a unique at the market's level
+const AUCTION69_OVER := 4                 # the lots' level: the reach and this
+
+## The allotments (the Workshop, the Pitch; with the pumping station rebuilt, growing while it runs): plots open at
+## the reaches here (the first two with the station); seeds from crates searched (ALLOT69_CRATE_ODDS a crate), hard men
+## (ALLOT69_HARD_ODDS, marrow ALLOT69_MARROW_SHARE of those - only from them) and convoys. A seed's runs to grow.
+const ALLOT69_PLOT_REACH := [0, 0, 50, 58, 66, 74]
+const ALLOT69_CRATE_ODDS := 0.04
+const ALLOT69_HARD_ODDS := 0.5
+const ALLOT69_MARROW_SHARE := 0.25
+const SEEDS69 := {
+	"onions": {"craft": "element", "el": "fire", "runs": 4},
+	"sprouts": {"craft": "element", "el": "frost", "runs": 4},
+	"beet": {"craft": "element", "el": "poison", "runs": 4},
+	"chard": {"craft": "element", "el": "shock", "runs": 4},
+	"rhubarb": {"craft": "element", "el": "bleed", "runs": 4},
+	"leeks": {"craft": "remove", "runs": 6},
+	"marrow": {"craft": "tier", "runs": 12},
+}
+const SEEDS69_ORDER := ["onions", "sprouts", "beet", "chard", "rhubarb", "leeks", "marrow"]

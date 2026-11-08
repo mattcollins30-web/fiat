@@ -130,9 +130,9 @@ func _init() -> void:
 	_band.room_band()
 	_side = UI.panel(self, Rect2(0, BODY_Y, BODY_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_said.append(UI.label(_side, Rect2(PAD, 10, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
-	for k in range(5):
+	for k in range(6):                            # (BUILD69-A) six: the back room after the Issuer's counter
 		var b := UI.button(self, Rect2(_tab_x(k, 2), BAND_H - 16 - TAB_H, TAB_W, TAB_H), k == 0)
-		b.pressed.connect(_show.bind(["shelf", "stash", "exchange", "word", "issuer"][k]))
+		b.pressed.connect(_show.bind(["shelf", "stash", "exchange", "word", "issuer", "auction"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
 	# the Fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
@@ -225,10 +225,12 @@ func _init() -> void:
 		_left_lines.append(UI.label(_panel, Rect2(PAD, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_right_lines.append(UI.label(_panel, Rect2(PAD * 2 + COL_W, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_head = ItemHead.new(COL_W, true)
+	_head.gun_own = true     # (BUILD69-R) a gun's own figures, not its dmg/s
 	_head.position = Vector2(PAD, 10)
 	_head.visible = false
 	_panel.add_child(_head)
 	_fit_head = ItemHead.new(COL_W, true)
+	_fit_head.gun_own = true     # (BUILD69-R)
 	_fit_head.position = Vector2(PAD * 2 + COL_W, 10)
 	_fit_head.visible = false
 	_panel.add_child(_fit_head)
@@ -281,6 +283,7 @@ func setup(k: String) -> void:
 		_issuer.visible = false
 		_issuer.acted.connect(_on_acted)
 		add_child(_issuer)
+		_a69_setup()                              # (BUILD69-A) the back room: the auction, the sixth tab
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
@@ -326,6 +329,7 @@ func show_state(s) -> void:
 	_stash.visible = showing == "stash" and kind != "clinic"
 	if showing == "issuer" and (kind != "fence" or not sim.issued):
 		showing = "shelf"                     # no counter before the Issue
+	_a69_show()                               # (BUILD69-A) the back room over the side and the grid
 	_word.visible = showing == "word"
 	if _exchange != null:
 		_exchange.visible = showing == "exchange"
@@ -339,7 +343,7 @@ func show_state(s) -> void:
 		_meds.visible = showing == "stash"
 		if _meds.visible:
 			_meds.show_state(sim)
-	_panel.visible = not (_word.visible or (_meds != null and _meds.visible) or (_issuer != null and _issuer.visible) or (_exchange != null and _exchange.visible))     # the exchange, the word and the meds take the grid's and the panel's place (Bands-U A)
+	_panel.visible = showing != "auction" and not (_word.visible or (_meds != null and _meds.visible) or (_issuer != null and _issuer.visible) or (_exchange != null and _exchange.visible))     # the exchange, the word and the meds take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 	var sig := _signature()
@@ -355,12 +359,13 @@ func show_state(s) -> void:
 		UI.style_button(_tabs[2], showing == "exchange")
 		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
 		UI.style_button(_tabs[3], showing == "word")
-		var n_tabs: int = 5 if sim.issued else 4     # the Issuer's tab once the town's on fiat (25 Oct)
+		var n_tabs: int = (5 + (1 if sim.e69_auction_open() else 0)) if sim.issued else 4     # the Issuer's tab once the town's on fiat (25 Oct); (BUILD69-A) the back room's after it
 		var tw: float = TAB_W if n_tabs == 4 else ISSUE_TAB_W
 		for i in range(n_tabs):
 			_tabs[i].size.x = tw
 			_tabs[i].position.x = Pal.GRID_W - PAD - n_tabs * tw - (n_tabs - 1) * 8 + i * (tw + 8)
 		_tabs[4].visible = sim.issued
+		_a69_tab()                                # (BUILD69-A)
 		if sim.issued:
 			_tab_text(_tabs[4], [Words.ISSUED["tab"], "Issuer"])
 			UI.style_button(_tabs[4], showing == "issuer")
@@ -639,12 +644,13 @@ func _show_panel() -> void:
 			ftail = [Items.fitted_words(fitted), Items.ammo_words(fitted).to_lower().replace("smg", "SMG")]
 		_fit_head.show_item(fitted, sim, ftail)
 		_fit_head.visible = true
+		# (BUILD69-R) no verdict, no deltas: the worn piece's card beside the pick, the dummy for the rest; a lock's level stays
 		var v: Array = PickPanel.verdict_for(sim, it)
 		_verdict.text = str(v[0])
 		_verdict.add_theme_color_override("font_color", Pal.tone_color(str(v[1])))
 		_verdict.size.x = ceilf(UI.text_width(_verdict, _verdict.text)) + 2
-		_verdict.visible = true
-		_pending_deltas = PickPanel.deltas_for(sim, it, fitted)
+		_verdict.visible = _verdict.text.begins_with("Level ")
+		_pending_deltas = []
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):
@@ -915,6 +921,8 @@ func text_nodes() -> Array:
 		out.append_array(_exchange.text_nodes())
 	if _meds != null and _meds.visible:
 		out.append_array(_meds.text_nodes())
+	if _auction != null and _auction.visible:
+		out.append_array(_auction.text_nodes())     # (BUILD69-A)
 	for h in _heads:
 		if h.visible:
 			out.append(h)
@@ -961,3 +969,44 @@ func line_pairs() -> Array:
 		out.append_array(_fit_head.line_pairs())
 	out.append([_band.headline, _band.unit])
 	return out
+
+
+
+# ------------------------------------------------------------------ (BUILD69-A) the back room: the auction
+
+const AuctionView := preload("res://scripts/ui/auction_view.gd")
+var _auction                                      # auction_view.gd, the Fence's sixth tab (with the Issue)
+
+
+func _a69_setup() -> void:
+	_tabs[5].add_theme_font_size_override("font_size", 16)
+	_tabs[5].visible = false
+	_auction = AuctionView.new(Pal.GRID_W, BODY_H)
+	_auction.position = Vector2(0, BODY_Y)
+	_auction.visible = false
+	_auction.acted.connect(_on_acted)
+	add_child(_auction)
+
+
+## The back room across the side and the grid while its tab's on; shut before the Issue.
+func _a69_show() -> void:
+	if _auction == null:
+		return
+	if showing == "auction" and not sim.e69_auction_open():
+		showing = "shelf"
+	_auction.visible = showing == "auction"
+	_side.visible = not _auction.visible
+	if _auction.visible:
+		_auction.show_state(sim)
+
+
+func _a69_tab() -> void:
+	_tabs[5].visible = sim.issued and sim.e69_auction_open()
+	if _tabs[5].visible:
+		_tab_text(_tabs[5], [Words.A69["a_tab"]])
+		UI.style_button(_tabs[5], showing == "auction")
+
+
+## For the tests: the back room.
+func auction_view():
+	return _auction

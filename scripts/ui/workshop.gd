@@ -35,9 +35,10 @@ const HEAD_H := Pal.BAND_H         # the rooms' one band across the top (10 Oct,
 const TOP := HEAD_H + 14           # the columns under it
 const VIEW_W := 144                # a view's tab (140 until "Weapons", 18 Oct)
 const VIEW_H := 40
-const VIEWS := ["guns", "sockets", "craft", "build", "patterns"]
-const VIEW_NAMES := ["Weapons", "Sockets", "Craft", "Build", "Patterns"]     # Patterns (24 Oct, the endgame chase)
-const VIEWS_X := Pal.GRID_W - PAD - 5 * (VIEW_W + 6) + 6     # the views at the band's foot, right (Bands-U A): five since Patterns
+const VIEWS := ["guns", "sockets", "craft", "build", "patterns", "allot"]     # (BUILD69-A) the allotments, sixth
+const VIEW_NAMES := ["Weapons", "Sockets", "Craft", "Build", "Patterns", "Plots"]     # (fix 69) "Plots": the Allotments is a site     # Patterns (24 Oct, the endgame chase); (BUILD69-A) Words.A69["l_tab"]
+const VIEWS_X := Pal.GRID_W - PAD - 6 * (VIEW_W + 6) + 6 - A69_TAB_EXTRA     # the views at the band's foot, right (Bands-U A): five since Patterns; (BUILD69-A) six, the last wider
+const A69_TAB_EXTRA := 0           # (fix 69) "Plots" fits the plain tab ("Allotments" wanted 28 more)
 const CARD_PAD := 14
 const HEAD_LINE_H := 26            # a gun card's first line: the slot and the figure
 const NAME_H := 34                 # the gun's name under it
@@ -519,6 +520,8 @@ static func _worn_colour(it: Dictionary, plain: Color) -> Color:
 
 func show_state(s) -> void:
 	sim = s
+	if _a69_show():                           # (BUILD69-A) the allotments: their own view, no grid
+		return
 	var source: Array = sim.attachments_for(sel_mount) if sel_mount != "" else _all_attachments(view == "sockets")
 	var what: String = "Socketables" if view == "sockets" else "Gun parts"
 	if sel_mount != "":
@@ -563,10 +566,12 @@ func show_state(s) -> void:
 			g["figure"].text = ""
 		else:
 			_worn_name(g["name"], gun, Pal.TEXT)     # the piece's own name (BUILD48 item 27, Matt: "butchers steel displays as machete")
+			# (fix 69) the gun's own figures, not its dmg/s: damage a shot, then what it takes
+			var gf: Array = ItemHeadRef.r69_gun_figures(sim, gun)
 			if Items.is_melee(gun):
-				UI.fit(g["figure"], ["%.0f dmg/s" % Items.dps_whole(gun)])     # a blade says nothing of rounds (BUILD48 item 27); the whole figure as the try-on reads it (merge 51)
+				UI.fit(g["figure"], [str(gf[0][0]), str(gf[0][1])])     # a blade says nothing of rounds (BUILD48 item 27)
 			else:
-				UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps_whole(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps_whole(gun)])
+				UI.fit(g["figure"], ["%s · %s" % [str(gf[0][0]), Items.ammo_words(gun).trim_prefix("Takes ")], str(gf[0][0]), str(gf[0][1])])
 		# the chips: the type, the rarity in its tone, what's fitted
 		g["chips"].visible = view == "guns" and gun != null
 		if gun != null:
@@ -873,7 +878,7 @@ func _show_panel() -> void:
 			var gun_slot: bool = Data.SLOT_SCORE.get(target_slot, "") == "dps"
 			# what it does (19 Oct, Matt): in a gun, the top bar's figure; in a body piece, the body's figure the Kit judges by
 			var dw: Array = sim.damage_with_part(target_slot, it, key) if gun_slot else sim.body_with_part(target_slot, it, key)
-			var line: String = ("Fitting it: %.0f → %.0f dmg/s" % [float(dw[0]), float(dw[1])]) if gun_slot else ("Fitting it: stands the fight %.1f× → %.1f×" % [float(dw[0]), float(dw[1])])
+			var line: String = r69_fit_line(cur, it)     # (fix 69) the affix line before → after, not the totals
 			if cur != null:
 				_pick.show_fitted(cur, sim, "On the %s · %s" % [target_slot.to_lower(), key])
 			else:
@@ -893,7 +898,7 @@ func _show_panel() -> void:
 			if cur != null:
 				_pick.show_fitted(cur, sim, kicker)
 			else:
-				_pick.show_right_words(kicker, "Empty", ["Fitting it: %.0f → %.0f dmg/s" % [float(dw[0]), float(dw[1])]] if why == "" else [])
+				_pick.show_right_words(kicker, "Empty", [r69_fit_line(cur, it)] if why == "" else [])     # (fix 69) before → after
 			if why == "":
 				_part_verdict(it, cur, dw)
 			else:
@@ -1012,6 +1017,8 @@ func _show_craft(it: Dictionary) -> void:
 		var h := Items.headline(it)
 		var tw := Items.type_word(it)
 		var fig := "%s %s" % [h[0], "dmg/s" if (tw != "" and Items.is_gun(it)) else h[1]]
+		if Items.is_gun(it):
+			fig = str(ItemHeadRef.r69_gun_figures(sim, it)[0][0])     # (fix 69) the gun's own damage a shot, not its dmg/s
 		_piece_figure.text = fig
 		_piece_title.size.x = BODY_W - 2 * PAD - ceilf(UI.text_width(_piece_figure, fig)) - 16
 		UI.fit(_piece_title, [Items.full_name(it), it["base"]])
@@ -1344,7 +1351,11 @@ func _show_view() -> void:
 	_builds.visible = view == "build"
 	_pat.visible = view == "patterns"
 	if _pick != null:
-		_pick.visible = view != "patterns"
+		_pick.visible = view != "patterns" and view != "allot"     # (BUILD69-A)
+	if _inv != null:
+		_inv.visible = view != "allot"            # (BUILD69-A)
+	if _allot != null:
+		_allot.visible = view == "allot"          # (BUILD69-A)
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["card"].visible = view == "guns"
@@ -1412,7 +1423,9 @@ func _press(i: int) -> void:
 func text_nodes() -> Array:
 	var out: Array = [_kicker, _headline, _unit, _next]
 	out.append_array(_chips.text_nodes())
-	out.append_array(_views)
+	out.append_array(_views.filter(func(v): return v.visible))     # (BUILD69-A) the allotments' tab hides before the station
+	if view == "allot" and _allot != null:
+		return out + _allot.text_nodes()          # (BUILD69-A)
 	out.append_array(_pick.text_nodes())
 	if view == "craft":
 		out.append_array([_piece_title, _piece_figure, _jobs_head, _foot, _build])
@@ -1474,6 +1487,8 @@ func text_nodes() -> Array:
 ## the gun's head keeps its slot and figure on one, the piece its name and figure
 ## (the heading's unit is laid after its level, so it is fitted on its own).
 func line_pairs() -> Array:
+	if view == "allot":
+		return []                                 # (BUILD69-A) the allotments pair nothing
 	var out: Array = _pick.line_pairs()
 	if view == "guns":
 		for slot in GUNS:
@@ -1620,3 +1635,62 @@ func pattern_text_nodes() -> Array:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
 		_break_arm.clear()
+
+
+# ------------------------------------------------------------------ (BUILD69-A) the allotments, the sixth view
+
+const AllotmentsView := preload("res://scripts/ui/allotments_view.gd")
+var _allot                                        # allotments_view.gd: under the band, the whole width
+
+
+## The allotments' tab: there once the pumping station's rebuilt (sim.e69_allot_open), the views laid from the right;
+## the view itself when it's on. True when the allotments took the screen (show_state stops there).
+func _a69_show() -> bool:
+	if _allot == null:
+		_allot = AllotmentsView.new(Pal.GRID_W, Pal.ROOM_H - TOP)
+		_allot.position = Vector2(0, TOP)
+		_allot.visible = false
+		_allot.acted.connect(func(): acted.emit())
+		add_child(_allot)
+	var open: bool = sim.e69_allot_open()
+	var k: int = VIEWS.find("allot")
+	_views[k].visible = open
+	if view == "allot" and not open:
+		_set_view("guns")
+		return true
+	_views[k].size.x = VIEW_W + A69_TAB_EXTRA
+	var x: float = Pal.GRID_W - PAD
+	for i in range(VIEWS.size() - 1, -1, -1):
+		if not _views[i].visible:
+			continue
+		x -= _views[i].size.x
+		_views[i].position.x = x
+		x -= 6
+	UI.fit_button(_views[k], [Words.A69["l_tab"]])
+	if view != "allot":
+		return false
+	_allot.visible = true
+	_allot.show_state(sim)
+	return true
+
+
+## For the tests: the allotments' view.
+func allotments_view():
+	return _allot
+
+
+# ------------------------------------------------------------------ (fix 69) the fitting's preview, no totals
+
+## What fitting a part or a socketable changes, as its own line before and after: "+8% damage → +12% damage", or
+## "Nothing there → +12% damage" (the verdict and the dmg/s come off: endgame_rail.md §4, the coordinator's call).
+static func r69_fit_line(cur, it: Dictionary) -> String:
+	var before: String = _r69_own(cur) if cur != null else Words.R69F["nothing"]
+	return Words.R69F["fit"] % [before, _r69_own(it)]
+
+
+## A part's own line: its figures; a socketable's without "in any socket" (the mount's said by the kicker).
+static func _r69_own(it: Dictionary) -> String:
+	if not Items.is_socketable(it):
+		return Items.att_words(it, true)
+	var parts: Array = Array(Items.socket_words(it).get_slice(": ", 1).split(", "))
+	return ", ".join(parts.filter(func(w): return not str(w).contains("socket")))

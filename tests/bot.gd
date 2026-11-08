@@ -387,6 +387,11 @@ func step(sim) -> int:
 			_order_ran = okey
 			_order_beaten0 = o_beaten
 		t0 = _lap("step/order", t0)
+	if t < 0 and not fetched and e69_on:
+		var ck: int = e69_convoy_go(sim)          # (BUILD69-E) a convoy that reads, hit before the signals
+		if ck >= 0:
+			t = int(sim.mission["tier"])
+			last_tier = -1
 	if t < 0 and not fetched and sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
 		t0 = _lap("step/signals", t0)
@@ -843,6 +848,7 @@ func tidy(sim) -> void:
 	_restock_meds(sim)                    # every run: the rig's meds and the endgame's business (the review: a run out with no meds, a signal waiting)
 	_issued(sim)
 	_endgame(sim)
+	e69_tidy(sim)                         # (BUILD69-E) the auction's bids and the allotments
 	_lap("endgame", t0)
 
 
@@ -2756,3 +2762,91 @@ func b61_words(okey: String) -> String:
 	if sp[0] == "head":
 		return str(Data.COUNTY_ZONES[int(sp[1])]["head"])
 	return "%s %d/3" % [str(Data.county(str(sp[0]))["place"]), int(sp[1])]
+
+
+
+# ------------------------------------------------------------------ (BUILD69-E) the bot's simple use of the activities
+# One rule each (docs/design/endgame_rail.md §4; the bot taught them properly later): a convoy hit when it reads
+# E69_CONVOY_ODDS with the two best crew for the roles; a bid on the unique and the sealed lot while the next bid is
+# under E69_BID_SHARE of the cash; every empty plot planted (the most held seed), every marrow used on the worn
+# primary's lowest-tier affix, every other harvest lifted into the shed.
+const E69_CONVOY_ODDS := 0.7
+const E69_BID_SHARE := 0.15
+var e69_on := true
+var e69_log := {"convoys": 0, "bids": 0, "planted": 0, "crafts": 0}
+
+
+## The roles' best: the most clock for the road, the fewest men for the load, two different crew.
+func e69_roles(sim) -> Array:
+	var crew: Array = sim.e69_crew_for_roles()
+	var on_road := ""
+	var best := -1
+	for c in crew:
+		var v: int = int(sim.e69_role_effect(str(c), "hold")["clock_pct"])
+		if v > best:
+			best = v
+			on_road = str(c)
+	var crack := ""
+	var least := 1 << 20
+	for c in crew:
+		var v2: int = int(sim.e69_role_effect(str(c), "crack")["men_pct"])
+		if str(c) != on_road and v2 < least:
+			least = v2
+			crack = str(c)
+	return [on_road, crack]
+
+
+## The first convoy that reads: hit, its index; -1 none.
+func e69_convoy_go(sim) -> int:
+	if not sim.e69_convoys_open() or sim.on_mission():
+		return -1
+	var r: Array = e69_roles(sim)
+	for k in range(sim.e69["convoys"].size()):
+		if sim.e69_convoy_block(k, r[0], r[1]) != "":
+			continue
+		var rd: Dictionary = sim.e69_convoy_read(k, r[0], r[1])
+		if float(rd.get("odds", 0.0)) >= E69_CONVOY_ODDS:
+			var nm: String = str(sim.e69_convoy(k)["cargo"]["name"])
+			if sim.e69_convoy_hit(k, r[0], r[1]):
+				e69_log["convoys"] += 1
+				bought.append([sim.elapsed, "hit a convoy for %s at %.0f%%" % [nm, float(rd["odds"]) * 100.0]])
+				return k
+	return -1
+
+
+func e69_tidy(sim) -> void:
+	if not e69_on or sim.on_mission():
+		return
+	if sim.e69_chip_fence() == "market":
+		for k in range(sim.e69["market"]["lots"].size()):
+			var lot: Dictionary = sim.e69_lot(k)
+			if not (str(lot["kind"]) in ["unique", "sealed"]):
+				continue
+			var b: int = sim.e69_bid_min(k)
+			if float(b) <= sim.cash * E69_BID_SHARE and sim.e69_bid(k, b):
+				e69_log["bids"] += 1
+	if not sim.e69_allot_open():
+		return
+	for p in range(sim.e69_plots_open()):
+		if sim.e69_plot_ready(p):
+			sim.e69_lift(p)
+		if str(sim.e69_plot(p)["seed"]) == "":
+			var most := ""
+			var n := 0
+			for key in sim.e69["shed"]:
+				if int(sim.e69["shed"][key]) > n:
+					n = int(sim.e69["shed"][key])
+					most = str(key)
+			if most != "" and sim.e69_plant(p, most):
+				e69_log["planted"] += 1
+	var gun = sim.equipped.get("Primary")
+	if gun != null and int(sim.e69["lifted"].get("marrow", 0)) > 0:
+		var low := ""
+		var lt := 99
+		for a in gun.get("affixes", []):
+			if int(a["tier"]) < lt and sim.e69_craft_block("marrow", int(gun["id"]), str(a["stat"])) == "":
+				lt = int(a["tier"])
+				low = str(a["stat"])
+		if low != "" and sim.e69_craft("marrow", int(gun["id"]), low):
+			e69_log["crafts"] += 1
+			bought.append([sim.elapsed, "marrow on %s: %s a tier" % [str(gun["base"]), low]])

@@ -11,6 +11,7 @@ extends Control
 
 signal acted
 signal bench(id)                   # the Bench's menu for this item
+signal dummy(it)                   # (BUILD69-R) "Try on the dummy": the Stats page's dummy with this piece on ({} the worn build)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const Arm := preload("res://scripts/ui/arm.gd")
@@ -84,6 +85,10 @@ func _init() -> void:
 	_hp_track = UI.panel(_strip, Rect2(90, 64, 220, 8), UI.box(Pal.BG, 4))
 	_hp_fill = UI.panel(_hp_track, Rect2(0, 0, 0, 8), UI.box(Pal.GOOD, 4))
 	_dps = UI.label(_strip, Rect2(330, 8, 150, 32), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_dps.visible = false     # (BUILD69-R) the totals off the Kit: dmg/s and "% stopped" go; "Test on the dummy ›" in their place
+	test_dummy = UI.button(_strip, Rect2(330, (STRIP_H - R69_TEST_H) / 2.0, R69_TEST_W, R69_TEST_H), false)
+	test_dummy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	test_dummy.pressed.connect(func(): dummy.emit(r69_strip_piece()))
 	_armour = UI.label(_strip, Rect2(330, 44, 150, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_pace = UI.label(_strip, Rect2(486, 12, BODY_W - 486 - 12, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_carry = UI.label(_strip, Rect2(486, 44, BODY_W - 486 - 12, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -225,9 +230,8 @@ func _show_strip() -> void:
 	var frac: float = clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_hp_fill.size.x = roundf(_hp_track.size.x * frac)
 	(_hp_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if frac > 0.5 else (Pal.WARN if frac > 0.25 else Pal.BAD)
-	var total: float = float(sim.damage_split()["total"])     # the hits and the dots together (16 Oct, item 14)
-	UI.fit(_dps, ["%.0f dmg/s" % total, "%.0f" % total])
-	UI.fit(_armour, ["%s stopped" % Fmt.pct(sim.mitigation()), Fmt.pct(sim.mitigation())])
+	_armour.visible = false     # (BUILD69-R) the totals off the Kit
+	UI.fit_button(test_dummy, [Words.R69["kit_test"], Words.R69["kit_test_short"]])     # (fix 69) "Test" whatever's picked; the read itself says "tried on"
 	UI.fit(_pace, ["pace ×%.2f" % sim.pace(), "×%.2f" % sim.pace()])
 	UI.fit(_carry, ["%d cells · %d pouches" % [sim.capacity(), sim.med_capacity()], "%d cells" % sim.capacity()])
 
@@ -337,14 +341,12 @@ func _show_panel() -> void:
 				_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 			else:
 				# parts or socketables on either (29 Oct, the Compare board's layout A): the three readings in the fitted's place
-				var rows: Array = sim.compare_readings(it)
-				if not rows.is_empty():
-					_pick.show_readings(fitted, sim, rows, "dmg/s" if Data.SLOT_SCORE.get(str(it["slot"]), "") == "dps" else "")
-				else:
-					var ftail = ""
-					if Items.is_gun(fitted):
-						ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
-					_pick.show_fitted(fitted, sim, "Fitted now", ftail)
+				# (BUILD69-R) the worn piece's card beside the pick, always: its own figures and affixes line by line, no
+				# readings of the totals (compare_readings stays for the tests and the bot)
+				var ftail = ""
+				if Items.is_gun(fitted):
+					ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
+				_pick.show_fitted(fitted, sim, "Fitted now", ftail)
 				var mv: bool = sim.swap_moves(it)     # the swap's what Equip does here only when something moves (the fix round)
 				var v: Array = PickPanel.verdict_for(sim, it, mv)
 				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted, mv))
@@ -362,11 +364,13 @@ func _show_panel() -> void:
 				hints.append(Words.REPEAT["shut_away"])     # the kit's with the runner (29 Oct)
 			elif (not sim.can_equip_item(it["id"]) or (swap and not sim.can_swap_with_parts(int(it["id"])))) and not sim.on_mission():
 				hints.append("No room in the stash for what comes off")     # the parts too, for the swap (30 Oct, the review's U4)
-			if lock > 0 and fitted == null:
-				_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level: said once (the review)
+			if lock > 0:
+				_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # (BUILD69-R) the verdict's off: the hint says the level, worn piece or none
 			elif not hints.is_empty():
 				_pick.set_hint_options(_hint_forms(hints))
-			if not it.has("unique") and not it.has("set") and not swap:     # the swap's in its place (29 Oct): the foot keeps room for the item's line
+			if str(it.get("slot", "")) in Data.SLOTS and not swap:     # with the swap's two buttons there's no room: the strip's button tries it
+				buttons.append({"text": Words.R69["pick_try"], "action": func(): dummy.emit(it), "enabled": true, "primary": false})     # (BUILD69-R) the try-on's figures: the dummy's (it stood where the Workshop's button was)
+			elif not it.has("unique") and not it.has("set") and not swap:     # the swap's in its place (29 Oct): the foot keeps room for the item's line
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.runner_busy() and sim.room_open("workshop"), "primary": false})
 		else:
 			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
@@ -463,7 +467,7 @@ func _show_magazine(it: Dictionary) -> Array:
 	if not other.is_empty() and str(other["base"]) != str(it["base"]):
 		_pick.show_fitted(other, sim, "In the rig")
 		var cmp: Array = sim.mag_compare(it, other)
-		_pick.set_verdict(cmp[0][0], cmp[0][1], cmp[1])
+		_pick.set_verdict(cmp[0][0], cmp[0][1], cmp[1], true)     # (BUILD69-R) the two magazines' own figures stay; "Sidegrade" goes
 	else:
 		# THE RIG card (the three-stage review, UI 1: one the same as the rig's isn't a compare; UI 14: no rig, said so)
 		var lines: Array = sim.rig_card_lines()
@@ -830,7 +834,7 @@ func text_nodes() -> Array:
 		out.append_array(load_list.text_nodes())
 	out.append_array(_containers.text_nodes())
 	out.append_array(_body.text_nodes())
-	out.append_array([_who, _hp, _dps, _armour, _pace, _carry])
+	out.append_array([_who, _hp, _pace, _carry, test_dummy])     # (BUILD69-R) dmg/s and "% stopped" off
 	out.append_array(_inv.text_nodes())
 	return out
 
@@ -859,3 +863,18 @@ func _lay_rules_button(n_on: int) -> void:
 	rules_button.size.x = clampf(end - rx, 0.0, RULES_W)
 	var LR: Dictionary = Words.LOOT_RULES
 	UI.fit_button(rules_button, [LR["button"] % n_on, LR["button_short"] % n_on] if n_on > 0 else [LR["button_none"]])
+
+
+# ------------------------------------------------------------------ (BUILD69-R) the dummy's ways in
+
+const R69_TEST_W := 148                # "Test on the dummy ›" in dmg/s's place on the strip (its short form at this width)
+const R69_TEST_H := 40
+var test_dummy: Button
+
+
+## The strip's button tries the stash piece picked, if it's gear; else the build as worn.
+func r69_strip_piece() -> Dictionary:
+	if sim == null or selected.get("kind", "") != "stash":
+		return {}
+	var it: Dictionary = _selected_item()
+	return it if str(it.get("slot", "")) in Data.SLOTS else {}

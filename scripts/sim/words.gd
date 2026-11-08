@@ -2519,3 +2519,144 @@ const T67 := {
 	"bonfire": "The fireworks go off: everyone on you burns",      # the Bonfire Box, the first time a run
 	"lifeboat": "Back on your feet at 20% HP",    # the Lifeboat Jacket's kill in Last legs
 }
+
+
+## (BUILD69-R) The Bunkhouse's room, the top bar's reach, the rail's Bunkhouse chip, the training dummy (8 Nov,
+## docs/design/endgame_rail.md §4; the mockups' words, drafts for the language pass).
+const R69 := {
+	"bunk_title": "The Bunkhouse", "bunk_line": "Six bunks, a stove, and whoever's willing to go a long way for a share.",
+	"bunk_tab_hands": "The hands", "bunk_tab_far": "The far places", "bunk_back": "%d back", "bunk_unload": "Take it in", "bunk_shut": "Opens with the Quartermaster's fall",
+	"reach_cap": "REACH", "reach_level": "Level %d", "reach_none": "None yet", "reach_tip": "Your reach: the furthest level cleared", "reach_sub": "furthest cleared",
+	"chip_both": "%d back · %d out", "chip_back": "Back", "chip_out": "%d out",
+	"dummy_head": "The dummy", "dummy_run": "Test for 30 seconds", "dummy_run_short": "Test it",
+	"dummy_gang": "A man, level %d", "dummy_gang_short": "A man, %d", "dummy_hard": "A hard man, armoured", "dummy_hard_short": "Hard man",
+	"dummy_hard_name": "The straw man", "dummy_fists": "Fists",
+	"dummy_unit": "dmg/s over 30 s", "dummy_unit_short": "dmg/s", "dummy_ask": "Test it to read the build",
+	"dummy_bars": "Each bar is 2 seconds · grey bars are reloads", "dummy_bars_short": "Grey bars are reloads",
+	"dummy_head_pct": "of hits to the head", "dummy_bleed_pct": "of damage from bleeds", "dummy_reload": "of 30 s reloading", "dummy_low": "damage under half HP",
+	"dummy_worn": "%s (worn)", "dummy_tried": "%s (tried on)", "dummy_vs_hard": "%s, vs a hard man", "dummy_none": "No reads yet",
+	"kit_test": "Test on the dummy ›", "kit_test_short": "The dummy ›", "pick_try": "Test on the dummy", "pick_try_short": "The dummy",
+}
+## (BUILD69-R) A gun's own figures on the Kit's try-on, in the totals' place (the Kit mockup's table).
+const R69G := {"shot": "%s damage a shot", "shot_short": "%s a shot", "shot_unit": "damage a shot", "shot_unit_short": "a shot", "rate": "%.1f shots a second", "rate_short": "%.1f shots/s", "mag": "%d rounds", "mag_short": "%d rounds",
+	"jams": "1 in %d jams", "jams_short": "1 in %d jams", "never": "Never jams", "never_short": "No jams"}
+## (fix 69) The Workshop's fitting preview: the affix line before and after.
+const R69F := {"fit": "%s → %s", "nothing": "Nothing there"}
+## (BUILD69-E) the convoys, the auction, the allotments: the sim's names and log lines (the language pass follows).
+const E69 := {
+	"routes": ["the M4", "the docks road", "the Treasury road", "the ring road", "the old A-road", "the airport spur"],     # (fix 69) lower case: capitalised only standing alone (route_title)
+	"from": ["from the Toll Plaza", "out of the docks", "off the Treasury's yard", "from the depot", "past the Services", "off the runway"],
+	"kev": ["Same lorry, same time, every Thursday. They think nobody's listening. I'm always listening.",
+		"Driver's new. Takes the long way round the roundabout. That's our minute.",
+		"They've doubled the guard since the last one. Doubled from not enough is still not enough.",
+		"I heard it on the band they think is theirs. Nothing's theirs."],
+	"rivals": {"docks": "The Docks crew", "golf": "The Golf Club's steward", "chapel": "The Chapel's deacon", "bypass": "The Bypass boys"},
+	"seeds": {"onions": "Firebrand onions", "sprouts": "Frostbite sprouts", "beet": "Bitter beet", "chard": "Sparking chard",
+		"rhubarb": "Razor rhubarb", "leeks": "Clean-cut leeks", "marrow": "Top-shelf marrow"},
+	"seeds_low": {"onions": "firebrand onions", "sprouts": "frostbite sprouts", "beet": "bitter beet", "chard": "sparking chard",
+		"rhubarb": "razor rhubarb", "leeks": "clean-cut leeks", "marrow": "top-shelf marrow"},     # (fix 69) the forms in a sentence, stored, not lowered in code
+	"elements": {"fire": ["fire", "Fire"], "frost": ["frost", "Frost"], "poison": ["poison", "Poison"], "shock": ["shock", "Shock"], "bleed": ["bleed", "Bleed"]},     # (fix 69) [in a line, standing alone]
+	"sealed": "A sealed crate",
+	"log": {
+		"heard": "Kev's heard a convoy: %s, on %s",
+		"passed": "The convoy on %s has passed",
+		"won": "The convoy's taken: %s",
+		"lost": "The convoy got away with %s",
+		"market": "Market day at the Fence: 4 lots",
+		"outbid": "Outbid on %s: %s back",
+		"lot_won": "Won at the auction: %s for %s",
+		"lot_lost": "Lost at the auction: %s",
+		"sealed_mythic": "The sealed crate held %s",
+		"seeds": "Seeds home: %s",
+		"ready": "Ready to lift: %s",
+		"craft": "%s at the Bench: %s",
+	},
+	"block": {
+		"shut": "Not open yet", "on_a_run": "Not while on a run", "no_convoy": "No such convoy", "roles": "Pick 2 different crew",
+		"not_crew": "Not one of your crew", "no_lot": "No such lot", "closed": "Not market day", "leading": "Your bid leads",
+		"low": "Bid at least %s", "short": "Short of fiat", "no_item": "No such piece", "fixed": "Its affixes are fixed",
+		"no_harvest": "No harvest to use", "not_gear": "Only a piece of kit", "no_room": "No element fits it",
+		"has_el": "It has that element already", "no_stat": "Pick an affix on it", "top": "That affix is at its top tier", "last": "Can't take off its last affix",
+		"full": "It holds all the affixes its rarity can",     # (fix 69) the element seeds stop at the rarity's count
+	},
+}
+## (BUILD69-A, 8 Nov, docs/design/endgame_rail.md §4) the convoys', the auction's and the allotments' screens and their
+## rail chips (the canvas's Convoys, Auction and Allotments boards) - for the language pass. E69 holds the sim's names.
+const A69 := {
+	# the rail's chips
+	"chip_convoy": "Convoy heard", "chip_market": "Market day", "chip_harvest": "Harvest",
+	# the Radio's fifth tab and its view
+	"c_tab": "The convoys", "c_tab_locked": "The convoys · locked",
+	"c_kicker": "Radio · the convoys",
+	"c_list_head": "On the roads",
+	"c_title": "%d convoys heard", "c_title_one": "1 convoy heard", "c_title_none": "None heard", "c_title_short": "%d heard",
+	"c_passes": "Passes in %d run%s",
+	"c_none": "Nothing on the roads yet", "c_none2": "Kev hears a convoy every %d runs or so", "c_none2_short": "Kev's listening",
+	"c_kev_quiet": "Nothing on the band. Give it a run or two.",
+	"c_empty": "No convoy to hit", "c_empty2": "When Kev hears one, its cargo shows here before you go",
+	"c_band_none": "Quiet roads",
+	"c_band_sub": "Level %d · passes in %d run%s",
+	"c_cargo_head": "The cargo", "c_cargo_line": "%s · item level %d · %s", "c_cargo_line_short": "%s · item level %d",
+	"c_kind": {"slot": "named ahead", "unique": "a unique", "set": "a set piece"},
+	"c_plan_head": "The plan · 2 of your crew",
+	"c_role": {"hold": "Holds the road", "crack": "Cracks the cargo"}, "c_role_low": {"hold": "holds the road", "crack": "cracks the cargo"},
+	"c_the": "The %s", "c_pick_one": "Pick one",
+	"c_fx_hold": "The clock runs %d%% longer", "c_fx_crack": "%d%% fewer men on the convoy",
+	"c_pick_for": "Pick who %s:", "c_no_crew": "Play another class to bring in crew", "c_no_crew_short": "No crew yet",
+	"c_odds": {"safe": "Safe", "fair": "Fair", "risky": "Risky", "long shot": "Long shot", "after": "After the run"},
+	"c_odds_sub": "about %d%% to take it", "c_odds_sub_short": "about %d%%", "c_after_sub": "Read again on the Pitch",     # (fix 69) an estimate off the fight and the clock, not a dry run
+	"c_clock_sub": "to crack it before it's gone", "c_clock_sub_short": "to crack it", "c_men_sub": "men on the convoy", "c_men_short": "men", "c_men": "%d",
+	"c_note": "A timed run on %s at level %d. Win: the cargo is yours. Lose, or let it pass: it's gone, and another comes.",
+	"c_need_two": "Pick 2 of your crew, one for each role",
+	"c_hit": "Hit the convoy", "c_pass": "Let it pass",
+	# the Fence's sixth tab and the back room
+	"a_tab": "Back room",
+	"a_kicker": "The Fence · the back room",
+	"a_title": "Market day", "a_title_off": "No market today",
+	"a_closes": "Closes in %d run%s", "a_next": "Then every %d runs",
+	"a_next_in": "Market day in %d run%s", "a_next_off": "4 lots, open %d runs",
+	"a_lot": "Lot %d · %s", "a_lot_short": "Lot %d", "a_kind": {"unique": "Unique", "set": "Set piece", "issued": "Issued", "sealed": "Sealed"},
+	"a_high": "High bid", "a_you": "you", "a_not_you": "not you",
+	"a_sealed_in": "1 in %d", "a_sealed_what": "A mythic",
+	"a_sealed_rule": "Opened when the day closes: 1 in %d holds a mythic, the rest a unique",
+	"a_sealed_line": "Sealed · a unique, item level %d or more",
+	"a_bids": "The bids", "a_you_row": "You",
+	"a_rivals": "What the rivals do",
+	"a_steady": "Raises %s after each of your runs. Tops out near %s.", "a_steady_short": "Raises %s a run",
+	"a_late": "Bids late. Expect one jump on the last run.", "a_late_short": "One jump on the last run",
+	"a_win": "If you win: in the stash when the day closes", "a_win_short": "Win: in the stash",
+	"a_win_tail": "Paid in fiat",
+	"a_bid": "Bid %s", "a_drop": "Drop out",
+	"a_shut": "No lots on the table today", "a_shut2": "Market day in %d run%s: 4 lots, rivals bidding", "a_shut2_short": "In %d run%s",
+	"a_fiat": "Your fiat", "a_held": "Held in your bids", "a_free": "Free to bid",
+	"a_yours": "Your bids", "a_leading": "leading", "a_outbid": "outbid", "a_no_bids": "No bids yet",
+	"a_last": "Last market", "a_won": "Won", "a_lost": "Lost", "a_back": "back", "a_no_last": "None yet",
+	"a_foot": "Outbid, your bid comes back. Win, and it's spent: gone for good",
+	# the Workshop's sixth view and the allotments
+	"l_tab": "Plots",
+	"l_kicker": "The Workshop · the plots", "l_title": "The plots",
+	"l_water": "Pumping station on: water to %d plot%s", "l_water_short": "Pumping station on",
+	"l_dry": "The pumping station's off: nothing grows", "l_dry_short": "No water: nothing grows",
+	"l_count": "%d of %d plots", "l_next": "next plot at reach %d",
+	"l_plot": "Plot %d", "l_shut": "Not yet dug", "l_opens_at": "Opens at reach %d", "l_opens_short": "Reach %d",
+	"l_empty": "Empty", "l_plant_from": "Plant from the shed", "l_plant": "Plant ›",
+	"l_craft_el": "Adds an element: %s", "l_craft_el_short": "Adds %s", "l_craft_off": "Takes an affix off", "l_craft_off_short": "An affix off", "l_craft_tier": "Raises an affix a tier", "l_craft_tier_short": "A tier up",
+	"l_ready": "Ready to lift", "l_left": "%d more run%s",
+	"l_bench": "At the Bench", "l_bench_plot": "Plot %d · at the Bench", "l_bench_lifted": "%s · at the Bench",
+	"l_bench_none": "No plot dug yet",
+	"l_worn": "Worn", "l_in_stash": "In the stash", "l_other": "Pick another ›", "l_other_short": "Another ›",
+	"l_now": "Now", "l_after": "After the %s", "l_after_short": "After",
+	"l_sure": "Sure, not rolled: what's shown is what you get. The harvest is used up.",
+	"l_sure_pick": "Pick the affix on the left. Sure, not rolled: what's shown is what you get.",
+	"l_sure_short": "Sure, not rolled: what's shown is what you get",
+	"l_no_piece": "Nothing you hold can take this harvest. Lift it into the shed for later.",
+	"l_lift_use": "Lift and use", "l_use": "Use it", "l_lift": "Lift into the shed",
+	"l_plant_how": "Pick a seed in the shed to plant it here", "l_no_seeds": "No seeds in the shed",
+	"l_seeds_from": "Seeds come from crates, hard men and convoys",
+	"l_growing": "%d more run%s while there's water",
+	"l_seeds": "The shed · seeds", "l_lifted": "In the shed · lifted", "l_lifted_none": "Nothing lifted",
+	"l_plant_word": "Plant",
+	"l_shed_note": "Marrow is the slow one: %d runs, and only from hard men.", "l_shed_note_short": "Marrow: only from hard men",
+}
+
+

@@ -84,6 +84,7 @@ func _init(width: int, height: int) -> void:
 		_tags.append(tag)
 		_tag_labels.append(UI.label(tag, Rect2(TAG_PAD, 0, 10, KICK_H - 2), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT))
 		var head := ItemHead.new(cw, true)
+		head.gun_own = true                    # (BUILD69-R) a gun's own figures in its headline, not its dmg/s
 		head.position = Vector2(cx, HEAD_Y)
 		head.visible = false
 		_panel.add_child(head)
@@ -264,7 +265,12 @@ func show_right_words(kicker: String, title: String, lines: Array) -> void:
 
 
 ## The foot's first row: the verdict in its tone, then the deltas, dropped from the right when they don't fit.
-func set_verdict(verdict: String, tone: String, deltas: Array) -> void:
+func set_verdict(verdict: String, tone: String, deltas: Array, own_figures := false) -> void:     # (BUILD69-R) own_figures: the deltas are the pieces' own (a magazine's rounds, pouches, reload), not the runner's totals
+	if R69_NO_VERDICT and r69_no_verdict:
+		verdict_said = [verdict, deltas.size()]     # (BUILD69-R) kept for the tests; nothing on the screen: the affixes side by side, the dummy for the rest
+		verdict = ""                               # the lock's "Level 25 to wear" goes to the hint (armoury.gd), said once
+		if not own_figures:
+			deltas = []
 	_verdict.text = verdict
 	_verdict.visible = verdict != ""
 	_verdict.add_theme_color_override("font_color", Pal.tone_color(tone) if tone != "" else Pal.TEXT_2)
@@ -349,7 +355,7 @@ func _lay_flavour() -> void:
 
 func _lay_foot() -> void:
 	var edge := _foot_left_edge()
-	var both: bool = not _verdict.visible
+	var both: bool = not _verdict.visible and not _deltas.any(func(l): return l.visible)     # (BUILD69-R) a magazine's own deltas on the first row with no verdict
 	_words.position = Vector2(PAD, foot_y if both else foot_y + 24)
 	_words.size = Vector2(maxf(80.0, edge - PAD), FOOT_H if both else 20)
 	_words.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -592,3 +598,18 @@ func button_texts() -> Array:
 func press(i: int) -> void:
 	if i < BUTTONS and _buttons[i].visible and not _buttons[i].disabled:
 		_press(i)
+
+
+# ------------------------------------------------------------------ (BUILD69-R) no verdict; a gun's own figures
+
+## The Upgrade / Sidegrade / Downgrade verdict and the deltas come off the screen (8 Nov, endgame_rail.md §4: "Two
+## figures, the affixes side by side, your call. The dummy tells you what it does"). verdict_for and deltas_for stay for
+## the bot's and the tests' reads.
+const R69_NO_VERDICT := true
+var verdict_said: Array = []           # what a caller asked set_verdict to say: [verdict, deltas], never shown
+var r69_no_verdict := true             # the Workshop's panel sets it off: its "Fitting it: 52 → 56 dmg/s" is the craft's preview, not a gear compare
+
+
+## A gun's own figures (item_head.gd r69_gun_figures): the pick's and the worn one's heads show them in the headline.
+static func r69_gun_figures(sim, gun: Dictionary) -> Array:
+	return ItemHead.r69_gun_figures(sim, gun)

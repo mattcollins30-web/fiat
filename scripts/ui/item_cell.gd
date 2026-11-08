@@ -375,6 +375,7 @@ func set_locked(lv: int) -> void:
 		return
 	_art.material = null                     # greyed under its padlock: no glow (the shader would drop the fade)
 	_up.visible = false
+	up_said = false
 	_lock.text = "%d" % lv
 	_lock.size = Vector2(ceilf(UI.text_width(_lock, _lock.text)) + LOCK_ICON + 9, LOCK_H)
 	_lock.position = Vector2(size.x - _lock.size.x - 2, 2)
@@ -389,6 +390,8 @@ func set_locked(lv: int) -> void:
 ## The upgrade's arrow on or off: better than what's worn in its slot (sim.is_upgrade). Off by default, so the
 ## body's slots and the rig never show one; the grids that hold spares set it.
 func set_upgrade(on: bool) -> void:
+	up_said = on                             # (fix 69) the sim's verdict, kept for the tests; the arrow itself is off (the spec: the verdict comes off)
+	on = on and R69_ARROWS
 	_up.visible = on
 	_up.position = Vector2(size.x - UP - 2, 2)
 	_up.move_to_front()
@@ -597,3 +600,9 @@ func t67_lay(it: Dictionary) -> void:
 ## Whether the ◆ shows (the tests).
 func t67_shown() -> bool:
 	return _t67 != null and _t67.visible
+
+
+## (fix 69) The ▲ comes off the grids with the verdict (endgame_rail.md §4: the one number handed to the player goes); the
+## judging stays (the bot's Equip if better, and the tests read up_said).
+const R69_ARROWS := false
+var up_said := false

@@ -67,14 +67,14 @@ func _init() -> void:
 	band.set_site("The Stats")              # art/places/the_stats.png once painted (Rooms-B); the skyline till then
 	_band_face = People.rect(band, Vector2(Band.PAD, (BAND_H - Pal.BAND_FACE) / 2.0), Pal.BAND_FACE / 128.0)
 	_card("runner", 0, R1_Y, R1_H, "The runner")
-	_card("attack", 1, R1_Y, R1_H, "Attack")
+	_card("dummy", 1, R1_Y, R1_H, Words.R69["dummy_head"])     # (BUILD69-R) Attack's card becomes the training dummy
 	_card("defence", 2, R1_Y, R1_H, "Defence")
 	_card("finds", 0, R2_Y, R2_H, "Finds")
 	_card("record", 1, R2_Y, R2_H, "The record")
 	_card("last", 2, R2_Y, R2_H, "Last run")
 	_card_wide("wall", R3_Y, R3_H, "The wall")
 	_build_runner()
-	_build_attack()
+	_r69_build_dummy()     # (BUILD69-R)
 	_build_defence()
 	_build_finds()
 	_build_record()
@@ -157,24 +157,6 @@ func _build_runner() -> void:
 	for k in range(keys.size()):
 		c["rows"].append(_row(c, y + 160 + k * ROW_H, keys[k]))
 	c["note"] = _small(c, y + c["h"] - 26)
-
-
-func _build_attack() -> void:
-	var c: Dictionary = cards["attack"]
-	var y: float = c["y"]
-	c["kicker"] = _small(c, y + 92)
-	c["chain"] = []
-	for k in range(CHAIN_ROWS):
-		c["chain"].append(_bar_row(c, y + 116 + k * CHAIN_H, -1.0, CHAIN_H))
-	c["split"] = UI.panel(self, Rect2(c["x"] + PAD, y + 240, c["w"] - 2 * PAD, BAR_TH), UI.box(Pal.BG, 4))
-	c["segs"] = []
-	for ty in Data.TYPES:
-		c["segs"].append(UI.panel(c["split"], Rect2(0, 0, 0, BAR_TH), UI.box(Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3, 0)))
-	c["chips"] = Chips.new(c["w"] - 2 * PAD)
-	c["chips"].position = Vector2(c["x"] + PAD, y + 256)
-	add_child(c["chips"])
-	c["note"] = _small(c, y + 282)
-	c["status"] = _small(c, y + c["h"] - 26)
 
 
 func _build_defence() -> void:
@@ -276,12 +258,10 @@ func _build_wall() -> void:
 func show_state(s) -> void:
 	sim = s
 	var lv: int = sim.level()
-	var dps: float = sim.dps()
-	var split: Dictionary = sim.damage_split()     # the one figure: the hits and the dots together (16 Oct, item 14)
 	band.set_words("Stats · %s" % (sim.cls if sim.cls != "" else "no past yet"), "", "", [""])     # the level is THE RUNNER's, the dmg/s ATTACK's (18 Oct, said once)
 	People.show(_band_face, sim.cls)
 	_show_runner(lv)
-	_show_attack(lv, dps, split)
+	_r69_show_dummy()     # (BUILD69-R) the dummy in Attack's place: the one damage figure off the fight
 	_show_defence()
 	_show_finds()
 	_show_record()
@@ -352,64 +332,6 @@ func _show_runner(lv: int) -> void:
 	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
 
 
-func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
-	var c: Dictionary = cards["attack"]
-	_headline(c, "%.0f" % float(split["total"]), "dmg/s", Pal.ACCENT)
-	# how it's built (the review): dps()'s own parts, in its order - the guns (their grades and the secondary's share),
-	# the level, the affixes and the tree on top of it, the attack, the past, then the trait and growth to the total
-	var p: Dictionary = sim.damage_parts()
-	var steps := [float(p["guns"])]
-	steps.append(steps[0] * (1.0 + float(p["level"])))
-	steps.append(steps[0] * (1.0 + float(p["level"]) + float(p["pct"])) * (1.0 + float(p["attack"])))
-	steps.append(steps[2] * float(p["past"]))
-	var top: float = maxf(dps, steps.max())
-	var gold := Color("c98a2f")
-	c["kicker"].text = "How it's built"
-	_set_bar(c["chain"][0], "Guns", steps[0] / top, "%.0f/s" % steps[0], gold)
-	_set_bar(c["chain"][1], "Level", steps[1] / top, "+%.0f%%" % (float(p["level"]) * 100.0), gold)
-	var on_top: float = ((1.0 + float(p["level"]) + float(p["pct"])) * (1.0 + float(p["attack"])) / (1.0 + float(p["level"])) - 1.0) * 100.0
-	_set_bar(c["chain"][2], "Affixes · tree", steps[2] / top, signed_pct(on_top), gold)
-	_set_bar(c["chain"][3], "Past", steps[3] / top, ("×%.2f" % float(p["past"])) if sim.cls != "" else "—", gold)
-	# the gun type's edge (29 Oct, the itemisation): what the fight pays on the hits for the primary's type, as the headline reads it
-	var ex: float = sim.edge_read()
-	top = maxf(top, dps * ex)
-	_set_bar(c["chain"][4], edge_key(sim.equipped["Primary"]), dps * ex / top, ("×%.2f" % ex) if absf(ex - 1.0) >= 0.005 else "—", gold)
-	_set_bar(c["chain"][5], "= base", dps * ex / top, "%.0f/s" % (dps * ex), Pal.ACCENT, Pal.ACCENT)     # before the types' own increases and the dots: the headline has those
-	for k in range(4):
-		var r: Dictionary = c["chain"][k]
-		r["fill"].size.x = roundf(r["track"].size.x * clampf([steps[0], steps[1], steps[2], steps[3]][k] / top, 0.0, 1.0))     # against the top with the edge in
-	# the elements dealt: one bar, a segment a type, and the chips name them
-	var conv: Dictionary = sim.conversion()
-	var x := 0.0
-	var phys: float = 1.0
-	var chips := []
-	for k in range(Data.TYPES.size()):
-		var ty: String = Data.TYPES[k]
-		var share: float = 0.0
-		if ty != "physical":
-			share = float(conv.get(ty, 0.0))
-			phys -= share
-	for k in range(Data.TYPES.size()):
-		var ty: String = Data.TYPES[k]
-		var share: float = maxf(0.0, phys) if ty == "physical" else float(conv.get(ty, 0.0))
-		var seg: Panel = c["segs"][k]
-		var w: float = roundf(c["split"].size.x * share)
-		seg.position.x = x
-		seg.size.x = w
-		seg.visible = w >= 1.0
-		x += w
-		if ty != "physical" and share * 100.0 > 0.5:
-			chips.append(["%s %.0f%%" % [ty.capitalize(), share * 100.0], ty])
-	if chips.is_empty():
-		chips.append(["All of it physical", ""])
-	c["chips"].show_chips(chips)
-	var first_pct: float = sim.first_pct_total()     # the fight's own figure (21 Oct)
-	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
-	var firing: String = ("%s: %s" % [Items.type_word(sim.equipped["Primary"]).left(1).to_upper() + Items.type_word(sim.equipped["Primary"]).substr(1), Items.edge_words(sim.equipped["Primary"]).get_slice(" · ", 0)]) if (sim.equipped["Primary"] != null and Items.edge_words(sim.equipped["Primary"]) != "") else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
-	var extra: String = ("growth ×%.2f · first of each gang %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first of each gang %s" % signed_pct(first_pct)
-	UI.fit(c["status"], ["%s · %s" % [firing, extra], firing])
-
-
 ## The edge row's name (the fix round, 29 Oct, the language review: "Type edge" named nothing): the primary's type, "Rifle
 ## edge", "SMG edge"; "Gun's edge" with none in hand.
 static func edge_key(gun) -> String:
@@ -427,6 +349,8 @@ func _zone_fires() -> Dictionary:
 			for ty in Data.ZONE_TYPES[int(Data.TIERS[i]["zone"])]["types"]:
 				out[ty] = true
 	return out
+
+
 
 
 func _show_defence() -> void:
@@ -615,6 +539,7 @@ func _show_wall() -> void:
 ## Every label the room shows, for the fit checks.
 func text_nodes() -> Array:
 	var out: Array = band.text_nodes()
+	out.append_array([dummy_run, dummy_gang, dummy_hard])     # (BUILD69-R) the dummy's buttons
 	for c in cards.values():
 		for k in c.keys():
 			var v = c[k]
@@ -836,3 +761,164 @@ func _cl(parent: Node, rect: Rect2, options: Array, weight: String, fs: int, ton
 ## For the tests: every label and button the collection shows.
 func collection_text_nodes() -> Array:
 	return _coll_labels.filter(func(l): return is_instance_valid(l))
+
+
+# ------------------------------------------------------------------ (BUILD69-R) the training dummy
+
+## Attack's card as the training dummy (8 Nov, docs/design/endgame_rail.md §4; the Stats mockup): who it stands up (a
+## gang man of the site at your reach, or a hard man), Run 30 seconds, the dmg/s it read big with the timeline of
+## two-second bars beside it (the reloads grey), four tiles (headshots, bleeds, reloading, under half HP), and its
+## last three reads under them - so a gun tried on from the Kit reads against the one worn. The read is the sim's
+## (sim.dummy69_read); the card only shows it. In the attack card's 538 x 332.
+const Sim69 := preload("res://scripts/sim/sim.gd")     # the dummy's figures (DUMMY69_*)
+const D69_TOP := 46                    # the man's two buttons
+const D69_BTN_H := 32
+const D69_RUN_W := 170
+const D69_BIG_Y := 78                  # the figure and the bars
+const D69_BIG_H := 48
+const D69_BAR_X := 236                 # the timeline's left, in the card
+const D69_BAR_H := 54
+const D69_BAR_GAP := 3
+const D69_NOTE_Y := 150
+const D69_TILE_Y := 174
+const D69_TILE_H := 42
+const D69_LAST_Y := 268
+const D69_LAST_H := 20
+const D69_BAR_TONE := Color("6aa6d8")  # a bar of fire (the mockup's blue); a reload's the track's grey
+var dummy_kind := "gang"               # who it stands up
+var dummy_swap := {}                   # the piece tried on, {} the worn build
+var dummy_res := {}                    # the last read shown ({} none yet)
+var dummy_run: Button
+var dummy_gang: Button
+var dummy_hard: Button
+var _d69_bars: Array = []
+var _d69_tiles: Array = []             # {value, key}
+var _d69_last: Array = []              # {name, value}
+var _d69_note: Label
+
+
+func _r69_build_dummy() -> void:
+	var c: Dictionary = cards["dummy"]
+	var x: float = c["x"]
+	var y: float = c["y"]
+	var w: float = c["w"]
+	var R: Dictionary = Words.R69
+	dummy_run = UI.button(self, Rect2(x + w - PAD - D69_RUN_W, y + 6, D69_RUN_W, 34), true)
+	dummy_run.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+	dummy_run.pressed.connect(func(): r69_dummy_go(dummy_kind, dummy_swap))
+	var bw: float = (w - 2 * PAD - 8) / 2.0
+	dummy_gang = UI.button(self, Rect2(x + PAD, y + D69_TOP, bw, D69_BTN_H), false)
+	dummy_hard = UI.button(self, Rect2(x + PAD + bw + 8, y + D69_TOP, bw, D69_BTN_H), false)
+	for b in [dummy_gang, dummy_hard]:
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	dummy_gang.pressed.connect(func(): r69_dummy_go("gang", dummy_swap))
+	dummy_hard.pressed.connect(func(): r69_dummy_go("hard", dummy_swap))
+	c["headline"].position = Vector2(x + PAD, y + D69_BIG_Y)
+	c["headline"].size.y = D69_BIG_H
+	c["unit"].position.y = y + D69_BIG_Y + D69_BIG_H
+	c["unit"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+	c["unit"].position.x = x + PAD
+	c["unit"].size = Vector2(D69_BAR_X - PAD - 8, 22)
+	var n: int = int(Sim69.DUMMY69_S / Sim69.DUMMY69_BAR_S)
+	var bar_w: float = floorf((w - PAD - D69_BAR_X - (n - 1) * D69_BAR_GAP) / n)
+	for k in range(n):
+		_d69_bars.append(UI.panel(self, Rect2(x + D69_BAR_X + k * (bar_w + D69_BAR_GAP), y + D69_BIG_Y + D69_BAR_H, bar_w, 0), UI.box(D69_BAR_TONE, 2)))
+	_d69_note = UI.label(self, Rect2(x + PAD, y + D69_NOTE_Y, w - 2 * PAD, 22), R["dummy_bars"], "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var tw: float = (w - 2 * PAD - 8) / 2.0
+	for k in range(4):
+		@warning_ignore("integer_division")
+		var ty: float = y + D69_TILE_Y + (k / 2) * (D69_TILE_H + 6)     # two rows of two
+		var tx: float = x + PAD + (k % 2) * (tw + 8)
+		var t := {}
+		t["panel"] = UI.panel(self, Rect2(tx, ty, tw, D69_TILE_H), UI.box(Pal.BG, 6))
+		t["value"] = UI.label(self, Rect2(tx + 10, ty + 1, tw - 20, 22), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)     # the figure over its words (the mockup's tile)
+		t["key"] = UI.label(self, Rect2(tx + 10, ty + 21, tw - 20, 20), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_d69_tiles.append(t)
+	c["d69_note"] = _d69_note             # in the card's dict: the sheet's fit and layout checks walk them
+	c["d69_tiles"] = _d69_tiles
+	c["d69_last"] = _d69_last
+	c["d69_run"] = dummy_run
+	c["d69_gang"] = dummy_gang
+	c["d69_hard"] = dummy_hard
+	for k in range(Sim69.DUMMY69_KEPT):
+		var ly: float = y + D69_LAST_Y + k * D69_LAST_H
+		_d69_last.append({"name": UI.label(self, Rect2(x + PAD, ly, w - 2 * PAD - 110, D69_LAST_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
+			"value": UI.label(self, Rect2(x + w - PAD - 104, ly, 104, D69_LAST_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)})
+
+
+## A read now: who it stands up, the piece tried on ({} the worn build). The Run button and the Kit's ways in.
+func r69_dummy_go(kind: String, swap: Dictionary) -> void:
+	dummy_kind = kind
+	dummy_swap = swap
+	if sim == null:
+		return
+	dummy_res = sim.dummy69_read(kind, swap)
+	_r69_show_dummy()
+
+
+func _r69_show_dummy() -> void:
+	if sim == null:
+		return
+	var c: Dictionary = cards["dummy"]
+	var R: Dictionary = Words.R69
+	UI.fit_button(dummy_run, [R["dummy_run"], R["dummy_run_short"]])
+	UI.fit_button(dummy_gang, [R["dummy_gang"] % sim.dummy69_level(), R["dummy_gang_short"] % sim.dummy69_level()])
+	UI.fit_button(dummy_hard, [R["dummy_hard"], R["dummy_hard_short"]])
+	UI.style_button(dummy_gang, false, "warn" if dummy_kind == "gang" else "")
+	UI.style_button(dummy_hard, false, "warn" if dummy_kind == "hard" else "")
+	var on: bool = not dummy_res.is_empty()
+	_headline(c, Fmt.group(int(round(float(dummy_res["dps"])))) if on else "—", "", Pal.ACCENT if on else Pal.TEXT_3)
+	c["unit"].position = Vector2(c["x"] + PAD, c["y"] + D69_BIG_Y + D69_BIG_H)
+	c["unit"].size.x = D69_BAR_X - PAD - 8
+	UI.fit(c["unit"], [R["dummy_unit"], R["dummy_unit_short"]] if on else [R["dummy_ask"], ""])
+	var bars: Array = dummy_res.get("bars", [])
+	var top := 0.0
+	for v in bars:
+		top = maxf(top, float(v))
+	for k in range(_d69_bars.size()):
+		var b: Panel = _d69_bars[k]
+		var v: float = float(bars[k]) if k < bars.size() else 0.0
+		var reload: bool = k < bars.size() and bool(dummy_res["bar_reload"][k])
+		var hb: float = maxf(4.0 if k < bars.size() else 0.0, roundf(D69_BAR_H * v / maxf(top, 0.0001)))
+		if reload:
+			hb = maxf(hb, 10.0)
+		b.size.y = hb
+		b.position.y = c["y"] + D69_BIG_Y + D69_BAR_H - hb
+		(b.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.CARD_LINE if reload else D69_BAR_TONE
+	_d69_note.visible = on
+	UI.fit(_d69_note, [R["dummy_bars"], R["dummy_bars_short"]])
+	var tiles: Array = [["%.0f%%" % float(dummy_res.get("head_pct", 0.0)), R["dummy_head_pct"]], ["%.0f%%" % float(dummy_res.get("bleed_pct", 0.0)), R["dummy_bleed_pct"]],
+		["%.1f s" % float(dummy_res.get("reload_s", 0.0)), R["dummy_reload"]], ["×%.2f" % float(dummy_res.get("low_x", 1.0)), R["dummy_low"]]]
+	for k in range(_d69_tiles.size()):
+		var t: Dictionary = _d69_tiles[k]
+		for key in ["panel", "value", "key"]:
+			t[key].visible = on
+		t["value"].text = str(tiles[k][0])
+		UI.fit(t["key"], [str(tiles[k][1])])
+	var last: Array = sim.dummy69_last
+	for k in range(_d69_last.size()):
+		var l: Dictionary = _d69_last[k]
+		var e: Dictionary = last[k] if k < last.size() else {}
+		if e.is_empty():
+			UI.fit(l["name"], [R["dummy_none"] if k == 0 else ""])
+			l["value"].text = ""
+			continue
+		var nm: String = str(e["gun"])
+		var form: String = R["dummy_tried"] if str(e["how"]) == "tried" else R["dummy_worn"]
+		var forms: Array = [form % nm]
+		if str(e["kind"]) == "hard":
+			forms = [R["dummy_vs_hard"] % (form % nm), R["dummy_vs_hard"] % nm, nm]
+		forms.append(nm)
+		UI.fit(l["name"], forms)
+		l["value"].text = Fmt.group(int(round(float(e["dps"]))))
+		l["value"].add_theme_color_override("font_color", Pal.ACCENT if k == 0 else Pal.TEXT)
+
+
+## The dummy's words, for the fit checks.
+func r69_text_nodes() -> Array:
+	var out: Array = [dummy_run, dummy_gang, dummy_hard, cards["dummy"]["headline"], cards["dummy"]["unit"], _d69_note]
+	for t in _d69_tiles:
+		out.append_array([t["value"], t["key"]])
+	for l in _d69_last:
+		out.append_array([l["name"], l["value"]])
+	return out
