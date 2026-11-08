@@ -23,6 +23,8 @@ func _init() -> void:
 		sim.set_class("Doorman")
 		for i in range(Data.TIERS.size()):
 			sim.best_depth[i] = 1 if i <= int(p[1]) else 0
+			if i < int(p[1]):
+				sim.a55_done[i] = Data.STAGES     # (0.15.4) the sites before cleared to 3/3: a site opens on the one before's stages (BUILD55-A), and with none the deploy was refused; the point's own site stays uncleared, as the read meant
 		for z in range(Data.ZONES.size()):
 			sim.bosses_beaten[z] = int(Data.ZONES[z]["tiers"].back()) <= int(p[1])
 		sim.xp = Data.xp_for_level(int(p[2]))
@@ -34,6 +36,7 @@ func _init() -> void:
 		var sites: Array = [int(p[1])] if int(p[3]) > 1 else range(maxi(0, int(p[1]) - 2), int(p[1]) + 1)
 		for i in sites:
 			sim.depth[i] = int(p[3])
+			sim.a55_pick[i] = clampi(int(p[3]), 1, Data.STAGES)     # (0.15.4) the stage the read means: the depth's, never the furthest open
 			sim.hp = sim.max_hp()
 			sim.deploy(i)
 			var m: Dictionary = sim.mission

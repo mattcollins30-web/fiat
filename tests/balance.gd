@@ -886,6 +886,7 @@ func _probe() -> void:
 		sim.tree = []
 		for oi in Data.ZONES[0]["tiers"]:
 			sim.best_depth[oi] = maxi(1, int(sim.best_depth[oi]))     # the Outskirts walked, so the Streets are open (12 Oct)
+			sim.a55_done[oi] = maxi(Data.STAGE_OPENS, sim.stage_done(oi))     # (0.15.4) and their stages: a site opens on the one before's 2/3 (BUILD55-A); with none, the deploy was refused
 		sim.bosses_beaten[0] = true               # and the Gamekeeper down: the Estate opens on him since the gates (13 Oct)
 		sim.hp = sim.max_hp()
 		sim.deploy(Data.OUTSKIRTS_SITES)          # the Streets, as before the Outskirts (12 Oct)

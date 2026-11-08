@@ -8203,3 +8203,15 @@ Build 4 of the four (docs/design/endgame_rail.md section 4), the last of the fro
   pause in a 12 ms slice, in play only on idle frames (no fight, not the Map, Radio or Bunkhouse, never a painting
   frame), its 3 ms budget held; a cold Kit first open timed against 150 ms. From a Map frame spike (p95 23 ms) in one
   device smoke of 0.15.3 (the re-run was green). Still 0.15.3.
+
+## The short balance pass on 0.15.3, and pinning (2026-11-08, evening)
+
+Matt (7 Nov): a short pass once the 0.15 builds land. The quick pass (`16 1 quick`, 18:02-18:25 on 2398621): 14 red,
+against the 2 Nov pass the campaign about a quarter faster - the Manager at 1.0 h (1.4), the Quartermaster at 1.3 h
+(1.8), 7 of 12 builds at level 18 there (the band 19-23). The cause: pinning on every build (enemy fire 20% slower
+after 10 s of fire) and the 5% base headshot, with helmets and armour only on the deeper sites. Matt ("go for it"):
+pinning now comes only from its sources (suppress_pct - affixes, the Issued bugle, the web's Pinning fillers, Covering
+fire - and the Football Rattle); the base headshot stays. The probe and the loot read crashed (their camps set the
+sites' depth but not the stages before it, so the stages gate refused the deploy): both set up as a real camp. Two
+convoy labels that overflowed, fixed. Bot play and bot timing reds as before 0.15 (not tuned before the playtest).
+Next: the quick pass again, against the band.

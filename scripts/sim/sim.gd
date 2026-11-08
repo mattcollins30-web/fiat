@@ -22132,7 +22132,10 @@ func _f66_hits(m: Dictionary, t: Dictionary, landed_total: float, single_top: Ar
 	var supp: float = float(m.get("f66_supp", 0.0))
 	var was_full: bool = supp >= 1.0
 	var firing: float = fx if shots > 0.0 else 0.0
-	supp += dt / Data.SUPP66_FILL_S * (1.0 + _f66_v(sv, "suppress_pct") / 100.0) * (Data.RATTLE67_PIN_X if has_rule("football_rattle") else 1.0) * firing - dt / Data.SUPP66_DRAIN_S * (1.0 - firing)     # (the review of 66) it drains while you don't fire
+	if f70_pins(sv):
+		supp += dt / Data.SUPP66_FILL_S * (1.0 + _f66_v(sv, "suppress_pct") / 100.0) * (Data.RATTLE67_PIN_X if has_rule("football_rattle") else 1.0) * firing - dt / Data.SUPP66_DRAIN_S * (1.0 - firing)     # (the review of 66) it drains while you don't fire
+	else:
+		supp = 0.0                                   # (0.15.4, the short pass: free pinning sped the early game ~25%) no source, no meter
 	supp = clampf(supp, 0.0, 1.0)
 	if supp >= 1.0 - 1e-6:
 		supp = 1.0                                   # the sum of a float's steps
@@ -23631,3 +23634,11 @@ func e69_load(d: Dictionary) -> void:
 func e69_lot_ref() -> int:
 	var at_issue: float = maxf(float(issue_moment.get("fiat", 0.0)), Data.AUCTION69_FIAT_FLOOR)
 	return maxi(1, int(round(at_issue * Data.AUCTION69_UNIQUE_SHARE * circ_mult())))     # already fiat: the circulation's rise only
+
+
+
+## (0.15.4, Matt's go: the short balance pass found the early campaign ~25% quicker than 0.14, the mechanics every build
+## got for free) Pinning only from its sources: suppress_pct on the build (affixes, the Issued bugle, Covering fire's
+## +50), or the Football Rattle. With none, a gang's meter never fills and its fire is never slowed.
+func f70_pins(sv := {}) -> bool:
+	return _f66_v(sv, "suppress_pct") > 0.0 or has_rule("football_rattle") or s68_on("s68_heads_down")

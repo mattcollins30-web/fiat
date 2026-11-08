@@ -981,6 +981,8 @@ func _init() -> void:
 	_g69_plate_checks(main)                   # 0.15.3 fix (the review): the plate and the jam not capped
 	_g69_lock_checks(main)                    # 0.15.3 (the review): all nine issued pieces wearable at the last zone's level
 	_g70_warm_checks(main)                    # 0.15.3 perf fix (the device's Map frames): the warm-up on idle frames and behind the title only, in its budget
+	_f70_pin_checks(main)                     # 0.15.4 (Matt's go, the short pass): pinning only from its sources
+	_f70_band_checks(main)                    # 0.15.4: every route's band line fits (the docks road's ran over)
 	_m68f_checks(main)                        # the 68 fix round (review68.md): the six's themes, the units at the low roll, one headshot not two, the chips' words, the arm glyph
 	_e69_open_checks(main)                    # BUILD69-E (8 Nov): the convoys with the County, the auction with the Issue, the allotments with the pumping station; the rail's three chips
 	_e69_convoy_checks(main)                  # BUILD69-E: heard by runs, the cargo named ahead, the roles, the hit's men and clock, won home, lost gone
@@ -4209,6 +4211,7 @@ func _guard_checks(main) -> void:
 		sim.tree.append(node_id.call(cd[1], cd[2]))
 		_check(sim.has_node(cd[2]), "%s did not take" % cd[2])
 		sim.hp = sim.max_hp()
+		sim.site_crates.erase("3")     # (0.15.4) the Streets' crates fresh: a camp that picked them clean ends the run at its clear (the pinning change moved the smoke's camp)
 		sim.deploy(3)
 		if sim.mission == null:
 			_check(false, "the %s run did not set off" % cd[2])
@@ -4922,6 +4925,7 @@ func _events_checks(main) -> void:
 	# it comes in the lull after the first search (G1), never mid-volley, never on a Ghost's pending clear (G10), once a run
 	Sim.asks = true
 	sim.hp = sim.max_hp()
+	sim.site_crates.erase("3")     # (0.15.4) the Streets' crates fresh: a camp that picked them clean ends the run at its clear (the pinning change moved the smoke's camp)
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	m["event"] = "need"
@@ -8811,7 +8815,7 @@ func _damage_model_checks(main) -> void:
 	armour["affixes"] = [{"stat": "fire_res", "value": 40, "tier": 5}, {"stat": "all_res", "value": 10, "tier": 3}]
 	sim.equipped["Armour"] = armour
 	var res_hold := {}
-	for s in ["Helmet", "Rig", "Charm", "Gloves", "Backpack"]:     # gloves roll resists too now (act two (e)) (BUILD51-A)
+	for s in ["Helmet", "Rig", "Charm", "Gloves", "Backpack", "Boots"]:     # gloves roll resists too now (act two (e)) (BUILD51-A); (0.15.4) and boots: the camp's had shock on them
 		res_hold[s] = sim.equipped[s]
 		sim.equipped[s] = null              # a rig rolls resists too now (12 Oct): only the coat's count here
 	var tree_hold: Array = sim.tree.duplicate()
@@ -19799,6 +19803,7 @@ func _combo_checks(main) -> void:
 			sim.skill_auto = [true, true, true]
 			sim._dry_memo.clear()
 		sim.hp = sim.max_hp()
+		sim.site_crates.erase("3")     # (0.15.4) the Streets' crates fresh: a camp that picked them clean ends the run at its clear (the pinning change moved the smoke's camp)
 		sim.deploy(3)
 		sim.mission["remaining"] = 400
 		var seen: Array = []
@@ -21610,6 +21615,7 @@ func _clock_checks(main) -> void:
 	_check(is_equal_approx(sim.clock_for_head(t0, float(t0["plain_hp"]) * 10.0), Data.CLOCK_PER_HEAD * 10.0), "a head ten heads strong does not bring ten heads' time")
 	# it runs while they're on you, and stands while the site's clear
 	sim.hp = sim.max_hp()
+	sim.site_crates.erase("3")     # (0.15.4) the Streets' crates fresh: a camp that picked them clean ends the run at its clear (the pinning change moved the smoke's camp)
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	_check(m != null and is_equal_approx(float(m["clock"]), sim.clock_budget(m["t"])) and is_equal_approx(float(m["clock_max"]), float(m["clock"])), "the run did not start on the site's clock")
@@ -30180,6 +30186,7 @@ func _repeat_checks(main) -> void:
 	sim.skill_auto = [false, false, false]
 	var uses := func(unwatched: bool) -> int:
 		sim.hp = sim.max_hp()
+		sim.site_crates.erase("3")     # (0.15.4) the Streets' crates fresh: a camp that picked them clean ends the run at its clear (the pinning change moved the smoke's camp)
 		sim.deploy(3)
 		sim.mission["remaining"] = 400
 		if unwatched:
@@ -42776,16 +42783,34 @@ func _f66_hit_checks(main) -> void:
 	_check(absf(float(m.get("f66_arm_t", 0.0)) - Data.ARM66_S) < 1e-6 and absf(sim._f66_in_mult(m, 1, 1.0) - (1.0 - Data.ARM66_MISS)) < 1e-6, "an arm shot didn't make the man miss more: %.2f s" % float(m.get("f66_arm_t", 0.0)))
 	sim._f66_in_mult(m, 1, 2.5)
 	_check(float(m.get("f66_arm_t", 0.0)) <= 0.0 and absf(sim._f66_in_mult(m, 1, 0.1) - 1.0) < 1e-6, "an arm shot lasted past its 3 s")
-	# suppression: SUPP66_FILL_S of sustained fire fills the meter; full, they fire 20% slower; suppress_pct faster
+	# suppression (0.15.4: only from its sources): a build with none never pins - the meter stays empty, their fire whole
+	sim.tree = []                    # (the m70 review) no node, no charm, no second gun, nothing forced: no source at all
+	sim.equipped["Charm"] = null
+	sim.equipped["Secondary"] = null
+	var force_np: Dictionary = sim.s68_force.duplicate()
+	sim.s68_force = {}
+	sim._stats_dirty()
 	m = _f66_run(sim)
-	var seq1: int = sim.f66_last_seq()
+	var seq_np: int = sim.f66_last_seq()
 	var ticks := 0
 	while sim.f66_suppress() < 1.0 and ticks < 100:
 		m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}
 		_f66_hit(sim, m, 1.0)
 		ticks += 1
-	_check(ticks == int(Data.SUPP66_FILL_S) and absf(sim._f66_in_mult(m, 1, 0.0) - (1.0 - Data.SUPP66_SLOW)) < 1e-6 and sim.f66_events_since(seq1).any(func(e): return e["kind"] == "suppressed"),
-		"the meter: full after %d s (want %d), their fire x%.2f" % [ticks, int(Data.SUPP66_FILL_S), sim._f66_in_mult(m, 1, 0.0)])
+	_check(not sim.f70_pins() and ticks == 100 and sim.f66_suppress() == 0.0 and absf(sim._f66_in_mult(m, 1, 0.0) - 1.0) < 1e-6 and not sim.f66_events_since(seq_np).any(func(e): return e["kind"] == "suppressed"),
+		"a build with no pinning pinned: the meter %.2f after %d s, their fire x%.2f" % [sim.f66_suppress(), ticks, sim._f66_in_mult(m, 1, 0.0)])
+	sim.s68_force = force_np
+	# with a source: SUPP66_FILL_S of sustained fire (its own share faster) fills it; full, they fire 20% slower
+	m = _f66_run(sim)
+	sim.f66_extra = {"no_jam": 1.0, "suppress_pct": 1e-6}
+	var seq1: int = sim.f66_last_seq()
+	ticks = 0
+	while sim.f66_suppress() < 1.0 and ticks < 100:
+		m["fire_x"] = {"Primary": 1.0, "Secondary": 1.0}
+		_f66_hit(sim, m, 1.0)
+		ticks += 1
+	_check(sim.f70_pins() and ticks == int(Data.SUPP66_FILL_S) and absf(sim._f66_in_mult(m, 1, 0.0) - (1.0 - Data.SUPP66_SLOW)) < 1e-6 and sim.f66_events_since(seq1).any(func(e): return e["kind"] == "suppressed"),
+		"the meter with a source: full after %d s (want %d), their fire x%.2f" % [ticks, int(Data.SUPP66_FILL_S), sim._f66_in_mult(m, 1, 0.0)])
 	m = _f66_run(sim)
 	sim.f66_extra = {"no_jam": 1.0, "suppress_pct": 100.0}
 	ticks = 0
@@ -43299,12 +43324,15 @@ func _f66fix_checks(main) -> void:
 	_check(float(m["f66_supp"]) == 0.0, "the dogs came on to a full meter")
 	m.erase("dogs_home")
 	sim._f66_gang(m, m["t"])                    # the site's own gang again
-	# 4. the meter drains while you don't fire
+	# 4. the meter drains while you don't fire (0.15.4: a build that pins)
+	var ex_was: Dictionary = sim.f66_extra.duplicate()
+	sim.f66_extra["suppress_pct"] = 1e-6
 	m["f66_supp"] = 0.5
 	m["fire_x"] = {"Primary": 0.0, "Secondary": 0.0}
 	m["target_hp"] = 1e12
 	sim._f66_hits(m, m["t"], 0.0, ["physical", 0.0], 1.0)
 	_check(float(m["f66_supp"]) < 0.5 - 1e-6 and absf(float(m["f66_supp"]) - (0.5 - 1.0 / Data.SUPP66_DRAIN_S)) < 1e-6, "the meter held with no fire: %.2f" % float(m["f66_supp"]))
+	sim.f66_extra = ex_was
 	# 5. an arm shot's cut in a long tick: only its seconds of it
 	m["f66_supp"] = 0.0
 	m["f66_arm_t"] = 1.0
@@ -44174,7 +44202,7 @@ func _i67_unique_checks(main) -> void:
 		return out
 	var ra: Array = rattle.call(true)
 	var ra0: Array = rattle.call(false)
-	_check(int(ra[0]) == int(Data.SUPP66_FILL_S / Data.RATTLE67_PIN_X) and absf(float(ra[1]) - (1.0 - Data.RATTLE67_SLOW)) < 1e-6 and int(ra0[0]) == int(Data.SUPP66_FILL_S),
+	_check(int(ra[0]) == int(Data.SUPP66_FILL_S / Data.RATTLE67_PIN_X) and absf(float(ra[1]) - (1.0 - Data.RATTLE67_SLOW)) < 1e-6 and int(ra0[0]) == 100 and absf(float(ra0[1]) - 1.0) < 1e-6,     # (0.15.4) no Rattle, no source: never pinned
 		"i67: the Rattle pins in %d s (plain %d), pinned fire x%.2f" % [int(ra[0]), int(ra0[0]), float(ra[1])])
 	# the Lifeboat Jacket: Last legs for 5 s with no stat; a kill in them, back at 20%
 	var boat := func(on: bool) -> Array:
@@ -46310,3 +46338,107 @@ func _g70_warm_checks(main) -> void:
 	main._art_warm_done = true
 	main.refresh()
 	print("g70 warm ok: idle frames and the title only, in its budget")
+
+
+
+## (0.15.4) Pinning only from its sources: a plain kit never pins; the Issued bugle's fixed +30%, a suppress_pct affix
+## or the Football Rattle do.
+func _f70_pin_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var ex_was: Dictionary = sim.f66_extra.duplicate()
+	var force_was: Dictionary = sim.s68_force.duplicate()
+	sim.f66_extra = {}
+	sim.s68_force = {}
+	sim.tree = []                    # (the m70 review) the camp's web off: a plain build has no node at all
+	for sl in Data.SLOTS:
+		sim.equipped[sl] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim._stats_dirty()
+	var plain: bool = sim.f70_pins()
+	# a Pinning filler node (suppress_pct, untyped) taken alone pins
+	var pin_id := ""
+	var cover_id := ""
+	for t in Data.TREES:
+		for k in range(t["nodes"].size()):
+			var nd: Dictionary = t["nodes"][k]
+			if pin_id == "" and str(nd.get("effect", "")) == "suppress_pct" and not nd.get("notable", false) and not nd.has("type"):
+				pin_id = "%s/%d" % [t["name"], k]
+			if str(nd.get("effect", "")) == "s68_heads_down":
+				cover_id = "%s/%d" % [t["name"], k]
+	sim.tree = [pin_id] if pin_id != "" else []
+	sim._stats_dirty()
+	var with_filler: bool = pin_id != "" and sim.f70_pins()
+	# Covering fire alone pins (its rule, and its 50 beside it)
+	sim.tree = [cover_id] if cover_id != "" else []
+	sim._stats_dirty()
+	var with_cover: bool = cover_id != "" and sim.s68_on("s68_heads_down") and sim.f70_pins()
+	sim.tree = []
+	sim._stats_dirty()
+	_check(with_filler and with_cover, "pinning's web sources: a Pinning node %s (%s), Covering fire %s (%s) (want true, true)" % [str(with_filler), pin_id, str(with_cover), cover_id])
+	# a fit or a socketable: none carries suppress_pct, so none is a source (a new one that did would need its own check)
+	var fit_pins: Array = Data.ATTACHMENTS.filter(func(a): return a.has("suppress_pct") or str(a).contains("suppress"))
+	_check(fit_pins.is_empty(), "a fit or socketable carries pinning, with no check that it pins: %s" % str(fit_pins.map(func(a): return a["name"])))
+	var bugle_def: Dictionary = {}
+	for u in Data.ISSUED67_MORE:
+		if str(u["name"]) == "Issued bugle":
+			bugle_def = u
+	var bugle: Dictionary = Items.roll_unique(bugle_def, sim.rng)
+	bugle["issued"] = true
+	bugle["fixed67"] = bugle_def["fixed"].duplicate()
+	sim.equipped["Charm"] = bugle
+	sim._stats_dirty()
+	var with_bugle: bool = sim.f70_pins()
+	sim.equipped["Charm"] = null
+	var gloves: Dictionary = sim._plain("Gloves", "Rigger gloves")
+	gloves["affixes"] = [{"stat": "suppress_pct", "value": 10, "tier": 1}]
+	sim.equipped["Gloves"] = gloves
+	sim._stats_dirty()
+	var with_affix: bool = sim.f70_pins()
+	_check(not plain and with_bugle and with_affix, "pinning's sources: plain %s, the Issued bugle %s, a suppress affix %s (want false, true, true)" % [str(plain), str(with_bugle), str(with_affix)])
+	sim.f66_extra = ex_was
+	sim.s68_force = force_was
+	sim.load_dict(saved)
+	main.refresh()
+	print("f70 pins ok: plain no; a Pinning node, Covering fire, the bugle and an affix yes; no fit carries it")
+
+
+
+## (0.15.4) The convoys' band: every route with where it leaves from, its headline and line inside 440 at both sizes.
+func _f70_band_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	_e69_camp(sim)
+	sim.e69_hear_convoy()
+	main.show_room(main.COMMS)
+	main._radio._pick_view("convoys")
+	for k in range(Words.E69["routes"].size()):
+		sim.e69["convoys"][0]["route"] = k
+		for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+			main.layout(sz)
+			main._radio._convoys._shown = ""
+			main.refresh()
+			_check_fit(main, "f70 the convoys' band, route %d (%dx%d)" % [k, int(sz.x), int(sz.y)])
+	main.layout(Vector2(1920, 1080))
+	sim.load_dict(saved)
+	main.refresh()
+	# the longest cargo names on the list's rows and the cargo card: every unique a convoy can carry
+	_e69_camp(sim)
+	sim.e69_hear_convoy()
+	var longest: Dictionary = {}
+	var fnt: Font = UI.font("SemiBold", false)
+	for u in Data.UNIQUES:
+		if str(u.get("slot", "")) in Data.SLOTS and (longest.is_empty() or fnt.get_string_size(str(u["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.CELL_TEXT_BIG + 2).x > fnt.get_string_size(str(longest["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.CELL_TEXT_BIG + 2).x):
+			longest = u     # the widest as the row draws it
+	var it: Dictionary = Items.roll_unique(longest, sim.rng)
+	sim.e69["convoys"][0]["item"] = it
+	sim.e69["convoys"][0]["cargo"]["name"] = Items.full_name(it)
+	main.show_room(main.COMMS)
+	main._radio._pick_view("convoys")
+	main._radio._convoys._shown = ""
+	main.refresh()
+	_check(main._radio._convoys.visible and main._radio._convoys._rows[0]["name"].visible, "the fixture: the convoys' list isn't up")
+	_check_fit(main, "f70 the convoys' longest cargo (%s)" % str(longest["name"]))
+	sim.load_dict(saved)
+	main.refresh()
+	print("f70 band ok: %d routes, the longest cargo %s" % [Words.E69["routes"].size(), str(longest["name"])])

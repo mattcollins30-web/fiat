@@ -238,7 +238,7 @@ func _show_list(cs: Array) -> void:
 		r["cell"].visible = not it.is_empty()
 		if not it.is_empty():
 			r["cell"].show_item(it, false, Vector2(PIC_W, ROW_H - 20))
-		UI.fit(r["name"], [cargo_words(c), Items.full_name(it) if not it.is_empty() else ""])
+		UI.fit(r["name"], [cargo_words(c), Items.full_name(it) if not it.is_empty() else ""] + ([str(it["base"])] if not it.is_empty() else []))     # (0.15.4) the base last: "The Quartermaster's Manual" ran 16 px past the row
 		UI.fit(r["route"], ["%s · level %d" % [route_title(c), int(c["level"])], "Level %d" % int(c["level"])])
 		var passes: int = int(c["passes"])
 		UI.fit(r["passes"], [Words.A69["c_passes"] % [passes, "" if passes == 1 else "s"], "%d run%s" % [passes, "" if passes == 1 else "s"]])
@@ -280,7 +280,7 @@ func _show_detail(cs: Array, crew: Array) -> void:
 	UI.set_head_art(head_band, UI.place_texture(route_art(c)))
 	UI.fit(_headline, [route_title(c)])
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
-	_unit.size.x = 440 + PAD - _unit.position.x
+	_unit.size.x = 440 + PAD - _unit.position.x - BAND_SLACK     # (0.15.4) a few px spare: "The docks road" + "out of the docks" ran 3 px past the line
 	UI.fit(_unit, [route_from(c), ""])
 	var passes: int = int(c["passes"])
 	UI.fit(_sub, [Words.A69["c_band_sub"] % [int(c["level"]), passes, "" if passes == 1 else "s"], "Level %d" % int(c["level"])])
@@ -288,7 +288,7 @@ func _show_detail(cs: Array, crew: Array) -> void:
 	_cargo_cell.visible = not it.is_empty()
 	if not it.is_empty():
 		_cargo_cell.show_item(it, false, CARGO_PIC)
-	UI.fit(_cargo_name, [Items.full_name(it) if not it.is_empty() else cargo_words(c), cargo_words(c)])
+	UI.fit(_cargo_name, [Items.full_name(it) if not it.is_empty() else cargo_words(c), cargo_words(c)] + ([str(it["base"])] if not it.is_empty() else []))     # (0.15.4) the base last
 	_cargo_name.add_theme_color_override("font_color", Pal.TEXT)
 	var kind: String = str(c["cargo"].get("kind", "slot"))
 	var what: String = str(Words.A69["c_kind"].get(kind, ""))
@@ -521,6 +521,9 @@ func text_nodes() -> Array:
 		out.append_array([t["value"], t["sub"]])
 	out.append_array(_note)
 	return out
+
+
+const BAND_SLACK := 6.0
 
 
 func line_pairs() -> Array:
