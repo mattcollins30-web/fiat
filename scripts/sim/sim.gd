@@ -4888,6 +4888,7 @@ func _fire_rounds(m: Dictionary, slot: String, shots: float) -> void:
 			continue
 		m["fired"][slot] = 0.0
 		cur["ammo"] = ""                          # spent: it takes any grade next
+		s68_on_empty(m)                           # (BUILD68-S) Change of dressing
 		var nxt: Dictionary = _next_mag(slot)
 		if nxt.is_empty():
 			nxt = _share_take(m, slot)            # the secondary's, the type's last (the three-stage review, game 2)
@@ -22119,9 +22120,11 @@ func _f66_hits(m: Dictionary, t: Dictionary, landed_total: float, single_top: Ar
 		x *= 1.0 - arm
 		st["armour_hits"] = float(st["armour_hits"]) + shots
 	x *= 1.0 + f66_streak_bonus_pct(sv) / 100.0
+	x *= s68_dmg_x(m, gun)                       # (BUILD68-S) Elbow grease, Covering fire, Body count
 	var one: float = x / maxf(shots, 0.0001)                   # one shot's worth, after the armour and the streak
 	var heads: int = _f66_count(m, shots * clampf(Data.HEAD66_PCT + float(sv["head_pct"]), 0.0, 100.0) / 100.0)
 	heads = u67_heads(m, slot, gun, shots, heads)     # (BUILD67-I) the Lee-Enfield's fifth round, the Desk Sergeant's last
+	heads = s68_heads(m, shots, heads)           # (BUILD68-S) Between the eyes: the first shot at each gang
 	if heads > 0:
 		var cut: float = f66_helmet(t, sv)
 		var add_one: float = one * maxf(0.0, Data.HEAD66_X + float(sv["head_dmg_pct"]) / 100.0 - 1.0) * (1.0 - cut)
@@ -22210,9 +22213,10 @@ func _f66_taken(m: Dictionary, on_hp: float) -> void:
 	m["f66_hurt"] = float(m.get("f66_hurt", 0.0)) + on_hp
 	if float(m["f66_hurt"]) >= max_hp() * Data.STREAK66_HIT_PCT / 100.0:
 		m["f66_hurt"] = 0.0
-		if int(m.get("f66_streak", 0)) > 0:
+		var kept: int = s68_streak_kept(int(m.get("f66_streak", 0)))     # (BUILD68-S) Ride your luck: halved, not ended
+		if int(m.get("f66_streak", 0)) > 0 and kept == 0:
 			_f66_push(m, "streak_end", {"was": int(m["f66_streak"])})
-		m["f66_streak"] = 0
+		m["f66_streak"] = kept
 
 
 ## A man down (from the kill loop, before _kill counts him): the streak, scavenger, the hard man, Last Stand held.
@@ -22632,3 +22636,70 @@ func clock_gain(it: Dictionary) -> float:
 	var t := surv_fight()
 	var c0: float = float(_try({}, func(): return patrol_s(t)))
 	return (float(_try(it, func(): return patrol_s(t))) - c0) / maxf(c0, 0.0001)
+
+
+# ------------------------------------------------------------------ BUILD68-S (8 Nov): six notables on 0.15.0's mechanics
+# docs/design/endgame_rail.md §3. Data.S68_NOTABLES: one a class, each hooked where its mechanic already is (marked
+# "(BUILD68-S)" there) and worked out here. Their figures beside a stat ride the node's "also" (head_dmg_pct, no_jam,
+# suppress_pct, streak_dmg_pct), summed by f66_stat as any other.
+
+var s68_force := {}     # effect -> true: the smoke's, a notable on without its node owned; never saved
+
+
+## Whether the runner has one of the six (its node owned, or the smoke's). The rules below read each by name, so the
+## smoke's "tree effects nothing reads" finds them.
+func s68_on(effect: String) -> bool:
+	return s68_force.has(effect) or has_node(effect)
+
+
+## The tick's damage from three of them: Elbow grease (a gun that could jam), Covering fire (the gang pinned),
+## Body count (the run's kills).
+func s68_dmg_x(m: Dictionary, gun) -> float:
+	var x := 1.0
+	if s68_on("s68_grease") and s68_could_jam(gun):
+		x *= Data.S68_GREASE_X
+	if s68_on("s68_heads_down") and float(m.get("f66_supp", 0.0)) >= 1.0:
+		x *= Data.S68_PINNED_X
+	x *= 1.0 + s68_count_pct(m) / 100.0
+	return x
+
+
+## A gun that could jam: its jam chance with no never-jam (BUILD68 fix round, review68 1: f66_jam_pct without no_jam,
+## so a T9 with a jam affix counts - the issued quick-draw pistol); not the Slam-fire, which has nothing to jam, and not
+## the Zip Gun, which Elbow grease leaves alone (its jams and its triple are its own; the words name it).
+func s68_could_jam(gun) -> bool:
+	if not (gun is Dictionary) or str(gun.get("rule", "")) == "zip_gun":
+		return false
+	return f66_jam_pct(gun, {"no_jam": 0.0, "jam_pct": f66_stat("jam_pct")}) > 0.0
+
+
+## Body count's +damage now (%): +1 for every S68_COUNT_EVERY kills this run, capped.
+func s68_count_pct(m) -> float:
+	if not (m is Dictionary) or not s68_on("s68_count"):
+		return 0.0
+	return minf(Data.S68_COUNT_CAP_PCT, floor(float(m.get("kills", 0)) / float(Data.S68_COUNT_EVERY)))
+
+
+## Between the eyes: the first shot at each gang (a patrol, a head, the dogs) is a headshot - one, whatever the roll gave.
+func s68_heads(m: Dictionary, shots: float, heads: int) -> int:
+	if shots <= 0.0 or not s68_on("s68_eyes"):
+		return heads
+	var key: String = _f66_gang_key(m)
+	if str(m.get("s68_eyes_gang", "")) == key:
+		return heads
+	m["s68_eyes_gang"] = key
+	return maxi(heads, 1)     # (BUILD68 fix round, review68 7) a headshot the roll gave already counts once
+
+
+## Ride your luck: what's left of the streak after a hit - half, rounded down; without it, none.
+func s68_streak_kept(n: int) -> int:
+	return int(floor(float(n) / 2.0)) if s68_on("s68_ride") else 0
+
+
+## Change of dressing: a magazine emptied in the fight heals S68_DRESSING_PCT of max HP.
+func s68_on_empty(m: Dictionary) -> void:
+	if not s68_on("s68_dressing") or hp <= 0.0:
+		return
+	var before: float = hp
+	hp = minf(max_hp(), hp + max_hp() * Data.S68_DRESSING_PCT / 100.0)
+	m["s68_dressed"] = float(m.get("s68_dressed", 0.0)) + (hp - before)

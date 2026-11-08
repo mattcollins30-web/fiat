@@ -85,9 +85,12 @@ const OF_EFFECT := {
 	"worst_first": "med", "jab": "med", "clocking_off": "search", "b_roads": "clock", "on_a_roll": "dice", "spare_change": "cash",
 	# the skill web (3 Nov, 0.12.1): the centre's Guard ring and the Recruit's lanes, which fell to the star
 	"guard_pct": "guard", "energy_max": "energy", "energy_regen_pct": "energy", "cdr_pct": "clock", "grenade_pct": "grenade", "grenade_extra": "grenade",
+	"head_pct": "skull", "head_dmg_pct": "skull", "pierce_pct": "pen", "leg_pct": "clock", "arm_pct": "person", "suppress_pct": "runs", "scav_pct": "quantity",     # (BUILD68-W) the fillers on 0.15.0's mechanics
 	"blast_burns": "fire", "cover_pct": "armour", "danger_area": "skull", "double_time": "pace", "on_the_double": "pace", "live_firing": "dmg",
 	"cap_passing_out": "quality", "cap_shock_awe": "loud",
 	"backdraught": "fire", "capacitor": "shock", "overload": "shock", "arterial": "bleed", "floored": "phys", "brittle": "frost", "catching": "poison",
+	# (BUILD68-S) the six on 0.15.0's mechanics
+	"s68_eyes": "skull", "s68_grease": "wrench", "s68_heads_down": "runs", "s68_count": "dmg", "s68_ride": "dice", "s68_dressing": "med",
 }
 
 

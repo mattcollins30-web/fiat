@@ -955,6 +955,14 @@ func _init() -> void:
 	_i67_mark_checks(main)                    # BUILD67-I: the ◆ on the pick panel, the stash cell, the floor, the log, at 1920x1080 and 1920x1200
 	_i67_unique_checks(main)                  # BUILD67-I: the 13 uniques - the table, the bands, the pictures, a check per rule
 	_f67_checks(main)                         # the 67 fix round (review67.md): boots scored as a body piece, the sling undone, the Zip Gun's jams, the Bench's T6, boots' lines, the last round, combat boots, the words
+	_w68_shape_checks(main)                   # BUILD68-W: no kind three in a row, the families by notable, the shorter paths, S's six placed
+	_w68_power_checks(main)                   # BUILD68-W: each region's lesser nodes worth 0.15.1's within 5%
+	_w68_kinds_checks(main)                   # BUILD68-W: every filler kind read by its stat
+	_w68_view_checks(main)                    # BUILD68-W: the new kinds' and S's six's cards, at 1920x1080 and 1920x1200
+
+	_s68_data_checks()                        # BUILD68-S (8 Nov): the six new notables - one a class, in its class's tree, their figures and words
+	_s68_rule_checks(main)                    # BUILD68-S: each one's rule in the fight - first-shot headshot, no jams, pinned, kill count, the streak halved, a magazine's dressing
+	_m68f_checks(main)                        # the 68 fix round (review68.md): the six's themes, the units at the low roll, one headshot not two, the chips' words, the arm glyph
 	_finish()
 
 
@@ -2344,6 +2352,8 @@ func _tree_effect_checks(sim) -> void:
 					read = read or src.contains('tree_sum("%s_last_pct" % ty)')     # Oil drum, Serrated, Deep freeze, Takes its time
 			if e == "skill_" + str(n.get("skill", "")):
 				read = read or (Data.SKILLS.has(str(n["skill"])) and src.contains('has_node("skill_" + id)'))     # the skill nodes, through skill_known (milestone 8)
+			read = read or (e in Sim.F66_STATS and src.contains("return tree_sum(key) + _affix_sum(key)"))     # (BUILD68-W) the web's fillers on 0.15.0's stats, read by f66_stat
+			read = read or src.contains('s68_on("%s")' % e)     # (BUILD68 fix round, review68 9) S's six, read by name through s68_on
 			if not read and not (e in orphans):
 				orphans.append("%s (%s)" % [e, n["name"]])
 	_check(orphans.is_empty(), "tree effects nothing reads: %s" % ", ".join(orphans))
@@ -2778,7 +2788,7 @@ func _webs_traits(main) -> void:
 			stats[nd["effect"]] = true
 			_check(nd.has("value") and nd.has("at") and nd.has("slot") and not Data.web_links(str(id)).is_empty() and Data.web_kind(str(id)) == "small", "filler %s is malformed" % id)
 	_check(fillers >= 95 and stats.size() >= 8, "the web has %d fillers of %d stats" % [fillers, stats.size()])     # 98 since merge 47 put Word of mouth, Long walks and Circuits on three
-	_check(Data.web_ids().size() == 1549, "the web has %d nodes, not the layout's 1,549" % Data.web_ids().size())
+	_check(Data.web_ids().size() == 1374, "the web has %d nodes, not the layout's 1,374" % Data.web_ids().size())     # (BUILD68-W) 1,549 to 1,374: the shorter roads
 	# the fillers' stats read: a regen filler heals; a resist filler counts
 	var mending: String = ""
 	for i in range(Data.tree_named("Petrol")["nodes"].size()):
@@ -16617,7 +16627,7 @@ func _web_layout_checks(main) -> void:
 	var sim = main.sim
 	var WL = load("res://scripts/sim/web_layout.gd")
 	var ids: Array = Data.web_ids()
-	_check(ids.size() == WL.SLOTS.size() and ids.size() == 1549, "the web holds %d nodes for %d slots" % [ids.size(), WL.SLOTS.size()])
+	_check(ids.size() == WL.SLOTS.size() and ids.size() == 1374, "the web holds %d nodes for %d slots" % [ids.size(), WL.SLOTS.size()])     # (BUILD68-W) 1,549 to 1,374
 	var seen := {}
 	var names := {}
 	for k in range(WL.SLOTS.size()):
@@ -22527,7 +22537,7 @@ func _web_checks(main) -> void:
 	# every node at the sim's place, the ring's thirty round the outside, no two on each other
 	var ids: Array = Data.web_ids()
 	var off_place: Array = ids.filter(func(id): return not wv.layout.has(id) or wv.layout[id].distance_to(Data.web_at(str(id))) > 0.01)
-	_check(ids.size() > 1500 and off_place.is_empty() and wv.layout.size() == ids.size() + Data.RING["nodes"].size(), "the web's nodes aren't at the sim's places: %d of %d off, %d laid" % [off_place.size(), ids.size(), wv.layout.size()])
+	_check(ids.size() > 1300 and off_place.is_empty() and wv.layout.size() == ids.size() + Data.RING["nodes"].size(), "the web's nodes aren't at the sim's places: %d of %d off, %d laid" % [off_place.size(), ids.size(), wv.layout.size()])     # (BUILD68-W) > 1500 to > 1300: the shorter roads (1,374)
 	var overlaps: Array = _web_overlaps(wv)      # bucketed (BUILD49 V: 1,579 nodes)
 	for ov in overlaps.slice(0, 3):
 		_check(false, "%s sit on each other" % ov)
@@ -23309,7 +23319,7 @@ func _web49_checks(main) -> void:
 	var far := 0.0
 	for id in ids:
 		far = maxf(far, Data.web_at(str(id)).length())
-	_check(ids.size() == 1549 and ids.all(func(id): return wv.layout.has(id) and wv.layout[id] == Data.web_at(str(id))), "the web has %d nodes, or one isn't at its place" % ids.size())
+	_check(ids.size() == 1374 and ids.all(func(id): return wv.layout.has(id) and wv.layout[id] == Data.web_at(str(id))), "the web has %d nodes, or one isn't at its place" % ids.size())     # (BUILD68-W) 1,549 to 1,374
 	_check(wv.ring_r() > far + 20.0 and wv.ring_r() <= 1125.0 and wv.layout.keys().filter(func(id): return wv._region[id] == "ring").all(func(id): return absf(wv.layout[id].length() - wv.ring_r()) < 0.01), "the ring sits at %.0f, the web's furthest node at %.0f" % [wv.ring_r(), far])
 	wv.count_batches()
 	_check(wv.nodes_drawn == ids.size() + Data.RING["nodes"].size(), "the whole web drew %d nodes of %d" % [wv.nodes_drawn, ids.size() + Data.RING["nodes"].size()])
@@ -26138,7 +26148,7 @@ func _skills_checks(sim) -> void:
 	_check(not sim.set_skill_slot(0, "decoy") and sim.skill_slots[0] == "clean_shot", "the loadout changed on a run")
 	# a fight starts full and ready
 	_check(m.has("sk") and is_equal_approx(sim.energy_now(), sim.max_energy()) and sim.skill_wait(0) == 0.0 and sim.skill_wait(2) == 0.0, "a fight didn't start with full energy and every skill ready: %s" % str(m.get("sk", {})))
-	_check(is_equal_approx(sim.max_energy(), Data.ENERGY_POOL) and is_equal_approx(sim.energy_regen(), Data.ENERGY_REGEN * (1.0 + (sim.pace() - 1.0) * Data.ENERGY_PACE_SHARE)), "energy's figures: %.1f max, %.2f a second" % [sim.max_energy(), sim.energy_regen()])
+	_check(is_equal_approx(sim.max_energy(), Data.ENERGY_POOL + sim.tree_sum("energy_max")) and is_equal_approx(sim.energy_regen(), Data.ENERGY_REGEN * (1.0 + (sim.pace() - 1.0) * Data.ENERGY_PACE_SHARE) * (1.0 + sim.tree_sum("energy_regen_pct") / 100.0)), "energy's figures: %.1f max, %.2f a second" % [sim.max_energy(), sim.energy_regen()])     # (BUILD68-W) the skills' roads carry Fit and Keyed up now: the walk's own energy counted
 	_check(sim.cooldown_cut() <= Data.CDR_CAP and is_equal_approx(sim.skill_cooldown("clean_shot"), 8.0 * (1.0 - sim.cooldown_cut() / 100.0)), "a cooldown is off: %.2f" % sim.skill_cooldown("clean_shot"))
 	# the rules, staged: each holds when its condition does and not otherwise
 	var holds := func(rule: String, on_you: int) -> bool: return sim._skill_rule_holds(m, t, rule, on_you)
@@ -42755,7 +42765,7 @@ func _f66_kill_checks(main) -> void:
 	sim._f66_taken(m, sim.max_hp() * 0.02)
 	_check(sim.f66_streak() == 7, "a graze ended the streak")
 	var seq0: int = sim.f66_last_seq()
-	sim._f66_taken(m, sim.max_hp() * 0.04)
+	sim._f66_taken(m, sim.max_hp() * Data.STREAK66_HIT_PCT / 100.0 * 1.01)     # (BUILD68) was max_hp × 0.04: a hit just over the streak's threshold, whatever STREAK66_HIT_PCT is
 	_check(sim.f66_streak() == 0 and sim.f66_events_since(seq0).any(func(e): return e["kind"] == "streak_end" and int(e["was"]) == 7), "a hit didn't end the streak: %d" % sim.f66_streak())
 	# scavenger: a kill puts a round back
 	m = _f66_run(sim)
@@ -44289,3 +44299,479 @@ func _f67_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("f67 ok: boots on armour and the clock, the sling undone, the Zip Gun's jams, the Bench's T6, boots' lines, the cylinder, combat boots, the words")
+
+
+# ------------------------------------------------------------------ BUILD68-W (8 Nov): the web's shape
+## docs/design/endgame_rail.md section 3: themed fillers by the notable each path leads to (3-4 kinds rotating), shorter
+## paths, no path repeating a node kind more than twice in a row, builder S's six notables placed; a full web's power
+## kept within 5% of 0.15.1's. `-- only w68_shape w68_power w68_kinds w68_view`.
+const W68_S_SIX := {"Between the eyes": ["Poacher", "s68_eyes"], "Elbow grease": ["Scrapper", "s68_grease"], "Covering fire": ["Recruit", "s68_heads_down"],
+	"Body count": ["Doorman", "s68_count"], "Ride your luck": ["Drifter", "s68_ride"], "Change of dressing": ["Paramedic", "s68_dressing"]}
+## 0.15.1's steps from each class's start (the template's places, the same in every class; the corner keystone its own)
+const W68_STEPS_0151 := {"oneshot": 14, "trapline": 14, "deadquiet": 18, "poached": 15, "pot": 12, "decoy": 12}
+const W68_CORNER_0151 := [21, 18, 16, 19, 18, 18]
+## A filler's worth in 0.15.1's terms: the figure one of today's fillers gave for that stat (Keen's 3% damage is one);
+## a stat that wasn't a filler, its affix's low roll (data.gd AFFIXES66 "min": head_dmg 10, leg 2, arm 2, suppress 10,
+## scav 5, pierce 5, head 1 - BUILD68 fix round, review68 2). 0.15.1's lesser nodes were one each.
+const W68_UNIT := {"damage_pct": 3.0, "cdr_pct": 2.0, "hp": 4.0, "guard_pct": 3.0, "armour_pct": 4.0, "pace_pct": 2.0, "regen": 0.2, "rarity": 2.0,
+	"search_pct": 5.0, "fire_res": 3.0, "frost_res": 3.0, "poison_res": 3.0, "shock_res": 3.0, "bleed_res": 3.0, "head_pct": 1.0, "head_dmg_pct": 10.0,
+	"pierce_pct": 5.0, "leg_pct": 2.0, "arm_pct": 2.0, "suppress_pct": 10.0, "scav_pct": 5.0, "grenade_pct": 4.0, "patrol_pct": 2.0, "heal_pct": 4.0,
+	"med_speed_pct": 4.0, "sell_pct": 3.0, "loot_pct": 2.0, "energy_regen_pct": 3.0, "energy_max": 3.0, "frost_pct": 3.0, "shock_pct": 3.0,
+	"fire_pct": 3.0, "bleed_pct": 3.0, "poison_pct": 3.0, "physical_pct": 3.0}
+const W68_LESSER_0151 := {"class": 131, "el": 60, "centre": 174}
+
+
+## A lesser node's slot is a wheel's member ("c0:flush.2", "h0.1"): its hub's slot, else "".
+func _w68_hub(slot: String) -> String:
+	var local: String = slot.get_slice(":", slot.get_slice_count(":") - 1)
+	if not local.contains("."):
+		return ""
+	var h: String = slot.substr(0, slot.rfind("."))
+	return h if Data.web_of_slot(h) != "" else slot.get_slice(":", 0) + ":start"
+
+
+## The family a lesser node takes from the notable it leads to (tools/make_skill_web.py fam_of): `own` the lesser node
+## (the start's wheel goes by its own track).
+func _w68_fam_of(hub: String, own: String) -> String:
+	var reg: String = Data.web_region(hub)
+	var th: String = Data.web_theme(hub)
+	if Data.web_kind(hub) == "start":
+		reg = Data.web_region(own)
+		th = Data.web_theme(own)
+	if reg == "centre":
+		return "centre:" + str({"h0": "hp", "h3": "hp", "h1": "guard", "h4": "guard", "h2": "pace", "h5": "pace"}.get(Data.web_slot(hub), "mix"))
+	if reg.begins_with("el:"):
+		return reg
+	if th == "dmg" or th == "ctl":
+		return ("atk:" if th == "dmg" else "oth:") + reg.substr(6)
+	return th
+
+
+func _w68_shape_checks(main) -> void:
+	var sim = main.sim
+	var ids: Array = Data.web_ids()
+	var lesser: Array = ids.filter(func(x): return Data.web_kind(str(x)) == "small")
+	# 1. no path runs one kind three times: no lesser node has two lesser neighbours of its own kind
+	var triples: Array = []
+	for id in lesser:
+		var nm: String = str(sim.node(str(id)).get("name", ""))
+		var same: Array = Data.web_links(str(id)).filter(func(o): return Data.web_kind(str(o)) == "small" and str(sim.node(str(o)).get("name", "")) == nm)
+		if same.size() >= 2:
+			triples.append("%s %s (%s)" % [nm, Data.web_slot(str(same[0])) + "-" + Data.web_slot(str(id)) + "-" + Data.web_slot(str(same[1])), Data.web_region(str(id))])
+	_check(triples.is_empty(), "w68: %d paths run one kind three in a row: %s" % [triples.size(), str(triples.slice(0, 4))])
+	# (BUILD68 fix round, review68 5) nor one stat: no lesser node has two lesser neighbours of its own stat
+	var by_stat: Array = []
+	for id in lesser:
+		var ef: String = str(sim.node(str(id)).get("effect", ""))
+		var same_e: Array = Data.web_links(str(id)).filter(func(o): return Data.web_kind(str(o)) == "small" and ef != "" and str(sim.node(str(o)).get("effect", "")) == ef)
+		if same_e.size() >= 2:
+			by_stat.append("%s: %s-%s-%s" % [ef, sim.node(str(same_e[0]))["name"], sim.node(str(id))["name"], sim.node(str(same_e[1]))["name"]])
+	_check(by_stat.is_empty(), "w68: %d paths run one stat three in a row: %s" % [by_stat.size(), str(by_stat.slice(0, 4))])
+	# (review68 3) runs that alternate two kinds, A-B-A-B over four lesser nodes: 401 of 4,202 before the fix round, 16 after
+	var abab := 0
+	var four := 0
+	for b in lesser:
+		var bn: String = str(sim.node(str(b))["name"])
+		for a in Data.web_links(str(b)):
+			if Data.web_kind(str(a)) != "small":
+				continue
+			for c in Data.web_links(str(b)):
+				if c == a or Data.web_kind(str(c)) != "small":
+					continue
+				for d in Data.web_links(str(c)):
+					if d == a or d == b or Data.web_kind(str(d)) != "small":
+						continue
+					four += 1
+					var an: String = str(sim.node(str(a))["name"])
+					if an == str(sim.node(str(c))["name"]) and bn == str(sim.node(str(d))["name"]) and an != bn:
+						abab += 1
+	abab = floori(abab / 2.0)                 # each counted from both ends
+	four = floori(four / 2.0)
+	print("w68: %d of %d four-node lesser paths A-B-A-B" % [abab, four])
+	_check(abab <= 20, "w68: %d of %d four-node lesser paths alternate two kinds (A-B-A-B)" % [abab, four])
+	# 2. every filler from its family, and its family the notable its path leads to: a wheel's its hub's; a road's one of its ends'
+	var fams := {}
+	var wrong: Array = []
+	for id in lesser:
+		var nd: Dictionary = sim.node(str(id))
+		if not nd.get("filler", false):
+			continue
+		var fam: String = str(nd.get("family", ""))
+		if not Data.FILLER_FAMILIES.has(fam) or not (str(nd["name"]) in Data.FILLER_FAMILIES[fam]) or str(nd.get("effect", "")) != str(Data.FILLER_KINDS[str(nd["name"])]["effect"]) \
+				or not is_equal_approx(float(nd.get("value", 0.0)), float(Data.FILLER_KINDS[str(nd["name"])]["value"])):
+			wrong.append("%s %s (%s)" % [Data.web_slot(str(id)), nd.get("name", ""), fam])
+			continue
+		if not fams.has(fam):
+			fams[fam] = {}
+		fams[fam][str(nd["name"])] = int(fams[fam].get(str(nd["name"]), 0)) + 1
+		var hub: String = _w68_hub(Data.web_slot(str(id)))
+		var want: Array = []
+		if hub != "":
+			want.append(_w68_fam_of(Data.web_of_slot(hub), str(id)))
+		else:                                     # a road: the hubs at its ends
+			var seen := {str(id): true}
+			var todo: Array = [str(id)]
+			while not todo.is_empty():
+				var y: String = todo.pop_back()
+				for z in Data.web_links(y):
+					if seen.has(z):
+						continue
+					seen[z] = true
+					var zs: String = Data.web_slot(str(z))
+					if Data.web_kind(str(z)) == "small" and _w68_hub(zs) == "":
+						todo.append(str(z))
+					else:
+						var zh: String = str(z) if Data.web_kind(str(z)) != "small" else Data.web_of_slot(_w68_hub(zs))
+						want.append(_w68_fam_of(zh, str(id)))
+		if not (fam in want):
+			wrong.append("%s %s: %s, not %s" % [Data.web_slot(str(id)), nd.get("name", ""), fam, str(want)])
+	_check(wrong.is_empty(), "w68: %d fillers not of the family their notable gives: %s" % [wrong.size(), str(wrong.slice(0, 4))])
+	# 3. three or four kinds a family, all of them coming round; no class's lesser nodes a quarter one kind (0.15.1: Practised 46 of 131)
+	for fam in Data.FILLER_FAMILIES:
+		var ks: Array = Data.FILLER_FAMILIES[fam]
+		var used: Dictionary = fams.get(fam, {})
+		_check(ks.size() >= 3 and ks.size() <= 4 and used.size() == ks.size(), "w68: the family %s has %d kinds, %d of them used: %s" % [fam, ks.size(), used.size(), str(used)])
+	for c in Data.CLASSES:
+		var here: Array = lesser.filter(func(x): return Data.web_region(str(x)) == "class:" + str(c["name"]))
+		var per := {}
+		for x in here:
+			per[str(sim.node(str(x))["name"])] = int(per.get(str(sim.node(str(x))["name"]), 0)) + 1
+		var top := ""
+		for k in per:
+			if top == "" or int(per[k]) > int(per[top]):
+				top = k
+		_check(here.size() > 0 and float(per[top]) <= here.size() * 0.25, "w68: the %s's lesser nodes are %d of %d %s" % [c["name"], int(per.get(top, 0)), here.size(), top])
+		_check(int(per.get("Practised", 0)) < int(per[top]), "w68: Practised is the %s's top kind: %d of %d" % [c["name"], int(per.get("Practised", 0)), here.size()])     # (BUILD68 fix round, review68 4)
+		# 4. shorter paths: fewer lesser nodes than 0.15.1's 131, and every place the template names nearer its start
+		_check(here.size() <= 110, "w68: the %s still has %d lesser nodes (0.15.1: 131)" % [c["name"], here.size()])
+		var st: String = Data.web_start(str(c["name"]))
+		var j: int = int(Data.web_slot(st).substr(1, 1))         # the layout's class (c0 the Poacher .. c5 the Recruit)
+		var dist := {st: 0}
+		var q: Array = [st]
+		while not q.is_empty():
+			var nq: Array = []
+			for x in q:
+				for y in Data.web_links(str(x)):
+					if not dist.has(y):
+						dist[y] = int(dist[x]) + 1
+						nq.append(y)
+			q = nq
+		for place in W68_STEPS_0151:
+			var pid: String = Data.web_of_slot("c%d:%s" % [j, place])
+			_check(pid != "" and int(dist.get(pid, 99)) < int(W68_STEPS_0151[place]), "w68: the %s's %s is %d steps from its start (0.15.1: %d)" % [c["name"], place, int(dist.get(pid, 99)), int(W68_STEPS_0151[place])])
+		var kid: String = Data.web_of_slot("c%d:K" % j)
+		_check(int(dist.get(kid, 99)) < int(W68_CORNER_0151[j]), "w68: the %s's corner keystone is %d steps (0.15.1: %d)" % [c["name"], int(dist.get(kid, 99)), int(W68_CORNER_0151[j])])
+	# 5. S's six: each one notable in its class's region, its rule's effect, a bare notable on a road - its two joins
+	# to two different clusters, so a path goes through it
+	var s68: Array = (Data as Script).get_script_constant_map().get("S68_NOTABLES", [])
+	for s in s68:
+		_check(W68_S_SIX.has(str(s["name"])) and str(W68_S_SIX[str(s["name"])][0]) == str(s["cls"]), "w68: S's %s isn't one W places" % str(s["name"]))
+	for nm in W68_S_SIX:
+		var hit: Array = ids.filter(func(x): return str(sim.node(str(x)).get("name", "")) == nm)
+		var id: String = str(hit[0]) if hit.size() == 1 else ""
+		var ends := {}
+		for o in Data.web_links(id):
+			var os: String = Data.web_slot(str(o))
+			ends[_w68_hub(os) if _w68_hub(os) != "" else os] = true
+		_check(id != "" and Data.web_kind(id) == "notable" and Data.web_region(id) == "class:" + str(W68_S_SIX[nm][0]) and str(sim.node(id).get("effect", "")) == str(W68_S_SIX[nm][1])
+			and Data.web_links(id).size() == 2 and ends.size() == 2, "w68: %s isn't one notable on a road in the %s's region: %s %s %s" % [nm, W68_S_SIX[nm][0], id, Data.web_region(id), str(ends.keys())])
+	print("w68 shape ok: %d nodes, %d lesser, none three in a row, %d families each its notable's, the classes' paths shorter, S's six placed" % [ids.size(), lesser.size(), fams.size()])
+
+
+## A full web's power (BUILD68-W): each region's lesser nodes in 0.15.1's terms (W68_UNIT; a named lesser node one, as
+## it was) within 5% of 0.15.1's - fewer, each a little more. The notables apart (S's six are the "more notables").
+func _w68_power_checks(main) -> void:
+	var sim = main.sim
+	var got := {}
+	var n := {}
+	for id in Data.web_ids():
+		if Data.web_kind(str(id)) != "small":
+			continue
+		var reg: String = Data.web_region(str(id))
+		var nd: Dictionary = sim.node(str(id))
+		var u: float = 1.0
+		if nd.get("filler", false):
+			_check(W68_UNIT.has(str(nd.get("effect", ""))), "w68: a filler's stat has no worth in 0.15.1's terms: %s" % str(nd))
+			u = float(nd.get("value", 0.0)) / float(W68_UNIT.get(str(nd.get("effect", "")), 1.0))
+		got[reg] = float(got.get(reg, 0.0)) + u
+		n[reg] = int(n.get(reg, 0)) + 1
+	var lines: Array = []
+	for reg in got:
+		var was: float = float(W68_LESSER_0151[reg.get_slice(":", 0) if reg != "centre" else "centre"])
+		lines.append("%s %.1f/%d (%+.1f%%, %d nodes)" % [reg, got[reg], int(was), (got[reg] / was - 1.0) * 100.0, n[reg]])
+		_check(absf(got[reg] / was - 1.0) <= 0.05, "w68: %s's lesser nodes are worth %.1f, 0.15.1's %.0f (more than 5%% off)" % [reg, got[reg], was])
+	print("w68 power ok: " + ", ".join(lines))
+
+
+## The new kinds read: each kind's stat one the sim reads off the web (a tree_sum of it in sim.gd, an element's by its
+## pattern, or one of 0.15.0's twelve), and owning one moves it by its figure (and the fight's read for 0.15.0's).
+func _w68_kinds_checks(_main) -> void:
+	var src: String = (load("res://scripts/sim/sim.gd") as Script).source_code
+	for kn in Data.FILLER_KINDS:
+		var e0: String = str(Data.FILLER_KINDS[kn]["effect"])
+		var by_el: bool = (e0.ends_with("_pct") and src.contains('tree_sum("%s_pct" % ty)') or e0.ends_with("_res") and src.contains('tree_sum("%s_res" % ty)')) \
+			and e0.get_slice("_", 0) in ["fire", "frost", "poison", "shock", "bleed", "physical"]
+		_check(src.contains('tree_sum("%s")' % e0) or e0 in Sim.F66_STATS or by_el, "w68: %s's stat %s isn't one the sim reads off the web" % [kn, e0])
+		var hit: Array = Data.web_ids().filter(func(x): return str(Data._web_node(str(x)).get("name", "")) == kn and Data._web_node(str(x)).get("filler", false))
+		var s = Sim.new()
+		s.start()
+		_set_cls(s, "Poacher")
+		s.core_gates = false
+		var eff: String = str(Data.FILLER_KINDS[kn]["effect"])
+		var v: float = float(Data.FILLER_KINDS[kn]["value"])
+		s.tree = [Data.web_start("Poacher")]
+		s._caches_out()
+		var t0: float = s.tree_sum(eff)
+		var f0: float = s.f66_stat(eff) if eff in s.F66_STATS else 0.0
+		if hit.is_empty():
+			_check(false, "w68: no filler on the web is %s" % kn)
+			continue
+		s.tree = [Data.web_start("Poacher"), str(hit[0])]
+		s._caches_out()
+		_check(is_equal_approx(s.tree_sum(eff) - t0, v), "w68: owning %s moves %s by %.2f, not %.2f" % [kn, eff, s.tree_sum(eff) - t0, v])
+		if eff in s.F66_STATS:
+			_check(is_equal_approx(s.f66_stat(eff) - f0, v), "w68: owning %s moves the fight's %s by %.2f, not %.2f" % [kn, eff, s.f66_stat(eff) - f0, v])
+	print("w68 kinds ok: %d kinds, each read by its stat" % Data.FILLER_KINDS.size())
+
+
+## The web's screen with the new shape: each new kind's card (its chip and its sentence) and S's six's, at 1920x1080 and
+## 1920x1200, centred on the node; every word fits (_check_fit).
+func _w68_view_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	if sim.on_mission():
+		sim.extract_now()
+	var bk = main._barracks
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	var wv = bk.web()
+	var picks: Array = []
+	for kn in Data.FILLER_KINDS:
+		var hit: Array = Data.web_ids().filter(func(x): return str(sim.node(str(x)).get("name", "")) == kn and sim.node(str(x)).get("filler", false))
+		if not hit.is_empty():
+			picks.append(str(hit[0]))
+	for nm in W68_S_SIX:
+		var hit2: Array = Data.web_ids().filter(func(x): return str(sim.node(str(x)).get("name", "")) == nm)
+		if hit2.size() == 1:
+			picks.append(str(hit2[0]))
+	_check(picks.size() == Data.FILLER_KINDS.size() + W68_S_SIX.size(), "w68: %d of the new kinds and S's six found on the web" % picks.size())
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		main.layout(sz)
+		for id in picks:
+			var nd: Dictionary = wv.node_of(str(id))
+			bk._pick(str(id))
+			wv.centre_on(str(id))
+			bk._shown = ""
+			main.refresh()
+			_check(bk._title.text == str(nd.get("name", "")) and bk._title.visible, "w68: the card for %s reads '%s'" % [nd.get("name", ""), bk._title.text])
+			if nd.get("filler", false):
+				var chip: String = str(bk.EFFECT_WORDS.get(str(nd["effect"]), "")) % nd["value"] if bk.EFFECT_WORDS.has(str(nd["effect"])) else ""
+				_check(chip != "" and bk._chip_words(nd) == chip and bk._sentence(nd) != "" and bk._sentence(nd) == str(bk.PANEL_WORDS.get(str(nd["effect"]), "")),
+					"w68: %s's card has no chip or sentence of its own: '%s' / '%s'" % [nd["name"], bk._chip_words(nd), bk._sentence(nd)])
+			_check(wv.framed_rect().has_point(wv.to_screen(wv.layout[str(id)])), "w68: centred on %s, it isn't on the canvas" % nd.get("name", ""))
+			_check_fit(main, "Training, %s (%dx%d)" % [nd.get("name", ""), int(sz.x), int(sz.y)])
+	bk._pick("")
+	bk.selected = ""
+	bk._shown = ""
+	sim.load_dict(saved)
+	main.layout(Vector2(1920, 1080))
+	main.refresh()
+	print("w68 view ok: %d cards at 1920x1080 and 1920x1200" % picks.size())
+
+
+# ------------------------------------------------------------------ BUILD68-S (8 Nov): six notables on 0.15.0's mechanics
+
+## The six: one a class, each in WEB_EXTRA under a tree of its class, its effect and figures, its words in the style.
+func _s68_data_checks() -> void:
+	_check(Data.S68_NOTABLES.size() == 6, "the new notables: %d, not 6" % Data.S68_NOTABLES.size())
+	var classes := {}
+	var effects := {}
+	for sn in Data.S68_NOTABLES:
+		classes[str(sn["cls"])] = true
+		effects[str(sn["effect"])] = true
+		var tree_cls := ""
+		for t in Data.TREES_SRC:
+			if str(t["name"]) == str(sn["tree"]):
+				tree_cls = str(t.get("class", ""))
+		_check(tree_cls == str(sn["cls"]), "%s's tree %s is the %s's, not the %s's" % [sn["name"], sn["tree"], tree_cls, sn["cls"]])
+		var found: Array = Data.WEB_EXTRA.get(str(sn["tree"]), []).filter(func(x): return str(x["name"]) == str(sn["name"]))
+		_check(found.size() == 1, "%s isn't in WEB_EXTRA's %s once: %d" % [sn["name"], sn["tree"], found.size()])
+		if found.size() != 1:
+			continue
+		var nd: Dictionary = found[0]
+		var extra: Array = Data.WEB_EXTRA[str(sn["tree"])]
+		_check(extra.find(nd) == extra.size() - 1, "%s isn't its tree's last: an existing node's id would move" % sn["name"])
+		_check(str(nd["effect"]) == str(sn["effect"]) and bool(nd.get("notable", false)) and not nd.has("skill") and not nd.has("keystone"), "%s's node: %s" % [sn["name"], str(nd)])
+		var w: String = str(nd.get("words", ""))
+		_check(w.length() >= 20 and w.length() <= 100 and w[0] == w[0].to_upper(), "%s's words: '%s'" % [sn["name"], w])     # (BUILD68 fix round) 90 to 100: the editor's Ride your luck line is 94
+		var rx := RegEx.new()
+		rx.compile("(?i)\\b(" + "|".join(WORDS_BANNED) + ")\\b")
+		_check(rx.search(w) == null, "%s's words use a banned word (the words check's list): '%s'" % [sn["name"], w])
+		for bad in ["depth", "tier", " - ", "-%", "Streak", "Pinned", "Headshot"]:
+			_check(not w.contains(bad), "%s's words say '%s': '%s'" % [sn["name"], bad, w])
+	_check(classes.size() == 6 and effects.size() == 6, "the six aren't one a class with their own effects: %s %s" % [str(classes.keys()), str(effects.keys())])
+	# once placed on the web: each effect read by the sim by name (the tree-effects check), each its own glyph, not the star
+	var src := FileAccess.get_file_as_string("res://scripts/sim/sim.gd")
+	for e in effects:
+		_check(src.contains('s68_on("%s")' % e), "the sim doesn't read %s by name: the tree-effects check would call it an orphan" % e)     # (BUILD68 fix round) by name through s68_on, not has_node
+		_check(NodeGlyphs.OF_EFFECT.has(e) and NodeGlyphs.SVG.has(str(NodeGlyphs.OF_EFFECT[e])), "%s has no glyph of its own: the web would draw the star" % e)
+	# the figures they carry beside their rules, on the stats the fight sums
+	var also := {"Between the eyes": {"head_dmg_pct": 25}, "Elbow grease": {"no_jam": 1}, "Covering fire": {"suppress_pct": 50}, "Ride your luck": {"streak_dmg_pct": 2}}
+	for nm in also:
+		var got := {}
+		for sn in Data.S68_NOTABLES:
+			if str(sn["name"]) == nm:
+				for nd in Data.WEB_EXTRA[str(sn["tree"])]:
+					if str(nd["name"]) == nm:
+						got = nd.get("also", {})
+		_check(got == also[nm], "%s's figures beside its rule: %s, not %s" % [nm, str(got), str(also[nm])])
+		for k in got:
+			_check(k in Sim.F66_STATS, "%s's %s isn't a stat the fight reads" % [nm, k])
+	# (the 68 merge) placed on the web by W's roads: each once, in its class's region, as its own entry (no stub's copy)
+	for sn in Data.S68_NOTABLES:
+		var placed: Array = []
+		for t in Data.TREES:
+			for nd in t["nodes"]:
+				if str(nd["name"]) == str(sn["name"]):
+					placed.append([str(t["name"]), nd])
+		_check(placed.size() == 1, "%s is on the web %d times, not once" % [sn["name"], placed.size()])
+		if placed.size() != 1:
+			continue
+		var pn: Dictionary = placed[0][1]
+		var own: Array = Data.WEB_EXTRA[str(sn["tree"])].filter(func(x): return str(x["name"]) == str(sn["name"]))
+		_check(str(placed[0][0]) == str(sn["tree"]) and str(pn.get("web_region", "")) == "class:" + str(sn["cls"]) and bool(pn.get("notable", false)),
+			"%s placed in %s / %s, not the %s's %s, or not a notable" % [sn["name"], placed[0][0], pn.get("web_region", ""), sn["cls"], sn["tree"]])
+		_check(own.size() == 1 and str(pn["effect"]) == str(own[0]["effect"]) and str(pn["words"]) == str(own[0]["words"]) and pn.get("also", {}) == own[0].get("also", {}),
+			"%s on the web isn't its WEB_EXTRA entry: %s" % [sn["name"], str(pn)])
+	print("s68 data ok: six notables, one a class, each its tree's last, their figures and words, each placed in its class")
+
+
+## A tick of hits for the rules: no headshot by roll, no jam, the gang's meter as given.
+func _s68_hit(sim, m: Dictionary, supp := 0.0) -> float:
+	m["f66_supp"] = supp
+	return float(_f66_hit(sim, m, 1.0)[0])
+
+
+func _s68_rule_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.s68_force = {}
+	var quiet := {"no_jam": 1.0, "head_pct": -Data.HEAD66_PCT}
+	# Between the eyes: the first shot at each gang a headshot (+25% headshot damage rides its figure), only the first
+	var m := _f66_run(sim)
+	sim.f66_extra = quiet.duplicate()
+	m.erase("s68_eyes_gang")
+	_check(absf(_s68_hit(sim, m) - 100.0) < 1e-6, "a headshot with no headshot chance and no Between the eyes")
+	sim.s68_force = {"s68_eyes": true}
+	m.erase("s68_eyes_gang")
+	var seq0: int = sim.f66_last_seq()
+	var e1: float = _s68_hit(sim, m)
+	var ev: Array = sim.f66_events_since(seq0).filter(func(e): return e["kind"] == "headshot")
+	_check(e1 > 100.0 + 1e-6 and ev.size() == 1 and int(ev[0]["n"]) == 1, "Between the eyes: the first shot at a gang wasn't a headshot: %.2f, %s" % [e1, str(ev)])
+	_check(absf(_s68_hit(sim, m) - 100.0) < 1e-6, "Between the eyes: a second headshot at the same gang")
+	m["patrols"] = int(m.get("patrols", 0)) + 1     # the next gang
+	_check(_s68_hit(sim, m) > 100.0 + 1e-6, "Between the eyes: the next gang's first shot wasn't a headshot")
+	# Elbow grease: a gun that could jam +20%; a gun that never could, nothing
+	sim.s68_force = {}
+	m = _f66_run(sim)
+	sim.f66_extra = quiet.duplicate()
+	var gun: Dictionary = sim.equipped["Primary"]
+	gun["tier"] = 1
+	_check(absf(_s68_hit(sim, m) - 100.0) < 1e-6, "a T1 gun's hit without Elbow grease")
+	sim.s68_force = {"s68_grease": true}
+	_check(absf(_s68_hit(sim, m) - 100.0 * Data.S68_GREASE_X) < 1e-4, "Elbow grease: a gun that could jam didn't do +20%%: %.2f" % _s68_hit(sim, m))
+	gun["tier"] = 9
+	_check(absf(_s68_hit(sim, m) - 100.0) < 1e-6, "Elbow grease on a gun that never jams")
+	# (BUILD68 fix round, review68 1) a T9 with a jam affix could jam (the issued quick-draw pistol): +20%; the Zip Gun,
+	# which jams whatever the notable says, is left alone (no +20%)
+	sim.f66_extra = quiet.merged({"jam_pct": 3.0}, true)
+	_check(sim.s68_could_jam(gun) and absf(sim.s68_dmg_x(m, gun) - Data.S68_GREASE_X) < 1e-6, "Elbow grease: a T9 with +3%% jam didn't count as could-jam: x%.2f" % sim.s68_dmg_x(m, gun))
+	sim.f66_extra = quiet.duplicate()
+	gun["tier"] = 1
+	gun["rule"] = "zip_gun"
+	_check(not sim.s68_could_jam(gun) and absf(sim.s68_dmg_x(m, gun) - 1.0) < 1e-6, "Elbow grease gave the Zip Gun +20%%: x%.2f" % sim.s68_dmg_x(m, gun))
+	gun.erase("rule")
+	# Covering fire: a pinned gang takes +20%; not pinned, nothing
+	sim.s68_force = {"s68_heads_down": true}
+	gun["tier"] = 9
+	_check(absf(_s68_hit(sim, m, 0.0) - 100.0) < 1e-6, "Covering fire on a gang not pinned")
+	_check(absf(_s68_hit(sim, m, 1.0) - 100.0 * Data.S68_PINNED_X) < 1e-4, "Covering fire: a pinned gang didn't take +20%%: %.2f" % _s68_hit(sim, m, 1.0))
+	sim.s68_force = {}
+	_check(absf(_s68_hit(sim, m, 1.0) - 100.0) < 1e-6, "+damage on a pinned gang without Covering fire")
+	# Body count: +1% for every 5 kills this run, to +25%
+	m["kills"] = 12
+	_check(absf(_s68_hit(sim, m) - 100.0) < 1e-6, "+damage for kills without Body count")
+	sim.s68_force = {"s68_count": true}
+	_check(absf(_s68_hit(sim, m) - 102.0) < 1e-4 and absf(sim.s68_count_pct(m) - 2.0) < 1e-6, "Body count at 12 kills: %.2f, not 102" % _s68_hit(sim, m))
+	m["kills"] = 900
+	_check(absf(_s68_hit(sim, m) - (100.0 + Data.S68_COUNT_CAP_PCT)) < 1e-4, "Body count past its cap: %.2f" % _s68_hit(sim, m))
+	# Ride your luck: a hit halves the streak, no end; without it the streak ends
+	sim.s68_force = {"s68_ride": true}
+	m = _f66_run(sim)
+	for k in range(7):
+		sim._f66_on_kill(m, m["t"])
+	seq0 = sim.f66_last_seq()
+	sim._f66_taken(m, sim.max_hp() * Data.STREAK66_HIT_PCT / 100.0 * 1.01)
+	_check(sim.f66_streak() == 3 and not sim.f66_events_since(seq0).any(func(e): return e["kind"] == "streak_end"), "Ride your luck: a hit at 7 left %d, not 3" % sim.f66_streak())
+	sim._f66_taken(m, sim.max_hp() * Data.STREAK66_HIT_PCT / 100.0 * 1.01)
+	sim._f66_taken(m, sim.max_hp() * Data.STREAK66_HIT_PCT / 100.0 * 1.01)
+	_check(sim.f66_streak() == 0 and sim.f66_events_since(seq0).any(func(e): return e["kind"] == "streak_end" and int(e["was"]) == 1), "Ride your luck: the streak at 1, hit, didn't end: %d" % sim.f66_streak())
+	sim.s68_force = {}
+	for k in range(7):
+		sim._f66_on_kill(m, m["t"])
+	sim._f66_taken(m, sim.max_hp() * Data.STREAK66_HIT_PCT / 100.0 * 1.01)
+	_check(sim.f66_streak() == 0, "without Ride your luck a hit left a streak of %d" % sim.f66_streak())
+	# Change of dressing: the magazine emptied heals 3% of max HP; one not emptied, nothing
+	for on in [false, true]:
+		sim.s68_force = {"s68_dressing": true} if on else {}
+		m = _f66_run(sim)
+		var cur: Dictionary = sim.mag_in("Primary")
+		_check(not cur.is_empty(), "no magazine in the gun for Change of dressing's check")
+		if cur.is_empty():
+			continue
+		sim.hp = sim.max_hp() * 0.5
+		cur["rounds"] = 3
+		m["fired"] = {}
+		sim._fire_rounds(m, "Primary", 1.0)
+		_check(absf(sim.hp - sim.max_hp() * 0.5) < 1e-6, "HP back from a magazine not emptied")
+		sim._fire_rounds(m, "Primary", 2.0)
+		var want: float = sim.max_hp() * (0.5 + (Data.S68_DRESSING_PCT / 100.0 if on else 0.0))
+		_check(absf(sim.hp - want) < 1e-4, "Change of dressing %s: HP %.2f after a magazine emptied, not %.2f" % ["on" if on else "off", sim.hp, want])
+	sim.hp = sim.max_hp() - 0.1
+	sim.s68_force = {"s68_dressing": true}
+	sim.s68_on_empty(m)
+	_check(sim.hp <= sim.max_hp() + 1e-6, "Change of dressing healed past max HP")
+	sim.s68_force = {}
+	if sim.mission != null:
+		sim.extract_now()
+	sim.f66_extra = {}
+	sim.load_dict(saved)
+	print("s68 rules ok: Between the eyes, Elbow grease, Covering fire, Body count, Ride your luck, Change of dressing")
+
+
+# ------------------------------------------------------------------ the 68 fix round (review68.md)
+## The six's themes as their rules (review68 6: Body count and Ride your luck are damage); W68_UNIT at each stat's affix
+## low roll (review68 2); Between the eyes one headshot, not one on top of the roll's (review68 7); the fillers' chips
+## in the affixes' own words, the arm shots' glyph a man (review68 8). `-- only m68f`.
+const M68F_THEMES := {"Between the eyes": "dmg", "Elbow grease": "dmg", "Covering fire": "ctl", "Body count": "dmg", "Ride your luck": "dmg", "Change of dressing": "def"}
+
+
+func _m68f_checks(main) -> void:
+	var sim = main.sim
+	for nm in M68F_THEMES:
+		var hit: Array = Data.web_ids().filter(func(x): return str(sim.node(str(x)).get("name", "")) == nm)
+		_check(hit.size() == 1 and Data.web_theme(str(hit[0])) == str(M68F_THEMES[nm]), "m68f: %s's theme is %s, not %s" % [nm, Data.web_theme(str(hit[0])) if hit.size() == 1 else "?", M68F_THEMES[nm]])
+	for a in Data.AFFIXES:
+		if W68_UNIT.has(str(a["stat"])) and str(a["stat"]) in Sim.F66_STATS:
+			_check(is_equal_approx(float(W68_UNIT[str(a["stat"])]), float(a["min"])), "m68f: %s's unit %.0f isn't its affix's low roll %.0f" % [a["stat"], float(W68_UNIT[str(a["stat"])]), float(a["min"])])
+		if str(a["stat"]) in ["leg_pct", "arm_pct", "suppress_pct", "scav_pct"]:
+			_check(str(main._barracks.EFFECT_WORDS.get(str(a["stat"]), "")) == "+%d%% " + str(a["label"]), "m68f: the %s chip isn't its affix's words: '%s' / '%s'" % [a["stat"], main._barracks.EFFECT_WORDS.get(str(a["stat"]), ""), a["label"]])
+	_check(NodeGlyphs.OF_EFFECT.get("arm_pct", "") == "person", "m68f: arm shots' glyph is %s" % NodeGlyphs.OF_EFFECT.get("arm_pct", ""))
+	# Between the eyes: a gang's first tick with a headshot rolled already is one headshot, not two
+	var m := {"patrols": 3}
+	sim.s68_force = {"s68_eyes": true}
+	var first: int = sim.s68_heads(m, 5.0, 1)
+	var none: int = sim.s68_heads({"patrols": 4}, 5.0, 0)
+	sim.s68_force = {}
+	_check(first == 1 and none == 1, "m68f: Between the eyes with a headshot rolled gave %d (want 1), with none %d (want 1)" % [first, none])
+	print("m68f ok: the six's themes, the units at the low roll, one headshot, the chips' words, the arm glyph")

@@ -2657,6 +2657,7 @@ const WEB_EXTRA := {
 		{"name": "By the numbers", "effect": "cdr_pct", "value": 10, "notable": true},     # new (4 Nov, skill web version two): the Drill track's second notable
 		{"name": "Bulled boots", "effect": "energy_regen_pct", "value": 25, "notable": true},     # new (4 Nov, skill web version two): the Recruit's corner notable
 		{"name": "Fire and manoeuvre", "hang": [4.5, 1], "effect": "skill_fire_and_manoeuvre", "skill": "fire_and_manoeuvre", "notable": true, "words": "For 10 seconds, skills cost half and cooldowns pass twice as quickly"},
+		{"name": "Covering fire", "effect": "s68_heads_down", "also": {"suppress_pct": 50}, "notable": true, "words": "Your fire pins them down 50% quicker; pinned men take 20% more damage from you"},     # (BUILD68-S) pinning
 	],
 	"The Pitch": [
 		{"name": "Home ground", "hang": [0.5, -1], "effect": "hp", "value": 8, "notable": true},
@@ -2676,6 +2677,7 @@ const WEB_EXTRA := {
 		{"name": "Short circuit", "hang": [4.5, -1], "effect": "skill_short_circuit", "skill": "short_circuit", "notable": true, "words": "Shocks everyone on you and stuns them for 1.5 seconds. Your shock damage +30% for 6 seconds."},
 		{"name": "Breaker's yard", "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Workbench"], "xlinks": ["Fencing/Blowtorch"],
 		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
+		{"name": "Elbow grease", "effect": "s68_grease", "also": {"no_jam": 1}, "notable": true, "words": "Your guns never jam, the Zip Gun aside; a gun that could jam does 20% more damage"},     # (BUILD68-S) jams
 	],
 	"Fencing": [
 		{"name": "Bung", "hang": [1.5, 1], "effect": "skill_bung", "skill": "bung", "notable": true, "words": "Pay 20 tins: the nearest man is stunned for 8 seconds"},
@@ -2690,6 +2692,7 @@ const WEB_EXTRA := {
 		{"name": "One for the pot", "hang": [4.5, -1], "effect": "skill_one_for_the_pot", "skill": "one_for_the_pot", "notable": true, "words": "A man on you under 25% HP dies at once. A head takes ×5 damage instead."},
 		{"name": "Snare and wait", "col": 4, "effect": "snare_and_wait", "keystone": true, "links": ["Lying up"], "xlinks": ["Snares/Cold snap"],
 		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
+		{"name": "Between the eyes", "effect": "s68_eyes", "also": {"head_dmg_pct": 25}, "notable": true, "words": "Your first round at each gang is a headshot; your headshots do 25% more damage"},     # (BUILD68-S) headshots
 	],
 	"Snares": [
 		{"name": "Collared", "hang": [1.5, 1], "effect": "skill_collared", "skill": "collared", "notable": true, "words": "The nearest man is stunned for 3 seconds: he can't fire"},
@@ -2710,6 +2713,7 @@ const WEB_EXTRA := {
 		{"name": "Shutters down", "hang": [2.5, 1], "effect": "skill_shutters_down", "skill": "shutters_down", "notable": true, "words": "Take 80% less damage for 4 seconds"},
 		{"name": "Pat down", "hang": [3.5, 1], "effect": "skill_pat_down", "skill": "pat_down", "notable": true, "words": "The nearest man loses his armour and resists for 10 seconds"},
 		{"name": "Chucking-out time", "hang": [4.5, 1], "effect": "skill_chucking_out_time", "skill": "chucking_out_time", "notable": true, "words": "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds"},
+		{"name": "Body count", "effect": "s68_count", "notable": true, "words": "1% more damage for every 5 kills this run, up to 25%"},     # (BUILD68-S) kill counts
 	],
 	"Triage": [
 		{"name": "Steady pulse", "hang": [1.5, -1], "effect": "heal_pct", "value": 30, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
@@ -2724,6 +2728,7 @@ const WEB_EXTRA := {
 		{"name": "Sedative dart", "hang": [2.5, 1], "effect": "skill_sedative_dart", "skill": "sedative_dart", "notable": true, "words": "One man on you sleeps for 4 seconds"},
 		{"name": "Strapped up", "hang": [3.5, 1], "effect": "skill_strapped_up", "skill": "strapped_up", "notable": true, "words": "The next hit that would wound you leaves no wound"},
 		{"name": "Code blue", "hang": [4.5, 1], "effect": "skill_code_blue", "skill": "code_blue", "notable": true, "words": "Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared"},
+		{"name": "Change of dressing", "effect": "s68_dressing", "notable": true, "words": "Each magazine you empty heals 3% of max HP"},     # (BUILD68-S) empty magazines
 	],
 	"Moving on": [
 		{"name": "Light feet", "hang": [1.5, -1], "effect": "pace_pct", "value": 11, "notable": true},     # was the starter: the first skill comes with the first point (24 Oct, Matt)
@@ -2738,6 +2743,7 @@ const WEB_EXTRA := {
 		{"name": "Close shave", "hang": [2.5, 1], "effect": "skill_close_shave", "skill": "close_shave", "notable": true, "words": "The next ailment that would land on you misses"},
 		{"name": "Chancer", "hang": [3.5, 1], "effect": "skill_chancer", "skill": "chancer", "notable": true, "words": "The next man you kill always drops something, at +50% loot quality"},
 		{"name": "Jackpot", "hang": [4.5, 1], "effect": "skill_jackpot", "skill": "jackpot", "notable": true, "words": "For 8 seconds, every kill takes 2 seconds off every cooldown"},
+		{"name": "Ride your luck", "effect": "s68_ride", "also": {"streak_dmg_pct": 2}, "notable": true, "words": "Being hit halves your streak instead of ending it; 2% more damage for each kill in your streak"},     # (BUILD68-S) the streak
 	],
 	"Petrol": [
 		{"name": "Accelerant", "hang": [1.5, -1], "effect": "fire_pct", "value": 15, "notable": true},
@@ -2862,6 +2868,8 @@ static func _web_build_all() -> Dictionary:
 			var own: String = pool.substr(6)
 			nd = Dictionary(smalls[own][int(pool_at.get(own, 0))]).duplicate(true)
 			pool_at[own] = int(pool_at.get(own, 0)) + 1
+		elif FILLER_FAMILIES.has(str(s.get("fam", ""))):
+			nd = {"name": "", "filler": true, "fam": str(s["fam"])}     # (BUILD68-W) its family's kind, chosen once every slot's known (_w68_fill)
 		elif STAT_SMALLS.has(pool):
 			nd = Dictionary(STAT_SMALLS[pool]).duplicate()
 			nd["filler"] = true
@@ -2897,6 +2905,7 @@ static func _web_build_all() -> Dictionary:
 		nd["theme"] = str(s.get("theme", ""))
 		nd["region"] = tn
 		got[str(s["slot"])] = [tn, nd]
+	_w68_fill(got)                                         # (BUILD68-W) the fillers by family, no kind three in a row
 	# each tree's nodes: its own source nodes kept in it, in source order, then the rest in slot order
 	var by_tree := {}
 	for sl in got:
@@ -4750,3 +4759,169 @@ const RATTLE67_PIN_X := 2.0         # the Football Rattle: the meter fills this 
 const RATTLE67_SLOW := 0.3          # ...and pinned men fire this much slower (SUPP66_SLOW without it)
 const LIFEBOAT67_S := 5.0           # the Lifeboat Jacket: Last legs' seconds, at least
 const LIFEBOAT67_BACK := 0.2        # ...a kill in them: back on your feet at this share of max HP
+
+
+# ------------------------------------------------------------------ BUILD68-W (8 Nov): the web's fillers by family
+## docs/design/endgame_rail.md section 3 (Matt, 22 Oct: "more notables rather than more filler"): every lesser node
+## the layout gives a family (tools/make_skill_web.py: the theme of the notable its path leads to) takes one of that
+## family's three or four kinds, in turn, never the kind a lesser neighbour already holds where another is free - so
+## no path runs one kind more than twice. The classes' roads are shorter (a fifth fewer lesser nodes there), so the
+## kinds only the classes carry are worth a little more than the old fillers (Keen 3% to 4%, Practised 2% to 3% ...);
+## the kinds the centre and the elements share keep 0.15.1's figures (Hardy 4 HP, Guarded 3% ...). A full web's power
+## stays within 5% of 0.15.1's, class by class (the smoke's _w68_power_checks). First figures; the balance pass sets them.
+const FILLER_KINDS := {
+	"Keen": {"effect": "damage_pct", "value": 4}, "Composed": {"effect": "head_pct", "value": 2}, "Telling": {"effect": "head_dmg_pct", "value": 12},
+	"Pointed": {"effect": "pierce_pct", "value": 6}, "Hobbling": {"effect": "leg_pct", "value": 3}, "Disarming": {"effect": "arm_pct", "value": 3},
+	"Pinning": {"effect": "suppress_pct", "value": 12}, "Thrifty": {"effect": "scav_pct", "value": 6}, "Primed": {"effect": "grenade_pct", "value": 5},
+	"Watchful": {"effect": "patrol_pct", "value": 3}, "Soothing": {"effect": "heal_pct", "value": 5}, "Deft": {"effect": "med_speed_pct", "value": 5},
+	"Shrewd": {"effect": "sell_pct", "value": 4}, "Sharp-eyed": {"effect": "rarity", "value": 2}, "Nimble": {"effect": "search_pct", "value": 5},
+	"Laden": {"effect": "loot_pct", "value": 3}, "Practised": {"effect": "cdr_pct", "value": 3}, "Keyed up": {"effect": "energy_regen_pct", "value": 4},
+	"Full of beans": {"effect": "energy_max", "value": 4}, "Hardy": {"effect": "hp", "value": 4}, "Guarded": {"effect": "guard_pct", "value": 3},
+	"Tough": {"effect": "armour_pct", "value": 4}, "Brisk": {"effect": "pace_pct", "value": 3}, "Mending": {"effect": "regen", "value": 0.2},
+	"Bitter": {"effect": "frost_pct", "value": 3}, "Crackling": {"effect": "shock_pct", "value": 3}, "Scorching": {"effect": "fire_pct", "value": 3},
+	"Barbed": {"effect": "bleed_pct", "value": 3}, "Brawny": {"effect": "physical_pct", "value": 3}, "Toxic": {"effect": "poison_pct", "value": 3},
+	"Wrapped up": {"effect": "frost_res", "value": 3}, "Insulated": {"effect": "shock_res", "value": 3}, "Singed": {"effect": "fire_res", "value": 3},
+	"Clotted": {"effect": "bleed_res", "value": 3}, "Hardened": {"effect": "poison_res", "value": 3},
+}
+## A family's kinds, in the turn they come round: atk:<Class> the class's attack track (its left tree), oth:<Class> its
+## other; skill, def (staying up), loot (finds); el:<element> an element's column; centre:<stat> the centre's rings.
+const FILLER_FAMILIES := {
+	"atk:Poacher": ["Keen", "Composed", "Telling"], "atk:Paramedic": ["Keen", "Disarming", "Composed"], "atk:Scrapper": ["Keen", "Pointed", "Thrifty"],
+	"atk:Drifter": ["Keen", "Pinning", "Brisk"], "atk:Doorman": ["Keen", "Pointed", "Hobbling"], "atk:Recruit": ["Keen", "Primed", "Pinning"],
+	"oth:Poacher": ["Hobbling", "Watchful", "Pinning"], "oth:Paramedic": ["Soothing", "Deft", "Mending"], "oth:Scrapper": ["Shrewd", "Thrifty", "Sharp-eyed"],
+	"oth:Drifter": ["Sharp-eyed", "Laden", "Brisk"], "oth:Doorman": ["Tough", "Guarded", "Disarming"], "oth:Recruit": ["Pinning", "Brisk", "Watchful"],
+	"skill": ["Keyed up", "Full of beans", "Practised"], "def": ["Hardy", "Guarded", "Tough", "Mending"], "loot": ["Sharp-eyed", "Nimble", "Laden"],
+	"el:The cold": ["Bitter", "Wrapped up", "Hardy"], "el:Live": ["Crackling", "Insulated", "Hardy"], "el:Petrol": ["Scorching", "Singed", "Hardy"],
+	"el:Blades": ["Barbed", "Clotted", "Hardy"], "el:Knuckles": ["Brawny", "Tough", "Hardy"], "el:The Rat Man": ["Toxic", "Hardened", "Hardy"],
+	"centre:hp": ["Hardy", "Mending", "Tough"], "centre:guard": ["Guarded", "Tough", "Hardy"], "centre:pace": ["Brisk", "Nimble", "Hardy"],
+	"centre:mix": ["Hardy", "Guarded", "Brisk"],
+}
+
+
+## Every family slot's kind (slot order): the family's next in turn, scored against the lesser nodes already filled
+## round it - never a third of a name or a stat in a row (BUILD68 fix round, review68 5: by stat as well as by name), then
+## as few A-B-A-B runs as can be (review68 3: skipping only a neighbour's kind made runs alternate), then as few pairs.
+## A pair is allowed (twice in a row is the rule's limit): with three kinds round a five-node wheel it's what breaks the
+## alternation. `got` slot -> [tree, node]; the nodes filled in place.
+static func _w68_fill(got: Dictionary) -> void:
+	var nbs := {}
+	for l in WL.LINKS:
+		for k in [0, 1]:
+			var a: String = str(l[k])
+			if not nbs.has(a):
+				nbs[a] = []
+			nbs[a].append(str(l[1 - k]))
+	var turn := {}
+	var filled: Array = []
+	for s in WL.SLOTS:
+		var sl: String = str(s["slot"])
+		var nd: Dictionary = got[sl][1]
+		if not nd.has("fam"):
+			continue
+		var fam: String = str(nd["fam"])
+		var kinds: Array = FILLER_FAMILIES[fam]
+		var at: int = int(turn.get(fam, 0))
+		var pick := ""
+		var best := 1 << 30
+		for k in range(kinds.size()):
+			var c: String = kinds[(at + k) % kinds.size()]
+			var cost: int = _w68_cost(got, nbs, sl, c, str(FILLER_KINDS[c]["effect"]))
+			if cost < best:
+				best = cost
+				pick = c
+		turn[fam] = (kinds.find(pick) + 1) % kinds.size()
+		nd.erase("fam")
+		nd["name"] = pick
+		nd["effect"] = FILLER_KINDS[pick]["effect"]
+		nd["value"] = FILLER_KINDS[pick]["value"]
+		nd["family"] = fam
+		filled.append(sl)
+	# then each looked at again with every neighbour known, a kind changed only where it costs less - or costs the same
+	# and its region holds fewer of it, so no one kind tops a region by the turn's luck (three passes)
+	var per := {}                                       # "<region>|<name>" -> how many
+	for sl in filled:
+		var k0: String = "%s|%s" % [got[sl][1]["web_region"], got[sl][1]["name"]]
+		per[k0] = int(per.get(k0, 0)) + 1
+	for _pass in range(3):
+		for sl in filled:
+			var nd: Dictionary = got[sl][1]
+			var reg: String = str(nd["web_region"])
+			var cur: String = str(nd["name"])
+			per["%s|%s" % [reg, cur]] = int(per["%s|%s" % [reg, cur]]) - 1
+			var best: int = _w68_cost(got, nbs, sl, cur, str(FILLER_KINDS[cur]["effect"])) * 10000 + int(per.get("%s|%s" % [reg, cur], 0)) + (1 if cur == "Practised" else 0)
+			var pick: String = cur
+			for c in FILLER_FAMILIES[str(nd["family"])]:
+				var cost: int = _w68_cost(got, nbs, sl, c, str(FILLER_KINDS[c]["effect"])) * 10000 + int(per.get("%s|%s" % [reg, c], 0)) + (1 if c == "Practised" else 0)     # 0.15.1's commonest loses a tie (review68 4)
+				if cost < best:
+					best = cost
+					pick = c
+			nd["name"] = pick
+			nd["effect"] = FILLER_KINDS[pick]["effect"]
+			nd["value"] = FILLER_KINDS[pick]["value"]
+			per["%s|%s" % [reg, pick]] = int(per.get("%s|%s" % [reg, pick], 0)) + 1
+
+
+## A filled lesser node's name and stat, or ["", ""] (a big node, or a filler not chosen yet).
+static func _w68_ne(got: Dictionary, sl: String) -> Array:
+	var nd: Dictionary = got[sl][1]
+	if str(nd.get("kind", "small")) != "small" or str(nd.get("name", "")) == "":
+		return ["", ""]
+	return [str(nd["name"]), str(nd.get("effect", ""))]
+
+
+## What a kind would cost at `sl` (name `c`, stat `e`): 10,000 a run of three by name or stat, 100 an A-B-A-B by name, 1 a pair.
+static func _w68_cost(got: Dictionary, nbs: Dictionary, sl: String, c: String, e: String) -> int:
+	var cost := 0
+	var ns: Array = nbs.get(sl, [])
+	for y in ns:
+		var yn: Array = _w68_ne(got, y)
+		if yn[0] == "":
+			continue
+		if yn[0] == c or yn[1] == e:
+			cost += 1
+		for z in nbs.get(y, []):
+			if z == sl:
+				continue
+			var zn: Array = _w68_ne(got, z)
+			if zn[0] == "":
+				continue
+			if (yn[0] == c and zn[0] == c) or (yn[1] == e and zn[1] == e):
+				cost += 10000                       # sl-y-z, three in a row
+			for w in nbs.get(z, []):
+				if w == y or w == sl:
+					continue
+				var wn: Array = _w68_ne(got, w)
+				if zn[0] == c and wn[0] == yn[0] and c != yn[0]:
+					cost += 100                     # sl-y-z-w: A-B-A-B
+		for z2 in ns:
+			if z2 == y:
+				continue
+			var z2n: Array = _w68_ne(got, z2)
+			if z2n[0] == "":
+				continue
+			if (yn[0] == c and z2n[0] == c) or (yn[1] == e and z2n[1] == e):
+				cost += 5000                        # y-sl-z2, three in a row (counted from both sides)
+			for w2 in nbs.get(z2, []):
+				if w2 == sl or w2 == y:
+					continue
+				if _w68_ne(got, w2)[0] == c and yn[0] == z2n[0] and c != yn[0]:
+					cost += 100                     # y-sl-z2-w2: A-B-A-B with sl second
+	return cost
+
+# ------------------------------------------------------------------ BUILD68-S (8 Nov): six notables on 0.15.0's mechanics
+## docs/design/endgame_rail.md §3: "five or six skills or notables using headshots, jams, empty magazines and kill
+## counts". One a class, each in WEB_EXTRA under its class tree (its tree's last, so no id moves); placed by the web's
+## slots (builder W). Their rules: Sim's BUILD68-S block. First guesses for the short balance pass.
+const S68_NOTABLES := [
+	{"name": "Between the eyes", "cls": "Poacher", "tree": "Stalking", "effect": "s68_eyes"},
+	{"name": "Elbow grease", "cls": "Scrapper", "tree": "Stripping", "effect": "s68_grease"},
+	{"name": "Covering fire", "cls": "Recruit", "tree": "Drill", "effect": "s68_heads_down"},
+	{"name": "Body count", "cls": "Doorman", "tree": "The door", "effect": "s68_count"},
+	{"name": "Ride your luck", "cls": "Drifter", "tree": "Luck", "effect": "s68_ride"},
+	{"name": "Change of dressing", "cls": "Paramedic", "tree": "Shifts", "effect": "s68_dressing"},
+]
+const S68_GREASE_X := 1.2          # Elbow grease: a gun that could jam (Data.JAM66_PCT's tiers) does this much damage
+const S68_PINNED_X := 1.2          # Covering fire: a pinned gang takes this much from you
+const S68_COUNT_EVERY := 5         # Body count: +1% damage for every this many kills this run
+const S68_COUNT_CAP_PCT := 25.0    # Body count: capped here
+const S68_DRESSING_PCT := 3.0      # Change of dressing: HP back (% of max) for each magazine emptied

@@ -4,7 +4,15 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 
 ## Now, next, parked (the board: updated with every delivery commit)
 
-- **Now (8 Nov, morning):** 0.15.1 for a fresh save (SAVE_VERSION 27) - the items, build 2 of 4: boots as the ninth
+- **Now (8 Nov, midday):** 0.15.2 for a fresh save (SAVE_VERSION 28) - the web, build 3 of 4: paths halved (1,549 nodes
+  to 1,374; a track keystone 10 steps from the start, was 14; the capstone 14, was 18), fillers in 25 families by the
+  notable each path leads to, 3-4 kinds rotating, never three of a kind (by name or by effect) in a row (the Poacher's
+  12 Practised in a row is gone), each class's power within 2.4% of 0.15.1 (more a point); six new notables, one a
+  class, on the new mechanics: Between the eyes (Poacher), Elbow grease (Scrapper), Covering fire (Recruit), Body
+  count (Doorman), Ride your luck (Drifter), Change of dressing (Paramedic). 0.15.0 and 0.15.1 committed (e2787ed;
+  0.15.1's first smoke on Matt's machine failed one fight frame-time check at p95 32 ms, the re-run green). Next:
+  build 4, the endgame and the screens.
+- **Before (8 Nov, morning):** 0.15.1 for a fresh save (SAVE_VERSION 27) - the items, build 2 of 4: boots as the ninth
   slot (30 bases, borrowed gloves pictures; pace, gangs later or leg armour; the Postman's Boots and Steel Toecaps),
   the Kit with the charm top left above a shorter pack and boots bottom right (Matt's swap), 11 new affixes over
   0.15.0's stats, the top tier T6 (1 in 40 affix rolls from level 50; the ◆ on the item, a sound, a gold log line), the
@@ -8129,3 +8137,22 @@ Build 2 of the four (docs/design/endgame_rail.md section 2), on Matt's "Proceed"
   name), The Station Revolver (beside the Sergeant's Whistle), Keeper's brogues, the issued tags (Escort, Eye,
   Headshot, Pin, Stride, Heavy, Leg shots), shorts led by the number and split with "·", figures not words.
 - Smoke green, lint 0. VERSION 0.15.1, SAVE_VERSION 27.
+
+## 0.15.2: the web (2026-11-08)
+
+Build 3 of the four (docs/design/endgame_rail.md section 3; Matt 22 Oct: "more notables rather than more filler").
+
+- The shape (builder W, tools/make_skill_web.py w68_shape, the layout regenerated): each road keeps half its nodes;
+  25 filler families, each set by the notable its path leads to, 3-4 kinds rotating, the kind two steps back skipped
+  too (A-B-A-B on 16 of 4,202 four-node paths, was 401); a smoke check that no path holds three of a kind in a row by
+  name or effect. Power measured with each stat at its affix's low roll: classes -2.4% to +2.2%, the centre -0.9%,
+  the elements 0% (docs/design/skill_web.md "As built (BUILD68-W)"). Fixtures moved onto the new ids.
+- The six notables (builder S): Between the eyes (your first round at each gang a headshot; headshots 25% more
+  damage), Elbow grease (guns never jam, the Zip Gun aside; a gun that could jam 20% more damage), Covering fire (pin
+  50% quicker; pinned men take 20% more), Body count (1% more damage every 5 kills a run, to 25%), Ride your luck
+  (being hit halves the streak), Change of dressing (an emptied magazine heals 3% of max HP).
+- The reviewer's findings fixed with red checks (Elbow grease's "could jam", the power units, A-B-A-B runs, the
+  Recruit's family repeating Practised, triples by effect, two notables' theme, a double headshot). The language pass:
+  Crackling, Barbed, Laden, Full of beans (clashes with Charge, An edge, Deeper pockets, the Bench's Fit), Body count
+  (the glossary's "never a headcount"), Covering fire (beside the Doorman's "Heads down"), lines in the sentence voice.
+- Smoke green, lint 0. VERSION 0.15.2, SAVE_VERSION 28.

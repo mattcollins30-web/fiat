@@ -426,6 +426,9 @@ const EFFECT_WORDS := {
 	# the skills' fillers (24 Oct, milestone 8: the affixes' words, skills.md §11)
 	"grenade_pct": "+%d%% grenade damage", "energy_regen_pct": "+%d%% energy gain", "cdr_pct": "%d%% shorter cooldowns", "energy_max": "+%d max energy",
 	"guard_pct": "+%d%% Guard cap",     # the centre's Guard ring (3 Nov, the skill web)
+	# (BUILD68-W) the web's fillers on 0.15.0's mechanics, as their affixes read (data.gd AFFIXES66's short words)
+	"head_pct": "+%d%% headshot chance", "head_dmg_pct": "+%d%% headshot damage", "pierce_pct": "%d%% of their armour ignored",
+	"leg_pct": "+%d%% of hits are leg shots", "arm_pct": "+%d%% of hits are arm shots", "suppress_pct": "+%d%% quicker to pin them down", "scav_pct": "+%d%% chance a kill puts a round back",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
@@ -444,6 +447,10 @@ const PANEL_WORDS := {
 	"poison_res": "Less of their poison gets through.", "shock_res": "Less of their shock gets through.", "bleed_res": "Less of their bleed gets through.",
 	"grenade_pct": "Every grenade hits harder.", "energy_regen_pct": "Energy refills quicker.", "cdr_pct": "Skills come round again sooner.", "energy_max": "More energy to spend on skills.",
 	"guard_pct": "Your Guard can hold more before it breaks.",
+	# (BUILD68-W) the web's fillers on 0.15.0's mechanics
+	"head_pct": "More of your hits land as headshots.", "head_dmg_pct": "Your headshots hit harder.", "pierce_pct": "Your rounds get through more of their armour.",
+	"leg_pct": "More of your hits are leg shots: the next gang comes later.", "arm_pct": "More of your hits are arm shots: the men you hit miss more.",
+	"suppress_pct": "Your fire pins them down quicker.", "scav_pct": "A kill puts a round back in the magazine more often.",
 }
 
 

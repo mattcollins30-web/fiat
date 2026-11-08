@@ -243,3 +243,60 @@ resist; the centre's clusters their ring's stat (life 4 HP, Guard 3%, pace 2%).
 _boss_down, the order's three in _order_down, the County's four in _county_down (not a remix's); "kev:<paper>" each of
 a story beat's three papers as they're decrypted (decrypt); "issue" in issue(). Each once; every runner reads them
 (web_points: its own two a level plus the camp's rewards).
+
+## As built (BUILD68-W, 8 Nov, 0.15.2): the web's shape
+docs/design/endgame_rail.md section 3 (Matt, 22 Oct: "more notables rather than more filler"). The layout JSON stays
+round six's; tools/make_skill_web.py reshapes it as it's read (`w68_shape`):
+
+- **S's six notables** (BUILD68-S, data.gd S68_NOTABLES) each take a road node of its class, a bare notable as a keystone
+  sits, so a path runs through it: Between the eyes (the Poacher's attack track, Rifleman to Clocked), Elbow grease (the
+  Scrapper's, Bodger to Salvage), Covering fire (the Recruit's Drill track, Cover me to By the numbers), Head
+  count (the Doorman's door track, Chokepoints to Last orders), Ride your luck (the Drifter's Luck track, Dead man's
+  shoes to Spare change), Change of dressing (the Paramedic's middle, Double shift to Code blue).
+- **Shorter roads.** A road (a run of lesser nodes outside the clusters' wheels) keeps half its nodes, rounded down:
+  a one-node road goes and its ends join; the centre's keep half rounded up (its spokes between the rings keep their
+  node). 1,549 nodes to 1,374; lesser nodes 1,320 to 1,139 (a class 131 to 101-106; the elements 60 each, unchanged;
+  the centre 174 to 162). From a start: the track keystones 14 steps to 10, the capstone 18 to 14, the far skills 12 to 9,
+  the corner keystone 16-21 to 13-14, an element's capstone 34 to 31; the centre 10 as before. The gates (30/80) hold the
+  keystones and capstones as before.
+- **Fillers by family.** Each lesser node takes the family of the notable its path leads to (a wheel's its hub; a road's
+  the end further from its class's start, or from the centre): atk:<class> (the attack track), oth:<class> (the other),
+  skill, def (staying up), loot (finds), el:<element>, centre:hp/guard/pace/mix. The class's own named smalls still come
+  first on its tracks. Three or four kinds a family, in turn, a kind a lesser neighbour holds passed over (data.gd
+  `_w68_fill`), so no path runs a kind more than twice (the smoke finds none twice).
+
+| Family | Kinds |
+|---|---|
+| atk: Poacher / Paramedic / Scrapper | Keen, Composed, Telling / Keen, Disarming, Composed / Keen, Pointed, Thrifty |
+| atk: Drifter / Doorman / Recruit | Keen, Pinning, Brisk / Keen, Pointed, Hobbling / Keen, Primed, Pinning |
+| oth: Poacher / Paramedic / Scrapper | Hobbling, Watchful, Pinning / Soothing, Deft, Mending / Shrewd, Thrifty, Sharp-eyed |
+| oth: Drifter / Doorman / Recruit | Sharp-eyed, Laden, Brisk / Tough, Guarded, Disarming / Pinning, Brisk, Watchful |
+| skill, def, loot | Keyed up, Full of beans, Practised · Hardy, Guarded, Tough, Mending · Sharp-eyed, Nimble, Laden |
+| el: (each element) | its damage (Bitter, Crackling, Scorching, Barbed, Brawny, Toxic), its resist (Wrapped up, Insulated, Singed, Clotted, Tough on Knuckles, Hardened), Hardy |
+| centre: hp / guard / pace / mix | Hardy, Mending, Tough / Guarded, Tough, Hardy / Brisk, Nimble, Hardy / Hardy, Guarded, Brisk |
+
+**First figures** (data.gd FILLER_KINDS; the balance pass sets them). The kinds the centre and the elements share keep
+0.15.1's (Hardy 4 HP, Guarded 3%, Tough 4%, Mending 0.2/s, Nimble 5%, the resists 3%, Sharp-eyed 2%); Brisk 2% to 3%;
+the kinds only the classes carry are worth a little more, the classes having lost a fifth of their lesser nodes: Keen 4%
+damage, Practised 3% cooldowns, Composed +2% headshot chance, Telling +12% headshot damage, Pointed 6% of their armour
+ignored, Hobbling +3% of hits leg shots, Disarming +3% arm shots, Pinning 12% quicker to pin them down, Thrifty +6% chance
+a kill puts a round back, Primed +5% grenade damage, Watchful gangs 3% later, Soothing meds +5%, Deft meds 5% quicker,
+Shrewd Fence pays +4%, Laden +3% loot quantity, Keyed up +4% energy gain, Full of beans +4 max energy; the elements'
+damage kinds 3%.
+
+**The fill (BUILD68 fix round, review68 3-5).** Each kind is scored against the lesser nodes round it: never three of a
+name or of a stat in a row (Brawny beside Weight behind it, both physical, counts), then as few A-B-A-B runs as can be,
+then as few pairs; then three passes over every filler with all its neighbours known, a tie going to the kind its region
+holds fewest of (Practised, 0.15.1's commonest, losing a tie). A-B-A-B over four lesser nodes: 401 of 4,202 before, 16
+after (a five-node wheel with three kinds can't always avoid it). The oth:Recruit family took Brisk and Watchful for
+Practised and Keyed up (the skill family's): Practised is no region's top kind.
+
+**Power.** Each lesser node in 0.15.1's terms (a filler then one; a stat that wasn't a filler, one at its affix's low
+roll: head_dmg 10, leg 2, arm 2, suppress 10, scav 5, pierce 5, head 1), the smoke's `_w68_power_checks`, each region
+within 5%: the Poacher +2.2%, the Paramedic 0.0%, the Scrapper -0.3%, the Drifter -2.0%, the Doorman -2.4%, the Recruit
++1.8%, each element 0%, the centre -0.9%. Per point (a lesser node bought): 1.00 in 0.15.1, 1.23-1.33 now. Read with the
+build's first units (head_dmg 6, leg 1, arm 1, suppress 6, scav 2), the classes would be +1% to +19%: the low roll is
+the basis. S's six on top, each roughly (in fillers): Between the eyes 4 (a headshot a gang, +25% headshot damage),
+Elbow grease 0-7 (+20% on a gun that could jam, nothing past the jamming tiers), Covering fire 7 (pins 50% quicker, +20%
+on a pinned gang), Body count 3-8 (+25% damage at 125 kills), Ride your luck 3 (+2% a streak kill, a hit halves it),
+Change of dressing 4-8 (3% max HP a magazine emptied) - against a notable's usual 5.

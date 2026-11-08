@@ -58,6 +58,7 @@ V1_TREE = {"Early doors": "Stalking", "Dead quiet": "Snares", "Night work": "Sna
 def main(out):
     lay = json.load(open(SRC, encoding="utf-8"))
     nodes, links = lay["nodes"], lay["links"]
+    nodes, links, fams = w68_shape(nodes, links)      # (BUILD68-W) the web's shape: S's notables placed, the roads shortened, the fillers' families
     names = {}                                        # layout id -> name
     for j, (c, a, lt, rt) in enumerate(CLASSES):
         for p, nm in zip(PLACES, CNAMES[c]):
@@ -74,6 +75,8 @@ def main(out):
             names[f"e{k}:{p}"] = nm
         names[f"e{k}:pairL"], names[f"e{k}:pairR"] = EPAIRS[e]
     names.update(CENTRE)
+    for sid, (nm, _cls, _th) in W68_PLACED.items():
+        names[sid] = nm                               # (BUILD68-W) S's six notables, each on its class's road
     slots = []
     for sid, n in nodes.items():
         assert sid in names or n["kind"] == "small", ("a big place with no node", sid)
@@ -104,6 +107,8 @@ def main(out):
                     s["pool"] = "class:" + lt                                 # the attack track: the left tree's own smalls first
                 elif s["track"] == "ctl":
                     s["pool"] = "class:" + rt                                 # the other track: the right tree's
+        if sid in fams:
+            s["fam"] = fams[sid]                      # (BUILD68-W) the filler's family: the notable its path leads to (data.gd FILLER_FAMILIES)
         if nm:
             s["tree"] = V1_TREE.get(nm, "")                                   # a named node stays in its own tree (data.gd finds it by name), or version one's
             if nm in EPAIRS.get(reg, []) or sid.endswith(":ratbait") or sid.endswith(":coldsnap"):
@@ -129,7 +134,8 @@ def main(out):
              "## kind, its node's name (today's node, found by name, in its own tree or version one's) or for a lesser node the tree it goes in and its",
              "## pool (class:<tree> - that tree's own smalls in order; stat:hp / stat:guard / stat:pace - the centre's) and track",
              "## (dmg / ctl / skill / def / loot / el - data.gd TRACK_FILLERS once the pool's dry), its region, its theme (the track",
-             "## the screen colours it by) and a pair half's side.",
+             "## the screen colours it by), a pair half's side, and (BUILD68-W) a filler's family - the notable its path leads to",
+             "## (data.gd FILLER_FAMILIES). BUILD68-W reshaped the layout as it's read: S's six notables on roads, the roads shorter.",
              "class_name WebLayout", "", "const SLOTS := ["]
     for s in slots:
         lines.append("\t" + json.dumps(s, ensure_ascii=False) + ",")
@@ -139,6 +145,147 @@ def main(out):
     lines += ["]", "", "const STARTS := " + json.dumps(starts), ""]
     open(out, "w", encoding="utf-8").write("\n".join(lines))
     print(len(slots), "slots", len(links), "links", len(nl), "named")
+
+
+# ------------------------------------------------------------------ BUILD68-W (8 Nov): the web's shape
+# docs/design/endgame_rail.md section 3: "themed fillers by the notable each path leads to (3-4 kinds rotating), shorter
+# paths, a check that no path repeats a node more than twice in a row". The agreed layout (round six) stays the source;
+# this reshapes it as it's read: S's six new notables each take a road node on its class's track (a bare notable, as a
+# keystone sits); every road (a run of lesser nodes outside the clusters' wheels) keeps half its nodes, rounded down -
+# a one-node road goes, its two ends joined - the kept ones spaced evenly along the old line (the centre's roads half,
+# rounded up: its spokes between the rings keep their node, or the centre would lose most of its life, Guard and pace); and every lesser node is
+# given its family: the theme of the notable its path leads to (a wheel's its own hub; a road's the end further from
+# its region's anchor - the class's start, or the centre).
+W68_PLACED = {   # road slot -> (name, class, theme): builder S's notables (data.gd S68_NOTABLES), one a class
+    "c0:p117": ("Between the eyes", "Poacher", "dmg"),         # the attack track, Rifleman to Clocked
+    "c2:p117": ("Elbow grease", "Scrapper", "dmg"),            # the attack track, Bodger to Salvage
+    "c5:p130": ("Covering fire", "Recruit", "ctl"),    # the Drill track, Cover me to By the numbers
+    "c4:p130": ("Body count", "Doorman", "dmg"),               # the door's track, Chokepoints to Last orders
+    "c3:p130": ("Ride your luck", "Drifter", "dmg"),           # the Luck track, Dead man's shoes to Spare change
+    "c1:p139": ("Change of dressing", "Paramedic", "def"),     # up the middle, Double shift to Code blue
+}
+CENTRE_STAT = {"h0": "hp", "h3": "hp", "h1": "guard", "h4": "guard", "h2": "pace", "h5": "pace"}
+
+
+def _ring(sid):
+    return "." in sid.split(":")[-1]
+
+
+def w68_shape(nodes, links):
+    nodes = {k: dict(v) for k, v in nodes.items()}
+    for sid, (nm, cls, th) in W68_PLACED.items():
+        assert nodes[sid]["kind"] == "small" and nodes[sid]["region"] == cls, sid
+        nodes[sid].update({"kind": "notable", "theme": th})
+    adj = {k: set() for k in nodes}
+    for a, b in links:
+        adj[a].add(b); adj[b].add(a)
+    road = lambda s: nodes[s]["kind"] == "small" and not _ring(s)
+    # the roads: runs of two-link road nodes between their ends (a wheel, a big node, or a road node where roads meet)
+    seen, chains = set(), []
+    for s in nodes:
+        if s in seen or not road(s) or len(adj[s]) != 2:
+            continue
+        seen.add(s)
+        run = [s]
+        ends = []
+        for side in sorted(adj[s]):
+            prev, cur, part = s, side, []
+            while road(cur) and len(adj[cur]) == 2 and cur not in seen:
+                seen.add(cur); part.append(cur)
+                prev, cur = cur, [x for x in adj[cur] if x != prev][0]
+            ends.append(cur)
+            run = (part[::-1] + run) if not ends[1:] else (run + part)
+        chains.append((ends[0], run, ends[1]))
+    gone = set()
+    for a, run, b in chains:
+        assert a != b, ("a road that loops", run)
+        keep = len(run) // 2 if any(nodes[x]["region"] != "centre" for x in run) else (len(run) + 1) // 2     # the centre's spokes keep their one node
+        pts = [nodes[a]["at"]] + [nodes[x]["at"] for x in run] + [nodes[b]["at"]]
+        seg = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+        total = sum(seg)
+        def along(f):                                  # the point a share f of the way along the old line
+            d = f * total
+            for i, ln in enumerate(seg):
+                if d <= ln or i == len(seg) - 1:
+                    u = d / ln if ln > 0 else 0.0
+                    return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u]
+                d -= ln
+        kept = run[:keep]
+        for i, x in enumerate(kept):
+            nodes[x]["at"] = along((i + 1) / (keep + 1))
+        for x in run[keep:]:
+            gone.add(x)
+        seq = [a] + kept + [b]
+        for x in run:
+            for y in list(adj[x]):
+                adj[y].discard(x)
+            adj[x] = set()
+        for i in range(len(seq) - 1):
+            if seq[i] != seq[i + 1]:
+                adj[seq[i]].add(seq[i + 1]); adj[seq[i + 1]].add(seq[i])
+    nodes = {k: v for k, v in nodes.items() if k not in gone}
+    out = []
+    for a, b in links:                                 # the layout's order where a join stands, then the new joins
+        if a in nodes and b in nodes and b in adj[a] and [a, b] not in out and [b, a] not in out:
+            out.append([a, b])
+    for a in nodes:
+        for b in sorted(adj[a]):
+            if [a, b] not in out and [b, a] not in out:
+                out.append([a, b])
+    # the families: each lesser node's notable, by its path
+    def dist_from(src):
+        d, q = {src: 0}, [src]
+        while q:
+            nq = []
+            for x in q:
+                for y in adj[x]:
+                    if y not in d:
+                        d[y] = d[x] + 1; nq.append(y)
+            q = nq
+        return d
+    anchor = {}
+    for j, (c, *_r) in enumerate(CLASSES):
+        anchor[c] = dist_from(f"c{j}:start")
+    anchor["centre"] = dist_from("C")
+    def hub(x):                                        # a wheel's member: its hub; a big node: itself
+        if nodes[x]["kind"] != "small":
+            return x
+        if _ring(x):
+            h = x.rsplit(".", 1)[0]
+            return h if h in nodes else x.split(":")[0] + ":start"
+        return None
+    def fam_of(h, x):
+        n = nodes[h]
+        reg, th = n["region"], n["theme"]
+        if th == "start":                              # the start's wheel: its own slot's track
+            th, reg = nodes[x]["theme"], nodes[x]["region"]
+        if reg == "centre":
+            return "centre:" + CENTRE_STAT.get(h, "mix")
+        if reg in dict(ELEMS):
+            return "el:" + reg
+        return {"dmg": "atk:", "ctl": "oth:"}.get(th, th + ":") + reg if th in ("dmg", "ctl") else th
+    fams = {}
+    for x in nodes:
+        if nodes[x]["kind"] != "small":
+            continue
+        if _ring(x):
+            fams[x] = fam_of(hub(x), x)
+            continue
+        reach, todo, ends = {x}, [x], set()        # a road node: the ends of its road (through other road nodes)
+        while todo:
+            y = todo.pop()
+            for z in adj[y]:
+                if z in reach:
+                    continue
+                if road(z):
+                    reach.add(z); todo.append(z)
+                else:
+                    ends.add(hub(z))
+        reg = nodes[x]["region"]
+        dd = anchor[reg] if reg in anchor else anchor["centre"]
+        lead = max(sorted(ends), key=lambda h: dd.get(h, 0))
+        fams[x] = fam_of(lead, x)
+    return nodes, out, fams
 
 
 if __name__ == "__main__":
