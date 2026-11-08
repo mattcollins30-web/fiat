@@ -8215,3 +8215,10 @@ fire - and the Football Rattle); the base headshot stays. The probe and the loot
 sites' depth but not the stages before it, so the stages gate refused the deploy): both set up as a real camp. Two
 convoy labels that overflowed, fixed. Bot play and bot timing reds as before 0.15 (not tuned before the playtest).
 Next: the quick pass again, against the band.
+
+The quick pass again (21:22-21:46 on 7f750c8): the Quartermaster at 1.5 h (1.3 before the change, 1.8 on 0.14), level
+18 there on 4 builds of 12 (7 before), no walls. Left as they are for Matt's playtest (his rule: one short pass, a
+second only for a wall): the campaign still a little quicker than 0.14 - the likely rest of it the web's shorter
+paths (a point worth 1.23-1.33x a 0.15.1 point) and the base headshot; build parity behind on six builds (+14 to +20
+against the best +41, two 20-minute reads each, noisy); commons by zone 50/43/37/38 (the County's not under the
+City's). Next: Matt plays 0.15.3 from fresh; then the art manifest for the borrowed pictures.
