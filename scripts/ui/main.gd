@@ -475,6 +475,7 @@ func _lay_fold() -> void:
 # ------------------------------------------------------------------ the clock
 
 func _process(delta: float) -> void:
+	_r69_delta = delta                         # (0.15.3 perf fix) the frame's length, for the warm-up's paint test
 	_warm_rooms()
 	if sim == null or _menu.visible:
 		return
@@ -519,8 +520,10 @@ var _warm_wait := WARM_AFTER
 var _warm_done := false
 var _warm_sim = null
 func _warm_rooms() -> void:
-	if _warm_done and not _art_warm_done and not r69_fight_on() and _since_refresh + ART_WARM_PAINT_S < REFRESH_S:
-		_warm_art_step()                       # (BUILD67-I) then the items' pictures; (0.15.3 perf fix) never while a run's fight is on screen, nor on a frame that paints
+	if not _art_warm_done and _menu != null and _menu.visible:
+		_warm_art_step(ART_WARM_TITLE_US)      # (0.15.3 perf fix) behind the title (or the pause): the game's still, so a bigger slice, Training's web or not
+	elif _warm_done and not _art_warm_done and r69_warm_idle():
+		_warm_art_step()                       # (BUILD67-I) then the items' pictures; (0.15.3 perf fix) only on an idle frame (r69_warm_idle)
 	if _warm_done or _barracks == null:
 		return
 	if _menu != null and _menu.visible:
@@ -1899,24 +1902,39 @@ func open_radio_air() -> void:
 ## items' pictures loaded ahead of the Kit's first open, a few a frame once Training's web is warm: the stash grid's
 ## first show was most of the open, each picture's first load in it. Items caches them; nothing else changes.
 const ART_WARM_US := 3000                    # a frame's budget
-const ART_WARM_ONE_US := 1200                # (0.15.3 perf fix) a picture's load at most, kept in hand: the step stops while one still fits
+const ART_ONE_DECAY := 0.9                   # (0.15.3 perf fix) the slowest load seen, eased a step
+const ART_WARM_TITLE_US := 12000            # (0.15.3 perf fix) a slice behind the title, where nothing else runs
+var _art_one_us := 0                         # (0.15.3 perf fix) the slowest picture or cell seen: the step stops while one more still fits
+var art_warm_last_n := 0                     # what the last step made (the smoke's)
+var _r69_delta := 0.0                         # the last frame's length
 const ART_WARM_PAINT_S := 1.0 / 60.0         # a frame this close to the refresh's paint is left alone
 const ART_WARM_CELLS := 64                  # the stash grid's cells made ahead: a full page's pieces
 var _art_warm_done := false
 var _art_warm_list: Array = []
 var _art_warm_i := -1
-func _warm_art_step() -> void:
+func _warm_art_step(budget_us := ART_WARM_US) -> void:
 	if _art_warm_i < 0:
 		for sl in Data.BASES:
 			for b in Data.BASES[sl]:
 				_art_warm_list.append({"slot": str(sl), "base": str(b["name"])})
 		_art_warm_i = 0
 	var t0 := Time.get_ticks_usec()
-	while _art_warm_i < _art_warm_list.size() and Time.get_ticks_usec() - t0 < ART_WARM_US - ART_WARM_ONE_US:     # (0.15.3 perf fix) room left for one more picture's load, not past the budget
-		Items.art(_art_warm_list[_art_warm_i])
-		_art_warm_i += 1
-	if _art_warm_i >= _art_warm_list.size() and _armoury != null and _armoury._inv._cells.size() < ART_WARM_CELLS:
-		_armoury._inv._cell(mini(_armoury._inv._cells.size() + 7, ART_WARM_CELLS - 1))     # and the stash grid's cells, pooled, eight a frame
+	# (0.15.3 perf fix, the device's Map at 22 ms p95) a picture or a cell only while the slowest one seen so far still
+	# fits in what's left of the budget: one a call at least, so a slow disk still gets there, never two past it
+	var n := 0
+	while Time.get_ticks_usec() - t0 + (_art_one_us if n > 0 else 0) <= budget_us:
+		var a := Time.get_ticks_usec()
+		if _art_warm_i < _art_warm_list.size():
+			Items.art(_art_warm_list[_art_warm_i])
+			_art_warm_i += 1
+		elif _armoury != null and _armoury._inv._cells.size() < ART_WARM_CELLS:
+			_armoury._inv._cell(_armoury._inv._cells.size())     # and the stash grid's cells, pooled, one at a time
+		else:
+			break
+		_art_one_us = mini(maxi(_art_one_us, Time.get_ticks_usec() - a), ART_WARM_US)
+		n += 1
+	art_warm_last_n = n
+	_art_one_us = mini(int(_art_one_us * ART_ONE_DECAY), ART_WARM_US)     # (0.15.3 perf fix) the slowest load seen eases off a step, never past the budget
 	_art_warm_done = _art_warm_i >= _art_warm_list.size() and (_armoury == null or _armoury._inv._cells.size() >= ART_WARM_CELLS)
 
 
@@ -2084,3 +2102,14 @@ func r69_reach_fit() -> void:
 ## (0.15.3 perf fix) A run's fight on screen: the Map with a watched run out. The art's warm-up waits for anything else.
 func r69_fight_on() -> bool:
 	return sim != null and room == MISSIONS and sim.on_mission() and not sim.unwatched()
+
+
+
+## (0.15.3 perf fix) A frame the warm-up may have: no fight on screen, no odds being read (the Map, the Radio, the far
+## places), not a painting frame. Behind the title it runs regardless (_warm_rooms).
+func r69_warm_idle() -> bool:
+	if sim == null or r69_fight_on() or (sim.on_mission() and not sim.unwatched()):
+		return false                             # an unwatched repeat's run is off screen: its frames are the room's
+	if room == MISSIONS or room == COMMS or room == BUNKHOUSE:
+		return false
+	return _since_refresh + maxf(_r69_delta, ART_WARM_PAINT_S) < REFRESH_S     # this frame's own length: a 22 ms frame that will paint is left alone

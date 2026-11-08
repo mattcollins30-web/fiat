@@ -276,6 +276,8 @@ func _init() -> void:
 		while not main._barracks.web().warm_step(main.sim):
 			pass                                 # Training's web laid out, as the title's seconds lay it in the game (BUILD45)
 		main._warm_done = true
+	while not main._art_warm_done:
+		main._warm_art_step(main.ART_WARM_TITLE_US)     # (0.15.3 perf fix) the items' pictures, as the title's seconds warm them in the game
 	_check(main.sim.mythics_on, "a new camp has the mythics off")
 	_check(main.sim.cls == "Poacher" and main.sim.next_words() != Words.NEXT["past"], "a new game doesn't start as the Poacher: '%s', '%s'" % [main.sim.cls, main.sim.next_words()])
 	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
@@ -978,6 +980,7 @@ func _init() -> void:
 	_g69_perf_checks(main)                    # 0.15.3 perf fix: no art warm-up in a fight, the pop search capped
 	_g69_plate_checks(main)                   # 0.15.3 fix (the review): the plate and the jam not capped
 	_g69_lock_checks(main)                    # 0.15.3 (the review): all nine issued pieces wearable at the last zone's level
+	_g70_warm_checks(main)                    # 0.15.3 perf fix (the device's Map frames): the warm-up on idle frames and behind the title only, in its budget
 	_m68f_checks(main)                        # the 68 fix round (review68.md): the six's themes, the units at the low roll, one headshot not two, the chips' words, the arm glyph
 	_e69_open_checks(main)                    # BUILD69-E (8 Nov): the convoys with the County, the auction with the Issue, the allotments with the pumping station; the rail's three chips
 	_e69_convoy_checks(main)                  # BUILD69-E: heard by runs, the cargo named ahead, the roles, the hit's men and clock, won home, lost gone
@@ -46212,3 +46215,98 @@ func _g69_lock_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("g69 lock ok: all nine issued and stampable at level %d" % zl)
+
+
+
+## (0.15.3 perf fix, the device: the Map's frames reading odds at 22 ms p95) The items' pictures warm behind the title, or
+## on an idle frame: never on the Map, the Radio or the far places (their odds), nor on a run; a step stops while the
+## slowest load seen still fits its budget (one a call at least).
+func _g70_warm_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	for rm in [main.MISSIONS, main.COMMS]:
+		main.show_room(rm)
+		main._art_warm_done = false
+		main._art_warm_i = -1
+		main._art_warm_list = []
+		main._since_refresh = 0.0
+		main._warm_rooms()
+		_check(main._art_warm_i == -1, "the art warmed on %s, where the odds are read: %d" % [rm, main._art_warm_i])
+	main.show_room(main.ARMOURY)
+	main._since_refresh = 0.0
+	main._warm_rooms()
+	_check(main._art_warm_i > 0, "the art didn't warm on an idle Kit frame")
+	# behind the title (the menu up): it warms, a bigger slice
+	main.show_room(main.MISSIONS)
+	main._art_warm_done = false
+	main._art_warm_i = -1
+	main._art_warm_list = []
+	main._menu.visible = true
+	main._warm_rooms()
+	main._menu.visible = false
+	_check(main._art_warm_i > 0, "the art didn't warm behind the title")
+	# the budget: with the slowest load seen at the whole budget, one a step
+	var one_was: int = main._art_one_us
+	main._art_one_us = main.ART_WARM_US
+	main._art_warm_done = false
+	main._art_warm_i = -1
+	main._art_warm_list = []
+	main._warm_art_step()
+	_check(main.art_warm_last_n == 1 and main._art_warm_i == 1, "a step with a 3 ms load in hand made %d" % main.art_warm_last_n)
+	_check(main._art_one_us < main.ART_WARM_US, "the slowest load seen never eases: %d" % main._art_one_us)
+	main._art_one_us = 10 * main.ART_WARM_US
+	main._warm_art_step()
+	_check(main._art_one_us <= main.ART_WARM_US, "the slowest load seen past the budget: %d" % main._art_one_us)
+	main._art_one_us = one_was
+	# (the review) a frame that will paint, by its own length: 80 ms since the paint and a 22 ms frame - left alone
+	main.show_room(main.ARMOURY)
+	main._art_warm_done = false
+	var i0: int = main._art_warm_i
+	main._r69_delta = 0.022
+	main._since_refresh = main.REFRESH_S - 0.02
+	main._warm_rooms()
+	_check(main._art_warm_i == i0, "the art warmed on a 22 ms frame that paints: %d -> %d" % [i0, main._art_warm_i])
+	main._r69_delta = 1.0 / 60.0
+	main._since_refresh = 0.0
+	# the title warms before Training's web is done
+	var web_was: bool = main._warm_done
+	main._warm_done = false
+	main._art_warm_i = -1
+	main._art_warm_list = []
+	main._menu.visible = true
+	main._warm_rooms()
+	main._menu.visible = false
+	_check(main._art_warm_i > 0, "behind the title the art waited on Training's web")
+	main._warm_done = web_was
+	# an unwatched repeat's run, the player in the Kit: idle
+	main._art_warm_i = -1
+	main._art_warm_list = []
+	main._art_warm_done = false
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	if sim.on_mission():
+		sim.mission["unwatched"] = true
+		main.room = main.ARMOURY
+		main._warm_rooms()
+		_check(main._art_warm_i > 0, "the art didn't warm in the Kit during an unwatched repeat")
+		sim.mission.erase("unwatched")
+		sim.extract_now()
+	# a cold first open (the pictures and the warm-up cleared), stash full: under the old 150 ms
+	if sim.on_mission():
+		sim.extract_now()
+	main.show_room(main.MISSIONS)
+	_b45_fill(sim)
+	main.refresh()
+	Items._art = {}
+	main._art_warm_done = false
+	main._art_warm_i = -1
+	main._art_warm_list = []
+	var cold: float = _b45_click(main, func(): main.show_room(main.ARMOURY))
+	_check(cold < _b45_b(B45_KIT_OPEN), "the Kit's cold first open took %.1f ms (under %.0f)" % [cold, _b45_b(B45_KIT_OPEN)])
+	print("g70 the Kit's cold first open: %.1f ms" % cold)
+	while not main._art_warm_done:
+		main._warm_art_step(main.ART_WARM_TITLE_US)
+	main._art_warm_done = true
+	main.refresh()
+	print("g70 warm ok: idle frames and the title only, in its budget")

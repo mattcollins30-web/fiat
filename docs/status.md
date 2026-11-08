@@ -8199,3 +8199,7 @@ Build 4 of the four (docs/design/endgame_rail.md section 4), the last of the fro
   "convoy" throughout (Kev keeps "lorry"), "Test" for the dummy ("Run it" is the repeat), "Take it in" (Unload is the
   rounds'), the Docks crew, figures not words, the Bench.
 - Smoke green, lint 0. VERSION 0.15.3, SAVE_VERSION 29.
+- Follow-up (8 Nov, evening, after ec017ec): the Kit's picture warm-up moved off timed work - behind the title and
+  pause in a 12 ms slice, in play only on idle frames (no fight, not the Map, Radio or Bunkhouse, never a painting
+  frame), its 3 ms budget held; a cold Kit first open timed against 150 ms. From a Map frame spike (p95 23 ms) in one
+  device smoke of 0.15.3 (the re-run was green). Still 0.15.3.
