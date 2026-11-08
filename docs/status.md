@@ -8222,3 +8222,10 @@ second only for a wall): the campaign still a little quicker than 0.14 - the lik
 paths (a point worth 1.23-1.33x a 0.15.1 point) and the base headshot; build parity behind on six builds (+14 to +20
 against the best +41, two 20-minute reads each, noisy); commons by zone 50/43/37/38 (the County's not under the
 City's). Next: Matt plays 0.15.3 from fresh; then the art manifest for the borrowed pictures.
+
+The art (8 Nov, night; Matt: "Drop the art flag now - get it done before I play tomorrow."): tools/make_art71_manifest.py
+and pixellab_art71_manifest.json, 101 jobs, ~$8.57 (~$11.14 with rerolls): the 30 boots bases, 15 uniques (13 and
+the two boots), 21 issued pieces (gloves, bergen, boots and the new versions), 27 web nodes (the six notables, 21
+fillers), 6 convoy route bands, the Plots banner, the sealed crate. art_lint clean; art.flag down. After art.done:
+docs/art/art71_wiring.md (the boots' ART_AS off; ROUTE_ART69, the Plots banner and SEALED_ART69 to the new names).
+Older gaps raised, not in it: the Practised and Sharp-eyed fillers, 18 web-v2 notables from 4 Nov (~$1.60).

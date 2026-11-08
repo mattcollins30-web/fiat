@@ -1,0 +1,1936 @@
+{
+ "_readme": [
+  "FIAT ART 71 (8 Nov; 0.15, docs/design/endgame_rail.md): every picture 0.15 borrows or lacks - 101 jobs: 94 at $0.08 (under 65k px), 7 at $0.15 (688x296 bands); about $8.57, $11.14 with a 30% reroll budget.",
+  "30 boots bases, 15 uniques, 21 issued pieces (art/items/<slug>.png); 6 notables and 21 fillers (art/nodes/<slug>.png); 6 route bands and the Plots banner (art/places/); the sealed crate (art/crates/sealed.png). Nothing on disk is overwritten.",
+  "Shows by name: the uniques, the issued pieces, the nodes. Wiring after art.done: the 30 boots ART_AS entries off; ROUTE_ART69 to the route_ names; the banner's head_art to \"The Plots\"; SEALED_ART69 to crates/sealed. ++ --parallel 3.",
+  "Regenerate with python3 tools/make_art71_manifest.py; check with python3 tools/art_lint.py tools/pixellab_art71_manifest.json."
+ ],
+ "jobs": [
+  {
+   "out": "art/items/plimsolls.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of thin white canvas plimsolls with grey rubber soles and toecaps, the canvas greyed, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650000,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Plimsolls, 2x2 (borrows Woolly gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/carpet_slippers.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of brown tartan carpet slippers with soft felt soles, the backs trodden down, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650001,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Carpet slippers, 2x2 (borrows Gardening gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/wellies.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tall green rubber wellington boots, mud dried on the toes, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650002,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Wellies, 2x2 (borrows Work gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/trainers.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of scuffed grey and white running trainers, plain, no logo or stripes, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650003,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Trainers, 2x2 (borrows Cycling mitts through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/deck_shoes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tan leather deck shoes with white soles and a leather lace round the collar, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650004,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Deck shoes, 2x2 (borrows Rigger gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/work_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tan leather work boots with steel toecaps showing through the scuffed leather, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650005,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Work boots, 2x2 (borrows Driving gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/running_shoes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of light mesh running shoes in faded blue with thin foam soles, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650006,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Running shoes, 2x2 (borrows Goalkeeper gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/crepe_soles.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of brown suede desert-style shoes on thick pale crepe rubber soles, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650007,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Crepe soles, 2x2 (borrows Leather gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/rigger_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tan pull-on rigger boots, tall, with loops at the top and a toe guard, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650008,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Rigger boots, 2x2 (borrows Shooting gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/fell_shoes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of low green fell-running shoes with deep studded rubber soles showing at the edges, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650009,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Fell shoes, 2x2 (borrows Racing gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/desert_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of sand suede desert boots, ankle high, two eyelets, pale crepe soles, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650010,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Desert boots, 2x2 (borrows Roofer's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/hobnail_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of old black leather ammunition boots with rows of iron hobnails round the soles, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650011,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Hobnail boots, 2x2 (borrows Tactical gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/trail_shoes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of grey and orange trail shoes with a toe bumper and quick laces, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650012,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Trail shoes, 2x2 (borrows Fell-runner's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/walking_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of brown leather walking boots with padded collars and red laces, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650013,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Walking boots, 2x2 (borrows Cut-resistant gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/bovver_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of oxblood leather boots laced high, many eyelets, thick air-cushioned soles, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650014,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Bovver boots, 2x2 (borrows Armourer's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/running_spikes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of thin black running spikes, the steel spikes showing under the toes, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650015,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Running spikes, 2x2 (borrows Pilot's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/keeper_s_brogues.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of heavy brown leather country brogues with punched toecaps and thick soles, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650016,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Keeper's brogues, 2x2 (borrows Riot gauntlets through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/motorcycle_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black leather motorcycle boots with buckles up the side and shin plates, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650017,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Motorcycle boots, 2x2 (borrows Stalker's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/orienteering_shoes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of red and black orienteering shoes with metal-studded soles and high ankle gaiters, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650018,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Orienteering shoes, 2x2 (borrows Paratrooper's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/stalking_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of soft olive leather stalking boots laced to mid-calf, thin quiet soles, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650019,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Stalking boots, 2x2 (borrows Firefighter's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/firefighter_s_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black leather firefighter's boots, tall, with a reflective band round the top, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650020,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Firefighter's boots, 2x2 (borrows Close-combat gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/patrol_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black lightweight patrol boots, ankle high, side zips and nylon panels, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650021,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Patrol boots, 2x2 (borrows Abseiling gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/jungle_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of olive canvas and black leather jungle boots, laced high, drainage eyelets on the instep, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650022,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Jungle boots, 2x2 (borrows Flight-deck gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/riot_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black riot boots with hard shin guards strapped over them and thick soles, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650023,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Riot boots, 2x2 (borrows Counter-sniper gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/special_forces_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of sand-coloured lightweight assault boots, laced high, stitched nylon and suede, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650024,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Special forces boots, 2x2 (borrows Dress uniform gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/ghillie_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of brown leather boots with long laces wound round the ankles and strips of hessian tied round them, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650025,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Ghillie boots, 2x2 (borrows EOD gauntlets through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/eod_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of heavy green bomb-disposal over-boots with thick armoured soles and wide straps, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650026,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base EOD boots, 2x2 (borrows Special forces gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/wading_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of tall green rubber waders' boots with felt soles, folded down at the knee, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650027,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Wading boots, 2x2 (borrows Leather gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/hospital_clogs.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of white rubber hospital clogs with rows of holes across the toes and a heel strap, plain, unprinted, no lettering, no numbers, no logo, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650028,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Hospital clogs, 2x2 (borrows Fell-runner's gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/parade_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black parade boots polished to a mirror shine, the toes gleaming, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650029,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Boots base Parade boots, 2x2 (borrows Dress uniform gloves through ART_AS till its entry comes off)"
+  },
+  {
+   "out": "art/items/grandad_s_303.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an old wooden Lee-Enfield bolt-action rifle, its stock dark with years of oil and handling, a brass marking disc on the butt worn blank, a leather sling, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 320,
+   "height": 64,
+   "no_background": true,
+   "seed": 650030,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique Grandad's .303 (Primary, on Old .303; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_groundsman_s_shotgun.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pump-action shotgun with its wooden stock painted grass green and chipped, a length of garden twine wound round the fore-end, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 256,
+   "height": 64,
+   "no_background": true,
+   "seed": 650031,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Groundsman's Shotgun (Primary, on Pump shotgun; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_range_officer_s_rifle.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy single-shot target rifle with a thick barrel, an aperture rear sight, a hooked butt plate and an adjustable cheek piece, polished walnut, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 320,
+   "height": 64,
+   "no_background": true,
+   "seed": 650032,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Range Officer's Rifle (Primary, on Range rifle; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_allotment_zip_gun.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a crude single-shot pistol made from a length of steel garden pipe bound with wire to a carved wooden handle, a nail as its firing pin, a bean cane splint along it, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 650033,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Allotment Zip Gun (Secondary, on Zip gun; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_station_revolver.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy old blued service revolver with a lanyard ring on the butt and a braided cord lanyard, worn smooth at the cylinder, no badge, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 650034,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Station Revolver (Secondary, on Police revolver; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_armourer_s_box.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy olive load-carrying vest whose front is a row of steel-cornered pouches holding a punch roll, files and a small hammer, the handles showing, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 650035,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Armourer's Box (Rig, on Load carrier; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_magpie_s_pouches.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a black webbing belt rig crowded with odd small pouches of every colour and cloth, sewn together, a few loose rifle rounds tucked in loops, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 650036,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Magpie's Pouches (Rig, on Webbing; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_gun_club_sling.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a broad tan leather shooting harness with a long rifle scabbard across the back, the scabbard empty, brass buckles, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 650037,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Gun Club Sling (Rig, on Quick-release rig; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_bin_man_s_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of heavy orange rubberised work gauntlets, thick cuffs, grime ground into the palms, plain, unprinted, no lettering, no numbers, no logo, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650038,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Bin Man's Gloves (Gloves, on Work gloves; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_bouncer_s_knuckles.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black leather gloves with thick padded knuckles sewn into the backs, the leather split at one knuckle, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650039,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Bouncer's Knuckles (Gloves, on Tactical gloves; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_bonfire_box.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small battered cardboard box of fireworks with its lid open, rockets and cones packed inside, a fuse or two showing, the box and every firework plain, unprinted, no lettering, no numbers, no logo, a single small object filling the frame, seen from above at a slight angle, lit from one side. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 650040,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Bonfire Box (Charm, on Box of matches; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_football_rattle.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an old wooden football rattle: a cog and two wooden blades on a turned wooden handle, the paint faded, a single small object filling the frame, seen from above at a slight angle, lit from one side. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 650041,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Football Rattle (Charm, on Brass canary; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_lifeboat_jacket.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a single piece of protective clothing - an orange-and-yellow lifeboat crew's waterproof jacket with a high collar and plain grey reflective bands, a whistle on a cord, plain, unprinted, no lettering, no numbers, no logo - hung flat as if on a hook, seen from the front, filling the frame top to bottom, no person wearing it, straps loose, stained, worn. Clothing or a vest, never crockery. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 192,
+   "no_background": true,
+   "seed": 650042,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Lifeboat Jacket (Armour, on Waxed coat; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/the_postman_s_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black leather postman's boots, polished but cracked across the toes, the soles worn down, long laces, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650043,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique The Postman's Boots (Boots, on Walking boots; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/steel_toecaps.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of black leather work boots whose toes are worn through to bare shining steel toecaps, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650044,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "unique Steel Toecaps (Boots, on Hobnail boots; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of olive drab assault gloves with a hard knuckle guard, a small smooth blank brass plate with no marks at all on one cuff, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650045,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued gloves (Gloves, on Special forces gloves; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_bergen.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a large olive drab military bergen rucksack on a frame, side pouches strapped on, a small smooth blank brass plate with no marks at all on the lid, standing upright, seen from the front, filling the frame, half full, zips and buckles worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 650046,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued bergen (Backpack, on Special forces bergen; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of olive drab lightweight assault boots, laced high, a small smooth blank brass plate with no marks at all on one collar, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650047,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued boots (Boots, on Special forces boots; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_steady_rifle.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a long heavy olive drab anti-materiel rifle on a folded bipod, a heavy padded cheek rest and a thick muzzle brake, a small smooth blank brass plate with no marks at all on the stock, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 320,
+   "height": 64,
+   "no_background": true,
+   "seed": 650048,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued steady rifle (Primary, on Anti-materiel rifle; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_marksman_s_rifle.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a long heavy olive drab anti-materiel rifle with a large telescopic sight mounted on top and a long slim barrel, a small smooth blank brass plate with no marks at all on the stock, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 320,
+   "height": 64,
+   "no_background": true,
+   "seed": 650049,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued marksman's rifle (Primary, on Anti-materiel rifle; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_quick_draw_pistol.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a black service pistol with an extended magazine and an open-topped slide, a cut-down grip, a small smooth blank brass plate with no marks at all on the grip, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 650050,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued quick-draw pistol (Secondary, on Special issue pistol; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_duty_pistol.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy black service pistol with a long barrel and a lanyard loop, a small smooth blank brass plate with no marks at all on the grip, seen exactly side-on with the muzzle pointing left, filling the frame, as it might be found in post-collapse Britain, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 650051,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued duty pistol (Secondary, on Special issue pistol; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_spotter_s_cap.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an olive command helmet with a pair of small binoculars clipped to its brow on a folding mount, a small smooth blank brass plate with no marks at all on the front, seen from the front and slightly above, resting on nothing, filling the frame top to bottom, scuffed and plain, no markings, no head in it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650052,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued spotter's cap (Helmet, on Command helmet; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_riot_cap.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an olive command helmet with a clear riot visor down and a padded neck flap, a small smooth blank brass plate with no marks at all on the front, seen from the front and slightly above, resting on nothing, filling the frame top to bottom, scuffed and plain, no markings, no head in it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650053,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued riot cap (Helmet, on Command helmet; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_light_plate.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a single piece of protective clothing - a slim olive plate carrier, only a front and back plate and narrow straps, a small smooth blank brass plate with no marks at all on the chest - hung flat as if on a hook, seen from the front, filling the frame top to bottom, no person wearing it, straps loose, stained, worn. Clothing or a vest, never crockery. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 650054,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued light plate (Armour, on Heavy armour suit; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_escort_plate.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a single piece of protective clothing - a heavy olive armour suit with broad shoulder plates and upper-arm guards, a small smooth blank brass plate with no marks at all on the chest - hung flat as if on a hook, seen from the front, filling the frame top to bottom, no person wearing it, straps loose, stained, worn. Clothing or a vest, never crockery. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 650055,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued escort plate (Armour, on Heavy armour suit; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_ammo_webbing.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an olive chest rig with a long row of magazine pouches across the front, the flaps open, a small smooth blank brass plate with no marks at all, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 650056,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued ammo webbing (Rig, on Command rig; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_scavenger_s_webbing.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an olive chest rig with a big open dump pouch hanging at one side and small loose pouches, a small smooth blank brass plate with no marks at all, hung flat as if on a hook, seen from the front, filling the frame, no person wearing it, worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 128,
+   "no_background": true,
+   "seed": 650057,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued scavenger's webbing (Rig, on Command rig; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_medal.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a single bronze campaign medal on a short plain olive ribbon, its face plain and smooth with no design or lettering, a single small object filling the frame, seen from above at a slight angle, lit from one side. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 650058,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued medal (Charm, on Gold sovereign; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_bugle.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small dented brass army bugle with a plain olive cord, no badge, a single small object filling the frame, seen from above at a slight angle, lit from one side. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 650059,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued bugle (Charm, on Gold sovereign; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_shooting_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of thin olive drab shooting gloves, the trigger finger of the right one cut away, a small smooth blank brass plate with no marks at all on one cuff, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650060,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued shooting gloves (Gloves, on Special forces gloves; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_tracker_s_gloves.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of olive drab gloves with leather palms and a strip of green-brown camouflage cloth along the backs, a small smooth blank brass plate with no marks at all on one cuff, laid flat side by side, fingers up, seen from above, filling the frame, no hands in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650061,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued tracker's gloves (Gloves, on Special forces gloves; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_search_pack.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a large olive drab bergen with its lid thrown open and long side pockets with pull tabs, a small smooth blank brass plate with no marks at all on the lid, standing upright, seen from the front, filling the frame, half full, zips and buckles worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 650062,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued search pack (Backpack, on Special forces bergen; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_light_pack.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a slim olive drab daysack, a third of a bergen's size, compression straps pulled tight, a small smooth blank brass plate with no marks at all on the lid, standing upright, seen from the front, filling the frame, half full, zips and buckles worn, repaired with tape and stitching. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 192,
+   "height": 256,
+   "no_background": true,
+   "seed": 650063,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued light pack (Backpack, on Special forces bergen; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_quiet_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of olive drab assault boots with soft dark rubber soles and padded cloth collars, a small smooth blank brass plate with no marks at all on one collar, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650064,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued quiet boots (Boots, on Special forces boots; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/items/issued_combat_boots.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of heavy olive drab combat boots with armoured shin guards strapped over them, a small smooth blank brass plate with no marks at all on one collar, the two side by side, seen from the front and a little above at a slight angle, toes towards the viewer, filling the frame, resting on nothing, no floor or ground under them, no feet or legs in them, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background. No floor, wall, ground or sky around it.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 650065,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "issued Issued combat boots (Boots, on Special forces boots; shows its base's picture till this lands)"
+  },
+  {
+   "out": "art/nodes/between_the_eyes.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650066,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rifle's telescopic sight seen end-on, its lens showing a plain thin crosshair. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Between the eyes (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/elbow_grease.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650067,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small brass oil can with a long thin spout, a rag tied round its neck, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Elbow grease (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/covering_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650068,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heap of spent brass cartridge cases, some still smoking. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Covering fire (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/body_count.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650069,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short piece of a worn wooden rifle stock with a long row of small notches cut into its edge. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Body count (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/change_of_dressing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650070,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an empty rifle magazine with a plain white field dressing knotted round it, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Change of dressing (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/ride_your_luck.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650071,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a worn British silver sixpence on a loop of string through a hole drilled in it, its face worn smooth, no lettering. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Ride your luck (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/composed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650072,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of grey foam ear plugs joined by a cord. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Composed (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/telling.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650073,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a square of rusty tin sheet with one bullet hole through it, the edges curled back. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Telling (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/pointed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650074,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single steel-cored rifle round with a sharp black tip, standing on its base. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Pointed (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/hobbling.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650075,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short length of rope tied into a hobble knot with two loops. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Hobbling (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/disarming.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650076,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of plain steel handcuffs, one cuff open. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Disarming (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/pinning.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650077,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single filled sandbag tied at the neck, plain hessian, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Pinning (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/thrifty.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650078,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small dented tin of loose rifle rounds, the lid off, the tin plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Thrifty (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/primed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650079,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a grenade's pin and pull ring, pulled out, on its own. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Primed (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/watchful.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650080,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small round mirror on a short steel rod, the kind for seeing round corners. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Watchful (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/soothing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650081,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a squeezed tube of ointment with its cap off, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Soothing (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/deft.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650082,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of fine steel tweezers. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Deft (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/shrewd.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650083,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small black jeweller's eye loupe. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Shrewd (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/laden.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650084,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bulging canvas sack tied at the neck, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Laden (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/keyed_up.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650085,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a chipped white enamel mug of black coffee, steam rising, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Keyed up (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/full_of_beans.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650086,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an opened dented tin of baked beans, the lid bent back, no label, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Full of beans (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/bitter.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650087,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single long icicle. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Bitter (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/crackling.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650088,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single car spark plug, its white porcelain cracked. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Crackling (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/scorching.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650089,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a lit red road flare stick, sparking at one end, plain, unprinted, no lettering, no numbers, no logo. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Scorching (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/barbed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650090,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short twist of rusty barbed wire. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Barbed (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/brawny.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650091,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a hand grip exerciser: two worn wooden handles joined by a steel spring. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Brawny (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/nodes/toxic.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 650092,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small brown glass bottle with a cork stopper, no label. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, a transparent background.",
+   "_where": "the web: Toxic (web_view's art/nodes/<slug>.png; a glyph till then)"
+  },
+  {
+   "out": "art/places/route_m4.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650093,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of a long straight motorway in a shallow cutting, three empty lanes each way, abandoned cars nosed onto the hard shoulder, crash barriers, an overhead gantry carrying plain blank grey panels with nothing on them, a line of lorry tail lights far off, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 0 (the M4): ROUTE_ART69[0] -> \"Route m4\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/route_docks_road.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650094,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of a dual carriageway running along a high dock wall, stacks of shipping containers in plain faded paint with no lettering behind a chain-link fence, the arms of gantry cranes against the sky, sodium lamps, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 1 (the docks road): ROUTE_ART69[1] -> \"Route docks road\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/route_treasury_road.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650095,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of a wide city avenue between tall stone buildings with columns, lines of plain grey concrete barricade blocks across it, one plain grey armoured van with no lettering far down the road, wet paving, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 2 (the Treasury road): ROUTE_ART69[2] -> \"Route treasury road\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/route_ring_road.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650096,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of an elevated concrete ring road on tall pillars curving past tower blocks, a flyover crossing it, a burnt-out car on a slip road, weeds in the cracks, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 3 (the ring road): ROUTE_ART69[3] -> \"Route ring road\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/route_old_a_road.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650097,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of a narrow old single-carriageway road between hedges and stone walls, telegraph poles along it, a village of stone cottages with dark windows, a shut lay-by with a plain empty trailer, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 4 (the old A-road): ROUTE_ART69[4] -> \"Route old a road\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/route_airport_spur.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650098,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of a straight dual carriageway beside a tall perimeter fence, beyond it a parked airliner in plain grey with no markings, livery or lettering, approach lights on poles running into the distance, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Convoys' band for route 5 (the airport spur): ROUTE_ART69[5] -> \"Route airport spur\" (borrows a place today)"
+  },
+  {
+   "out": "art/places/the_plots.png",
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "seed": 650099,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "description": "Pixel art, wide ground-level view of the camp's own vegetable plots dug along the edge of an old council football pitch: six long raised beds edged with scaffold boards in a row, rows of young greens, bean canes, a water butt, a wheelbarrow, a lean-to shed of corrugated sheet, a rusting goalpost with no net at the far end. Not a council allotment site: no sheds in rows, no chain-link fence, no gate, after a collapse. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The subject runs as a long low strip across the middle of the frame from edge to edge; the left third stays darker and lower in detail (the title sits there). Only the palette, light and painting style of the style image, not its view or its subject. The painting fills the whole canvas to all four edges, no border, frame or margin. No people or figures. No text, no lettering, no numbers, no number plates; every panel and board in it blank.",
+   "_where": "the Plots banner (allotments_view head_art: \"The Allotments\" -> \"The Plots\"; borrows the site's today)"
+  },
+  {
+   "out": "art/crates/sealed.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy dark wooden crate bound with steel bands, its lid shut and sealed with twisted wire through a plain lead seal, no stencils, no lettering, no numbers, no labels. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 650100,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the auction's sealed crate (SEALED_ART69 \"crates/military\" -> \"crates/sealed\")"
+  }
+ ]
+}
