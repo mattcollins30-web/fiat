@@ -7,6 +7,7 @@ const SliceWorld := preload("res://slice/slice.gd")     # (no class_name: Matt's
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 
 const T := preload("res://slice/tuning.gd")
+const Art := preload("res://slice/art.gd")
 const C_BODY := Color("4e6b3a")
 const C_LINE := Color("e0a030")
 const C_HURT := Color("f4e6d0")
@@ -401,13 +402,26 @@ func debug_aim_at(p: Vector2) -> void:
 
 
 # ---------------------------------------------------------------- the look
+## (round 3) The runner's picture: reload while reloading; the gun down (stand) while searching, leaving, swapping or
+## dead; else the gun up - "machine" for a long gun, "gun" for a pistol (firing or aiming, the same pose).
+func pose() -> String:
+	if reloading:
+		return "reload"
+	if dead or searching != null or leaving_frac > 0.0 or swap_left > 0.0:
+		return "stand"
+	return "gun" if str(gun().get("type", "")) == "pistol" else "machine"
+
+
 func _draw() -> void:
 	var r := T.RUNNER_R
 	draw_circle(Vector2(6, 8), r, Color(0, 0, 0, 0.3))
-	var tip := aim_dir * (T.BARREL + 18.0)
-	draw_line(aim_dir * (r - 6.0), tip, C_BARREL, 12.0)
-	draw_circle(Vector2.ZERO, r, C_HURT if hurt_left > 0.0 else C_BODY)
+	draw_circle(Vector2.ZERO, r, Color(C_BODY, 0.55))     # his disc and amber ring: he reads apart from the men
 	draw_arc(Vector2.ZERO, r, 0, TAU, 48, C_LINE, 5.0)
+	if not Art.draw_char(self, Art.RUNNER, pose(), aim_dir.angle(), r * 0.95):
+		draw_line(aim_dir * (r - 6.0), aim_dir * (T.BARREL + 18.0), C_BARREL, 12.0)     # no picture: the token, as before
+		draw_circle(Vector2.ZERO, r - 3.0, C_BODY)
+	if hurt_left > 0.0:
+		draw_circle(Vector2.ZERO, r, Color(C_HURT, 0.65))     # hit: he flashes
 	if reloading and reload_total > 0.0:
 		draw_arc(Vector2.ZERO, r + 12.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - reload_left / reload_total), 40, Color(C_LINE, 0.8), 4.0)
 	if leaving_frac > 0.0:

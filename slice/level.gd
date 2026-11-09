@@ -4,12 +4,14 @@ extends Node2D
 ## The layout is data here so the world's sight and collision read the same rectangles the eye does.
 
 const T := preload("res://slice/tuning.gd")
+const Art := preload("res://slice/art.gd")
 
 const C_FLOOR := Color("30333a")
-const C_GRID := Color("383b42")
-const C_BAY := Color("8a8466")
+const C_BAY := Color("d8c27a")             # (round 3) the bays' paint on the pack's asphalt
 const C_SHADOW := Color(0, 0, 0, 0.35)
 const C_EDGE := Color("23252a")
+const C_EDGE_SHADE := Color(0.08, 0.09, 0.1, 0.55)    # (round 3) the edge wall over the paving
+const C_BURNT := Color(0.55, 0.42, 0.36)    # (round 3) the kiosk's tiles, scorched
 const C_EXIT := Color("3fae7a")
 const KIND_COLOUR := {"car_burnt": Color("3b2c27"), "car_grey": Color("4a4d55"), "van": Color("5a5f52"), "wall": Color("6b5a4c"),
 	"low_wall": Color("7a6a58"), "bin": Color("2e4a35"), "shelter": Color("56646e"), "kiosk": Color("3a2e2a")}
@@ -94,6 +96,7 @@ var blocks: Array = []               # Rect2s, the cover and the park's edge wal
 
 
 func build() -> void:
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED     # (round 3) the floor's tiles repeat in one draw
 	cover.clear()
 	for c in COVER:
 		cover.append(tiles_px(c["tiles"]))
@@ -118,16 +121,22 @@ func build() -> void:
 
 
 func _draw() -> void:
-	draw_rect(park_rect, C_FLOOR)
-	var step := T.TILE * 4.0
-	var x := 0.0
-	while x <= T.PARK_W:
-		draw_line(Vector2(x, 0), Vector2(x, T.PARK_H), C_GRID, 2.0)
-		x += step
-	var y := 0.0
-	while y <= T.PARK_H:
-		draw_line(Vector2(0, y), Vector2(T.PARK_W, y), C_GRID, 2.0)
-		y += step
+	# (round 3) the floor from Kenney's tiles: asphalt, repeated in one draw; paving round the edge; the lines drawn
+	var asphalt := Art.tex(Art.FLOOR)
+	if asphalt != null:
+		draw_texture_rect(asphalt, park_rect, true)
+	else:
+		draw_rect(park_rect, C_FLOOR)
+	var pave := Art.tex(Art.PAVING)
+	var kerb := T.EDGE + T.TILE                      # the edge wall's tile and one inside it
+	for r in [Rect2(0, 0, T.PARK_W, kerb), Rect2(0, T.PARK_H - kerb, T.PARK_W, kerb), Rect2(0, kerb, kerb, T.PARK_H - 2.0 * kerb), Rect2(T.PARK_W - kerb, kerb, kerb, T.PARK_H - 2.0 * kerb)]:
+		if pave != null:
+			draw_texture_rect(pave, r, true)
+		else:
+			draw_rect(r, C_EDGE)
+	var e := T.EDGE
+	for r in [Rect2(0, 0, T.PARK_W, e), Rect2(0, T.PARK_H - e, T.PARK_W, e), Rect2(0, 0, e, T.PARK_H), Rect2(T.PARK_W - e, 0, e, T.PARK_H)]:
+		draw_rect(r, C_EDGE_SHADE)                   # the edge wall: the paving darkened, so the kerb reads
 	for row in BAYS:
 		var n: int = int(row["count"])
 		var x0: float = float(row["x0"]) * T.TILE
@@ -136,7 +145,11 @@ func _draw() -> void:
 			var bx: float = x0 + i * T.BAY_W
 			draw_line(Vector2(bx, y0), Vector2(bx, y0 + T.BAY_H), C_BAY, 4.0)
 		draw_line(Vector2(x0, y0), Vector2(x0 + n * T.BAY_W, y0), C_BAY, 4.0)
-	draw_rect(tiles_px(KIOSK_INSIDE), Color("26221f"))     # the kiosk's burnt floor
+	var boards := Art.tex(Art.KIOSK_FLOOR)
+	if boards != null:
+		draw_texture_rect(boards, tiles_px(KIOSK_INSIDE), true, C_BURNT)     # the kiosk's boards, scorched
+	else:
+		draw_rect(tiles_px(KIOSK_INSIDE), Color("26221f"))
 	# the way out
 	var ec := C_EXIT if exit_lit else Color(C_EXIT, 0.55)
 	draw_rect(exit_rect, Color(ec, 0.10 if not exit_lit else 0.22))
@@ -145,18 +158,34 @@ func _draw() -> void:
 	draw_line(mid + Vector2(-50, 50), mid + Vector2(50, -50), ec, 6.0)
 	draw_line(mid + Vector2(50, -50), mid + Vector2(10, -50), ec, 6.0)
 	draw_line(mid + Vector2(50, -50), mid + Vector2(50, -10), ec, 6.0)
-	# the cover, a shadow under each
+	# the cover, a shadow under each: the pack's props where it has one, code-drawn (shaded to match) where not
+	var bin_i := 0
 	for c in cover_px():
 		var r: Rect2 = c["rect"]
-		draw_rect(Rect2(r.position + Vector2(8, 10), r.size), C_SHADOW)
-		draw_rect(r, KIND_COLOUR[c["kind"]])
-		draw_rect(r, KIND_LINE[c["kind"]], false, 3.0)
-		if str(c["kind"]).begins_with("car") or c["kind"] == "van":      # a windscreen's gap
-			draw_rect(Rect2(r.position + Vector2(16, 44), Vector2(r.size.x - 32, 40)), Color(KIND_LINE[c["kind"]], 0.8))
-	# the edge walls
-	var e := T.EDGE
-	for r in [Rect2(0, 0, T.PARK_W, e), Rect2(0, T.PARK_H - e, T.PARK_W, e), Rect2(0, 0, e, T.PARK_H), Rect2(T.PARK_W - e, 0, e, T.PARK_H)]:
-		draw_rect(r, C_EDGE)
+		var kind: String = c["kind"]
+		match kind:
+			"bin":
+				var u := Art.used(Art.BINS[bin_i % Art.BINS.size()])
+				bin_i += 1
+				var d := minf(r.size.x, r.size.y)
+				draw_circle(r.get_center() + Vector2(6, 8), d * 0.5, C_SHADOW)
+				if u["tex"] != null:
+					draw_texture_rect_region(u["tex"], Rect2(r.get_center() - Vector2(d, d) * 0.5, Vector2(d, d)), u["src"])
+				else:
+					draw_rect(r, KIND_COLOUR[kind])
+			"wall", "kiosk":
+				draw_rect(Rect2(r.position + Vector2(8, 10), r.size), C_SHADOW)
+				Art.draw_strip(self, Art.WALL, r, C_BURNT if kind == "kiosk" else Color.WHITE)
+				draw_rect(r, KIND_LINE[kind], false, 3.0)
+			"low_wall":
+				draw_rect(Rect2(r.position + Vector2(6, 8), r.size), C_SHADOW)
+				Art.draw_strip(self, Art.FENCE_H if r.size.x >= r.size.y else Art.FENCE_V, r)
+			_:
+				draw_rect(Rect2(r.position + Vector2(8, 10), r.size), C_SHADOW)
+				draw_rect(r, KIND_COLOUR[kind])
+				draw_rect(r, KIND_LINE[kind], false, 3.0)
+				if kind.begins_with("car") or kind == "van":      # a windscreen's gap
+					draw_rect(Rect2(r.position + Vector2(16, 44), Vector2(r.size.x - 32, 40)), Color(KIND_LINE[kind], 0.8))
 
 
 ## (round 2) The cells a circle of radius r can stand on and walk to from `from`, on a REACH_CELL grid (4-way).

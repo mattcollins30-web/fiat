@@ -8260,3 +8260,9 @@ the rig, the pack with the run's finds, the runner's stats in the game's words; 
 magazines x2.5 by default (x1 / x2.5 / x4, a hand refill by the round); reload on R (Space still), skill 3 to C, a
 reload prompt under a quarter; the car park 1.4x with a kiosk, a shelter, a van, more cars, bins and low walls, every
 spawn, crate and the way out proved reachable. Art waits on Matt's word on a source.
+
+The slice, round 3 (9 Nov; Matt picked "Kenney CC0"): Kenney's Top-down Shooter pack (CC0, from OpenGameArt; kenney.nl's
+own link refuses scripts), 21 pictures in slice/art/kenney/ with its License.txt: Soldier 1 as the runner by pose, the
+gang as Hitman 1 / Man Brown / Man Blue, the hard man as Man Old, asphalt, paving and kiosk floors, concrete walls,
+crates, barrels as bins, fences as the low walls (cars, the van, the shelter, the bay lines still drawn). slice/art.gd
+loads the imported picture where there is one (the editor, an export) and the raw PNG where not (the headless smoke).

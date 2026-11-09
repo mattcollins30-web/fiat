@@ -42,3 +42,7 @@ Round 2's test knobs on the pause: "Gang HP" ×0.5 / ×0.25 (MAN_HP_X, the start
 
 kit_sheet.gd (H, round 2) - Tab's sheet: the worn kit in slot order (a piece picked shows the game's item head), the rig
 and the pack's finds (a med into the rig, a gun worn: the bridge reads it again), the runner's stats in the game's words.
+
+Stand-in art (round 3): Kenney's Top-down Shooter pack, by Kenney (kenney.nl), CC0 - slice/art/kenney/ holds only
+the files the slice uses, with the pack's License.txt. slice/art.gd reads them straight from the PNGs (never load()),
+so a picture with no .import shows in the headless smoke too.

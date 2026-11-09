@@ -5,6 +5,7 @@ extends CharacterBody2D
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 
 const T := preload("res://slice/tuning.gd")
+const Art := preload("res://slice/art.gd")
 const Data := preload("res://scripts/sim/data.gd")
 
 signal fired_at(man: Node, hit: bool, to: Vector2)
@@ -26,6 +27,8 @@ var hard := false
 var name_text := ""
 var traits: Array = []
 var flanker := false
+var dead_face := INF                 # (round 3) his facing, frozen when he falls
+var look := ""                       # (round 3) his picture: Hitman 1, Man Brown or Man Blue; Man Old for the hard man
 var state := "enter"                  # enter, move, cover, retreat, dead
 var target := Vector2.ZERO
 var sees := false
@@ -306,15 +309,38 @@ func _fire(dt: float, rp: Vector2, dist: float) -> void:
 	fired_at.emit(self, hit, tracer_to)
 
 
+## (round 3) Where he faces: the runner while he lives; a dead man keeps the facing he fell with while he fades.
+func facing() -> float:
+	if dead and dead_face != INF:
+		return dead_face
+	var a := 0.0
+	if world != null and world.runner != null:
+		a = (world.runner.global_position - global_position).angle()
+	if dead:
+		dead_face = a
+	return a
+
+
 func _draw() -> void:
 	if tracer_t > 0.0:
 		draw_line(Vector2.ZERO, to_local(tracer_to), C_TRACER, 2.0)
 	var body: Color = C_HURT if flash_t > 0.0 else (C_HARD if hard else C_MAN)
 	draw_circle(Vector2(4, 6), radius, Color(0, 0, 0, 0.35))
-	draw_circle(Vector2.ZERO, radius, body)
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, C_HARD_LINE if hard else C_LINE, 4.0 if hard else 3.0)
-	if world != null and world.runner != null:
-		var f: Vector2 = (world.runner.global_position - global_position).normalized() * radius
+	var face := facing()
+	if look == "":
+		look = Art.HARD if hard else Art.next_look()
+	if hard:
+		draw_circle(Vector2.ZERO, radius + 10.0, Color(C_HARD_LINE, 0.22))     # his glow
+	var pose_v: String = Art.man_pose(look, not dead and (sees or tracer_t > 0.0))
+	if Art.draw_char(self, look, pose_v, face, radius * 0.95):
+		if flash_t > 0.0:
+			draw_circle(Vector2.ZERO, radius, Color(C_HURT, 0.65))     # hit: he flashes
+		if hard:
+			draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, C_HARD_LINE, 4.0)     # his gold ring
+	else:
+		draw_circle(Vector2.ZERO, radius, body)
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, C_HARD_LINE if hard else C_LINE, 4.0 if hard else 3.0)
+		var f: Vector2 = Vector2.RIGHT.rotated(face) * radius
 		draw_line(f * 0.4, f * 1.15, C_LINE, 5.0)
 	if float(ms.get("stun_t", 0.0)) > 0.0:
 		draw_arc(Vector2.ZERO, radius + 8.0, 0.0, TAU, 40, C_STUN, 3.0)

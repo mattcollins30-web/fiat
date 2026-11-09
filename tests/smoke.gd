@@ -46929,6 +46929,57 @@ func _w72_reach_checks(world) -> void:
 	print("slice reach ok: %d cells his, %d spawns, %d crates, the way out, the kiosk" % [me["seen"].size(), SliceLevel.SPAWNS.size(), world.crates().size()])
 
 
+## (round 3) Kenney's CC0 stand-in art: only the files used, the licence beside them, every picture the slice names
+## loads straight from its PNG (a copy in user://, where no .import can be, loads too), and the runner's pose.
+func _w74_art_checks(world) -> void:
+	var Art = load("res://slice/art.gd")
+	var files: PackedStringArray = DirAccess.get_files_at(Art.DIR)
+	var pngs: Array = Array(files).filter(func(f): return f.ends_with(".png"))
+	_check(files.has("License.txt") and pngs.size() > 0 and pngs.size() < 60, "the pack's files in the slice: %d pictures, licence %s" % [pngs.size(), files.has("License.txt")])
+	var names: Array = Art.used_files()
+	var missing: Array = names.filter(func(n): return Art.tex(n) == null)
+	_check(missing.is_empty(), "the slice's pictures that don't load: %s" % str(missing))
+	_check(pngs.all(func(f): return names.has(str(f).get_basename())), "pictures copied but never drawn: %s" % str(pngs.filter(func(f): return not names.has(str(f).get_basename()))))
+	for who in Art.GUN_UP:                   # a man's poses are the ones Art declares (so the copied set is what's drawn)
+		_check(Art.POSES[who] == ["stand", Art.man_pose(who, true)] and Art.man_pose(who, false) == "stand", "%s's poses %s aren't the ones he's drawn in" % [who, str(Art.POSES[who])])
+	for p in ["stand", "gun", "machine", "reload"]:
+		_check(Art.POSES[Art.RUNNER].has(p), "the runner's %s isn't in the pack's copy" % p)
+	# imported (the editor, an export) the import wins: an export packs the imported texture, not the PNG
+	var icon: Texture2D = Art.png_texture("res://icon.png")
+	_check(ResourceLoader.exists("res://icon.png") and icon != null and not (icon is ImageTexture), "an imported picture is read from its PNG, not its import (an export would draw tokens): %s" % str(icon))
+	var probe := "user://w74_probe.png"
+	var fa := FileAccess.open(probe, FileAccess.WRITE)
+	fa.store_buffer(FileAccess.get_file_as_bytes(Art.DIR + Art.CRATE + ".png"))
+	fa.close()
+	var t: Texture2D = Art.png_texture(probe)
+	_check(not FileAccess.file_exists(probe + ".import") and t != null and t.get_size() == Vector2(64, 64), "a picture with no .import doesn't load: %s" % str(t))
+	DirAccess.remove_absolute(probe)
+	var looks: Array = [Art.next_look(), Art.next_look(), Art.next_look()]
+	_check(looks[0] != looks[1] and looks[1] != looks[2] and looks[0] != looks[2], "the gang's men don't vary: %s" % str(looks))
+	var r = world.runner
+	var g: Dictionary = r.gun()
+	_check(r.pose() == ("gun" if str(g.get("type", "")) == "pistol" else "machine"), "the runner's pose with a %s up is '%s'" % [str(g.get("type", "")), r.pose()])
+	r.reloading = true
+	_check(r.pose() == "reload", "reloading, the runner's pose is '%s'" % r.pose())
+	r.reloading = false
+	r.leaving_frac = 0.5
+	_check(r.pose() == "stand", "leaving, the runner's gun isn't down: '%s'" % r.pose())
+	r.leaving_frac = 0.0
+	# a dead man keeps the facing he fell with while he fades
+	var man = load("res://slice/man.gd").new()
+	man.world = world
+	man.position = r.position + Vector2(300, 0)
+	var alive_face: float = man.facing()
+	man.dead = true
+	var fell: float = man.facing()
+	var was: Vector2 = r.position
+	r.position = man.position + Vector2(0, 300)
+	_check(is_equal_approx(man.facing(), fell) and is_equal_approx(fell, alive_face), "a dead man turns to follow the runner: %.2f -> %.2f" % [fell, man.facing()])
+	r.position = was
+	man.free()
+	print("slice art ok: %d of Kenney's pictures (CC0), loaded without the importer" % pngs.size())
+
+
 func _w72_steps(world, secs: float) -> void:
 	for _i in range(int(round(secs * 60.0))):
 		world.tick(1.0 / 60.0)
@@ -46946,6 +46997,7 @@ func _slice_world_checks(main) -> void:
 	_check(grown > 1.35 and grown < 1.5 and world.park_rect.size.x / vw > 2.5, "the car park is %.2fx build 72's area, not about 1.4" % grown)
 	_check(is_equal_approx(world.park_rect.size.x, T.PARK_TILES.x * T.TILE) and is_equal_approx(world.park_rect.size.y, T.PARK_TILES.y * T.TILE), "the park isn't a whole number of floor tiles")
 	_w72_reach_checks(world)
+	_w74_art_checks(world)
 	_check(r.hp == r.hp_max and r.hp_max == int(world.ctx["hp_max"]) and r.guns.size() == world.ctx["guns"].size() and r.guns.size() >= 2, "the runner isn't the ctx's: %d/%d HP, %d guns" % [r.hp, r.hp_max, r.guns.size()])
 	# moving: a tenth of a second up to pace, a stop with no slide, the pace the class's
 	r.debug_move_to(Vector2(1200, 1200))

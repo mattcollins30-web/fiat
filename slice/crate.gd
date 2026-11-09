@@ -4,6 +4,7 @@ extends Node2D
 const SliceWorld := preload("res://slice/slice.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 
 const T := preload("res://slice/tuning.gd")
+const Art := preload("res://slice/art.gd")
 const C_BOX := Color("8a6a3a")
 const C_LINE := Color("e0a030")
 const C_OPEN := Color("4a4036")
@@ -32,7 +33,11 @@ func _draw() -> void:
 	var h := T.CRATE_SIZE * 0.5
 	var r := Rect2(-Vector2.ONE * h, Vector2.ONE * T.CRATE_SIZE)
 	draw_rect(Rect2(r.position + Vector2(6, 8), r.size), Color(0, 0, 0, 0.3))
-	draw_rect(r, C_OPEN if opened else C_BOX)
+	var box := Art.used(Art.CRATE)     # (round 3) the pack's crate, the amber line kept
+	if box["tex"] != null:
+		draw_texture_rect_region(box["tex"], r, box["src"], Color(0.45, 0.42, 0.4) if opened else Color.WHITE)
+	else:
+		draw_rect(r, C_OPEN if opened else C_BOX)
 	draw_rect(r, Color(C_LINE, 0.4) if opened else C_LINE, false, 4.0)
 	if opened:
 		draw_line(r.position, r.end, Color(C_LINE, 0.3), 3.0)
