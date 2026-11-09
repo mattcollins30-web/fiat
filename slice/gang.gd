@@ -24,6 +24,10 @@ var hard_seen := false
 var cleared := false
 var men_by_gang := {}                # gang i -> men left
 var last_seen := Vector2.ZERO        # the runner where they last saw him
+var seen_ago := 0.0                  # (round 6) seconds since one of the front saw him
+var searches := 0                    # ...and the searches sent since
+var _search_in := 0.0
+var _hold_check := 0.0
 var _on_you := 0
 var _men: Array = []
 var _all: Array = []                 # every man still drawn (the dead fade out)
@@ -124,7 +128,77 @@ func held_shot(mn: Node) -> void:
 
 ## Where a waiting man stands: the edge he came in by, held back out of the runner's sight.
 func _hold_spot(mn: Node) -> Vector2:
-	return mn.get_meta("way", mn.global_position)
+	var way: Vector2 = mn.get_meta("way", mn.global_position)
+	var rp: Vector2 = world.runner.global_position if world.runner != null else way
+	if world.has_los(way, rp):
+		return world.cover_spot(way, rp)              # (round 6) the runner can see the edge he came in by: behind the cover nearest it
+	return way
+
+
+## (round 6) The waiting men stay out of his sight: one he could see moves behind cover.
+func _hold_out_of_sight(dt: float) -> void:
+	_hold_check -= dt
+	if _hold_check > 0.0 or world.runner == null:
+		return
+	_hold_check = T.G_HOLD_CHECK_S
+	var rp: Vector2 = world.runner.global_position
+	var taken: Array = []
+	for mn in _queue:
+		if not is_instance_valid(mn) or mn.is_dead():
+			continue
+		# his spot is in sight, or another man has it: a place of his own in the cover's shadow
+		if world.has_los(mn.target, rp) or taken.any(func(p): return p.distance_to(mn.target) < T.G_HOLD_FILE_PX * 0.8):
+			mn.hold(_shadow_spot(_hold_spot(mn), rp, taken))
+		taken.append(mn.target)
+
+
+## A free place out of his sight behind `spot`, in file away from him, that none of `taken` has.
+func _shadow_spot(spot: Vector2, rp: Vector2, taken: Array) -> Vector2:
+	var dir: Vector2 = (spot - rp).normalized()
+	for row in range(T.G_HOLD_FILE):
+		for side in [0.0, 1.0, -1.0]:
+			var p: Vector2 = spot + dir * T.G_HOLD_FILE_PX * row + dir.orthogonal() * T.G_HOLD_FILE_PX * side * row * 0.5
+			if not world.park_rect.grow(-T.MAN_R).has_point(p) or world.resolve_circle(p, T.MAN_R).distance_to(p) > 1.0:
+				continue
+			if world.has_los(p, rp) or taken.any(func(q): return q.distance_to(p) < T.G_HOLD_FILE_PX * 0.8):
+				continue
+			return p
+	return spot
+
+
+const SETTLED := ["cover", "lean", "duck"]
+
+## (round 6, board E) Nobody of the front has seen him for a while: the gang has lost him.
+func lost_him() -> bool:
+	return seen_ago >= T.G_SEARCH_AFTER_S
+
+
+## The search: the two of the front nearest where they last saw him go and look; the rest hold their cover. Still lost
+## after it, the next goes nearer where he is.
+func _search(dt: float) -> void:
+	var live: Array = _front.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
+	if live.is_empty():
+		return
+	if live.any(func(mn): return mn.sees):
+		seen_ago = 0.0
+		searches = 0
+		_search_in = 0.0
+		return
+	# the clock runs once they are at their cover with nothing to shoot at: men still on their way in haven't lost him
+	if live.all(func(mn): return mn.state in SETTLED):
+		seen_ago += dt
+	if not lost_him():
+		return
+	_search_in -= dt
+	if _search_in > 0.0 or live.any(func(mn): return mn.is_searching()):
+		return
+	if searches > 0 and world.runner != null:
+		last_seen = last_seen.move_toward(world.runner.global_position, T.G_SEARCH_CLOSER_PX)
+	searches += 1
+	_search_in = T.G_SEARCH_AGAIN_S
+	live.sort_custom(func(a, b): return a.global_position.distance_to(last_seen) < b.global_position.distance_to(last_seen))
+	for k in range(mini(T.G_SEARCHERS, live.size())):
+		live[k].search(last_seen + Vector2(70.0, 0.0).rotated(PI * k))
 
 
 ## The men who may fire this frame (the review: the sim's contact(t), so many on you at once): the nearest of those who
@@ -177,6 +251,8 @@ func _step(dt: float) -> void:
 		return
 	SliceBridge.tick(world, dt)
 	_fill_front(dt)
+	_search(dt)
+	_hold_out_of_sight(dt)
 	_pick_firing()
 	for mn in _all.duplicate():
 		if is_instance_valid(mn) and not mn.gone:
@@ -219,6 +295,10 @@ func _arrive(i: int) -> void:
 	var spawns: Array = world.spawn_points()
 	var rp: Vector2 = world.runner.global_position if world.runner != null else Vector2.ZERO
 	spawns.sort_custom(func(a, b): return a.distance_to(rp) > b.distance_to(rp))
+	if alive == 0:
+		last_seen = rp                             # (round 6) a gang into an empty park comes in knowing where he is
+		seen_ago = 0.0
+		searches = 0
 	var ways: Array = spawns.slice(0, mini(2, spawns.size()))
 	var r: RandomNumberGenerator = ctx["sim"].fight_rng
 	var hard_at := -1

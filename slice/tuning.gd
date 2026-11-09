@@ -127,17 +127,22 @@ const G_BOX_ROUNDS := 250            # (the review, 9 Nov) a runner with no box 
 #   rate: rounds a second (auto), or the cap on presses (semi, pump); mag: the magazine (big: a base whose own magazine
 #   is over its type's has this instead); fire: "auto" held, "semi" a press a round, "pump" a press a shell of pellets,
 #   "swing" a press a blow; spread: degrees either side of the aim.
+#   (round 6) kick: degrees a round fired adds to the spread; kick_max: the most it adds. First guesses, all of them.
 const G_KINDS := {
-	"ar": {"name": "AR", "rate": 10.0, "mag": 30, "big": 30, "fire": "auto", "spread": 2.0},
-	"smg": {"name": "SMG", "rate": 13.0, "mag": 30, "big": 30, "fire": "auto", "spread": 3.5},
-	"rifle": {"name": "Rifle", "rate": 3.0, "mag": 10, "big": 20, "fire": "semi", "spread": 0.8},
-	"bolt": {"name": "Bolt rifle", "rate": 1.0, "mag": 5, "big": 5, "fire": "semi", "spread": 0.3},
-	"pistol": {"name": "Pistol", "rate": 6.0, "mag": 12, "big": 15, "fire": "semi", "spread": 1.5},
-	"revolver": {"name": "Revolver", "rate": 3.0, "mag": 6, "big": 6, "fire": "semi", "spread": 1.2},
-	"shotgun": {"name": "Shotgun", "rate": 1.2, "mag": 6, "big": 8, "fire": "pump", "spread": 7.0, "pellets": 8},
-	"improvised": {"name": "Improvised", "rate": 2.0, "mag": 10, "big": 20, "fire": "semi", "spread": 2.0},
-	"melee": {"name": "Melee", "rate": 1.5, "mag": 0, "big": 0, "fire": "swing", "spread": 0.0},
+	"ar": {"name": "AR", "rate": 10.0, "mag": 30, "big": 30, "fire": "auto", "spread": 2.0, "kick": 0.5, "kick_max": 5.0},
+	"smg": {"name": "SMG", "rate": 13.0, "mag": 30, "big": 30, "fire": "auto", "spread": 3.5, "kick": 0.45, "kick_max": 6.0},
+	"rifle": {"name": "Rifle", "rate": 3.0, "mag": 10, "big": 20, "fire": "semi", "spread": 0.8, "kick": 0.9, "kick_max": 3.0},
+	"bolt": {"name": "Bolt rifle", "rate": 1.0, "mag": 5, "big": 5, "fire": "semi", "spread": 0.3, "kick": 1.5, "kick_max": 1.5},
+	"pistol": {"name": "Pistol", "rate": 6.0, "mag": 12, "big": 15, "fire": "semi", "spread": 1.5, "kick": 0.7, "kick_max": 3.5},
+	"revolver": {"name": "Revolver", "rate": 3.0, "mag": 6, "big": 6, "fire": "semi", "spread": 1.2, "kick": 1.2, "kick_max": 3.0},
+	"shotgun": {"name": "Shotgun", "rate": 1.2, "mag": 6, "big": 8, "fire": "pump", "spread": 7.0, "kick": 1.5, "kick_max": 3.0, "pellets": 8},
+	"improvised": {"name": "Improvised", "rate": 2.0, "mag": 10, "big": 20, "fire": "semi", "spread": 2.0, "kick": 0.8, "kick_max": 3.0},
+	"melee": {"name": "Melee", "rate": 1.5, "mag": 0, "big": 0, "fire": "swing", "spread": 0.0, "kick": 0.0, "kick_max": 0.0},
 }
+const G_KICK_HOLD_S := 0.14           # (round 6) the kick holds this long after a round (over an AR's beat), then settles
+const G_KICK_SETTLE_S := 0.35         # ...from its most to nothing in this long
+const G_CROSS_MIN_PX := 9.0           # the crosshair's gap on screen at its least; past it the gap is the spread at the aim
+const G_CROSS_TICK_PX := 9.0          # ...and a tick's length on screen
 const G_AR_ROF := 2.0                # a rifle at the game's rate of this or more is an AR (the Regimental rifle's 2.45)
 const G_BOLT_ROF := 1.0              # ...under this a bolt or lever rifle; between, a semi-auto rifle
 const G_REVOLVER_ROF := 1.0          # a pistol under this rate (or named a revolver) is a revolver
@@ -154,8 +159,41 @@ const G_HIT_OPEN := 0.4              # Matt's figure on the board: this share of
                                      # their aim's error is spread so a round crosses his token this often (led for his move)
 const G_LEAD := 1.0                  # they lead a moving runner by this share of the round's flight
 const G_MOVING_X := 0.75             # a man on the move: his share of hits times this
-const THEIR_DMG_X := 1.0             # (build 76) the "Their damage" test knob's start (×0.5 / ×1 / ×1.5 on the pause, live:
+const THEIR_DMG_X := 1.0             # (build 76) the "Gang damage" test knob's start (×0.5 / ×1 / ×1.5 on the pause, live:
                                      # ctx["their_dmg_x"]); a round's damage is the sim's damage a second over their rate, times this
+# (round 6, board E) Leaning out: a man behind cover with no line to the runner steps sideways to the nearest spot with
+# one, fires while he's out, and ducks back - so about three have him in sight and their fire lands at the game's rate.
+const G_LEAN_STEP_PX := 40.0         # he looks for his line this far sideways at a time
+const G_LEAN_STEPS := 10             # ...this many steps either way; none, and he moves to other cover
+const G_LEAN_CLEAR_PX := 30.0        # ...and stands this far past the first, his rounds clear of the cover's corner
+const G_LEAN_FIRST_S := [0.2, 0.5]   # at his cover: this long before he first leans out
+const G_LEAN_OUT_S := [4.0, 6.5]     # out of cover firing this long
+const G_DUCK_MAX_S := 2.0              # ducking back takes the walk at a hit leg's pace and this long over, at most (a man shoved off his way back is in cover where he stands)
+const G_LEAN_BACK_S := [0.3, 0.7]    # ...then behind it this long (G_PINNED_SLOW times longer pinned)
+const G_LEAN_BLIND_X := 3.0          # out with nothing to shoot at, his time out runs this many times faster
+const G_LEANS := [2, 3]                # he leans out this many times from a spot, then moves to other cover
+const G_NO_LEAN_STEP := 0.6          # nowhere to lean out: his next cover is this far of the way to the runner (0.35 as a rule)
+const G_LEAN_REACT_X := 0.5          # leaning out he knew where to look: G_REACT_S times this
+# (round 6, board E) The search: nobody of the front has seen him for G_SEARCH_AFTER_S - two walk to where they last saw
+# him, look about and spread to cover either side; the rest hold. Still lost, they search again nearer where he is.
+const G_SEARCH_AFTER_S := 2.5
+const G_SEARCHERS := 2
+const G_SEARCH_WALK_S := 8.0         # a searcher who can't reach the spot looks about where he's got to after this
+const G_SEARCH_NEAR_PX := 90.0       # at the spot
+const G_LOOK_S := 1.5                # looking about
+const G_LOOK_SWEEP := 4.0            # ...his head's swing: how fast it turns back and forth
+const G_LOOK_TURN := 2.2             # ...and how far (radians a second at its fastest)
+const G_SPREAD_PX := 420.0           # then to cover this far to one side
+const G_SEARCH_AGAIN_S := 6.0        # still lost: the next search after this
+const G_SEARCH_CLOSER_PX := 450.0    # ...this much nearer where he really is (a hidden runner is found in the end)
+const G_HOLD_CHECK_S := 0.5          # the waiting men: how often the gang checks they're out of his sight
+const G_HOLD_FILE_PX := 70.0   # the waiting men out of his sight: a place each, this far apart, in the cover's shadow
+const G_HOLD_FILE := 10        # ... and this many rows deep at most
 # ---------------------------------------------------------------- H: the start, the HUD, the pause (build 76)
 const H_LEVEL_FRESH := 12            # the level picker's default on a fresh camp (the fixture's car park)
 const H_LEVEL_STEPS := 3             # the picker offers this many levels either side of the default
+
+# -- sound (round 6, board E part 2): the game's own sounds, placed
+const SOUND_PAN_PX := 1900.0         # a man this far to one side sounds wholly from that side (about half the view across)
+const SOUND_FAR_PX := 2400.0         # a man's shot from this far is at its faintest
+const SOUND_LOW_HP := 0.25           # under this much of his HP the game's low-HP loop plays (the game's own rule)

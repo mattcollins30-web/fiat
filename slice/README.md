@@ -1,4 +1,4 @@
-# slice/ - the ARPG slice (build 72, 9 Nov)
+# slice/ - the ARPG slice (build 72, 9 Nov; round 6 the same day)
 
 A prototype, option A on the canvas "Lesser England - the ARPG slice": top-down and close, Hotline Miami for feel,
 the game's real maths. It asks one question - is moving and shooting under your own hands fun? - before anything
@@ -11,7 +11,8 @@ fire, the way out. Out: every other site and class, final art (tokens drawn in c
 
 - slice.tscn / slice.gd (SliceWorld, W) - the world: steps everything in tick(dt); signals for the HUD; the geometry
   (sight, cover spots, collision as circles against rectangles)
-- level.gd - the car park's layout and look; crate.gd - a crate; fx.gd - tracers, flashes, prompts (W)
+- level.gd - the car park's layout and look; crate.gd - a crate; fx.gd - tracers, flashes, prompts, the crosshair (W)
+- sounds.gd (round 6) - the game's own sounds (scripts/ui/sound.gd), cued off the world's signals; no new files
 - runner.gd (W) - the runner: moving, aiming (mouse, or right stick with a soft lock-on), the gun, crates, the way
   out, death and Last legs
 - bridge.gd (G) - the game's maths per round, on its own copy of the runner's Sim (the camp is never written)
@@ -40,9 +41,32 @@ Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left 
 / RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
 X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
-The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and (build 76) "Their damage" ×1
-(THEIR_DMG_X, the start) / ×1.5 / ×0.5 - their damage a round. The magazine's knob went with build 76's real magazine
-sizes by gun kind. The HUD's top line says which are in force; the gun's line over its rounds reads "AR · 10 a second".
+The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and "Gang damage" (round 6; build
+76's "Their damage"): THEIR_DMG_X ×1 (the start) / ×1.5 / ×0.5, tied to the gang HP knob (SliceBridge.their_x: the knob
+over MAN_HP_X), so a gang at half HP deals double and the fight costs about what the game's would. The button and the
+HUD show the figure in force: "Test settings: gang HP ×0.5 · gang damage ×2". The magazine's knob went with build 76's
+real magazine sizes by gun kind. The gun's line over its rounds reads "AR · 10 a second".
+
+## Round 6 (9 Nov, board E; Matt: "Build it")
+
+- The gang as a threat (man.gd, gang.gd): a man in cover leans out to a clear line, fires for G_LEAN_OUT_S, ducks back
+  (G_DUCK_MAX_S and the walk at most; a stunned man's time isn't counted), and after G_LEANS leans moves to other
+  cover. Waiting men file up in cover's shadow. A hurt man (under G_RETREAT_HP) falls back once of his own accord, and
+  whenever he's hit.
+- The search: when none of the front has seen the runner for G_SEARCH_AFTER_S, G_SEARCHERS walk to where they last saw
+  him and look about; the rest hold their cover. Each search after is G_SEARCH_CLOSER_PX nearer where he really is, so a
+  hidden runner is found in the end.
+- The gun's kick and the crosshair (runner.gd, fx.gd): held fire opens the spread (G_KICK_HOLD_S, G_KICK_SETTLE_S),
+  bursts keep it tight; the crosshair's gap is the spread at the aim, and the mouse arrow is hidden in the fight. The
+  figures are first guesses; a slow gun's kick does nothing yet.
+- Sound (sounds.gd): fire, the dry click (a jam too), reload, hits taken, Guard breaking, meds, kills and the streak,
+  a gang arriving, the park cleared, the low-HP loop under SOUND_LOW_HP; their fire is the game's one "incoming"
+  sound. None yet for crates, death or getting out; the title's music plays on under the fight.
+- The end screen (end_screen.gd): cleared, it sets you against the runner alone - its time and HP lost against what
+  the game's own fight would expect at this level (the bridge runs it), meds and Guard not counted.
+
+Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
+head aim, half-cover, hit feedback, a sight cone.
 
 kit_room.gd (H, round 4; it replaced round 2's kit_sheet.gd, Matt: "why reinvent the wheel") - Tab's Kit room: the game's
 own scripts/ui/armoury.gd on the slice's Sim (the camp's copy: its whole stash to wear), the run put by while it's open

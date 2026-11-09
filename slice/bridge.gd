@@ -241,6 +241,17 @@ static func site_figures(s, lv_in := 0) -> Dictionary:
 	return t
 
 
+## (round 6, board E) The game's own fight for this runner at this level, for the end screen's row: its estimate of the
+## time to clear the place and the HP their fire takes off him in that time with a gang's contact on him - before
+## meds and Guard, and none of the slice's test settings in it.
+static func game_fight(ctx: Dictionary) -> Dictionary:
+	var s = ctx["sim"]
+	var t: Dictionary = ctx["t"]
+	var on_you: int = int(ctx.get("contact", s.contact(t)))
+	var secs: float = s._surv_estimate(t)
+	return {"level": int(t.get("level", 0)), "time_s": secs, "hp_lost": s.incoming_rate(t, on_you) * s.crowd_mult(on_you) * secs}
+
+
 ## The slice's fight as a mission on the slice's sim: what the reads it calls look at, nothing a run's end would.
 static func _mission(s, t: Dictionary) -> Dictionary:
 	var m := {"tier": SITE_TIER, "t": t, "remaining": 0, "target_hp": 0.0, "kills": 0, "found": [], "insured": false,
@@ -337,6 +348,8 @@ static func _kind_entry(s, e: Dictionary) -> Dictionary:
 	e["auto"] = str(k["fire"]) == "auto"
 	e["pellets"] = int(k.get("pellets", 1))
 	e["spread_deg"] = float(k["spread"])
+	e["kick_deg"] = float(k.get("kick", 0.0))             # (round 6) a round's kick and the most of it
+	e["kick_max"] = float(k.get("kick_max", 0.0))
 	var game_mag: int = int(e["mag"])
 	e["sim_mag"] = game_mag
 	e["mag"] = 0 if kind == "melee" else int(k["big"] if own else k["mag"])
@@ -817,9 +830,15 @@ static func their_rps() -> float:
 ## One of their rounds before you: the sim's damage a second for the man over the rounds that land a second - their rate
 ## times the share that lands in the open (G_HIT_OPEN) - so a man firing at a runner in the open deals the sim's figure a
 ## second (round 5's review: over the rate alone it landed ~40% of it; Matt: "not taking much if any damage"); cover cuts
-## it still. Times the pause's "Their damage" (ctx.their_dmg_x, live).
+## it still. Times the pause's "Gang damage" knob (ctx.their_dmg_x, live).
 static func their_round(ctx: Dictionary, ms: Dictionary) -> float:
-	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * float(ctx.get("their_dmg_x", T.THEIR_DMG_X))
+	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * their_x(ctx)
+
+
+## (round 6, board E) Their damage against the game's: tied to the gang's HP (half the HP, twice the damage: a fight as
+## dangerous as the game's in half the time), times the pause's knob. The HUD's and the pause's "gang damage ×2" are this.
+static func their_x(ctx: Dictionary) -> float:
+	return float(ctx.get("their_dmg_x", T.THEIR_DMG_X)) / maxf(0.01, float(ctx.get("man_hp_x", T.MAN_HP_X)))
 
 
 ## What reaches the runner: Guard first (the sim's _take), the streak's hit (_f66_taken).

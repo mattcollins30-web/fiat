@@ -4,14 +4,15 @@ extends Control
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const SliceBridge := preload("res://slice/bridge.gd")
 
 signal resumed
 signal to_title
 signal hp_x_changed(x: float)            # the test setting: the men's HP times this, live
 signal dmg_x_changed(x: float)           # (build 76) the test setting: their damage a round times this, live
 
-const HP_STEPS := [0.5, 0.25, 0.15]    # "Gang HP" (round 2, Matt: "1x health is too much"): a half, a quarter (MAN_HP_X, the start), less
-const DMG_STEPS := [1.0, 1.5, 0.5]     # (build 76) "Their damage": the game's (the start), more, less - the magazine's knob gone (real sizes)
+const HP_STEPS := [0.5, 0.25, 0.15]    # "Gang HP" (round 2, Matt: "1x health is too much"): a half (MAN_HP_X, the start), a quarter, less
+const DMG_STEPS := [1.0, 1.5, 0.5]     # (build 76) the "Gang damage" knob's steps: the game's (the start), more, less - the magazine's knob gone (real sizes)
 
 ## Board C's two columns, as drawn: what it does, the key.
 const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Swap gun", "Right button"], ["Reload", "R or Space"],
@@ -30,7 +31,7 @@ var _title: Label
 var _sub: Label
 var _heads: Array = []
 var _rows: Array = []                 # [[what, key]] labels
-var buttons: Array = []               # Resume, Back to the title, Gang HP, Their damage
+var buttons: Array = []               # Resume, Back to the title, Gang HP, Gang damage
 var hp_x := 1.0
 var dmg_x := 1.0
 var _test: Label
@@ -82,16 +83,26 @@ func _init() -> void:
 func show_hp_x(x: float) -> void:
 	hp_x = x
 	buttons[2].text = "Gang HP %s" % hp_words(x)
+	_show_damage()
 
 
+## ×2, ×0.25, ×6.7: whole, the knobs' own hundredths, a tenth from ×2 up (the HUD's x_words).
 static func hp_words(x: float) -> String:
-	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
+	if is_equal_approx(x, roundf(x)):
+		return "×%d" % roundi(x)
+	return "×%s" % str(snappedf(x, 0.1 if x >= 2.0 else 0.01))
 
 
-## Their damage a round times this, on the button (build 76).
+## The knob's step (build 76: their damage a round times this). The button reads the figure in force (round 6's
+## language pass): the step over the gang HP knob, the bridge's tie, the same figure as the HUD's top line.
 func show_dmg_x(x: float) -> void:
 	dmg_x = x
-	buttons[3].text = "Their damage %s" % hp_words(x)
+	_show_damage()
+
+
+func _show_damage() -> void:
+	if buttons.size() > 3:
+		buttons[3].text = "Gang damage %s" % hp_words(SliceBridge.their_x({"their_dmg_x": dmg_x, "man_hp_x": hp_x}))
 
 
 func _on_dmg_x() -> void:

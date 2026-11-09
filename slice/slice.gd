@@ -34,6 +34,8 @@ signal missed(point: Vector2)
 signal reload_started(gun: Dictionary, secs: float)
 signal reloaded(gun: Dictionary)
 signal jammed(gun: Dictionary)
+signal dry(gun: Dictionary)                     # (round 6) a fresh pull on an empty gun with nothing to reload
+signal man_down(man: Node)                      # (round 6) every man's death, whatever killed him
 signal swapped(gun_index: int)
 signal search_progress(crate: Node, frac: float)
 signal crate_opened(crate: Node, finds: Array)
@@ -158,6 +160,8 @@ func tick(dt: float) -> void:
 		fx.exit_at = Vector2(exit_rect.get_center().x, exit_rect.position.y - 24.0)
 	fx.reticle = runner.aim if runner.aim_mode == "pad" else Vector2.INF
 	fx.reticle_locked = runner.locked != null
+	fx.cross = runner.aim if not runner.dead else Vector2.INF
+	fx.cross_r = runner.cross_r()
 	fx.step(dt)
 	_camera_step(dt)
 	sight.step(dt)
@@ -380,6 +384,8 @@ func runner_event(kind: String, a: Variant = null, b: Variant = null) -> void:
 			reloaded.emit(a)
 		"jammed":
 			jammed.emit(a)
+		"dry":
+			dry.emit(a)
 		"swapped":
 			swapped.emit(a)
 		"last_legs":
@@ -450,6 +456,7 @@ func add_damage_done(n: float) -> void:
 ## life (res.heal, the sim's _kill_heal) to the runner, and scavenger's round (res.scav) back in the magazine (the review).
 func on_man_killed(_man: Node, result: Dictionary) -> void:
 	stats["kills"] += 1
+	man_down.emit(_man)
 	add_haul(result.get("drops", []))
 	if runner != null:
 		_heal_frac += maxf(0.0, float(result.get("heal", 0.0)))

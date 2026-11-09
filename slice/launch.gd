@@ -11,6 +11,7 @@ const HudScript := preload("res://slice/hud.gd")
 const PauseScript := preload("res://slice/pause.gd")
 const EndScript := preload("res://slice/end_screen.gd")
 const KitScript := preload("res://slice/kit_room.gd")     # (round 4) the game's own Kit room, on the slice's Sim
+const SoundsScript := preload("res://slice/sounds.gd") # (round 6) the game's own sounds off the world's signals
 const PickScript := preload("res://slice/level_pick.gd")  # (build 76) the level picker before the fight
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
@@ -22,6 +23,7 @@ var world = null                      # the slice's world (slice.gd)
 var hud = null
 var pause = null
 var end = null
+var sounds = null                     # (round 6) the fight's sounds
 var kit = null                        # the Kit room (round 4): Tab or Back
 var over: CanvasLayer
 var ended := false
@@ -121,6 +123,9 @@ func start(lv: int) -> void:
 	hud = HudScript.new()
 	world.hud_layer.add_child(hud)
 	hud.bind(world)
+	sounds = SoundsScript.new()
+	add_child(sounds)
+	sounds.bind(world, main._sound if main != null and main.get("_sound") != null else null)
 	if over == null:
 		over = CanvasLayer.new()
 		over.layer = OVER_LAYER
@@ -153,6 +158,14 @@ func _input(event: InputEvent) -> void:
 		close_kit()
 	else:
 		open_kit()
+
+
+## (round 6) The mouse's arrow gives way to the crosshair while the fight runs; held, in the Kit room or ended it's back.
+func _process(_dt: float) -> void:
+	if world == null or ended or not is_instance_valid(world):
+		return
+	var live: bool = world.process_mode != Node.PROCESS_MODE_DISABLED and world.runner.aim_mode != "pad"
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if live else Input.MOUSE_MODE_VISIBLE
 
 
 ## The fight held still under the Kit room (a sandbox: the clock stops too).
@@ -202,7 +215,7 @@ func _on_ended(outcome: String, stats: Dictionary) -> void:
 	pause.close()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var site: Dictionary = world.ctx.get("site", {}) if world.ctx.get("site") is Dictionary else {}
-	end.open(outcome, stats, str(site.get("name", "The car park")))
+	end.open(outcome, stats, str(site.get("name", "The car park")), SliceBridge.game_fight(world.ctx))
 
 
 ## The pause's other test setting (build 76, the magazine's gone): their damage a round times x, live - the bridge

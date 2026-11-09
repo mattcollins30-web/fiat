@@ -13,9 +13,12 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   the Radio's Set off (and a convoy's hit, the Bunkhouse's Fetch) landing on the Map. Next: Matt plays 0.15 from fresh;
   the short balance pass (Matt, 7 Nov); the art manifest for the borrowed pictures (boots, the uniques, the routes and
   plots) once it reads with test art.
-- **Alongside (9 Nov, evening): the ARPG slice, round 5** (1d82108; its sprites 0e0d00f) - zoomed out, line of sight,
-  real fire rates, travelling rounds, the level picked, the art76 top-down set. Waiting on Matt: his play of round 5,
-  and the damage call below its entry (option 2 recommended). The slice doesn't touch 0.15.3's playtest.
+- **Alongside (9 Nov, night): the ARPG slice, round 6** (board E, Matt: "Build it") - the gang as a threat (men lean
+  out of cover, fire and duck back; two search where they last saw you), gang damage tied to the gang HP knob (x2 at
+  x0.5 HP), the game's sounds, the gun's kick and a crosshair, the end screen's "You against the runner alone". Round
+  5 before it (1d82108; its sprites 0e0d00f). Waiting on Matt: his play of round 6. Next for the slice, on his word and
+  a mockup each: kinds of men, the hard man's own behaviour, a dodge or sprint, head aim, half-cover, hit feedback, a
+  sight cone (the backlog). The slice doesn't touch 0.15.3's playtest.
 - **Matt's calls (8 Nov): "1-fix it, 2-fix it, 3-keep it, 4-keep it."** Built into 0.15.3 before its commit: (1) a
   head's drop (and the runner's own piece swapped out) comes home past a full stash, marked r69_home / r69_own, nothing
   else does; (2) the County's want is 3/4/6/9 (all nine slots wear and stamp at the Counting House's level). Kept: the
@@ -8301,3 +8304,22 @@ Open for Matt after round 5 (9 Nov):
   strip, faint at 64 px (keep or redo, Matt's call); kiosk_floor is one lino sheet with a curled corner, so it may seam
   when tiled; burnt_car, van, shelter_roof, drain, oil_stain, kerb, bay_line, brick_wall and asphalt_b are in
   slice/art/pl/ but not drawn yet (the level still draws its own shapes) - a follow-up on Matt's word.
+
+The slice, round 6 (9 Nov, night; Matt: "Review the arpg slice and detail improvements", "Ok proceed", then board E,
+"Build it"): the damage call is settled as option 2 - gang damage tied to the gang HP knob (SliceBridge.their_x: x2 at
+gang HP x0.5), shown as the figure in force on the pause button and the HUD ("Test settings: gang HP x0.5 · gang damage
+x2"); about 14 s in the open on the fixture's 204 HP. The gang as a threat: a man in cover leans out to a clear line,
+fires 4-6.5 s, ducks back, and moves to other cover after 2-3 leans; when none of the front has seen you for 2.5 s two
+walk to where they last saw you and look about, each search after 450 px nearer where you are, the rest holding cover;
+waiting men file up in cover's shadow; a hurt man falls back once of his own accord and whenever hit. Sound
+(slice/sounds.gd): the game's own one-shots off the world's signals - fire by gun, the dry click, reload, hits, Guard
+breaking, meds, kills and the streak, a gang arriving, the clear, the low-HP loop; their fire the game's one "incoming".
+The gun's kick (held fire opens the spread, bursts keep it) and a crosshair whose gap is the spread at the aim, the
+mouse arrow hidden in the fight. The end screen: a taller card, six tiles in two rows, and when cleared "You against
+the runner alone" - your time and HP lost beside the game's own fight at that level (the fixture at 12: 3:27 and 1,564
+HP), "Meds and Guard not counted". Wording off board E by the editor's call (Matt can overrule): that head, the columns
+"You" / "Runner alone", "Gang damage" for "Their damage". Known and left: the delivered rate is about two thirds of the
+game's times the tie (10.7-13.4 HP a second against 15); a slow gun's kick does nothing yet and the kick figures are
+first guesses; no sounds for crates, death or getting out; the title's music plays on under the fight. Checked: the
+slice's smoke areas (r6 new) with each fix proved red, two reviews, lint 0, the full smoke on Matt's machine. No change
+to shared code; the camp stays read-only.

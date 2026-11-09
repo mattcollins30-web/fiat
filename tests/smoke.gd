@@ -1011,6 +1011,7 @@ func _init() -> void:
 	_h75_kit_room_checks(main)                # round 4 (9 Nov, Matt): the game's own Kit room in the slice, on its Sim; finds in it; kit read again
 	_g76_checks(main)                         # BUILD76-G (9 Nov, board D): rates and magazines by type, rounds that travel, their 40%, their damage ×
 	_r5_checks(main)                          # round 5's review (9 Nov): their damage, the reload's share, the press cap, the picker's row, Reach, world text, the fog's cost and leaks, up to, the set's poses
+	_r6_checks(main)                          # round 6 (9 Nov, board E): the gang a threat - leaning out, their damage tied to gang HP, the search, the kick, the sound, the end screen
 	_h76_checks(main)                         # BUILD76-H (9 Nov): the level picker, the HUD's gun line, the pause's their damage, the PixelLab art by name
 	_h72_slice_checks(main)                   # BUILD72-H: the slice's scripted run - walk, hit, headshot, reload, crates, gangs, the clear, the end
 	_finish()
@@ -46717,7 +46718,8 @@ func _h72_slice_checks(main) -> void:
 	_check(ended.is_empty() and not w.ended, "the clear ended the run before the way out")
 	w.leave()
 	_check(ended == ["cleared"] and run.end.visible and run.end._title.text == "Cleared", "the way out after the clear: %s, the end screen '%s'" % [str(ended), run.end._title.text])
-	_check(run.end._tiles[0]["value"].text == Fmt.group(int(w.stats["kills"])) and run.end._tiles[1]["value"].text == Fmt.group(int(w.stats["headshots"])) and run.end._tiles[2]["value"].text == Fmt.group(int(w.stats["damage_done"])), "the end screen's figures aren't the run's")
+	_check(run.end._tiles[0]["value"].text == Fmt.group(int(w.stats["kills"])) and run.end._tiles[1]["value"].text == Fmt.group(int(w.stats["headshots"])) and run.end._tiles[3]["value"].text == Fmt.group(int(w.stats["damage_done"])), "the end screen's figures aren't the run's")
+	_check(run.end._vs_head.visible and run.end._sub.text == ("%s · Level %d" % [str(site.get("name", "The car park")), int(ctx["t"]["level"])]).to_upper() and run.end._vs[2][1].text == Fmt.group(int(w.stats["damage_taken"])), "a cleared car park's end has no row against the game's own fight: '%s', '%s'" % [run.end._sub.text, run.end._vs[2][1].text])
 	var haul: Array = w.stats["haul"]
 	_check(run.end._haul[0].text == (EndScreen72.find_words(haul[0]) if not haul.is_empty() else "Nothing found"), "the end screen's haul starts '%s'" % run.end._haul[0].text)
 	_check(_check_nodes(run.end.text_nodes(), [], "the slice's end screen") == 0, "the end screen's words don't fit")
@@ -47563,14 +47565,23 @@ func _h73_round2_checks(main) -> void:
 	# live into the ctx the bridge reads, and the HUD's test line says so
 	var g0: Dictionary = ctx["guns"][0]
 	var seen: Array = []
-	_check(run.pause.buttons[3].text == "Their damage ×1" and is_equal_approx(float(ctx["their_dmg_x"]), SliceTuning.THEIR_DMG_X), "the pause's fourth test setting: '%s'" % run.pause.buttons[3].text)
+	_check(run.pause.buttons[3].text == "Gang damage ×2" and is_equal_approx(float(ctx["their_dmg_x"]), SliceTuning.THEIR_DMG_X), "the pause's fourth test setting: '%s'" % run.pause.buttons[3].text)
+	hud.show_state(hud.read_state())
+	_check(hud._tests.text == "Test settings: gang HP ×0.5 · gang damage ×2", "the HUD's test line at the start (round 6's tie): '%s'" % hud._tests.text)
 	for k in range(3):
 		run.pause.buttons[3].pressed.emit()
 		seen.append([float(ctx["their_dmg_x"]), run.pause.buttons[3].text])
-	_check(seen == [[1.5, "Their damage ×1.5"], [0.5, "Their damage ×0.5"], [1.0, "Their damage ×1"]], "the pause's their damage steps: %s" % str(seen))
+	_check(seen == [[1.5, "Gang damage ×3"], [0.5, "Gang damage ×1"], [1.0, "Gang damage ×2"]], "the pause's gang damage steps, the figure in force: %s" % str(seen))
+	# (round 6's language pass) the button reads the figure in force, so the gang HP knob moves it too
+	var hp_was: float = run.pause.hp_x
+	run.pause.show_hp_x(0.15)
+	var at_15: String = run.pause.buttons[3].text
+	run.pause.show_hp_x(hp_was)
+	_check(at_15 == "Gang damage ×6.7" and run.pause.buttons[3].text == "Gang damage ×2", "the gang damage button at gang HP ×0.15: '%s', back at ×0.5 '%s'" % [at_15, run.pause.buttons[3].text])
 	run.pause.buttons[3].pressed.emit()
 	hud.show_state(hud.read_state())
-	_check(hud._tests.text == "Test settings: gang HP ×0.5, their damage ×1.5", "the HUD's test line: '%s'" % hud._tests.text)
+	# (round 6) their damage is tied to gang HP: ×0.5 HP is ×2, and the pause's ×1.5 on top makes ×3
+	_check(hud._tests.text == "Test settings: gang HP ×0.5 · gang damage ×3", "the HUD's test line: '%s'" % hud._tests.text)
 	_check(not run.pause.text_nodes().any(func(l): return str(l.text).contains("Magazine")), "the magazine's test knob is still on the pause")
 	# 3. (build 76, G) MAG_X gone: the fixture's rifle is an AR with its kind's magazine (H: the pause's and the HUD's lines)
 	_check(str(g0["kind"]) == "ar" and int(g0["mag"]) == 30 and int(r.gun()["mag"]) == 30 and r.rounds[0] == 30 and not ctx.has("mag_x"),
@@ -48257,6 +48268,7 @@ func _g76_checks(main) -> void:
 		_check(cover_rate < open_rate * 0.75, "behind cover hiding half of him %.0f%% landed, in the open %.0f%%" % [cover_rate * 100.0, open_rate * 100.0])
 	# their round's damage: the sim's damage a second over their rate; the knob times it, live
 	ctx["their_dmg_x"] = 1.0
+	ctx["man_hp_x"] = 1.0  # round 6: their damage is tied to the gang HP knob; these read the untied figure
 	var one: float = SliceBridge.their_round(ctx, mstate)
 	_check(is_equal_approx(one * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, float(mstate["dps"])) and is_equal_approx(SliceTuning.THEIR_DMG_X, 1.0), "their round %.2f at %.2f a second, %.0f%% landing, isn't the sim's %.2f a second" % [one, SliceBridge.their_rps(), SliceTuning.G_HIT_OPEN * 100.0, float(mstate["dps"])])
 	var took: Array = []
@@ -48340,6 +48352,7 @@ func _r5_checks(main) -> void:
 	# 1. their round: landed damage a second (their rate x the share landing in the open) is the sim's figure
 	var ms := {"dps": 12.0}
 	ctx["their_dmg_x"] = 1.0
+	ctx["man_hp_x"] = 1.0  # round 6: their damage is tied to the gang HP knob; these read the untied figure
 	var per: float = SliceBridge.their_round(ctx, ms)
 	_check(is_equal_approx(per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, 12.0), "their round %.2f lands %.2f a second in the open, not the sim's 12" % [per, per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN])
 	# 2. the reload: the same share of the fight firing as the sim's gun (its magazine over its rate, and the reload)
@@ -48446,3 +48459,407 @@ func _r5_checks(main) -> void:
 	pk.queue_free()
 	main._menu.close()
 	print("r5 ok: their damage lands at the sim's, the reload's share, the press cap, up to, world text at the zoom, the set's poses, the fog's 4 px and its view, marks and flashes, the picker from level %d, Reach" % first)
+
+
+## Round 6 (9 Nov, board E, Matt: "dont seem to be taking much if any damage"): a gang's own world at level 12, the
+## runner stood where he came in for `secs` (his HP put back each step): what he loses a second, and how many see him.
+func _r6_stood(secs: float, lv := 12) -> Dictionary:
+	var world = load("res://slice/slice.tscn").instantiate()
+	root.add_child(world)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, lv)
+	world.start(ctx, 72)
+	var r = world.runner
+	var taken := 0.0
+	var seeing := 0.0
+	var first := -1
+	var early := 0
+	var steps: int = int(secs * 60.0)
+	for _i in range(steps):
+		var hp0: int = r.hp
+		var g0: int = r.guard
+		world.tick(1.0 / 60.0)
+		# what they did to him: Guard coming back is his, not theirs, and the walk in before the first round isn't the fight
+		var loss: float = float(hp0 - r.hp) + float(g0 - r.guard)
+		if loss > 0.0:
+			taken += loss
+			if first < 0:
+				first = _i
+		r.hp = r.hp_max
+		if first < 0:
+			early = maxi(early, int(world.gang.searches))
+		if first >= 0:
+			for mn in world.men():
+				if mn.sees and not mn.is_dead():
+					seeing += 1.0
+	var s = ctx["sim"]
+	var game: float = float(s.incoming_rate(ctx["t"], int(ctx["contact"])))
+	var tie: float = SliceBridge.their_x(ctx)       # (the review) the bridge's own figure, the one their rounds are multiplied by
+	return {"world": world, "rate": taken / maxf(1.0, float(steps - first) / 60.0), "seeing": seeing / maxf(1.0, float(steps - first)), "first_s": first / 60.0, "early": early, "game": game, "tie": tie}
+
+
+## Round 6, part 5 (board E): Accuracy and HP lost on the end's tiles, and a cleared run's row against the game's own
+## fight for the same runner and level - not shown for a run that wasn't cleared.
+func _r6_end_checks(main) -> void:
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	var s = ctx["sim"]
+	var t: Dictionary = ctx["t"]
+	var game: Dictionary = SliceBridge.game_fight(ctx)
+	var on: int = int(ctx["contact"])
+	_check(int(game["level"]) == 12 and is_equal_approx(float(game["time_s"]), s._surv_estimate(t)) and float(game["time_s"]) > 10.0, "the game's own fight at level 12: %s against its estimate %.1f" % [str(game), s._surv_estimate(t)])
+	_check(is_equal_approx(float(game["hp_lost"]), s.incoming_rate(t, on) * s.crowd_mult(on) * s._surv_estimate(t)) and float(game["hp_lost"]) > 0.0, "the game's HP lost %.1f isn't its incoming with %d on him over its time" % [float(game["hp_lost"]), on])
+	var dmg_x: float = float(ctx["their_dmg_x"])
+	ctx["their_dmg_x"] = 0.5
+	ctx["man_hp_x"] = 0.15
+	_check(SliceBridge.game_fight(ctx) == game, "the slice's test settings moved the game's own fight")
+	ctx["their_dmg_x"] = dmg_x
+	var end = EndScreen72.new()
+	main.add_child(end)
+	var stats := {"kills": 20, "headshots": 3, "damage_done": 34460, "damage_taken": 612, "shots": 200, "hits": 82, "time_s": 228.0, "haul": []}
+	end.open("cleared", stats, "The car park", game)
+	var tiles: Array = end._tiles.map(func(tl): return "%s %s" % [tl["key"].text, tl["value"].text])
+	_check(tiles == ["Kills 20", "Headshots 3", "Accuracy 41%", "Damage done 34,460", "HP lost 612", "Time 3:48"], "the end's tiles read %s" % str(tiles))
+	_check(end._sub.text == "THE CAR PARK · LEVEL 12" and end._title.text == "Cleared", "the end's heading: '%s' / '%s'" % [end._sub.text, end._title.text])
+	var rows: Array = end._vs.map(func(row): return row.map(func(l): return l.text))
+	_check(end._vs_head.visible and end._vs_head.text == "YOU AGAINST THE RUNNER ALONE" and rows == [["", "You", "Runner alone"], ["Time", "3:48", Fmt.mss(float(game["time_s"]))], ["HP lost", "612", Fmt.group(int(round(float(game["hp_lost"]))))]], "the row against the game's own fight reads %s" % str(rows))
+	_check(end._vs_note.visible and end._vs_note.text == "What this runner would expect alone at this level · Meds and Guard not counted", "the note under it: '%s'" % end._vs_note.text)
+	_check(_check_nodes(end.text_nodes(), [], "the slice's end screen, round 6") == 0, "the end's words don't fit")
+	var card: Rect2 = end.card_rect()
+	var foot: float = end._haul.back().position.y + EndScreen72.HAUL_ROW_H
+	_check(card.size.y <= 1080.0 and end._vs_note.position.y + end._vs_note.size.y <= end._haul_head.position.y and foot <= end._note.position.y, "the end's card: %s, the haul's foot %.0f against the note at %.0f" % [str(card), foot, end._note.position.y])
+	stats["shots"] = 0
+	stats["hits"] = 0
+	end.open("died", stats, "The car park", game)
+	_check(not end._vs_head.visible and not end._vs_note.visible and end._vs[1][1].text == "" and end._haul_head.position.y == EndScreen72.VS_Y, "a run that died shows a row against the game's fight")
+	_check(end._tiles[2]["value"].text == "No rounds fired", "no rounds fired reads '%s' for accuracy" % end._tiles[2]["value"].text)
+	end.queue_free()
+	print("r6 end ok: the game's own fight at level 12 %s, %d HP" % [Fmt.mss(float(game["time_s"])), int(round(float(game["hp_lost"])))])
+
+
+## Round 6, part 4 (board E): held fire widens the spread and the crosshair shows it; easing off settles it; bursts
+## beat a held trigger at range.
+func _r6_kick_checks(main) -> void:
+	var world = _w72_world(main)
+	var r = world.runner
+	var g: Dictionary = r.gun()
+	var kind: Dictionary = SliceTuning.G_KINDS.get(str(g.get("kind", "")), {})
+	_check(float(g.get("kick_deg", 0.0)) > 0.0 and is_equal_approx(float(g.get("kick_deg", 0.0)), float(kind.get("kick", -1.0))) and is_equal_approx(float(g.get("kick_max", 0.0)), float(kind.get("kick_max", -1.0))), "the fixture's %s carries kick %s to %s, its kind's is %s to %s" % [str(g.get("kind", "?")), str(g.get("kick_deg")), str(g.get("kick_max")), str(kind.get("kick")), str(kind.get("kick_max"))])
+	var at: Vector2 = _h72_clear_spot(world, r.position, 1300.0)
+	var d: float = at.distance_to(r.position)
+	_check(d > 800.0, "no clear line of 800 px from the way in to shoot down: %.0f" % d)
+	r.debug_aim_at(at)
+	_w72_steps(world, 1.0)
+	var base: float = float(g.get("spread_deg", 0.0))
+	var rest_r: float = world.fx.cross_r
+	_check(r.kick == 0.0 and is_equal_approx(r.spread_deg(), base), "at rest the spread is %.2f against the gun's %.2f (kick %.2f)" % [r.spread_deg(), base, r.kick])
+	_check(world.fx.cross == r.aim and absf(rest_r - d * tan(deg_to_rad(base))) < 2.0, "the crosshair at rest: at %s (aim %s), gap %.1f against %.1f" % [str(world.fx.cross), str(r.aim), rest_r, d * tan(deg_to_rad(base))])
+	var target := W72Target.new()
+	world.men_root.add_child(target)
+	target.position = at
+	var fired := [0]
+	world.fired.connect(func(_a = null, _b = null, _c = null): fired[0] += 1)
+	# held: a magazine on the trigger
+	var held: Array = _r6_kick_run(world, r, at, target, fired, 30, 0)
+	_check(is_equal_approx(float(held[2]), float(g.get("kick_max", 0.0))), "a held magazine's kick reached %.2f of %.2f" % [float(held[2]), float(g.get("kick_max", 0.0))])
+	_check(float(held[3]) > rest_r * 1.5 and absf(float(held[3]) - d * tan(deg_to_rad(base + float(held[2])))) < 2.0, "the crosshair under held fire: gap %.1f against %.1f at rest" % [float(held[3]), rest_r])
+	# easing off settles it
+	_w72_steps(world, SliceTuning.G_KICK_HOLD_S + SliceTuning.G_KICK_SETTLE_S + 0.1)
+	_check(r.kick == 0.0 and absf(world.fx.cross_r - rest_r) < 0.5, "off the trigger the kick is %.2f and the crosshair's gap %.1f (at rest %.1f)" % [r.kick, world.fx.cross_r, rest_r])
+	# bursts of three, the same thirty rounds
+	var burst: Array = _r6_kick_run(world, r, at, target, fired, 30, 3)
+	var held_share: float = float(held[1]) / maxf(1.0, float(held[0]))
+	var burst_share: float = float(burst[1]) / maxf(1.0, float(burst[0]))
+	_check(int(held[0]) >= 25 and int(burst[0]) >= 25, "held fired %d, bursts %d of 30" % [int(held[0]), int(burst[0])])
+	_check(burst_share > held_share * 1.3, "at %.0f px bursts landed %.0f%% and a held trigger %.0f%%" % [d, burst_share * 100.0, held_share * 100.0])
+	print("r6 kick ok: at %.0f px held %d of %d, bursts %d of %d; kick to %.1f, crosshair %.0f to %.0f" % [d, int(held[1]), int(held[0]), int(burst[1]), int(burst[0]), float(held[2]), rest_r, float(held[3])])
+	world.queue_free()
+
+
+## `n` rounds at the target, held (per 0) or in bursts of `per` with a rest between: [fired, landed, the most kick,
+## the crosshair's widest gap].
+func _r6_kick_run(world, r, at: Vector2, target, fired: Array, n: int, per: int) -> Array:
+	var f0: int = fired[0]
+	target.shots = 0
+	var top := 0.0
+	var wide := 0.0
+	var in_burst := 0
+	var rest := 0.0
+	var guard := 0
+	while fired[0] - f0 < n and guard < 60 * 60:
+		guard += 1
+		r.rounds[0] = 30
+		r.jammed = false
+		r.reloading = false
+		r.swap_left = 0.0
+		r.debug_aim_at(at)
+		var was: int = fired[0]
+		if rest > 0.0:
+			rest -= H72_DT
+			Input.action_release("slice_fire")
+		else:
+			Input.action_press("slice_fire")
+		world.tick(H72_DT)
+		top = maxf(top, r.kick)
+		wide = maxf(wide, world.fx.cross_r)
+		if per > 0 and fired[0] > was:
+			in_burst += fired[0] - was
+			if in_burst >= per:
+				in_burst = 0
+				rest = 0.6
+	Input.action_release("slice_fire")
+	world.tick(H72_DT)
+	SliceRound76.settle(world)
+	return [fired[0] - f0, target.shots, top, wide]
+
+
+## Round 6, part 2 (board E): the game's own sounds off the slice's world - yours by the gun, theirs, the reload, the
+## dry click, a hit, Guard breaking, a kill, a gang arriving, a med, low HP, the way out.
+func _r6_sound_checks(main) -> void:
+	var world = load("res://slice/slice.tscn").instantiate()
+	root.add_child(world)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	world.start(ctx, 72)
+	var snd = load("res://slice/sounds.gd").new()
+	root.add_child(snd)
+	snd.bind(world)
+	var so = snd.sound
+	var r = world.runner
+	so.clear_cued()
+	# a gang arriving, and their fire
+	var guard := 0
+	while not so.cued().has("incoming") and guard < 60 * 90:
+		_r6_tick(world)
+		snd._process(0.0)
+		guard += 1
+	_check(so.cued().has("gang_arrives"), "a gang came in with no sound: %s" % str(so.cued().slice(0, 6)))
+	_check(so.cued().has("incoming"), "ninety seconds of the first gang and none of their rounds was heard")
+	# a hit, Guard breaking, a miss
+	so.clear_cued()
+	r.guard = 5
+	snd._process(0.0)
+	r.apply_hit({"hp_loss": 0, "guard_loss": 2})
+	r.apply_hit({"hp_loss": 2, "guard_loss": 3})
+	r.apply_hit({"hp_loss": 2, "guard_loss": 0})
+	r.apply_hit({"missed": true, "hp_loss": 0, "guard_loss": 0})
+	_check(so.cued() == ["hit_taken", "guard_break", "hit_taken"], "a hit on Guard, the hit that broke it, a hit on HP and a miss sounded %s" % str(so.cued()))
+	# low HP: the game's loop under a quarter, off again above it
+	r.hp = int(r.hp_max * SliceTuning.SOUND_LOW_HP) - 1
+	snd._process(0.0)
+	var low_on: String = str(so.playing()["low_hp"])
+	# a med
+	so.clear_cued()
+	_check(world.use_med(0), "the fixture has no med to use")
+	snd._process(0.0)
+	snd._process(0.0)
+	_check(so.cued() == ["med_use"], "using a med sounded %s" % str(so.cued()))
+	r.hp = r.hp_max
+	snd._process(0.0)
+	_check(low_on == "low_hp" and str(so.playing()["low_hp"]) == "", "low HP's loop: '%s' under a quarter, '%s' at full" % [low_on, str(so.playing()["low_hp"])])
+	# his own round by the gun, the reload, the dry click
+	so.clear_cued()
+	r.reloading = false
+	r.jammed = false
+	r.swap_left = 0.0
+	r.shot_cd = 0.0
+	var g: Dictionary = r.gun()
+	r.rounds[r.gun_i] = int(g["mag"])
+	var shot: Dictionary = {}
+	for _k in range(8):
+		so.clear_cued()
+		r.jammed = false
+		r.shot_cd = 0.0
+		shot = r.fire_once()
+		if shot.has("rounds"):
+			break
+	_check(so.cued() == [so._gun_sound(g["item"])] and str(so.cued()[0]).begins_with("shot_"), "a round from the %s sounded %s, the game's is %s" % [str(g.get("type", "")), str(so.cued()), so._gun_sound(g["item"])])
+	so.clear_cued()
+	_check(r.start_reload() and so.cued() == ["reload"], "a reload sounded %s" % str(so.cued()))
+	r.reloading = false
+	for i in range(r.guns.size()):
+		r.rounds[i] = 0
+		r.mags[i] = 0
+		ctx["boxes"][str(r.guns[i].get("ammo", ""))] = 0
+	so.clear_cued()
+	r._trigger(false)
+	var held_dry: Array = so.cued().duplicate()
+	r._trigger(true)
+	_check(held_dry.is_empty() and so.cued() == ["dry_click"], "an empty gun: held %s, a fresh pull %s" % [str(held_dry), str(so.cued())])
+	# kills, close together climbing; the clear
+	so.clear_cued()
+	var men: Array = world.men().filter(func(mn): return not mn.is_dead())
+	_check(men.size() >= 2, "fewer than two men standing to kill")
+	for mn in men.slice(0, 2):
+		mn.die_by({})
+	_check(so.cued().filter(func(id): return id == "kill").size() == 2 and snd._streak == 1, "two kills sounded %s (streak %d)" % [str(so.cued()), snd._streak])
+	so.clear_cued()
+	world.on_cleared()
+	_check(so.cued().has("way_out"), "the car park cleared with no sound: %s" % str(so.cued()))
+	snd.queue_free()
+	world.queue_free()
+	# opened from the title it's the shell's sound, and the heartbeat doesn't follow him back
+	var run = load("res://slice/launch.gd").open(main, H72_SEED, false)
+	_check(run.sounds != null and run.sounds.sound == main._sound, "the slice opened from the title doesn't play through the game's sound")
+	run.world.runner.hp = 1
+	run.sounds._process(0.0)
+	var beat: String = str(main._sound.playing()["low_hp"])
+	run.back_to_title()
+	# (the review) the title quiets the loop itself, so that proved nothing of the slice: with it playing again as the
+	# slice's sounds leave the tree, it's theirs to stop
+	run.sounds._process(0.0)
+	var again: String = str(main._sound.playing()["low_hp"])
+	# the smoke's shell isn't in the tree, so leaving it is told to them as the engine would
+	run.sounds._exit_tree()
+	var gone: String = str(main._sound.playing()["low_hp"])
+	run.free()
+	_check(beat == "low_hp" and again == "low_hp" and gone == "", "the slice gone, the low-HP loop is '%s' (it was '%s' in the fight, '%s' as it left)" % [gone, beat, again])
+
+
+## A step of round 6's world with the runner kept alive.
+func _r6_tick(world) -> void:
+	world.tick(1.0 / 60.0)
+	world.runner.hp = world.runner.hp_max
+
+
+## The first free spot on a 120 px grid of the car park that `ok` takes; Vector2.INF with none.
+func _r6_spot(world, ok: Callable) -> Vector2:
+	var rect: Rect2 = world.park_rect.grow(-150.0)
+	var x: float = rect.position.x
+	while x <= rect.end.x:
+		var y: float = rect.position.y
+		while y <= rect.end.y:
+			var p := Vector2(x, y)
+			if world.resolve_circle(p, SliceTuning.RUNNER_R).distance_to(p) <= 1.0 and ok.call(p):
+				return p
+			y += 120.0
+		x += 120.0
+	return Vector2.INF
+
+
+## Round 6's review: a hurt man still leans out and still searches (he fell back every frame he was out of cover, so he
+## never fired from a lean); a man ducking back who can't reach his spot is in cover all the same; out of their sight
+## the men face, and fall back from, where the gang knows him to be.
+func _r6_review_checks(world) -> void:
+	var g = world.gang
+	var r = world.runner
+	var front: Array = g.front_men().filter(func(m): return not m.is_dead())
+	_check(not front.is_empty(), "nobody of the front left for the review's checks")
+	if front.is_empty():
+		return
+	var mn = front[0]
+	var dt: float = 1.0 / 60.0
+	mn.ms["supp"] = 0.0
+	var hp_full: float = mn.hp
+	mn.ms["hp"] = maxf(1.0, mn.hp_max * SliceTuning.G_RETREAT_HP * 0.5)
+	var kept: Array = []
+	for st in ["lean", "search", "look"]:
+		mn.state = st
+		mn.target = mn.global_position + Vector2(400.0, 0.0)
+		mn.lean_left = 5.0
+		mn.move_left = 5.0
+		mn.look_left = 5.0
+		mn.sees = true
+		mn._think(dt, r.global_position)
+		kept.append(mn.state)
+	mn.state = "move"
+	mn.target = mn.global_position + Vector2(400.0, 0.0)
+	mn.hurt_back = false
+	mn._think(dt, r.global_position)
+	var fell: String = mn.state
+	# once: moving up again from his cover he isn't turned round (the second review: he'd never fire again)
+	mn.state = "move"
+	mn.target = mn.global_position + Vector2(400.0, 0.0)
+	mn._think(dt, r.global_position)
+	_check(kept == ["lean", "search", "look"] and fell == "retreat" and mn.state == "move", "a hurt man out of a lean, on a search, looking about: %s; caught in the open he's '%s', not falling back; moving up after it he's '%s'" % [str(kept), fell, mn.state])
+	mn.ms["hp"] = hp_full
+	# ducking back to a spot he can't reach: in cover where he stands, in G_DUCK_MAX_S
+	mn.state = "lean"
+	mn.lean_left = 0.0
+	mn._think(dt, r.global_position)
+	var duck_s: float = SliceTuning.G_DUCK_MAX_S + mn.global_position.distance_to(mn.home) / (SliceTuning.G_MAN_SPEED * SliceTuning.G_LEG_SLOW_X)
+	var ducked: bool = mn.state == "duck" and is_equal_approx(mn.duck_left, duck_s)
+	mn.target = mn.global_position + Vector2(4000.0, 0.0)
+	# stunned the time isn't counted
+	mn.ms["stun_t"] = 1.0
+	for _i in range(30):
+		mn._think(dt, r.global_position)
+	ducked = ducked and is_equal_approx(mn.duck_left, duck_s)
+	mn.ms["stun_t"] = 0.0
+	for _i in range(int(duck_s * 60.0) + 2):
+		mn._think(dt, r.global_position)
+	_check(ducked and mn.state == "cover", "a man ducking back to a spot he can't reach is '%s' after %.1f s (ducked %s)" % [mn.state, SliceTuning.G_DUCK_MAX_S, ducked])
+	# out of their sight: he faces, and falls back from, where the gang last saw him - not the runner through the wall
+	var known: Vector2 = mn.global_position + Vector2(300.0, 0.0)
+	g.last_seen = known
+	r.position = mn.global_position + Vector2(-300.0, 40.0)
+	mn.state = "cover"
+	mn.sees = false
+	_check(is_equal_approx(mn.facing(), 0.0), "out of their sight he faces %.2f, not where the gang last saw him (0.00)" % mn.facing())
+	mn._retreat()
+	var want: Vector2 = world.cover_spot(mn._in_park(mn.global_position + Vector2(-600.0, 0.0)), known)
+	_check(mn.target.distance_to(want) < 1.0, "out of their sight he falls back to %s, not %s, away from where the gang last saw him" % [str(mn.target.round()), str(want.round())])
+
+
+func _r6_checks(_main) -> void:
+	# 1. stood in the open he loses about the game's own rate times the tie (gang HP x0.5: their damage x2)
+	var st: Dictionary = _r6_stood(60.0)
+	var want: float = float(st["game"]) * float(st["tie"])
+	_check(is_equal_approx(float(st["tie"]), 2.0), "the tie at gang HP x0.5 is x%.2f, not x2" % float(st["tie"]))
+	_check(float(st["rate"]) >= want * 0.6 and float(st["rate"]) <= want * 1.4, "stood in the open he loses %.2f HP a second; the game's %.2f x the tie %.1f is %.2f" % [float(st["rate"]), float(st["game"]), float(st["tie"]), want])
+	_check(float(st["seeing"]) >= 1.8, "stood in the open %.2f men have him in sight on average, not about three" % float(st["seeing"]))
+	# 2. the search (part 3). Men on their way in haven't lost him; only a man who sees him says where he is
+	_check(int(st["early"]) == 0, "the gang sent %d searches on its way in, before it had fired a round" % int(st["early"]))
+	var world = st["world"]
+	var g = world.gang
+	var r = world.runner
+	var was: Vector2 = r.position
+	var hide: Vector2 = _r6_spot(world, func(p): return p.distance_to(was) > SliceTuning.G_MAN_RANGE + SliceTuning.G_SPREAD_PX + 200.0 and not g.front_men().any(func(mn): return world.has_los(mn.position, p)))
+	_check(hide != Vector2.INF, "nowhere in the car park to hide from the three on him")
+	r.position = hide
+	var sent: Array = []
+	for _i in range(60 * 14):
+		_r6_tick(world)
+		sent = g.front_men().filter(func(mn): return mn.is_searching())
+		if not sent.is_empty():
+			break
+	var held: Array = g.front_men().filter(func(mn): return not mn.is_searching())
+	_check(g.last_seen.distance_to(was) < 1.0, "out of their sight, the gang still knows where he is: %s, he was last seen at %s" % [str(g.last_seen.round()), str(was.round())])
+	_check(sent.size() == SliceTuning.G_SEARCHERS and held.size() == g.front_men().size() - SliceTuning.G_SEARCHERS, "a gang that lost him sent %d to look, not %d" % [sent.size(), SliceTuning.G_SEARCHERS])
+	_check(sent.all(func(mn): return mn.target.distance_to(was) < 120.0), "the searchers aren't sent to where he was last seen")
+	var looked := false
+	var spread := false
+	var held_ok := true
+	for _i in range(int(60 * (SliceTuning.G_SEARCH_WALK_S + SliceTuning.G_LOOK_S + 1.0))):
+		_r6_tick(world)
+		looked = looked or sent.any(func(mn): return mn.state == "look")
+		held_ok = held_ok and held.all(func(mn): return mn.state in ["cover", "lean", "duck"])
+		if looked and sent.all(func(mn): return not mn.is_searching()):
+			spread = sent.all(func(mn): return mn.state == "move" and mn.target.distance_to(was) > 150.0)
+			break
+	_check(looked and spread, "the searchers didn't look about where he was and then spread to cover (looked %s, spread %s)" % [looked, spread])
+	_check(held_ok, "the rest of the front left their cover while the two searched")
+	# found: a searcher who sees him is back in the fight, and the gang knows where he is again
+	if not sent.is_empty():
+		var mn = sent[0]
+		mn.search(was)
+		var open: Vector2 = _r6_spot(world, func(p): return p.distance_to(mn.position) < 500.0 and p.distance_to(mn.position) > 200.0 and world.has_los(mn.position, p))
+		r.position = open
+		_r6_tick(world)
+		_r6_tick(world)
+		_check(mn.sees and not mn.is_searching() and g.seen_ago == 0.0 and g.searches == 0 and g.last_seen.distance_to(open) < 1.0, "a searcher who found him went on searching (sees %s, state %s, seen %.1f s ago)" % [mn.sees, mn.state, g.seen_ago])
+	# the waiting men keep out of his sight: stood where he can see the edge they came in by, they go behind cover
+	var waiting: Array = g.waiting_men()
+	_check(not waiting.is_empty(), "nobody waiting at the back to check")
+	if not waiting.is_empty():
+		var way: Vector2 = waiting[0].get_meta("way", waiting[0].position)
+		var view: Vector2 = _r6_spot(world, func(p): return p.distance_to(way) > 700.0 and p.distance_to(way) < 1300.0 and world.has_los(way, p))
+		_check(view != Vector2.INF, "nowhere to stand with a view of the edge they came in by")
+		r.position = view
+		for _i in range(60 * 12):
+			_r6_tick(world)
+		var seen: Array = g.waiting_men().filter(func(mn): return world.has_los(mn.position, r.position))
+		_check(seen.is_empty(), "%d of the %d waiting stand where he can see them" % [seen.size(), g.waiting_men().size()])
+	_r6_review_checks(world)
+	world.queue_free()
+	_r6_sound_checks(_main)
+	_r6_kick_checks(_main)
+	_r6_end_checks(_main)
+	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

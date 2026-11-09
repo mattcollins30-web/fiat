@@ -14,6 +14,8 @@ var exit_prompt := ""                # the world sets it while the runner stands
 var exit_at := Vector2.ZERO
 var reticle := Vector2.INF          # the pad's aim point (the mouse has its own cursor); INF hides it
 var reticle_locked := false
+var cross := Vector2.INF            # (round 6) the crosshair at the aim, mouse or pad: four ticks, their gap the spread there
+var cross_r := 0.0
 
 
 func tracer(a: Vector2, b: Vector2) -> void:
@@ -60,10 +62,15 @@ func _draw() -> void:
 				for i in range(5):
 					var d := Vector2.RIGHT.rotated(i * TAU / 5.0) * (1.0 - k) * 26.0
 					draw_circle(m["a"] + d, 3.5, Color(C_SPARK, k))
-	if reticle != Vector2.INF:
-		var rc := C_TRACER if reticle_locked else Color(C_TRACER, 0.6)
-		draw_arc(reticle, (22.0 if reticle_locked else 14.0) / T.CAM_ZOOM, 0, TAU, 32, rc, 3.0 / T.CAM_ZOOM)     # (build 76) its screen size kept
-		draw_circle(reticle, 3.0 / T.CAM_ZOOM, rc)
+	if reticle != Vector2.INF and reticle_locked:     # (round 6) the crosshair marks the aim; the ring is the pad's lock
+		draw_arc(reticle, 22.0 / T.CAM_ZOOM, 0, TAU, 32, C_TRACER, 3.0 / T.CAM_ZOOM)     # (build 76) its screen size kept
+	if cross != Vector2.INF:
+		var tick: float = T.G_CROSS_TICK_PX / T.CAM_ZOOM
+		for i in range(4):
+			var d := Vector2.RIGHT.rotated(i * PI / 2.0)
+			draw_line(cross + d * cross_r, cross + d * (cross_r + tick), Color(0, 0, 0, 0.55), 5.0 / T.CAM_ZOOM)
+			draw_line(cross + d * cross_r, cross + d * (cross_r + tick), C_TRACER, 2.5 / T.CAM_ZOOM)
+		draw_circle(cross, 2.0 / T.CAM_ZOOM, C_TRACER)
 	if exit_prompt != "":
 		var f: Font = (get_parent() as SliceWorld).font()
 		var fs := prompt_px()

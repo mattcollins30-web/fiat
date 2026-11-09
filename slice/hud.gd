@@ -83,7 +83,7 @@ var _news_left := 0.0
 var _note_gun: Label                  # "Stand-in gun · ..." when the runner's own can't fire here
 var _note_sk: Label                   # "Not in the slice: E" over skills the slice doesn't play
 var _reload_hint: Label               # "R · Reload" under a quarter of the magazine (round 2: Matt couldn't find the reload)
-var _tests: Label                     # the test settings in force: gang HP, their damage (build 76: the magazine's gone)
+var _tests: Label                     # the test settings in force: gang HP, gang damage (build 76: the magazine's gone)
 var _pop_root: Control
 
 
@@ -401,7 +401,7 @@ func show_state(st: Dictionary) -> void:
 	_reload_hint.visible = low
 	_reload_hint.text = ("X · Reload" if bool(st.get("pad", false)) else "R · Reload") if low else ""
 	# the test settings in force
-	_tests.text = "Test settings: gang HP %s, their damage %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(float(st.get("their_dmg_x", SliceTuning.THEIR_DMG_X)))]
+	_tests.text = "Test settings: gang HP %s · gang damage %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(SliceBridge.their_x(st))]
 	_note_gun.visible = str(st.get("stand_in", "")) != ""
 	if _note_gun.visible:
 		UI.fit(_note_gun, ["Stand-in gun · %s" % str(st["stand_in"]), "Stand-in gun"])
@@ -472,7 +472,10 @@ static func gun_line(gun: Dictionary) -> Array:
 
 
 static func x_words(x: float) -> String:
-	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
+	if is_equal_approx(x, roundf(x)):
+		return "×%d" % roundi(x)
+	# round 6: the tie's ×6.67 reads ×6.7; the knobs' own ×0.25 and ×0.15 keep their hundredths
+	return "×%s" % str(snappedf(x, 0.1 if x >= 2.0 else 0.01))
 
 
 ## The waves' line (round 4): "3 on you · 4 waiting", the waiting part gone when none wait; "" before any are on you.

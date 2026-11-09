@@ -30,7 +30,16 @@ var traits: Array = []
 var flanker := false
 var dead_face := INF                 # (round 3) his facing, frozen when he falls
 var look := ""                       # (round 3) his picture: Hitman 1, Man Brown or Man Blue; Man Old for the hard man
-var state := "enter"                  # enter, move, cover, retreat, held (round 4: waiting his turn at the back), dead
+var state := "enter"                  # enter, move, cover, retreat, held (round 4: waiting his turn at the back), dead;
+                                      # (round 6) lean (out of cover to fire), duck (back behind it), search, look
+var home := Vector2.ZERO              # (round 6) his spot behind cover: he leans out from it and ducks back to it
+var lean_wait := 0.0                  # ...behind it this long before he leans out again
+var lean_left := 0.0                  # ...and out this long before he ducks back
+var leans_left := 0                   # ...and this many more times from this spot before he moves on
+var hurt_back := false                # (round 6's review) hurt, he has fallen back once of his own accord: after that only a hit sends him
+var duck_left := 0.0                  # (round 6's review) ducking back: this long at most, then he is in cover where he stands
+var look_a := 0.0                     # (round 6) searching: where he's looking
+var look_left := 0.0
 var target := Vector2.ZERO
 var sees := false
 var react_left := 0.0
@@ -141,6 +150,27 @@ func is_held() -> bool:
 	return state == "held"
 
 
+## (round 6, board E) The gang has lost him: this man walks to where they last saw him and looks about.
+func search(at: Vector2) -> void:
+	if dead or state == "held" or state == "retreat":
+		return
+	state = "search"
+	target = world.resolve_circle(_in_park(at), radius)
+	move_left = T.G_SEARCH_WALK_S
+	burst_left = 0
+
+
+func is_searching() -> bool:
+	return state == "search" or state == "look"
+
+
+## Where the gang thinks he is: where one of them last saw him (the runner himself with no gang to say).
+func _known() -> Vector2:
+	if gang != null and gang.get("last_seen") != null:
+		return gang.last_seen
+	return world.runner.global_position if world.runner != null else global_position
+
+
 ## Flush them out: out of cover, toward you.
 func flush(toward: Vector2) -> void:
 	if state == "held":
@@ -200,7 +230,13 @@ func step(dt: float) -> void:
 	var saw := sees
 	sees = dist <= T.G_MAN_RANGE and world.has_los(global_position, rp) and not runner.is_dead()
 	if sees and not saw:
-		react_left = rng.randf_range(T.G_REACT_S[0], T.G_REACT_S[1])
+		# (round 6) leaning out he knew where to look: a shorter beat than a man surprised
+		react_left = rng.randf_range(T.G_REACT_S[0], T.G_REACT_S[1]) * (T.G_LEAN_REACT_X if state == "lean" else 1.0)
+		if is_searching():
+			_pick_spot()                              # found him: back in the fight
+	if sees and gang != null:
+		gang.note_runner(rp)                          # (round 6) only a man who sees him says where he is
+	pause_left = maxf(0.0, pause_left - dt)           # (round 6) the pause between bursts runs behind cover too
 	_think(dt, rp)
 	if not stunned:
 		_move(dt)
@@ -210,31 +246,126 @@ func step(dt: float) -> void:
 	queue_redraw()
 
 
-func _think(dt: float, rp: Vector2) -> void:
+func _think(dt: float, _rp: Vector2) -> void:
 	move_left -= dt
+	var pinned: bool = float(ms.get("supp", 0.0)) >= 1.0
 	match state:
 		"enter", "move", "retreat":
 			if global_position.distance_to(target) <= T.G_ARRIVE_PX:
-				state = "cover"
-				move_left = rng.randf_range(T.G_REPOSITION_S[0], T.G_REPOSITION_S[1])
+				_in_cover()
 		"cover":
-			var pinned: bool = float(ms.get("supp", 0.0)) >= 1.0
-			if move_left <= 0.0 and not pinned:
-				_pick_spot()
-			elif not sees and move_left <= 0.0:
-				_pick_spot()
-	if state == "cover" and not sees and move_left > 1.5 and float(ms.get("supp", 0.0)) < 1.0:
-		move_left = 1.5                           # in cover with nothing to shoot at: he moves on sooner
-	if hp < hp_max * T.G_RETREAT_HP and state != "retreat" and state != "cover":
+			if sees:
+				if move_left <= 0.0 and not pinned:
+					_pick_spot()                          # a spot with a line of its own: he fires from it a while, then moves
+			else:
+				_think_lean(dt, pinned)
+		"lean":
+			# out of cover: he fires while he has him, then back - sooner pinned, or with nothing there to shoot at
+			lean_left -= dt * (1.0 if sees else T.G_LEAN_BLIND_X)
+			if lean_left <= 0.0 or pinned:
+				state = "duck"
+				target = home
+				# the walk home at a hit leg's pace, and G_DUCK_MAX_S over
+				duck_left = T.G_DUCK_MAX_S + global_position.distance_to(home) / (T.G_MAN_SPEED * T.G_LEG_SLOW_X)
+		"duck":
+			if float(ms.get("stun_t", 0.0)) <= 0.0:
+				duck_left -= dt                           # stunned he isn't walking: the time isn't counted
+			if global_position.distance_to(target) <= T.G_ARRIVE_PX or duck_left <= 0.0:
+				state = "cover"
+				lean_wait = rng.randf_range(T.G_LEAN_BACK_S[0], T.G_LEAN_BACK_S[1])
+		"search":
+			if global_position.distance_to(target) <= T.G_SEARCH_NEAR_PX or move_left <= 0.0:
+				state = "look"
+				look_left = T.G_LOOK_S
+				look_a = velocity.angle() if velocity.length() > 1.0 else look_a
+		"look":
+			look_left -= dt
+			look_a += sin(look_left * T.G_LOOK_SWEEP) * T.G_LOOK_TURN * dt
+			if look_left <= 0.0:
+				_spread()
+	# (round 6's review) a hurt man falls back from the open once (hurt by a bleed or a burn, no hit to send him), not
+	# from behind cover, out of a lean or off a search: after that he leans out, moves up and goes to look like the
+	# rest (a hit while he's hurt sends him back all the same, take_shot)
+	if not hurt_back and hp < hp_max * T.G_RETREAT_HP and state not in ["retreat", "cover", "duck", "lean", "search", "look"]:
 		_retreat()
-	if gang != null:
-		gang.note_runner(rp)
+
+
+## At his spot: behind it, a beat, then he leans out.
+func _in_cover() -> void:
+	state = "cover"
+	home = global_position
+	leans_left = rng.randi_range(T.G_LEANS[0], T.G_LEANS[1])
+	lean_wait = rng.randf_range(T.G_LEAN_FIRST_S[0], T.G_LEAN_FIRST_S[1])
+	move_left = rng.randf_range(T.G_REPOSITION_S[0], T.G_REPOSITION_S[1])
+
+
+## (round 6, board E) Behind cover with no line to him: he leans out to fire - the nearest step sideways with a line to
+## where the gang knows him to be - unless the gang has lost him (then they search, gang.gd).
+func _think_lean(dt: float, pinned: bool) -> void:
+	lean_wait -= dt * (1.0 / T.G_PINNED_SLOW if pinned else 1.0)
+	if lean_wait > 0.0 or pinned:
+		return
+	if gang != null and gang.has_method("lost_him") and gang.lost_him():
+		return
+	if leans_left <= 0:
+		_pick_spot()                                  # he has leaned out from here enough: other cover, nearer
+		return
+	home = global_position
+	var found: Dictionary = lean_point(_known())
+	if found.is_empty():
+		# nowhere to lean out from here: on to cover further in, or (the same cover again) out to where he has a line
+		_pick_spot(T.G_NO_LEAN_STEP)
+		if target.distance_to(global_position) <= T.G_ARRIVE_PX * 2.0:
+			target = world.resolve_circle(_in_park(global_position.lerp(_known(), T.G_NO_LEAN_STEP)), radius)
+		return
+	leans_left -= 1
+	home = found["back"]                              # he ducks back just behind the corner, not to the middle of his cover
+	target = found["at"]
+	state = "lean"
+	lean_left = rng.randf_range(T.G_LEAN_OUT_S[0], T.G_LEAN_OUT_S[1])
+
+
+## The nearest spot sideways of him with a line to `known`, free of cover and in the park: {at: where he stands to
+## fire, back: the last step short of it, out of sight}; empty with none in reach.
+func lean_point(known: Vector2) -> Dictionary:
+	var to: Vector2 = known - global_position
+	if to.length() < 1.0 or to.length() > T.G_MAN_RANGE:
+		return {}
+	var side: Vector2 = Vector2(-to.y, to.x).normalized()
+	for k in range(1, T.G_LEAN_STEPS + 1):
+		for sgn in [1.0, -1.0]:
+			var hop: Vector2 = side * sgn * T.G_LEAN_STEP_PX
+			var c: Vector2 = global_position + hop * k
+			if not world.park_rect.has_point(c) or not _free(c):
+				continue
+			if not (world.has_los(c, known) and world.has_los(global_position, c)):
+				continue
+			var past: Vector2 = c + side * sgn * T.G_LEAN_CLEAR_PX
+			var back: Vector2 = c - hop
+			if not _free(back) or world.has_los(back, known):
+				back = global_position
+			return {"at": past if _free(past) else c, "back": back}
+	return {}
+
+
+func _free(p: Vector2) -> bool:
+	return world.resolve_circle(p, radius).distance_to(p) <= 1.0
+
+
+## The search over: he spreads to cover off to one side of where they last saw him.
+func _spread() -> void:
+	var known: Vector2 = _known()
+	var out: Vector2 = Vector2.RIGHT.rotated(look_a + (PI / 2.0 if (get_instance_id() % 2) == 0 else -PI / 2.0))
+	var near: Vector2 = _in_park(known + out * T.G_SPREAD_PX)
+	target = world.cover_spot(near, known) if world.has_method("cover_spot") else near
+	state = "move"
+	move_left = rng.randf_range(T.G_REPOSITION_S[0], T.G_REPOSITION_S[1])
 
 
 ## Where to next: cover near him, or round the side (a flanker), facing the runner.
-func _pick_spot() -> void:
-	var rp: Vector2 = world.runner.global_position if world.runner != null else global_position
-	var near: Vector2 = global_position.lerp(rp, 0.35)
+func _pick_spot(frac := 0.35) -> void:
+	var rp: Vector2 = _known()                     # (round 6) where the gang knows him to be, not where he is
+	var near: Vector2 = global_position.lerp(rp, frac)
 	if flanker:
 		var line: Vector2 = (global_position - rp).normalized()
 		var side := Vector2(-line.y, line.x) * (1.0 if (get_instance_id() % 2) == 0 else -1.0)
@@ -246,11 +377,12 @@ func _pick_spot() -> void:
 
 
 func _retreat() -> void:
-	var rp: Vector2 = world.runner.global_position
+	var rp: Vector2 = _known()                        # (round 6's review) away from where the gang knows him to be
 	var away: Vector2 = (global_position - rp).normalized()
 	var near: Vector2 = _in_park(global_position + away * 600.0)
 	target = world.cover_spot(near, rp) if world.has_method("cover_spot") else near
 	state = "retreat"
+	hurt_back = true
 	move_left = 6.0
 
 
@@ -261,7 +393,7 @@ func _in_park(p: Vector2) -> Vector2:
 
 func _move(dt: float) -> void:
 	var want := Vector2.ZERO
-	if state != "cover":
+	if state != "cover" and state != "look":
 		want = (target - global_position)
 		if want.length() > T.G_ARRIVE_PX:
 			want = want.normalized()
@@ -307,7 +439,6 @@ func _fire(dt: float, rp: Vector2, dist: float) -> void:
 		react_left -= dt
 		return
 	if pause_left > 0.0:
-		pause_left -= dt
 		return
 	var runner = world.runner
 	var slow: float = 1.0
@@ -341,8 +472,10 @@ func facing() -> float:
 	if dead and dead_face != INF:
 		return dead_face
 	var a := 0.0
-	if world != null and world.runner != null:
-		a = (world.runner.global_position - global_position).angle()
+	if is_searching():
+		a = velocity.angle() if state == "search" and velocity.length() > 1.0 else look_a     # (round 6) he doesn't know where the runner is
+	elif world != null and world.runner != null:
+		a = (_known() - global_position).angle()      # (round 6's review) where the gang knows him to be: not through a wall once he's gone
 	if dead:
 		dead_face = a
 	return a

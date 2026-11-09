@@ -34,6 +34,8 @@ var jammed := false
 var jam_left := 0.0
 var swap_left := 0.0
 var shot_cd := 0.0
+var kick := 0.0                      # (round 6) degrees the fire so far adds to the spread; it settles when he eases off
+var kick_t := 0.0                    # seconds since the last round
 var fire_t := 0.0                     # (round 5's review) just fired: the art's "fire" pose this long
 const YOU_PX := 26                    # "You" on screen, px (board A's size; drawn at YOU_PX / CAM_ZOOM in the world)
 const SHOT_EPS := 1e-6                # (round 5's review) the beat's leftover after frames of dt: a float's crumb isn't a wait
@@ -179,6 +181,11 @@ func _gun_timers(dt: float) -> void:
 	if not Input.is_action_pressed("slice_fire") or reloading or jammed or swap_left > 0.0:     # no burst saved up
 		shot_cd = maxf(0.0, shot_cd)
 	swap_left = maxf(0.0, swap_left - dt)
+	kick_t += dt
+	var kmax: float = float(gun().get("kick_max", 0.0)) if gun_i < guns.size() else 0.0
+	kick = minf(kick, kmax)                  # a swap: the gun in hand's own most
+	if kick_t > T.G_KICK_HOLD_S:
+		kick = move_toward(kick, 0.0, kmax / T.G_KICK_SETTLE_S * dt)
 	if jammed:
 		jam_left -= dt
 		if jam_left <= 0.0:
@@ -221,6 +228,7 @@ func _trigger(fresh: bool = false) -> void:
 		return
 	if rounds[gun_i] <= 0:
 		if not start_reload() and fresh:
+			world.runner_event("dry", gun())     # (round 6) the click of an empty gun
 			var other := (gun_i + 1) % guns.size()
 			if other != gun_i and (rounds[other] > 0 or mags[other] > 0 or box_rounds(other) > 0 or bool(guns[other].get("melee", false))):
 				swap()                       # dry and no magazines left: a fresh pull goes to the spare
@@ -232,6 +240,18 @@ func _trigger(fresh: bool = false) -> void:
 		return
 	while shot_cd <= SHOT_EPS and can_fire():     # a stream: at a high rate several rounds can fall in one frame
 		fire_once()
+
+
+## (round 6) Degrees either side of the aim the next round can go: the gun's own spread and the kick held fire has built.
+func spread_deg() -> float:
+	return float(gun().get("spread_deg", T.SPREAD_DEG)) + kick if gun_i < guns.size() else T.SPREAD_DEG
+
+
+## The crosshair's gap in the world's px: the spread's width at the aim point, never under its least on screen.
+func cross_r() -> float:
+	if is_melee():
+		return T.G_CROSS_MIN_PX / T.CAM_ZOOM
+	return maxf(T.G_CROSS_MIN_PX / T.CAM_ZOOM, aim.distance_to(position) * tan(deg_to_rad(spread_deg())))
 
 
 ## One press's worth: a jam (the beat lost), a blow (melee: {man, point, result} at once), or the round(s) sent down the
@@ -253,6 +273,8 @@ func fire_once() -> Dictionary:
 		return {"jammed": true}
 	rounds[gun_i] -= 1
 	var sent: Array = rl.fire_runner(self, g)
+	kick = minf(float(g.get("kick_max", 0.0)), kick + float(g.get("kick_deg", 0.0)))     # the round gone, the next is wider
+	kick_t = 0.0
 	if rounds[gun_i] <= 0 and (mags[gun_i] > 0 or box_rounds() > 0):
 		start_reload()
 	return {"rounds": sent}

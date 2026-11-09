@@ -140,6 +140,11 @@ fight sim (rate-based ticks, not positions), the balance bot and harness, the De
 Talked through 9 Nov: Matt means full control ("there's no point changing what we have to one and two as it already
 works") - scoped in the chat as an option, out of interest. No build until Matt's 0.15 playtest and his call.
 
+The slice, for the round after round 6 (9 Nov, from the slice's review; Matt: "Review the arpg slice and detail
+improvements"): kinds of men (a rusher, a marksman, a man who throws); the hard man's own behaviour; a dodge or a
+sprint; head aim that pays; half-cover you fire over; hit feedback (a flinch, a hit mark, their HP bars); a sight
+cone or a soft edge to the fog. Each needs its mockup and Matt's word before a build.
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison

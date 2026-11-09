@@ -54,7 +54,7 @@ func fire_runner(r, g: Dictionary) -> Array:
 	var out: Array = []
 	world.stats["shots"] += 1
 	var n: int = maxi(1, int(g.get("pellets", 1)))
-	var spread: float = deg_to_rad(float(g.get("spread_deg", T.SPREAD_DEG)))
+	var spread: float = deg_to_rad(r.spread_deg() if r.has_method("spread_deg") else float(g.get("spread_deg", T.SPREAD_DEG)))     # (round 6) the kick in it
 	var press := {"hit": false}              # a shell's pellets: one press, one hit in the run's figures however many land
 	for _k in range(n):
 		var dir: Vector2 = r.aim_dir.rotated(world.rng.randf_range(-spread, spread))
