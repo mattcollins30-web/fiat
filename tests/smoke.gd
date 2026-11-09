@@ -3,6 +3,10 @@ extends SceneTree
 ## Builds the shell, starts a camp, has a crude bot run missions, gear up and
 ## sell, shows every room along the way and checks every label fits its box,
 ## then round-trips the save. Exit 1 if anything doesn't fit.
+const SliceWorld := preload("res://slice/slice.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceLevel := preload("res://slice/level.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceTuning := preload("res://slice/tuning.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 
 const Data := preload("res://scripts/sim/data.gd")
 const StatsRoom := preload("res://scripts/ui/stats_room.gd")
@@ -995,6 +999,11 @@ func _init() -> void:
 	_a69_auction_checks(main)                 # BUILD69-A: the Fence's back room - the tab with the Issue, the lots, a bid and a drop, the fit
 	_a69_allot_checks(main)                   # BUILD69-A: the Workshop's allotments - the tab with the station, plant, ready, lift and use, the shed, the fit
 	_a69_chip_checks(main)                    # BUILD69-A: the rail's Convoy heard, Market day and Harvest
+	_slice_world_checks(main)                 # BUILD72-W (9 Nov): the ARPG slice's world - the park, moving, firing, crates, the way out, the camera
+	_h72_menu_checks(main)                    # BUILD72-H (9 Nov): the title's ARPG slice button, the camp's runner copied, the pause, the title back
+	_h72_fit_checks(main)                     # BUILD72-H: the slice's HUD at 1920x1080 and 1920x1200, the pause's controls, the end screen
+	_h72_review_checks(main)                  # BUILD72 review (9 Nov): rounds from the box, kill heal and scavenger, Guard's fractions, meds, stand-ins, pad aim, events, dots, contact
+	_h72_slice_checks(main)                   # BUILD72-H: the slice's scripted run - walk, hit, headshot, reload, crates, gangs, the clear, the end
 	_finish()
 
 
@@ -46481,3 +46490,745 @@ func _a71_art_checks(_main) -> void:
 			nmiss.append(k)
 	_check(nmiss.is_empty(), "nodes with no picture: %s" % str(nmiss))
 	print("a71 art ok: 6 route bands, the Plots, the sealed crate, %d uniques and issued pieces, the six notables and the new fillers" % names.size())
+
+
+# ------------------------------------------------------------------ BUILD72-H (9 Nov): the ARPG slice
+## The slice (res://slice/, a prototype beside the game): the title's button opens it over the title and gives the
+## title back as it was; a scripted run on fixed dice (a walk, a hit that is the bridge's figure, a headshot's pop, a
+## reload in its time, crates searched in and under fire, the gangs on the clock, the clear and the way out, the end
+## screen); the HUD, the pause and the end screen fit at 1920 x 1080 and 1920 x 1200. `-- only h72_slice h72_fit
+## h72_menu`.
+const H72_SEED := 72
+const H72_DT := 1.0 / 60.0
+
+
+## The runner kept standing through a check that isn't about his HP (the gang fires all the while).
+func _h72_keep_up(r) -> void:
+	r.hp = 1000000                         # past any gang's fire for the frame: the run ends only where the check ends it
+
+
+## A spot `d` px from `at` with a clear line to it (cover blocks sight), or `at` itself when none.
+func _h72_clear_spot(w, at: Vector2, d: float) -> Vector2:
+	for k in range(16):
+		var p: Vector2 = w.resolve_circle(at + Vector2.RIGHT.rotated(TAU * k / 16.0) * d, SliceTuning.RUNNER_R)
+		if p.distance_to(at) > d * 0.6 and w.has_los(p, at):
+			return p
+	return at
+
+
+func _h72_slice_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var camp_was: String = JSON.stringify(main.sim.to_dict())
+	var run = Launch.open(main, H72_SEED, false)
+	var w = run.world
+	var ctx: Dictionary = w.ctx
+	var site: Dictionary = ctx["site"]
+	_check(bool(ctx.get("fixture", false)) and str(ctx["class_name"]) == "Poacher" and int(ctx["level"]) == 14 and ctx["guns"].size() == 2 and ctx["skills"].size() == 3,
+			"the slice's fixture isn't a level-14 Poacher with two guns and three skills: %s, %d, %d guns, %d skills" % [ctx.get("class_name"), int(ctx.get("level", 0)), ctx.get("guns", []).size(), ctx.get("skills", []).size()])
+	_check(ctx["sim"] != main.sim and not main.visible and run.get_parent() == main.get_parent(), "the slice didn't open beside the title's shell with a Sim of its own")
+	var hud = run.hud
+	var r = w.runner
+	_check(hud != null and hud.get_parent() == w.hud_layer and r.hp == r.hp_max and r.hp_max == int(ctx["hp_max"]), "the HUD isn't on the world's layer, or the runner doesn't start at the bridge's HP")
+	# the walk: 8 ways at the class's pace, a tenth of a second up to speed, no slide
+	var path: Array = [Vector2(900, 2000), Vector2(1400, 1900)]
+	var from: Vector2 = r.position
+	for wp in path:
+		_check(w.has_los(from, wp), "the walk's path crosses cover at %s (the park moved)" % str(wp))
+		var steps := 0
+		while r.position.distance_to(wp) > 12.0 and steps < 600:
+			r.auto_move = (wp - r.position).normalized()
+			w.tick(H72_DT)
+			steps += 1
+		_check(r.position.distance_to(wp) <= 12.0, "the runner didn't walk to %s: at %s after %d frames" % [str(wp), str(r.position), steps])
+		from = wp
+	r.auto_move = Vector2.RIGHT
+	var x0: float = r.position.x
+	for k in range(60):
+		w.tick(H72_DT)
+	var went: float = r.position.x - x0
+	_check(went > r.pace_px * 0.85 and went <= r.pace_px * 1.01, "a second's walk went %.0f px at a pace of %.0f px/s" % [went, r.pace_px])
+	r.auto_move = Vector2.ZERO
+	for k in range(6):
+		w.tick(H72_DT)
+	_check(r.velocity.length() < 1.0, "the runner slides on: %.0f px/s a tenth of a second after letting go" % r.velocity.length())
+	# the HUD before the first gang: the site, the clock, the runner, the gun
+	hud.show_state(hud.read_state())
+	_check(hud._site_name.text == str(site["name"]) and hud._site_kicker.text == ("%s · level %d" % [site["place"], int(site["level"])]).to_upper(), "the HUD's site reads '%s' / '%s'" % [hud._site_kicker.text, hud._site_name.text])
+	_check(hud._site_clock.text.begins_with("First gang in") or hud._site_clock.text.begins_with("Gang 1 of"), "the HUD's gang clock before the first: '%s'" % hud._site_clock.text)
+	_check(hud._gun_rounds.text == str(int(ctx["guns"][0]["mag"])) and hud._gun_spare.text.begins_with("/ %d" % int(ctx["guns"][0]["mag"])), "the HUD's rounds read '%s %s' for a magazine of %d" % [hud._gun_rounds.text, hud._gun_spare.text, int(ctx["guns"][0]["mag"])])
+	_check(hud._me_name.text == "Poacher · Level 14" and hud._me_hp.text == "%s / %s" % [Fmt.group(r.hp), Fmt.group(r.hp_max)], "the HUD's runner reads '%s' '%s'" % [hud._me_name.text, hud._me_hp.text])
+	_check(hud._face.texture != null and hud._gun_pic.texture != null, "the HUD has no portrait or no gun picture")
+	_check(hud._skills.all(func(d): return d["pic"].visible and d["pic"].texture != null), "a skill slot has no picture")
+	# a crate in the clear: its time is the bridge's; under fire it goes at SEARCH_UNDER_FIRE
+	var crates: Array = w.crates()
+	var c0 = crates[0]
+	r.debug_move_to(c0.position + Vector2(0, 100))
+	r.last_hurt_t = -100.0
+	var haul_was: int = w.stats["haul"].size()
+	var frames := 0
+	while not c0.opened and frames < 1200:
+		w.search_step(r, true, H72_DT)
+		frames += 1
+	var want_s: float = SliceBridge.search_s(ctx)
+	_check(c0.opened and absf(frames * H72_DT - want_s) <= 2.0 * H72_DT, "a crate opened after %.2f s, the bridge's search is %.2f s" % [frames * H72_DT, want_s])
+	_check(w.stats["haul"].size() == haul_was + c0.finds.size(), "the crate's %d finds aren't in the haul" % c0.finds.size())
+	var c1 = crates[1]
+	r.debug_move_to(c1.position + Vector2(0, 100))
+	r.last_hurt_t = w.time_s
+	for k in range(30):
+		w.search_step(r, true, H72_DT)
+	var fire_rate: float = c1.progress / (30.0 * H72_DT) * want_s
+	_check(not c1.opened and absf(fire_rate - SliceTuning.SEARCH_UNDER_FIRE) < 0.02, "under fire a search goes at ×%.2f, not ×%.2f" % [fire_rate, SliceTuning.SEARCH_UNDER_FIRE])
+	r.last_hurt_t = -100.0
+	# the gangs on the clock
+	var arrived: Array = []
+	w.gang.gang_arrived.connect(func(_i: int, _n: int) -> void: arrived.append(w.time_s))
+	var t_first: float = float(site["first_gang_s"])
+	var guard := 0
+	while arrived.is_empty() and guard < 60 * 120:
+		w.tick(H72_DT)
+		_h72_keep_up(r)
+		guard += 1
+	_check(arrived.size() == 1 and absf(arrived[0] - t_first) <= 2.0 * H72_DT, "the first gang came at %s s, the clock says %.1f s" % [str(arrived), t_first])
+	_check(w.men().size() == int(site["gang_sizes"][0]), "the first gang is %d men, the site's is %d" % [w.men().size(), int(site["gang_sizes"][0])])
+	# the two knobs (merge, 9 Nov): the site's level is the runner's less SITE_LEVEL_UNDER; a man's HP the sim's times
+	# MAN_HP_X, and the pause's "Their HP" (a test setting) rescales the men standing, live
+	_check(int(site["level"]) == maxi(1, 14 - SliceTuning.SITE_LEVEL_UNDER) and int(site["level"]) == 12, "the fixture's car park is level %d, not 12" % int(site["level"]))
+	var plain_man = null
+	for m in w.men():
+		if not m.hard:
+			plain_man = m
+	_check(plain_man != null and is_equal_approx(plain_man.hp_max, float(ctx["t"]["hp"]) * SliceTuning.MAN_HP_X), "a man's HP isn't the sim's ×%.2f: %s" % [SliceTuning.MAN_HP_X, str(plain_man.hp_max if plain_man != null else -1.0)])
+	if plain_man != null:
+		var base_hp: float = plain_man.hp_max / SliceTuning.MAN_HP_X
+		var seen_x: Array = []
+		for k in range(3):
+			run.pause.buttons[2].pressed.emit()
+			seen_x.append(float(ctx["man_hp_x"]))
+			_check(is_equal_approx(plain_man.hp_max, base_hp * float(ctx["man_hp_x"])) and run.pause.buttons[2].text == "Gang HP " + PauseScript72.hp_words(float(ctx["man_hp_x"])), "Their HP ×%.2f left a man at %.0f of %.0f ('%s')" % [float(ctx["man_hp_x"]), plain_man.hp_max, base_hp, run.pause.buttons[2].text])
+		_check(seen_x == [1.0, 0.5, 0.25], "Their HP steps %s, not ×1, ×0.5, ×0.25" % str(seen_x))
+	hud.show_state(hud.read_state())
+	_check(hud._site_clock.text.begins_with("Gang 1 of %d" % int(site["gangs"])), "the HUD's clock with the first gang in: '%s'" % hud._site_clock.text)
+	# a hit: what the man takes is the bridge's figure for that round on him
+	var man = w.men()[0]
+	r.debug_move_to(_h72_clear_spot(w, man.position, 420.0))
+	r.debug_aim_at(man.position)
+	var gun: Dictionary = r.gun()
+	var dice: int = w.rng.state
+	var mission_was: Dictionary = ctx["sim"].mission.duplicate(true)
+	var events_was: Array = ctx["events"].duplicate(true)
+	var probe := RandomNumberGenerator.new()
+	probe.state = dice
+	var want: Dictionary = SliceBridge.shot_damage(ctx, gun, man.ms.duplicate(true), probe)
+	ctx["sim"].mission.clear()
+	ctx["sim"].mission.merge(mission_was)
+	ctx["events"].clear()
+	ctx["events"].append_array(events_was)
+	w.rng.state = dice
+	var hp_was: float = man.hp
+	var got: Dictionary = man.take_shot({"gun": gun, "from": r.position, "point": man.position, "dir": r.aim_dir, "dist": r.position.distance_to(man.position), "runner": r, "world": w})
+	_check(int(got["damage"]) > 0 and int(got["damage"]) == int(want["damage"]) and bool(got["headshot"]) == bool(want["headshot"]), "a hit did %d (headshot %s), the bridge's figure is %d (%s)" % [int(got["damage"]), str(got["headshot"]), int(want["damage"]), str(want["headshot"])])
+	_check(got["killed"] or absf(hp_was - man.hp - float(got.get("amount", got["damage"]))) < 1.0, "the man lost %.1f HP to a hit of %d" % [hp_was - man.hp, int(got["damage"])])
+	# rounds down the aim: a number over the man, and a headshot's pop on fixed dice
+	var head_seen := false
+	var plain_seen := false
+	var shots := 0
+	var head_was: int = int(w.stats["headshots"])
+	while not (head_seen and plain_seen) and shots < 400:
+		var men: Array = w.men()
+		if men.is_empty():
+			break
+		var m = men[0]
+		m.ms["hp"] = m.ms["hp_max"]
+		r.debug_move_to(_h72_clear_spot(w, m.position, 420.0))
+		r.debug_aim_at(m.position)
+		r.jammed = false
+		r.reloading = false
+		r.shot_cd = 0.0
+		r.swap_left = 0.0
+		r.rounds[r.gun_i] = maxi(2, r.rounds[r.gun_i])
+		var out: Dictionary = r.fire_once()
+		shots += 1
+		if out.is_empty() or out.get("jammed", false) or out.get("man") == null:
+			continue
+		var res: Dictionary = out["result"]
+		if res.get("missed", false):
+			continue
+		var top: Label = hud.pops.back()["label"] if not hud.pops.is_empty() else null
+		if bool(res.get("headshot", false)):
+			head_seen = true
+			_check(top != null and top.text == Words.V66["headshot"] % Fmt.group(int(res["damage"])), "a headshot of %d popped '%s'" % [int(res["damage"]), top.text if top != null else ""])
+		else:
+			plain_seen = true
+			_check(top != null and top.text == Fmt.group(int(res["damage"])), "a hit of %d showed '%s'" % [int(res["damage"]), top.text if top != null else ""])
+	_check(head_seen and plain_seen, "in %d rounds: a headshot %s, a plain hit %s" % [shots, str(head_seen), str(plain_seen)])
+	_check(int(w.stats["headshots"]) > head_was, "the run's headshots didn't count the pop")
+	# a reload takes the gun's time and fills the magazine from a spare
+	r.jammed = false
+	r.reloading = false
+	r.swap_left = 0.0
+	r.rounds[r.gun_i] = 1
+	r.mags[r.gun_i] = maxi(1, r.mags[r.gun_i])
+	var mags_was: int = r.mags[r.gun_i]
+	var rl: float = float(r.gun()["reload_s"])
+	_check(r.start_reload() and is_equal_approx(r.reload_total, rl), "a reload didn't start at the gun's %.2f s" % rl)
+	var rf := 0
+	while r.reloading and rf < 1200:
+		w.tick(H72_DT)
+		_h72_keep_up(r)
+		rf += 1
+		if rf == 3:
+			hud.show_state(hud.read_state())
+			_check(hud._gun_state.visible and hud._gun_state.text == "Reloading" and hud._reload_bar.visible, "the HUD doesn't show the reload")
+	_check(absf(rf * H72_DT - rl) <= 2.0 * H72_DT and r.rounds[r.gun_i] == int(r.gun()["mag"]) and r.mags[r.gun_i] == mags_was - 1,
+			"a reload took %.2f s for the gun's %.2f s; rounds %d of %d, spare mags %d from %d" % [rf * H72_DT, rl, r.rounds[r.gun_i], int(r.gun()["mag"]), r.mags[r.gun_i], mags_was])
+	# the rest of the gangs down, each on the clock, then the clear and the way out
+	var t_guard := 0
+	var ended: Array = []
+	w.run_ended.connect(func(o: String, _s: Dictionary) -> void: ended.append(o))
+	while not w.cleared and t_guard < 60 * 600:
+		for m in w.men():
+			if m.ms["hp"] > 0.0 and t_guard % 30 == 0:
+				m.ms["hp"] = 0.01
+				m.take_shot({"gun": r.gun(), "from": r.position, "point": m.position, "dir": Vector2.RIGHT, "dist": 400.0, "runner": r, "world": w})
+		w.tick(H72_DT)
+		_h72_keep_up(r)
+		t_guard += 1
+	_check(w.cleared and arrived.size() == int(site["gangs"]), "the park isn't cleared after %d gangs (%.0f s)" % [arrived.size(), w.time_s])
+	var next_s: float = float(site["next_gang_s"])
+	for k in range(1, arrived.size()):
+		_check(arrived[k] - arrived[k - 1] <= next_s + 2.0 * H72_DT, "gang %d came %.1f s after the one before; the clock says %.1f s" % [k + 1, arrived[k] - arrived[k - 1], next_s])
+	var sizes: int = 0
+	for n in site["gang_sizes"]:
+		sizes += int(n)
+	_check(int(w.stats["kills"]) == sizes, "%d kills for the three gangs' %d men" % [int(w.stats["kills"]), sizes])
+	hud.show_state(hud.read_state())
+	_check(hud._site_clock.text.begins_with("Cleared"), "the HUD's clock after the clear: '%s'" % hud._site_clock.text)
+	_check(ended.is_empty() and not w.ended, "the clear ended the run before the way out")
+	w.leave()
+	_check(ended == ["cleared"] and run.end.visible and run.end._title.text == "Cleared", "the way out after the clear: %s, the end screen '%s'" % [str(ended), run.end._title.text])
+	_check(run.end._tiles[0]["value"].text == Fmt.group(int(w.stats["kills"])) and run.end._tiles[1]["value"].text == Fmt.group(int(w.stats["headshots"])) and run.end._tiles[2]["value"].text == Fmt.group(int(w.stats["damage_done"])), "the end screen's figures aren't the run's")
+	var haul: Array = w.stats["haul"]
+	_check(run.end._haul[0].text == (EndScreen72.find_words(haul[0]) if not haul.is_empty() else "Nothing found"), "the end screen's haul starts '%s'" % run.end._haul[0].text)
+	_check(_check_nodes(run.end.text_nodes(), [], "the slice's end screen") == 0, "the end screen's words don't fit")
+	_check(w.process_mode == Node.PROCESS_MODE_DISABLED, "the world runs on under the end screen")
+	run.end.button.pressed.emit()
+	_check(main.visible and main._menu.visible and main._menu.row_names().back() == "Try the ARPG slice" and run.is_queued_for_deletion(), "Back to the title didn't give the title back")
+	var camp_now: Dictionary = JSON.parse_string(JSON.stringify(main.sim.to_dict()))
+	var camp_before: Dictionary = JSON.parse_string(camp_was)
+	# Items' id counter too (the review, 10): the slice puts it back on the way out
+	var moved: Array = camp_now.keys().filter(func(k): return JSON.stringify(camp_now[k]) != JSON.stringify(camp_before.get(k)))
+	_check(moved.is_empty(), "the slice changed the camp: %s" % str(moved))
+	main._menu.close()
+	print("h72 slice ok: the fixture, a walk (%.0f px/s, no slide), crates (%.1f s, under fire ×%.1f), %d gangs on the clock, a hit of %d as the bridge's, the pops, a %.1f s reload, the clear, the way out, the end" % [r.pace_px, want_s, SliceTuning.SEARCH_UNDER_FIRE, arrived.size(), int(got["damage"]), rl])
+
+
+const HudScript72 := preload("res://slice/hud.gd")
+const PauseScript72 := preload("res://slice/pause.gd")
+const EndScreen72 := preload("res://slice/end_screen.gd")
+
+
+## The HUD's longest words at both screens: the panels in the screen and clear of each other, every label in its box.
+func _h72_fit_checks(_main) -> void:
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, H72_SEED)
+	var hud = HudScript72.new()
+	root.add_child(hud)
+	var long_med := {"name": "First aid kit", "base": "First aid kit", "count": 12}
+	var st := {"site": "The Estate", "site_level": 99, "place": "The car park", "gang": 2, "gangs": 3, "next_s": 599.0,
+		"cls": "Paramedic", "level": 99, "portrait": str(ctx["portrait"]), "hp": 12888, "hp_max": 12888, "guard": 9999, "guard_max": 9999,
+		"energy": 999.0, "energy_max": 999.0, "streak": 999, "gun": ctx["guns"][0], "rounds": 120, "mag": 120, "mags": 12,
+		"reload_frac": -1.0, "jammed": false, "skills": [], "meds": [long_med, long_med, long_med, long_med], "last_legs_s": 9.0}
+	var sk: Array = []
+	for s in ctx["skills"]:
+		var d: Dictionary = s.duplicate()
+		d["cd_left"] = 88.0
+		d["cd"] = 90.0
+		sk.append(d)
+	st["skills"] = sk
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		hud.layout(sz)
+		for variant in ["plain", "reload", "jam", "clear"]:
+			var v: Dictionary = st.duplicate()
+			v["reload_frac"] = 0.4 if variant == "reload" else -1.0
+			v["jammed"] = variant == "jam"
+			v["jam_s"] = 9.5
+			v["cleared"] = variant == "clear"
+			hud.show_state(v)
+			var where := "the slice's HUD at %dx%d (%s)" % [int(sz.x), int(sz.y), variant]
+			_check(_check_nodes(hud.text_nodes(), [], where) == 0, where + ": words out of their boxes")
+		var screen := Rect2(Vector2.ZERO, sz)
+		var ps: Array = hud.panels()
+		for i in range(ps.size()):
+			var a := Rect2(ps[i].position, ps[i].size)
+			_check(screen.encloses(a), "the slice's HUD panel %d runs off a %s screen: %s" % [i, str(sz), str(a)])
+			for j in range(i + 1, ps.size()):
+				var b := Rect2(ps[j].position, ps[j].size)
+				_check(not a.intersects(b), "the slice's HUD panels %d and %d overlap at %s" % [i, j, str(sz)])
+		_check(Rect2(hud._banner.position, hud._banner.size).end.y <= hud._bar.position.y and hud._banner.visible, "the Last legs banner sits on the bar at %s" % str(sz))
+	# what it shows: the shade is the cooldown's share, the seconds, the counts
+	hud.layout(Vector2(1920, 1080))
+	hud.show_state(st)
+	var q: Dictionary = hud._skills[0]
+	_check(q["shade"].visible and absf(q["shade"].size.y - HudScript72.TILE * 88.0 / 90.0) < 0.5 and q["secs"].text == "88", "a skill's cooldown shade or seconds are wrong: %.1f px, '%s'" % [q["shade"].size.y, q["secs"].text])
+	_check(hud._meds[0]["count"].text == "×12" and hud._gun_spare.text == "/ 120 · 12 mags", "the meds' count or the spare mags read '%s', '%s'" % [hud._meds[0]["count"].text, hud._gun_spare.text])
+	_check(hud._banner.text == "Last legs · 9 s", "the Last legs banner reads '%s'" % hud._banner.text)
+	var none: Dictionary = st.duplicate()
+	none["skills"] = []
+	none["meds"] = []
+	none["last_legs_s"] = 0.0
+	hud.show_state(none)
+	_check(not hud._banner.visible and hud._meds.all(func(d): return not d["pic"].visible and not d["plus"].visible), "an empty rig or no Last legs still shows")
+	hud.queue_free()
+	# the pause (board C's controls) and the end screen at both screens
+	var pz = PauseScript72.new()
+	var en = EndScreen72.new()
+	root.add_child(pz)
+	root.add_child(en)
+	pz.open()
+	var finds: Array = []
+	for k in range(14):
+		finds.append({"name": "Field marshal's revolver · Legendary ×9"})
+	en.open("died", {"kills": 9999, "headshots": 9999, "damage_done": 9999999, "time_s": 5999.0, "haul": finds}, "The car park")
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		pz.layout(sz)
+		en.layout(sz)
+		_check(_check_nodes(pz.text_nodes(), pz.line_pairs(), "the slice's pause at %s" % str(sz)) == 0 and Rect2(Vector2.ZERO, sz).encloses(pz.card_rect()), "the slice's pause doesn't fit at %s" % str(sz))
+		_check(_check_nodes(en.text_nodes(), [], "the slice's end at %s" % str(sz)) == 0 and Rect2(Vector2.ZERO, sz).encloses(en.card_rect()), "the slice's end screen doesn't fit at %s" % str(sz))
+	_check(en._title.text == "Dead" and en._haul[EndScreen72.HAUL_ROWS].text == "And %d more" % (14 - EndScreen72.HAUL_ROWS), "the end screen after a death: '%s', '%s'" % [en._title.text, en._haul[EndScreen72.HAUL_ROWS].text])
+	_check(pz._rows.size() == PauseScript72.KEYS.size() + PauseScript72.PAD.size() and pz._rows[0][1].text == "W A S D" and pz._rows[PauseScript72.KEYS.size()][1].text == "Left stick", "the pause's controls aren't board C's")
+	pz.queue_free()
+	en.queue_free()
+	print("h72 fit ok: the HUD at 1920x1080 and 1920x1200 (four states), the pause's controls, the end screen")
+
+
+## The title's button: the game's rows as they were and the slice's after them; it opens the slice with the camp's
+## runner (a copy), Esc holds it under the pause, and Back to the title gives the title back with the camp untouched.
+func _h72_menu_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	# no class_name in slice/ (9 Nov, Matt's device smoke: a headless run has no editor scan, so a new class_name isn't in
+	# the global class cache and every script naming it fails to parse) - each names the others by preload
+	var named: Array = []
+	for f in DirAccess.get_files_at("res://slice"):
+		if str(f).ends_with(".gd") and ("\n" + FileAccess.get_file_as_string("res://slice/" + str(f))).contains("\nclass_name"):
+			named.append(f)
+	_check(DirAccess.get_files_at("res://slice").size() > 5 and named.is_empty(), "slice/ scripts declare a class_name: %s" % str(named))
+	main.show_title()
+	var names: Array = main._menu.row_names()
+	_check(names.size() == 5 and names.slice(0, 4) == ["Continue", "New game", "Load a slot", "Quit"] and names[4] == "Try the ARPG slice", "the title's rows: %s" % str(names))
+	_check_fit(main, "Title with the slice's row")
+	# the camp's runner, from the shell's Sim or the autosave read: a copy either way
+	var c = Launch.camp_for(main)
+	_check(c.sim != null and c.sim != main.sim and str(c.sim.cls) == str(main.sim.cls) and c.sim.level() == main.sim.level(), "the slice's runner isn't a copy of the camp's")
+	main.save_game()
+	var keep = main.sim
+	main.sim = null
+	var from_save = Launch.camp_for(main)
+	main.sim = keep
+	_check(from_save.sim != null and str(from_save.sim.cls) == str(keep.cls) and from_save.sim.level() == keep.level(), "at the title the slice doesn't read the autosave's runner")
+	var camp_was: String = JSON.stringify(main.sim.to_dict())
+	var saved_at: int = FileAccess.get_modified_time(main.save_file)
+	main._menu.press(4)
+	var run = null
+	for n in main.get_parent().get_children():
+		if n.get_script() == Launch and not n.is_queued_for_deletion():
+			run = n                                # (a run before it in this smoke waits on a frame to go)
+	_check(run != null and not main.visible and not bool(run.world.ctx.get("fixture", true)) and str(run.world.ctx["class_name"]) == str(main.sim.cls), "the title's button didn't open the slice with the camp's runner")
+	if run != null:
+		_check(int(run.world.ctx["site"]["level"]) == maxi(1, main.sim.level() - SliceTuning.SITE_LEVEL_UNDER), "the camp's runner at level %d gets a level %d car park" % [main.sim.level(), int(run.world.ctx["site"]["level"])])
+	if run == null:
+		main.visible = true
+		return
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	run._unhandled_input(esc)
+	_check(run.pause.visible and run.world.process_mode == Node.PROCESS_MODE_DISABLED, "Esc didn't hold the slice under the pause")
+	_check(_check_nodes(run.pause.text_nodes(), run.pause.line_pairs(), "the slice's pause over the park") == 0, "the pause's words don't fit")
+	run.pause.buttons[0].pressed.emit()
+	_check(not run.pause.visible and run.world.process_mode == Node.PROCESS_MODE_PAUSABLE, "Resume didn't let the slice run")
+	var start := InputEventJoypadButton.new()
+	start.button_index = JOY_BUTTON_START
+	start.pressed = true
+	run._unhandled_input(start)
+	_check(run.pause.visible, "Start didn't pause the slice")
+	run.pause.buttons[1].pressed.emit()
+	_check(main.visible and main._menu.visible and main._menu.shape() == ("title" if main._menu._picture.texture != null else "card") and run.is_queued_for_deletion(), "Back to the title from the pause didn't give the title back")
+	_check(JSON.stringify(main.sim.to_dict()) == camp_was and FileAccess.get_modified_time(main.save_file) == saved_at, "the slice changed the camp or wrote its save")
+	main._menu.close()
+	print("h72 menu ok: the title's fifth row, the camp's runner copied (live and from the autosave), the pause by Esc and Start, the title back")
+
+
+# ------------------------------------------------------------------ BUILD72-W (9 Nov): the ARPG slice's world
+## A target for the slice's world checks: a still man who takes every round for 10 and never dies (the gang's own men
+## are G's and get their own checks); the world reads only take_shot, is_dead and radius.
+class W72Target:
+	extends Node2D
+	var radius := 34.0
+	var shots := 0
+	func _init() -> void:
+		add_to_group("slice_man")
+	func is_dead() -> bool:
+		return false
+	func take_shot(_shot: Dictionary) -> Dictionary:
+		shots += 1
+		return {"damage": 10, "headshot": false, "killed": false}
+
+
+func _w72_world(main, extra: Dictionary = {}) -> Node:
+	var world = load("res://slice/slice.tscn").instantiate()
+	main.add_child(world)
+	var ctx: Dictionary = load("res://slice/bridge.gd").runner_ctx(null)
+	ctx.merge(extra, true)
+	world.start(ctx, 72)
+	if world.gang != null:                   # the world alone: the gang's men and clock are G's checks
+		world.gang.queue_free()
+		world.gang = null
+	for m in world.men_root.get_children():
+		m.queue_free()
+		world.men_root.remove_child(m)
+	return world
+
+
+func _w72_steps(world, secs: float) -> void:
+	for _i in range(int(round(secs * 60.0))):
+		world.tick(1.0 / 60.0)
+
+
+## The slice's world: the park's size, moving tight at the class's pace, cover that stops him and blocks sight and
+## rounds, the gun's rate, the magazine, the reload's time, the swap, a crate searched (slower under fire), the way
+## out held, death and Last legs, the camera's lead, the pad's lock-on.
+func _slice_world_checks(main) -> void:
+	var T = load("res://slice/tuning.gd")
+	var world = _w72_world(main)
+	var r = world.runner
+	var vw: float = world.view_size().x
+	_check(world.park_rect.size.x / vw > 2.3 and world.park_rect.size.x / vw < 2.7, "the car park is %.2f screens wide, not about 2.5" % (world.park_rect.size.x / vw))
+	_check(r.hp == r.hp_max and r.hp_max == int(world.ctx["hp_max"]) and r.guns.size() == world.ctx["guns"].size() and r.guns.size() >= 2, "the runner isn't the ctx's: %d/%d HP, %d guns" % [r.hp, r.hp_max, r.guns.size()])
+	# moving: a tenth of a second up to pace, a stop with no slide, the pace the class's
+	r.debug_move_to(Vector2(1200, 1200))
+	r.debug_aim_at(Vector2(2000, 1200))
+	r.auto_move = Vector2.RIGHT
+	var p0: Vector2 = r.position
+	_w72_steps(world, 1.0)
+	var went: float = r.position.x - p0.x
+	_check(went > r.pace_px * 0.85 and went <= r.pace_px * 1.001, "a second's walk went %.0f px at a pace of %.0f px/s" % [went, r.pace_px])
+	_check(absf(r.pace_px - T.PACE_PX * maxf(T.PACE_MIN, 1.0 + float(world.ctx.get("pace_pct", 0.0)) / 100.0)) < 0.01, "the runner's pace isn't the class's: %.1f" % r.pace_px)
+	r.auto_move = Vector2.ZERO
+	var p1: Vector2 = r.position
+	_w72_steps(world, 0.1)
+	_check(r.velocity == Vector2.ZERO and r.position.distance_to(p1) < 20.0, "he slid %.0f px after letting go (still %.0f px/s)" % [r.position.distance_to(p1), r.velocity.length()])
+	r.auto_move = Vector2(1, 1).normalized()
+	_w72_steps(world, 0.5)
+	_check(absf(r.velocity.length() - r.pace_px) < 1.0, "on the diagonal he goes %.0f, not the pace %.0f" % [r.velocity.length(), r.pace_px])
+	r.auto_move = Vector2.ZERO
+	_w72_steps(world, 0.2)
+	# cover: he can't stand in it or walk through it; it blocks sight and rounds
+	var wall: Rect2 = SliceLevel.COVER[2]["rect"]
+	r.debug_move_to(wall.get_center())
+	_check(not wall.grow(T.RUNNER_R - 1.0).has_point(r.position), "the runner stands inside the wall at %s" % str(r.position))
+	r.debug_move_to(wall.get_center() + Vector2(0, -200))
+	r.auto_move = Vector2.DOWN
+	_w72_steps(world, 1.5)
+	r.auto_move = Vector2.ZERO
+	_check(r.position.y < wall.position.y - T.RUNNER_R + 1.0, "he walked through the wall: y %.0f, the wall's top %.0f" % [r.position.y, wall.position.y])
+	var above: Vector2 = wall.get_center() + Vector2(0, -150)
+	var below: Vector2 = wall.get_center() + Vector2(0, 150)
+	_check(not world.has_los(above, below) and world.has_los(above, above + Vector2(400, 0)), "sight: across the wall %s, in the open %s" % [world.has_los(above, below), world.has_los(above, above + Vector2(400, 0))])
+	# firing: a round on a man in the open, one off the magazine, a hit with its damage
+	var target := W72Target.new()
+	world.men_root.add_child(target)
+	r.debug_move_to(Vector2(1200, 1000))
+	target.position = Vector2(1700, 1000)
+	r.debug_aim_at(target.position)
+	var hits: Array = []
+	world.hit_landed.connect(func(m, res, pt): hits.append([m, res, pt]))
+	var before: int = r.rounds[0]
+	var shot: Dictionary = r.fire_once()
+	if shot.get("jammed", false):           # a jam's the gun's luck: clear it and go again
+		_w72_steps(world, world.jam_s() + 0.05)
+		r.shot_cd = 0.0
+		shot = r.fire_once()
+	_check(shot.get("man") == target and r.rounds[0] == before - 1 and hits.size() == 1 and int(hits[0][1]["damage"]) == 10 and world.stats["hits"] == 1 and world.stats["damage_done"] == 10,
+		"a round on a man in the open: %s, rounds %d -> %d, %d hits" % [str(shot), before, r.rounds[0], hits.size()])
+	_check(world.fx.marks.any(func(m): return m["kind"] == "tracer") and world.fx.marks.any(func(m): return m["kind"] == "hit"), "no tracer or hit flash for the round")
+	_check(world.lock_target(r.position, Vector2.RIGHT) == target and world.lock_target(r.position, Vector2.UP) == null, "the pad's lock-on doesn't hold the man on the stick's line")
+	# the gun's rate, the trigger held a second
+	var g: Dictionary = r.gun().duplicate()
+	var fired := [0]
+	world.fired.connect(func(_g): fired[0] += 1)
+	var jams := [0]
+	world.jammed.connect(func(_g): jams[0] += 1)
+	r.rounds[0] = int(g["mag"])
+	r.shot_cd = 0.0
+	Input.action_press("slice_fire")
+	_w72_steps(world, 1.0)
+	Input.action_release("slice_fire")
+	var rof: float = float(g["rof"])
+	_check(jams[0] > 0 or fired[0] == int(floor(rof * 0.999)) + 1, "a second on the trigger fired %d rounds at %.1f a second" % [fired[0], rof])
+	var fast: Dictionary = r.guns[0].duplicate()     # a fast gun shows a rate that rounds to the frame (7 a second is 8.6 frames)
+	r.guns[0]["rof"] = 7.0
+	r.guns[0]["mag"] = 40
+	r.rounds[0] = 40
+	r.shot_cd = 0.0
+	fired[0] = 0
+	jams[0] = 0
+	Input.action_press("slice_fire")
+	_w72_steps(world, 2.9)
+	Input.action_release("slice_fire")
+	_check(jams[0] > 0 or fired[0] == 21, "2.9 s on the trigger at 7 a second fired %d rounds, not 21 (the rate rounds to the frame)" % fired[0])
+	r.guns[0] = fast
+	# behind the wall a round stops on it
+	target.position = below
+	r.debug_move_to(above)
+	r.debug_aim_at(below)
+	_w72_steps(world, 0.5)
+	r.shot_cd = 0.0
+	var walled: Dictionary = r.fire_once()
+	_check(walled.is_empty() or walled.get("jammed", false) or walled.get("man") == null, "a round went through the wall: %s" % str(walled))
+	_check(world.lock_target(above, Vector2.DOWN) == null, "the lock-on holds a man behind the wall")
+	target.position = Vector2(-500, -500)
+	# the reload: the gun's own time, a magazine from the spares
+	_w72_steps(world, 1.0)
+	r.rounds[0] = 0
+	var spares: int = r.mags[0]
+	_check(r.start_reload() and r.reloading, "an empty gun with %d spare magazines won't reload" % spares)
+	_w72_steps(world, float(g["reload_s"]) - 0.1)
+	_check(r.reloading and r.rounds[0] == 0, "the reload finished before its %.1f s" % float(g["reload_s"]))
+	_w72_steps(world, 0.2)
+	_check(not r.reloading and r.rounds[0] == int(g["mag"]) and r.mags[0] == spares - 1, "after %.1f s: reloading %s, %d rounds, %d spares" % [float(g["reload_s"]) + 0.1, r.reloading, r.rounds[0], r.mags[0]])
+	# the swap: the spare, no fire for SWAP_S
+	_check(r.swap() and r.gun_i == 1 and not r.can_fire(), "the swap to the spare: gun %d, can fire %s" % [r.gun_i, r.can_fire()])
+	_w72_steps(world, T.SWAP_S + 0.05)
+	_check(r.can_fire() and r.gun()["name"] == world.ctx["guns"][1]["name"], "after the swap the spare won't fire")
+	r.swap()
+	_w72_steps(world, T.SWAP_S + 0.05)
+	# dry with no magazines left and no box in the pack (the review: a box refills it by hand first), a fresh pull of the
+	# trigger goes to the spare
+	var keep_r: int = r.rounds[0]
+	var keep_m: int = r.mags[0]
+	var keep_boxes: Dictionary = world.ctx.get("boxes", {}).duplicate()
+	for k in world.ctx.get("boxes", {}).keys():
+		world.ctx["boxes"][k] = 0
+	r.rounds[0] = 0
+	r.mags[0] = 0
+	Input.action_press("slice_fire")
+	world.tick(1.0 / 60.0)
+	Input.action_release("slice_fire")
+	_check(r.gun_i == 1, "a dry gun with no magazines left doesn't go to the spare on the trigger")
+	world.ctx["boxes"] = keep_boxes
+	r.swap()
+	r.rounds[0] = keep_r
+	r.mags[0] = keep_m
+	_w72_steps(world, T.SWAP_S + 0.05)
+	# a crate: held F, its time; under fire slower; its finds in the haul
+	var cr = world.crates()[0]
+	var cr2 = world.crates()[1]
+	var opened := []
+	world.crate_opened.connect(func(c, f): opened.append([c, f]))
+	var secs: float = SliceBridge.search_s(world.ctx)
+	r.debug_move_to(cr.position + Vector2(0, 90))
+	world.tick(1.0 / 60.0)
+	_check(cr.near and cr.prompt == SliceWorld.WORDS["search_key"], "next to a crate there's no prompt: '%s'" % cr.prompt)
+	Input.action_press("slice_use")
+	_w72_steps(world, secs * 0.8)
+	_check(not cr.opened and cr.progress > 0.7 and cr.progress < 0.9, "a crate at 80%% of its time: opened %s, %.2f" % [cr.opened, cr.progress])
+	_w72_steps(world, secs * 0.3)
+	Input.action_release("slice_use")
+	_check(cr.opened and opened.size() == 1 and world.stats["haul"].size() >= opened[0][1].size(), "the crate didn't open on its time, or its finds aren't in the haul")
+	r.debug_move_to(cr2.position + Vector2(0, 90))
+	Input.action_press("slice_use")
+	for _i in range(int(secs * 0.6 * 60.0)):
+		r.last_hurt_t = world.time_s           # under fire the whole time
+		world.tick(1.0 / 60.0)
+	Input.action_release("slice_use")
+	_check(not cr2.opened and cr2.progress < 0.6 * T.SEARCH_UNDER_FIRE + 0.05 and cr2.progress > 0.6 * T.SEARCH_UNDER_FIRE - 0.05, "under fire a search went %.2f in 60%% of its time" % cr2.progress)
+	# the camera: leans toward the aim, stays on the park
+	r.debug_move_to(Vector2(2400, 1350))
+	r.debug_aim_at(Vector2(3400, 1350))
+	_w72_steps(world, 1.0)
+	_check(world.cam_center.x > r.position.x + 100.0 and world.cam_center.x <= r.position.x + T.CAM_LEAD_MAX + 1.0, "the camera leans %.0f px toward the aim" % (world.cam_center.x - r.position.x))
+	var sp: Vector2 = world.world_to_screen(r.position)
+	_check(Rect2(Vector2.ZERO, world.view_size()).has_point(sp), "the runner is off the screen at %s" % str(sp))
+	r.debug_move_to(Vector2(100, 100))
+	_w72_steps(world, 1.5)
+	var half: Vector2 = world.view_size() * 0.5
+	_check(world.cam_center.x >= half.x - 0.5 and world.cam_center.y >= half.y - 0.5, "the camera shows past the park's corner: %s" % str(world.cam_center))
+	# the way out: held, not tapped; before the clear it's "out"
+	var left := [0]
+	world.left.connect(func(): left[0] += 1)
+	r.debug_move_to(world.exit_rect.get_center())
+	Input.action_press("slice_out")
+	_w72_steps(world, T.LEAVE_HOLD_S * 0.5)
+	_check(not world.ended and r.leaving_frac > 0.4, "the way out went on a tap (%.2f)" % r.leaving_frac)
+	_check(world.fx.exit_prompt == SliceWorld.WORDS["out_key"], "in the way out there's no prompt")
+	_w72_steps(world, T.LEAVE_HOLD_S * 0.6)
+	Input.action_release("slice_out")
+	_check(world.ended and world.outcome == "out" and left[0] == 1 and world.stats["time_s"] > 0.0, "held in the way out: ended %s, '%s'" % [world.ended, world.outcome])
+	world.queue_free()
+	# the clear lights the way out and leaving then is "cleared"
+	var w2 = _w72_world(main)
+	w2.on_cleared()
+	_check(w2.level.exit_lit and w2.cleared and not w2.ended, "the clear didn't light the way out, or ended the run")
+	w2.leave()
+	_check(w2.outcome == "cleared", "leaving after the clear is '%s'" % w2.outcome)
+	w2.queue_free()
+	# death: HP 0 with no Last legs
+	var w3 = _w72_world(main, {"last_legs_hp": 0, "last_legs_s": 0.0})
+	var ends := []
+	w3.run_ended.connect(func(o, _st): ends.append(o))
+	w3.runner.apply_hit({"hp_loss": 30, "guard_loss": 5})
+	_check(w3.runner.hp == w3.runner.hp_max - 30 and w3.runner.guard == w3.runner.guard_max - 5 and w3.stats["damage_taken"] == 30, "a hit on the runner: %d HP, %d Guard" % [w3.runner.hp, w3.runner.guard])
+	w3.runner.apply_hit({"hp_loss": 99999})
+	_check(w3.runner.dead and w3.outcome == "died" and ends == ["died"], "HP 0 and he's not dead: %s, '%s'" % [w3.runner.dead, w3.outcome])
+	w3.queue_free()
+	# Last legs: the hold, a second lethal hit held, dead when its seconds run out on it
+	var w4 = _w72_world(main, {"last_legs_hp": 1, "last_legs_s": 3.0})
+	if SliceBridge.last_legs_hp(w4.ctx) > 0:
+		w4.runner.apply_hit({"hp_loss": 99999})
+		_check(not w4.runner.dead and w4.runner.hp == 1 and w4.runner.last_legs_used, "Last legs didn't hold him: %d HP, dead %s" % [w4.runner.hp, w4.runner.dead])
+		w4.runner.apply_hit({"hp_loss": 99999})
+		_w72_steps(w4, 2.5)
+		_check(not w4.runner.dead and w4.runner.hp == 1, "Last legs let go before its seconds")
+		_w72_steps(w4, 0.6)
+		_check(w4.runner.dead and w4.outcome == "died", "out of Last legs' seconds on the hold he lives")
+	w4.queue_free()
+	# outside the tree (a headless scenario stepping world.tick alone): no viewport, no camera to own, still steps
+	var w5 = load("res://slice/slice.tscn").instantiate()
+	w5.start(load("res://slice/bridge.gd").runner_ctx(null), 72)
+	var p5: Vector2 = w5.runner.position
+	w5.runner.auto_move = Vector2.RIGHT
+	_w72_steps(w5, 0.5)
+	_check(not w5.is_inside_tree() and w5.runner.position.x > p5.x + 50.0 and w5.view_size().x > 0.0, "out of the tree the world doesn't step: %s -> %s" % [str(p5), str(w5.runner.position)])
+	w5.free()
+	print("slice world ok: the park %.1f screens, pace %.0f px/s, %d rounds fired, a reload %.1f s, a crate %.1f s, the way out, death, Last legs" % [world.park_rect.size.x / vw, r.pace_px, fired[0], float(g["reload_s"]), secs])
+
+
+## The review of m72 (9 Nov): ten things that muddied the test, each with the check that would have caught it.
+func _h72_review_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var id_was: int = Items._next_id
+	var run = Launch.open(main, H72_SEED, false)
+	var w = run.world
+	var ctx: Dictionary = w.ctx
+	var r = w.runner
+	var hud = run.hud
+	# 1. rounds from the pack's box: a dry gun with no spare magazine fills one by hand at the sim's REFILL_MULT
+	var ty: String = str(r.gun()["ammo"])
+	_check(int(ctx["boxes"].get(ty, 0)) == SliceTuning.G_BOX_ROUNDS, "the fixture's pack has %d %s rounds in a box, not %d" % [int(ctx["boxes"].get(ty, 0)), ty, SliceTuning.G_BOX_ROUNDS])
+	var mag_n: int = int(r.gun()["mag"])
+	var carried: int = mag_n * (1 + int(r.mags[0])) + int(ctx["boxes"][ty])
+	_check(carried >= 175, "the run carries %d rounds for the primary, short of the ~175 a clear takes" % carried)
+	r.rounds[r.gun_i] = 0
+	r.mags[r.gun_i] = 0
+	var box_was: int = r.box_rounds()
+	_check(r.start_reload() and r.refilling and is_equal_approx(r.reload_total, float(r.gun()["reload_s"]) * Data.REFILL_MULT), "a dry gun with a box in the pack doesn't refill by hand at ×%.1f its reload" % Data.REFILL_MULT)
+	var guard_n := 0
+	while r.reloading and guard_n < 2000:
+		r.tick(H72_DT)
+		guard_n += 1
+	_check(r.rounds[r.gun_i] == mag_n and r.box_rounds() == box_was - mag_n, "the refill gave %d rounds (box %d from %d)" % [r.rounds[r.gun_i], r.box_rounds(), box_was])
+	hud.show_state(hud.read_state())
+	r.rounds[r.gun_i] = 0
+	r.start_reload()
+	hud.show_state(hud.read_state())
+	_check(hud._gun_state.text == "Refilling", "the HUD says '%s' over a refill" % hud._gun_state.text)
+	r.reloading = false
+	r.refilling = false
+	r.rounds[r.gun_i] = 5
+	hud.show_state(hud.read_state())
+	_check(hud._gun_spare.text.contains("in the box") or hud._gun_spare.text.contains("box"), "with no magazines left the HUD doesn't show the box: '%s'" % hud._gun_spare.text)
+	var found: Dictionary = Sim.new()._plain(Data.AMMO, str(Data.BASES[Data.AMMO].filter(func(b): return str(b["type"]) == ty)[0]["name"]))
+	var b_before: int = r.box_rounds()
+	w.add_haul([found])
+	_check(r.box_rounds() == b_before + int(found["rounds"]), "a box of %s rounds found didn't go in the pack's count" % ty)
+	# 2. a kill's heal and scavenger's round
+	r.hp = r.hp_max - 50
+	r.rounds[r.gun_i] = mag_n - 2
+	w.on_man_killed(null, {"heal": 10.0, "scav": true, "drops": []})
+	_check(r.hp == r.hp_max - 40 and r.rounds[r.gun_i] == mag_n - 1, "a kill's 10 HP and scavenger's round: HP %d of %d, rounds %d of %d" % [r.hp, r.hp_max, r.rounds[r.gun_i], mag_n])
+	# 3. Guard's fractions: ten 0.4 dots take 4 Guard, and nothing is lost to rounding
+	r.guard = 10
+	r.hp = r.hp_max
+	for k in range(10):
+		r.apply_hit(SliceBridge._land_on_runner(ctx, r, 0.4, {}))
+	_check(r.guard == 6 and r.hp == r.hp_max, "ten 0.4 hits on 10 Guard left Guard %d, HP %d of %d" % [r.guard, r.hp, r.hp_max])
+	for k in range(3):
+		r.apply_hit(SliceBridge._land_on_runner(ctx, r, 1.66, {}))
+	_check(r.guard == 2 and absf(float(ctx["guard_frac"]) - 0.98) < 0.01, "three 1.66 hits on 6 Guard left %d and %.2f carried, not 2 and 0.98" % [r.guard, float(ctx["guard_frac"])])
+	# 4. a med used counts down where the HUD reads it
+	r.hp = r.hp_max - 100
+	var count_was: int = int(r.meds[0]["count"])
+	_check(SliceBridge.use_med(w, 0) and int(r.meds[0]["count"]) == count_was - 1 and r.meds[0] == ctx["meds"][0], "a med used didn't count down on the runner's list: %d from %d" % [int(r.meds[0]["count"]), count_was])
+	# 6. the pad with no lock: the aim stays out ahead of him as he moves
+	r.aim_mode = "pad"
+	r.locked = null
+	r.aim_dir = Vector2.RIGHT
+	r.debug_move_to(r.position + Vector2(0, 300))
+	r._aim()
+	_check(r.aim.is_equal_approx(r.position + Vector2.RIGHT * SliceTuning.AIM_STICK_PX), "the pad's aim with no lock is at %s, %s from him" % [str(r.aim), str(r.aim - r.position)])
+	r.aim_mode = "fixed"
+	# 7. the bridge's events on the news line
+	SliceBridge._event(ctx, "hard_man", {"name": "Big Terry Vance", "traits": ["armoured"], "trait_words": ["Armoured"]})
+	hud.drain_events()
+	_check(hud._news.visible and hud._news.text.begins_with("Big Terry Vance, a hard man"), "the hard man's arrival isn't on the news line: '%s'" % hud._news.text)
+	SliceBridge._event(ctx, "streak_end", {"was": 7})
+	hud.drain_events()
+	_check(hud._news.text == "Hit: the streak of 7 ends", "the streak's end reads '%s'" % hud._news.text)
+	_check(_check_nodes(hud.text_nodes(), [], "the slice's news line") == 0, "the news line doesn't fit")
+	# 8 and 9: a gang in; dots count as damage done; only contact(t) of them fire
+	var guard_t := 0
+	while w.gang.live_men().is_empty() and guard_t < 60 * 30:
+		w.tick(H72_DT)
+		_h72_keep_up(r)
+		guard_t += 1
+	var men: Array = w.gang.live_men()
+	_check(men.size() > int(ctx["contact"]), "the first gang (%d) isn't more than the %d on you at once" % [men.size(), int(ctx["contact"])])
+	var dmg_was: int = int(w.stats["damage_done"])
+	var bled = men[0]
+	bled.ms["dots"]["bleed"] = 60.0
+	r.debug_move_to(Vector2(SliceTuning.EDGE + 200.0, SliceTuning.EDGE + 200.0))     # out of their way: no rounds of his own land meanwhile
+	for k in range(120):
+		w.tick(H72_DT)
+		_h72_keep_up(r)
+	var dealt: float = 60.0 - float(bled.ms["dots"].get("bleed", 0.0))
+	var counted: int = int(w.stats["damage_done"]) - dmg_was
+	_check(dealt > 5.0 and absf(float(counted) - dealt) <= 1.0, "a bleed dealt %.1f, the run counted %d damage done" % [dealt, counted])
+	for mn in w.gang.live_men():
+		mn.sees = true
+	w.gang._pick_firing()
+	var firing: int = w.gang.live_men().filter(func(mn): return w.gang.may_fire(mn)).size()
+	_check(firing == mini(int(ctx["contact"]), w.gang.live_men().size()), "%d of %d men who see you may fire; the sim's contact is %d" % [firing, w.gang.live_men().size(), int(ctx["contact"])])
+	run.back_to_title()
+	_check(Items._next_id == id_was, "the slice left Items' id counter at %d, from %d" % [Items._next_id, id_was])     # 10
+	# 5. a camp runner the slice can't fully play: a hammer and another class's skill
+	var camp = Launch.Camp.new()
+	camp.sim = Sim.new()
+	camp.sim.load_dict(JSON.parse_string(JSON.stringify(main.sim.to_dict())))
+	camp.sim.equipped["Primary"] = camp.sim._plain("Primary", "Claw hammer")
+	var other_skill := ""
+	for id in Data.SKILLS.keys():
+		if not SliceBridge._skill_in_slice(str(id)):
+			other_skill = str(id)
+			break
+	camp.sim.skill_slots[1] = other_skill
+	var c2: Dictionary = SliceBridge.runner_ctx(camp, H72_SEED)
+	# the skill slot as the bridge lays one out (a camp's slots are its own; the fixture's here is fixed): another class's
+	var sk_other: Dictionary = Data.SKILLS[other_skill]
+	c2["skills"][1] = {"id": other_skill, "name": str(sk_other["name"]), "icon": "", "cd": float(sk_other["cd"]), "cost": float(sk_other["cost"]), "in_slice": SliceBridge._skill_in_slice(other_skill)}
+	_check(not SliceBridge._skill_in_slice(other_skill) and SliceBridge._skill_in_slice("clean_shot"), "the slice's skills aren't the Poacher's alone")
+	_check(not c2["guns"].is_empty() and bool(c2["guns"][0]["stand_in"]) and str(c2["guns"][0]["base"]) == "Regimental rifle", "a hammer's runner has no stand-in gun: %s" % str(c2["guns"].map(func(g): return g["name"])))
+	var hud2 = HudScript72.new()
+	root.add_child(hud2)
+	var st2 := {"cls": str(c2["class_name"]), "level": int(c2["level"]), "gun": c2["guns"][0], "rounds": 5, "mag": int(c2["guns"][0]["mag"]), "mags": 2,
+		"skills": c2["skills"], "stand_in": str(c2["guns"][0]["name"]), "hp": 10, "hp_max": 10}
+	hud2.show_state(st2)
+	var out_keys: Array = []
+	for k in range(c2["skills"].size()):
+		if str(c2["skills"][k]["id"]) != "" and not bool(c2["skills"][k].get("in_slice", true)):
+			out_keys.append(["Q", "E", "R"][k])
+	_check(out_keys.has("E") and hud2._note_sk.visible and hud2._note_sk.text == "Not in the slice: %s" % ", ".join(out_keys) and out_keys.all(func(k): return hud2._skills[["Q", "E", "R"].find(k)]["pic"].modulate.a < 0.5), "another class's skill isn't greyed and named: '%s' for %s" % [hud2._note_sk.text, str(out_keys)])
+	_check(hud2._note_gun.visible and hud2._note_gun.text.begins_with("Stand-in gun"), "the stand-in gun isn't said on the HUD: '%s'" % hud2._note_gun.text)
+	_check(_check_nodes(hud2.text_nodes(), [], "the slice's HUD with a stand-in and a skill not in the slice") == 0, "the stand-in's words don't fit")
+	hud2.queue_free()
+	main._menu.close()
+	print("h72 review ok: a refill from the box, crates' rounds, kill heal and scavenger, Guard's fractions, meds counted, the pad's aim, the news line, dots as damage, contact %d, a stand-in gun, skills not in the slice, the id counter" % int(ctx["contact"]))

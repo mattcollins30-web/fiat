@@ -8241,3 +8241,14 @@ alongside it in its own folder, not touching the game he plays (Matt: "I say we 
 overrule of the playtest freeze for this one). First its mockups: the design canvas "Lesser England - the ARPG
 slice" (A top-down close, B isometric wide, C controls and the slice's scope), his pick before any build. Backlog: skill
 animations, the ARPG window, measuring when the resists cap.
+
+The ARPG slice built (9 Nov; Matt: "A makes sense to start off with ... Let's build it."): option A, top-down and
+close, in res://slice/ (README there), opened from the title's "Try the ARPG slice". The Estate's car park, three
+gangs then the clear, the runner from the camp (or a level-14 Poacher fixture) on the game's real maths through a
+read-only bridge (slice/bridge.gd: a round on a man and their hits on you as the sim computes them, the skills, meds,
+the 0.15 mechanics); men who take cover, flank, fire in bursts, fall back, the hard man; crates searched under fire;
+the way out. Two test knobs: Gang HP x0.25 (pause menu: x1 / x0.5 / x0.25; at the sim's HP a man took ~38 rounds) and
+the site's level the runner's minus 2. Nothing the slice does is kept; the camp and its saves only read. Builders W,
+G, H; the reviewer's ten (ammo fed from the pack's boxes, life on kill and scavenger, Guard's rounding, the med
+counts, pad aim, the hard man's name and the news line, dots in damage done, 3 men on you, the item counter) fixed
+with red checks; the slice's scripts preload each other (no class_name: Matt's headless smoke has no editor scan).

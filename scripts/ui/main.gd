@@ -886,8 +886,15 @@ func show_title() -> void:
 	# hardcore is hidden for now (21 Oct, Matt: "we're struggling to balance soft core"); new_game(true) still works
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
+	items.append({"name": "Try the ARPG slice", "detail": "The Estate's car park, a sandbox",
+			"action": open_slice, "glyph": "menu_skull"})     # (BUILD72, 9 Nov) the prototype in res://slice/, a sandbox
 	_menu.open("Lesser England", "Let it be done", items, Callable(), true, Rect2(), true)
 	_sound.title()                     # the title's music, the world quiet (13 Oct)
+
+
+## (BUILD72) The ARPG slice over the title: the camp's runner read, never written (slice/launch.gd).
+func open_slice() -> Node:
+	return load("res://slice/launch.gd").open(self)
 
 
 ## "Level 22, £14,437, 2 h 10 m played · 1 Oct, 11:04" for a save file, or "".
