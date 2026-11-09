@@ -33,5 +33,12 @@ rounds at REFILL_MULT times the reload. The box is the camp's boxes of that type
 `G_BOX_ROUNDS` (250). Boxes found in crates or on men go in. A primary that can't fire here (no rate, no magazine) is
 swapped for the fixture's rifle, said on the HUD; skills the slice doesn't play show greyed, "Not in the slice".
 
-Controls (board C): WASD / left stick, mouse / right stick, left button / RT fire, right button / Y swap, Space / X
-reload, Q E R / LB RB LT skills, 1-4 / d-pad meds, F / A search, X / B held to get out, Esc / Start pause.
+Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left stick, mouse / right stick, left button
+/ RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
+X / B held to get out, Tab / Back the kit and runner sheet (the fight held), Esc / Start pause.
+
+Round 2's test knobs on the pause: "Gang HP" ×0.5 / ×0.25 (MAN_HP_X, the start) / ×0.15, and "Magazine" ×1 / ×2.5
+(MAG_X, the start) / ×4 - a magazine's size in the slice only. The HUD's top line says which are in force.
+
+kit_sheet.gd (H, round 2) - Tab's sheet: the worn kit in slot order (a piece picked shows the game's item head), the rig
+and the pack's finds (a med into the rig, a gun worn: the bridge reads it again), the runner's stats in the game's words.

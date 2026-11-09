@@ -8,28 +8,31 @@ const UI := preload("res://scripts/ui/ui.gd")
 signal resumed
 signal to_title
 signal hp_x_changed(x: float)            # the test setting: the men's HP times this, live
+signal mag_x_changed(x: float)           # the test setting: a magazine's size times this, live (round 2)
 
-const HP_STEPS := [1.0, 0.5, 0.25]     # "Gang HP": the game's figure, a half, a quarter (SliceTuning.MAN_HP_X the start)
+const HP_STEPS := [0.5, 0.25, 0.15]    # "Gang HP" (round 2, Matt: "1x health is too much"): a half, a quarter (MAN_HP_X, the start), less
+const MAG_STEPS := [1.0, 2.5, 4.0]     # "Magazine" (round 2): the game's figure, MAG_X (the start), more
 
 ## Board C's two columns, as drawn: what it does, the key.
-const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Swap gun", "Right button"], ["Reload", "Space"],
-		["Skills", "Q E R"], ["Med from the rig", "1 2 3 4"], ["Search, pick up", "F, held"], ["Get out", "X, held"], ["Pause", "Esc"]]
+const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Swap gun", "Right button"], ["Reload", "R or Space"],
+		["Skills", "Q E C"], ["Med from the rig", "1 2 3 4"], ["Search, pick up", "F, held"], ["Get out", "X, held"], ["Kit and runner", "Tab"], ["Pause", "Esc"]]
 const PAD := [["Move", "Left stick"], ["Aim", "Right stick, with a lock-on"], ["Fire", "Right trigger"], ["Swap gun", "Y"], ["Reload", "X"],
-		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search, pick up", "A, held"], ["Get out", "B, held"], ["Pause", "Start"]]
+		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search, pick up", "A, held"], ["Get out", "B, held"], ["Kit and runner", "Back"], ["Pause", "Start"]]
 const COL_W := 560.0
 const ROW_H := 42.0
 const ROW_GAP := 9.0
 const CARD_W := 2.0 * COL_W + 3.0 * 40.0
 const HEAD := 112.0                    # the title, the sub line
-const FOOT := 96.0                     # the buttons
+const FOOT := 124.0                    # the buttons, the test settings' head over theirs
 
 var _card: Panel
 var _title: Label
 var _sub: Label
 var _heads: Array = []
 var _rows: Array = []                 # [[what, key]] labels
-var buttons: Array = []               # Resume, Back to the title, Their HP
+var buttons: Array = []               # Resume, Back to the title, Gang HP, Magazine
 var hp_x := 1.0
+var mag_x := 1.0
 var _test: Label
 
 
@@ -58,17 +61,20 @@ func _init() -> void:
 			var what := UI.label(row, Rect2(14, 0, COL_W - 28, ROW_H), str(list[k][0]), "Regular", 18, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			var key := UI.label(row, Rect2(14, 0, COL_W - 28, ROW_H), str(list[k][1]), "Bold", 18, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 			_rows.append([what, key])
-	var by: float = h - FOOT + 24.0
+	var by: float = h - 76.0
 	for k in range(2):
 		var b := UI.button(_card, Rect2(40 + k * 280, by, 260, 52), k == 0)
 		b.text = "Resume" if k == 0 else "Back to the title"
 		b.pressed.connect(_on_resume if k == 0 else _on_title)
 		buttons.append(b)
-	var hb := UI.button(_card, Rect2(CARD_W - 40 - 300, by, 300, 52), false)
-	hb.pressed.connect(_on_hp_x)
-	buttons.append(hb)
-	_test = UI.label(_card, Rect2(600, by, CARD_W - 40 - 300 - 600 - 20, 52), "A test setting", "Regular", 15, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	show_hp_x(1.0)
+	var tx: float = CARD_W - 40.0 - 2.0 * 270.0 - 20.0
+	for k in range(2):
+		var tb := UI.button(_card, Rect2(tx + k * 290.0, by, 270, 52), false)
+		tb.pressed.connect(_on_hp_x if k == 0 else _on_mag_x)
+		buttons.append(tb)
+	_test = UI.head(_card, Rect2(tx, by - 30, 560, 22), "Test settings")
+	show_hp_x(0.25)
+	show_mag_x(1.0)
 	visible = false
 
 
@@ -79,7 +85,20 @@ func show_hp_x(x: float) -> void:
 
 
 static func hp_words(x: float) -> String:
-	return "×1" if is_equal_approx(x, 1.0) else "×%s" % str(snappedf(x, 0.01))
+	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
+
+
+## A magazine's size times this, on the button.
+func show_mag_x(x: float) -> void:
+	mag_x = x
+	buttons[3].text = "Magazine %s" % hp_words(x)
+
+
+func _on_mag_x() -> void:
+	var i: int = MAG_STEPS.find(mag_x)
+	var x: float = MAG_STEPS[(i + 1) % MAG_STEPS.size()]
+	show_mag_x(x)
+	mag_x_changed.emit(x)
 
 
 func _on_hp_x() -> void:

@@ -1003,6 +1003,8 @@ func _init() -> void:
 	_h72_menu_checks(main)                    # BUILD72-H (9 Nov): the title's ARPG slice button, the camp's runner copied, the pause, the title back
 	_h72_fit_checks(main)                     # BUILD72-H: the slice's HUD at 1920x1080 and 1920x1200, the pause's controls, the end screen
 	_h72_review_checks(main)                  # BUILD72 review (9 Nov): rounds from the box, kill heal and scavenger, Guard's fractions, meds, stand-ins, pad aim, events, dots, contact
+	_h73_round2_checks(main)                  # round 2 (9 Nov, Matt's first try): gang HP down to ×0.15, the kit sheet, MAG_X, R reloads, skill 3 on C
+	_h73_review_checks(main)                  # round 2's review (9 Nov): a gun's own rounds, the rig's pouches, cover off the pockets, kit read again, over the cap, Sidearm
 	_h72_slice_checks(main)                   # BUILD72-H: the slice's scripted run - walk, hit, headshot, reload, crates, gangs, the clear, the end
 	_finish()
 
@@ -46606,7 +46608,7 @@ func _h72_slice_checks(main) -> void:
 			run.pause.buttons[2].pressed.emit()
 			seen_x.append(float(ctx["man_hp_x"]))
 			_check(is_equal_approx(plain_man.hp_max, base_hp * float(ctx["man_hp_x"])) and run.pause.buttons[2].text == "Gang HP " + PauseScript72.hp_words(float(ctx["man_hp_x"])), "Their HP ×%.2f left a man at %.0f of %.0f ('%s')" % [float(ctx["man_hp_x"]), plain_man.hp_max, base_hp, run.pause.buttons[2].text])
-		_check(seen_x == [1.0, 0.5, 0.25], "Their HP steps %s, not ×1, ×0.5, ×0.25" % str(seen_x))
+		_check(seen_x == [0.15, 0.5, 0.25], "Gang HP steps %s from ×0.25, not ×0.15, ×0.5, ×0.25 (round 2: no ×1)" % str(seen_x))
 	hud.show_state(hud.read_state())
 	_check(hud._site_clock.text.begins_with("Gang 1 of %d" % int(site["gangs"])), "the HUD's clock with the first gang in: '%s'" % hud._site_clock.text)
 	# a hit: what the man takes is the bridge's figure for that round on him
@@ -46889,6 +46891,44 @@ func _w72_world(main, extra: Dictionary = {}) -> Node:
 	return world
 
 
+## (round 2) Pathing on the level's grid from the way in: every gang's way in reaches him (a man's radius), and he
+## reaches every crate, the way out and the kiosk's floor (his own, the wider). Cover sits on the quarter-tile grid.
+func _w72_reach_checks(world) -> void:
+	var T = load("res://slice/tuning.gd")
+	var lv = world.level
+	var off: Array = []
+	for c in SliceLevel.COVER:
+		var t: Rect2 = c["tiles"]
+		var q := [t.position.x * 4.0, t.position.y * 4.0, t.size.x * 4.0, t.size.y * 4.0]     # on the quarter-tile grid
+		if q.any(func(v): return not is_equal_approx(v, round(v))):
+			off.append(c)
+	_check(off.is_empty(), "cover off the tile grid: %s" % str(off))
+	var me: Dictionary = lv.reach(SliceLevel.ENTRY, T.RUNNER_R)
+	var men: Dictionary = lv.reach(SliceLevel.ENTRY, T.MAN_R)
+	_check(me["seen"].size() > 1000, "the way in is shut in: %d cells" % me["seen"].size())
+	var cut: Array = []
+	for sp in SliceLevel.SPAWNS:
+		if not SliceLevel.reached_near(men, sp, T.REACH_CELL * 2.0):
+			cut.append(sp)
+	_check(cut.is_empty(), "the gang's ways in that can't reach the runner: %s" % str(cut))
+	var shut: Array = []
+	for cr in world.crates():
+		if not SliceLevel.reached_near(me, cr.position, T.CRATE_SIZE * 0.5 + T.SEARCH_RANGE):
+			shut.append(cr.position)
+	_check(shut.is_empty() and world.crates().size() == SliceLevel.CRATES.size(), "crates he can't reach: %s" % str(shut))
+	_check(SliceLevel.reached_near(me, world.exit_rect.get_center(), T.REACH_CELL), "the way out can't be reached from the way in")
+	var inside: Rect2 = SliceLevel.tiles_px(SliceLevel.KIOSK_INSIDE)
+	_check(SliceLevel.reached_near(me, inside.get_center(), T.REACH_CELL), "he can't step into the kiosk")
+	var seen_in: bool = false
+	for b in lv.blocks:
+		if (b as Rect2).intersects(inside):
+			seen_in = true
+	_check(not seen_in and not world.has_los(inside.get_center(), inside.get_center() + Vector2(0, -400)) and not world.has_los(inside.get_center(), inside.get_center() + Vector2(400, 0)),
+		"the kiosk doesn't break sight from inside it")
+	_check(world.has_los(inside.get_center(), inside.get_center() + Vector2(0, 300)), "the kiosk's doorway doesn't open to the south")
+	print("slice reach ok: %d cells his, %d spawns, %d crates, the way out, the kiosk" % [me["seen"].size(), SliceLevel.SPAWNS.size(), world.crates().size()])
+
+
 func _w72_steps(world, secs: float) -> void:
 	for _i in range(int(round(secs * 60.0))):
 		world.tick(1.0 / 60.0)
@@ -46902,7 +46942,10 @@ func _slice_world_checks(main) -> void:
 	var world = _w72_world(main)
 	var r = world.runner
 	var vw: float = world.view_size().x
-	_check(world.park_rect.size.x / vw > 2.3 and world.park_rect.size.x / vw < 2.7, "the car park is %.2f screens wide, not about 2.5" % (world.park_rect.size.x / vw))
+	var grown: float = world.park_rect.get_area() / (4800.0 * 2700.0)     # (round 2, Matt: "a tad bigger") about 1.4x build 72's
+	_check(grown > 1.35 and grown < 1.5 and world.park_rect.size.x / vw > 2.5, "the car park is %.2fx build 72's area, not about 1.4" % grown)
+	_check(is_equal_approx(world.park_rect.size.x, T.PARK_TILES.x * T.TILE) and is_equal_approx(world.park_rect.size.y, T.PARK_TILES.y * T.TILE), "the park isn't a whole number of floor tiles")
+	_w72_reach_checks(world)
 	_check(r.hp == r.hp_max and r.hp_max == int(world.ctx["hp_max"]) and r.guns.size() == world.ctx["guns"].size() and r.guns.size() >= 2, "the runner isn't the ctx's: %d/%d HP, %d guns" % [r.hp, r.hp_max, r.guns.size()])
 	# moving: a tenth of a second up to pace, a stop with no slide, the pace the class's
 	r.debug_move_to(Vector2(1200, 1200))
@@ -46923,7 +46966,8 @@ func _slice_world_checks(main) -> void:
 	r.auto_move = Vector2.ZERO
 	_w72_steps(world, 0.2)
 	# cover: he can't stand in it or walk through it; it blocks sight and rounds
-	var wall: Rect2 = SliceLevel.COVER[2]["rect"]
+	_check(SliceLevel.COVER[2]["kind"] == "wall", "COVER[2] isn't a wall (the checks below stand either side of it)")
+	var wall: Rect2 = SliceLevel.tiles_px(SliceLevel.COVER[2]["tiles"])
 	r.debug_move_to(wall.get_center())
 	_check(not wall.grow(T.RUNNER_R - 1.0).has_point(r.position), "the runner stands inside the wall at %s" % str(r.position))
 	r.debug_move_to(wall.get_center() + Vector2(0, -200))
@@ -47121,7 +47165,7 @@ func _h72_review_checks(main) -> void:
 	r.rounds[r.gun_i] = 0
 	r.mags[r.gun_i] = 0
 	var box_was: int = r.box_rounds()
-	_check(r.start_reload() and r.refilling and is_equal_approx(r.reload_total, float(r.gun()["reload_s"]) * Data.REFILL_MULT), "a dry gun with a box in the pack doesn't refill by hand at ×%.1f its reload" % Data.REFILL_MULT)
+	_check(r.start_reload() and r.refilling and is_equal_approx(r.reload_total, float(r.gun()["reload_s"]) * Data.REFILL_MULT * float(mag_n) / float(r.gun()["mag_base"])), "a dry gun with a box in the pack doesn't refill by hand at ×%.1f its reload, for its rounds" % Data.REFILL_MULT)
 	var guard_n := 0
 	while r.reloading and guard_n < 2000:
 		r.tick(H72_DT)
@@ -47225,10 +47269,250 @@ func _h72_review_checks(main) -> void:
 	var out_keys: Array = []
 	for k in range(c2["skills"].size()):
 		if str(c2["skills"][k]["id"]) != "" and not bool(c2["skills"][k].get("in_slice", true)):
-			out_keys.append(["Q", "E", "R"][k])
-	_check(out_keys.has("E") and hud2._note_sk.visible and hud2._note_sk.text == "Not in the slice: %s" % ", ".join(out_keys) and out_keys.all(func(k): return hud2._skills[["Q", "E", "R"].find(k)]["pic"].modulate.a < 0.5), "another class's skill isn't greyed and named: '%s' for %s" % [hud2._note_sk.text, str(out_keys)])
+			out_keys.append(HudScript72.SKILL_KEYS[k])
+	_check(out_keys.has("E") and hud2._note_sk.visible and hud2._note_sk.text == "Not in the slice: %s" % ", ".join(out_keys) and out_keys.all(func(k): return hud2._skills[HudScript72.SKILL_KEYS.find(k)]["pic"].modulate.a < 0.5), "another class's skill isn't greyed and named: '%s' for %s" % [hud2._note_sk.text, str(out_keys)])
 	_check(hud2._note_gun.visible and hud2._note_gun.text.begins_with("Stand-in gun"), "the stand-in gun isn't said on the HUD: '%s'" % hud2._note_gun.text)
 	_check(_check_nodes(hud2.text_nodes(), [], "the slice's HUD with a stand-in and a skill not in the slice") == 0, "the stand-in's words don't fit")
 	hud2.queue_free()
 	main._menu.close()
 	print("h72 review ok: a refill from the box, crates' rounds, kill heal and scavenger, Guard's fractions, meds counted, the pad's aim, the news line, dots as damage, contact %d, a stand-in gun, skills not in the slice, the id counter" % int(ctx["contact"]))
+
+
+const KitScript73 := preload("res://slice/kit_sheet.gd")
+const SliceLevelRef := preload("res://slice/level.gd")
+
+
+## Round 2 (9 Nov, Matt's first try of the slice): gang HP ×0.5 / ×0.25 / ×0.15; the kit and runner sheet on Tab or Back;
+## MAG_X, a test knob on the pause and the HUD; R reloads (Space and the pad's X too), the third skill on C.
+func _h73_round2_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var run = Launch.open(main, H72_SEED, false)
+	var w = run.world
+	var ctx: Dictionary = w.ctx
+	var r = w.runner
+	var hud = run.hud
+	# 1. gang HP: ×1 gone, ×0.15 in, ×0.25 the start
+	_check(PauseScript72.HP_STEPS == [0.5, 0.25, 0.15] and is_equal_approx(SliceTuning.MAN_HP_X, 0.25) and run.pause.buttons[2].text == "Gang HP ×0.25", "the pause's gang HP: %s, '%s'" % [str(PauseScript72.HP_STEPS), run.pause.buttons[2].text])
+	# 3. MAG_X: the fixture rifle's 14 at ×2.5, the pause's ×1 / ×2.5 / ×4 live, the HUD says so
+	var g0: Dictionary = ctx["guns"][0]
+	_check(is_equal_approx(float(ctx["mag_x"]), SliceTuning.MAG_X) and is_equal_approx(SliceTuning.MAG_X, 2.5) and int(g0["mag"]) == roundi(int(g0["mag_base"]) * 2.5) and int(g0["mag"]) >= 30 and int(r.gun()["mag"]) == int(g0["mag"]) and r.rounds[0] == int(g0["mag"]),
+			"the fixture's magazine at MAG_X: %d from %d, the runner's %d" % [int(g0.get("mag", 0)), int(g0.get("mag_base", 0)), int(r.gun().get("mag", 0))])
+	var seen: Array = []
+	for k in range(3):
+		run.pause.buttons[3].pressed.emit()
+		seen.append([float(ctx["mag_x"]), int(r.gun()["mag"])])
+	_check(seen == [[4.0, int(g0["mag_base"]) * 4], [1.0, int(g0["mag_base"])], [2.5, roundi(int(g0["mag_base"]) * 2.5)]] and r.rounds[0] <= int(r.gun()["mag"]), "the pause's magazine steps: %s" % str(seen))
+	hud.show_state(hud.read_state())
+	_check(hud._tests.text == "Test settings: gang HP ×0.25, magazine ×2.5", "the HUD's test line: '%s'" % hud._tests.text)
+	# 4. the reload: R, Space and the pad's X reload a part-empty magazine; the third skill is on C, not R
+	var mg: int = int(r.gun()["mag"])
+	# each binding is the reload's in the input map (R new, Space and the pad's X as they were), and the action pressed
+	# reloads a part-empty magazine in the world's step (Input.action_press: the smoke has no frames to deliver a key). With
+	# no frames, a press and release here unsettle slice_world's own presses after it: the whole smoke runs it first
+	# (`-- only` puts slice_world before h73_round2)
+	var presses: Array = []
+	for code in [KEY_R, KEY_SPACE]:
+		var ek := InputEventKey.new()
+		ek.physical_keycode = code
+		presses.append(ek)
+	var ej := InputEventJoypadButton.new()
+	ej.button_index = JOY_BUTTON_X
+	presses.append(ej)
+	for ev in presses:
+		_check(InputMap.event_is_action(ev, "slice_reload"), "%s isn't the reload" % ev.as_text())
+	r.reloading = false
+	r.refilling = false
+	r.jammed = false
+	r.rounds[r.gun_i] = mg - 5
+	r.mags[r.gun_i] = 2
+	Input.action_press("slice_reload")
+	w.tick(H72_DT)
+	Input.action_release("slice_reload")
+	_check(r.reloading, "the reload pressed didn't reload a magazine with %d of %d in" % [mg - 5, mg])
+	w.tick(H72_DT)
+	var key_c := InputEventKey.new()
+	key_c.physical_keycode = KEY_C
+	var key_r := InputEventKey.new()
+	key_r.physical_keycode = KEY_R
+	_check(InputMap.event_is_action(key_c, "slice_skill_3") and not InputMap.event_is_action(key_r, "slice_skill_3") and InputMap.event_is_action(key_r, "slice_reload"), "the third skill isn't on C, or R isn't the reload")
+	_check(hud._skills.map(func(d): return d["key"].text) == ["Q", "E", "C"], "the HUD's skill keys: %s" % str(hud._skills.map(func(d): return d["key"].text)))
+	_check(PauseScript72.KEYS.has(["Reload", "R or Space"]) and PauseScript72.KEYS.has(["Skills", "Q E C"]) and PauseScript72.PAD.has(["Reload", "X"]), "the pause's control rows don't say R and Q E C")
+	r.reloading = false
+	r.rounds[r.gun_i] = int(mg * 0.25) - 1
+	hud.show_state(hud.read_state())
+	_check(hud._reload_hint.visible and hud._reload_hint.text == "R · Reload", "under a quarter of the magazine the HUD's prompt reads '%s'" % hud._reload_hint.text)
+	r.rounds[r.gun_i] = mg
+	hud.show_state(hud.read_state())
+	_check(not hud._reload_hint.visible, "the reload's prompt shows on a full magazine")
+	# 2. the kit sheet: Tab holds the fight and opens it
+	var tab := InputEventKey.new()
+	tab.physical_keycode = KEY_TAB
+	tab.pressed = true
+	run._input(tab)
+	var kit = run.kit
+	_check(kit.visible and w.process_mode == Node.PROCESS_MODE_DISABLED, "Tab didn't open the kit sheet over a held fight")
+	var s = ctx["sim"]
+	var names: Array = []
+	for d in kit._worn:
+		names.append(d["slot"])
+	_check(names == KitScript73.SLOT_ORDER and KitScript73.SLOT_ORDER == ["Helmet", "Armour", "Gloves", "Rig", "Primary", "Secondary", "Boots", "Charm", "Backpack"], "the worn kit's order: %s" % str(names))
+	for d in kit._worn:
+		var it = s.equipped.get(d["slot"])
+		_check((it is Dictionary and d["name"].text == Items.full_name(it) and d["rarity"].text.contains(Items.rarity_name(it)) and d["pic"].texture == Items.art(it)) or (it == null and d["name"].text == "Nothing worn"), "the worn %s reads '%s' / '%s'" % [d["slot"], d["name"].text, d["rarity"].text])
+	kit._pick_worn(KitScript73.SLOT_ORDER.find("Primary"))
+	_check(kit._head.visible and kit._head._title.text == Items.full_name(s.equipped["Primary"]), "the primary picked doesn't show the game's item head: '%s'" % kit._head._title.text)
+	# the sheet: the game's words, the resists capped
+	var keys: Array = kit._sheet.map(func(p): return p[0].text)
+	for k in ["HP", "Guard", "Armour", "Fire", "Frost", "Poison", "Shock", "Bleed", "Total", "Headshot chance", "Headshot damage", "Their armour ignored", "Leg shots", "Arm shots", "Pinning them down", "Round back", "Streak bonus", "Pace", "Reload", "Energy"]:
+		_check(keys.has(k), "the runner's sheet has no '%s' row: %s" % [k, str(keys)])
+	var res_at: int = keys.find("RESISTS, CAPPED AT %d%%" % int(Data.RESIST_CAP))
+	_check(res_at >= 0, "the sheet's resists have no head saying the cap: %s" % str(keys))
+	for k in range(Data.ELEMENTS.size()):
+		var ty: String = str(Data.ELEMENTS[k])
+		var row: Array = kit._sheet[res_at + 1 + k]
+		_check(row[0].text == ty.capitalize() and row[1].text == KitScript73.resist_words(s, ty) and row[1].text.begins_with("%.0f%%" % (s.resist(ty) * 100.0)), "the sheet's %s resist reads '%s %s', the sim's %.0f%%" % [ty, row[0].text, row[1].text, s.resist(ty) * 100.0])
+	_check(keys.has(str(ctx["skills"][0]["name"])), "the sheet doesn't list the skills")
+	# a found med into the rig, a found gun worn: the bridge reads the gun again
+	var med: Dictionary = s._plain(Data.MEDICAL, "Bandage")
+	var count_was: int = 0
+	for md in ctx["meds"]:
+		if str(md["base"]) == "Bandage":
+			count_was = int(md["count"])
+	w.stats["haul"].append(med)
+	kit.refresh()
+	kit._pick_pack(w.stats["haul"].find(med))
+	_check(kit.rig_button.visible and not kit.wear_button.visible, "a found med can't go in the rig")
+	kit.rig_selected()
+	var count_now: int = 0
+	for md in ctx["meds"]:
+		if str(md["base"]) == "Bandage":
+			count_now = int(md["count"])
+	_check(count_now == count_was + 1 and not w.stats["haul"].has(med) and r.meds == ctx["meds"], "a found Bandage put in the rig: %d from %d" % [count_now, count_was])
+	var found: Dictionary = Items.roll_on("Secondary", Items.base_named("Secondary", "Cavalry revolver"), RandomNumberGenerator.new(), 1.0, true, false, 0, 14)
+	w.stats["haul"].append(found)
+	kit.refresh()
+	kit._pick_pack(w.stats["haul"].find(found))
+	_check(kit.wear_button.visible and KitScript73.wear_slot(found) == "Secondary", "a found revolver can't be worn")
+	var was = s.equipped["Secondary"]
+	kit.wear_selected()
+	var want: Dictionary = SliceBridge.scaled_gun(SliceBridge._gun_entry(s, "Secondary", found), float(ctx["mag_x"]))
+	var rg: Dictionary = {}
+	for g in r.guns:
+		if str(g["slot"]) == "Secondary":
+			rg = g
+	_check(s.equipped["Secondary"] == found and str(rg.get("base", "")) == "Cavalry revolver" and is_equal_approx(float(rg["rof"]), float(want["rof"])) and int(rg["mag"]) == int(want["mag"]) and (was == null or w.stats["haul"].has(was)),
+			"the found revolver worn: the sim's %s, the runner's %s (rof %s, want %s)" % [str(s.equipped["Secondary"].get("base", "")), str(rg.get("base", "")), str(rg.get("rof", 0)), str(want["rof"])])
+	# fit at both screens, the pack full and the longest sheet
+	for k in range(40):
+		w.stats["haul"].append(s._plain(Data.MEDICAL, "Bandage"))
+	kit.refresh()
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		kit.layout(sz)
+		_check(Rect2(Vector2.ZERO, sz).encloses(kit.card_rect()) and kit.card_rect().encloses(kit.head_rect()), "the kit sheet runs off a %s screen" % str(sz))
+		_check(_check_nodes(kit.text_nodes(), kit.line_pairs(), "the slice's kit sheet at %s" % str(sz)) == 0, "the kit sheet's words don't fit at %s" % str(sz))
+	_check(kit._more.text.begins_with("And "), "a full pack doesn't say how many more: '%s'" % kit._more.text)
+	run._input(tab)
+	_check(not kit.visible and w.process_mode != Node.PROCESS_MODE_DISABLED, "Tab didn't close the kit sheet and let the fight run")
+	run.back_to_title()
+	main._menu.close()
+	print("h73 round 2 ok: gang HP ×0.5/×0.25/×0.15, the magazine ×%s (%d) live and on the HUD, R / Space / X reload, skill 3 on C, the reload prompt, the kit sheet (9 worn, the item head, the sheet, a med in, a gun worn), its fit" % [str(SliceTuning.MAG_X), int(g0["mag"])])
+
+
+## A sim for the sheet's resist words: one resist past the cap.
+class H73OverSim:
+	extends RefCounted
+	func resist(_ty: String) -> float:
+		return 0.75
+	func over_cap(_ty: String) -> float:
+		return 12.0
+
+
+## Round 2's review (9 Nov): each with the check that would have caught it.
+func _h73_review_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var run = Launch.open(main, H72_SEED, false)
+	var w = run.world
+	var ctx: Dictionary = w.ctx
+	var r = w.runner
+	var s = ctx["sim"]
+	var kit = run.kit
+	run.open_kit()
+	# 4. a gun worn reads every gun and the maxima again, onto the runner
+	r.guns[0]["rof"] = 99.0                    # stale on purpose: only a read again puts it right
+	r.hp_max = 1
+	var found: Dictionary = Items.roll_on("Secondary", Items.base_named("Secondary", "Cavalry revolver"), RandomNumberGenerator.new(), 1.0, true, false, 0, 14)
+	w.stats["haul"].append(found)
+	kit.refresh()
+	kit._pick_pack(w.stats["haul"].find(found))
+	var was = s.equipped["Secondary"]
+	kit.wear_selected()
+	var fresh0: Dictionary = SliceBridge._gun_entry(s, "Primary", s.equipped["Primary"])
+	_check(is_equal_approx(float(r.guns[0]["rof"]), float(fresh0["rof"])) and r.hp_max == int(round(s.max_hp())) and r.guard_max == int(round(s.guard_cap())) and is_equal_approx(r.energy_max, s.max_energy()) and int(ctx["hp_max"]) == r.hp_max,
+			"a gun worn left the runner's primary firing %s a second (fresh %s), HP max %d (the sim's %d)" % [str(r.guns[0]["rof"]), str(fresh0["rof"]), r.hp_max, int(round(s.max_hp()))])
+	# 6. the game's slot word: Sidearm
+	_check(kit._status.text == "Worn as the sidearm" and kit._worn[KitScript73.SLOT_ORDER.find("Secondary")]["rarity"].text.begins_with("Sidearm"), "the sidearm's words: '%s', '%s'" % [kit._status.text, kit._worn[KitScript73.SLOT_ORDER.find("Secondary")]["rarity"].text])
+	# 1. each gun keeps its own rounds and spares off and on; a gun new to the run starts full
+	var si: int = -1
+	for k in range(r.guns.size()):
+		if str(r.guns[k]["slot"]) == "Secondary":
+			si = k
+	r.rounds[si] = 3
+	r.mags[si] = 0
+	if was != null:
+		kit._pick_pack(w.stats["haul"].find(was))
+		kit.wear_selected()
+		_check(r.rounds[si] == int(r.guns[si]["mag"]) and str(r.guns[si]["base"]) == str(was["base"]), "the sidearm first worn didn't come back with its own full magazine")
+		kit._pick_pack(w.stats["haul"].find(found))
+		kit.wear_selected()
+		_check(r.rounds[si] == 3 and r.mags[si] == 0, "the revolver worn again came back with %d rounds and %d spares, not its own 3 and 0" % [r.rounds[si], r.mags[si]])
+	# the design call: a refill by hand takes time for the rounds it puts in; the magazine as played on the item head
+	var pi: int = 0
+	r.gun_i = pi
+	r.rounds[pi] = 0
+	r.mags[pi] = 0
+	r.reloading = false
+	r.start_reload()
+	var g: Dictionary = r.gun()
+	_check(r.refilling and is_equal_approx(r.reload_total, float(g["reload_s"]) * Data.REFILL_MULT * float(g["mag"]) / float(g["mag_base"])), "a refill of %d rounds takes %.2f s; a magazine of the game's %d takes %.2f" % [int(g["mag"]), r.reload_total, int(g["mag_base"]), float(g["reload_s"]) * Data.REFILL_MULT])
+	r.reloading = false
+	r.refilling = false
+	kit._pick_worn(KitScript73.SLOT_ORDER.find("Primary"))
+	var want_tail: String = "Magazine %d (%d ×2.5)" % [int(g["mag"]), int(g["mag_base"])]
+	_check(kit.mag_words(s.equipped["Primary"]) == want_tail and kit._head._tail.text.contains(want_tail), "the item head's magazine: '%s' / '%s', not '%s'" % [kit.mag_words(s.equipped["Primary"]), kit._head._tail.text, want_tail])
+	# 5. a resist past the cap: what's over shows after a "+", as the Runner room's
+	_check(KitScript73.resist_words(H73OverSim.new(), "fire") == "75% +12", "a resist 12 past the cap reads '%s'" % KitScript73.resist_words(H73OverSim.new(), "fire"))
+	# 2. the rig takes no more meds than its pouches
+	var room: int = SliceBridge.med_room(ctx)
+	_check(room == maxi(int(s.med_capacity()), 4) and room > 0, "the rig's room is %d (the sim's %d)" % [room, int(s.med_capacity())])
+	var took := 0
+	for k in range(30):
+		if SliceBridge.rig_med(ctx, s._plain(Data.MEDICAL, "Bandage")):
+			took += 1
+	var held := 0
+	for md in ctx["meds"]:
+		held += int(md["count"])
+	_check(held == room and took < 30, "the rig holds %d meds in %d pouches (%d of 30 taken)" % [held, room, took])
+	var extra_med: Dictionary = s._plain(Data.MEDICAL, "Bandage")
+	w.stats["haul"].append(extra_med)
+	kit.refresh()
+	kit._pick_pack(w.stats["haul"].find(extra_med))
+	kit.rig_selected()
+	_check(kit._status.text == "All %d pouches are full" % room and w.stats["haul"].has(extra_med), "a med into a full rig: '%s'" % kit._status.text)
+	run.close_kit()
+	# 3. cover never sends a man into the kiosk or the shelter's pocket
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 73
+	var bad := 0
+	var picks := 0
+	for k in range(4000):
+		var around: Rect2 = SliceLevelRef.tiles_px(SliceLevelRef.KIOSK_INSIDE if k % 2 == 0 else w.SHELTER_POCKET).grow(500.0)
+		var near := Vector2(rng.randf_range(around.position.x, around.end.x), rng.randf_range(around.position.y, around.end.y))
+		var threat := Vector2(rng.randf_range(0.0, w.park_rect.size.x), rng.randf_range(0.0, w.park_rect.size.y))
+		var spot: Vector2 = w.cover_spot(near, threat)
+		picks += 1
+		if w.in_pocket(spot):
+			bad += 1
+	_check(bad == 0, "%d of %d cover spots put a man in the kiosk or the shelter's pocket" % [bad, picks])
+	run.back_to_title()
+	main._menu.close()
+	print("h73 review ok: guns keep their own rounds, every gun and the maxima read again, Sidearm, refills by the round, the magazine as played, over the cap, %d pouches, %d cover spots off the pockets" % [room, picks])

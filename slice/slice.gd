@@ -286,7 +286,30 @@ func cover_spot(near: Vector2, threat: Vector2) -> Vector2:
 	var mid := best.get_center()
 	var dir := (mid - threat).normalized() if mid.distance_to(threat) > 1.0 else Vector2.UP
 	var reach := absf(dir.x) * best.size.x * 0.5 + absf(dir.y) * best.size.y * 0.5 + T.MAN_R + 12.0
-	return resolve_circle(mid + dir * reach, T.MAN_R)
+	var spot: Vector2 = resolve_circle(mid + dir * reach, T.MAN_R)
+	if not in_pocket(spot):
+		return spot
+	# (the review) behind a wall into the kiosk or the shelter's pocket: a man there sticks on the wall - round the cover's
+	# other sides, nearest to behind it first
+	for turn in [PI / 2.0, -PI / 2.0, PI]:
+		var d2: Vector2 = dir.rotated(turn)
+		var reach2: float = absf(d2.x) * best.size.x * 0.5 + absf(d2.y) * best.size.y * 0.5 + T.MAN_R + 12.0
+		var p2: Vector2 = resolve_circle(mid + d2 * reach2, T.MAN_R)
+		if not in_pocket(p2):
+			return p2
+	return resolve_circle(near, T.MAN_R)
+
+
+## The pockets a man mustn't be sent into (the review: 1 pick in 100 put him inside the kiosk, behind its wall): the
+## kiosk's floor and the bus shelter's three-sided pocket, a man's radius out round each.
+const SHELTER_POCKET := Rect2(12.5, 5.5, 5, 1.5)     # tiles: inside the shelter's back and ends (level.gd's shelter pieces)
+
+
+func in_pocket(p: Vector2) -> bool:
+	for t in [SliceLevel.KIOSK_INSIDE, SHELTER_POCKET]:
+		if SliceLevel.tiles_px(t).grow(T.MAN_R).has_point(p):
+			return true
+	return false
 
 
 func spawn_points() -> Array[Vector2]:

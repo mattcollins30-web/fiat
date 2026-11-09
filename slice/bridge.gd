@@ -59,7 +59,7 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 		var g = s.equipped[slot]
 		if g == null or float(Items.base_of(g).get("rof", 0.0)) <= 0.0:
 			continue
-		ctx["guns"].append(_gun_entry(s, slot, g))
+		ctx["guns"].append(scaled_gun(_gun_entry(s, slot, g), T.MAG_X))
 	if stand_in != "":
 		for e in ctx["guns"]:
 			if str(e["slot"]) == "Primary":
@@ -67,7 +67,8 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 	ctx["meds"] = _meds(s)
 	ctx["skills"] = _skills(s, fixture)
 	ctx["boxes"] = boxes_for(s, ctx["guns"])
-	ctx["contact"] = int(s.contact(t))          # the sim's: how many of a gang are on you at once
+	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
+	ctx["mag_x"] = T.MAG_X
 	return ctx
 
 
@@ -113,9 +114,94 @@ static func take_rounds(ctx: Dictionary, items: Array) -> int:
 	return got
 
 
-## A magazine filled by hand from the pack's box: the sim's REFILL_MULT times the gun's reload.
-static func refill_s(gun: Dictionary) -> float:
-	return float(gun.get("reload_s", 2.0)) * Data.REFILL_MULT
+## The rig's room for meds (the sim's med_capacity, the pouches); never under what the runner set out with.
+static func med_room(ctx: Dictionary) -> int:
+	if not ctx.has("med_room"):
+		var start := 0
+		for md in ctx["meds"]:
+			start += int(md["count"])
+		ctx["med_room"] = maxi(int(ctx["sim"].med_capacity()), start)
+	return int(ctx["med_room"])
+
+
+## A found med into the rig (the kit sheet, round 2): with its kind's slot, else a free one of the four. False when full.
+static func rig_med(ctx: Dictionary, it: Dictionary) -> bool:
+	var s = ctx["sim"]
+	var nm: String = str(it["base"])
+	var held := 0
+	for md in ctx["meds"]:
+		held += int(md["count"])
+	if held >= med_room(ctx):
+		return false                          # the rig's pouches, all told (the review: no cap before)
+	for md in ctx["meds"]:
+		if str(md["base"]) == nm:
+			md["count"] = int(md["count"]) + 1
+			return true
+	if ctx["meds"].size() >= T.G_MED_SLOTS:
+		return false
+	ctx["meds"].append({"name": nm, "base": nm, "icon": _item_icon(it), "heal": int(round(s.med_heal(it))), "use_s": s.use_time(it), "count": 1, "item": it})
+	return true
+
+
+## A gun entry's magazine at the slice's MAG_X (a test knob, round 2): the game's own kept as mag_base.
+static func scaled_gun(e: Dictionary, x: float) -> Dictionary:
+	if not e.has("mag_base"):
+		e["mag_base"] = int(e["mag"])
+	e["mag"] = maxi(1, roundi(float(e["mag_base"]) * x)) if int(e["mag_base"]) > 0 else 0
+	return e
+
+
+## A gun worn in place of the one in `slot` (the kit sheet, round 2): on the slice's Sim, the gun fed, its entry read again
+## as the bridge reads any (rate, magazine, reload, the stats it carries). Returns the new entry; the old item.
+static func wear_gun(ctx: Dictionary, slot: String, it: Dictionary) -> Array:
+	var s = ctx["sim"]
+	var old = s.equipped[slot]
+	s.equipped[slot] = it
+	s._stats_dirty()
+	_arm(s)
+	var e: Dictionary = scaled_gun(_gun_entry(s, slot, it), float(ctx.get("mag_x", T.MAG_X)))
+	var ty: String = str(e.get("ammo", ""))
+	if ty != "" and not ctx["boxes"].has(ty):
+		ctx["boxes"].merge(boxes_for(s, [e]))
+	var put := false
+	for k in range(ctx["guns"].size()):
+		if str(ctx["guns"][k]["slot"]) == slot:
+			ctx["guns"][k] = e
+			put = true
+	if not put:
+		ctx["guns"].append(e)
+	reread(ctx)
+	return [e, old]
+
+
+## Everything a change of kit moves, read again from the slice's Sim (the review: a gun worn moved only that gun): every
+## gun's entry (its rate and reload carry pace and the kit's stats), pace, the HP, Guard and energy maxima. The runner
+## takes them with runner.reread(ctx).
+static func reread(ctx: Dictionary) -> void:
+	var s = ctx["sim"]
+	s._stats_dirty()
+	var x: float = float(ctx.get("mag_x", T.MAG_X))
+	for k in range(ctx["guns"].size()):
+		var old_e: Dictionary = ctx["guns"][k]
+		var g = s.equipped[str(old_e["slot"])]
+		if g == null:
+			continue
+		var e: Dictionary = scaled_gun(_gun_entry(s, str(old_e["slot"]), g), x)
+		e["stand_in"] = bool(old_e.get("stand_in", false))
+		ctx["guns"][k] = e
+	ctx["hp_max"] = int(round(s.max_hp()))
+	ctx["guard_max"] = int(round(s.guard_cap()))
+	ctx["energy_max"] = s.max_energy()
+	ctx["pace_pct"] = (s.pace() - 1.0) * 100.0
+
+
+## A magazine filled by hand from the pack's box: the sim's REFILL_MULT times the gun's reload for a magazine of the game's
+## size, in proportion to the rounds put in (the design call: at MAG_X ×2.5 a 35-round fill takes 2.5 times a 14's).
+static func refill_s(gun: Dictionary, rounds_in := -1) -> float:
+	var full: float = float(gun.get("reload_s", 2.0)) * Data.REFILL_MULT
+	var base: int = int(gun.get("mag_base", gun.get("mag", 1)))
+	var n: int = rounds_in if rounds_in >= 0 else int(gun.get("mag", base))
+	return full * float(n) / float(maxi(1, base))
 
 
 ## A level-14 Poacher in worn kit of his level, rolled with affixes on a fixed seed: no camp, no web past the class's start.

@@ -7,6 +7,7 @@ extends Control
 ## It reads the world each frame into a plain state (read_state), then shows that state (show_state): the smoke feeds
 ## show_state the longest words it can meet for the fit checks at 1920 x 1080 and 1920 x 1200.
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceTuning := preload("res://slice/tuning.gd")     # (round 2: the test knobs' defaults)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -33,6 +34,8 @@ const BAR_H := 132.0                  # bottom centre's panel
 const POP_S := 0.75                   # a damage number's life
 const POP_RISE := 46.0                # how far it rises
 const POP_MAX := 24                   # numbers on screen at once (the oldest goes)
+const SKILL_KEYS := ["Q", "E", "C"]   # (round 2) R reloads now; the third skill is on C
+const RELOAD_AT := 0.25               # under this share of the magazine, the reload's prompt shows (round 2)
 const NEWS_W := 1200.0                # the events' line, top centre between the site and the minimap
 const NEWS_S := 3.0                   # how long a line stays
 const HEAD_TONE := Color("f2c14e")    # the headshot's pop (board A)
@@ -77,6 +80,8 @@ var _news: Label                      # the bridge's events (the review): the ha
 var _news_left := 0.0
 var _note_gun: Label                  # "Stand-in gun · ..." when the runner's own can't fire here
 var _note_sk: Label                   # "Not in the slice: E" over skills the slice doesn't play
+var _reload_hint: Label               # "R · Reload" under a quarter of the magazine (round 2: Matt couldn't find the reload)
+var _tests: Label                     # the test settings in force: gang HP, the magazine (round 2)
 var _pop_root: Control
 
 
@@ -99,6 +104,10 @@ func _init() -> void:
 	_note_gun = UI.label(self, Rect2(0, 0, 20.0 + GUN_W + 20.0, 22), "", "Regular", 15, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT)
 	_note_sk = UI.label(self, Rect2(0, 0, 3.0 * TILE + 2.0 * TILE_GAP + 40.0, 22), "", "Regular", 15, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
 	UI.shadow(_note_gun)
+	_reload_hint = UI.label(self, Rect2(0, 0, 20.0 + GUN_W + 20.0, 26), "", "Bold", 18, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	UI.shadow(_reload_hint)
+	_tests = UI.label(self, Rect2(0, 58, NEWS_W, 22), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER)
+	UI.shadow(_tests)
 	UI.shadow(_note_sk)
 	layout(Vector2(1920, 1080))
 
@@ -210,7 +219,7 @@ func _build_bar() -> void:
 	_bar.add_child(line)
 	var x := 20.0 + GUN_W + 20.0 + 1.0 + 20.0
 	for k in range(3):
-		_skills.append(_slot(x, ["Q", "E", "R"][k]))
+		_skills.append(_slot(x, SKILL_KEYS[k]))
 		x += TILE + TILE_GAP
 	x += 24.0 - TILE_GAP
 	for k in range(4):
@@ -250,9 +259,11 @@ func layout(s: Vector2) -> void:
 	_map.position = Vector2(s.x - EDGE - MAP_W, 20)
 	_me.position = Vector2(EDGE, s.y - EDGE - ME_H)
 	_bar.position = Vector2(roundf((s.x - _bar_w()) / 2.0), s.y - EDGE - BAR_H)
-	_banner.position = Vector2(roundf((s.x - _banner.size.x) / 2.0), _bar.position.y - 76)
+	_banner.position = Vector2(roundf((s.x - _banner.size.x) / 2.0), _bar.position.y - 110)
 	_news.position = Vector2(roundf((s.x - NEWS_W) / 2.0), 24)
 	_note_gun.position = Vector2(_bar.position.x + 20.0, _bar.position.y - 26)
+	_reload_hint.position = Vector2(_bar.position.x + 20.0, _bar.position.y - 56)
+	_tests.position = Vector2(roundf((s.x - NEWS_W) / 2.0), 58)
 	_note_sk.position = Vector2(_bar.position.x + 20.0 + GUN_W + 20.0 + 1.0 + 20.0, _bar.position.y - 26)
 
 
@@ -309,6 +320,9 @@ func read_state() -> Dictionary:
 	st["box"] = int(r.box_rounds()) if r.has_method("box_rounds") else 0
 	st["refilling"] = bool(r.get("refilling")) if r.get("refilling") != null else false
 	st["stand_in"] = str(gun.get("name", "")) if bool(gun.get("stand_in", false)) else ""
+	st["pad"] = bool(world.get("pad")) if world.get("pad") != null else false
+	st["man_hp_x"] = float(ctx.get("man_hp_x", SliceTuning.MAN_HP_X))
+	st["mag_x"] = float(ctx.get("mag_x", SliceTuning.MAG_X))
 	var sk: Array = []
 	var skills: Array = ctx.get("skills", [])
 	for i in range(mini(3, skills.size())):
@@ -373,6 +387,12 @@ func show_state(st: Dictionary) -> void:
 		UI.fit(_gun_spare, ["/ %d · %s in the box" % [mag_n, Fmt.group(box)], "/ %d · box %s" % [mag_n, Fmt.group(box)], "/ %d" % mag_n])
 	else:
 		UI.fit(_gun_spare, ["/ %d · %s" % [mag_n, Fmt.count(mags, "mag")], "/ %d" % mag_n])
+	# the reload's prompt: under a quarter of the magazine, a spare or the box to fill it from, not already at it
+	var low: bool = mag_n > 0 and float(rounds) < float(mag_n) * RELOAD_AT and not jammed and rf < 0.0 and (mags > 0 or box > 0)
+	_reload_hint.visible = low
+	_reload_hint.text = ("X · Reload" if bool(st.get("pad", false)) else "R · Reload") if low else ""
+	# the test settings in force
+	_tests.text = "Test settings: gang HP %s, magazine %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(float(st.get("mag_x", SliceTuning.MAG_X)))]
 	_note_gun.visible = str(st.get("stand_in", "")) != ""
 	if _note_gun.visible:
 		UI.fit(_note_gun, ["Stand-in gun · %s" % str(st["stand_in"]), "Stand-in gun"])
@@ -385,7 +405,7 @@ func show_state(st: Dictionary) -> void:
 		var on: bool = i < sk.size() and str(sk[i].get("id", "")) != ""
 		d["pic"].visible = on
 		if on and not bool(sk[i].get("in_slice", true)):
-			out_keys.append(["Q", "E", "R"][i])
+			out_keys.append(SKILL_KEYS[i])
 			d["pic"].texture = skill_picture(sk[i])
 			d["pic"].modulate = Color(1, 1, 1, 0.3)     # not in the slice: there, greyed, never lit
 			d["shade"].visible = true
@@ -434,6 +454,10 @@ func show_state(st: Dictionary) -> void:
 	_banner.visible = ls > 0.0
 	if ls > 0.0:
 		_banner.text = UI.dots("%s · %s" % [Words.V66["last_stand"], Words.V66["ls_on"] % ("%d" % int(ceil(ls)))])
+
+
+static func x_words(x: float) -> String:
+	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
 
 
 ## The gang clock's line, long to short: "Gang 2 of 3 · next in 0:41" (board A).
@@ -573,7 +597,7 @@ func _on_hit(_man: Node, result: Dictionary, point: Vector2) -> void:
 ## anything).
 func text_nodes() -> Array:
 	var out: Array = [_site_kicker, _site_name, _site_clock, _me_name, _me_hp, _me_line, _me_energy, _gun_rounds, _gun_spare, _gun_state, _banner,
-		_news, _note_gun, _note_sk]
+		_news, _note_gun, _note_sk, _reload_hint, _tests]
 	for d in _skills + _meds:
 		out.append(d["secs"])
 		out.append(d["key"])

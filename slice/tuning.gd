@@ -4,11 +4,14 @@ extends RefCounted
 ## rate, magazines, reloads, jams, HP) come from the sim through slice/bridge.gd.
 
 # ---------------------------------------------------------------- W: the world
-const PARK_W := 4800.0               # the car park, about 2.5 screens of 1920 wide at zoom 1
-const PARK_H := 2700.0               # and 2.5 screens tall
-const EDGE := 60.0                   # the park's edge wall, thickness
-const BAY_W := 150.0                 # a painted bay
-const BAY_H := 300.0
+const TILE := 64.0                   # (round 2) the floor's tile: the level's data is in tiles, so CC0 tiles can drop in
+const PARK_TILES := Vector2i(90, 50) # (round 2, Matt: "a tad bigger to allow more hiding") 1.42x build 72's area
+const PARK_W := 5760.0               # PARK_TILES.x * TILE: three screens of 1920 wide at zoom 1
+const PARK_H := 3200.0               # PARK_TILES.y * TILE
+const EDGE := 64.0                   # the park's edge wall, a tile
+const BAY_W := 160.0                 # a painted bay, 2.5 tiles by 5
+const BAY_H := 320.0
+const REACH_CELL := 32.0             # the reach check's grid (half a tile)
 
 # ---------------------------------------------------------------- W: the runner
 const RUNNER_R := 40.0               # the token, 80 px across (board A)
@@ -66,6 +69,8 @@ const G_HARD_SURE := true            # no hard man by the last gang: it brings o
 # Their fire
 const MAN_HP_X := 0.25               # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man
                                      # takes ~38 rounds, at 0.25 ~10; the pause's "Gang HP" switches it live (README)
+const MAG_X := 2.5                   # (round 2, Matt: "12 rounds with that gun is too few") a test knob: a magazine holds the
+                                     # game's figure times this in the slice only; the pause's "Magazine" switches ×1, ×2.5, ×4
 const SITE_LEVEL_UNDER := 2          # (merge) the car park's level: the runner's less this, at least 1
 const G_MAN_DPS_X := 1.0             # their fire: the sim's times this (1: the game's maths)
 const G_MAN_ROF := 1.6               # a man's rounds a second: their damage a second (the sim's) over this

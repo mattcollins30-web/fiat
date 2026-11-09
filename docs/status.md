@@ -8252,3 +8252,11 @@ the site's level the runner's minus 2. Nothing the slice does is kept; the camp 
 G, H; the reviewer's ten (ammo fed from the pack's boxes, life on kill and scavenger, Guard's rounding, the med
 counts, pad aim, the hard man's name and the news line, dots in damage done, 3 men on you, the item counter) fixed
 with red checks; the slice's scripts preload each other (no class_name: Matt's headless smoke has no editor scan).
+
+The slice, round 2 (9 Nov; Matt on his first try: "1x health is too much. It needs an inventory and character sheet
+during the run ... Levels need to be a tad bigger to allow more hiding. 12 rounds with that gun is too few. A reload
+key is needed. Some art would help"): gang HP x0.5 / x0.25 / x0.15 (x1 gone); the kit sheet on Tab / Back (worn kit,
+the rig, the pack with the run's finds, the runner's stats in the game's words; wear a found gun, rig a found med);
+magazines x2.5 by default (x1 / x2.5 / x4, a hand refill by the round); reload on R (Space still), skill 3 to C, a
+reload prompt under a quarter; the car park 1.4x with a kiosk, a shelter, a van, more cars, bins and low walls, every
+spawn, crate and the way out proved reachable. Art waits on Matt's word on a source.

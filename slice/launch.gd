@@ -10,6 +10,7 @@ const SliceTuning := preload("res://slice/tuning.gd")     # (no class_name: Matt
 const HudScript := preload("res://slice/hud.gd")
 const PauseScript := preload("res://slice/pause.gd")
 const EndScript := preload("res://slice/end_screen.gd")
+const KitScript := preload("res://slice/kit_sheet.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
@@ -20,6 +21,7 @@ var world = null                      # the slice's world (slice.gd)
 var hud = null
 var pause = null
 var end = null
+var kit = null                        # the kit and runner sheet (round 2): Tab or Back
 var over: CanvasLayer
 var ended := false
 var _next_id := 0                     # Items' id counter when the slice opened: put back on the way out (the review)
@@ -91,16 +93,46 @@ func begin(seed_v: int, use_camp := true) -> void:
 	pause.to_title.connect(back_to_title)
 	pause.show_hp_x(float(ctx.get("man_hp_x", SliceTuning.MAN_HP_X)))
 	pause.hp_x_changed.connect(set_hp_x)
+	pause.show_mag_x(float(ctx.get("mag_x", SliceTuning.MAG_X)))
+	pause.mag_x_changed.connect(set_mag_x)
+	kit = KitScript.new()
+	over.add_child(kit)
+	kit.closed.connect(close_kit)
 	end = EndScript.new()
 	over.add_child(end)
 	end.to_title.connect(back_to_title)
 	world.run_ended.connect(_on_ended)
 
 
+## Tab or Back: the kit sheet, on and off (in _input, ahead of the GUI's own Tab, which moves the focus).
+func _input(event: InputEvent) -> void:
+	if ended or pause == null or pause.visible or not event.is_action_pressed("slice_kit"):
+		return
+	if is_inside_tree():
+		get_viewport().set_input_as_handled()
+	if kit.visible:
+		close_kit()
+	else:
+		open_kit()
+
+
+## The fight held still under the kit sheet (a sandbox: the clock stops too).
+func open_kit() -> void:
+	_world_mode = world.process_mode
+	world.process_mode = Node.PROCESS_MODE_DISABLED
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	kit.open(world)
+
+
+func close_kit() -> void:
+	kit.close()
+	world.process_mode = _world_mode
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	var press: bool = (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE) \
 			or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_START)
-	if not press or ended:
+	if not press or ended or (kit != null and kit.visible):
 		return
 	if is_inside_tree():
 		get_viewport().set_input_as_handled()
@@ -130,6 +162,14 @@ func _on_ended(outcome: String, stats: Dictionary) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var site: Dictionary = world.ctx.get("site", {}) if world.ctx.get("site") is Dictionary else {}
 	end.open(outcome, stats, str(site.get("name", "The car park")))
+
+
+## The pause's other test setting (round 2): a magazine's size times x, live - the ctx's guns and the runner's.
+func set_mag_x(x: float) -> void:
+	world.ctx["mag_x"] = x
+	for e in world.ctx["guns"]:
+		SliceBridge.scaled_gun(e, x)
+	world.runner.set_mag_x(x)
 
 
 ## The pause's test setting: the men's HP times x from now - the men standing scaled to it, their share of HP kept.

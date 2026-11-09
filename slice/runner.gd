@@ -223,6 +223,61 @@ func fire_once() -> Dictionary:
 	return res
 
 
+## A gun put on from the kit sheet (round 2): the bridge's entry for its slot. Its rounds and spares are its own, kept
+## by the item while it's off (the review: a swap refilled for free); a gun not worn yet this run starts full.
+var kept := {}                       # item id -> [rounds in, spare magazines]
+
+
+func wear(e: Dictionary) -> void:
+	var k := -1
+	for i in range(guns.size()):
+		if str(guns[i].get("slot", "")) == str(e.get("slot", "")):
+			k = i
+	var id: int = int(Dictionary(e.get("item", {})).get("id", -1))
+	var mine: Array = kept.get(id, [int(e.get("mag", 1)), int(e.get("mags", 0))])
+	kept.erase(id)
+	if k < 0:
+		guns.append(e.duplicate(true))
+		rounds.append(mini(int(mine[0]), int(e.get("mag", 1))))
+		mags.append(int(mine[1]))
+		return
+	var off_id: int = int(Dictionary(guns[k].get("item", {})).get("id", -1))
+	if off_id >= 0:
+		kept[off_id] = [rounds[k], mags[k]]
+	guns[k] = e.duplicate(true)
+	rounds[k] = mini(int(mine[0]), int(e.get("mag", 1)))
+	mags[k] = int(mine[1])
+	if k == gun_i:
+		reloading = false
+		refilling = false
+		jammed = false
+
+
+## A change of kit read again (the bridge's reread): each gun's figures, its rounds kept to its magazine; the HP, Guard
+## and energy maxima and the pace. What's in hand stays (HP over a lower max comes down to it).
+func reread(c: Dictionary) -> void:
+	for e in c.get("guns", []):
+		for i in range(guns.size()):
+			if str(guns[i].get("slot", "")) == str(e.get("slot", "")) and int(Dictionary(guns[i].get("item", {})).get("id", -2)) == int(Dictionary(e.get("item", {})).get("id", -3)):
+				guns[i] = e.duplicate(true)
+				rounds[i] = mini(rounds[i], int(e.get("mag", 1)))
+	hp_max = maxi(1, int(c.get("hp_max", hp_max)))
+	hp = mini(hp, hp_max)
+	guard_max = int(c.get("guard_max", guard_max))
+	guard = mini(guard, guard_max)
+	energy_max = float(c.get("energy_max", energy_max))
+	energy = minf(energy, energy_max)
+	pace_px = T.PACE_PX * maxf(T.PACE_MIN, 1.0 + float(c.get("pace_pct", 0.0)) / 100.0)
+
+
+## The magazine's size at the pause's test setting (round 2, MAG_X): each gun's game figure times x; what's in a
+## magazine kept, down to the new size.
+func set_mag_x(x: float) -> void:
+	for i in range(guns.size()):
+		SliceBridge.scaled_gun(guns[i], x)
+		rounds[i] = mini(rounds[i], int(guns[i]["mag"]))
+
+
 ## The rounds in the pack's boxes for gun i's type (the ctx's count, shared with the bridge).
 func box_rounds(i := -1) -> int:
 	var k: int = gun_i if i < 0 else i
@@ -247,7 +302,7 @@ func start_reload() -> bool:
 			return false
 		reloading = true
 		refilling = true
-		reload_total = SliceBridge.refill_s(guns[gun_i])
+		reload_total = SliceBridge.refill_s(guns[gun_i], mini(int(guns[gun_i].get("mag", 1)) - rounds[gun_i], box_rounds()))
 		reload_left = reload_total
 		world.runner_event("reload_started", gun(), reload_total)
 		return true
