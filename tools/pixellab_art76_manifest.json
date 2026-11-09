@@ -1,0 +1,721 @@
+{
+ "_readme": [
+  "FIAT ART 76 (9 Nov; the ARPG slice, slice/README.md): the slice's own top-down sprites and tiles, 37 jobs, all at $0.08 (every canvas under 65k px); about $2.96, $3.85 with a 30% reroll budget.",
+  "20 figures (runner, gang1..3, hard x aim, fire, reload, down; 64x64, from directly above, facing +x) and 17 tiles and props (64 px canvas = one 32 px tile on screen), out to slice/art/pl/<name>.png. Style image art/map/land.png (the game's own top-down painting); the Kenney figures as a view-only reference. Nothing on disk is overwritten.",
+  "Wiring after art.done: slice/art.gd reads slice/art/pl/ by name (art76_names.md). ++ --parallel 3.",
+  "Regenerate with python3 tools/make_art76_manifest.py; check with python3 tools/art_lint.py tools/pixellab_art76_manifest.json."
+ ],
+ "jobs": [
+  {
+   "out": "slice/art/pl/runner_aim.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a lean poacher in a worn olive waxed jacket and a brown tweed flat cap, the cap's top and peak the nearest thing to the eye, standing, aiming: both arms forward to the right holding a long bolt-action hunting rifle with a dark wooden stock and a scope pointing straight to the right. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660000,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure runner, aim (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_gun.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/runner_fire.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a lean poacher in a worn olive waxed jacket and a brown tweed flat cap, the cap's top and peak the nearest thing to the eye, standing, firing: both arms forward to the right holding a long bolt-action hunting rifle with a dark wooden stock and a scope pointing straight to the right, a small bright yellow-orange muzzle flash at its muzzle. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660001,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure runner, fire (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_machine.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/runner_reload.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a lean poacher in a worn olive waxed jacket and a brown tweed flat cap, the cap's top and peak the nearest thing to the eye, standing, reloading: a long bolt-action hunting rifle with a dark wooden stock and a scope held lowered and angled across the body, one hand at the magazine or the breech. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660002,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure runner, reload (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_reload.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/runner_down.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above: a lean poacher in a worn olive waxed jacket and a brown tweed flat cap, the cap's top and peak the nearest thing to the eye, down and dead, lying flat on his back with his arms flung out, a long bolt-action hunting rifle with a dark wooden stock and a scope dropped beside his hand. Seen straight down from overhead, lying along the frame with his head to the right. Not a side view. One gun only. The figure centred, clear of every edge. No blood pool. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660003,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure runner, down (art.gd; faces +x, about 30 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/gang1_aim.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain grey tracksuit top with the hood down, close-cropped dark hair, no stripes, plain, unprinted, no lettering, no numbers, no logo, standing, aiming: both arms forward to the right holding a sawn-off double-barrelled shotgun pointing straight to the right. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660004,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang1, aim (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_gun.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang1_fire.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain grey tracksuit top with the hood down, close-cropped dark hair, no stripes, plain, unprinted, no lettering, no numbers, no logo, standing, firing: both arms forward to the right holding a sawn-off double-barrelled shotgun pointing straight to the right, a small bright yellow-orange muzzle flash at its muzzle. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660005,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang1, fire (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_machine.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang1_reload.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain grey tracksuit top with the hood down, close-cropped dark hair, no stripes, plain, unprinted, no lettering, no numbers, no logo, standing, reloading: a sawn-off double-barrelled shotgun held lowered and angled across the body, one hand at the magazine or the breech. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660006,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang1, reload (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_reload.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang1_down.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above: a young man in a plain grey tracksuit top with the hood down, close-cropped dark hair, no stripes, plain, unprinted, no lettering, no numbers, no logo, down and dead, lying flat on his back with his arms flung out, a sawn-off double-barrelled shotgun dropped beside his hand. Seen straight down from overhead, lying along the frame with his head to the right. Not a side view. One gun only. The figure centred, clear of every edge. No blood pool. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660007,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang1, down (art.gd; faces +x, about 30 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/gang2_aim.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain black hoodie with the hood up, plain, unprinted, no lettering, no numbers, no logo, standing, aiming: both arms forward to the right holding a small black pistol held out in both hands pointing straight to the right. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660008,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang2, aim (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_gun.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang2_fire.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain black hoodie with the hood up, plain, unprinted, no lettering, no numbers, no logo, standing, firing: both arms forward to the right holding a small black pistol held out in both hands pointing straight to the right, a small bright yellow-orange muzzle flash at its muzzle. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660009,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang2, fire (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_machine.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang2_reload.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a young man in a plain black hoodie with the hood up, plain, unprinted, no lettering, no numbers, no logo, standing, reloading: a small black pistol held out in both hands held lowered and angled across the body, one hand at the magazine or the breech. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660010,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang2, reload (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_reload.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang2_down.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above: a young man in a plain black hoodie with the hood up, plain, unprinted, no lettering, no numbers, no logo, down and dead, lying flat on his back with his arms flung out, a small black pistol held out in both hands dropped beside his hand. Seen straight down from overhead, lying along the frame with his head to the right. Not a side view. One gun only. The figure centred, clear of every edge. No blood pool. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660011,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang2, down (art.gd; faces +x, about 30 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/gang3_aim.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a man in a dark navy donkey jacket with a plain black shoulder panel across the top of the back, no lettering on the panel, short fair hair, standing, aiming: both arms forward to the right holding a short black submachine gun pointing straight to the right. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660012,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang3, aim (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_gun.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang3_fire.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a man in a dark navy donkey jacket with a plain black shoulder panel across the top of the back, no lettering on the panel, short fair hair, standing, firing: both arms forward to the right holding a short black submachine gun pointing straight to the right, a small bright yellow-orange muzzle flash at its muzzle. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660013,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang3, fire (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_machine.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang3_reload.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a man in a dark navy donkey jacket with a plain black shoulder panel across the top of the back, no lettering on the panel, short fair hair, standing, reloading: a short black submachine gun held lowered and angled across the body, one hand at the magazine or the breech. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660014,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang3, reload (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_reload.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/gang3_down.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above: a man in a dark navy donkey jacket with a plain black shoulder panel across the top of the back, no lettering on the panel, short fair hair, down and dead, lying flat on his back with his arms flung out, a short black submachine gun dropped beside his hand. Seen straight down from overhead, lying along the frame with his head to the right. Not a side view. One gun only. The figure centred, clear of every edge. No blood pool. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660015,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure gang3, down (art.gd; faces +x, about 30 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/hard_aim.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a big heavy-built man, broad shoulders filling more of the frame than the others, a heavy dark work coat with a faded orange hi-visibility vest over it, the vest's bands plain grey, plain, unprinted, no lettering, no numbers, no logo, a shaved head, standing, aiming: both arms forward to the right holding a black pump-action shotgun pointing straight to the right. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660016,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure hard, aim (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_gun.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/hard_fire.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a big heavy-built man, broad shoulders filling more of the frame than the others, a heavy dark work coat with a faded orange hi-visibility vest over it, the vest's bands plain grey, plain, unprinted, no lettering, no numbers, no logo, a shaved head, standing, firing: both arms forward to the right holding a black pump-action shotgun pointing straight to the right, a small bright yellow-orange muzzle flash at its muzzle. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660017,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure hard, fire (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_machine.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/hard_reload.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above, looking straight down onto the top of his head and shoulders: a big heavy-built man, broad shoulders filling more of the frame than the others, a heavy dark work coat with a faded orange hi-visibility vest over it, the vest's bands plain grey, plain, unprinted, no lettering, no numbers, no logo, a shaved head, standing, reloading: a black pump-action shotgun held lowered and angled across the body, one hand at the magazine or the breech. He faces right: head in the centre, shoulders running up and down the frame, the gun pointing to the right. Not a side view, not in profile, not from the front, no legs seen from the side. One gun only, held by exactly two hands. The figure small and centred, clear of every edge. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660018,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure hard, reload (art.gd; faces +x, about 30 px on screen)",
+   "reference_images": [
+    "res://slice/art/kenney/soldier1_reload.png"
+   ]
+  },
+  {
+   "out": "slice/art/pl/hard_down.png",
+   "endpoint": "generate-image-v2",
+   "description": "Top-down pixel-art game character sprite seen from directly above: a big heavy-built man, broad shoulders filling more of the frame than the others, a heavy dark work coat with a faded orange hi-visibility vest over it, the vest's bands plain grey, plain, unprinted, no lettering, no numbers, no logo, a shaved head, down and dead, lying flat on his back with his arms flung out, a black pump-action shotgun dropped beside his hand. Seen straight down from overhead, lying along the frame with his head to the right. Not a side view. One gun only. The figure centred, clear of every edge. No blood pool. Only the palette, light and painting style of the style image, not its view or its subject; only the view from directly above of the reference image, not its colours or its flat style. Muted, grim, cold palette, worn and dirty clothes, painterly pixel shading. The figure alone on a transparent background: no floor, ground, shadow, shadow disc or setting around it. No text, no lettering, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660019,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice figure hard, down (art.gd; faces +x, about 30 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/asphalt_a.png",
+   "endpoint": "generate-image-v2",
+   "description": "Dark grey worn asphalt, fine grit, a faint crack. Seen from directly above, flat, filling the whole canvas to all four edges, no border, frame or margin; an even surface with nothing near the edges, so it repeats side by side. Nothing on it, no marks but its own wear. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660020,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop asphalt_a, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/asphalt_b.png",
+   "endpoint": "generate-image-v2",
+   "description": "Dark grey worn asphalt, fine grit, a patched darker square repair in the middle, loose gravel. Seen from directly above, flat, filling the whole canvas to all four edges, no border, frame or margin; an even surface with nothing near the edges, so it repeats side by side. Nothing on it, no marks but its own wear. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660021,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop asphalt_b, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/paving.png",
+   "endpoint": "generate-image-v2",
+   "description": "Grey square concrete paving slabs, two by two, cracked and mossy at the joints. Seen from directly above, flat, filling the whole canvas to all four edges, no border, frame or margin; an even surface with nothing near the edges, so it repeats side by side. Nothing on it, no marks but its own wear. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660022,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop paving, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/kerb.png",
+   "endpoint": "generate-image-v2",
+   "description": "A straight grey concrete kerb running left to right across the middle, a strip of worn asphalt below it and a strip of grey paving above it, the kerb's top edge chipped. Seen from directly above, filling the whole canvas to all four edges, no border, frame or margin. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660023,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop kerb, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/bay_line.png",
+   "endpoint": "generate-image-v2",
+   "description": "A single straight faded white painted stripe running up the middle from top edge to bottom edge, the paint worn and broken, no numbers or words painted. The stripe alone on a transparent background, no asphalt or ground around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660024,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop bay_line, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/drain.png",
+   "endpoint": "generate-image-v2",
+   "description": "A square cast-iron drain grate with parallel slots, rusted at the edges, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660025,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop drain, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/oil_stain.png",
+   "endpoint": "generate-image-v2",
+   "description": "A dark irregular oil stain splash, translucent black with a faint rainbow sheen at its edges. The stain alone on a transparent background, no asphalt or ground around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660026,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop oil_stain, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/burnt_car.png",
+   "endpoint": "generate-image-v2",
+   "description": "A burnt-out saloon car, its nose to the top: the roof caved, paint burnt off to rust-brown and black metal, the windows gone, the tyres burnt to the rims, no number plates, no badges, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 660027,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop burnt_car, 128x192 (2 x 3 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/van.png",
+   "endpoint": "generate-image-v2",
+   "description": "A plain dull white panel van, its nose to the top, roof dented and streaked with grime, no livery, no number plates, no lettering, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 128,
+   "height": 224,
+   "no_background": true,
+   "seed": 660028,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice prop van, 128x224 (about 2.0 x 3.5 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/bin_wheelie.png",
+   "endpoint": "generate-image-v2",
+   "description": "A dark green plastic wheelie bin with its lid shut, the hinge and two wheels at one end, no number on it, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660029,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop bin_wheelie, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/bin_round.png",
+   "endpoint": "generate-image-v2",
+   "description": "A round black metal litter bin with an open top, rubbish inside, no number on it, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660030,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop bin_round, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/brick_wall.png",
+   "endpoint": "generate-image-v2",
+   "description": "The top of a low red-brick wall running left to right across the middle from edge to edge, a row of grey coping stones along it, a brick missing. Seen from directly above, transparent above and below the wall, no ground. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660031,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop brick_wall, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/fence.png",
+   "endpoint": "generate-image-v2",
+   "description": "A run of rusted green steel palisade fence running left to right across the middle from edge to edge, the pointed tops of its pales seen from above. Transparent above and below the fence, no ground. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660032,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop fence, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/kiosk_floor.png",
+   "endpoint": "generate-image-v2",
+   "description": "Worn grey-brown lino floor tiles, scuffed, a curled corner. Seen from directly above, flat, filling the whole canvas to all four edges, no border, frame or margin; an even surface with nothing near the edges, so it repeats side by side. Nothing on it, no marks but its own wear. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660033,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop kiosk_floor, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/kiosk_wall.png",
+   "endpoint": "generate-image-v2",
+   "description": "The top of a thick wall of grey painted breeze blocks running left to right across the whole tile, blackened with soot. Seen from directly above, filling the whole canvas to all four edges, no border, frame or margin. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": false,
+   "seed": 660034,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop kiosk_wall, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/crate.png",
+   "endpoint": "generate-image-v2",
+   "description": "The lid of a heavy dark wooden crate bound with two steel bands, seen from directly above, nail heads at the corners, no stencils, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 660035,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop crate, 64x64 (1 x 1 tiles of 32 px on screen)"
+  },
+  {
+   "out": "slice/art/pl/shelter_roof.png",
+   "endpoint": "generate-image-v2",
+   "description": "The flat roof of a small open-sided steel shelter, seen from directly above: a plain grey corrugated roof panel on a thin steel frame, dirt and dead leaves on it, plain, unprinted, no lettering, no numbers, no logo. Seen from directly above, looking straight down. The object alone on a transparent background, centred, no floor, ground, shadow or setting around it. Top-down pixel-art game tile. Only the palette, light and painting style of the style image, not its view or its subject. Muted, grim, cold palette, worn, dirty and neglected, painterly pixel shading. No text, no lettering, no numbers, no logos.",
+   "width": 128,
+   "height": 64,
+   "no_background": true,
+   "seed": 660036,
+   "single": true,
+   "style_image": "res://art/map/land.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "slice tile/prop shelter_roof, 128x64 (2 x 1 tiles of 32 px on screen)"
+  }
+ ]
+}
