@@ -25,8 +25,11 @@ fire, the way out. Out: every other site and class, final art (tokens drawn in c
 - `MAN_HP_X` (tuning.gd, default 0.5 since round 4, Matt: "0.5x HP is the better setting"): a gang man's HP is the
   sim's times this. At the game's own figures a man takes about 38 rounds - a sponge under your own hands. The pause's
   "Gang HP" button (a test setting) switches ×0.5, ×0.25 and ×0.15 live.
-- The site's level follows the runner: the runner's level minus 2 (`SITE_LEVEL_UNDER`), at least 1. The fixture is
-  the level-14 Poacher, so its car park is level 12.
+- (build 76) The car park's level is picked at the start (level_pick.gd, H): the default is the camp's reach (its
+  furthest cleared level, Sim.deepest_cleared_level), or 12 on a fresh camp (no runner, or nothing cleared), with three
+  levels either side (H_LEVEL_STEPS), never under level 9: levels 1 to 9 play the same fight (round 5's review). The
+  smoke's fixed-seed open goes straight in at the default; `SITE_LEVEL_UNDER` (the runner's level less 2) is only the
+  bridge's rule when no level is given.
 
 The rounds: each gun's spare magazines, then (the sim's refill) a magazine filled by hand from the pack's box of its
 rounds at REFILL_MULT times the reload. The box is the camp's boxes of that type; a runner with none gets
@@ -37,16 +40,20 @@ Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left 
 / RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
 X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
-The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and "Magazine" ×1 / ×2.5
-(MAG_X, the start) / ×4 - a magazine's size in the slice only. The HUD's top line says which are in force.
+The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and (build 76) "Their damage" ×1
+(THEIR_DMG_X, the start) / ×1.5 / ×0.5 - their damage a round. The magazine's knob went with build 76's real magazine
+sizes by gun kind. The HUD's top line says which are in force; the gun's line over its rounds reads "AR · 10 a second".
 
 kit_room.gd (H, round 4; it replaced round 2's kit_sheet.gd, Matt: "why reinvent the wheel") - Tab's Kit room: the game's
 own scripts/ui/armoury.gd on the slice's Sim (the camp's copy: its whole stash to wear), the run put by while it's open
 so the room isn't locked "out on a run", the Workshop greyed, the dummy and the loot filter hidden. A run's finds go
 into that Sim's stash (the room's grid; a box of a gun's rounds into the pack's count). On the way back the bridge's
 kit_changed reads the guns (each with its own rounds), the rig's meds, the maxima and pace into the fight. The room's
-gun cards show the game's magazine; MAG_X is the slice's, on the HUD.
+gun cards show the game's magazine; the slice's (its kind's, build 76) is on the HUD.
 
 Stand-in art (round 3): Kenney's Top-down Shooter pack, by Kenney (kenney.nl), CC0 - slice/art/kenney/ holds only
 the files the slice uses, with the pack's License.txt. slice/art.gd reads them straight from the PNGs (never load()),
-so a picture with no .import shows in the headless smoke too.
+so a picture with no .import shows in the headless smoke too. (build 76) The PixelLab set (tools/make_art76_manifest.py,
+by art.flag) lands in slice/art/pl/: art.gd draws a set picture by name when it's there (runner/gang1-3/hard x
+aim/fire/reload/down; asphalt_a, paving, kiosk_floor, kiosk_wall, crate, the bins, fence) and Kenney's when not, so the
+set shows with no code once it lands.

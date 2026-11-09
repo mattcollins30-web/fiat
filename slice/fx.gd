@@ -23,6 +23,8 @@ func tracer(a: Vector2, b: Vector2) -> void:
 
 
 func hit_flash(man: Node2D) -> void:
+	if not man.visible:                # (round 5's review) a man the fog hides: no flash to give him away
+		return
 	marks.append({"kind": "hit", "node": man, "a": man.position, "t": T.HIT_FLASH_S, "life": T.HIT_FLASH_S})
 	queue_redraw()
 
@@ -44,11 +46,13 @@ func _draw() -> void:
 		var k: float = clampf(float(m["t"]) / float(m["life"]), 0.0, 1.0)
 		match str(m["kind"]):
 			"tracer":
-				draw_line(m["a"], m["b"], Color(C_TRACER, 0.85 * k), 3.0)
+				draw_line(m["a"], m["b"], Color(C_TRACER, 0.85 * k), 3.0 / T.CAM_ZOOM)
 			"flash":
 				draw_circle(m["a"], 16.0 * k + 6.0, Color(C_FLASH, k))
 			"hit":
 				var n = m["node"]
+				if is_instance_valid(n) and not n.visible:
+					continue                         # (build 76) a man the fog hides doesn't flash
 				var p: Vector2 = n.position if is_instance_valid(n) else m["a"]
 				var r: float = float(n.get("radius")) if is_instance_valid(n) and n.get("radius") != null else T.MAN_R
 				draw_circle(p, r, Color(1, 1, 1, 0.75 * k))
@@ -58,9 +62,15 @@ func _draw() -> void:
 					draw_circle(m["a"] + d, 3.5, Color(C_SPARK, k))
 	if reticle != Vector2.INF:
 		var rc := C_TRACER if reticle_locked else Color(C_TRACER, 0.6)
-		draw_arc(reticle, 22.0 if reticle_locked else 14.0, 0, TAU, 32, rc, 3.0)
-		draw_circle(reticle, 3.0, rc)
+		draw_arc(reticle, (22.0 if reticle_locked else 14.0) / T.CAM_ZOOM, 0, TAU, 32, rc, 3.0 / T.CAM_ZOOM)     # (build 76) its screen size kept
+		draw_circle(reticle, 3.0 / T.CAM_ZOOM, rc)
 	if exit_prompt != "":
 		var f: Font = (get_parent() as SliceWorld).font()
-		var w := f.get_string_size(exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x
-		draw_string(f, exit_at - Vector2(w * 0.5, 0), exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, C_EXIT)
+		var fs := prompt_px()
+		var w := f.get_string_size(exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(f, exit_at - Vector2(w * 0.5, 0), exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_EXIT)
+
+
+## (build 76) The way out's prompt: 28 px on screen at any zoom (the world's font size over the camera's zoom).
+static func prompt_px() -> int:
+	return int(round(28.0 / T.CAM_ZOOM))

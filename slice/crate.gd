@@ -15,6 +15,12 @@ var opened := false
 var near := false                    # the runner is in reach (the prompt shows)
 var prompt := ""                     # the world sets it (the keyboard's or the pad's word)
 var finds: Array = []
+var seen := false                    # (build 76) the runner has seen it: drawn from then on (slice/sight.gd)
+
+
+## (build 76) The search prompt: 26 px on screen at the camera's zoom.
+static func prompt_px() -> int:
+	return int(round(26.0 / T.CAM_ZOOM))
 
 
 func rect() -> Rect2:
@@ -47,6 +53,6 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, h + 18.0, -PI / 2.0, -PI / 2.0 + TAU * progress, 48, C_RING, 7.0)
 	if near:
 		var f: Font = (get_parent().get_parent() as SliceWorld).font()
-		var fs := 26
+		var fs := prompt_px()
 		var w := f.get_string_size(prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(f, Vector2(-w * 0.5, -h - 40.0), prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_LINE)

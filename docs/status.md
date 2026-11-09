@@ -8275,3 +8275,15 @@ copy of the camp, so the whole stash can be worn; finds land in that stash copy 
 base); gang HP x0.5 by default, magazines x2.5; a gang comes in full but only 3 (the sim's contact) engage, the rest
 wait at their edge and step up 1.2 s after a front man falls, the hard man last; the HUD's "3 on you · 4 waiting".
 No change to shared code; the camp stays read-only (checked byte for byte).
+
+The slice, round 5 (9 Nov; Matt: "the fire rate feels off too from something thats supposed to be an AR ... the view is
+also too zoomed in ... i dont seem to be taking much if any damage. look at zero sievert", then board D, "do it"): the
+camera at half the old zoom, leaning toward the aim; line of sight (slice/sight.gd) darkens what walls, cars and the
+kiosk hide, a man lost from sight leaves a fading "last seen" mark; guns fire at their kind's rate with its own magazine
+(AR 10 a second and 30, SMG 13, pistol up to 6 and 12, revolver 3 and 6, shotgun pump 1.2 and 8 pellets, bolt 1 and 5,
+melee a swing), a round's damage the gun's damage a second over that rate; rounds travel as tracers (slice/round.gd);
+the gang's fire the same, sized so a man deals the sim's damage a second at the open-ground hit rate; the level picked
+before the run (slice/level_pick.gd, levels 9 up, "Your reach, level N"); the art76 top-down set (slice/art/pl/, 37 and
+6 rerolls) preferred over Kenney by slice/art.gd, poses aim/fire/reload/down. Open (Matt's call): at level 12 x1 the
+runner still loses only 0.15-0.68 HP a second, as the sim's level-12 man deals about 4.7 a second. No change to shared
+code.

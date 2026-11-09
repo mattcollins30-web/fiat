@@ -32,7 +32,7 @@ const SLOT_NAMES := ["Primary", "Secondary"]
 # ------------------------------------------------------------------ the ctx
 
 ## The runner and the site for the slice. `main`: the title's main node (anything with a `sim`), or null.
-static func runner_ctx(main, seed_v := 72) -> Dictionary:
+static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
 	var s := Sim.new()
 	var fixture := true
 	var camp = main.get("sim") if main != null and main is Object else null
@@ -46,7 +46,7 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 	s.fight_rng.seed = seed_v + 1
 	var stand_in: String = _stand_in(s, seed_v)
 	_arm(s)
-	var t := site_figures(s)
+	var t := site_figures(s, site_lv)
 	var m := _mission(s, t)
 	s.mission = m
 	s.hp = s.max_hp()
@@ -59,7 +59,9 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 		var g = s.equipped[slot]
 		if g == null or float(Items.base_of(g).get("rof", 0.0)) <= 0.0:
 			continue
-		ctx["guns"].append(scaled_gun(_gun_entry(s, slot, g), T.MAG_X))
+		if Items.mag_size(g) <= 0 and gun_kind(g) != "melee":
+			continue
+		ctx["guns"].append(_gun_entry(s, slot, g))
 	if stand_in != "":
 		for e in ctx["guns"]:
 			if str(e["slot"]) == "Primary":
@@ -68,7 +70,7 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 	ctx["skills"] = _skills(s, fixture)
 	ctx["boxes"] = boxes_for(s, ctx["guns"])
 	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
-	ctx["mag_x"] = T.MAG_X
+	ctx["their_dmg_x"] = T.THEIR_DMG_X
 	return ctx
 
 
@@ -76,8 +78,8 @@ static func runner_ctx(main, seed_v := 72) -> Dictionary:
 ## place, on the slice's own Sim, so its reads are the stand-in's. Returns the stand-in's name, "" when none was needed.
 static func _stand_in(s, seed_v: int) -> String:
 	var g = s.equipped["Primary"]
-	if g != null and float(Items.base_of(g).get("rof", 0.0)) > 0.0 and Items.mag_size(g) > 0:
-		return ""
+	if g != null and float(Items.base_of(g).get("rof", 0.0)) > 0.0 and (Items.mag_size(g) > 0 or gun_kind(g) == "melee"):
+		return ""                             # (build 76) a melee weapon swings in the slice
 	var r := RandomNumberGenerator.new()
 	r.seed = seed_v
 	var b: Dictionary = Items.base_named("Primary", FIXTURE_GUNS[0])
@@ -98,8 +100,17 @@ static func boxes_for(s, guns: Array) -> Dictionary:
 		for it in s._rounds_held():
 			if Items.is_ammo(it) and str(Items.base_of(it)["type"]) == ty:
 				n += int(it.get("rounds", 0))
-		out[ty] = n if n > 0 else T.G_BOX_ROUNDS
+		out[ty] = roundi(float(n if n > 0 else T.G_BOX_ROUNDS) * round_x(guns, ty))
 	return out
+
+
+## (build 76) The slice's rounds for one of the game's: its kind's rate over the game's for the first gun on that type (an AR
+## fires four of its rounds for the game's one at the same damage a second, so a box carries the same fight), never under 1.
+static func round_x(guns: Array, ty: String) -> float:
+	for e in guns:
+		if str(e.get("ammo", "")) == ty and float(e.get("sim_rof", 0.0)) > 0.0:
+			return maxf(1.0, float(e.get("rof", 1.0)) / float(e["sim_rof"]))
+	return 1.0
 
 
 ## Rounds found (a crate's, a man's drop): boxes of a gun's type go into the pack's count. Returns the rounds taken in.
@@ -109,17 +120,10 @@ static func take_rounds(ctx: Dictionary, items: Array) -> int:
 		if it is Dictionary and it.has("base") and Items.is_ammo(it):
 			var ty: String = str(Items.base_of(it)["type"])
 			if ctx.get("boxes", {}).has(ty):
-				ctx["boxes"][ty] = int(ctx["boxes"][ty]) + int(it.get("rounds", 0))
-				got += int(it.get("rounds", 0))
+				var n: int = roundi(float(it.get("rounds", 0)) * round_x(ctx.get("guns", []), ty))     # (build 76) the slice's rounds
+				ctx["boxes"][ty] = int(ctx["boxes"][ty]) + n
+				got += n
 	return got
-
-
-## A gun entry's magazine at the slice's MAG_X (a test knob, round 2): the game's own kept as mag_base.
-static func scaled_gun(e: Dictionary, x: float) -> Dictionary:
-	if not e.has("mag_base"):
-		e["mag_base"] = int(e["mag"])
-	e["mag"] = maxi(1, roundi(float(e["mag_base"]) * x)) if int(e["mag_base"]) > 0 else 0
-	return e
 
 
 ## The kit changed in the Kit room (round 4: the game's own room, any slot): everything it moves read again from the
@@ -130,13 +134,12 @@ static func kit_changed(ctx: Dictionary) -> void:
 	var s = ctx["sim"]
 	s._stats_dirty()
 	_arm(s)
-	var x: float = float(ctx.get("mag_x", T.MAG_X))
 	var guns: Array = []
 	for slot in SLOT_NAMES:
 		var g = s.equipped[slot]
-		if g == null or float(Items.base_of(g).get("rof", 0.0)) <= 0.0 or Items.mag_size(g) <= 0:
+		if g == null or float(Items.base_of(g).get("rof", 0.0)) <= 0.0 or (Items.mag_size(g) <= 0 and gun_kind(g) != "melee"):
 			continue
-		var e: Dictionary = scaled_gun(_gun_entry(s, slot, g), x)
+		var e: Dictionary = _gun_entry(s, slot, g)
 		for old in ctx["guns"]:
 			if str(old["slot"]) == slot and int(Dictionary(old.get("item", {})).get("id", -1)) == int(g.get("id", -2)):
 				e["stand_in"] = bool(old.get("stand_in", false))
@@ -167,13 +170,13 @@ static func stow(ctx: Dictionary, items: Array) -> void:
 			s.stash.append(it)                 # past the stash's room: kept all the same (a sandbox), the grid's pages show it
 
 
-## A magazine filled by hand from the pack's box: the sim's REFILL_MULT times the gun's reload for a magazine of the game's
-## size, in proportion to the rounds put in (the design call: at MAG_X ×2.5 a 35-round fill takes 2.5 times a 14's).
+## A magazine filled by hand from the pack's box: the sim's REFILL_MULT times the gun's reload for a full magazine (the
+## slice's, build 76), in proportion to the rounds put in.
 static func refill_s(gun: Dictionary, rounds_in := -1) -> float:
 	var full: float = float(gun.get("reload_s", 2.0)) * Data.REFILL_MULT
-	var base: int = int(gun.get("mag_base", gun.get("mag", 1)))
-	var n: int = rounds_in if rounds_in >= 0 else int(gun.get("mag", base))
-	return full * float(n) / float(maxi(1, base))
+	var mag: int = maxi(1, int(gun.get("mag", 1)))
+	var n: int = rounds_in if rounds_in >= 0 else mag
+	return full * float(n) / float(mag)
 
 
 ## A level-14 Poacher in worn kit of his level, rolled with affixes on a fixed seed: no camp, no web past the class's start.
@@ -227,8 +230,8 @@ static func _arm(s) -> void:
 
 ## The car park's figures: the Retail Park as a signal at level 12 plays it (its depth's curve), the Estate's crew's damage
 ## types and resists at that depth.
-static func site_figures(s) -> Dictionary:
-	var lv: int = site_level(s)
+static func site_figures(s, lv_in := 0) -> Dictionary:
+	var lv: int = lv_in if lv_in > 0 else site_level(s)     # (build 76) the level picker's, else the runner's less two
 	var d: int = Sim.tier_depth(lv)
 	var t: Dictionary = s.depth_figures(SITE_TIER, d, lv, true, true)
 	var crew: Array = s._crew_types(int(Data.TIERS[SITE_TIER]["zone"]), d, [])
@@ -280,10 +283,112 @@ static func _gun_entry(s, slot: String, g: Dictionary) -> Dictionary:
 	var mags: int = 0
 	for it in s.mags_for(g):
 		mags += 1
-	return {"slot": slot, "name": str(g.get("unique", g.get("piece", g["base"]))), "base": str(g["base"]), "icon": _item_icon(g),
-		"rof": float(b["rof"]) * s.pace() * s.rate_x(), "mag": maxi(1, Items.mag_size(g)) if Items.mag_size(g) > 0 else 0,
+	var e := {"slot": slot, "name": str(g.get("unique", g.get("piece", g["base"]))), "base": str(g["base"]), "icon": _item_icon(g),
+		"sim_rof": float(b["rof"]) * s.pace() * s.rate_x(), "mag": maxi(1, Items.mag_size(g)) if Items.mag_size(g) > 0 else 0,
 		"reload_s": s.reload_s(g) / maxf(0.01, s.pace()), "mags": maxi(T.G_SPARE_MAGS, mags - 1), "type": str(b.get("type", "")),
 		"ammo": Items.ammo_type(g), "item": g, "stand_in": false}
+	return _kind_entry(s, e)
+
+
+# ------------------------------------------------------------------ the gun's kind (build 76)
+
+## The slice's kind of a gun (SliceTuning.G_KINDS) from the game's type and rate: a rifle at G_AR_ROF or more an AR,
+## under G_BOLT_ROF a bolt or lever rifle, between a semi-auto rifle; a pistol under G_REVOLVER_ROF (or named a revolver)
+## a revolver; an improvised gun by the rounds it takes (rifle, SMG, shotgun), its own kind on nails, bolts and the like.
+static func gun_kind(g: Dictionary) -> String:
+	var b: Dictionary = Items.base_of(g)
+	var ty: String = str(b.get("type", ""))
+	var rof: float = float(b.get("rof", 1.0))
+	if ty == "improvised":
+		ty = Items.ammo_type(g)
+	match ty:
+		"melee":
+			return "melee"
+		"smg":
+			return "smg"
+		"shotgun":
+			return "shotgun"
+		"rifle":
+			return "ar" if rof >= T.G_AR_ROF else ("bolt" if rof < T.G_BOLT_ROF else "rifle")
+		"pistol":
+			return "revolver" if rof < T.G_REVOLVER_ROF or str(b.get("name", "")).to_lower().contains("revolver") else "pistol"
+	return "improvised"
+
+
+## A gun entry's kind fields: its rate (rof: the kind's, the sim's kept as sim_rof), magazine, fire, spread, pellets; its
+## damage a second as the bridge reads it (dps) and a round's (per_round, dps / rof: a shell's whole before its pellets).
+static func _kind_entry(s, e: Dictionary) -> Dictionary:
+	var it: Dictionary = e["item"]
+	var kind: String = gun_kind(it)
+	var k: Dictionary = T.G_KINDS[kind]
+	var b: Dictionary = Items.base_of(it)
+	var own: bool = b.has("mag") and int(b["mag"]) > int(Data.MAG_SIZE.get(Items.ammo_type(it), 0))
+	var name_v: String = str(k["name"])
+	if kind == "bolt" and str(b.get("name", "")).to_lower().contains("lever"):
+		name_v = "Lever rifle"
+	e["kind"] = kind
+	e["fire_name"] = name_v
+	e["fire"] = str(k["fire"])
+	e["rof"] = float(k["rate"])
+	e["rps"] = float(k["rate"])
+	e["semi"] = str(k["fire"]) == "semi"
+	e["pump"] = str(k["fire"]) == "pump"
+	e["melee"] = str(k["fire"]) == "swing"
+	e["auto"] = str(k["fire"]) == "auto"
+	e["pellets"] = int(k.get("pellets", 1))
+	e["spread_deg"] = float(k["spread"])
+	var game_mag: int = int(e["mag"])
+	e["sim_mag"] = game_mag
+	e["mag"] = 0 if kind == "melee" else int(k["big"] if own else k["mag"])
+	if kind == "melee":
+		e["mags"] = 0
+	e["sim_reload_s"] = float(e["reload_s"])
+	e["reload_s"] = reload_share_s(float(e["reload_s"]), int(e["mag"]), float(e["rof"]), game_mag, float(e["sim_rof"]))
+	e["dps"] = gun_dps(s, e)
+	e["per_round"] = float(e["dps"]) / maxf(0.01, float(e["rof"]))
+	return e
+
+
+## (round 5's review) The slice's reload for the sim's: scaled by (the slice's magazine / rate) over (the game's magazine /
+## rate), so the gun spends the same share of a fight firing as in the sim, whatever its kind's magazine and rate.
+static func reload_share_s(sim_reload: float, mag: int, rof: float, game_mag: int, game_rof: float) -> float:
+	if mag <= 0 or game_mag <= 0 or rof <= 0.0 or game_rof <= 0.0:
+		return sim_reload
+	return sim_reload * (float(mag) / rof) / (float(game_mag) / game_rof)
+
+
+## The gun's damage a second as the bridge reads it: its own over the sim's chain (the level, the %, attack, the class,
+## growth), at the runner's pace - the same figure the sim's tick spreads over its rof x pace x dt shots.
+static func gun_dps(s, gun: Dictionary) -> float:
+	var it: Dictionary = gun.get("item", gun)
+	var slot: String = str(gun.get("slot", "Primary"))
+	var b: Dictionary = Items.base_of(it)
+	var own: float = Items.dps(it) * (1.0 + s.grade_bonus(it) / 100.0) * s._class_gun_mult(it)
+	if slot == "Primary" and s.has_node("cap_jerry") and str(b.get("type", "")) == "improvised":
+		own *= Data.FX["node/cap_jerry"]
+	if slot == "Secondary" and s.has_rule("branch_pistol") and s.hp < s.max_hp() * 0.5:
+		own *= Data.FX["rule/branch_pistol"]
+	var u: Array = s.u67_gun_x(true)
+	own *= float(u[0] if slot == "Primary" else u[1])
+	var pair: Array = s._gun_dps()
+	var guns: float = float(pair[0]) + float(pair[1])
+	var runner_x: float = s.dps() / guns if guns > 0.0 else 1.0
+	return own * runner_x * s.pace()
+
+
+## The HUD's gun line (H), long to short: ["AR · 10 a second", "AR"]; a melee weapon ["Melee · a swing", "Melee"].
+static func gun_line(gun: Dictionary) -> Array:
+	var nm: String = str(gun.get("fire_name", "Gun"))
+	if bool(gun.get("melee", false)):
+		return ["%s · a swing" % nm, nm]
+	var rate: String = _rate_words(float(gun.get("rps", gun.get("rof", 1.0))))
+	if bool(gun.get("semi", false)) or bool(gun.get("pump", false)):     # (round 5's review) a press gun: its rate is a cap
+		return ["%s · up to %s a second" % [nm, rate], "%s · %s a second" % [nm, rate], nm]
+	return ["%s · %s a second" % [nm, rate], nm]
+
+
+static func _rate_words(r: float) -> String:
+	return str(roundi(r)) if absf(r - roundf(r)) < 0.05 else ("%.1f" % r)
 
 
 static func _meds(s) -> Array:
@@ -418,14 +523,15 @@ static func jams(ctx: Dictionary, gun: Dictionary, rng: RandomNumberGenerator) -
 
 ## One round of the runner's `gun` (a ctx gun entry) on a man, as the real fight computes it. Writes the man's HP, dots and
 ## timers into `ms`; returns {damage:int, amount:float, by_type, headshot, helmet, leg, arm, killed, hard, clean}.
-static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: RandomNumberGenerator, aimed_head := false) -> Dictionary:
+## (build 76) `part`: this round's part of the press - a shotgun's pellet 1 / pellets, else 1.
+static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: RandomNumberGenerator, aimed_head := false, part := 1.0) -> Dictionary:
 	var s = ctx["sim"]
 	var m: Dictionary = s.mission
 	var t: Dictionary = ctx["t"]
 	var it: Dictionary = gun.get("item", gun)
 	var slot: String = str(gun.get("slot", "Primary"))
 	var sv: Dictionary = s._f66_sv(m)
-	var one: float = round_damage(ctx, gun)
+	var one: float = round_damage(ctx, gun) * clampf(part, 0.0, 1.0)
 	var per: Dictionary = s.type_dps()
 	var total: float = 0.0
 	for ty in per:
@@ -473,7 +579,7 @@ static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: R
 		if landed > float(top[1]):
 			top = [ty, landed]
 		if Data.DOTS.has(ty) and landed > 0.0:
-			_dot_add(ctx, ms, ty, landed, landed * float(gun.get("rof", 1.0)))
+			_dot_add(ctx, ms, ty, landed, landed * float(gun.get("rof", 1.0)) / maxf(0.01, part))
 		if ty == "frost" and landed > 0.0:
 			ms["chill_t"] = s.status_s(1.0) * (1.0 + s.tree_sum("frost_last_pct") / 100.0)
 		if ty == "shock" and landed > 0.0:
@@ -503,7 +609,7 @@ static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: R
 		ms["arm_t"] = Data.ARM66_S
 	# the pinning meter on him: sustained fire fills it, only from a source (0.15.4)
 	if s.f70_pins(sv):
-		var rof: float = maxf(0.1, float(gun.get("rof", 1.0)))
+		var rof: float = maxf(0.1, float(gun.get("rof", 1.0)) / maxf(0.01, part))     # a pellet: its share of the shell's fill
 		ms["supp"] = minf(1.0, float(ms.get("supp", 0.0)) + 1.0 / (rof * Data.SUPP66_FILL_S) * (1.0 + float(sv["suppress_pct"]) / 100.0) * (Data.RATTLE67_PIN_X if s.has_rule("football_rattle") else 1.0))
 	ms["since_shot"] = 0.0
 	ms["hp"] = float(ms["hp"]) - x
@@ -524,23 +630,12 @@ static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: R
 
 
 ## One round's damage of a gun before the man: its share of the damage a second (the sim's own chain) over its rate.
+## (build 76) The gun's damage a second (read live: low HP, the kit) over the slice's rate of its kind.
 static func round_damage(ctx: Dictionary, gun: Dictionary) -> float:
-	var s = ctx["sim"]
-	var it: Dictionary = gun.get("item", gun)
-	var slot: String = str(gun.get("slot", "Primary"))
-	var b: Dictionary = Items.base_of(it)
-	var rof: float = maxf(0.01, float(b.get("rof", 1.0)))
-	var own: float = Items.dps(it) * (1.0 + s.grade_bonus(it) / 100.0) * s._class_gun_mult(it)
-	if slot == "Primary" and s.has_node("cap_jerry") and str(b.get("type", "")) == "improvised":
-		own *= Data.FX["node/cap_jerry"]
-	if slot == "Secondary" and s.has_rule("branch_pistol") and s.hp < s.max_hp() * 0.5:
-		own *= Data.FX["rule/branch_pistol"]
-	var u: Array = s.u67_gun_x(true)
-	own *= float(u[0] if slot == "Primary" else u[1])
-	var pair: Array = s._gun_dps()
-	var guns: float = float(pair[0]) + float(pair[1])
-	var runner_x: float = s.dps() / guns if guns > 0.0 else 1.0     # the level, the %, attack, the class, growth: the sim's chain
-	return own * runner_x / (rof * s.rate_x())
+	var e: Dictionary = gun
+	if not gun.has("kind"):
+		e = _kind_entry(ctx["sim"], {"item": gun.get("item", gun), "slot": str(gun.get("slot", "Primary"))})
+	return gun_dps(ctx["sim"], e) / maxf(0.01, float(e.get("rof", 1.0)))
 
 
 ## The share of a hit his armour takes (f66_armour on him): the depth's, an Armoured hard man's doubled, pierce_pct.
@@ -672,7 +767,7 @@ static func _gang_left(ctx: Dictionary) -> int:
 
 # ------------------------------------------------------------------ their fire on you
 
-## One of their rounds on the runner: their fire a second over SliceTuning.G_MAN_ROF, by type - physical through your
+## One of their rounds on the runner: their_round (the sim's fire a second over their rate, the knob), by type - physical through your
 ## armour, the rest your resists - the crowd rules, low HP, Decoy, Go to ground, an arm-shot man's misses, a Spotter,
 ## Guard first. `on_you`: how many have you in their sights now. Returns {hp_loss:int, guard_loss:int, missed, amount, by_type}.
 static func hit_on_runner(ctx: Dictionary, runner, ms: Dictionary, rng: RandomNumberGenerator, on_you := 1, spotter := false) -> Dictionary:
@@ -686,7 +781,7 @@ static func hit_on_runner(ctx: Dictionary, runner, ms: Dictionary, rng: RandomNu
 		return miss                                    # Go to ground: out of sight
 	if float(ms.get("arm_t", 0.0)) > 0.0 and rng.randf() < (Data.KNUCKLES67_MISS if s.has_rule("bouncers") else Data.ARM66_MISS):
 		return miss                                    # an arm shot: he misses more
-	var raw: float = float(ms["dps"]) / T.G_MAN_ROF * rng.randf_range(1.0 - Sim.VARIANCE, 1.0 + Sim.VARIANCE)
+	var raw: float = their_round(ctx, ms) * rng.randf_range(1.0 - Sim.VARIANCE, 1.0 + Sim.VARIANCE)
 	var types: Dictionary = ms.get("types", {"physical": 1.0})
 	var by := {}
 	var amount := 0.0
@@ -708,8 +803,23 @@ static func hit_on_runner(ctx: Dictionary, runner, ms: Dictionary, rng: RandomNu
 	for ty in ["fire", "poison", "bleed"]:
 		var sh := float(types.get(ty, 0.0))
 		if sh > 0.0 and amount > 0.0 and not s.cure_wards(m, ty):
-			s._dot_add(m["my_dots"], ty, amount * sh, amount * sh * T.G_MAN_ROF)
+			s._dot_add(m["my_dots"], ty, amount * sh, amount * sh * their_rps())
 	return _land_on_runner(ctx, runner, amount, by)
+
+
+## (build 76) Their rounds a second, firing: a burst at G_MAN_ROF, then its pause - the mean over a burst and its pause.
+static func their_rps() -> float:
+	var burst: float = (float(T.G_BURST[0]) + float(T.G_BURST[1])) * 0.5
+	var pause: float = (float(T.G_BURST_PAUSE[0]) + float(T.G_BURST_PAUSE[1])) * 0.5
+	return burst / (burst / T.G_MAN_ROF + pause)
+
+
+## One of their rounds before you: the sim's damage a second for the man over the rounds that land a second - their rate
+## times the share that lands in the open (G_HIT_OPEN) - so a man firing at a runner in the open deals the sim's figure a
+## second (round 5's review: over the rate alone it landed ~40% of it; Matt: "not taking much if any damage"); cover cuts
+## it still. Times the pause's "Their damage" (ctx.their_dmg_x, live).
+static func their_round(ctx: Dictionary, ms: Dictionary) -> float:
+	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * float(ctx.get("their_dmg_x", T.THEIR_DMG_X))
 
 
 ## What reaches the runner: Guard first (the sim's _take), the streak's hit (_f66_taken).

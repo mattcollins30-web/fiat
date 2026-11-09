@@ -91,6 +91,7 @@ static func cover_px() -> Array:
 var park_rect := Rect2(0, 0, T.PARK_W, T.PARK_H)
 var exit_rect := Rect2(T.EDGE + 40.0, T.PARK_H - T.EDGE - 40.0 - T.EXIT_H, T.EXIT_W, T.EXIT_H)
 var exit_lit := false                # the clear lights the way out up
+var exit_seen := false               # (build 76) the way out shows once the runner has seen it (slice/sight.gd sets it)
 var cover: Array = []                # Rect2s, the cover only
 var blocks: Array = []               # Rect2s, the cover and the park's edge walls (moving and sight)
 
@@ -150,14 +151,15 @@ func _draw() -> void:
 		draw_texture_rect(boards, tiles_px(KIOSK_INSIDE), true, C_BURNT)     # the kiosk's boards, scorched
 	else:
 		draw_rect(tiles_px(KIOSK_INSIDE), Color("26221f"))
-	# the way out
-	var ec := C_EXIT if exit_lit else Color(C_EXIT, 0.55)
-	draw_rect(exit_rect, Color(ec, 0.10 if not exit_lit else 0.22))
-	draw_rect(exit_rect, ec, false, 4.0)
-	var mid := exit_rect.get_center()
-	draw_line(mid + Vector2(-50, 50), mid + Vector2(50, -50), ec, 6.0)
-	draw_line(mid + Vector2(50, -50), mid + Vector2(10, -50), ec, 6.0)
-	draw_line(mid + Vector2(50, -50), mid + Vector2(50, -10), ec, 6.0)
+	# the way out, once seen (build 76)
+	if exit_seen:
+		var ec := C_EXIT if exit_lit else Color(C_EXIT, 0.55)
+		draw_rect(exit_rect, Color(ec, 0.10 if not exit_lit else 0.22))
+		draw_rect(exit_rect, ec, false, 4.0)
+		var mid := exit_rect.get_center()
+		draw_line(mid + Vector2(-50, 50), mid + Vector2(50, -50), ec, 6.0)
+		draw_line(mid + Vector2(50, -50), mid + Vector2(10, -50), ec, 6.0)
+		draw_line(mid + Vector2(50, -50), mid + Vector2(50, -10), ec, 6.0)
 	# the cover, a shadow under each: the pack's props where it has one, code-drawn (shaded to match) where not
 	var bin_i := 0
 	for c in cover_px():

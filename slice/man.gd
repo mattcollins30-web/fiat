@@ -3,6 +3,7 @@ extends CharacterBody2D
 ## reaction delay and spread, falling back when hurt. His numbers are the bridge's (the sim's man at the car park);
 ## his feet and timings SliceTuning's G block. The hard man is one of these with a name and traits.
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceRound := preload("res://slice/round.gd")     # (build 76) his rounds travel too
 
 const T := preload("res://slice/tuning.gd")
 const Art := preload("res://slice/art.gd")
@@ -16,8 +17,8 @@ const C_HARD := Color("5e1f1a")
 const C_HARD_LINE := Color("d9a441")
 const C_HURT := Color("e6e1d3")
 const C_STUN := Color("7fb4d9")
-const NAME_PX := 22                   # the hard man's name over his token
-const C_TRACER := Color(1.0, 0.85, 0.55, 0.9)
+const NAME_PX := 22                   # the hard man's name over his token, on screen (drawn at NAME_PX / CAM_ZOOM in the world)
+const BAR_H := 6.0                    # (round 5's review) his HP bar's height on screen, px (BAR_H / CAM_ZOOM in the world)
 
 var world = null
 var gang = null
@@ -44,6 +45,8 @@ var knock_v := Vector2.ZERO
 var tracer_to := Vector2.ZERO
 var tracer_t := 0.0
 var dead := false
+var fired := 0                        # (build 76) his rounds sent, and those that reached the runner (round.gd counts)
+var landed := 0
 var gone := false                     # faded out: the director drops him
 var fade_t := 0.0
 var rng: RandomNumberGenerator
@@ -96,7 +99,7 @@ func take_shot(shot: Dictionary) -> Dictionary:
 		return {"damage": 0, "headshot": false, "killed": false}
 	if state == "held" and gang != null and gang.has_method("held_shot"):
 		gang.held_shot(self)                      # (round 4) found at the back and shot: he's in it now, one of the front goes back
-	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)))
+	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)), float(shot.get("share", 1.0)))
 	flash_t = T.G_FLASH_S
 	if state == "cover" or state == "enter":
 		move_left = minf(move_left, 0.6)          # shot at: he thinks about moving
@@ -318,23 +321,19 @@ func _fire(dt: float, rp: Vector2, dist: float) -> void:
 	pause_left = slow / T.G_MAN_ROF
 	if burst_left <= 0:
 		pause_left += rng.randf_range(T.G_BURST_PAUSE[0], T.G_BURST_PAUSE[1]) * (T.G_PINNED_SLOW if float(ms.get("supp", 0.0)) >= 1.0 else 1.0)
-	# the round: spread either side; it lands if it passes within the runner's token
-	var spread: float = deg_to_rad(T.G_SPREAD_DEG) * (T.G_SPREAD_MOVING if velocity.length() > 40.0 else 1.0)
-	var err: float = rng.randf_range(-spread, spread)
-	var off: float = absf(sin(err)) * dist
-	var r_r: float = T.G_RUNNER_R
-	var hit: bool = off <= r_r
-	var dir: Vector2 = (rp - global_position).normalized().rotated(err)
-	tracer_to = global_position + dir * dist
+	# (build 76) a round that travels (round.gd), aimed where the runner will be when it gets there, its error spread across
+	# so G_HIT_OPEN of them cross his token in the open (less on the move); cover in its path stops it
+	var p_hit: float = T.G_HIT_OPEN * (T.G_MOVING_X if velocity.length() > 40.0 else 1.0)
+	var lead: Vector2 = Vector2(runner.velocity) * (dist / T.G_THEIR_ROUND_PX_S) * T.G_LEAD
+	var aim_at: Vector2 = rp + lead
+	var to: Vector2 = aim_at - global_position
+	var side: Vector2 = Vector2(-to.y, to.x).normalized() if to.length() > 1.0 else Vector2.UP
+	var off: float = rng.randf_range(-1.0, 1.0) * T.RUNNER_R / maxf(0.05, p_hit)
+	tracer_to = aim_at + side * off
 	tracer_t = 0.06
-	if hit:
-		var on_you: int = gang.on_you() if gang != null else 1
-		var res: Dictionary = SliceBridge.hit_on_runner(world.ctx, runner, ms, rng, on_you, gang != null and gang.spotter_on(int(ms.get("gang", 0))))
-		if not bool(res["missed"]) and (int(res["hp_loss"]) > 0 or int(res["guard_loss"]) > 0):
-			runner.apply_hit(res)
-		else:
-			hit = false
-	fired_at.emit(self, hit, tracer_to)
+	SliceRound.layer(world).fire_man(self, tracer_to)
+	fired += 1
+	fired_at.emit(self, absf(off) <= T.RUNNER_R, tracer_to)
 
 
 ## (round 3) Where he faces: the runner while he lives; a dead man keeps the facing he fell with while he fades.
@@ -349,9 +348,16 @@ func facing() -> float:
 	return a
 
 
+## (round 5's review) The hard man's name and the HP bar at the camera's zoom: world sizes that show NAME_PX and BAR_H.
+static func name_px() -> int:
+	return roundi(NAME_PX / T.CAM_ZOOM)
+
+
+static func bar_h() -> float:
+	return BAR_H / T.CAM_ZOOM
+
+
 func _draw() -> void:
-	if tracer_t > 0.0:
-		draw_line(Vector2.ZERO, to_local(tracer_to), C_TRACER, 2.0)
 	var body: Color = C_HURT if flash_t > 0.0 else (C_HARD if hard else C_MAN)
 	draw_circle(Vector2(4, 6), radius, Color(0, 0, 0, 0.35))
 	var face := facing()
@@ -359,7 +365,7 @@ func _draw() -> void:
 		look = Art.HARD if hard else Art.next_look()
 	if hard:
 		draw_circle(Vector2.ZERO, radius + 10.0, Color(C_HARD_LINE, 0.22))     # his glow
-	var pose_v: String = Art.man_pose(look, not dead and (sees or tracer_t > 0.0))
+	var pose_v: String = Art.man_set_pose(dead, tracer_t > 0.0, sees)     # (round 5's review) the set's names, Kenney's mapped
 	if Art.draw_char(self, look, pose_v, face, radius * 0.95):
 		if flash_t > 0.0:
 			draw_circle(Vector2.ZERO, radius, Color(C_HURT, 0.65))     # hit: he flashes
@@ -374,9 +380,11 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, radius + 8.0, 0.0, TAU, 40, C_STUN, 3.0)
 	if hard and name_text != "" and not dead and world != null:
 		var f: Font = world.font() if world.has_method("font") else ThemeDB.fallback_font
-		var nw: float = f.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_PX).x
-		draw_string(f, Vector2(-nw * 0.5, -radius - 26.0), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_PX, C_HARD_LINE)     # his name over him (board A)
+		var np: int = name_px()
+		var nw: float = f.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, np).x
+		draw_string(f, Vector2(-nw * 0.5, -radius - bar_h() - 14.0 / T.CAM_ZOOM), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, np, C_HARD_LINE)     # his name over him (board A)
 	if hp < hp_max and not dead:
 		var w: float = radius * 2.0
-		draw_rect(Rect2(-radius, -radius - 16.0, w, 6.0), Color(0, 0, 0, 0.6))
-		draw_rect(Rect2(-radius, -radius - 16.0, w * clampf(hp / hp_max, 0.0, 1.0), 6.0), Color("d0453a"))
+		var bh: float = bar_h()
+		draw_rect(Rect2(-radius, -radius - 10.0 - bh, w, bh), Color(0, 0, 0, 0.6))
+		draw_rect(Rect2(-radius, -radius - 10.0 - bh, w * clampf(hp / hp_max, 0.0, 1.0), bh), Color("d0453a"))

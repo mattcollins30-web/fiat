@@ -29,7 +29,7 @@ const ME_H := 118.0
 const FACE := 64.0                    # the portrait at half its 128 (People: whole or a clean half)
 const TILE := 72.0                    # a skill or med slot
 const TILE_GAP := 12.0
-const GUN_W := 180.0                  # the gun's picture and its rounds
+const GUN_W := 180.0                  # the gun's line (build 76), its picture and its rounds
 const BAR_H := 132.0                  # bottom centre's panel
 const POP_S := 0.75                   # a damage number's life
 const POP_RISE := 46.0                # how far it rises
@@ -69,6 +69,7 @@ var _me_line: Label
 var _me_energy: Label
 var _bar: Panel
 var _gun_pic: TextureRect
+var _gun_line: Label                  # (build 76, board D) "AR · 10 a second" over the rounds
 var _gun_rounds: Label
 var _gun_spare: Label
 var _gun_state: Label
@@ -82,7 +83,7 @@ var _news_left := 0.0
 var _note_gun: Label                  # "Stand-in gun · ..." when the runner's own can't fire here
 var _note_sk: Label                   # "Not in the slice: E" over skills the slice doesn't play
 var _reload_hint: Label               # "R · Reload" under a quarter of the magazine (round 2: Matt couldn't find the reload)
-var _tests: Label                     # the test settings in force: gang HP, the magazine (round 2)
+var _tests: Label                     # the test settings in force: gang HP, their damage (build 76: the magazine's gone)
 var _pop_root: Control
 
 
@@ -192,13 +193,14 @@ func _bar_w() -> float:
 func _build_bar() -> void:
 	_bar = UI.panel(self, Rect2(0, 0, _bar_w(), BAR_H), _panel_box())
 	_gun_pic = TextureRect.new()
-	_gun_pic.position = Vector2(20, 14)
-	_gun_pic.size = Vector2(GUN_W, 56)
+	_gun_pic.position = Vector2(20, 38)
+	_gun_pic.size = Vector2(GUN_W, 34)
 	_gun_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_gun_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_gun_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_gun_pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bar.add_child(_gun_pic)
+	_gun_line = UI.label(_bar, Rect2(20, 12, GUN_W, 24), "", "SemiBold", 16, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_gun_rounds = UI.label(_bar, Rect2(20, 74, 48, 32), "", "Bold", 22, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
 	_gun_spare = UI.label(_bar, Rect2(68, 74, GUN_W - 48, 32), "", "Medium", 16, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
 	_gun_state = UI.label(_bar, Rect2(20, 74, GUN_W, 32), "", "SemiBold", 16, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT)
@@ -327,7 +329,7 @@ func read_state() -> Dictionary:
 	st["stand_in"] = str(gun.get("name", "")) if bool(gun.get("stand_in", false)) else ""
 	st["pad"] = bool(world.get("pad")) if world.get("pad") != null else false
 	st["man_hp_x"] = float(ctx.get("man_hp_x", SliceTuning.MAN_HP_X))
-	st["mag_x"] = float(ctx.get("mag_x", SliceTuning.MAG_X))
+	st["their_dmg_x"] = float(ctx.get("their_dmg_x", SliceTuning.THEIR_DMG_X))
 	var sk: Array = []
 	var skills: Array = ctx.get("skills", [])
 	for i in range(mini(3, skills.size())):
@@ -367,6 +369,7 @@ func show_state(st: Dictionary) -> void:
 	# the gun
 	var gun: Dictionary = st.get("gun", {})
 	_gun_pic.texture = gun_picture(gun)
+	UI.fit(_gun_line, gun_line(gun))
 	var rf: float = float(st.get("reload_frac", -1.0))
 	var jammed: bool = bool(st.get("jammed", false))
 	_reload_bar.visible = rf >= 0.0
@@ -398,7 +401,7 @@ func show_state(st: Dictionary) -> void:
 	_reload_hint.visible = low
 	_reload_hint.text = ("X · Reload" if bool(st.get("pad", false)) else "R · Reload") if low else ""
 	# the test settings in force
-	_tests.text = "Test settings: gang HP %s, magazine %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(float(st.get("mag_x", SliceTuning.MAG_X)))]
+	_tests.text = "Test settings: gang HP %s, their damage %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(float(st.get("their_dmg_x", SliceTuning.THEIR_DMG_X)))]
 	_note_gun.visible = str(st.get("stand_in", "")) != ""
 	if _note_gun.visible:
 		UI.fit(_note_gun, ["Stand-in gun · %s" % str(st["stand_in"]), "Stand-in gun"])
@@ -460,6 +463,12 @@ func show_state(st: Dictionary) -> void:
 	_banner.visible = ls > 0.0
 	if ls > 0.0:
 		_banner.text = UI.dots("%s · %s" % [Words.V66["last_stand"], Words.V66["ls_on"] % ("%d" % int(ceil(ls)))])
+
+
+## (build 76, board D) The gun's line, long to short: its kind and its rate, "AR · 10 a second" - the bridge's words
+## (SliceBridge.gun_line: a press gun's rate is its cap, a melee weapon "a swing"); then the kind alone.
+static func gun_line(gun: Dictionary) -> Array:
+	return [""] if gun.is_empty() else SliceBridge.gun_line(gun)
 
 
 static func x_words(x: float) -> String:
@@ -605,7 +614,9 @@ func bind(w) -> void:
 		w.gang.gang_arrived.connect(func(i: int, _n: int) -> void: _arrived = maxi(_arrived, i + 1))
 
 
-func _on_hit(_man: Node, result: Dictionary, point: Vector2) -> void:
+func _on_hit(man: Node, result: Dictionary, point: Vector2) -> void:
+	if man is CanvasItem and not man.visible:     # (round 5's review) a man the fog hides: no number to give him away
+		return
 	var at: Vector2 = world.world_to_screen(point) if world != null and world.has_method("world_to_screen") else point
 	pop(at, int(result.get("damage", 0)), bool(result.get("headshot", false)), bool(result.get("killed", false)))
 
@@ -613,7 +624,7 @@ func _on_hit(_man: Node, result: Dictionary, point: Vector2) -> void:
 ## Every label the HUD shows, for the fit checks (pops are short-lived and centred over a man: not laid out against
 ## anything).
 func text_nodes() -> Array:
-	var out: Array = [_site_kicker, _site_name, _site_clock, _waves, _me_name, _me_hp, _me_line, _me_energy, _gun_rounds, _gun_spare, _gun_state, _banner,
+	var out: Array = [_site_kicker, _site_name, _site_clock, _waves, _me_name, _me_hp, _me_line, _me_energy, _gun_line, _gun_rounds, _gun_spare, _gun_state, _banner,
 		_news, _note_gun, _note_sk, _reload_hint, _tests]
 	for d in _skills + _meds:
 		out.append(d["secs"])
@@ -628,9 +639,33 @@ func panels() -> Array:
 	return [_site, _map, _me, _bar]
 
 
-## The minimap: the park in its panel - cover, crates, the way out, the men, you.
+## The minimap: the park in its panel - cover, crates, the way out, the men, you. (build 76, W's line of sight) Only what
+## the runner has seen: a man the fog hides isn't on it (his "last seen" mark is, faint), a crate or the way out once seen.
 class MiniMap extends Control:
 	var hud = null
+
+	## What the map shows, in the park's px: {"crates": [[pos, opened]], "men": [[pos, hard]], "marks": [pos], "exit": bool}.
+	static func shown(w) -> Dictionary:
+		var out := {"crates": [], "men": [], "marks": [], "exit": true}
+		var lv = w.get("level")
+		if lv != null and lv.get("exit_seen") != null:
+			out["exit"] = bool(lv.get("exit_seen"))
+		if w.has_method("crates"):
+			for c in w.crates():
+				if c.get("seen") == false or not c.visible:
+					continue
+				out["crates"].append([c.global_position, bool(c.get("opened")) if c.get("opened") != null else false])
+		if w.has_method("men"):
+			for m in w.men():
+				if not m.visible:
+					continue
+				out["men"].append([m.global_position, bool(m.get("hard")) if m.get("hard") != null else false])
+		var sight = w.get("sight")
+		if sight != null and sight.get("marks") is Array:
+			for mk in sight.get("marks"):
+				if mk is Dictionary and mk.get("pos") is Vector2:
+					out["marks"].append(mk["pos"])
+		return out
 
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.08, 0.09, 0.10, 0.9))
@@ -645,17 +680,17 @@ class MiniMap extends Control:
 		if w.has_method("cover_rects"):
 			for r in w.cover_rects():
 				draw_rect(Rect2(to.call(r.position), r.size * k), COVER_TONE)
-		var ex: Rect2 = w.exit_rect
-		draw_rect(Rect2(to.call(ex.position), (ex.size * k).max(Vector2(8, 8))), EXIT_TONE, false, 2.0)
-		if w.has_method("crates"):
-			for c in w.crates():
-				var opened: bool = bool(c.get("opened")) if c.get("opened") != null else false
-				draw_rect(Rect2(to.call(c.global_position) - Vector2(3, 3), Vector2(7, 7)), Color(Pal.ACCENT, 0.35 if opened else 1.0))
-		if w.has_method("men"):
-			for m in w.men():
-				var hard: bool = bool(m.get("hard")) if m.get("hard") != null else false
-				draw_circle(to.call(m.global_position), 5.0 if hard else 4.0, MAN_TONE)
-				if hard:
-					draw_arc(to.call(m.global_position), 6.5, 0.0, TAU, 16, Pal.ACCENT, 1.5)
+		var sh: Dictionary = shown(w)
+		if bool(sh["exit"]):
+			var ex: Rect2 = w.exit_rect
+			draw_rect(Rect2(to.call(ex.position), (ex.size * k).max(Vector2(8, 8))), EXIT_TONE, false, 2.0)
+		for c in sh["crates"]:
+			draw_rect(Rect2(to.call(c[0]) - Vector2(3, 3), Vector2(7, 7)), Color(Pal.ACCENT, 0.35 if bool(c[1]) else 1.0))
+		for p in sh["marks"]:
+			draw_arc(to.call(p), 4.0, 0.0, TAU, 12, Color(MAN_TONE, 0.45), 1.5)     # where a man was last seen
+		for m in sh["men"]:
+			draw_circle(to.call(m[0]), 5.0 if bool(m[1]) else 4.0, MAN_TONE)
+			if bool(m[1]):
+				draw_arc(to.call(m[0]), 6.5, 0.0, TAU, 16, Pal.ACCENT, 1.5)
 		if w.runner != null and is_instance_valid(w.runner):
 			draw_circle(to.call(w.runner.global_position), 5.0, Pal.ACCENT)

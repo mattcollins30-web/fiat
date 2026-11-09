@@ -5,6 +5,7 @@ extends CharacterBody2D
 ## crates, and holds X/B in the way out to leave. The world steps him (world.tick) so a headless check can too.
 const SliceWorld := preload("res://slice/slice.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceRound := preload("res://slice/round.gd")     # (build 76) rounds that travel
 
 const T := preload("res://slice/tuning.gd")
 const Art := preload("res://slice/art.gd")
@@ -33,6 +34,9 @@ var jammed := false
 var jam_left := 0.0
 var swap_left := 0.0
 var shot_cd := 0.0
+var fire_t := 0.0                     # (round 5's review) just fired: the art's "fire" pose this long
+const YOU_PX := 26                    # "You" on screen, px (board A's size; drawn at YOU_PX / CAM_ZOOM in the world)
+const SHOT_EPS := 1e-6                # (round 5's review) the beat's leftover after frames of dt: a float's crumb isn't a wait
 var aim := Vector2.ZERO              # the world point aimed at
 var aim_dir := Vector2.RIGHT
 var aim_mode := "mouse"              # "mouse", "pad", or "fixed" (a check's debug_aim_at)
@@ -49,6 +53,7 @@ var hurt_left := 0.0
 var last_hurt_t := -100.0
 var dead := false
 var trigger_was := false            # the trigger held last step (a fresh pull)
+var press_kept := 0.0               # (build 76) a press on a semi gun inside its cap: kept this long, fires when it can
 var auto_move := Vector2.ZERO        # a check's walk (debug_move_dir); zero means the controls
 
 
@@ -105,8 +110,11 @@ func tick(dt: float) -> void:
 	_aim()
 	_gun_timers(dt)
 	var pulled := Input.is_action_pressed("slice_fire")
-	if pulled:
-		_trigger(not trigger_was)
+	if pulled and not trigger_was:
+		press_kept = T.G_PRESS_KEEP_S
+	if pulled or press_kept > 0.0:
+		_trigger(pulled and not trigger_was)
+	press_kept = maxf(0.0, press_kept - dt)
 	trigger_was = pulled
 	if Input.is_action_just_pressed("slice_reload"):
 		start_reload()
@@ -165,7 +173,9 @@ func _input(event: InputEvent) -> void:
 
 # ---------------------------------------------------------------- the gun
 func _gun_timers(dt: float) -> void:
-	shot_cd -= dt                            # held, the debt carries: the stream keeps the gun's exact rate
+	fire_t = maxf(0.0, fire_t - dt)
+	if shot_cd > 0.0:                        # held, the debt carries: the stream keeps the gun's exact rate; (round 5's
+		shot_cd -= dt                        # review) a ready gun doesn't run up credit before the press
 	if not Input.is_action_pressed("slice_fire") or reloading or jammed or swap_left > 0.0:     # no burst saved up
 		shot_cd = maxf(0.0, shot_cd)
 	swap_left = maxf(0.0, swap_left - dt)
@@ -190,38 +200,81 @@ func _gun_timers(dt: float) -> void:
 
 
 func can_fire() -> bool:
-	return not dead and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= 0.0 and gun_i < guns.size() and rounds[gun_i] > 0
+	return not dead and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
 
 
+## (build 76) A melee weapon in hand: it swings, no rounds.
+func is_melee() -> bool:
+	return bool(gun().get("melee", false))
+
+
+## (build 76) The trigger by the gun's fire (bridge's kind): an auto gun streams while it's held at its rate; a semi gun,
+## a pump shotgun or a melee weapon gives one round (a shell, a blow) a press, no faster than its cap - a press inside
+## the cap is kept G_PRESS_KEEP_S and fires when the gun's ready.
 func _trigger(fresh: bool = false) -> void:
 	if gun_i >= guns.size() or reloading or jammed or swap_left > 0.0:
+		return
+	if is_melee():
+		if press_kept > 0.0 and can_fire():
+			press_kept = 0.0
+			fire_once()
 		return
 	if rounds[gun_i] <= 0:
 		if not start_reload() and fresh:
 			var other := (gun_i + 1) % guns.size()
-			if other != gun_i and (rounds[other] > 0 or mags[other] > 0 or box_rounds(other) > 0):
+			if other != gun_i and (rounds[other] > 0 or mags[other] > 0 or box_rounds(other) > 0 or bool(guns[other].get("melee", false))):
 				swap()                       # dry and no magazines left: a fresh pull goes to the spare
 		return
-	while shot_cd <= 0.0 and can_fire():     # a stream: at a high rate several rounds can fall in one frame
+	if not bool(gun().get("auto", true)):
+		if press_kept > 0.0 and can_fire():
+			press_kept = 0.0                 # one a press
+			fire_once()
+		return
+	while shot_cd <= SHOT_EPS and can_fire():     # a stream: at a high rate several rounds can fall in one frame
 		fire_once()
 
 
-## One round: a jam (the beat lost) or a shot down the aim. Returns what the world made of it ({} when it couldn't).
+## One press's worth: a jam (the beat lost), a blow (melee: {man, point, result} at once), or the round(s) sent down the
+## aim, travelling (build 76): {"rounds": [the round's state, SliceRound's]} - what each hit lands as it gets there.
 func fire_once() -> Dictionary:
 	if not can_fire():
 		return {}
 	var g := gun()
-	shot_cd += 1.0 / maxf(0.05, float(g.get("rof", 1.0)))
+	var beat: float = 1.0 / maxf(0.05, float(g.get("rof", 1.0)))
+	fire_t = T.TRACER_S
+	shot_cd = shot_cd + beat if bool(g.get("auto", true)) else beat     # held, an auto gun's debt carries (its exact rate); a press: the cap
+	var rl: Node = SliceRound.layer(world)
+	if is_melee():
+		return rl.swing(self, g)
 	if world.roll_jam(g):
 		jammed = true
 		jam_left = world.jam_s()
 		world.runner_event("jammed", g)
 		return {"jammed": true}
 	rounds[gun_i] -= 1
-	var res: Dictionary = world.shoot(self, g)
+	var sent: Array = rl.fire_runner(self, g)
 	if rounds[gun_i] <= 0 and (mags[gun_i] > 0 or box_rounds() > 0):
 		start_reload()
-	return res
+	return {"rounds": sent}
+
+
+## fire_once, and its round flown to its end (a check's helper, at most max_s): the old shape {man, point, result}, the
+## first pellet that found a man for a shotgun, or {"jammed": true}, or {} when it couldn't fire.
+func fire_once_landed(max_s := 2.0) -> Dictionary:
+	var out := fire_once()
+	if not out.has("rounds"):
+		return out
+	var rl: Node = SliceRound.layer(world)
+	var t := 0.0
+	while t < max_s and Array(out["rounds"]).any(func(rd): return not bool(rd["done"])):
+		rl.step(1.0 / 60.0)
+		t += 1.0 / 60.0
+	var first: Dictionary = {}
+	for rd in out["rounds"]:
+		var o: Dictionary = rd.get("out", {})
+		if first.is_empty() or (first.get("man") == null and o.get("man") != null):
+			first = o
+	return first
 
 
 ## The kit changed in the Kit room (round 4, any slot): the guns as the bridge now has them, in its order. Each gun's
@@ -264,14 +317,6 @@ func kit_changed(c: Dictionary) -> void:
 	energy_max = float(c.get("energy_max", energy_max))
 	energy = minf(energy, energy_max)
 	pace_px = T.PACE_PX * maxf(T.PACE_MIN, 1.0 + float(c.get("pace_pct", 0.0)) / 100.0)
-
-
-## The magazine's size at the pause's test setting (round 2, MAG_X): each gun's game figure times x; what's in a
-## magazine kept, down to the new size.
-func set_mag_x(x: float) -> void:
-	for i in range(guns.size()):
-		SliceBridge.scaled_gun(guns[i], x)
-		rounds[i] = mini(rounds[i], int(guns[i]["mag"]))
 
 
 ## The rounds in the pack's boxes for gun i's type (the ctx's count, shared with the bridge).
@@ -397,14 +442,26 @@ func debug_aim_at(p: Vector2) -> void:
 
 
 # ---------------------------------------------------------------- the look
-## (round 3) The runner's picture: reload while reloading; the gun down (stand) while searching, leaving, swapping or
-## dead; else the gun up - "machine" for a long gun, "gun" for a pistol (firing or aiming, the same pose).
+## The runner's picture, in the art set's poses (round 5's review: art.gd maps them to Kenney's while the set isn't in
+## slice/art/pl/): down when dead, reload while reloading, the gun down ("stand") while searching, leaving or swapping,
+## fire just after a shot, else aim. kenney_up() is Kenney's gun-up picture for it: "gun" for a pistol, else "machine".
 func pose() -> String:
+	if dead:
+		return "down"
 	if reloading:
 		return "reload"
-	if dead or searching != null or leaving_frac > 0.0 or swap_left > 0.0:
+	if searching != null or leaving_frac > 0.0 or swap_left > 0.0:
 		return "stand"
+	return "fire" if fire_t > 0.0 else "aim"
+
+
+func kenney_up() -> String:
 	return "gun" if str(gun().get("type", "")) == "pistol" else "machine"
+
+
+## (round 5's review) "You" under him at the camera's zoom: its font in world px, so on screen it's YOU_PX.
+static func you_px() -> int:
+	return roundi(YOU_PX / T.CAM_ZOOM)
 
 
 func _draw() -> void:
@@ -412,7 +469,7 @@ func _draw() -> void:
 	draw_circle(Vector2(6, 8), r, Color(0, 0, 0, 0.3))
 	draw_circle(Vector2.ZERO, r, Color(C_BODY, 0.55))     # his disc and amber ring: he reads apart from the men
 	draw_arc(Vector2.ZERO, r, 0, TAU, 48, C_LINE, 5.0)
-	if not Art.draw_char(self, Art.RUNNER, pose(), aim_dir.angle(), r * 0.95):
+	if not Art.draw_char(self, Art.RUNNER, pose(), aim_dir.angle(), r * 0.95, Color.WHITE, kenney_up()):
 		draw_line(aim_dir * (r - 6.0), aim_dir * (T.BARREL + 18.0), C_BARREL, 12.0)     # no picture: the token, as before
 		draw_circle(Vector2.ZERO, r - 3.0, C_BODY)
 	if hurt_left > 0.0:
@@ -423,5 +480,6 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, r + 22.0, -PI / 2.0, -PI / 2.0 + TAU * leaving_frac, 40, Color("3fae7a"), 6.0)
 	var f: Font = world.font() if world != null else ThemeDB.fallback_font
 	var you: String = SliceWorld.WORDS["you"]
-	var w := f.get_string_size(you, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-	draw_string(f, Vector2(-w * 0.5, r + 40.0), you, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, C_LINE)
+	var fs: int = you_px()
+	var w := f.get_string_size(you, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string(f, Vector2(-w * 0.5, r + 14.0 + fs), you, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_LINE)

@@ -22,9 +22,10 @@ const ACCEL := 3600.0                # px/s² to full pace: about a tenth of a s
 const DECEL := 5200.0                # px/s² to a stop: no slide
 const MOVE_DEADZONE := 0.2           # the left stick
 const AIM_DEADZONE := 0.3            # the right stick
-const AIM_STICK_PX := 520.0          # the pad aims at a point this far out along the stick
+const AIM_STICK_PX := 1000.0         # the pad aims at a point this far out along the stick (build 76: 500 px on screen at the
+                                     # half zoom, about round 4's 520; the camera's lean follows it)
 const LOCK_DEG := 14.0               # the pad's soft lock-on: a man within this many degrees of the stick
-const LOCK_RANGE := 1300.0           # ...and this near, in sight
+const LOCK_RANGE := 1800.0           # ...and this near, in sight (build 76: the zoomed-out screen's half width is 1920)
 const SHOT_RANGE := 2200.0           # a round flies this far
 const SPREAD_DEG := 1.2              # a round's spread either side (the sim's misses are its own; this is the look)
 const BARREL := 58.0                 # the muzzle, out from the runner's centre
@@ -49,14 +50,23 @@ const EXIT_H := 260.0
 const LEAVE_HOLD_S := 1.5            # X/B held this long in the way out
 
 # ---------------------------------------------------------------- W: the camera
-const CAM_LEAD := 0.22               # the camera leans this share of the way toward the aim
-const CAM_LEAD_MAX := 280.0          # ...at most this far
+const CAM_ZOOM := 0.5                # (build 76, board D; Matt: "the view is also too zoomed in") half the old zoom: a 64 px
+                                     # tile 32 px on screen, figures 34-40 px - the camera shows twice the ground
+const CAM_LEAD := 0.3                # (build 76) the camera leans this share of the way toward the aim (the mouse's lean
+                                     # settles at 0.43 of its distance from the runner: further when it's pushed out)
+const CAM_LEAD_MAX := 760.0          # ...at most this far (world px; 380 on screen)
 const CAM_FOLLOW := 12.0             # catch-up rate a second (higher is tighter)
 const SHAKE_FIRE := 1.5              # px, each round
 const SHAKE_HIT := 3.0               # a hit landed
 const SHAKE_HURT := 7.0              # the runner hit
 const SHAKE_MAX := 12.0
 const SHAKE_DECAY := 40.0            # px a second
+# ---------------------------------------------------------------- W: line of sight (build 76, board D)
+const FOG_ALPHA := 0.78              # what the cover hides from him: board D's darkness
+const FOG_MARGIN := 400.0            # the fog's ground past the view (the lead and the shake never show its edge)
+const SIGHT_SIDE := 0.8              # a man is seen if his centre or a point this share of his radius to either side is
+const LAST_SEEN_S := 4.0             # a man lost from sight: his "Last seen" mark fades over this long
+const MARK_FONT := 14.0              # the mark's words, px on screen
 # ---------------------------------------------------------------- G: the gang and the bridge (build 72)
 # The site and the clock
 const G_SITE_NAME := "The car park"  # the Retail Park's car park (the brief: the Estate's car park)
@@ -70,15 +80,11 @@ const G_HARD_SURE := true            # no hard man by the last gang: it brings o
 # Their fire
 const MAN_HP_X := 0.5                # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man  (round 4, Matt: "0.5x HP is the better setting")
                                      # takes ~38 rounds, at 0.25 ~10; the pause's "Gang HP" switches it live (README)
-const MAG_X := 2.5                   # (round 2, Matt: "12 rounds with that gun is too few") a test knob: a magazine holds the
-                                     # game's figure times this in the slice only; the pause's "Magazine" switches ×1, ×2.5, ×4
 const SITE_LEVEL_UNDER := 2          # (merge) the car park's level: the runner's less this, at least 1
 const G_MAN_DPS_X := 1.0             # their fire: the sim's times this (1: the game's maths)
-const G_MAN_ROF := 1.6               # a man's rounds a second: their damage a second (the sim's) over this
+const G_MAN_ROF := 5.0               # (build 76) a man's rounds a second within a burst (was 1.6, one round at a time)
 const G_MAN_RANGE := 1500.0          # px: a man fires from this near, in sight
 const G_REACT_S := [0.35, 0.7]       # his first shot this long after he sees you
-const G_SPREAD_DEG := 5.0            # his rounds either side of true
-const G_SPREAD_MOVING := 2.0         # ...times this while he's on the move
 const G_BURST := [3, 5]              # rounds a burst, then a pause
 const G_BURST_PAUSE := [0.6, 1.2]
 const G_PINNED_SLOW := 2.0           # pinned (the meter full), his pauses this many times longer and he keeps his head down
@@ -95,7 +101,6 @@ const G_ARRIVE_PX := 24.0            # at his spot
 const G_SEPARATE_PX := 90.0          # men keep this far apart
 const G_STUCK_S := 0.6               # no headway this long: he steps round
 const G_MAN_R := 34.0               # a man's token (W's MAN_R, board A)
-const G_RUNNER_R := 40.0            # the runner's token, for their rounds (W's RUNNER_R)
 const G_FLASH_S := 0.09             # a man flashes when hit
 const G_HARD_R := 44.0               # the hard man's token radius (a man's is W's MAN_R)
 # The bridge
@@ -112,3 +117,45 @@ const G_SPARE_MAGS := 2              # spare magazines a gun at least (the rig's
 const G_MED_SLOTS := 4
 const G_EVENTS_KEPT := 40
 const G_BOX_ROUNDS := 250            # (the review, 9 Nov) a runner with no box of his gun's rounds in the pack: one of this many
+
+# ---------------------------------------------------------------- G: the guns and their fire (build 76)
+# Matt (9 Nov): "the fire rate feels off too from something that's supposed to be an AR"; "i dont seem to be taking much
+# if any damage". Board D: each gun fires at its type's rate with its type's magazine; a round's damage is the gun's
+# damage a second (the sim's chain, so a build's totals stand) over that rate; rounds travel and the first thing in their
+# path stops them, cover too. The game's gun types (rifle, smg, pistol, shotgun, improvised, melee) split by rate into
+# the slice's kinds; each kind's figures:
+#   rate: rounds a second (auto), or the cap on presses (semi, pump); mag: the magazine (big: a base whose own magazine
+#   is over its type's has this instead); fire: "auto" held, "semi" a press a round, "pump" a press a shell of pellets,
+#   "swing" a press a blow; spread: degrees either side of the aim.
+const G_KINDS := {
+	"ar": {"name": "AR", "rate": 10.0, "mag": 30, "big": 30, "fire": "auto", "spread": 2.0},
+	"smg": {"name": "SMG", "rate": 13.0, "mag": 30, "big": 30, "fire": "auto", "spread": 3.5},
+	"rifle": {"name": "Rifle", "rate": 3.0, "mag": 10, "big": 20, "fire": "semi", "spread": 0.8},
+	"bolt": {"name": "Bolt rifle", "rate": 1.0, "mag": 5, "big": 5, "fire": "semi", "spread": 0.3},
+	"pistol": {"name": "Pistol", "rate": 6.0, "mag": 12, "big": 15, "fire": "semi", "spread": 1.5},
+	"revolver": {"name": "Revolver", "rate": 3.0, "mag": 6, "big": 6, "fire": "semi", "spread": 1.2},
+	"shotgun": {"name": "Shotgun", "rate": 1.2, "mag": 6, "big": 8, "fire": "pump", "spread": 7.0, "pellets": 8},
+	"improvised": {"name": "Improvised", "rate": 2.0, "mag": 10, "big": 20, "fire": "semi", "spread": 2.0},
+	"melee": {"name": "Melee", "rate": 1.5, "mag": 0, "big": 0, "fire": "swing", "spread": 0.0},
+}
+const G_AR_ROF := 2.0                # a rifle at the game's rate of this or more is an AR (the Regimental rifle's 2.45)
+const G_BOLT_ROF := 1.0              # ...under this a bolt or lever rifle; between, a semi-auto rifle
+const G_REVOLVER_ROF := 1.0          # a pistol under this rate (or named a revolver) is a revolver
+const G_PRESS_KEEP_S := 0.15         # a press while the gun's cap holds it is kept this long, then fires
+const G_ROUND_PX_S := 2600.0         # the runner's rounds: px a second (a 64 px tile, 32 on screen at half zoom)
+const G_ROUND_RANGE := 2600.0        # ...and how far they fly
+const G_TRACER_PX := 70.0            # a round's tracer: this long behind it
+const G_MELEE_REACH := 120.0         # a swing: from the runner's edge, this far
+const G_MELEE_ARC_DEG := 50.0        # ...this many degrees either side of the aim
+# Their fire
+const G_THEIR_ROUND_PX_S := 1500.0   # their rounds: slower than his, you see them come
+const G_THEIR_RANGE := 1900.0
+const G_HIT_OPEN := 0.4              # Matt's figure on the board: this share of their rounds land on a runner in the open;
+                                     # their aim's error is spread so a round crosses his token this often (led for his move)
+const G_LEAD := 1.0                  # they lead a moving runner by this share of the round's flight
+const G_MOVING_X := 0.75             # a man on the move: his share of hits times this
+const THEIR_DMG_X := 1.0             # (build 76) the "Their damage" test knob's start (×0.5 / ×1 / ×1.5 on the pause, live:
+                                     # ctx["their_dmg_x"]); a round's damage is the sim's damage a second over their rate, times this
+# ---------------------------------------------------------------- H: the start, the HUD, the pause (build 76)
+const H_LEVEL_FRESH := 12            # the level picker's default on a fresh camp (the fixture's car park)
+const H_LEVEL_STEPS := 3             # the picker offers this many levels either side of the default

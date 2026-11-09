@@ -11,6 +11,7 @@ const HudScript := preload("res://slice/hud.gd")
 const PauseScript := preload("res://slice/pause.gd")
 const EndScript := preload("res://slice/end_screen.gd")
 const KitScript := preload("res://slice/kit_room.gd")     # (round 4) the game's own Kit room, on the slice's Sim
+const PickScript := preload("res://slice/level_pick.gd")  # (build 76) the level picker before the fight
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
@@ -26,6 +27,10 @@ var over: CanvasLayer
 var ended := false
 var _next_id := 0                     # Items' id counter when the slice opened: put back on the way out (the review)
 var _world_mode := Node.PROCESS_MODE_INHERIT     # the world's own, put back on resume
+var picker = null                     # (build 76) the level picker, up from the title until a level's picked
+var site_level := 0                   # the car park's level, as picked (or the default)
+var _camp: Camp = null
+var _dice := 0
 
 
 ## A holder for the bridge's runner_ctx: anything with a `sim` (the bridge reads main.sim; at the title the camp
@@ -57,22 +62,55 @@ static func camp_for(main_v) -> Camp:
 	return c
 
 
-## Opens the slice over `main`'s title. `seed_v` fixes the dice (the smoke's); 0 picks one.
-static func open(main_v, seed_v := 0, use_camp := true) -> Node:
+## Opens the slice over `main`'s title. `seed_v` fixes the dice (the smoke's); 0 picks one. `pick` (build 76): 0 - the
+## title's (no seed) shows the level picker, a fixed seed starts at the default level; above 0 starts at that level;
+## -1 shows the picker whatever the seed.
+static func open(main_v, seed_v := 0, use_camp := true, pick := 0) -> Node:
 	var run = load("res://slice/launch.gd").new()
 	run.name = "Slice"
 	run.main = main_v
 	var host: Node = main_v.get_parent() if main_v != null and main_v.get_parent() != null else main_v
 	host.add_child(run)
-	run.begin(seed_v, use_camp)
+	run.begin(seed_v, use_camp, pick)
 	return run
 
 
-func begin(seed_v: int, use_camp := true) -> void:
+func begin(seed_v: int, use_camp := true, pick := 0) -> void:
 	_next_id = Items._next_id
-	var camp := camp_for(main) if use_camp else Camp.new()
-	var dice: int = seed_v if seed_v != 0 else 1 + int(Time.get_ticks_usec() % 1000003)
-	var ctx: Dictionary = SliceBridge.runner_ctx(camp if camp.sim != null else null, dice)
+	_camp = camp_for(main) if use_camp else Camp.new()
+	_dice = seed_v if seed_v != 0 else 1 + int(Time.get_ticks_usec() % 1000003)
+	var def: int = PickScript.default_for(_camp.sim)
+	if pick < 0 or (pick == 0 and seed_v == 0):
+		show_picker(def)
+		return
+	start(pick if pick > 0 else def)
+
+
+## The level picker over the title (build 76): a level's button starts the fight there.
+func show_picker(def: int) -> void:
+	over = CanvasLayer.new()
+	over.layer = OVER_LAYER
+	over.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(over)
+	picker = PickScript.new()
+	var fresh: bool = PickScript.is_fresh(_camp.sim)
+	picker.setup(def, "Poacher" if _camp.sim == null else str(_camp.sim.cls), SliceBridge.FIXTURE_LEVEL if _camp.sim == null else int(_camp.sim.level()), fresh)
+	over.add_child(picker)
+	picker.picked.connect(start)
+	picker.to_title.connect(back_to_title)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## The fight at the car park's level `lv`: the world, the HUD, the pause, the Kit room and the end over it.
+func start(lv: int) -> void:
+	site_level = lv
+	if picker != null:
+		picker.queue_free()
+		picker = null
+	var camp := _camp
+	var dice := _dice
+	var ctx: Dictionary = SliceBridge.runner_ctx(camp if camp.sim != null else null, dice, lv)
+	ctx["their_dmg_x"] = SliceTuning.THEIR_DMG_X
 	if main != null:
 		if main.get("_menu") != null:
 			main._menu.close()
@@ -83,18 +121,19 @@ func begin(seed_v: int, use_camp := true) -> void:
 	hud = HudScript.new()
 	world.hud_layer.add_child(hud)
 	hud.bind(world)
-	over = CanvasLayer.new()
-	over.layer = OVER_LAYER
-	over.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(over)
+	if over == null:
+		over = CanvasLayer.new()
+		over.layer = OVER_LAYER
+		over.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(over)
 	pause = PauseScript.new()
 	over.add_child(pause)
 	pause.resumed.connect(_resume)
 	pause.to_title.connect(back_to_title)
 	pause.show_hp_x(float(ctx.get("man_hp_x", SliceTuning.MAN_HP_X)))
 	pause.hp_x_changed.connect(set_hp_x)
-	pause.show_mag_x(float(ctx.get("mag_x", SliceTuning.MAG_X)))
-	pause.mag_x_changed.connect(set_mag_x)
+	pause.show_dmg_x(float(ctx.get("their_dmg_x", SliceTuning.THEIR_DMG_X)))
+	pause.dmg_x_changed.connect(set_dmg_x)
 	kit = KitScript.new()
 	over.add_child(kit)
 	kit.closed.connect(close_kit)
@@ -106,7 +145,7 @@ func begin(seed_v: int, use_camp := true) -> void:
 
 ## Tab or Back: the Kit room, on and off (in _input, ahead of the GUI's own Tab, which moves the focus).
 func _input(event: InputEvent) -> void:
-	if ended or pause == null or pause.visible or not event.is_action_pressed("slice_kit"):
+	if ended or pause == null or kit == null or pause.visible or not event.is_action_pressed("slice_kit"):
 		return
 	if is_inside_tree():
 		get_viewport().set_input_as_handled()
@@ -134,7 +173,7 @@ func close_kit() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var press: bool = (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE) \
 			or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_START)
-	if not press or ended or (kit != null and kit.visible):
+	if not press or ended or pause == null or (kit != null and kit.visible):
 		return
 	if is_inside_tree():
 		get_viewport().set_input_as_handled()
@@ -166,12 +205,10 @@ func _on_ended(outcome: String, stats: Dictionary) -> void:
 	end.open(outcome, stats, str(site.get("name", "The car park")))
 
 
-## The pause's other test setting (round 2): a magazine's size times x, live - the ctx's guns and the runner's.
-func set_mag_x(x: float) -> void:
-	world.ctx["mag_x"] = x
-	for e in world.ctx["guns"]:
-		SliceBridge.scaled_gun(e, x)
-	world.runner.set_mag_x(x)
+## The pause's other test setting (build 76, the magazine's gone): their damage a round times x, live - the bridge
+## reads ctx["their_dmg_x"] each round they fire.
+func set_dmg_x(x: float) -> void:
+	world.ctx["their_dmg_x"] = x
 
 
 ## The pause's test setting: the men's HP times x from now - the men standing scaled to it, their share of HP kept.

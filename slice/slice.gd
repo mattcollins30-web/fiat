@@ -17,6 +17,7 @@ const RunnerScript := preload("res://slice/runner.gd")
 const CrateScript := preload("res://slice/crate.gd")
 const FxScript := preload("res://slice/fx.gd")
 const GangScript := preload("res://slice/gang.gd")
+const SightScript := preload("res://slice/sight.gd")
 
 ## Every word the world puts on screen (for the language pass).
 const WORDS := {
@@ -50,6 +51,7 @@ var runner: SliceRunner
 var crates_root: Node2D
 var men_root: Node2D
 var fx: SliceFx
+var sight: Node2D                    # (build 76) slice/sight.gd: the fog over what the cover hides, the last-seen marks
 var camera: Camera2D
 var hud_layer: CanvasLayer
 var gang: Node = null
@@ -62,6 +64,7 @@ var outcome := ""                    # "", "cleared", "out", "died"
 var stats: Dictionary = {}
 var pad := false                     # the last control touched was the pad (the prompts' words)
 var cam_center := Vector2.ZERO
+var screen_override := Vector2.ZERO  # (build 76) a check's screen size (1920 x 1200) for view_size(); zero: the viewport's
 var shake_px := 0.0
 var started := false
 var _dmg_frac := 0.0                 # a dot's damage under one, carried
@@ -93,6 +96,9 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	men_root = Node2D.new()
 	men_root.name = "Men"
 	add_child(men_root)
+	sight = SightScript.new()            # (build 76) over the level, the crates and the men; under the runner, the marks, the rounds
+	sight.name = "Sight"
+	add_child(sight)
 	runner = RunnerScript.new()
 	runner.name = "Runner"
 	runner.position = SliceLevel.ENTRY
@@ -103,6 +109,7 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	add_child(fx)
 	camera = Camera2D.new()
 	camera.name = "Camera"
+	camera.zoom = Vector2(T.CAM_ZOOM, T.CAM_ZOOM)     # (build 76) half the old zoom: twice the ground
 	add_child(camera)
 	if camera.is_inside_tree():
 		camera.make_current()            # (outside the tree - a headless check - there's no viewport to own)
@@ -116,6 +123,8 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	gang.name = "Gang"
 	add_child(gang)
 	gang.setup(self)
+	sight.setup(self)
+	sight.step(0.0)
 	started = true
 
 
@@ -151,6 +160,7 @@ func tick(dt: float) -> void:
 	fx.reticle_locked = runner.locked != null
 	fx.step(dt)
 	_camera_step(dt)
+	sight.step(dt)
 
 
 func _input(event: InputEvent) -> void:
@@ -165,7 +175,7 @@ func _cam_goal() -> Vector2:
 	var lead := (runner.aim - runner.position) * T.CAM_LEAD
 	if lead.length() > T.CAM_LEAD_MAX:
 		lead = lead.normalized() * T.CAM_LEAD_MAX
-	var half := view_size() * 0.5
+	var half := view_world() * 0.5
 	var g := runner.position + lead
 	return Vector2(clampf(g.x, half.x, T.PARK_W - half.x), clampf(g.y, half.y, T.PARK_H - half.y))
 
@@ -179,10 +189,17 @@ func _camera_step(dt: float) -> void:
 
 ## The screen in canvas pixels (1920 x 1080, or 1920 x 1200 on a 16:10 screen); the project's size headless.
 func view_size() -> Vector2:
+	if screen_override != Vector2.ZERO:
+		return screen_override
 	var v := get_viewport_rect().size if is_inside_tree() else Vector2.ZERO
 	if v.x < 1.0 or v.y < 1.0:
 		v = Vector2(ProjectSettings.get_setting("display/window/size/viewport_width", 1920), ProjectSettings.get_setting("display/window/size/viewport_height", 1080))
 	return v
+
+
+## (build 76) The ground the camera shows, in world px: the screen over the zoom (3840 x 2160 at 1920 x 1080).
+func view_world() -> Vector2:
+	return view_size() / T.CAM_ZOOM
 
 
 func shake(strength: float) -> void:
@@ -190,7 +207,11 @@ func shake(strength: float) -> void:
 
 
 func world_to_screen(p: Vector2) -> Vector2:
-	return p - cam_center + view_size() * 0.5
+	return (p - cam_center) * T.CAM_ZOOM + view_size() * 0.5
+
+
+func screen_to_world(s: Vector2) -> Vector2:
+	return (s - view_size() * 0.5) / T.CAM_ZOOM + cam_center
 
 
 # ---------------------------------------------------------------- the geometry

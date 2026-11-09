@@ -4,6 +4,7 @@ extends Node2D
 ## bridge's frame (SliceBridge.tick) itself. H reads the clock: gang_i, gangs, next_in, alive, hard_man.
 const SliceMan := preload("res://slice/man.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceRound := preload("res://slice/round.gd")     # (build 76) the rounds in flight, stepped here
 
 const T := preload("res://slice/tuning.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -180,6 +181,7 @@ func _step(dt: float) -> void:
 	for mn in _all.duplicate():
 		if is_instance_valid(mn) and not mn.gone:
 			mn.step(dt)
+	SliceRound.layer(world).step(dt)                   # (build 76) the rounds in flight, the runner's and theirs
 	_all = _all.filter(func(mn): return is_instance_valid(mn) and not mn.gone)
 	_men = _men.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
 	alive = _men.size()

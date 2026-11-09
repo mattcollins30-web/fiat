@@ -8,10 +8,10 @@ const UI := preload("res://scripts/ui/ui.gd")
 signal resumed
 signal to_title
 signal hp_x_changed(x: float)            # the test setting: the men's HP times this, live
-signal mag_x_changed(x: float)           # the test setting: a magazine's size times this, live (round 2)
+signal dmg_x_changed(x: float)           # (build 76) the test setting: their damage a round times this, live
 
 const HP_STEPS := [0.5, 0.25, 0.15]    # "Gang HP" (round 2, Matt: "1x health is too much"): a half, a quarter (MAN_HP_X, the start), less
-const MAG_STEPS := [1.0, 2.5, 4.0]     # "Magazine" (round 2): the game's figure, MAG_X (the start), more
+const DMG_STEPS := [1.0, 1.5, 0.5]     # (build 76) "Their damage": the game's (the start), more, less - the magazine's knob gone (real sizes)
 
 ## Board C's two columns, as drawn: what it does, the key.
 const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Swap gun", "Right button"], ["Reload", "R or Space"],
@@ -30,9 +30,9 @@ var _title: Label
 var _sub: Label
 var _heads: Array = []
 var _rows: Array = []                 # [[what, key]] labels
-var buttons: Array = []               # Resume, Back to the title, Gang HP, Magazine
+var buttons: Array = []               # Resume, Back to the title, Gang HP, Their damage
 var hp_x := 1.0
-var mag_x := 1.0
+var dmg_x := 1.0
 var _test: Label
 
 
@@ -70,11 +70,11 @@ func _init() -> void:
 	var tx: float = CARD_W - 40.0 - 2.0 * 270.0 - 20.0
 	for k in range(2):
 		var tb := UI.button(_card, Rect2(tx + k * 290.0, by, 270, 52), false)
-		tb.pressed.connect(_on_hp_x if k == 0 else _on_mag_x)
+		tb.pressed.connect(_on_hp_x if k == 0 else _on_dmg_x)
 		buttons.append(tb)
 	_test = UI.head(_card, Rect2(tx, by - 30, 560, 22), "Test settings")
 	show_hp_x(0.5)
-	show_mag_x(1.0)
+	show_dmg_x(1.0)
 	visible = false
 
 
@@ -88,17 +88,17 @@ static func hp_words(x: float) -> String:
 	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
 
 
-## A magazine's size times this, on the button.
-func show_mag_x(x: float) -> void:
-	mag_x = x
-	buttons[3].text = "Magazine %s" % hp_words(x)
+## Their damage a round times this, on the button (build 76).
+func show_dmg_x(x: float) -> void:
+	dmg_x = x
+	buttons[3].text = "Their damage %s" % hp_words(x)
 
 
-func _on_mag_x() -> void:
-	var i: int = MAG_STEPS.find(mag_x)
-	var x: float = MAG_STEPS[(i + 1) % MAG_STEPS.size()]
-	show_mag_x(x)
-	mag_x_changed.emit(x)
+func _on_dmg_x() -> void:
+	var i: int = DMG_STEPS.find(dmg_x)
+	var x: float = DMG_STEPS[(i + 1) % DMG_STEPS.size()]
+	show_dmg_x(x)
+	dmg_x_changed.emit(x)
 
 
 func _on_hp_x() -> void:

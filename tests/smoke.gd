@@ -1000,14 +1000,18 @@ func _init() -> void:
 	_a69_allot_checks(main)                   # BUILD69-A: the Workshop's allotments - the tab with the station, plant, ready, lift and use, the shed, the fit
 	_a69_chip_checks(main)                    # BUILD69-A: the rail's Convoy heard, Market day and Harvest
 	_slice_world_checks(main)                 # BUILD72-W (9 Nov): the ARPG slice's world - the park, moving, firing, crates, the way out, the camera
+	_w76_sight_checks(main)                   # BUILD76-W (9 Nov): zoomed out, the camera's lean, line of sight's fog, last seen, crates and the way out once seen, the frame
 	_h72_menu_checks(main)                    # BUILD72-H (9 Nov): the title's ARPG slice button, the camp's runner copied, the pause, the title back
 	_h72_fit_checks(main)                     # BUILD72-H: the slice's HUD at 1920x1080 and 1920x1200, the pause's controls, the end screen
 	_h72_review_checks(main)                  # BUILD72 review (9 Nov): rounds from the box, kill heal and scavenger, Guard's fractions, meds, stand-ins, pad aim, events, dots, contact
-	_h73_round2_checks(main)                  # round 2 (9 Nov, Matt's first try): gang HP down to ×0.15, the kit sheet, MAG_X, R reloads, skill 3 on C
+	_h73_round2_checks(main)                  # round 2 (9 Nov, Matt's first try): gang HP down to ×0.15, the kit sheet, their damage (build 76: MAG_X gone), R reloads, skill 3 on C
 	_h73_review_checks(main)                  # round 2's review (9 Nov): a gun's own rounds, refills by the round, cover off the pockets
 	_h75_waves_checks(main)                   # round 4 (G's waves): never more than contact on you, the next steps up in its beat, the hard man last
 	_h75_review_checks(main)                  # round 4's review: finds out of the pack by id, held_shot, a beat a gap, flush, on you, the spares
 	_h75_kit_room_checks(main)                # round 4 (9 Nov, Matt): the game's own Kit room in the slice, on its Sim; finds in it; kit read again
+	_g76_checks(main)                         # BUILD76-G (9 Nov, board D): rates and magazines by type, rounds that travel, their 40%, their damage ×
+	_r5_checks(main)                          # round 5's review (9 Nov): their damage, the reload's share, the press cap, the picker's row, Reach, world text, the fog's cost and leaks, up to, the set's poses
+	_h76_checks(main)                         # BUILD76-H (9 Nov): the level picker, the HUD's gun line, the pause's their damage, the PixelLab art by name
 	_h72_slice_checks(main)                   # BUILD72-H: the slice's scripted run - walk, hit, headshot, reload, crates, gangs, the clear, the end
 	_finish()
 
@@ -46647,12 +46651,13 @@ func _h72_slice_checks(main) -> void:
 		m.ms["hp"] = m.ms["hp_max"]
 		r.debug_move_to(_h72_clear_spot(w, m.position, 420.0))
 		r.debug_aim_at(m.position)
+		w.sight.step(0.0)                        # (round 5's review) moved by hand: the fog judges him in sight, as a frame would
 		r.jammed = false
 		r.reloading = false
 		r.shot_cd = 0.0
 		r.swap_left = 0.0
 		r.rounds[r.gun_i] = maxi(2, r.rounds[r.gun_i])
-		var out: Dictionary = r.fire_once()
+		var out: Dictionary = r.fire_once_landed()     # (build 76) the round travels: flown to its end
 		shots += 1
 		if out.is_empty() or out.get("jammed", false) or out.get("man") == null:
 			continue
@@ -46839,9 +46844,17 @@ func _h72_menu_checks(main) -> void:
 	for n in main.get_parent().get_children():
 		if n.get_script() == Launch and not n.is_queued_for_deletion():
 			run = n                                # (a run before it in this smoke waits on a frame to go)
+	# (build 76) the title's button opens the level picker first: the camp's furthest cleared level the default, focused
+	if run != null:
+		var pk = run.picker
+		var def_lv: int = PickScript76.default_for(main.sim)
+		_check(pk != null and run.world == null and pk.default_level == def_lv and pk.levels.has(def_lv) and pk.default_button() != null,
+				"the title's button didn't open the level picker at the camp's furthest cleared level %d: %s" % [def_lv, str(pk.levels if pk != null else [])])
+		if pk != null:
+			pk.default_button().pressed.emit()
 	_check(run != null and not main.visible and not bool(run.world.ctx.get("fixture", true)) and str(run.world.ctx["class_name"]) == str(main.sim.cls), "the title's button didn't open the slice with the camp's runner")
 	if run != null:
-		_check(int(run.world.ctx["site"]["level"]) == maxi(1, main.sim.level() - SliceTuning.SITE_LEVEL_UNDER), "the camp's runner at level %d gets a level %d car park" % [main.sim.level(), int(run.world.ctx["site"]["level"])])
+		_check(run.picker == null and int(run.world.ctx["site"]["level"]) == PickScript76.default_for(main.sim), "the camp's reach %d picked, a level %d car park" % [main.sim.deepest_cleared_level(), int(run.world.ctx["site"]["level"])])
 	if run == null:
 		main.visible = true
 		return
@@ -46963,7 +46976,8 @@ func _w74_art_checks(world) -> void:
 	_check(looks[0] != looks[1] and looks[1] != looks[2] and looks[0] != looks[2], "the gang's men don't vary: %s" % str(looks))
 	var r = world.runner
 	var g: Dictionary = r.gun()
-	_check(r.pose() == ("gun" if str(g.get("type", "")) == "pistol" else "machine"), "the runner's pose with a %s up is '%s'" % [str(g.get("type", "")), r.pose()])
+	r.fire_t = 0.0
+	_check(r.pose() == "aim" and r.kenney_up() == ("gun" if str(g.get("type", "")) == "pistol" else "machine"), "the runner's pose with a %s up is '%s' (Kenney's %s)" % [str(g.get("type", "")), r.pose(), r.kenney_up()])
 	r.reloading = true
 	_check(r.pose() == "reload", "reloading, the runner's pose is '%s'" % r.pose())
 	r.reloading = false
@@ -46997,9 +47011,9 @@ func _slice_world_checks(main) -> void:
 	var T = load("res://slice/tuning.gd")
 	var world = _w72_world(main)
 	var r = world.runner
-	var vw: float = world.view_size().x
+	var vw: float = world.view_world().x     # (build 76) the ground the zoomed-out camera shows
 	var grown: float = world.park_rect.get_area() / (4800.0 * 2700.0)     # (round 2, Matt: "a tad bigger") about 1.4x build 72's
-	_check(grown > 1.35 and grown < 1.5 and world.park_rect.size.x / vw > 2.5, "the car park is %.2fx build 72's area, not about 1.4" % grown)
+	_check(grown > 1.35 and grown < 1.5 and world.park_rect.size.x / vw > 1.4, "the car park is %.2fx build 72's area, not about 1.4, or %.2f views wide" % [grown, world.park_rect.size.x / vw])
 	_check(is_equal_approx(world.park_rect.size.x, T.PARK_TILES.x * T.TILE) and is_equal_approx(world.park_rect.size.y, T.PARK_TILES.y * T.TILE), "the park isn't a whole number of floor tiles")
 	_w72_reach_checks(world)
 	_w74_art_checks(world)
@@ -47044,14 +47058,14 @@ func _slice_world_checks(main) -> void:
 	var hits: Array = []
 	world.hit_landed.connect(func(m, res, pt): hits.append([m, res, pt]))
 	var before: int = r.rounds[0]
-	var shot: Dictionary = r.fire_once()
+	var shot: Dictionary = r.fire_once_landed()     # (build 76) the round travels: flown to its end
 	if shot.get("jammed", false):           # a jam's the gun's luck: clear it and go again
 		_w72_steps(world, world.jam_s() + 0.05)
 		r.shot_cd = 0.0
-		shot = r.fire_once()
+		shot = r.fire_once_landed()
 	_check(shot.get("man") == target and r.rounds[0] == before - 1 and hits.size() == 1 and int(hits[0][1]["damage"]) == 10 and world.stats["hits"] == 1 and world.stats["damage_done"] == 10,
 		"a round on a man in the open: %s, rounds %d -> %d, %d hits" % [str(shot), before, r.rounds[0], hits.size()])
-	_check(world.fx.marks.any(func(m): return m["kind"] == "tracer") and world.fx.marks.any(func(m): return m["kind"] == "hit"), "no tracer or hit flash for the round")
+	_check(SliceRound76.layer(world).flying.any(func(rd): return str(rd.get("how", "")) == "hit") and world.fx.marks.any(func(m): return m["kind"] == "hit"), "no round's tracer or hit flash for the round")     # (build 76) the tracer is the round's
 	_check(world.lock_target(r.position, Vector2.RIGHT) == target and world.lock_target(r.position, Vector2.UP) == null, "the pad's lock-on doesn't hold the man on the stick's line")
 	# the gun's rate, the trigger held a second
 	var g: Dictionary = r.gun().duplicate()
@@ -47084,7 +47098,7 @@ func _slice_world_checks(main) -> void:
 	r.debug_aim_at(below)
 	_w72_steps(world, 0.5)
 	r.shot_cd = 0.0
-	var walled: Dictionary = r.fire_once()
+	var walled: Dictionary = r.fire_once_landed()
 	_check(walled.is_empty() or walled.get("jammed", false) or walled.get("man") == null, "a round went through the wall: %s" % str(walled))
 	_check(world.lock_target(above, Vector2.DOWN) == null, "the lock-on holds a man behind the wall")
 	target.position = Vector2(-500, -500)
@@ -47152,7 +47166,7 @@ func _slice_world_checks(main) -> void:
 	_check(Rect2(Vector2.ZERO, world.view_size()).has_point(sp), "the runner is off the screen at %s" % str(sp))
 	r.debug_move_to(Vector2(100, 100))
 	_w72_steps(world, 1.5)
-	var half: Vector2 = world.view_size() * 0.5
+	var half: Vector2 = world.view_world() * 0.5     # (build 76) the zoomed-out view's half
 	_check(world.cam_center.x >= half.x - 0.5 and world.cam_center.y >= half.y - 0.5, "the camera shows past the park's corner: %s" % str(world.cam_center))
 	# the way out: held, not tapped; before the clear it's "out"
 	var left := [0]
@@ -47204,6 +47218,194 @@ func _slice_world_checks(main) -> void:
 	print("slice world ok: the park %.1f screens, pace %.0f px/s, %d rounds fired, a reload %.1f s, a crate %.1f s, the way out, death, Last legs" % [world.park_rect.size.x / vw, r.pace_px, fired[0], float(g["reload_s"]), secs])
 
 
+# ------------------------------------------------------------------ BUILD76-W (9 Nov): zoomed out, line of sight
+## Board D (Matt: "the view is also too zoomed in"; "look at zero sievert for inspo"): half the zoom - 32 px tiles, small
+## figures - the camera leaning further the further the aim's pushed out, a fog over what the cover hides (one even
+## darkness, the cover itself lit), men out of sight not drawn but marked "Last seen" where you lost them, crates and the
+## way out shown once seen, the prompts their size on screen at both screens, and the fog's cost in a fight.
+func _w76_sight_checks(main) -> void:
+	var T = load("res://slice/tuning.gd")
+	var SightS = load("res://slice/sight.gd")
+	var FxS = load("res://slice/fx.gd")
+	var world = _w72_world(main)
+	var r = world.runner
+	var sg = world.sight
+	# the zoom: a tile 32 px on screen, the figures about 30-40, twice the ground
+	var tile_px: float = (world.world_to_screen(Vector2(T.TILE, 0)) - world.world_to_screen(Vector2.ZERO)).x
+	var fig_px: float = T.RUNNER_R * 2.0 * T.CAM_ZOOM
+	_check(world.camera.zoom.is_equal_approx(Vector2(T.CAM_ZOOM, T.CAM_ZOOM)) and absf(tile_px - 32.0) < 0.5 and fig_px >= 28.0 and fig_px <= 44.0 and T.MAN_R * 2.0 * T.CAM_ZOOM >= 28.0,
+		"the zoom: camera %s, a tile %.1f px on screen (not 32), the runner %.0f px" % [str(world.camera.zoom), tile_px, fig_px])
+	_check(world.view_world().is_equal_approx(world.view_size() * 2.0) and world.screen_to_world(world.world_to_screen(Vector2(1234, 567))).distance_to(Vector2(1234, 567)) < 0.01,
+		"the view's ground %s isn't twice the screen %s, or screen_to_world isn't world_to_screen's inverse" % [str(world.view_world()), str(world.view_size())])
+	# the lean: toward the aim, further the further it's pushed out, never past CAM_LEAD_MAX; the runner stays on screen
+	r.debug_move_to(Vector2(2880, 1600))
+	var leans: Array = []
+	for d in [400.0, 1200.0, 6000.0]:
+		r.debug_aim_at(r.position + Vector2(d, 0))
+		_w72_steps(world, 1.5)
+		leans.append(world.cam_center.x - r.position.x)
+	_check(leans[0] > 60.0 and leans[1] > leans[0] + 150.0 and leans[2] <= T.CAM_LEAD_MAX + 0.5 and leans[2] > leans[1],
+		"the camera's lean at an aim 400 / 1200 / 6000 px out: %s (max %.0f)" % [str(leans), T.CAM_LEAD_MAX])
+	_check(Rect2(Vector2.ZERO, world.view_size()).grow(-60.0).has_point(world.world_to_screen(r.position)), "leaning, the runner's off the screen at %s" % str(world.world_to_screen(r.position)))
+	# the camera on the park at both screens: no ground past its edges, top left and bottom right
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		world.screen_override = sz
+		for corner in [Vector2(100, 100), Vector2(T.PARK_W - 100.0, T.PARK_H - 100.0)]:
+			r.debug_move_to(corner)
+			r.debug_aim_at(corner * 2.0 - Vector2(T.PARK_W, T.PARK_H) * 0.5)
+			_w72_steps(world, 1.5)
+			var tl: Vector2 = world.screen_to_world(Vector2.ZERO)
+			var br: Vector2 = world.screen_to_world(sz)
+			_check(tl.x >= -0.5 and tl.y >= -0.5 and br.x <= T.PARK_W + 0.5 and br.y <= T.PARK_H + 0.5, "at %s the camera shows past the park: %s to %s" % [str(sz), str(tl), str(br)])
+	# the prompts their size on screen, and the way out's on the screen at both (the bottom left corner, clamped)
+	_check(absf(FxS.prompt_px() * T.CAM_ZOOM - 28.0) <= 1.0 and absf(load("res://slice/crate.gd").prompt_px() * T.CAM_ZOOM - 26.0) <= 1.0,
+		"the prompts on screen: the way out %.0f px, a crate %.0f px (28 and 26 before the zoom)" % [FxS.prompt_px() * T.CAM_ZOOM, load("res://slice/crate.gd").prompt_px() * T.CAM_ZOOM])
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		world.screen_override = sz
+		r.debug_move_to(world.exit_rect.get_center())
+		_w72_steps(world, 1.5)
+		var f: Font = world.font()
+		var pw: float = f.get_string_size(world.fx.exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, FxS.prompt_px()).x * T.CAM_ZOOM
+		var at: Vector2 = world.world_to_screen(world.fx.exit_at)
+		var box := Rect2(at - Vector2(pw * 0.5, FxS.prompt_px() * T.CAM_ZOOM), Vector2(pw, FxS.prompt_px() * T.CAM_ZOOM))
+		_check(world.fx.exit_prompt != "" and Rect2(Vector2.ZERO, sz).encloses(box), "at %s the way out's prompt %s is off the screen" % [str(sz), str(box)])
+	world.screen_override = Vector2.ZERO
+	# sight: above the long wall, a man below it hidden, a man in the open seen; the wall itself lit, behind it dark
+	var wall: Rect2 = SliceLevel.tiles_px(SliceLevel.COVER[2]["tiles"])
+	var above: Vector2 = wall.get_center() + Vector2(0, -260)
+	var below: Vector2 = wall.get_center() + Vector2(0, 260)
+	r.debug_move_to(above)
+	r.debug_aim_at(above + Vector2(0, 400))
+	var hid := W72Target.new()
+	var open := W72Target.new()
+	world.men_root.add_child(hid)
+	world.men_root.add_child(open)
+	hid.position = below
+	open.position = above + Vector2(500, 0)
+	_w72_steps(world, 0.2)
+	_check(not hid.visible and open.visible and not sg.is_seen(hid) and sg.is_seen(open), "behind the wall a man's drawn (%s), or in the open he isn't (%s)" % [hid.visible, open.visible])
+	_check(not Geometry2D.is_point_in_polygon(below, sg.lit) and Geometry2D.is_point_in_polygon(open.position, sg.lit) and Geometry2D.is_point_in_polygon(wall.get_center(), sg.lit),
+		"the lit shape: behind the wall %s, in the open %s, the wall itself %s" % [Geometry2D.is_point_in_polygon(below, sg.lit), Geometry2D.is_point_in_polygon(open.position, sg.lit), Geometry2D.is_point_in_polygon(wall.get_center(), sg.lit)])
+	# half round the wall's end he's seen (his side shows)
+	var first_x := INF                     # walking out from behind the wall: where he's first seen
+	var walk_x := wall.get_center().x
+	while walk_x < wall.end.x + 900.0 and first_x == INF:
+		if sg.can_see(Vector2(walk_x, below.y), T.MAN_R * T.SIGHT_SIDE):
+			first_x = walk_x
+		walk_x += 4.0
+	_check(first_x != INF and not world.has_los(r.position, Vector2(first_x, below.y)) and not sg.can_see(Vector2(wall.get_center().x, below.y), T.MAN_R * T.SIGHT_SIDE),
+		"a man coming round the wall's end isn't seen by his side before his centre (first seen at x %.0f)" % first_x)
+	# the fog: one even darkness - every point of the view under exactly one quad if it's dark, none if it's lit
+	var b: Rect2 = sg.bound()
+	var quads: Array = sg.fog_quads()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 76
+	var wrong: Array = []
+	for _i in range(300):
+		var pk: Rect2 = b.intersection(world.park_rect.grow(-T.EDGE))     # (off the park never shows: the camera's on it)
+		var p := Vector2(rng.randf_range(pk.position.x, pk.end.x), rng.randf_range(pk.position.y, pk.end.y))
+		var n := 0
+		for q in quads:
+			if Geometry2D.is_point_in_polygon(p, q):
+				n += 1
+		var is_lit: bool = Geometry2D.is_point_in_polygon(p, sg.lit)
+		var unseen: bool = not world.has_los(r.position, p) and not world.level.cover.any(func(c): return (c as Rect2).has_point(p))
+		if (is_lit and n != 0) or (not is_lit and n != 1) or (unseen and is_lit):
+			wrong.append([p, n, is_lit, unseen])
+	_check(wrong.size() <= 3, "the fog's not one even darkness over what he can't see: %d of 300 points wrong %s" % [wrong.size(), str(wrong.slice(0, 3))])
+	# lost: the man in the open steps behind the wall - a Last seen mark where he went; it fades; seen again it goes
+	var lost_at: Vector2 = open.position
+	open.position = below + Vector2(120, 0)
+	_w72_steps(world, 0.1)
+	_check(not open.visible and sg.marks.size() == 1 and sg.marks[0]["pos"].distance_to(lost_at) < 1.0 and sg.marks[0]["node"] == open,
+		"a man lost from sight left no Last seen mark where he was: %s" % str(sg.marks))
+	_w72_steps(world, T.LAST_SEEN_S + 0.1)
+	_check(sg.marks.is_empty(), "the Last seen mark didn't fade in %.1f s" % T.LAST_SEEN_S)
+	_w72_steps(world, 0.1)
+	open.position = lost_at
+	_w72_steps(world, 0.1)
+	open.position = below + Vector2(120, 0)
+	_w72_steps(world, 0.1)
+	open.position = lost_at
+	_w72_steps(world, 0.1)
+	_check(open.visible and sg.marks.is_empty(), "seen again, the man's Last seen mark stays: %s" % str(sg.marks))
+	_check(SightS.WORDS["last_seen"] == "Last seen" and T.MARK_FONT >= 12.0, "the mark's words: '%s'" % SightS.WORDS["last_seen"])
+	# hidden_share (G's rounds): all of him in the open 0, all behind the wall 1
+	_check(is_equal_approx(SightS.hidden_share(world, above, open.position, T.MAN_R), 0.0) and is_equal_approx(SightS.hidden_share(world, above, below, T.MAN_R), 1.0), "hidden_share in the open / behind the wall: %.2f / %.2f" % [SightS.hidden_share(world, above, open.position, T.MAN_R), SightS.hidden_share(world, above, below, T.MAN_R)])
+	hid.free()
+	open.free()
+	# a still runner doesn't rebuild the lit shape
+	var built: int = sg.builds
+	_w72_steps(world, 0.5)
+	_check(sg.builds == built, "a still runner rebuilt the lit shape %d times in half a second" % (sg.builds - built))
+	world.queue_free()
+	# crates and the way out: hidden till seen, then kept. The kiosk's crate from the way in is behind its wall.
+	var w2 = _w72_world(main)
+	var kc = null
+	for c in w2.crates():
+		if SliceLevel.tiles_px(SliceLevel.KIOSK_INSIDE).has_point(c.position):
+			kc = c
+	_check(kc != null and w2.level.exit_seen and w2.crates().any(func(c): return c.seen), "no crate in the kiosk, or from the way in the way out (%s) or no crate seen" % w2.level.exit_seen)
+	if kc != null:
+		_check(not kc.seen and not kc.visible, "the kiosk's crate shows from the way in, behind the kiosk's wall")
+		w2.runner.debug_move_to(Vector2(kc.position.x, SliceLevel.tiles_px(SliceLevel.KIOSK_INSIDE).end.y + 260.0))
+		_w72_steps(w2, 0.1)
+		_check(kc.seen and kc.visible, "seen through the kiosk's doorway, its crate doesn't show")
+		w2.runner.debug_move_to(SliceLevel.ENTRY)
+		_w72_steps(w2, 0.1)
+		_check(kc.visible and not w2.sight.can_see(kc.position, T.CRATE_SIZE * 0.45), "out of sight again the crate went (or it's in sight from the way in)")
+	w2.queue_free()
+	var w3 = _w72_world(main)
+	w3.level.exit_seen = false
+	w3.runner.debug_move_to(SliceLevel.tiles_px(SliceLevel.KIOSK_INSIDE).position + Vector2(60, 60))     # in the kiosk, its west wall between
+	_w72_steps(w3, 0.1)
+	var far_seen: bool = w3.level.exit_seen
+	w3.runner.debug_move_to(SliceLevel.ENTRY)
+	_w72_steps(w3, 0.1)
+	_check(not far_seen and w3.level.exit_seen, "the way out: seen from in the kiosk %s, from the way in %s" % [far_seen, w3.level.exit_seen])
+	w3.queue_free()
+	# the frame: a fight - the gang's men on him, the fog rebuilt every step as he moves, the rounds - in budget
+	var w4 = load("res://slice/slice.tscn").instantiate()
+	main.add_child(w4)
+	w4.start(load("res://slice/bridge.gd").runner_ctx(null), 76)
+	w4.runner.debug_move_to(Vector2(2600, 1900))
+	var waited := 0.0                        # the gang in and on him: 3 on (the front's contact), more waiting
+	while waited < 60.0 and not (w4.gang.on_you_count() >= 3 and w4.gang.waiting_count() >= 1):
+		_w72_steps(w4, 0.5)
+		waited += 0.5
+	var on_n: int = w4.gang.on_you_count()
+	var wait_n: int = w4.gang.waiting_count()
+	var ms: Array = []
+	var sight_us: Array = []
+	var dirs := [Vector2.RIGHT, Vector2.UP, Vector2.LEFT, Vector2.DOWN]
+	Input.action_press("slice_fire")
+	for i in range(240):
+		w4.runner.auto_move = dirs[int(i / 30.0) % 4]
+		w4.runner.debug_aim_at(w4.runner.position + Vector2(600, 0).rotated(i * 0.05))
+		var t0 := Time.get_ticks_usec()
+		w4.tick(1.0 / 60.0)
+		ms.append((Time.get_ticks_usec() - t0) / 1000.0)
+		sight_us.append(w4.sight.build_us)
+		if w4.ended:
+			break
+	Input.action_release("slice_fire")
+	w4.runner.auto_move = Vector2.ZERO
+	var men_n: int = w4.men().size()
+	var hidden_n: int = w4.men().filter(func(m): return not m.visible).size()
+	ms.sort()
+	var avg: float = ms.reduce(func(acc, v): return acc + v, 0.0) / maxf(1.0, ms.size())
+	var s_avg: float = sight_us.reduce(func(acc, v): return acc + v, 0) / maxf(1.0, sight_us.size()) / 1000.0
+	var p95: float = ms[int(ms.size() * 0.95)] if not ms.is_empty() else 0.0
+	_check(on_n >= 3 and wait_n >= 1, "the frame's fight never had 3 on him and more waiting (%d on, %d waiting in %.0f s)" % [on_n, wait_n, waited])
+	_check(ms.size() >= 60 and men_n >= 3 and avg < W76_TICK_MS and s_avg < W76_SIGHT_MS, "the fight's step: %d steps, %d men, avg %.2f ms (budget %.1f), the fog %.2f ms (budget %.1f)" % [ms.size(), men_n, avg, W76_TICK_MS, s_avg, W76_SIGHT_MS])
+	print("slice sight ok (BUILD76-W): a tile %.0f px, the runner %.0f px on screen, leans %s; a fight's step avg %.2f ms (p95 %.2f), the fog %.2f ms, %d on him and %d waiting, %d of %d men out of sight" % [tile_px, fig_px, str(leans.map(func(v): return int(v))), avg, p95, s_avg, on_n, wait_n, hidden_n, men_n])
+	w4.queue_free()
+
+
+const W76_TICK_MS := 8.0                  # a step of the world in a fight, all of it (half a 60 fps frame; drawing has the rest)
+const W76_SIGHT_MS := 2.0                 # the lit shape's build in it
+
+
 ## The review of m72 (9 Nov): ten things that muddied the test, each with the check that would have caught it.
 func _h72_review_checks(main) -> void:
 	var Launch = load("res://slice/launch.gd")
@@ -47215,14 +47417,15 @@ func _h72_review_checks(main) -> void:
 	var hud = run.hud
 	# 1. rounds from the pack's box: a dry gun with no spare magazine fills one by hand at the sim's REFILL_MULT
 	var ty: String = str(r.gun()["ammo"])
-	_check(int(ctx["boxes"].get(ty, 0)) == SliceTuning.G_BOX_ROUNDS, "the fixture's pack has %d %s rounds in a box, not %d" % [int(ctx["boxes"].get(ty, 0)), ty, SliceTuning.G_BOX_ROUNDS])
+	var box_want: int = roundi(SliceTuning.G_BOX_ROUNDS * SliceBridge.round_x(ctx["guns"], ty))     # (build 76) in the slice's rounds
+	_check(int(ctx["boxes"].get(ty, 0)) == box_want, "the fixture's pack has %d %s rounds in a box, not %d" % [int(ctx["boxes"].get(ty, 0)), ty, box_want])
 	var mag_n: int = int(r.gun()["mag"])
 	var carried: int = mag_n * (1 + int(r.mags[0])) + int(ctx["boxes"][ty])
-	_check(carried >= 175, "the run carries %d rounds for the primary, short of the ~175 a clear takes" % carried)
+	_check(carried >= 175 * SliceBridge.round_x(ctx["guns"], ty), "the run carries %d rounds for the primary, short of the ~175 a clear takes (in the game's rounds)" % carried)
 	r.rounds[r.gun_i] = 0
 	r.mags[r.gun_i] = 0
 	var box_was: int = r.box_rounds()
-	_check(r.start_reload() and r.refilling and is_equal_approx(r.reload_total, float(r.gun()["reload_s"]) * Data.REFILL_MULT * float(mag_n) / float(r.gun()["mag_base"])), "a dry gun with a box in the pack doesn't refill by hand at ×%.1f its reload, for its rounds" % Data.REFILL_MULT)
+	_check(r.start_reload() and r.refilling and is_equal_approx(r.reload_total, float(r.gun()["reload_s"]) * Data.REFILL_MULT), "a dry gun with a box in the pack doesn't refill by hand at ×%.1f its reload, for its rounds" % Data.REFILL_MULT)
 	var guard_n := 0
 	while r.reloading and guard_n < 2000:
 		r.tick(H72_DT)
@@ -47241,7 +47444,7 @@ func _h72_review_checks(main) -> void:
 	var found: Dictionary = Sim.new()._plain(Data.AMMO, str(Data.BASES[Data.AMMO].filter(func(b): return str(b["type"]) == ty)[0]["name"]))
 	var b_before: int = r.box_rounds()
 	w.add_haul([found])
-	_check(r.box_rounds() == b_before + int(found["rounds"]), "a box of %s rounds found didn't go in the pack's count" % ty)
+	_check(r.box_rounds() == b_before + roundi(int(found["rounds"]) * SliceBridge.round_x(w.ctx["guns"], ty)), "a box of %s rounds found didn't go in the pack's count (in the slice's rounds)" % ty)     # (build 76)
 	# 2. a kill's heal and scavenger's round
 	r.hp = r.hp_max - 50
 	r.rounds[r.gun_i] = mag_n - 2
@@ -47317,7 +47520,14 @@ func _h72_review_checks(main) -> void:
 	var sk_other: Dictionary = Data.SKILLS[other_skill]
 	c2["skills"][1] = {"id": other_skill, "name": str(sk_other["name"]), "icon": "", "cd": float(sk_other["cd"]), "cost": float(sk_other["cost"]), "in_slice": SliceBridge._skill_in_slice(other_skill)}
 	_check(not SliceBridge._skill_in_slice(other_skill) and SliceBridge._skill_in_slice("clean_shot"), "the slice's skills aren't the Poacher's alone")
-	_check(not c2["guns"].is_empty() and bool(c2["guns"][0]["stand_in"]) and str(c2["guns"][0]["base"]) == "Regimental rifle", "a hammer's runner has no stand-in gun: %s" % str(c2["guns"].map(func(g): return g["name"])))
+	# (build 76, G) a melee weapon swings in the slice: the hammer's his; a gun that still can't fire here (no magazine) gets the stand-in
+	_check(not c2["guns"].is_empty() and not bool(c2["guns"][0]["stand_in"]) and str(c2["guns"][0]["kind"]) == "melee" and str(c2["guns"][0]["base"]) == "Claw hammer", "a hammer's runner doesn't swing his hammer: %s" % str(c2["guns"].map(func(g): return g["name"])))
+	var keyed: Dictionary = camp.sim._plain("Primary", "Battle rifle")
+	keyed["rule"] = "spare_key"                 # never spends a round: no magazine, nothing for the slice's gun to count
+	camp.sim.equipped["Primary"] = keyed
+	var c3: Dictionary = SliceBridge.runner_ctx(camp, H72_SEED)
+	_check(not c3["guns"].is_empty() and bool(c3["guns"][0]["stand_in"]) and str(c3["guns"][0]["base"]) == "Regimental rifle", "a runner whose gun has no magazine has no stand-in gun: %s" % str(c3["guns"].map(func(g): return g["name"])))
+	c2["guns"][0]["stand_in"] = true             # the HUD's note, as a stand-in shows it
 	var hud2 = HudScript72.new()
 	root.add_child(hud2)
 	var st2 := {"cls": str(c2["class_name"]), "level": int(c2["level"]), "gun": c2["guns"][0], "rounds": 5, "mag": int(c2["guns"][0]["mag"]), "mags": 2,
@@ -47339,7 +47549,7 @@ const SliceLevelRef := preload("res://slice/level.gd")
 
 
 ## Round 2 (9 Nov, Matt's first try of the slice): gang HP ×0.5 / ×0.25 / ×0.15; the kit and runner sheet on Tab or Back;
-## MAG_X, a test knob on the pause and the HUD; R reloads (Space and the pad's X too), the third skill on C.
+## their damage (build 76; MAG_X went), a test knob on the pause and the HUD; R reloads (Space and the pad's X too), the third skill on C.
 func _h73_round2_checks(main) -> void:
 	var Launch = load("res://slice/launch.gd")
 	var run = Launch.open(main, H72_SEED, false)
@@ -47349,17 +47559,22 @@ func _h73_round2_checks(main) -> void:
 	var hud = run.hud
 	# 1. gang HP: ×1 gone, ×0.15 in, ×0.25 the start
 	_check(PauseScript72.HP_STEPS == [0.5, 0.25, 0.15] and is_equal_approx(SliceTuning.MAN_HP_X, 0.5) and run.pause.buttons[2].text == "Gang HP ×0.5", "the pause's gang HP: %s, '%s'" % [str(PauseScript72.HP_STEPS), run.pause.buttons[2].text])
-	# 3. MAG_X: the fixture rifle's 14 at ×2.5, the pause's ×1 / ×2.5 / ×4 live, the HUD says so
+	# 3. (build 76) the magazine's knob gone (real sizes, G's): the pause's fourth button is their damage, ×1 / ×1.5 / ×0.5
+	# live into the ctx the bridge reads, and the HUD's test line says so
 	var g0: Dictionary = ctx["guns"][0]
-	_check(is_equal_approx(float(ctx["mag_x"]), SliceTuning.MAG_X) and is_equal_approx(SliceTuning.MAG_X, 2.5) and int(g0["mag"]) == roundi(int(g0["mag_base"]) * 2.5) and int(g0["mag"]) >= 30 and int(r.gun()["mag"]) == int(g0["mag"]) and r.rounds[0] == int(g0["mag"]),
-			"the fixture's magazine at MAG_X: %d from %d, the runner's %d" % [int(g0.get("mag", 0)), int(g0.get("mag_base", 0)), int(r.gun().get("mag", 0))])
 	var seen: Array = []
+	_check(run.pause.buttons[3].text == "Their damage ×1" and is_equal_approx(float(ctx["their_dmg_x"]), SliceTuning.THEIR_DMG_X), "the pause's fourth test setting: '%s'" % run.pause.buttons[3].text)
 	for k in range(3):
 		run.pause.buttons[3].pressed.emit()
-		seen.append([float(ctx["mag_x"]), int(r.gun()["mag"])])
-	_check(seen == [[4.0, int(g0["mag_base"]) * 4], [1.0, int(g0["mag_base"])], [2.5, roundi(int(g0["mag_base"]) * 2.5)]] and r.rounds[0] <= int(r.gun()["mag"]), "the pause's magazine steps: %s" % str(seen))
+		seen.append([float(ctx["their_dmg_x"]), run.pause.buttons[3].text])
+	_check(seen == [[1.5, "Their damage ×1.5"], [0.5, "Their damage ×0.5"], [1.0, "Their damage ×1"]], "the pause's their damage steps: %s" % str(seen))
+	run.pause.buttons[3].pressed.emit()
 	hud.show_state(hud.read_state())
-	_check(hud._tests.text == "Test settings: gang HP ×0.5, magazine ×2.5", "the HUD's test line: '%s'" % hud._tests.text)
+	_check(hud._tests.text == "Test settings: gang HP ×0.5, their damage ×1.5", "the HUD's test line: '%s'" % hud._tests.text)
+	_check(not run.pause.text_nodes().any(func(l): return str(l.text).contains("Magazine")), "the magazine's test knob is still on the pause")
+	# 3. (build 76, G) MAG_X gone: the fixture's rifle is an AR with its kind's magazine (H: the pause's and the HUD's lines)
+	_check(str(g0["kind"]) == "ar" and int(g0["mag"]) == 30 and int(r.gun()["mag"]) == 30 and r.rounds[0] == 30 and not ctx.has("mag_x"),
+			"the fixture's magazine: %s %d, the runner's %d" % [str(g0.get("kind", "")), int(g0.get("mag", 0)), int(r.gun().get("mag", 0))])
 	# 4. the reload: R, Space and the pad's X reload a part-empty magazine; the third skill is on C, not R
 	var mg: int = int(r.gun()["mag"])
 	# each binding is the reload's in the input map (R new, Space and the pad's X as they were), and the action pressed
@@ -47402,7 +47617,7 @@ func _h73_round2_checks(main) -> void:
 	_check(not hud._reload_hint.visible, "the reload's prompt shows on a full magazine")
 	run.back_to_title()
 	main._menu.close()
-	print("h73 round 2 ok: gang HP ×0.5/×0.25/×0.15, the magazine ×%s (%d) live and on the HUD, R / Space / X reload, skill 3 on C, the reload prompt (the kit sheet's checks went with it, round 4: the Kit room's are h75_kit_room)" % [str(SliceTuning.MAG_X), int(g0["mag"])])
+	print("h73 round 2 ok: gang HP ×0.5/×0.25/×0.15, their damage live and on the HUD (build 76: the magazine's knob gone, %d a magazine), R / Space / X reload, skill 3 on C, the reload prompt (the kit sheet's checks went with it, round 4: the Kit room's are h75_kit_room)" % int(g0["mag"]))
 
 
 
@@ -47447,7 +47662,7 @@ func _h73_review_checks(main) -> void:
 	r.reloading = false
 	r.start_reload()
 	var g: Dictionary = r.gun()
-	_check(r.refilling and is_equal_approx(r.reload_total, float(g["reload_s"]) * Data.REFILL_MULT * float(g["mag"]) / float(g["mag_base"])), "a refill of %d rounds takes %.2f s; a magazine of the game's %d takes %.2f" % [int(g["mag"]), r.reload_total, int(g["mag_base"]), float(g["reload_s"]) * Data.REFILL_MULT])
+	_check(r.refilling and is_equal_approx(r.reload_total, float(g["reload_s"]) * Data.REFILL_MULT), "a refill of %d rounds takes %.2f s; a full magazine takes %.2f" % [int(g["mag"]), r.reload_total, float(g["reload_s"]) * Data.REFILL_MULT])
 	r.reloading = false
 	r.refilling = false
 	# cover never sends a man into the kiosk or the shelter's pocket
@@ -47532,7 +47747,7 @@ func _h75_kit_room_checks(main) -> void:
 	for g in r.guns:
 		if str(g["slot"]) == "Secondary":
 			rg = g
-	var want: Dictionary = SliceBridge.scaled_gun(SliceBridge._gun_entry(s, "Secondary", rev), float(ctx["mag_x"]))
+	var want: Dictionary = SliceBridge._gun_entry(s, "Secondary", rev)
 	_check(str(rg.get("base", "")) == "Old revolver" and is_equal_approx(float(rg["rof"]), float(want["rof"])) and int(rg["mag"]) == int(want["mag"]) and r.hp_max == int(round(s.max_hp())) and is_equal_approx(r.pace_px, SliceTuning.PACE_PX * maxf(SliceTuning.PACE_MIN, s.pace())),
 			"the revolver worn in the room: the runner's %s (rof %s, want %s), HP max %d (the sim's %d)" % [str(rg.get("base", "")), str(rg.get("rof", 0)), str(want["rof"]), r.hp_max, int(round(s.max_hp()))])
 	# a med used comes out of the slice's rig, so the room shows it gone
@@ -47704,3 +47919,530 @@ func _h75_review_checks(main) -> void:
 	run.back_to_title()
 	main._menu.close()
 	print("h75 review ok: finds out by id, the spares re-read, on you without the dead, held_shot, a beat a gap, flush on the front")
+
+
+# ------------------------------------------------------------------ BUILD76-H (9 Nov): the slice, round 5 - the start, the gun line, the art
+const PickScript76 := preload("res://slice/level_pick.gd")
+
+
+## Round 5 (board D, "zoomed out, line of sight"): the level picker before the fight (the furthest cleared level the
+## default, level 12 on a fresh camp, steps either side), the HUD's gun line ("AR · 10 a second"), and slice/art.gd taking
+## a PixelLab picture from slice/art/pl/ by name when it's there, Kenney's when not.
+func _h76_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	# 1. the picker: a fresh camp's default 12, the row either side, every word in its box at both screens
+	_check(PickScript76.default_for(null) == 12 and PickScript76.levels_round(12) == [9, 10, 11, 12, 13, 14, 15], "a fresh camp's picker: %d, %s" % [PickScript76.default_for(null), str(PickScript76.levels_round(12))])
+	_check(PickScript76.levels_round(1) == [9, 10, 11, 12, 13, 14, 15] and PickScript76.levels_round(Data.MAX_LEVEL).back() == Data.MAX_LEVEL and PickScript76.levels_round(Data.MAX_LEVEL).size() == 7,
+			"the picker's row at the ends: %s, %s" % [str(PickScript76.levels_round(1)), str(PickScript76.levels_round(Data.MAX_LEVEL))])
+	var s0 = main.sim
+	_check(PickScript76.default_for(s0) == clampi(s0.deepest_cleared_level(), PickScript76.first_level(), Data.MAX_LEVEL) and PickScript76.default_for(s0) != 12, "a camp's picker default %d isn't its reach %d" % [PickScript76.default_for(s0), s0.deepest_cleared_level()])
+	var run = Launch.open(main, H72_SEED, false, -1)
+	var pk = run.picker
+	_check(pk != null and run.world == null and run.hud == null and pk.default_level == 12 and pk.default_button() != null and pk.default_button().text == "12" and pk._mark.text == "Fresh camp",
+			"the picker on a fresh camp: %s" % str(pk.levels if pk != null else "none"))
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
+		pk.layout(sz)
+		_check(_check_nodes(pk.text_nodes(), [], "the slice's level picker at %s" % str(sz)) == 0 and Rect2(Vector2.ZERO, sz).encloses(pk.card_rect()), "the level picker doesn't fit at %s" % str(sz))
+	var mark: Rect2 = Rect2(pk._mark.position, pk._mark.size)
+	var db: Button = pk.default_button()
+	_check(mark.position.y >= db.position.y + db.size.y and absf(mark.get_center().x - (db.position.x + db.size.x / 2.0)) < 1.0, "the default's mark isn't under its button: %s, %s" % [str(mark), str(Rect2(db.position, db.size))])
+	pk.buttons[5].pressed.emit()                 # level 14, two over the default
+	_check(run.picker == null and run.world != null and int(run.world.ctx["site"]["level"]) == 14 and run.site_level == 14, "a level picked (14) isn't the car park's: %s" % str(run.world.ctx["site"]["level"] if run.world != null else "no world"))
+	# (W's request, 18:18) the minimap shows only what the runner's seen: no man the fog hides, a crate or the way out once seen
+	var wd = run.world
+	for k in range(int(8.0 / H72_DT)):
+		if wd.men().size() >= 2:
+			break
+		wd.tick(H72_DT)
+	var MiniMap = load("res://slice/hud.gd").MiniMap
+	var men_all: Array = wd.men()
+	var cr: Array = wd.crates()
+	_check(men_all.size() >= 2 and cr.size() >= 2, "no gang on the park to hide from the minimap: %d men, %d crates" % [men_all.size(), cr.size()])
+	if men_all.size() >= 2 and cr.size() >= 2:
+		men_all[0].visible = true                  # (both in sight for the check: the fog sets it each step)
+		men_all[1].visible = true
+		var before: Dictionary = MiniMap.shown(wd)
+		men_all[0].visible = false
+		cr[0].visible = false
+		if cr[0].get("seen") != null:
+			cr[0].seen = false
+		var after: Dictionary = MiniMap.shown(wd)
+		_check(after["men"].size() == before["men"].size() - 1 and after["crates"].size() == before["crates"].size() - 1 and not after["men"].any(func(e): return e[0] == men_all[0].global_position),
+				"the minimap shows a man or a crate the fog hides: men %d to %d, crates %d to %d" % [before["men"].size(), after["men"].size(), before["crates"].size(), after["crates"].size()])
+		men_all[0].visible = true
+		cr[0].visible = true
+		if wd.get("level") != null and wd.level.get("exit_seen") != null:
+			var was_seen: bool = wd.level.exit_seen
+			wd.level.exit_seen = false
+			_check(not bool(MiniMap.shown(wd)["exit"]), "the minimap shows the way out before it's seen")
+			wd.level.exit_seen = was_seen
+	run.hud.show_state(run.hud.read_state())
+	_check(run.hud._site_kicker.text == "THE ESTATE · LEVEL 14", "the HUD's site line after picking 14: '%s'" % run.hud._site_kicker.text)
+	var m14: float = float(run.world.ctx["site"]["man_hp"])
+	run.back_to_title()
+	var run12 = Launch.open(main, H72_SEED, false)       # a fixed seed (the smoke's): straight in at the default
+	_check(run12.picker == null and int(run12.world.ctx["site"]["level"]) == 12 and float(run12.world.ctx["site"]["man_hp"]) < m14, "the smoke's open isn't straight in at 12, or 14's men aren't tougher: %s vs %s" % [str(run12.world.ctx["site"]["man_hp"]), str(m14)])
+	run12.back_to_title()
+	var run_t = Launch.open(main, 0, false)               # the title's (no seed): the picker
+	_check(run_t.picker != null and run_t.world == null, "the title's open didn't show the picker")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	run_t._unhandled_input(esc)                          # Esc in the picker: no pause to open, nothing breaks
+	run_t.picker._unhandled_input(esc)
+	_check(run_t.is_queued_for_deletion() and main.visible, "Esc in the picker didn't give the title back")
+	main._menu.close()
+	# 2. the gun line (board D): the type and its rate, long to short; the longest fits; the line, picture and rounds stacked
+	var Hud = load("res://slice/hud.gd")
+	var samples: Array = [{"fire_name": "AR", "rps": 10.0}, {"fire_name": "Pistol", "rps": 6.0, "semi": true}, {"fire_name": "Melee", "melee": true}, {"fire_name": "SMG", "rps": 13.0}]
+	_check(samples.all(func(g): return Hud.gun_line(g) == SliceBridge.gun_line(g)) and Hud.gun_line({"fire_name": "AR", "rps": 10.0}) == ["AR · 10 a second", "AR"] and Hud.gun_line({}) == [""],
+			"the HUD's gun lines aren't the bridge's: %s" % str(samples.map(func(g): return Hud.gun_line(g))))
+	var hud = Hud.new()
+	root.add_child(hud)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, H72_SEED)
+	var st := {"gun": ctx["guns"][0].duplicate(), "rounds": 30, "mag": 30, "mags": 2, "reload_frac": -1.0}
+	for nr in [["Lever rifle", 1.0], ["Bolt rifle", 1.0], ["Revolver", 6.0], ["Shotgun", 1.0], ["SMG", 13.0], ["AR", 10.0]]:     # the kinds at their rates (G's)
+		var nm: String = nr[0]
+		st["gun"]["fire_name"] = nm
+		st["gun"]["rps"] = nr[1]
+		hud.show_state(st)
+		_check(hud._gun_line.text == "%s · %d a second" % [nm, int(nr[1])] and _check_nodes([hud._gun_line], [], "the gun line") == 0, "the gun line for %s: '%s'" % [nm, hud._gun_line.text])
+	var gl: Rect2 = Rect2(hud._gun_line.position, hud._gun_line.size)
+	var gp: Rect2 = Rect2(hud._gun_pic.position, hud._gun_pic.size)
+	var gr: Rect2 = Rect2(hud._gun_rounds.position, hud._gun_rounds.size)
+	_check(gl.end.y <= gp.position.y and gp.end.y <= gr.position.y and gl.end.x <= hud._bar.size.x, "the gun's line, picture and rounds overlap: %s %s %s" % [str(gl), str(gp), str(gr)])
+	_check(hud._bar.position.x - (hud._me.position.x + hud._me.size.x) >= 8.0, "the gun's bar crowds the runner's panel: %.0f px apart" % (hud._bar.position.x - (hud._me.position.x + hud._me.size.x)))
+	st["gun"] = ctx["guns"][0]
+	hud.show_state(st)
+	_check(hud._gun_line.text == "AR · 10 a second", "the fixture's gun line (board D's): '%s'" % hud._gun_line.text)
+	hud.queue_free()
+	# 3. the art: no set picture, Kenney's; a set picture in pl/, it (a figure centred and sized by its shoulders, a floor
+	# tile scaled to the slice's tile); a pose the set has but Kenney hasn't falls back or leaves the token
+	var Art = load("res://slice/art.gd")
+	Art.forget()
+	var landed: bool = FileAccess.file_exists(Art.PL_DIR + "runner_aim.png")
+	var kenney_runner: Vector2 = Art.png_texture(Art.DIR + "soldier1_machine.png").get_size()
+	_check(Art.is_pl("soldier1_machine") == landed and (landed or Art.tex("soldier1_machine").get_size() == kenney_runner), "the runner's picture: the set's %s (landed %s), %s" % [str(Art.is_pl("soldier1_machine")), str(landed), str(Art.tex("soldier1_machine").get_size())])
+	var kenney_floor: Vector2 = Art.tex(Art.FLOOR).get_size()
+	_check(Art.pl_name("soldier1_machine") == "runner_aim" and Art.pl_name("manOld_reload") == "hard_reload" and Art.pl_name(Art.FLOOR) == "asphalt_a" and Art.pl_name(Art.WALL) == "kiosk_wall" and Art.pl_name("nothing") == "",
+			"the set's names: %s" % str([Art.pl_name("soldier1_machine"), Art.pl_name("manOld_reload"), Art.pl_name(Art.FLOOR)]))
+	_check(Art.pl_files().size() == 20 + Art.PL_TILES.values().reduce(func(acc, v): return acc if acc.has(v) else acc + [v], []).size(), "the set's file list: %d" % Art.pl_files().size())
+	var probe_dir := "user://h76_pl/"
+	DirAccess.make_dir_recursive_absolute(probe_dir)
+	var fig := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	fig.fill_rect(Rect2i(22, 22, 30, 20), Color.RED)
+	fig.save_png(probe_dir + "runner_aim.png")
+	var tile := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	tile.fill(Color.DIM_GRAY)
+	tile.save_png(probe_dir + "asphalt_a.png")
+	Art.pl_dir = probe_dir
+	Art.forget()
+	_check(Art.is_pl("soldier1_machine") and Art.tex("soldier1_machine").get_size() == Vector2(64, 64) and is_equal_approx(Art.PL_SCALE_R, SliceTuning.RUNNER_R * 0.95), "a set picture in pl/ isn't the runner's: %s" % str(Art.tex("soldier1_machine").get_size()))
+	_check(Art.is_pl(Art.FLOOR) and Art.tex(Art.FLOOR).has_meta("pl_who") == false and Art.tex(Art.FLOOR).get_size() == Vector2(Art.TILE_PX, Art.TILE_PX) and Art.TILE_PX == int(SliceTuning.TILE) and kenney_floor == Vector2(64, 64), "the set's 32 px floor isn't drawn at the slice's tile: %s" % str(Art.tex(Art.FLOOR).get_size()))
+	_check(not Art.is_pl("hitman1_machine") and Art.tex("hitman1_machine") != null and Art.tex(Art.PAVING) != null, "a set picture not landed doesn't fall back to Kenney's")
+	_check(Art.char_tex("soldier1", "stand") == Art.tex("soldier1_machine") and Art.char_tex("soldier1", "fire") == Art.tex("soldier1_machine") and Art.char_tex("soldier1", "fire").has_meta("pl_who") and Art.char_tex("hitman1", "fire") == Art.tex("hitman1_machine")
+			and Art.char_tex("manBrown", "aim") == Art.tex("manBrown_gun") and Art.char_tex("hitman1", "down") == Art.tex("hitman1_stand") and Art.char_tex("soldier1", "reload") == Art.tex("soldier1_reload"),
+			"the poses' pictures: the set's aim for stand, Kenney's gun up for a man's fire, Kenney's stood for down")
+	Art.pl_dir = Art.PL_DIR
+	Art.forget()
+	for f in DirAccess.get_files_at(probe_dir):
+		DirAccess.remove_absolute(probe_dir + f)
+	DirAccess.remove_absolute(probe_dir)
+	_check(Art.is_pl("soldier1_machine") == landed and not DirAccess.dir_exists_absolute(probe_dir), "the probe's set stayed after it")
+	print("h76 ok: the level picker (fresh 12, the camp's furthest, the row, picked 14 in force, Esc back), the gun line, the set's pictures by name over Kenney's")
+# ---------------------------------------------------------------------------------------------------------------- BUILD76-G
+const SliceRound76 := preload("res://slice/round.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const SliceMan76 := preload("res://slice/man.gd")
+
+
+## BUILD76-G (9 Nov, board D; Matt: "the fire rate feels off too from something that's supposed to be an AR", "i dont seem
+## to be taking much if any damage"): each gun at its type's rate and magazine, a round's damage the gun's damage a second
+## over that rate (a build's totals stand), rounds that travel and stop on the first thing in their path, cover too; their
+## fire the same, about 40% landing on a runner in the open and fewer behind cover; the "Their damage" knob.
+func _g76_checks(main) -> void:
+	var world = _w72_world(main)
+	var ctx: Dictionary = world.ctx
+	var r = world.runner
+	var s = ctx["sim"]
+	# 1. the kinds: the game's types split by rate; each kind's magazine (a base with a bigger own magazine, the kind's big)
+	var want := {"Regimental rifle": ["ar", 30, "AR"], "Army SMG": ["smg", 30, "SMG"], "Battle rifle": ["rifle", 10, "Rifle"],
+		"Old .303": ["bolt", 5, "Bolt rifle"], "Lever-action rifle": ["bolt", 5, "Lever rifle"], "Service pistol": ["pistol", 12, "Pistol"],
+		"Long-slide pistol": ["pistol", 15, "Pistol"], "Officer's revolver": ["revolver", 6, "Revolver"], "Pump shotgun": ["shotgun", 6, "Shotgun"],
+		"Riot shotgun": ["shotgun", 8, "Shotgun"], "Claw hammer": ["melee", 0, "Melee"], "Nail gun": ["improvised", 10, "Improvised"]}
+	for nm in want:
+		var slot: String = "Secondary" if nm.contains("pistol") or nm.contains("revolver") else "Primary"
+		var b: Dictionary = Items.base_named(slot, nm)
+		_check(not b.is_empty(), "no base %s" % nm)
+		if b.is_empty():
+			continue
+		var e: Dictionary = SliceBridge._gun_entry(s, slot, Items.roll_on(slot, b, s.rng, 1.0, true, false, 0, 14))
+		var k: Dictionary = SliceTuning.G_KINDS[str(want[nm][0])]
+		_check(str(e["kind"]) == str(want[nm][0]) and int(e["mag"]) == int(want[nm][1]) and str(e["fire_name"]) == str(want[nm][2]) and is_equal_approx(float(e["rof"]), float(k["rate"])),
+				"%s: kind %s, magazine %d, '%s', %.1f a second (want %s)" % [nm, str(e["kind"]), int(e["mag"]), str(e["fire_name"]), float(e["rof"]), str(want[nm])])
+		# a round's damage: the gun's damage a second (the sim's chain, at the game's rate) over the kind's rate
+		_check(float(e["dps"]) > 0.0 and is_equal_approx(float(e["per_round"]) * float(e["rof"]), float(e["dps"])), "%s: %.2f a round at %.1f a second isn't its %.1f a second" % [nm, float(e["per_round"]), float(e["rof"]), float(e["dps"])])
+	var g0: Dictionary = r.gun()
+	_check(SliceBridge.gun_line(g0) == ["AR · 10 a second", "AR"] and int(g0["mag"]) == 30 and r.rounds[0] == 30 and not (load("res://slice/tuning.gd") as GDScript).get_script_constant_map().has("MAG_X"),
+			"the fixture's AR: %s, %d in the magazine" % [str(SliceBridge.gun_line(g0)), int(g0["mag"])])
+	# the build's totals stand: the AR's damage a second is the game's - its old round (the sim's rate) times that rate
+	var it: Dictionary = g0["item"]
+	var b0: Dictionary = Items.base_of(it)
+	var old_round: float = Items.dps(it) * (1.0 + s.grade_bonus(it) / 100.0) * s._class_gun_mult(it) * float(s.u67_gun_x(true)[0]) * (s.dps() / (float(s._gun_dps()[0]) + float(s._gun_dps()[1]))) / (float(b0["rof"]) * s.rate_x())
+	_check(is_equal_approx(snappedf(SliceBridge.round_damage(ctx, g0) * float(g0["rof"]), 0.001), snappedf(old_round * float(g0["sim_rof"]), 0.001)),
+			"the AR's damage a second in the slice %.2f, the game's %.2f" % [SliceBridge.round_damage(ctx, g0) * float(g0["rof"]), old_round * float(g0["sim_rof"])])
+	# 2. the rate: the AR held a second fires its 10; a pistol held fires one; pressed fast, no more than its cap
+	var fired := [0]
+	world.fired.connect(func(_g): fired[0] += 1)
+	r.debug_move_to(Vector2(1200, 1000))
+	r.debug_aim_at(Vector2(1200, 300))
+	r.rounds[0] = 30
+	r.shot_cd = 0.0
+	# (a frameless smoke: an earlier area's R press stays "just pressed" with no frame to end it, and a part-empty magazine
+	# would reload on it every step - the rate is checked on magazines that can't be topped up)
+	var mag_keep := [int(r.guns[0]["mag"]), int(r.guns[r.guns.size() - 1]["mag"])]
+	r.guns[0]["mag"] = 0
+	var jams := [0]
+	world.jammed.connect(func(_g): jams[0] += 1)
+	Input.action_press("slice_fire")
+	_w72_steps(world, 1.0)
+	Input.action_release("slice_fire")
+	_w72_steps(world, 0.1)                       # the trigger let go a frame
+	_check(jams[0] > 0 or fired[0] == 10, "a second on the AR's trigger fired %d rounds, not 10" % fired[0])
+	var pistol_i: int = -1
+	for k in range(r.guns.size()):
+		if not bool(r.guns[k].get("auto", true)):
+			pistol_i = k
+	_check(pistol_i >= 0 and str(r.guns[pistol_i]["kind"]) == "revolver", "the fixture's sidearm isn't a press gun: %s" % str(r.guns.map(func(x): return x.get("kind", ""))))
+	if pistol_i >= 0:
+		r.guns[pistol_i]["mag"] = 0
+		r.gun_i = pistol_i
+		r.rounds[pistol_i] = 6
+		r.swap_left = 0.0
+		r.shot_cd = 0.0
+		fired[0] = 0
+		jams[0] = 0
+		Input.action_press("slice_fire")
+		_w72_steps(world, 1.0)
+		Input.action_release("slice_fire")
+		_check(jams[0] > 0 or fired[0] == 1, "the revolver's trigger held a second fired %d, not one" % fired[0])
+		fired[0] = 0
+		jams[0] = 0
+		r.rounds[pistol_i] = 6
+		for _k in range(30):                     # a press every other frame for a second: the cap, 3 a second
+			Input.action_press("slice_fire")
+			_w72_steps(world, 1.0 / 60.0)
+			Input.action_release("slice_fire")
+			_w72_steps(world, 1.0 / 60.0)
+		var cap: float = float(SliceTuning.G_KINDS["revolver"]["rate"])
+		_check(jams[0] > 0 or (fired[0] >= int(cap) and fired[0] <= int(cap) + 1), "pressed 30 times in a second the revolver fired %d, its cap %.0f" % [fired[0], cap])
+		r.gun_i = 0
+		_w72_steps(world, 0.5)
+	r.guns[0]["mag"] = mag_keep[0]
+	r.guns[r.guns.size() - 1]["mag"] = mag_keep[1]
+	# 3. rounds travel: a man 1300 px off isn't hit the frame it's fired; he is after its flight; cover stops it
+	var target := W72Target.new()
+	world.men_root.add_child(target)
+	r.debug_move_to(Vector2(1200, 1000))
+	var open_at: Vector2 = _h72_clear_spot(world, r.position, 1300.0)
+	target.position = open_at
+	r.debug_aim_at(target.position)
+	r.rounds[0] = 30
+	r.jammed = false
+	r.shot_cd = 0.0
+	r.swap_left = 0.0
+	r.reloading = false
+	SliceRound76.settle(world)                   # the rounds of the checks above flown out
+	var spread_was: float = float(r.guns[0]["spread_deg"])
+	r.guns[0]["spread_deg"] = 0.0                # true down the aim, for the flight's time
+	var out: Dictionary = r.fire_once()
+	while out.get("jammed", false):
+		r.jammed = false
+		r.shot_cd = 0.0
+		out = r.fire_once()
+	var rd: Dictionary = out["rounds"][0]
+	var layer = SliceRound76.layer(world)
+	layer.step(1.0 / 60.0)
+	_check(target.shots == 0 and not bool(rd["done"]) and SliceRound76.live(world).size() == 1, "the round landed the frame it was fired: %d shots, done %s" % [target.shots, str(rd["done"])])
+	var flight: float = r.position.distance_to(target.position) / SliceTuning.G_ROUND_PX_S
+	var tt := 1.0 / 60.0
+	while not bool(rd["done"]) and tt < 3.0:
+		layer.step(1.0 / 60.0)
+		tt += 1.0 / 60.0
+	_check(target.shots == 1 and str(rd.get("how", "")) == "hit" and absf(tt - flight) < 0.1, "the round took %.2f s to a man %.0f px off (want ~%.2f); %d shots, %s" % [tt, r.position.distance_to(target.position), flight, target.shots, str(rd.get("how", ""))])
+	var wall: Rect2 = world.level.cover[0]
+	var above: Vector2 = Vector2(wall.get_center().x, wall.position.y - 160.0)
+	var below: Vector2 = Vector2(wall.get_center().x, wall.end.y + 160.0)
+	target.position = below
+	r.debug_move_to(above)
+	r.debug_aim_at(below)
+	r.shot_cd = 0.0
+	r.jammed = false
+	var walled: Dictionary = r.fire_once_landed()
+	var walled_rd: Dictionary = layer.flying.back()
+	r.guns[0]["spread_deg"] = spread_was
+	_check(target.shots == 1 and str(walled_rd.get("how", "")) == "cover" and walled.get("man") == null and wall.grow(2.0).has_point(Vector2(walled.get("point", Vector2.ZERO))), "a round through cover: %s, %d shots" % [str(walled), target.shots])
+	target.position = Vector2(-900, -900)
+	# 4. the shotgun: a press is a shell of pellets, each its share of the shell's damage
+	var sb: Dictionary = Items.base_named("Primary", "Pump shotgun")
+	var sg: Dictionary = SliceBridge._gun_entry(s, "Primary", Items.roll_on("Primary", sb, s.rng, 1.0, true, false, 0, 14))
+	r.guns[0] = sg
+	r.rounds[0] = 6
+	r.shot_cd = 0.0
+	r.jammed = false
+	var shell: Dictionary = r.fire_once()
+	while shell.get("jammed", false):
+		r.jammed = false
+		r.shot_cd = 0.0
+		shell = r.fire_once()
+	_check(shell.has("rounds") and Array(shell["rounds"]).size() == 8 and Array(shell["rounds"]).all(func(x): return is_equal_approx(float(x["share"]), 0.125)) and r.rounds[0] == 5,
+			"a shell: %d pellets, %d left in the magazine" % [Array(shell.get("rounds", [])).size(), r.rounds[0]])
+	SliceRound76.settle(world)
+	# a shell at a man close by: most pellets land, the run counts one hit (the end screen's accuracy stays a share)
+	r.debug_move_to(Vector2(1200, 1000))
+	target.position = Vector2(1500, 1000)
+	r.debug_aim_at(target.position)
+	var hits_was: int = int(world.stats["hits"])
+	var shots_before: int = target.shots
+	r.shot_cd = 0.0
+	r.jammed = false
+	var close: Dictionary = r.fire_once()
+	SliceRound76.settle(world)
+	_check(close.has("rounds") and target.shots - shots_before >= 2 and int(world.stats["hits"]) - hits_was == 1, "a shell at 300 px: %d pellets landed, the run counted %d hits" % [target.shots - shots_before, int(world.stats["hits"]) - hits_was])
+	target.position = Vector2(-900, -900)
+	var ms0: Dictionary = SliceBridge.man_state(ctx, 0)
+	ms0["hp"] = 1.0e9
+	ms0["hp_max"] = 1.0e9
+	var probe := RandomNumberGenerator.new()
+	s.mission["fresh"] = false                   # no first shot's bonus on either
+	probe.seed = 5
+	var whole: Dictionary = SliceBridge.shot_damage(ctx, sg, ms0.duplicate(true), probe, false, 1.0)
+	probe.seed = 5
+	s.mission["fresh"] = false
+	var pellet: Dictionary = SliceBridge.shot_damage(ctx, sg, ms0.duplicate(true), probe, false, 0.125)
+	_check(float(whole["amount"]) > 0.0 and is_equal_approx(snappedf(float(pellet["amount"]) * 8.0, 0.01), snappedf(float(whole["amount"]), 0.01)), "a pellet's %.2f is not an eighth of the shell's %.2f" % [float(pellet["amount"]), float(whole["amount"])])
+	# 5. melee: a blow lands at once on a man in reach before him, no round, no magazine
+	var hb: Dictionary = Items.base_named("Primary", "Claw hammer")
+	r.guns[0] = SliceBridge._gun_entry(s, "Primary", Items.roll_on("Primary", hb, s.rng, 1.0, true, false, 0, 14))
+	r.rounds[0] = 0
+	r.mags[0] = 0
+	r.debug_move_to(Vector2(1200, 1000))
+	r.debug_aim_at(Vector2(1400, 1000))
+	target.position = Vector2(1200 + SliceTuning.RUNNER_R + 60.0, 1000)
+	r.shot_cd = 0.0
+	var shots_pre: int = target.shots
+	var blow: Dictionary = r.fire_once()
+	var shots_was: int = target.shots
+	_check(blow.get("man") == target and shots_was == shots_pre + 1 and r.rounds[0] == 0 and r.can_fire() == false, "a swing at a man in reach: %s, %d shots" % [str(blow), shots_was])
+	target.position = Vector2(1200 - SliceTuning.RUNNER_R - 60.0, 1000)     # behind him
+	r.shot_cd = 0.0
+	blow = r.fire_once()
+	_check(blow.get("man") == null and target.shots == shots_was, "a swing hit a man behind him")
+	target.queue_free()
+	world.men_root.remove_child(target)
+	r.guns[0] = g0
+	r.rounds[0] = 30
+	# 6. their fire: rounds that travel, about 40% landing on him in the open, fewer with cover hiding part of him
+	var mn = SliceMan76.new()
+	world.men_root.add_child(mn)
+	var mstate: Dictionary = SliceBridge.man_state(ctx, 0)
+	mn.setup(world, null, mstate, Vector2(600, 600), false)
+	var spots: Array = _g76_cover_spots(world)
+	_check(not spots.is_empty(), "no cover in the park with a clear lane beside it for the test")
+	var rates := [0.0, 0.0]
+	if not spots.is_empty():
+		var open_rate: float = _g76_their_rate(world, mn, spots[0][0], spots[0][1], 400)
+		var cover_rate: float = _g76_their_rate(world, mn, spots[0][2], spots[0][3], 400)
+		_check(open_rate >= 0.32 and open_rate <= 0.48, "%.0f%% of their rounds landed on him in the open, not about %.0f%%" % [open_rate * 100.0, SliceTuning.G_HIT_OPEN * 100.0])
+		rates = [open_rate, cover_rate]
+		_check(cover_rate < open_rate * 0.75, "behind cover hiding half of him %.0f%% landed, in the open %.0f%%" % [cover_rate * 100.0, open_rate * 100.0])
+	# their round's damage: the sim's damage a second over their rate; the knob times it, live
+	ctx["their_dmg_x"] = 1.0
+	var one: float = SliceBridge.their_round(ctx, mstate)
+	_check(is_equal_approx(one * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, float(mstate["dps"])) and is_equal_approx(SliceTuning.THEIR_DMG_X, 1.0), "their round %.2f at %.2f a second, %.0f%% landing, isn't the sim's %.2f a second" % [one, SliceBridge.their_rps(), SliceTuning.G_HIT_OPEN * 100.0, float(mstate["dps"])])
+	var took: Array = []
+	for x in [0.5, 1.0, 1.5]:
+		ctx["their_dmg_x"] = x
+		var rr := RandomNumberGenerator.new()
+		rr.seed = 9
+		r.guard = 0
+		ctx["hp_frac"] = 0.0
+		took.append(float(SliceBridge.hit_on_runner(ctx, r, mstate, rr, 1, false)["amount"]))
+	ctx["their_dmg_x"] = 1.0
+	_check(took[1] > 0.0 and is_equal_approx(snappedf(took[0] * 2.0, 0.01), snappedf(took[1], 0.01)) and is_equal_approx(snappedf(took[2], 0.01), snappedf(took[1] * 1.5, 0.01)), "their damage at ×0.5 / ×1 / ×1.5: %s" % str(took))
+	# 7. a box carries the same fight in the slice's rounds: the game's rounds times the kind's rate over the game's
+	var ty: String = str(g0["ammo"])
+	var was: int = int(ctx["boxes"][ty])
+	var box: Dictionary = s._plain(Data.AMMO, "Rifle rounds") if not Items.base_named(Data.AMMO, "Rifle rounds").is_empty() else {}
+	if not box.is_empty():
+		box["rounds"] = 100
+		SliceBridge.take_rounds(ctx, [box])
+		_check(int(ctx["boxes"][ty]) - was == roundi(100.0 * float(g0["rof"]) / float(g0["sim_rof"])), "a box of 100 rifle rounds put %d in the slice's (want %d)" % [int(ctx["boxes"][ty]) - was, roundi(100.0 * float(g0["rof"]) / float(g0["sim_rof"]))])
+	mn.queue_free()
+	world.queue_free()
+	print("g76 ok: kinds and magazines, a round's damage from dmg/s, the AR's 10 a second, the revolver a press, rounds that travel and stop on cover, the shell's pellets, the swing, their rounds landing %.0f%% in the open and %.0f%% half behind cover, the knob" % [rates[0] * 100.0, rates[1] * 100.0])
+
+
+## Lanes beside a cover block for their fire: [man in the open, runner in the open, man, runner half behind the block].
+func _g76_cover_spots(world) -> Array:
+	var out: Array = []
+	for c in world.level.cover:
+		var rect: Rect2 = c
+		var rx: float = rect.end.x + SliceTuning.RUNNER_R + 6.0
+		var top: float = rect.position.y
+		var man_c := Vector2(rect.position.x - 700.0, top - 4.0)
+		var run_c := Vector2(rx, top - 4.0)
+		var man_o := Vector2(rect.position.x - 700.0, top - 260.0)
+		var run_o := Vector2(rx, top - 260.0)
+		if not world.park_rect.grow(-100.0).has_point(man_c) or not world.park_rect.grow(-100.0).has_point(man_o):
+			continue
+		var ok := true
+		for dy in [-120.0, -60.0, 0.0, 60.0, 120.0]:
+			ok = ok and world.has_los(man_o + Vector2(0, dy), run_o + Vector2(0, dy)) and world.has_los(man_o, run_o + Vector2(0, dy))
+		for dy in [-120.0, -60.0, -8.0]:
+			ok = ok and world.has_los(man_c + Vector2(0, dy), run_c + Vector2(0, dy))
+		ok = ok and world.resolve_circle(man_c, SliceTuning.MAN_R).distance_to(man_c) < 1.0 and world.resolve_circle(man_o, SliceTuning.MAN_R).distance_to(man_o) < 1.0
+		ok = ok and world.has_los(man_c, run_c) and world.resolve_circle(run_c, SliceTuning.RUNNER_R).distance_to(run_c) < 1.0 and world.resolve_circle(run_o, SliceTuning.RUNNER_R).distance_to(run_o) < 1.0
+		if ok:
+			out.append([man_o, run_o, man_c, run_c])
+	return out
+
+
+## The share of n of the man's rounds, fired from `from` at a still runner at `at`, that reach him.
+func _g76_their_rate(world, mn, from: Vector2, at: Vector2, n: int) -> float:
+	var r = world.runner
+	r.debug_move_to(at)
+	r.velocity = Vector2.ZERO
+	mn.position = from
+	mn.velocity = Vector2.ZERO
+	mn.landed = 0
+	mn.fired = 0
+	for _k in range(n):
+		r.hp = 1000000
+		mn.sees = true
+		mn.react_left = 0.0
+		mn.pause_left = 0.0
+		mn._fire(1.0 / 60.0, r.position, mn.position.distance_to(r.position))
+		SliceRound76.settle(world)
+	r.hp = r.hp_max
+	return float(mn.landed) / float(maxi(1, mn.fired))
+
+
+# ------------------------------------------------------------------ round 5's review (9 Nov): the fixes, each a check
+## Their damage landed at the sim's rate in the open; reloads at the sim's share of the fight; the press gun's cap kept;
+## the picker from the first level that differs, "Reach"; world text at the zoom; the fog's cost and leaks; the press
+## guns' "up to"; the art set's poses passed from the men and the runner.
+func _r5_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var run = Launch.open(main, H72_SEED, false)
+	var world = run.world
+	var ctx: Dictionary = world.ctx
+	var r = world.runner
+	# 1. their round: landed damage a second (their rate x the share landing in the open) is the sim's figure
+	var ms := {"dps": 12.0}
+	ctx["their_dmg_x"] = 1.0
+	var per: float = SliceBridge.their_round(ctx, ms)
+	_check(is_equal_approx(per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, 12.0), "their round %.2f lands %.2f a second in the open, not the sim's 12" % [per, per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN])
+	# 2. the reload: the same share of the fight firing as the sim's gun (its magazine over its rate, and the reload)
+	var g0: Dictionary = ctx["guns"][0]
+	var sim_fire: float = float(g0["sim_mag"]) / float(g0["sim_rof"])
+	var sl_fire: float = float(g0["mag"]) / float(g0["rof"])
+	var share_sim: float = sim_fire / (sim_fire + float(g0["sim_reload_s"]))
+	var share_sl: float = sl_fire / (sl_fire + float(g0["reload_s"]))
+	_check(absf(share_sim - share_sl) < 0.001 and not is_equal_approx(float(g0["reload_s"]), float(g0["sim_reload_s"])), "the AR fires %.3f of the fight in the slice, %.3f in the sim (reload %.2f s, the sim's %.2f)" % [share_sl, share_sim, float(g0["reload_s"]), float(g0["sim_reload_s"])])
+	# 3. a press gun's cap: pressed every other frame for two seconds at 6 a second, 12 shots (no frame lost to a crumb)
+	var pi: int = -1
+	for k in range(r.guns.size()):
+		if not bool(r.guns[k].get("auto", true)) and not bool(r.guns[k].get("melee", false)):
+			pi = k
+	_check(pi >= 0, "the fixture has no press gun")
+	if pi >= 0:
+		var shots := [0]
+		var on_shot := func(_g): shots[0] += 1
+		world.fired.connect(on_shot)
+		world.jammed.connect(on_shot)
+		var rof_was: float = float(r.guns[pi]["rof"])
+		r.guns[pi]["rof"] = 6.0
+		r.gun_i = pi
+		r.rounds[pi] = 99
+		r.swap_left = 0.0
+		r.reloading = false
+		r.shot_cd = 0.0
+		for _k in range(60):
+			r.jammed = false
+			Input.action_press("slice_fire")
+			_w72_steps(world, 1.0 / 60.0)
+			Input.action_release("slice_fire")
+			_w72_steps(world, 1.0 / 60.0)
+		r.jammed = false
+		world.fired.disconnect(on_shot)
+		world.jammed.disconnect(on_shot)
+		_check(shots[0] == 12, "a press gun at 6 a second, pressed 60 times in 2 s, fired %d, not 12" % shots[0])
+		r.guns[pi]["rof"] = rof_was
+		r.gun_i = 0
+	# 9. the press guns' line: "up to", the shotgun's at its own rate
+	_check(SliceBridge.gun_line({"fire_name": "Pistol", "rps": 6.0, "semi": true})[0] == "Pistol · up to 6 a second" and SliceBridge.gun_line({"fire_name": "Shotgun", "rps": float(SliceTuning.G_KINDS["shotgun"]["rate"]), "pump": true})[0] == "Shotgun · up to %s a second" % str(SliceTuning.G_KINDS["shotgun"]["rate"])
+			and SliceBridge.gun_line({"fire_name": "AR", "rps": 10.0, "auto": true})[0] == "AR · 10 a second", "the press guns' lines: %s" % str(SliceBridge.gun_line({"fire_name": "Pistol", "rps": 6.0, "semi": true})))
+	# 6. world text at the zoom: the hard man's name, his HP bar and "You" show at their screen sizes
+	var ManS = load("res://slice/man.gd")
+	var RunS = load("res://slice/runner.gd")
+	_check(absf(ManS.name_px() * SliceTuning.CAM_ZOOM - ManS.NAME_PX) <= 1.0 and is_equal_approx(ManS.bar_h() * SliceTuning.CAM_ZOOM, ManS.BAR_H) and absf(RunS.you_px() * SliceTuning.CAM_ZOOM - RunS.YOU_PX) <= 1.0 and SliceTuning.CAM_ZOOM < 1.0,
+			"world text on screen: the name %.0f px (want %d), the bar %.1f, You %.0f" % [ManS.name_px() * SliceTuning.CAM_ZOOM, ManS.NAME_PX, ManS.bar_h() * SliceTuning.CAM_ZOOM, RunS.you_px() * SliceTuning.CAM_ZOOM])
+	# 10. the poses passed in the art set's names
+	r.fire_t = 0.0
+	r.reloading = false
+	_check(r.pose() == "aim", "the runner aiming: '%s'" % r.pose())
+	r.fire_t = 0.05
+	_check(r.pose() == "fire", "the runner just fired: '%s'" % r.pose())
+	r.fire_t = 0.0
+	var Art = load("res://slice/art.gd")
+	_check(Art.man_set_pose(true, true, true) == "down" and Art.man_set_pose(false, true, true) == "fire" and Art.man_set_pose(false, false, true) == "aim" and Art.man_set_pose(false, false, false) == "stand", "a man's set poses")
+	if not Art.is_pl("soldier1_machine"):
+		_check(Art.char_tex("soldier1", "aim", "gun") == Art.tex("soldier1_gun") and Art.char_tex("soldier1", "fire", "machine") == Art.tex("soldier1_machine") and Art.char_tex("soldier1", "down") == Art.tex("soldier1_stand"), "the set's poses to Kenney's for the runner")
+	# 7. the fog: rebuilt only after 4 px of the runner; cover that can't shade the view not clipped
+	var sg = world.sight
+	sg.step(H72_DT)
+	var b0: int = sg.builds
+	r.position += Vector2(3, 0)
+	sg.step(H72_DT)
+	var b3: int = sg.builds
+	r.position += Vector2(2, 0)
+	sg.step(H72_DT)
+	_check(b3 == b0 and sg.builds == b0 + 1, "the fog's builds for 3 px then 5 px: %d, %d from %d" % [b3, sg.builds, b0])
+	var bd: Rect2 = sg.bound()
+	var near: int = world.level.cover.filter(func(c): return Rect2(c).intersects(bd)).size()
+	_check(sg.clipped == near and near < world.level.cover.size(), "the fog clipped %d covers, %d can shade the view of %d" % [sg.clipped, near, world.level.cover.size()])
+	# 8. the fog's leaks: a last-seen mark outlives its man's death out of sight; no flash or number on a man unseen
+	for k in range(int(8.0 / H72_DT)):
+		if world.men().size() >= 1:
+			break
+		world.tick(H72_DT)
+	_check(world.men().size() >= 1, "no man on the park for the fog's leaks")
+	if world.men().size() >= 1:
+		var mn = world.men()[0]
+		sg.marks.append({"pos": mn.position, "t": 1.0, "life": 1.0, "node": mn})
+		mn.dead = true
+		mn.visible = false
+		sg._judge_men()
+		_check(sg.marks.any(func(m): return m["node"] == mn), "a last-seen mark went when its man died out of sight")
+		var fx_n: int = world.fx.marks.size()
+		world.fx.hit_flash(mn)
+		var pops_n: int = run.hud.pops.size()
+		run.hud._on_hit(mn, {"damage": 40}, mn.position)
+		_check(world.fx.marks.size() == fx_n and run.hud.pops.size() == pops_n, "a man the fog hides flashed or showed a number")
+		mn.visible = true
+		run.hud._on_hit(mn, {"damage": 40}, mn.position)
+		_check(run.hud.pops.size() == pops_n + 1, "a man in sight showed no number")
+	run.back_to_title()
+	# 4. 5. the picker: from the first level that differs; a camp with nothing cleared is fresh; "Reach"
+	var first: int = PickScript76.first_level()
+	_check(Sim.tier_depth(first) == 1 and Sim.tier_depth(first + 1) == 2 and PickScript76.levels_round(1)[0] == first and PickScript76.levels_round(first + 3)[0] == first, "the picker's first level %d, the row %s" % [first, str(PickScript76.levels_round(1))])
+	var bare = Sim.new()
+	bare.start()
+	_check(PickScript76.is_fresh(bare) and PickScript76.default_for(bare) == SliceTuning.H_LEVEL_FRESH, "a camp with nothing cleared isn't a fresh camp: %d" % PickScript76.default_for(bare))
+	var pk = PickScript76.new()
+	pk.setup(14, "Poacher", 16, false)
+	root.add_child(pk)
+	_check(pk._mark.text == "Reach" and pk._sub.text == "Poacher, level 16 · Your reach, level 14" and _check_nodes(pk.text_nodes(), [], "the picker's reach") == 0, "the picker's reach words: '%s', '%s'" % [pk._mark.text, pk._sub.text])
+	pk.queue_free()
+	main._menu.close()
+	print("r5 ok: their damage lands at the sim's, the reload's share, the press cap, up to, world text at the zoom, the set's poses, the fog's 4 px and its view, marks and flashes, the picker from level %d, Reach" % first)
