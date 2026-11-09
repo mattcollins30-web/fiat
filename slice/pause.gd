@@ -73,7 +73,7 @@ func _init() -> void:
 		tb.pressed.connect(_on_hp_x if k == 0 else _on_mag_x)
 		buttons.append(tb)
 	_test = UI.head(_card, Rect2(tx, by - 30, 560, 22), "Test settings")
-	show_hp_x(0.25)
+	show_hp_x(0.5)
 	show_mag_x(1.0)
 	visible = false
 

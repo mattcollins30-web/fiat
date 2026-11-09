@@ -224,44 +224,39 @@ func fire_once() -> Dictionary:
 	return res
 
 
-## A gun put on from the kit sheet (round 2): the bridge's entry for its slot. Its rounds and spares are its own, kept
-## by the item while it's off (the review: a swap refilled for free); a gun not worn yet this run starts full.
-var kept := {}                       # item id -> [rounds in, spare magazines]
+## The kit changed in the Kit room (round 4, any slot): the guns as the bridge now has them, in its order. Each gun's
+## rounds and spares are its own, by the item: a gun worn before keeps what it had (in hand or put by while off - the
+## review: a swap refilled for free); one new to the run starts full. The HP, Guard and energy maxima and the pace
+## follow; what's in hand stays, down to a lower max.
+var kept := {}                       # item id -> [rounds in, spare magazines spent], for every gun the runner has held
 
 
-func wear(e: Dictionary) -> void:
-	var k := -1
-	for i in range(guns.size()):
-		if str(guns[i].get("slot", "")) == str(e.get("slot", "")):
-			k = i
-	var id: int = int(Dictionary(e.get("item", {})).get("id", -1))
-	var mine: Array = kept.get(id, [int(e.get("mag", 1)), int(e.get("mags", 0))])
-	kept.erase(id)
-	if k < 0:
-		guns.append(e.duplicate(true))
-		rounds.append(mini(int(mine[0]), int(e.get("mag", 1))))
-		mags.append(int(mine[1]))
-		return
-	var off_id: int = int(Dictionary(guns[k].get("item", {})).get("id", -1))
-	if off_id >= 0:
-		kept[off_id] = [rounds[k], mags[k]]
-	guns[k] = e.duplicate(true)
-	rounds[k] = mini(int(mine[0]), int(e.get("mag", 1)))
-	mags[k] = int(mine[1])
-	if k == gun_i:
+func kit_changed(c: Dictionary) -> void:
+	for k in range(guns.size()):
+		var id_k: int = int(Dictionary(guns[k].get("item", {})).get("id", -1))
+		if id_k >= 0:
+			kept[id_k] = [rounds[k], maxi(0, int(guns[k].get("mags", 0)) - mags[k])]     # the spares spent, not left
+	var held_id: int = int(Dictionary(gun().get("item", {})).get("id", -1)) if gun_i < guns.size() else -1
+	var new_guns: Array = []
+	var new_rounds: Array[int] = []
+	var new_mags: Array[int] = []
+	for e in c.get("guns", []):
+		var id: int = int(Dictionary(e.get("item", {})).get("id", -1))
+		var mine: Array = kept.get(id, [int(e.get("mag", 1)), 0])
+		new_guns.append(Dictionary(e).duplicate(true))
+		new_rounds.append(mini(int(mine[0]), int(e.get("mag", 1))))
+		new_mags.append(maxi(0, int(e.get("mags", 0)) - int(mine[1])))     # (the review) the spares as the rig has them now, less those spent
+	guns = new_guns
+	rounds = new_rounds
+	mags = new_mags
+	gun_i = 0
+	for k in range(guns.size()):
+		if int(Dictionary(guns[k].get("item", {})).get("id", -1)) == held_id:
+			gun_i = k                          # the gun in hand stays in hand while it's still worn
+	if held_id < 0 or gun_i >= guns.size() or int(Dictionary(guns[gun_i].get("item", {})).get("id", -1)) != held_id:
 		reloading = false
 		refilling = false
 		jammed = false
-
-
-## A change of kit read again (the bridge's reread): each gun's figures, its rounds kept to its magazine; the HP, Guard
-## and energy maxima and the pace. What's in hand stays (HP over a lower max comes down to it).
-func reread(c: Dictionary) -> void:
-	for e in c.get("guns", []):
-		for i in range(guns.size()):
-			if str(guns[i].get("slot", "")) == str(e.get("slot", "")) and int(Dictionary(guns[i].get("item", {})).get("id", -2)) == int(Dictionary(e.get("item", {})).get("id", -3)):
-				guns[i] = e.duplicate(true)
-				rounds[i] = mini(rounds[i], int(e.get("mag", 1)))
 	hp_max = maxi(1, int(c.get("hp_max", hp_max)))
 	hp = mini(hp, hp_max)
 	guard_max = int(c.get("guard_max", guard_max))

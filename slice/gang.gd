@@ -26,6 +26,13 @@ var last_seen := Vector2.ZERO        # the runner where they last saw him
 var _on_you := 0
 var _men: Array = []
 var _all: Array = []                 # every man still drawn (the dead fade out)
+## (round 4, Matt: "the gangs should come in waves similar to how the fight works at the moment - 3 on you - 3 next etc")
+## The sim's fight: a gang's men are a pool, contact(t) of them on you at once, the next stepping up as one falls, the
+## hard man the gang's last. Here: `_front` the men engaged (never more than contact), `_queue` the rest in order, held
+## at the edge they came in by; a front man down, the next steps up after G_STEP_UP_S.
+var _front: Array = []
+var _queue: Array = []
+var _step_up_ts: Array = []          # (the review) a beat for each gap in the front, counting down to its man stepping up
 
 
 func setup(world_v) -> void:
@@ -44,6 +51,81 @@ func live_men() -> Array:
 	return _men
 
 
+## How many may be on you at once: the sim's contact(t) for the runner and the site.
+func contact() -> int:
+	return maxi(1, int(world.ctx.get("contact", 3))) if world != null else 3
+
+
+## (round 4) The men engaged now, "3 on you" (H's line), and those waiting their turn, "4 waiting".
+func on_you_count() -> int:
+	return _front.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead()).size()     # (the review) not one who fell this frame
+
+
+func waiting_count() -> int:
+	return _queue.size()
+
+
+func front_men() -> Array:
+	return _front.duplicate()
+
+
+func waiting_men() -> Array:
+	return _queue.duplicate()
+
+
+## Seconds until the next man steps up (-1 none due).
+func step_up_in() -> float:
+	return _step_up_ts.min() if not _step_up_ts.is_empty() else -1.0
+
+
+## Fills the front from the queue: `now` all at once (a gang's arrival), else one after the beat.
+func _fill_front(dt: float, now := false) -> void:
+	_front = _front.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
+	_queue = _queue.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
+	while now and _front.size() < contact() and not _queue.is_empty():
+		_step_up()
+	# (the review) each fallen man his own beat: two down together, two step up together after G_STEP_UP_S
+	var due: int = mini(contact() - _front.size(), _queue.size())
+	while _step_up_ts.size() < due:
+		_step_up_ts.append(T.G_STEP_UP_S)
+	_step_up_ts = _step_up_ts.slice(0, maxi(0, due))
+	for k in range(_step_up_ts.size()):
+		_step_up_ts[k] = float(_step_up_ts[k]) - dt
+	while not _step_up_ts.is_empty() and float(_step_up_ts[0]) <= 0.0 and not _queue.is_empty():
+		_step_up_ts.pop_front()
+		_step_up()
+
+
+func _step_up() -> void:
+	var mn = _queue.pop_front()
+	_front.append(mn)
+	mn.engage()
+
+
+## A man at the back found and shot: he's in it; the front man furthest from the runner goes back to wait.
+func held_shot(mn: Node) -> void:
+	if not (mn in _queue):
+		return
+	_queue.erase(mn)
+	_front = _front.filter(func(f): return is_instance_valid(f) and not f.is_dead())     # (the review) a dead front man is no reason to send a live one back
+	if _front.size() >= contact() and not _front.is_empty():
+		var rp: Vector2 = world.runner.global_position if world.runner != null else Vector2.ZERO
+		var back = _front[0]
+		for f in _front:
+			if f.global_position.distance_to(rp) > back.global_position.distance_to(rp):
+				back = f
+		_front.erase(back)
+		_queue.push_front(back)
+		back.hold(_hold_spot(back))
+	_front.append(mn)
+	mn.engage()
+
+
+## Where a waiting man stands: the edge he came in by, held back out of the runner's sight.
+func _hold_spot(mn: Node) -> Vector2:
+	return mn.get_meta("way", mn.global_position)
+
+
 ## The men who may fire this frame (the review: the sim's contact(t), so many on you at once): the nearest of those who
 ## saw you last frame.
 var _firing: Array = []
@@ -51,7 +133,7 @@ var _firing: Array = []
 
 func _pick_firing() -> void:
 	var rp: Vector2 = world.runner.global_position if world.runner != null else Vector2.ZERO
-	var seeing: Array = _men.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead() and mn.sees)
+	var seeing: Array = _front.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead() and mn.sees)     # (round 4) only the front fires
 	seeing.sort_custom(func(a, b): return a.global_position.distance_to(rp) < b.global_position.distance_to(rp))
 	_firing = seeing.slice(0, maxi(1, int(world.ctx.get("contact", 3))))
 
@@ -93,6 +175,7 @@ func _step(dt: float) -> void:
 	if world == null or world.get("ended") == true:
 		return
 	SliceBridge.tick(world, dt)
+	_fill_front(dt)
 	_pick_firing()
 	for mn in _all.duplicate():
 		if is_instance_valid(mn) and not mn.gone:
@@ -101,8 +184,8 @@ func _step(dt: float) -> void:
 	_men = _men.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
 	alive = _men.size()
 	_on_you = 0
-	for mn in _men:
-		if mn.sees:
+	for mn in _front:
+		if is_instance_valid(mn) and not mn.is_dead() and mn.sees:
 			_on_you += 1
 	if gang_i + 1 < gangs:
 		var rate := 1.0
@@ -155,6 +238,9 @@ func _arrive(i: int) -> void:
 		var root: Node = world.men_root if world.get("men_root") != null else self
 		root.add_child(mn)
 		mn.setup(world, self, ms, at, world.rng.randf() < T.G_FLANK_SHARE)
+		mn.set_meta("way", at)
+		mn.hold(at)                                    # (round 4) every man waits his turn; the front fills below
+		_queue.append(mn)
 		_men.append(mn)
 		_all.append(mn)
 		if hname != "":
@@ -163,6 +249,7 @@ func _arrive(i: int) -> void:
 			SliceBridge._event(ctx, "hard_man", {"name": hname, "traits": traits_v.duplicate(), "trait_words": traits_v.map(func(x): return str(Words.HARD66_TRAITS.get(x, x)))})
 			hard_man_in.emit(mn)
 	alive = _men.size()
+	_fill_front(0.0, true)                             # the gang in: the first `contact` (an older gang's waiting first) step up
 	gang_arrived.emit(i, size)
 
 

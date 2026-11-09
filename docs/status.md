@@ -8266,3 +8266,12 @@ own link refuses scripts), 21 pictures in slice/art/kenney/ with its License.txt
 gang as Hitman 1 / Man Brown / Man Blue, the hard man as Man Old, asphalt, paving and kiosk floors, concrete walls,
 crates, barrels as bins, fences as the low walls (cars, the van, the shelter, the bay lines still drawn). slice/art.gd
 loads the imported picture where there is one (the editor, an export) and the raw PNG where not (the headless smoke).
+
+The slice, round 4 (9 Nov; Matt: "whats found isnt shown ... why reinvent the wheel here - i thought we'd just use the
+existing inventory and gear interface ... 0.5x HP is the better setting and the mag felt much better at 2.5 ... its
+pointless if the rest of the games gear isnt available in the slice ... the gangs should come in waves similar to how
+the fight works at the moment - 3 on you - 3 next"): Tab now opens the game's own Kit room (armoury.gd) on the slice's
+copy of the camp, so the whole stash can be worn; finds land in that stash copy (the empty cells were finds with no
+base); gang HP x0.5 by default, magazines x2.5; a gang comes in full but only 3 (the sim's contact) engage, the rest
+wait at their edge and step up 1.2 s after a front man falls, the hard man last; the HUD's "3 on you · 4 waiting".
+No change to shared code; the camp stays read-only (checked byte for byte).

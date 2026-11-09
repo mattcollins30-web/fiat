@@ -10,7 +10,7 @@ const SliceTuning := preload("res://slice/tuning.gd")     # (no class_name: Matt
 const HudScript := preload("res://slice/hud.gd")
 const PauseScript := preload("res://slice/pause.gd")
 const EndScript := preload("res://slice/end_screen.gd")
-const KitScript := preload("res://slice/kit_sheet.gd")
+const KitScript := preload("res://slice/kit_room.gd")     # (round 4) the game's own Kit room, on the slice's Sim
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
@@ -21,7 +21,7 @@ var world = null                      # the slice's world (slice.gd)
 var hud = null
 var pause = null
 var end = null
-var kit = null                        # the kit and runner sheet (round 2): Tab or Back
+var kit = null                        # the Kit room (round 4): Tab or Back
 var over: CanvasLayer
 var ended := false
 var _next_id := 0                     # Items' id counter when the slice opened: put back on the way out (the review)
@@ -104,7 +104,7 @@ func begin(seed_v: int, use_camp := true) -> void:
 	world.run_ended.connect(_on_ended)
 
 
-## Tab or Back: the kit sheet, on and off (in _input, ahead of the GUI's own Tab, which moves the focus).
+## Tab or Back: the Kit room, on and off (in _input, ahead of the GUI's own Tab, which moves the focus).
 func _input(event: InputEvent) -> void:
 	if ended or pause == null or pause.visible or not event.is_action_pressed("slice_kit"):
 		return
@@ -116,7 +116,7 @@ func _input(event: InputEvent) -> void:
 		open_kit()
 
 
-## The fight held still under the kit sheet (a sandbox: the clock stops too).
+## The fight held still under the Kit room (a sandbox: the clock stops too).
 func open_kit() -> void:
 	_world_mode = world.process_mode
 	world.process_mode = Node.PROCESS_MODE_DISABLED
@@ -126,6 +126,8 @@ func open_kit() -> void:
 
 func close_kit() -> void:
 	kit.close()
+	SliceBridge.kit_changed(world.ctx)        # (round 4) whatever was worn, taken or left: the guns, meds, maxima, pace read again
+	world.runner.kit_changed(world.ctx)
 	world.process_mode = _world_mode
 
 

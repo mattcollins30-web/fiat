@@ -114,35 +114,6 @@ static func take_rounds(ctx: Dictionary, items: Array) -> int:
 	return got
 
 
-## The rig's room for meds (the sim's med_capacity, the pouches); never under what the runner set out with.
-static func med_room(ctx: Dictionary) -> int:
-	if not ctx.has("med_room"):
-		var start := 0
-		for md in ctx["meds"]:
-			start += int(md["count"])
-		ctx["med_room"] = maxi(int(ctx["sim"].med_capacity()), start)
-	return int(ctx["med_room"])
-
-
-## A found med into the rig (the kit sheet, round 2): with its kind's slot, else a free one of the four. False when full.
-static func rig_med(ctx: Dictionary, it: Dictionary) -> bool:
-	var s = ctx["sim"]
-	var nm: String = str(it["base"])
-	var held := 0
-	for md in ctx["meds"]:
-		held += int(md["count"])
-	if held >= med_room(ctx):
-		return false                          # the rig's pouches, all told (the review: no cap before)
-	for md in ctx["meds"]:
-		if str(md["base"]) == nm:
-			md["count"] = int(md["count"]) + 1
-			return true
-	if ctx["meds"].size() >= T.G_MED_SLOTS:
-		return false
-	ctx["meds"].append({"name": nm, "base": nm, "icon": _item_icon(it), "heal": int(round(s.med_heal(it))), "use_s": s.use_time(it), "count": 1, "item": it})
-	return true
-
-
 ## A gun entry's magazine at the slice's MAG_X (a test knob, round 2): the game's own kept as mag_base.
 static func scaled_gun(e: Dictionary, x: float) -> Dictionary:
 	if not e.has("mag_base"):
@@ -151,48 +122,49 @@ static func scaled_gun(e: Dictionary, x: float) -> Dictionary:
 	return e
 
 
-## A gun worn in place of the one in `slot` (the kit sheet, round 2): on the slice's Sim, the gun fed, its entry read again
-## as the bridge reads any (rate, magazine, reload, the stats it carries). Returns the new entry; the old item.
-static func wear_gun(ctx: Dictionary, slot: String, it: Dictionary) -> Array:
+## The kit changed in the Kit room (round 4: the game's own room, any slot): everything it moves read again from the
+## slice's Sim - the guns the runner holds (Primary, Secondary: each the bridge's entry, its rate and reload carrying pace
+## and the kit), the rig's meds, a box for a new gun's rounds, the HP, Guard and energy maxima and pace. Resists, armour
+## and the damage are read live from the Sim by every hit. The runner takes it with runner.kit_changed(ctx).
+static func kit_changed(ctx: Dictionary) -> void:
 	var s = ctx["sim"]
-	var old = s.equipped[slot]
-	s.equipped[slot] = it
 	s._stats_dirty()
 	_arm(s)
-	var e: Dictionary = scaled_gun(_gun_entry(s, slot, it), float(ctx.get("mag_x", T.MAG_X)))
-	var ty: String = str(e.get("ammo", ""))
-	if ty != "" and not ctx["boxes"].has(ty):
-		ctx["boxes"].merge(boxes_for(s, [e]))
-	var put := false
-	for k in range(ctx["guns"].size()):
-		if str(ctx["guns"][k]["slot"]) == slot:
-			ctx["guns"][k] = e
-			put = true
-	if not put:
-		ctx["guns"].append(e)
-	reread(ctx)
-	return [e, old]
-
-
-## Everything a change of kit moves, read again from the slice's Sim (the review: a gun worn moved only that gun): every
-## gun's entry (its rate and reload carry pace and the kit's stats), pace, the HP, Guard and energy maxima. The runner
-## takes them with runner.reread(ctx).
-static func reread(ctx: Dictionary) -> void:
-	var s = ctx["sim"]
-	s._stats_dirty()
 	var x: float = float(ctx.get("mag_x", T.MAG_X))
-	for k in range(ctx["guns"].size()):
-		var old_e: Dictionary = ctx["guns"][k]
-		var g = s.equipped[str(old_e["slot"])]
-		if g == null:
+	var guns: Array = []
+	for slot in SLOT_NAMES:
+		var g = s.equipped[slot]
+		if g == null or float(Items.base_of(g).get("rof", 0.0)) <= 0.0 or Items.mag_size(g) <= 0:
 			continue
-		var e: Dictionary = scaled_gun(_gun_entry(s, str(old_e["slot"]), g), x)
-		e["stand_in"] = bool(old_e.get("stand_in", false))
-		ctx["guns"][k] = e
+		var e: Dictionary = scaled_gun(_gun_entry(s, slot, g), x)
+		for old in ctx["guns"]:
+			if str(old["slot"]) == slot and int(Dictionary(old.get("item", {})).get("id", -1)) == int(g.get("id", -2)):
+				e["stand_in"] = bool(old.get("stand_in", false))
+		guns.append(e)
+	ctx["guns"] = guns
+	var meds: Array = ctx["meds"]
+	meds.clear()                            # the same list the runner reads: filled again from the rig as it stands
+	meds.append_array(_meds(s))
+	for ty in boxes_for(s, guns).keys():
+		if not ctx["boxes"].has(ty):
+			ctx["boxes"][ty] = boxes_for(s, guns)[ty]
 	ctx["hp_max"] = int(round(s.max_hp()))
 	ctx["guard_max"] = int(round(s.guard_cap()))
 	ctx["energy_max"] = s.max_energy()
 	ctx["pace_pct"] = (s.pace() - 1.0) * 100.0
+
+
+## A find of the run (a crate's, a man's drop) where the slice's Kit room shows it (round 4, Matt: "whats found isnt
+## shown"): into the slice's own stash, the Kit room's grid, to wear or put in the rig there; a box of a gun's rounds into
+## the pack's count for the refills instead. The camp's stash is never touched: the slice's Sim is its own copy.
+static func stow(ctx: Dictionary, items: Array) -> void:
+	var s = ctx["sim"]
+	take_rounds(ctx, items)
+	for it in items:
+		if not (it is Dictionary) or not it.has("base") or (Items.is_ammo(it) and ctx.get("boxes", {}).has(str(Items.base_of(it)["type"]))):
+			continue
+		if not s.stash_put(it):
+			s.stash.append(it)                 # past the stash's room: kept all the same (a sandbox), the grid's pages show it
 
 
 ## A magazine filled by hand from the pack's box: the sim's REFILL_MULT times the gun's reload for a magazine of the game's
@@ -672,7 +644,19 @@ static func _find(s, m: Dictionary, t: Dictionary, from_kill: bool) -> Array:
 	var it: Dictionary = got.get("it", {}) if got.get("it", null) is Dictionary else {}
 	if it.is_empty():
 		return []
-	return [{"name": _item_name(it), "rarity": int(it.get("rarity", 0)), "slot": str(it.get("slot", "")), "icon": _item_icon(it), "item": it}]
+	# (round 4) the item itself, not a wrapper round it (the kit sheet's pack drew a wrapper's empty picture): taken out
+	# of the mission's pack and floor, where the sim's _find left it, to go where stow puts it
+	take_out(m, it)
+	return [it]
+
+
+## A find taken out of the mission's pack and floor by its id (the review: by value missed the copy the sim stored with
+## its place in the pack, so the find was in the stash and the pack both, and a box of rounds counted twice).
+static func take_out(m: Dictionary, it: Dictionary) -> void:
+	var id: int = int(it.get("id", -1))
+	for k in ["found", "floor"]:
+		if m.has(k):
+			m[k] = Array(m[k]).filter(func(x): return not (x is Dictionary and int(x.get("id", -2)) == id))
 
 
 static func _item_name(it: Dictionary) -> String:
@@ -772,7 +756,7 @@ static func use_skill(world, i: int, aim: Vector2) -> bool:
 		"clean_shot":
 			ctx["buffs"]["clean_shot"] = true
 		"flush_them_out":
-			var mn = _nearest(men, aim, T.G_AIM_PICK_R)
+			var mn = _nearest(men, aim, T.G_AIM_PICK_R, true)     # (the review) never a man still waiting his turn
 			if mn == null:
 				return false
 			mn.state_data()["exposed_t"] = float(fx["exposed_s"])
@@ -817,11 +801,11 @@ static func use_skill(world, i: int, aim: Vector2) -> bool:
 	return true
 
 
-static func _nearest(men: Array, at: Vector2, within: float):
+static func _nearest(men: Array, at: Vector2, within: float, skip_held := false):
 	var best = null
 	var bd := within
 	for mn in men:
-		if not is_instance_valid(mn) or mn.is_dead():
+		if not is_instance_valid(mn) or mn.is_dead() or (skip_held and mn.has_method("is_held") and mn.is_held()):
 			continue
 		var d: float = mn.global_position.distance_to(at)
 		if d <= bd:
@@ -841,6 +825,11 @@ static func use_med(world, i: int) -> bool:
 	if int(md["count"]) <= 0 or int(runner.hp) >= int(runner.hp_max):
 		return false
 	md["count"] = int(md["count"]) - 1
+	var s = ctx["sim"]
+	for it in s.rig:                         # (round 4) out of the slice's rig too, so the Kit room shows it gone
+		if Items.is_medical(it) and str(it["base"]) == str(md["base"]):
+			s.rig.erase(it)
+			break
 	var secs: float = float(md["use_s"])
 	ctx["using"] = {"i": i, "left": secs, "time": secs, "heal": float(md["heal"]), "given": 0.0, "frac": 0.0}
 	_event(ctx, "med", {"i": i, "name": str(md["name"]), "heal": int(md["heal"]), "s": secs})

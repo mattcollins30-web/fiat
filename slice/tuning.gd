@@ -65,9 +65,10 @@ const G_GANG_MAX := 7                # no gang bigger than this (the site's pool
 const G_FIRST_GANG_S := 4.0          # the first gang this long after you're in
 const G_CLOCK_X := 0.75              # the sim's gap between gangs (patrol_s) times this: a slice's few minutes
 const G_QUIET_MAX_S := 10.0          # the park quiet (every man down): the next gang no longer than this
+const G_STEP_UP_S := 1.2            # (round 4) a man of the front down: the next steps up after this beat
 const G_HARD_SURE := true            # no hard man by the last gang: it brings one (the slice shows him)
 # Their fire
-const MAN_HP_X := 0.25               # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man
+const MAN_HP_X := 0.5                # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man  (round 4, Matt: "0.5x HP is the better setting")
                                      # takes ~38 rounds, at 0.25 ~10; the pause's "Gang HP" switches it live (README)
 const MAG_X := 2.5                   # (round 2, Matt: "12 rounds with that gun is too few") a test knob: a magazine holds the
                                      # game's figure times this in the slice only; the pause's "Magazine" switches ×1, ×2.5, ×4

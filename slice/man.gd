@@ -29,7 +29,7 @@ var traits: Array = []
 var flanker := false
 var dead_face := INF                 # (round 3) his facing, frozen when he falls
 var look := ""                       # (round 3) his picture: Hitman 1, Man Brown or Man Blue; Man Old for the hard man
-var state := "enter"                  # enter, move, cover, retreat, dead
+var state := "enter"                  # enter, move, cover, retreat, held (round 4: waiting his turn at the back), dead
 var target := Vector2.ZERO
 var sees := false
 var react_left := 0.0
@@ -94,6 +94,8 @@ var hp_max: float:
 func take_shot(shot: Dictionary) -> Dictionary:
 	if dead:
 		return {"damage": 0, "headshot": false, "killed": false}
+	if state == "held" and gang != null and gang.has_method("held_shot"):
+		gang.held_shot(self)                      # (round 4) found at the back and shot: he's in it now, one of the front goes back
 	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)))
 	flash_t = T.G_FLASH_S
 	if state == "cover" or state == "enter":
@@ -117,8 +119,29 @@ func die_by(res: Dictionary) -> void:
 		_die(res)
 
 
+## (round 4, Matt: "3 on you - 3 next") The director holds him back: to `at` (the park's edge, out of sight), not firing.
+func hold(at: Vector2) -> void:
+	state = "held"
+	target = at
+	sees = false
+	burst_left = 0
+
+
+## His turn: he steps up and engages (cover, flanking, fire), with his reaction beat.
+func engage() -> void:
+	if dead or state != "held":
+		return
+	_pick_spot()
+
+
+func is_held() -> bool:
+	return state == "held"
+
+
 ## Flush them out: out of cover, toward you.
 func flush(toward: Vector2) -> void:
+	if state == "held":
+		return                                    # (round 4) at the back he isn't in it: the director brings him up
 	state = "move"
 	target = global_position.lerp(toward, 0.5)
 	move_left = 4.0
@@ -162,6 +185,11 @@ func step(dt: float) -> void:
 		return
 	var runner = world.runner
 	if runner == null or not is_instance_valid(runner):
+		return
+	if state == "held":
+		sees = false                              # (round 4) waiting his turn: out of it, at the back, not firing
+		_move(dt)
+		queue_redraw()
 		return
 	var rp: Vector2 = runner.global_position
 	var stunned: bool = float(ms.get("stun_t", 0.0)) > 0.0

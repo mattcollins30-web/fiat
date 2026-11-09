@@ -22,9 +22,9 @@ fire, the way out. Out: every other site and class, final art (tokens drawn in c
 
 ## The two tuning knobs (build 72, the coordinator's call for feel)
 
-- `MAN_HP_X` (tuning.gd, default 0.25): a gang man's HP is the sim's times this. At the game's own figures a man
-  takes about 38 rounds - a sponge under your own hands; at 0.25 about 10, a few seconds. The pause's "Gang HP"
-  button (a test setting) switches ×1, ×0.5 and ×0.25 live, so the difference can be felt.
+- `MAN_HP_X` (tuning.gd, default 0.5 since round 4, Matt: "0.5x HP is the better setting"): a gang man's HP is the
+  sim's times this. At the game's own figures a man takes about 38 rounds - a sponge under your own hands. The pause's
+  "Gang HP" button (a test setting) switches ×0.5, ×0.25 and ×0.15 live.
 - The site's level follows the runner: the runner's level minus 2 (`SITE_LEVEL_UNDER`), at least 1. The fixture is
   the level-14 Poacher, so its car park is level 12.
 
@@ -35,13 +35,17 @@ swapped for the fixture's rifle, said on the HUD; skills the slice doesn't play 
 
 Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left stick, mouse / right stick, left button
 / RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
-X / B held to get out, Tab / Back the kit and runner sheet (the fight held), Esc / Start pause.
+X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
-Round 2's test knobs on the pause: "Gang HP" ×0.5 / ×0.25 (MAN_HP_X, the start) / ×0.15, and "Magazine" ×1 / ×2.5
+The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and "Magazine" ×1 / ×2.5
 (MAG_X, the start) / ×4 - a magazine's size in the slice only. The HUD's top line says which are in force.
 
-kit_sheet.gd (H, round 2) - Tab's sheet: the worn kit in slot order (a piece picked shows the game's item head), the rig
-and the pack's finds (a med into the rig, a gun worn: the bridge reads it again), the runner's stats in the game's words.
+kit_room.gd (H, round 4; it replaced round 2's kit_sheet.gd, Matt: "why reinvent the wheel") - Tab's Kit room: the game's
+own scripts/ui/armoury.gd on the slice's Sim (the camp's copy: its whole stash to wear), the run put by while it's open
+so the room isn't locked "out on a run", the Workshop greyed, the dummy and the loot filter hidden. A run's finds go
+into that Sim's stash (the room's grid; a box of a gun's rounds into the pack's count). On the way back the bridge's
+kit_changed reads the guns (each with its own rounds), the rig's meds, the maxima and pace into the fight. The room's
+gun cards show the game's magazine; MAG_X is the slice's, on the HUD.
 
 Stand-in art (round 3): Kenney's Top-down Shooter pack, by Kenney (kenney.nl), CC0 - slice/art/kenney/ holds only
 the files the slice uses, with the pack's License.txt. slice/art.gd reads them straight from the PNGs (never load()),

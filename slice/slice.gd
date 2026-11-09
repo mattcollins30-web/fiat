@@ -446,7 +446,7 @@ func on_man_killed(_man: Node, result: Dictionary) -> void:
 ## Finds into the haul; boxes of a gun's rounds into the pack's count too (the bridge's take_rounds).
 func add_haul(items: Array) -> void:
 	stats["haul"].append_array(items)
-	SliceBridge.take_rounds(ctx, items)
+	SliceBridge.stow(ctx, items)          # (round 4) into the slice's stash, the Kit room's grid; boxes of rounds to the pack's count
 
 
 func use_skill(i: int) -> bool:

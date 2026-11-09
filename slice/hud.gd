@@ -20,7 +20,7 @@ const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 # the board's measures (board A, 1920 x 1080); the bottom row sits on the screen's foot at any height
 const EDGE := 24.0                    # the panels' gap from the screen's edge
 const SITE_W := 300.0                 # top left: the site and the gang clock
-const SITE_H := 92.0
+const SITE_H := 116.0                 # (round 4) a line more: "3 on you · 4 waiting"
 const MAP_W := 240.0                  # top right: the minimap's panel
 const MAP_H := 158.0
 const MAP_IN := 16.0                  # the park drawn inside it
@@ -52,6 +52,7 @@ var _site: Panel
 var _site_kicker: Label
 var _site_name: Label
 var _site_clock: Label
+var _waves: Label                     # (round 4, G's waves) "3 on you · 4 waiting" under the gang clock
 var _map: Panel
 var _map_draw: Control
 var _me: Panel
@@ -132,6 +133,7 @@ func _build_site() -> void:
 	UI.track(_site_kicker, 1)
 	_site_name = UI.label(_site, Rect2(16, 30, SITE_W - 32, 30), "", "Bold", 22, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_site_clock = UI.label(_site, Rect2(16, 60, SITE_W - 32, 22), "", "Regular", 15, Pal.TEXT_2)
+	_waves = UI.label(_site, Rect2(16, 84, SITE_W - 32, 22), "", "SemiBold", 15, Pal.TEXT)
 
 
 func _build_map() -> void:
@@ -295,6 +297,9 @@ func read_state() -> Dictionary:
 		st["gangs"] = int(g.get("gangs")) if g.get("gangs") != null else st["gangs"]
 		st["next_s"] = float(g.get("next_in")) if g.get("next_in") != null else -1.0
 		st["on_park"] = int(g.get("alive")) if g.get("alive") != null else 0
+		if g.has_method("on_you_count"):
+			st["on_you"] = int(g.on_you_count())
+			st["waiting"] = int(g.waiting_count())
 	st["cls"] = str(ctx.get("class_name", "Poacher"))
 	st["level"] = int(ctx.get("level", 1))
 	st["portrait"] = str(ctx.get("portrait", ""))
@@ -341,6 +346,7 @@ func show_state(st: Dictionary) -> void:
 	_site_kicker.text = ("%s · level %d" % [str(st.get("site", "")), int(st.get("site_level", 0))]).to_upper()
 	_site_name.text = str(st.get("place", ""))
 	UI.fit(_site_clock, clock_words(st))
+	UI.fit(_waves, wave_words(st))
 	_map_draw.queue_redraw()
 	# the runner
 	_face.texture = face_picture(str(st.get("portrait", "")), str(st.get("cls", "")))
@@ -458,6 +464,17 @@ func show_state(st: Dictionary) -> void:
 
 static func x_words(x: float) -> String:
 	return ("×%d" % roundi(x)) if is_equal_approx(x, roundf(x)) else "×%s" % str(snappedf(x, 0.01))
+
+
+## The waves' line (round 4): "3 on you · 4 waiting", the waiting part gone when none wait; "" before any are on you.
+static func wave_words(st: Dictionary) -> Array:
+	var on: int = int(st.get("on_you", 0))
+	var wait: int = int(st.get("waiting", 0))
+	if on <= 0 and wait <= 0:
+		return [""]
+	if wait <= 0:
+		return ["%d on you" % on]
+	return ["%d on you · %d waiting" % [on, wait], "%d on you · %d" % [on, wait]]
 
 
 ## The gang clock's line, long to short: "Gang 2 of 3 · next in 0:41" (board A).
@@ -596,7 +613,7 @@ func _on_hit(_man: Node, result: Dictionary, point: Vector2) -> void:
 ## Every label the HUD shows, for the fit checks (pops are short-lived and centred over a man: not laid out against
 ## anything).
 func text_nodes() -> Array:
-	var out: Array = [_site_kicker, _site_name, _site_clock, _me_name, _me_hp, _me_line, _me_energy, _gun_rounds, _gun_spare, _gun_state, _banner,
+	var out: Array = [_site_kicker, _site_name, _site_clock, _waves, _me_name, _me_hp, _me_line, _me_energy, _gun_rounds, _gun_spare, _gun_state, _banner,
 		_news, _note_gun, _note_sk, _reload_hint, _tests]
 	for d in _skills + _meds:
 		out.append(d["secs"])
