@@ -56,4 +56,5 @@ the files the slice uses, with the pack's License.txt. slice/art.gd reads them s
 so a picture with no .import shows in the headless smoke too. (build 76) The PixelLab set (tools/make_art76_manifest.py,
 by art.flag) lands in slice/art/pl/: art.gd draws a set picture by name when it's there (runner/gang1-3/hard x
 aim/fire/reload/down; asphalt_a, paving, kiosk_floor, kiosk_wall, crate, the bins, fence) and Kenney's when not, so the
-set shows with no code once it lands.
+set shows with no code once it lands. Not drawn yet (9 Nov): burnt_car, van, shelter_roof, drain, oil_stain, kerb,
+bay_line, brick_wall, asphalt_b - in slice/art/pl/ and reachable by name (Art.pl_tex), the level still draws its own shapes.

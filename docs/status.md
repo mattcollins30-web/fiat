@@ -13,6 +13,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   the Radio's Set off (and a convoy's hit, the Bunkhouse's Fetch) landing on the Map. Next: Matt plays 0.15 from fresh;
   the short balance pass (Matt, 7 Nov); the art manifest for the borrowed pictures (boots, the uniques, the routes and
   plots) once it reads with test art.
+- **Alongside (9 Nov, evening): the ARPG slice, round 5** (1d82108; its sprites 0e0d00f) - zoomed out, line of sight,
+  real fire rates, travelling rounds, the level picked, the art76 top-down set. Waiting on Matt: his play of round 5,
+  and the damage call below its entry (option 2 recommended). The slice doesn't touch 0.15.3's playtest.
 - **Matt's calls (8 Nov): "1-fix it, 2-fix it, 3-keep it, 4-keep it."** Built into 0.15.3 before its commit: (1) a
   head's drop (and the runner's own piece swapped out) comes home past a full stash, marked r69_home / r69_own, nothing
   else does; (2) the County's want is 3/4/6/9 (all nine slots wear and stamp at the Counting House's level). Kept: the
@@ -8287,3 +8290,14 @@ before the run (slice/level_pick.gd, levels 9 up, "Your reach, level N"); the ar
 6 rerolls) preferred over Kenney by slice/art.gd, poses aim/fire/reload/down. Open (Matt's call): at level 12 x1 the
 runner still loses only 0.15-0.68 HP a second, as the sim's level-12 man deals about 4.7 a second. No change to shared
 code.
+
+Open for Matt after round 5 (9 Nov):
+- The damage call. The runner loses 0.15-0.68 HP a second at level 12 x1 (seeds 72/73/74, 60 s), because the sim's
+  level-12 man deals about 4.7 a second, with cover, sight and the gaps between gangs on top. Options: (1) "Their
+  damage" x1/x2/x3, quick but only a dial; (2) their damage tied to the gang HP knob (x0.5 HP -> x2 damage) so each
+  gang deals what the sim's fight would - recommended, with an end-screen line of HP lost against the sim's figure;
+  (3) a higher default level, which hides it. Nothing built until Matt picks.
+- The art (docs/art/handoff/art.done, 9 Nov 20:25; 37 jobs and 6 rerolls, about $3.44): fence rerolled to a thin rusty
+  strip, faint at 64 px (keep or redo, Matt's call); kiosk_floor is one lino sheet with a curled corner, so it may seam
+  when tiled; burnt_car, van, shelter_roof, drain, oil_stain, kerb, bay_line, brick_wall and asphalt_b are in
+  slice/art/pl/ but not drawn yet (the level still draws its own shapes) - a follow-up on Matt's word.
