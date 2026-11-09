@@ -63,7 +63,7 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   Gamekeeper, an end screen to the store page, the save carried into the full game; (5) save safety - rolling autosave
   backups, the last good one loaded on a damaged save. For the store page and launch: (6) a capture mode - no debug
   tools, a set-up run played the same way for screenshots and the trailer; (7) achievements and cloud saves through
-  GodotSteam (Matt's call first on the "no GDExtension" rule); (8) a settings check - fullscreen, volumes, rebinding,
+  GodotSteam (a GDExtension: not banned - Matt never set that rule, a 7 Nov review inferred it from Greenhorn's "Godot 4 standard build"; recommended, with Sentry for crash reports before the friends playtest); (8) a settings check - fullscreen, volumes, rebinding,
   text size. Not now: translation (a CJK font when it comes), offline progress (not coming back). Matt's own, not game
   work: the EUIPO search, the Zoom contract's clauses, sole trader or Mundane Studios Ltd, the Steamworks sign-up.
 - **Before (7 Nov, morning):** 0.14.4 - the County's art in (the 18:24 art.done, $7.34): its 24 stage plates on their
@@ -8229,3 +8229,15 @@ the two boots), 21 issued pieces (gloves, bergen, boots and the new versions), 2
 fillers), 6 convoy route bands, the Plots banner, the sealed crate. art_lint clean; art.flag down. After art.done:
 docs/art/art71_wiring.md (the boots' ART_AS off; ROUTE_ART69, the Plots banner and SEALED_ART69 to the new names).
 Older gaps raised, not in it: the Practised and Sharp-eyed fillers, 18 web-v2 notables from 4 Nov (~$1.60).
+
+The art landed (8 Nov, 23:10 art.done: 101 written, none failed, $8.57) and is wired (9 Nov; Matt's editor import, then the smoke
+green on his machine 09:11, committed): the 30 boots' ART_AS borrows off, the convoys' six route
+bands (ROUTE_ART69 to "Route <key>", art/places/route_*.png), the Plots banner (art/places/the_plots.png), the sealed
+crate (crates/sealed); the uniques, issued pieces and nodes show by name. A smoke check (_a71_art_checks, red on the
+old names) and the boots' check tightened to their own 2x2 pictures. Cloud smoke green, reviewer clean.
+
+9 Nov, morning (Matt): the 0.15 playtest starts; the ARPG slice (full control, "item 3", scoped in chat) is built
+alongside it in its own folder, not touching the game he plays (Matt: "I say we build now while i playtest" - his
+overrule of the playtest freeze for this one). First its mockups: the design canvas "Lesser England - the ARPG
+slice" (A top-down close, B isometric wide, C controls and the slice's scope), his pick before any build. Backlog: skill
+animations, the ARPG window, measuring when the resists cap.

@@ -35,7 +35,7 @@ const YOUR_ROWS := 4
 const LAST_ROWS := 3
 const BTN_H := 52
 const BID_MORE_STEPS := 2               # the second Bid button: the least bid and this many steps more
-const SEALED_ART69 := "crates/military"  # the sealed crate's picture: the military crate's, borrowed (A69 art list)
+const SEALED_ART69 := "crates/sealed"  # the sealed crate's own picture (art71, 9 Nov)
 
 var sim
 var selected := 0

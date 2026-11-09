@@ -120,3 +120,31 @@ the box in the pack (0.10.2, docs/design/meds_ammo_clinic.md). The idea: an upgr
 tree node or the rig's own tier - to decide) under which a spent magazine refills in the background while the next is
 fired, so two magazines mean no pause. In before the next balance pass, with everything else that moves numbers.
 
+
+## Animations for the skills (parked 9 Nov, Matt)
+
+Matt: "we need animations for the skills." Today a skill firing in the fight shows its name across the frame (run.gd,
+the skill word) and its effect in the numbers; the skills have a still picture each (art/skills/<id>.png, the bar
+and the web) and nothing moves. To design: what a skill does on screen when it fires - over the gang (a flashbang's
+white-out, a grenade's burst, a medkit's green on your bar) or on the hands (the reload, the swap) - in the rail-shooter
+view Matt chose (13 Oct: no head-on characters), likely PixelLab "Animate with text" clips or code-drawn effects over
+the plate, one look a skill's kind before one a skill. UI and art, moves no numbers: after Matt's 0.15 playtest, with
+the design canvas first.
+
+## An ARPG gameplay window in place of the fight window (raised 9 Nov, Matt - a design conversation first)
+
+Matt: "This game was always an arpg first and only my experience stopped it from being designed that way from the
+start. I'm wondering now if the fight window which is all sick anyway is just replaced with an arpg style gameplay
+window instead." Touches vision.md's first line and pillar ("A run fights itself; your job is what goes in"), the
+fight sim (rate-based ticks, not positions), the balance bot and harness, the Deck/gamepad work and the Steam dates.
+Talked through 9 Nov: Matt means full control ("there's no point changing what we have to one and two as it already
+works") - scoped in the chat as an option, out of interest. No build until Matt's 0.15 playtest and his call.
+
+## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
+
+Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison
+Poacher). By the tables, yes: 375 points needed against ~500 reachable (a T5 element line ~33, "all resists" ~70 a
+line, Immune +20, sets, "Add a resist"); the perfect poison gun is ~1 in 200,000 as a drop but a padlock, leeks, Bitter
+beet and marrow chase. To do after Matt's 0.15 playtest: the long reads' HOUR line records the hour each build caps all
+five resists and its share of on-build gear lines; read alongside Matt's play. Watch: capping arriving mid-game, and
+"all resists" worth about twice a single element's top roll at 0.3 weight.

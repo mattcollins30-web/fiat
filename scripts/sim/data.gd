@@ -853,7 +853,7 @@ const BASES := {
 		{"name": "Special forces boots", "tier": 9, "pace": 12, "value": 1490, "role": "pace"},
 		{"name": "Ghillie boots", "tier": 9, "pace": 5, "stats": {"patrol_pct": 22}, "value": 1490, "role": "quiet"},
 		{"name": "EOD boots", "tier": 9, "pace": 3, "armour": 50.0, "value": 1500, "role": "heavy"},
-		# the sites' themed finds (BUILD67-K): drafted by role against their tier's neighbours, each on a borrowed picture (ART_AS)
+		# the sites' themed finds (BUILD67-K): drafted by role against their tier's neighbours, each its own picture (art71, 9 Nov)
 		{"name": "Wading boots", "tier": 3, "pace": 1, "stats": {"patrol_pct": 11}, "value": 110, "role": "quiet"},     # the Pleasure Park's: under the Crepe soles' pace, a point more clock
 		{"name": "Hospital clogs", "tier": 5, "pace": 6, "stats": {"med_speed_pct": 6}, "value": 350, "role": "pace"},     # the Hospital's: a point under the Trail shoes, quicker meds
 		{"name": "Parade boots", "tier": 9, "pace": 4, "armour": 46.0, "value": 1480, "role": "heavy"},     # the Treasury's (the County): under the EOD boots' armour, a point quicker
@@ -2270,39 +2270,7 @@ const NOTES_BOSS := 5              # notes a boss kill, times depth
 ## heads, uniques, sets; everything else is sentence case; acronyms upper.
 ## A base whose picture was made under an older name (the fix round, 29 Oct): its art is read under that one.
 const ART_AS := {"Legation machine pistol": "Diplomatic machine pistol", "Turnout coat": "Fire service turnout gear",
-	# (BUILD67-K) the 30 boots borrow a pair of gloves' picture (2x2, a role's own: pace the pace pair, quiet the grip pair,
-	# heavy the rate pair, of their tier) until the art manifest after Matt plays them
-	"Plimsolls": "Woolly gloves",
-	"Trainers": "Cycling mitts",
-	"Running shoes": "Goalkeeper gloves",
-	"Fell shoes": "Racing gloves",
-	"Trail shoes": "Fell-runner's gloves",
-	"Running spikes": "Pilot's gloves",
-	"Orienteering shoes": "Paratrooper's gloves",
-	"Patrol boots": "Abseiling gloves",
-	"Special forces boots": "Dress uniform gloves",
-	"Carpet slippers": "Gardening gloves",
-	"Deck shoes": "Rigger gloves",
-	"Crepe soles": "Leather gloves",
-	"Desert boots": "Roofer's gloves",
-	"Walking boots": "Cut-resistant gloves",
-	"Keeper's brogues": "Riot gauntlets",
-	"Stalking boots": "Firefighter's gloves",
-	"Jungle boots": "Flight-deck gloves",
-	"Ghillie boots": "EOD gauntlets",
-	"Wellies": "Work gloves",
-	"Work boots": "Driving gloves",
-	"Rigger boots": "Shooting gloves",
-	"Hobnail boots": "Tactical gloves",
-	"Bovver boots": "Armourer's gloves",
-	"Motorcycle boots": "Stalker's gloves",
-	"Firefighter's boots": "Close-combat gloves",
-	"Riot boots": "Counter-sniper gloves",
-	"EOD boots": "Special forces gloves",
-	"Wading boots": "Leather gloves",
-	"Hospital clogs": "Fell-runner's gloves",
-	"Parade boots": "Dress uniform gloves",
-	}     # the stages' 24 new bases (6 Nov) and the County's 24 (7 Nov, the 18:24 art.done) have their own pictures: their borrows gone
+	}     # the stages' 24 new bases (6 Nov), the County's 24 (7 Nov) and the 30 boots (9 Nov, art71) have their own pictures: their borrows gone
 
 const COMMON_TREE := "The Pitch"
 const TREES_SRC := [

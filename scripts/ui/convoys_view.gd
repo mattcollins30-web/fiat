@@ -52,8 +52,8 @@ const NOTE_Y := TILE_Y + TILE_H + 14
 const BTN_H := Pal.BUTTON_H
 const ROLES := ["hold", "crack"]
 const INFO := Color("7fb7e6")         # the convoys' blue (the canvas's "Convoy heard"; R's Pal.INFO once merged)
-## A route's picture: the place its convoy leaves from, borrowed from the places' art (A69 list for the art pass).
-const ROUTE_ART69 := ["The Toll Plaza", "The Container Port", "The Treasury", "The Distribution Centre", "The Services", "The Truck Stop"]
+## A route's picture: its own band (art/places/route_<key>.png, art71 9 Nov), in Words.E69["routes"]'s order.
+const ROUTE_ART69 := ["Route m4", "Route docks road", "Route treasury road", "Route ring road", "Route old a road", "Route airport spur"]
 
 var sim
 var selected := 0                     # the lorry picked, by its place in the list

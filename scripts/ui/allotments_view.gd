@@ -83,7 +83,7 @@ func _init(w: float, h: float) -> void:
 	size = Vector2(w, h)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_banner = UI.panel(self, Rect2(0, 0, w, BANNER_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_band = UI.head_art(_banner, "The Allotments")
+	_band = UI.head_art(_banner, "The Plots")     # its own banner (art71, 9 Nov): the Allotments is a site
 	_kicker = UI.head(_banner, Rect2(BP + 8, 10, 600, UI.HEAD_H), Words.A69["l_kicker"])
 	_kicker.add_theme_color_override("font_color", Pal.GOOD)
 	_title = UI.label(_banner, Rect2(BP + 8, 30, 600, 34), Words.A69["l_title"], "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)

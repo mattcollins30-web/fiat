@@ -983,6 +983,7 @@ func _init() -> void:
 	_g70_warm_checks(main)                    # 0.15.3 perf fix (the device's Map frames): the warm-up on idle frames and behind the title only, in its budget
 	_f70_pin_checks(main)                     # 0.15.4 (Matt's go, the short pass): pinning only from its sources
 	_f70_band_checks(main)                    # 0.15.4: every route's band line fits (the docks road's ran over)
+	_a71_art_checks(main)                     # art71 (9 Nov): 0.15's pictures wired - routes, the Plots, the sealed crate, uniques, issued, nodes
 	_m68f_checks(main)                        # the 68 fix round (review68.md): the six's themes, the units at the low roll, one headshot not two, the chips' words, the arm glyph
 	_e69_open_checks(main)                    # BUILD69-E (8 Nov): the convoys with the County, the auction with the Issue, the allotments with the pumping station; the rail's three chips
 	_e69_convoy_checks(main)                  # BUILD69-E: heard by runs, the cargo named ahead, the roles, the hit's men and clock, won home, lost gone
@@ -43439,7 +43440,10 @@ func _k67_boots_checks(main) -> void:
 	var tiers := {}
 	for b in bb:
 		tiers["%d/%s" % [int(b["tier"]), str(b.get("role", ""))]] = true
-		_check(Items.art(sim._plain("Boots", str(b["name"]))) != null, "the %s have no picture (a borrowed one till the art)" % b["name"])
+		_check(Items.art(sim._plain("Boots", str(b["name"]))) != null, "the %s have no picture" % b["name"])
+		_check(not Data.ART_AS.has(str(b["name"])) and Items.art(sim._plain("Boots", str(b["name"]))) == Items._art_named(Items.slug(str(b["name"]))), "the %s don't show their own picture (art/items/%s.png)" % [b["name"], Items.slug(str(b["name"]))])
+		var btex: Texture2D = Items.art(sim._plain("Boots", str(b["name"])))
+		_check(btex != null and btex.get_width() == 128 and btex.get_height() == 128, "the %s's picture isn't 2x2 at 64 a cell" % b["name"])
 		_check(Items.base_pace(sim._plain("Boots", str(b["name"]))) > 0.0, "the %s carry no pace (every pair's headline)" % b["name"])
 	var three_a_tier := true
 	for t in range(1, 10):
@@ -46442,3 +46446,38 @@ func _f70_band_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("f70 band ok: %d routes, the longest cargo %s" % [Words.E69["routes"].size(), str(longest["name"])])
+
+
+## art71 (9 Nov, the 23:10 art.done): the pictures 0.15 borrowed are its own - each route's band its own file and no
+## place's, the Plots banner, the sealed crate, the 15 new uniques and the issued pieces by their names, the new nodes.
+func _a71_art_checks(_main) -> void:
+	var CV = load("res://scripts/ui/convoys_view.gd")
+	_check(CV.ROUTE_ART69.size() == Words.E69["routes"].size(), "%d route bands for %d routes" % [CV.ROUTE_ART69.size(), Words.E69["routes"].size()])
+	for i in range(CV.ROUTE_ART69.size()):
+		var nm: String = CV.ROUTE_ART69[i]
+		var tex: Texture2D = UI.place_texture(nm)
+		_check(tex != null and FileAccess.file_exists("res://art/places/%s.png" % Items.slug(nm)) and Items.slug(nm).begins_with("route_"), "route %d's band isn't its own picture (%s)" % [i, nm])
+	_check(UI.place_texture("The Plots") != null and UI.place_texture("The Plots") != UI.place_texture("The Allotments"), "the Plots have no banner of their own")
+	var AV = load("res://scripts/ui/auction_view.gd")
+	_check(str(AV.SEALED_ART69) == "crates/sealed" and UI.glyph_texture(AV.SEALED_ART69) != null, "the sealed crate has no picture of its own")
+	var names := ["Grandad's .303", "The Groundsman's Shotgun", "The Range Officer's Rifle", "The Allotment Zip Gun", "The Station Revolver",
+		"The Armourer's Box", "The Magpie's Pouches", "The Gun Club Sling", "The Bin Man's Gloves", "The Bouncer's Knuckles",
+		"The Bonfire Box", "The Football Rattle", "The Lifeboat Jacket", "The Postman's Boots", "Steel Toecaps", "Issued gloves", "Issued bergen", "Issued boots"]
+	for d in Data.ISSUED67_MORE:
+		names.append(str(d["name"]))
+	var miss: Array = []
+	for nm in names:
+		if not FileAccess.file_exists("res://art/items/%s.png" % Items.slug(str(nm))):
+			miss.append(nm)
+	_check(miss.is_empty(), "no picture of their own: %s" % str(miss))
+	var nmiss: Array = []
+	var WV = load("res://scripts/ui/web_view.gd")
+	for d in Data.S68_NOTABLES:
+		if WV.picture(Items.slug(str(d["name"]))) == null:
+			nmiss.append(d["name"])
+	for k in ["Composed", "Telling", "Pointed", "Hobbling", "Disarming", "Pinning", "Thrifty", "Primed", "Watchful", "Soothing", "Deft",
+			"Shrewd", "Laden", "Keyed up", "Full of beans", "Bitter", "Crackling", "Scorching", "Barbed", "Brawny", "Toxic"]:     # BUILD68-W's 21 new kinds
+		if WV.picture(Items.slug(k)) == null:
+			nmiss.append(k)
+	_check(nmiss.is_empty(), "nodes with no picture: %s" % str(nmiss))
+	print("a71 art ok: 6 route bands, the Plots, the sealed crate, %d uniques and issued pieces, the six notables and the new fillers" % names.size())
