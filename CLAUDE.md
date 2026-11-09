@@ -149,6 +149,9 @@ No smoke while a balance pass runs. gdlint 0 before any commit (`tools/gdlint.py
   that report may then be applied and the smoke re-run without asking again; a new failure starts the loop over.
 - A mockup needs Matt's word before the build, every time, even inside a batch he approved as a whole. "Do
   everything" is the list, not the designs.
+- A question from Matt is a question, not a go (9 Nov: "why reinvent the wheel ... ?" and "its pointless if ... ?" were
+  built straight away as round 4 of the slice). Answer it, say what I'd build and how, and wait for his word -
+  slices and prototypes included.
 - No sleep or poll loops in the device shell while Matt's about: they block his messages. Drop the flag, say so, and
   read the result when he says it's done (or on the next turn).
 
