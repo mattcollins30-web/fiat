@@ -27,7 +27,8 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   built as one, 0e4bc0d: "3 sites in a row" on the slice's picker). Matt played all three through first try, 10 Nov
   ("weapon felt good"): from it, the way out dealt somewhere else and gun men standing against a hand weapon (in);
   2c8954b. The search for crates and bodies as a screen over the fight (board M, "your picks, build it"): in.
-  Waiting on Matt: his play of it.
+  5ddb220. From his play of it: the compare panel and "Potential upgrade" on the search card, the pack as the bag's
+  grid, bodies with nothing said at once and now and then two finds (in). Waiting on Matt: his play of it.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8484,3 +8485,20 @@ men's commit: 2c8954b. The review's finds fixed: the camp's whole stash counted 
 fifty times a search (lost clicks and drags), the haul counting a swapped piece twice, a searched body hiding one
 beside it, bodies pushing a gang's crates away, bodies on the map. Checked: r18 in the smoke, proved red three ways; a
 review; a language pass; lint 0; the full smoke on Matt's machine.
+
+
+The slice, the search card from Matt's play of it (10 Nov; "So i think i will miss the compare panel ... checking on a
+live run I think we need an indicator back along the lines of 'potential upgrade'", then "run the check and build the
+comparer panel back in - it needs it. also searching bodies is fine however it would be good if there was sometimes
+more than 1 item and in addition - if a body has nothing on it then there isnt a cell displayed when searching so you
+can immediatly tell ... if it does have something a cell is highlighted ... Also the grid view needs to be displayed
+in the pack so you can see how many cells are taken up visually."). The check: the game's upgrade test reads a Bolt
+gun as 77% worse than the claw hammer, where in the slice it does 15 damage a second to the hammer's 12 - so a gun or
+hand weapon is judged by the slice's own damage a second, everything else by the game's test. Built: the game's own
+compare panel on the card (a find pressed against what's worn, Wear / Take / Put back), a ▲ on a cell and "Potential
+upgrade" in the panel; the pack as the game's real grid (the bag's shape, pieces where they fit); a body with nothing
+says so as it opens, one with something shows its cells lit, and a man with a find has a second 35% of the time.
+Built straight from his words, no board first; board M is behind the build. The search's commit: 5ddb220. The review's
+finds fixed: a piece coming off into a full pack was destroyed; the sim's own rolls joined stacks in the player's
+pack; a big bag's grid shrank to nothing (it scrolls now); a piece with no place couldn't be seen. Checked: r18 in the
+smoke, proved red three ways more; a review; lint 0; the full smoke on Matt's machine.

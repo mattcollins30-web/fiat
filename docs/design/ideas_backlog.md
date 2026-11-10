@@ -176,6 +176,11 @@ The slice, from Matt's first play of 3 sites in a row (10 Nov, all three beaten 
 - The search in the Kit room, crates and bodies both, to be built now. Matt: "we should build the inventory change
   now with bodies being searchable as well as crates." (The two items above, 10 Nov.) Its talk and mockup first; the
   open question stands: wearing a find straight off the floor with no pack space.
+- A "potential upgrade" mark on a find, and the compare panel. Matt, 10 Nov, on the search screen built: "i think i
+  will miss the compare panel but also in an earlier build we removed the dmg/s and upgrade ratings from the compare
+  panels - relying on the player using the training dummy to select gear. This still holds true however for the new
+  style and checking on a live run I think we need an indicator back along the lines of 'potential upgrade'." New,
+  for the talk: the dummy still decides at camp; on a live run a find wants a quick sign it may be worth wearing.
 
 The slice's test runner (10 Nov, built on Matt's "go"; his words: "level 12 with a hammer is impossible - can you
 provide some level appropriate gear per level selection?"). Left open from its review, for the talk: a runner under

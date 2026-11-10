@@ -189,9 +189,19 @@ Stages 2 to 4, built as one (boards J to L): melee, levels dealt from pieces, th
   down leaves a body holding what he dropped (no mark on one that holds something). The pack is what he's found since
   he came in (the stash less what he brought: bridge.pack_items), counted in the bag's cells; a full pack takes no
   more. The run's haul is what he took or wore. The hold-F ring is kept behind world.search_ui for the smoke's older
-  checks (launch.search_default). Known: its own card, not the Kit room's widget - no compare panel, and the pack is
-  a count of cells, not the bag's shape; nothing on the pad but A for take all; the Kit on Tab isn't held to the
-  pack's cells; rounds on a body reach the box only when it's searched.
+  checks (launch.search_default).
+  From Matt's play of it (10 Nov: "build the compare panel back in - it needs it"; "an indicator back along the lines
+  of 'potential upgrade'"; "the grid view needs to be displayed in the pack"; a body "sometimes more than 1 item ...
+  if a body has nothing on it then there isnt a cell displayed"): a find pressed is picked and shown in the game's own
+  compare panel (pick_panel.gd) against what's worn in its slot, with Wear / Take / Put back / Into the rig; a ▲ on a
+  cell and "Potential upgrade" in the panel when it may be worth wearing (bridge.potential_upgrade: a gun or hand
+  weapon by the slice's own damage a second - the game's test reads a Bolt gun as 77% worse than the claw hammer it
+  out-hits here - anything else by Sim.is_upgrade). The pack is the game's own grid on the slice's mission
+  (Sim.pack_spot, the bag's shape, pieces laid where they fit, turned if need be; it scrolls past the panel) and is
+  tipped into the stash when he gets out. A body with nothing says so the moment it's opened, no cell and no wait;
+  one with something shows its cells lit; a man who drops a find has a second on him G_BODY_SECOND of the time.
+  Known: nothing on the pad but A for take all; the Kit on Tab doesn't show the pack; rounds on a body reach the box
+  only when it's searched; a melee weapon against a gun is compared on damage a second alone.
 - Known: rounds aren't scarce or carried (each site starts on the slice's own box for a gun worn); cover all blocks
   sight and rounds, beds included; the three sites' test settings are first guesses, not played; "3 sites in a row" is
   the language pass's name for it ("run" is one trip out in the glossary) - Matt's to rename.

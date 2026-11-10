@@ -729,6 +729,8 @@ func add_body(p: Vector2, drops: Array) -> SliceCrate:
 	b.body = true
 	b.rolled = true
 	b.finds = drops.duplicate()
+	for it in b.finds:
+		SliceBridge.take_out(ctx["sim"].mission, it)     # on him, not in the pack the sim's find put it in
 	return b
 
 
@@ -761,8 +763,9 @@ func search_tick(cr: SliceCrate, dt: float) -> void:
 func take_find(cr: SliceCrate, it: Dictionary) -> bool:
 	if not cr.left.has(it) or not SliceBridge.pack_room(ctx, it):
 		return false
+	if not SliceBridge.pack_take(ctx, it):
+		return false
 	cr.left.erase(it)
-	SliceBridge.stow(ctx, [it])
 	if not stats["haul"].has(it):
 		stats["haul"].append(it)                  # (the review) a piece taken, put back and taken again is in the haul once
 	cr.queue_redraw()

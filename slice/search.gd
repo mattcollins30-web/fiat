@@ -2,16 +2,19 @@ extends Control
 ## The search (board M, 10 Nov; Matt: "the inventory screen needs to be shown when searching crates ... Tarkov style it
 ## searches as you're in the inventory and then you drag and drop from the crate to the inventory", "with bodies being
 ## searchable as well as crates"). F at a crate or a body opens it over the fight, which goes on: what he wears on the
-## left, the crate where the Kit's stash sits, the pack under it. Finds turn up one at a time (the world's
+## left, what's in the crate top right, the pack as the bag's own grid under it, and the game's compare panel under
+## that: a find pressed is shown against what's worn, a ▲ and "Potential upgrade" when it may be worth wearing (the
+## bridge's potential_upgrade). Finds turn up one at a time (the world's
 ## search_tick); a find is dragged (or pressed) into the pack, or dragged straight onto its slot - no pack room needed,
 ## what he had on goes into the crate. F takes all there's room for. Moving off, Esc, Tab or Close shuts it; what's
-## left stays in the crate. The pack is the slice's stash counted in the bag's cells (the bridge's pack_used).
+## left stays in the crate. The pack is the game's own on the slice's mission: a piece lies where it fits.
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 const T := preload("res://slice/tuning.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 
 signal closed
 
@@ -23,20 +26,25 @@ const WORDS := {
 	"crate_head": "IN IT", "body_head": "ON HIM", "pack_head": "THE PACK", "worn_head": "WORN",
 	"searching": "%d of %d found · searching", "searched": "%d found · searched", "none_crate": "Nothing in it", "none_body": "Nothing on him", "looking": "Searching",
 	"cells": "%d/%d cells",
-	"hint": "Drag a find to the pack, or onto its slot. What the runner had on takes its place.",
 	"full": "No room in the pack for that", "full_n": "No room in the pack for %d of them", "cant": "The runner can't wear that",
-	"more": "And %d more", "rig": "%d in the rig",
+	"rig": "%d in the rig", "up": "Potential upgrade",
+	"pick_none": "Pick a find", "pick_lines": ["Press one to see it against what's worn", "The ▲ marks a potential upgrade"],
+	"in_crate": "In the crate", "on_body": "On him", "in_pack": "In the pack", "worn": "Worn now", "worn_none": "Nothing worn there",
+	"take": "Take", "wear": "Wear", "leave": "Put back", "to_rig": "Into the rig",
 }
-const W := 1240.0
-const H := 600.0
-const SLOTS := [["Charm", 16, 92, 150, 58], ["Backpack", 16, 176, 150, 64], ["Primary", 16, 266, 150, 90], ["Secondary", 16, 382, 150, 80],
-	["Helmet", 302, 92, 134, 58], ["Armour", 302, 180, 134, 70], ["Gloves", 302, 280, 134, 58], ["Rig", 302, 368, 134, 58], ["Boots", 302, 456, 134, 58]]
+const W := 1440.0
+const H := 818.0
+const RIGHT_X := 496.0
+const RIGHT_W := 920.0
+const PICK_H := 304                   # the game's compare panel, as the Kit has it
+const SLOTS := [["Charm", 16, 56, 190, 90], ["Backpack", 16, 176, 190, 110], ["Primary", 16, 316, 190, 150], ["Secondary", 16, 496, 190, 150],
+	["Helmet", 246, 56, 190, 100], ["Armour", 246, 186, 190, 130], ["Gloves", 246, 346, 190, 90], ["Rig", 246, 466, 190, 90], ["Boots", 246, 586, 190, 90]]
 const SLOT_WORDS := {"Backpack": "PACK"}
-const CRATE_CELL := 88.0
-const CRATE_COLS := 7
-const PACK_CELL := 78.0
-const PACK_COLS := 8
-const PACK_SHOWN := 15                # the pack's pieces drawn; past that, "And N more"
+const CRATE_CELL := 64.0
+const CRATE_COLS := 12
+const PACK_MAX_CELL := 44.0           # a pack cell's most; a big bag's cells shrink to PACK_MIN_CELL, then the grid scrolls
+const PACK_MIN_CELL := 28.0
+const PACK_GRID := Vector2(888.0, 150.0)
 const MOVE_OFF_PX := 46.0             # he's walked this far from where he opened it: it shuts
 
 var world = null
@@ -60,7 +68,10 @@ var _pack_head: Label
 var _pack_state: Label
 var _worn_head: Label
 var _rig_label: Label
-var _more: Label
+var _pack_scroll: ScrollContainer
+var _pack_grid: Control               # the bag's grid: its squares and the pieces on them
+var pick                             # the game's compare panel (pick_panel.gd)
+var selected := {}                    # the piece picked: shown against what's worn
 var _note: Label
 var _slot_labels: Array = []
 var _slot_boxes := {}                 # slot -> the drop target
@@ -73,6 +84,7 @@ var _open_t := 0.0
 var _flashing := false
 var _now_bar: Panel = null            # the bar on the find being turned up
 var _now_w := 0.0
+var pack_cell := 0.0                  # a pack cell's size as laid (a check's)
 
 
 func _init() -> void:
@@ -83,14 +95,14 @@ func _init() -> void:
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	_title = UI.label(_card, Rect2(24, 12, 220, 40), "", "Bold", 26, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_sub = UI.label(_card, Rect2(250, 22, 300, 24), WORDS["sub"], "Regular", 15, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_clock = UI.label(_card, Rect2(560, 20, 330, 26), "", "SemiBold", 15, Pal.BAD, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_hp = UI.label(_card, Rect2(880, 20, 90, 26), "", "SemiBold", 15, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_hp_track = UI.panel(_card, Rect2(980, 28, 110, 10), UI.box(Color(0, 0, 0, 0.6), 3, 0, Pal.CARD_LINE))
+	_clock = UI.label(_card, Rect2(760, 20, 330, 26), "", "SemiBold", 15, Pal.BAD, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_hp = UI.label(_card, Rect2(1080, 20, 90, 26), "", "SemiBold", 15, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_hp_track = UI.panel(_card, Rect2(1180, 28, 110, 10), UI.box(Color(0, 0, 0, 0.6), 3, 0, Pal.CARD_LINE))
 	_hp_fill = UI.panel(_hp_track, Rect2(0, 0, 110, 10), UI.box(Pal.GOOD, 3, 0, Pal.GOOD))
-	close_button = UI.button(_card, Rect2(1102, 12, 118, 40), false)
+	close_button = UI.button(_card, Rect2(1302, 12, 118, 40), false)
 	close_button.text = WORDS["close"]
 	close_button.pressed.connect(close)
-	_worn_panel = UI.panel(_card, Rect2(24, 62, 452, 514), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_worn_panel = UI.panel(_card, Rect2(24, 62, 452, 732), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_worn_head = UI.head(_worn_panel, Rect2(16, 10, 200, 20), WORDS["worn_head"])
 	for sl in SLOTS:
 		var nm: String = str(sl[0])
@@ -99,22 +111,34 @@ func _init() -> void:
 		box.mouse_filter = Control.MOUSE_FILTER_STOP
 		box.set_drag_forwarding(Callable(), _can_drop.bind("slot:" + nm), _drop.bind("slot:" + nm))
 		_slot_boxes[nm] = box
-	_rig_label = UI.label(_worn_panel, Rect2(16, 478, 130, 22), "", "Regular", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_crate_panel = UI.panel(_card, Rect2(496, 62, 720, 250), UI.box(Pal.PANEL, 8, 2, Pal.ACCENT))
+	_rig_label = UI.label(_worn_panel, Rect2(16, 688, 150, 22), "", "Regular", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_crate_panel = UI.panel(_card, Rect2(RIGHT_X, 62, RIGHT_W, 198), UI.box(Pal.PANEL, 8, 2, Pal.ACCENT))
 	_crate_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_crate_panel.set_drag_forwarding(Callable(), _can_drop.bind("crate"), _drop.bind("crate"))
 	_crate_head = UI.head(_crate_panel, Rect2(16, 10, 90, 20), WORDS["crate_head"])
 	_crate_state = UI.label(_crate_panel, Rect2(110, 8, 400, 24), "", "Regular", 15, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	take_button = UI.button(_crate_panel, Rect2(528, 6, 176, 34), false)
+	take_button = UI.button(_crate_panel, Rect2(728, 6, 176, 34), false)
 	take_button.text = WORDS["take_all"]
 	take_button.pressed.connect(take_all)
-	_pack_panel = UI.panel(_card, Rect2(496, 326, 720, 250), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_pack_panel = UI.panel(_card, Rect2(RIGHT_X, 272, RIGHT_W, 206), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_pack_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_pack_panel.set_drag_forwarding(Callable(), _can_drop.bind("pack"), _drop.bind("pack"))
 	_pack_head = UI.head(_pack_panel, Rect2(16, 10, 100, 20), WORDS["pack_head"])
 	_pack_state = UI.label(_pack_panel, Rect2(120, 8, 300, 24), "", "Regular", 15, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_more = UI.label(_pack_panel, Rect2(600, 8, 104, 24), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_note = UI.label(_pack_panel, Rect2(16, 216, 688, 22), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_note = UI.label(_pack_panel, Rect2(300, 8, 604, 24), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_pack_scroll = ScrollContainer.new()
+	_pack_scroll.position = Vector2(16, 44)
+	_pack_scroll.size = PACK_GRID
+	_pack_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_pack_panel.add_child(_pack_scroll)
+	_pack_grid = Control.new()
+	_pack_grid.mouse_filter = Control.MOUSE_FILTER_PASS
+	_pack_grid.set_drag_forwarding(Callable(), _can_drop.bind("pack"), _drop.bind("pack"))
+	_pack_scroll.add_child(_pack_grid)
+	pick = PickPanel.new(int(RIGHT_W), PICK_H)
+	pick.r69_no_verdict = false                    # this panel says "Potential upgrade" (the Kit's leave it to the dummy)
+	pick.position = Vector2(RIGHT_X, 490)
+	_card.add_child(pick)
 	visible = false
 
 
@@ -134,10 +158,13 @@ func open(w, hud_v, thing_v) -> void:
 	_open_t = 0.0
 	_shown = ""
 	_note_t = 0.0
+	selected = {}
 	_title.text = WORDS["body"] if thing.body else (WORDS["prize"] if thing.prize else WORDS["crate"])
 	_crate_head.text = WORDS["body_head"] if thing.body else WORDS["crate_head"]
 	if not world.runner_hurt.is_connected(_on_hurt):
 		world.runner_hurt.connect(_on_hurt)
+	if thing.body and thing.finds.is_empty():
+		world._searched(thing)                    # (10 Nov, Matt) nothing on him: said at once, no cell, no wait
 	visible = true
 	layout(get_viewport_rect().size if is_inside_tree() else size)
 	refresh()
@@ -202,12 +229,14 @@ func refresh() -> void:
 	if _now_bar != null and is_instance_valid(_now_bar) and n > 0:
 		_now_bar.size.x = _now_w * clampf(thing.progress * n - thing.found_n, 0.0, 1.0)     # the find being turned up: its bar, without laying the cells again
 	if _note_t <= 0.0:
-		_note.text = WORDS["hint"]
+		_note.text = ""
 		_note.add_theme_color_override("font_color", Pal.TEXT_3)
 	take_button.disabled = thing.left.is_empty()
 	var rig_meds: Array = s.rig.filter(func(x): return Items.is_medical(x))
 	_rig_label.text = WORDS["rig"] % rig_meds.size()
-	var sig := "%d|%s|%s|%s|%s|%s" % [thing.found_n, str(thing.opened), str(thing.left.map(func(x): return x.get("id"))), str(s.stash.map(func(x): return x.get("id"))),
+	if not selected.is_empty() and not (thing.left.has(selected) or SliceBridge.pack_items(world.ctx).has(selected)):
+		selected = {}                             # taken, worn or gone: nothing picked
+	var sig := "%d|%s|%s|%s|%s|%s|%s" % [thing.found_n, str(thing.opened), str(selected.get("id", -1)), str(thing.left.map(func(x): return x.get("id"))), str(SliceBridge.pack_items(world.ctx).map(func(x): return [x.get("id"), x.get("pos"), x.get("rot")])),
 		str(SLOTS.map(func(sl): return s.equipped[sl[0]].get("id") if s.equipped.get(sl[0]) != null else -1)), str(rig_meds.size())]
 	if sig == _shown:
 		return
@@ -230,9 +259,15 @@ func _cell(parent: Control, it: Dictionary, rect: Rect2, from: String) -> ItemCe
 	c.show_item(it, false, rect.size)
 	c.tooltip_text = Items.full_name(it)
 	if from != "":
+		if SliceBridge.potential_upgrade(world.ctx, it):
+			# the ▲: it may be worth wearing (the cell's own arrow is off game-wide since 0.15.3; this is the card's)
+			var up := UI.label(c, Rect2(rect.size.x - 20.0, 2, 18, 18), "▲", "SemiBold", 11, Pal.GOOD, HORIZONTAL_ALIGNMENT_CENTER)
+			up.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			up.add_theme_stylebox_override("normal", UI.box(Color(Pal.BG, 0.85), 9, 1, Pal.GOOD))
+			up.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			up.name = "Up"
 		c.set_drag_forwarding(_drag.bind(it, from), _can_drop.bind(from), _drop.bind(from))
-		if from == "crate":
-			c.pressed.connect(func() -> void: take(it))
+		c.pressed.connect(func() -> void: select(it))
 	else:
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cells.append(c)
@@ -240,10 +275,11 @@ func _cell(parent: Control, it: Dictionary, rect: Rect2, from: String) -> ItemCe
 
 
 func _blank(parent: Control, rect: Rect2, kind: String) -> void:
-	var p := UI.panel(parent, rect, UI.box(Color(Pal.BG, 0.9 if kind != "now" else 0.6), 5, 2 if kind == "now" else 1, Pal.ACCENT if kind == "now" else Pal.CARD_LINE))
+	var lit: bool = kind == "now" or (kind == "dark" and thing.body)     # (10 Nov, Matt) a body with something on it: its cells lit while it's searched
+	var p := UI.panel(parent, rect, UI.box(Color(Pal.BG, 0.9 if kind != "now" else 0.6), 5, 2 if lit else 1, Pal.ACCENT if lit else Pal.CARD_LINE))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if kind == "dark":
-		UI.label(p, Rect2(0, rect.size.y / 2.0 - 14.0, rect.size.x, 28), "?", "Bold", 18, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
+		UI.label(p, Rect2(0, rect.size.y / 2.0 - 14.0, rect.size.x, 28), "?", "Bold", 18, Pal.ACCENT if lit else Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
 	elif kind == "now":
 		_now_w = rect.size.x - 16.0
 		_now_bar = UI.panel(p, Rect2(8, rect.size.y - 14.0, 0, 6), UI.box(Pal.ACCENT, 2, 0, Pal.ACCENT))
@@ -258,11 +294,11 @@ func _lay(s, rig_meds: Array) -> void:
 		if it != null:
 			_cell(_slot_boxes[sl[0]], it, Rect2(2, 2, float(sl[3]) - 4.0, float(sl[4]) - 4.0), "")
 	for k in range(mini(rig_meds.size(), 3)):
-		_cell(_worn_panel, rig_meds[k], Rect2(170.0 + k * 42.0, 470.0, 36, 36), "")
+		_cell(_worn_panel, rig_meds[k], Rect2(170.0 + k * 46.0, 680.0, 40, 40), "")
 	# the crate: a cell a find, in the order found - taken ones stand empty; what he put in after them
 	var k := 0
 	for i in range(thing.finds.size()):
-		var at := Rect2(16.0 + (k % CRATE_COLS) * (CRATE_CELL + 8.0), 50.0 + floorf(float(k) / CRATE_COLS) * (CRATE_CELL + 8.0), CRATE_CELL, CRATE_CELL)
+		var at := Rect2(16.0 + (k % CRATE_COLS) * (CRATE_CELL + 8.0), 46.0 + floorf(float(k) / CRATE_COLS) * (CRATE_CELL + 8.0), CRATE_CELL, CRATE_CELL)
 		k += 1
 		if k > CRATE_COLS * 2:
 			break
@@ -276,14 +312,70 @@ func _lay(s, rig_meds: Array) -> void:
 	for it in thing.left:
 		if thing.finds.has(it) or k >= CRATE_COLS * 2:
 			continue
-		_cell(_crate_panel, it, Rect2(16.0 + (k % CRATE_COLS) * (CRATE_CELL + 8.0), 50.0 + floorf(float(k) / CRATE_COLS) * (CRATE_CELL + 8.0), CRATE_CELL, CRATE_CELL), "crate")
+		_cell(_crate_panel, it, Rect2(16.0 + (k % CRATE_COLS) * (CRATE_CELL + 8.0), 46.0 + floorf(float(k) / CRATE_COLS) * (CRATE_CELL + 8.0), CRATE_CELL, CRATE_CELL), "crate")
 		k += 1
-	# the pack: a cell a piece, the newest first
-	var held: Array = SliceBridge.pack_items(world.ctx)
-	held.reverse()
-	for j in range(mini(held.size(), PACK_SHOWN)):
-		_cell(_pack_panel, held[j], Rect2(16.0 + (j % PACK_COLS) * (PACK_CELL + 8.0), 44.0 + floorf(float(j) / PACK_COLS) * (PACK_CELL + 8.0), PACK_CELL, PACK_CELL), "pack")
-	_more.text = WORDS["more"] % (held.size() - PACK_SHOWN) if held.size() > PACK_SHOWN else ""
+	# the pack: the bag's own shape, a square a cell, each piece where it lies
+	var pw: int = int(s.pack_w())
+	var rows: int = int(s.pack_rows())
+	var cap: int = int(s.capacity())
+	var gap := 4.0
+	var cs: float = floorf(clampf(minf((PACK_GRID.x - 12.0 - (pw - 1) * gap) / pw, (PACK_GRID.y - (rows - 1) * gap) / maxf(1.0, rows)), PACK_MIN_CELL, PACK_MAX_CELL))
+	pack_cell = cs
+	for y in range(rows):
+		for x in range(pw):
+			if y * pw + x < cap:
+				_blank(_pack_grid, Rect2(x * (cs + gap), y * (cs + gap), cs, cs), "empty")
+	var loose := 0                                # a piece with no place (a smaller bag put on): in a row under the grid, to wear or put back
+	for it in SliceBridge.pack_items(world.ctx):
+		if not (it.get("pos") is Array):
+			_cell(_pack_grid, it, Rect2(loose * (cs + gap), rows * (cs + gap) + 6.0, cs, cs), "pack")
+			loose += 1
+			continue
+		var fp: Vector2i = Items.footprint(it)
+		if bool(it.get("rot", false)):
+			fp = Vector2i(fp.y, fp.x)
+		_cell(_pack_grid, it, Rect2(float(it["pos"][0]) * (cs + gap), float(it["pos"][1]) * (cs + gap), fp.x * cs + (fp.x - 1) * gap, fp.y * cs + (fp.y - 1) * gap), "pack")
+	_pack_grid.custom_minimum_size = Vector2(pw * (cs + gap), rows * (cs + gap) + (cs + 10.0 if loose > 0 else 0.0))
+	_show_pick(s)
+
+
+## The piece picked against what's worn in its slot (the game's compare panel), and what can be done with it.
+func _show_pick(s) -> void:
+	if selected.is_empty():
+		pick.show_empty(WORDS["pick_none"], WORDS["pick_lines"])
+		pick.set_verdict("", "", [])
+		pick.set_buttons([])
+		return
+	var in_crate: bool = thing.left.has(selected)
+	var held = s.mission
+	s.mission = null                              # the panel reads the piece as the Kit does, not "out on a run"
+	pick.show_pick(selected, s, WORDS["in_pack"] if not in_crate else (WORDS["on_body"] if thing.body else WORDS["in_crate"]))
+	var slot: String = str(selected.get("slot", ""))
+	var worn = s.equipped.get(slot) if s.equipped.has(slot) else null
+	if worn != null:
+		pick.show_fitted(worn, s, WORDS["worn"])
+	elif s.equipped.has(slot):
+		pick.show_right_words(WORDS["worn"], WORDS["worn_none"], [])
+	s.mission = held
+	var up: bool = SliceBridge.potential_upgrade(world.ctx, selected)
+	pick.set_verdict(WORDS["up"] if up else "", "good" if up else "", [])
+	var it: Dictionary = selected
+	var buttons: Array = []
+	if s.equipped.has(slot):
+		buttons.append({"text": WORDS["wear"], "action": func() -> void: wear(it), "enabled": bool(s.can_wear(it)), "primary": up, "tone": ""})
+	if Items.is_medical(it):
+		buttons.append({"text": WORDS["to_rig"], "action": func() -> void: to_rig(it), "enabled": true, "primary": false, "tone": ""})
+	if in_crate:
+		buttons.append({"text": WORDS["take"], "action": func() -> void: take(it), "enabled": true, "primary": not up, "tone": ""})
+	else:
+		buttons.append({"text": WORDS["leave"], "action": func() -> void: leave(it), "enabled": true, "primary": false, "tone": ""})
+	pick.set_buttons(buttons)
+
+
+## A find or a pack's piece pressed: picked, shown against what's worn.
+func select(it: Dictionary) -> void:
+	selected = it
+	_shown = ""
 
 
 func say(key: String, n := 0) -> void:
@@ -311,7 +403,15 @@ func take_all() -> void:
 ## A find or a pack's piece onto its slot.
 func wear(it: Dictionary) -> bool:
 	var from_crate: bool = thing.left.has(it)
-	var ok: bool = world.wear_find(thing, it) if from_crate else bool(SliceBridge.wear_from(world.ctx, it)["ok"])
+	var ok := false
+	if from_crate:
+		ok = world.wear_find(thing, it)
+	else:
+		var got: Dictionary = SliceBridge.wear_from(world.ctx, it)
+		ok = bool(got["ok"])
+		thing.left.append_array(got["off"])       # (the review) what came off and found no place in the pack: into the crate, not lost
+		for x in got["off"]:
+			world.stats["haul"].erase(x)
 	if ok and not from_crate:
 		world.runner.kit_changed(world.ctx)       # (from the crate the world's wear_find has done it)
 	elif not ok:
@@ -370,7 +470,7 @@ func _drop(_at_v: Vector2, data: Variant, to: String) -> void:
 
 
 func text_nodes() -> Array:
-	return [_title, _sub, _clock, _hp, close_button, take_button, _crate_head, _crate_state, _pack_head, _pack_state, _worn_head, _rig_label, _more, _note] + _slot_labels
+	return [_title, _sub, _clock, _hp, close_button, take_button, _crate_head, _crate_state, _pack_head, _pack_state, _worn_head, _rig_label, _note] + _slot_labels + pick.text_nodes()
 
 
 func card_rect() -> Rect2:

@@ -76,9 +76,6 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0, place := {}) -> Diction
 	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
 	ctx["their_dmg_x"] = T.THEIR_DMG_X
 	ctx["camp_level"] = int(camp.level()) if camp != null and str(camp.cls) != "" else 0     # the camp's own runner, whoever plays (the run log's)
-	ctx["pack_base"] = {}                    # (board M) the stash as he came in: not the pack's
-	for it0 in s.stash:
-		ctx["pack_base"][int(it0.get("id", -1))] = true
 	if not place.is_empty():
 		ctx["place"] = place
 		ctx["site"]["name"] = str(place["name"])
@@ -91,65 +88,93 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0, place := {}) -> Diction
 
 
 # ------------------------------------------------------------------ the pack (board M)
-## The pack is what he's carrying out: the slice's stash, counted in the bag's cells (the game's capacity()).
-## What he had in the stash coming in isn't in it (the review: a camp's whole stash filled it from the first second).
+## The pack is the game's own on the slice's mission (10 Nov, Matt: "the grid view needs to be displayed in the pack so
+## you can see how many cells are taken up"): the bag's shape, each piece laid where it fits, turned if need be
+## (Sim.pack_spot); a find that fits nowhere isn't taken. Out of a site it's tipped into the stash (launch's _carry).
 static func pack_items(ctx: Dictionary) -> Array:
-	var base: Dictionary = ctx.get("pack_base", {})
-	return ctx["sim"].stash.filter(func(it): return not base.has(int(it.get("id", -1))))
+	return ctx["sim"].mission["found"]
 
 
 static func pack_used(ctx: Dictionary) -> int:
-	var n := 0
-	for it in pack_items(ctx):
-		n += Items.size(it)
-	return n
+	return int(ctx["sim"].pack_used(ctx["sim"].mission))
 
 
 static func pack_cap(ctx: Dictionary) -> int:
 	return int(ctx["sim"].capacity())
 
 
+static func _to_box(ctx: Dictionary, it: Dictionary) -> bool:
+	return it.has("base") and Items.is_ammo(it) and ctx.get("boxes", {}).has(str(Items.base_of(it)["type"]))
+
+
 ## Room in the pack for `it`: a box of rounds for a gun he's holding goes into the box's count, no cells.
 static func pack_room(ctx: Dictionary, it: Dictionary) -> bool:
-	if it.has("base") and Items.is_ammo(it) and ctx.get("boxes", {}).has(str(Items.base_of(it)["type"])):
+	return _to_box(ctx, it) or not ctx["sim"].pack_spot(ctx["sim"].mission, it).is_empty()
+
+
+## A find into the pack where it fits (or its rounds into the box): false with no place for it.
+static func pack_take(ctx: Dictionary, it: Dictionary) -> bool:
+	if _to_box(ctx, it):
+		take_rounds(ctx, [it])
 		return true
-	return pack_used(ctx) + Items.size(it) <= pack_cap(ctx)
+	var s = ctx["sim"]
+	var spot: Array = s.pack_spot(s.mission, it)
+	if spot.is_empty():
+		return false
+	s._pack_put(s.mission, it, spot)
+	return true
 
 
 ## A piece out of the pack (to go back in a crate): false when it isn't there.
 static func pack_drop(ctx: Dictionary, it: Dictionary) -> bool:
-	var s = ctx["sim"]
-	if not pack_items(ctx).has(it):
+	var found: Array = ctx["sim"].mission["found"]
+	if not found.has(it):
 		return false
-	s.stash.erase(it)
+	found.erase(it)
+	it.erase("pos")
+	it.erase("rot")
 	return true
 
 
+## The pack tipped into the stash: he's out of the site (or the Kit's open before the next).
+static func pack_home(ctx: Dictionary) -> void:
+	var s = ctx["sim"]
+	for it in s.mission["found"].duplicate():
+		pack_drop(ctx, it)
+		if not s.stash_put(it):
+			s.stash.append(it)
+
+
 ## A piece worn by the game's own rule (Sim.equip_item), from a crate or the pack, the run put by for the moment as the
-## Kit room does: {"ok", "off": what came off, taken out of the pack when the piece came from a crate}.
+## Kit room does: {"ok", "off": what came off - for the crate when the piece came from one; from the pack, what came
+## off goes into the pack where it fits, else it's in "off" for the crate too}.
 static func wear_from(ctx: Dictionary, it: Dictionary) -> Dictionary:
 	var s = ctx["sim"]
-	if not it.has("slot") or not s.equipped.has(str(it["slot"])):
+	if not it.has("slot") or not s.equipped.has(str(it["slot"])) or not s.can_wear(it):
 		return {"ok": false, "off": []}
 	var held = s.mission
+	var in_pack: bool = held["found"].has(it)
+	if in_pack:
+		pack_drop(ctx, it)
 	s.mission = null
-	var in_pack: bool = s.stash.has(it)
 	var before := {}
 	for x in s.stash:
 		before[int(x.get("id", -1))] = true
-	if not in_pack:
-		s.stash.append(it)
+	s.stash.append(it)
 	var ok: bool = s.equip_item(int(it["id"]))
 	var off: Array = []
 	if not ok:
-		if not in_pack:
-			s.stash.erase(it)
-	elif not in_pack:
+		s.stash.erase(it)
+	else:
 		for x in s.stash.duplicate():
 			if not before.has(int(x.get("id", -1))):
 				off.append(x)
 				s.stash.erase(x)
 	s.mission = held
+	if not ok and in_pack:
+		pack_take(ctx, it)
+	if ok and in_pack:
+		off = off.filter(func(x): return not pack_take(ctx, x))     # into the cells the swap freed, when it fits
 	if ok:
 		kit_changed(ctx)
 	return {"ok": ok, "off": off}
@@ -159,17 +184,66 @@ static func wear_from(ctx: Dictionary, it: Dictionary) -> Dictionary:
 static func rig_from(ctx: Dictionary, it: Dictionary) -> bool:
 	var s = ctx["sim"]
 	var held = s.mission
+	var in_pack: bool = held["found"].has(it)
+	if in_pack:
+		pack_drop(ctx, it)
 	s.mission = null
-	var in_pack: bool = s.stash.has(it)
-	if not in_pack:
-		s.stash.append(it)
+	s.stash.append(it)
 	var ok: bool = s.take(int(it["id"]))
-	if not ok and not in_pack:
+	if not ok:
 		s.stash.erase(it)
 	s.mission = held
+	if not ok and in_pack:
+		pack_take(ctx, it)
 	if ok:
 		kit_changed(ctx)
 	return ok
+
+
+## (10 Nov, Matt: "checking on a live run I think we need an indicator back along the lines of 'potential upgrade'")
+## Whether a find may be worth wearing over what's in its slot. A gun or a hand weapon by the slice's own damage a
+## second (a round's damage by its kind's rate: the game's test reads a Bolt gun as 77% worse than the claw hammer it
+## out-hits here); anything else by the game's own test (Sim.is_upgrade). An empty slot: yes. Kept by the pair's ids.
+static func potential_upgrade(ctx: Dictionary, it: Dictionary) -> bool:
+	var s = ctx["sim"]
+	var slot: String = str(it.get("slot", ""))
+	if not it.has("id") or not s.equipped.has(slot) or not s.can_wear(it):
+		return false
+	var worn = s.equipped[slot]
+	if worn == null:
+		return true
+	if int(worn.get("id", -1)) == int(it["id"]):
+		return false
+	var key := "%d/%d" % [int(it["id"]), int(worn.get("id", -1))]
+	var cache: Dictionary = ctx.get("up_cache", {})
+	ctx["up_cache"] = cache
+	if cache.has(key):
+		return bool(cache[key])
+	var held = s.mission
+	s.mission = null
+	var up := false
+	if slot in SLOT_NAMES:
+		var mine: float = _slice_dps(ctx, slot, worn)
+		s.equipped[slot] = it
+		s._stats_dirty()
+		var its: float = _slice_dps(ctx, slot, it)
+		s.equipped[slot] = worn
+		s._stats_dirty()
+		up = its > mine * 1.02
+	else:
+		up = bool(s.is_upgrade(it))
+	s.mission = held
+	cache[key] = up
+	return up
+
+
+## The slice's damage a second for the gun in `slot` (worn now): 0 when it can't fire here.
+static func _slice_dps(ctx: Dictionary, slot: String, g: Dictionary) -> float:
+	var s = ctx["sim"]
+	if float(Items.base_of(g).get("rof", 0.0)) <= 0.0 or (Items.mag_size(g) <= 0 and gun_kind(g) != "melee"):
+		return 0.0
+	var e: Dictionary = _gun_entry(s, slot, g)
+	return round_damage(ctx, e) * float(e.get("rof", 1.0))
 
 
 ## A site's name in running text: its "The" lower-case (the style guide: capital only when the name stands alone).
@@ -251,6 +325,7 @@ static func take_rounds(ctx: Dictionary, items: Array) -> int:
 ## and the damage are read live from the Sim by every hit. The runner takes it with runner.kit_changed(ctx).
 static func kit_changed(ctx: Dictionary) -> void:
 	var s = ctx["sim"]
+	ctx.erase("up_cache")                    # what's worn changed: every "potential upgrade" is read again
 	s._stats_dirty()
 	_arm(s)
 	var guns: Array = []
@@ -869,6 +944,8 @@ static func kill_drops(ctx: Dictionary, ms: Dictionary, rng: RandomNumberGenerat
 	var out: Array = []
 	if rng.randf() < float(t["drop"]) * (1.0 + s.loot_bonus()):
 		out.append_array(_find(s, m, t, true))
+		if bool(ctx.get("bodies", false)) and rng.randf() < T.G_BODY_SECOND:
+			out.append_array(_find(s, m, t, true))     # (10 Nov, Matt: "sometimes more than 1 item") a man with a find on him: now and then a second
 	if bool(ms.get("hard", false)):
 		var better: Dictionary = t.duplicate()
 		better["rarity"] = float(t.get("rarity", 0.0)) + Data.HARD66_RARITY
@@ -888,7 +965,19 @@ static func crate_finds(ctx: Dictionary, _rng: RandomNumberGenerator = null) -> 
 ## The sim's _find on the slice's mission; the item it placed (pack, floor or stack), taken back out of the slice's sim
 ## so nothing piles up there.
 static func _find(s, m: Dictionary, t: Dictionary, from_kill: bool) -> Array:
+	# (the review) the sim rolls into an empty pack and floor of its own: it joins a find onto a matching stack and lands a
+	# gun's box beside it, and the pack is the player's now (board M) - nothing of the roll's is left in it
+	var mine: Array = m["found"]
+	var floor_was = m.get("floor", [])
+	m["found"] = []
+	m["floor"] = []
 	var got: Dictionary = s._find(m, t, from_kill)
+	m["found"] = mine
+	m["floor"] = floor_was
+	if got.get("it", null) is Dictionary:
+		got["it"].erase("pos")
+		got["it"].erase("rot")
+		got["it"].erase("strapped")
 	var it: Dictionary = got.get("it", {}) if got.get("it", null) is Dictionary else {}
 	if it.is_empty():
 		return []

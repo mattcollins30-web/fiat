@@ -50147,8 +50147,8 @@ func _r18_search_checks(main) -> void:
 	r.position = prize.position + Vector2(0, 90)
 	w.search_step(r, false, 1.0 / 60.0)
 	_check(w.search_ui and prize.near and prize.prompt == "F · Search" and not se.visible, "at the prize: the search a screen %s, its prompt '%s'" % [str(w.search_ui), prize.prompt])
-	var pack0: int = s.stash.size()
-	_check(pack0 > 0 and SliceBridge.pack_used(w.ctx) == 0 and SliceBridge.pack_items(w.ctx).is_empty(), "the pack at the start: %d cells used with %d pieces in the stash he came with" % [SliceBridge.pack_used(w.ctx), pack0])
+	var pack0: int = SliceBridge.pack_items(w.ctx).size()
+	_check(s.stash.size() > 0 and SliceBridge.pack_used(w.ctx) == 0 and SliceBridge.pack_items(w.ctx).is_empty(), "the pack at the start: %d cells used with %d pieces in the stash he came with" % [SliceBridge.pack_used(w.ctx), pack0])
 	var asked := [0]
 	w.search_asked.connect(func(_t): asked[0] += 1)
 	w.search_step(r, true, 1.0 / 60.0)
@@ -50167,20 +50167,42 @@ func _r18_search_checks(main) -> void:
 		if first_at < 0.0 and prize.found_n >= 1:
 			first_at = t
 	_check(absf(first_at - secs / n) < 0.06 and absf(t - secs) < 0.1 and prize.found_n == n and prize.left.size() == n and w.time_s - t0 > secs * 0.9, "the search: the first find at %.2f s (one in %d of %.1f s), all at %.2f s, %d left in it, the fight's clock on %.1f s" % [first_at, n, secs, t, prize.left.size(), w.time_s - t0])
-	_check(bool(w.stats["prize"]) and int(w.stats["crates_opened"]) == 1 and w.stats["haul"].is_empty() and s.stash.size() == pack0, "searched, nothing taken: the prize marked %s, %d in the haul, %d in the pack (was %d)" % [str(w.stats["prize"]), w.stats["haul"].size(), s.stash.size(), pack0])
+	_check(bool(w.stats["prize"]) and int(w.stats["crates_opened"]) == 1 and w.stats["haul"].is_empty() and SliceBridge.pack_items(w.ctx).size() == pack0, "searched, nothing taken: the prize marked %s, %d in the haul, %d in the pack (was %d)" % [str(w.stats["prize"]), w.stats["haul"].size(), SliceBridge.pack_items(w.ctx).size(), pack0])
 	se.refresh()
 	_check(_check_nodes(se.text_nodes(), [], "the search screen") == 0 and se.card_rect().end.y <= 1080.0 - SliceTuning.HUD_BAND_H and se._crate_state.text == "%d found · Searched" % n, "the search screen's words: '%s', its card to %s" % [se._crate_state.text, str(se.card_rect().end)])
+	# a find pressed: the game's compare panel, and "Potential upgrade" by the slice's own damage a second for a gun
+	var bolt0: Dictionary = SliceBridge.place_gun(w.ctx, "Primary", "Bolt gun", w.rng)[0]
+	var ham0: Dictionary = SliceBridge.place_gun(w.ctx, "Primary", "Claw hammer", w.rng)[0]
+	prize.left.append(bolt0)
+	se.select(bolt0)
+	se.refresh()
+	_check(SliceBridge.potential_upgrade(w.ctx, bolt0) and not SliceBridge.potential_upgrade(w.ctx, ham0) and not s.is_upgrade(bolt0), "a Bolt gun over the claw hammer: potential upgrade %s (the game's own test %s); a second hammer %s" % [str(SliceBridge.potential_upgrade(w.ctx, bolt0)), str(s.is_upgrade(bolt0)), str(SliceBridge.potential_upgrade(w.ctx, ham0))])
+	var ups: Array = se._cells.filter(func(c): return c.get_parent() == se._crate_panel and c.has_node("Up"))
+	_check(ups.size() >= 1 and ups.any(func(c): return c.id == int(bolt0["id"])), "the ▲ on a find that may be an upgrade: %d cells marked" % ups.size())
+	_check(se.pick._verdict.visible and se.pick._verdict.text == "Potential upgrade" and se.pick._heads[0].visible and se.pick._heads[1].visible and se.pick.button_texts() == ["Wear", "Take"] and s.mission != null, "the pick: verdict '%s', both pieces shown %s, buttons %s" % [se.pick._verdict.text, str(se.pick._heads[1].visible), str(se.pick.button_texts())])
+	_check(_check_nodes(se.text_nodes(), [], "the search screen, a find picked") == 0, "the search screen with a find picked: its words don't fit")
+	prize.left.erase(bolt0)
+	se.refresh()
+	_check(se.selected.is_empty() and not se.pick._verdict.visible, "the picked find gone, the panel still shows it")
 	# into the pack; onto a slot with what he had on going into the crate
 	var pistol: Dictionary = prize.finds.filter(func(it): return str(it.get("base", "")) == "Pocket pistol")[0]
 	var other: Dictionary = prize.finds.filter(func(it): return it != pistol)[0]
 	var used0: int = SliceBridge.pack_used(w.ctx)
-	_check(se.take(other) and s.stash.has(other) and w.stats["haul"].has(other) and not prize.left.has(other) and (SliceBridge.pack_used(w.ctx) == used0 + Items.size(other) or Items.is_ammo(other)), "a find taken: in the pack %s, in the haul %s" % [str(s.stash.has(other)), str(w.stats["haul"].has(other))])
-	_check(se.wear(pistol) and s.equipped["Secondary"] == pistol and r.guns.size() == 2 and not prize.left.has(pistol) and not s.stash.has(pistol), "the pistol worn from the crate: %d guns, still in the crate %s" % [r.guns.size(), str(prize.left.has(pistol))])
+	se.refresh()
+	var grid0: int = se._cells.filter(func(c): return c.get_parent() == se._pack_grid).size()
+	_check(grid0 == SliceBridge.pack_cap(w.ctx) and se.pack_cell >= 20.0, "the pack's grid: %d squares for the bag's %d cells, %.0f px each" % [grid0, SliceBridge.pack_cap(w.ctx), se.pack_cell])
+	_check(se.take(other) and SliceBridge.pack_items(w.ctx).has(other) and w.stats["haul"].has(other) and not prize.left.has(other) and (SliceBridge.pack_used(w.ctx) == used0 + Items.size(other) or Items.is_ammo(other)), "a find taken: in the pack %s, in the haul %s" % [str(SliceBridge.pack_items(w.ctx).has(other)), str(w.stats["haul"].has(other))])
+	se.refresh()
+	if not Items.is_ammo(other):
+		var oc: Array = se._cells.filter(func(c): return c.get_parent() == se._pack_grid and c.get("id") == int(other["id"]))
+		var ofp: Vector2i = Items.footprint(other)
+		_check(oc.size() == 1 and other.get("pos") is Array and is_equal_approx(oc[0].position.x, float(other["pos"][0]) * (se.pack_cell + 4.0)) and is_equal_approx(oc[0].size.x * oc[0].size.y, (ofp.x * se.pack_cell + (ofp.x - 1) * 4.0) * (ofp.y * se.pack_cell + (ofp.y - 1) * 4.0)), "the find in the pack's grid: %d cells for it, at %s" % [oc.size(), str(other.get("pos"))])
+	_check(se.wear(pistol) and s.equipped["Secondary"] == pistol and r.guns.size() == 2 and not prize.left.has(pistol) and not SliceBridge.pack_items(w.ctx).has(pistol), "the pistol worn from the crate: %d guns, still in the crate %s" % [r.guns.size(), str(prize.left.has(pistol))])
 	var bolt: Dictionary = SliceBridge.place_gun(w.ctx, "Primary", "Bolt gun", w.rng)[0]
 	prize.left.append(bolt)
 	var hammer = s.equipped["Primary"]
-	var stash0: int = s.stash.size()
-	_check(se.wear(bolt) and s.equipped["Primary"] == bolt and prize.left.has(hammer) and s.stash.size() == stash0 and not r.is_melee(), "a gun worn over the hammer: the hammer in the crate %s, the pack %d (was %d)" % [str(prize.left.has(hammer)), s.stash.size(), stash0])
+	var stash0: int = SliceBridge.pack_items(w.ctx).size()
+	_check(se.wear(bolt) and s.equipped["Primary"] == bolt and prize.left.has(hammer) and SliceBridge.pack_items(w.ctx).size() == stash0 and not r.is_melee(), "a gun worn over the hammer: the hammer in the crate %s, the pack %d (was %d)" % [str(prize.left.has(hammer)), SliceBridge.pack_items(w.ctx).size(), stash0])
 	# a full pack takes no more; a slot still does
 	var filled := 0
 	while filled < 60:
@@ -50191,19 +50213,19 @@ func _r18_search_checks(main) -> void:
 		filled += 1
 	var cap: int = SliceBridge.pack_cap(w.ctx)
 	var spare: Dictionary = prize.left.back()
-	_check(filled > 0 and filled < 60 and SliceBridge.pack_used(w.ctx) <= cap and SliceBridge.pack_used(w.ctx) + Items.size(spare) > cap and se._note.text == se.WORDS["full"], "the pack filled after %d: %d of %d cells, the note '%s'" % [filled, SliceBridge.pack_used(w.ctx), cap, se._note.text])
+	_check(filled > 0 and filled < 60 and SliceBridge.pack_used(w.ctx) <= cap and not SliceBridge.pack_room(w.ctx, spare) and se._note.text == se.WORDS["full"], "the pack filled after %d: %d of %d cells, the note '%s'" % [filled, SliceBridge.pack_used(w.ctx), cap, se._note.text])
 	_check(se.wear(spare) and s.equipped["Secondary"] == spare and prize.left.has(pistol) and SliceBridge.pack_used(w.ctx) <= cap, "a full pack, a find onto its slot: worn %s, the old one in the crate %s" % [str(s.equipped["Secondary"] == spare), str(prize.left.has(pistol))])
 	_check(not w.stats["haul"].has(pistol) and w.stats["haul"].has(spare) and w.stats["haul"].count(spare) == 1, "the haul after the swap: the pistol put back in it %s, the one worn in it %d times" % [str(w.stats["haul"].has(pistol)), w.stats["haul"].count(spare)])
 	# the drags themselves: a find to the pack, a pack's piece onto its slot, never onto another's
 	var d_crate := {"slice_find": pistol, "from": "crate"}
 	_check(se._can_drop(Vector2.ZERO, d_crate, "pack") and se._can_drop(Vector2.ZERO, d_crate, "slot:Secondary") and not se._can_drop(Vector2.ZERO, d_crate, "slot:Helmet") and not se._can_drop(Vector2.ZERO, d_crate, "crate") and not se._can_drop(Vector2.ZERO, {"other": 1}, "pack"), "a find's drops: the pack, its own slot, and nowhere else")
-	var back: Dictionary = s.stash.back()
+	var back: Dictionary = SliceBridge.pack_items(w.ctx).back()
 	var d_pack := {"slice_find": back, "from": "pack"}
 	_check(se._can_drop(Vector2.ZERO, d_pack, "crate") and not se._can_drop(Vector2.ZERO, d_pack, "pack"), "a pack piece's drops: the crate, not the pack")
 	se._drop(Vector2.ZERO, d_pack, "slot:Secondary")
-	_check(s.equipped["Secondary"] == back and s.stash.has(spare), "a pack's piece dragged onto its slot: worn %s, the one it replaced in the pack %s" % [str(s.equipped["Secondary"] == back), str(s.stash.has(spare))])
-	back = s.stash.back()
-	_check(se.leave(back) and prize.left.has(back) and not s.stash.has(back) and not w.stats["haul"].has(back), "a piece put back: in the crate %s, in the haul %s" % [str(prize.left.has(back)), str(w.stats["haul"].has(back))])
+	_check(s.equipped["Secondary"] == back and SliceBridge.pack_items(w.ctx).has(spare), "a pack's piece dragged onto its slot: worn %s, the one it replaced in the pack %s" % [str(s.equipped["Secondary"] == back), str(SliceBridge.pack_items(w.ctx).has(spare))])
+	back = SliceBridge.pack_items(w.ctx).back()
+	_check(se.leave(back) and prize.left.has(back) and not SliceBridge.pack_items(w.ctx).has(back) and not w.stats["haul"].has(back), "a piece put back: in the crate %s, in the haul %s" % [str(prize.left.has(back)), str(w.stats["haul"].has(back))])
 	var left0: int = prize.left.size()
 	var no_room: int = w.take_all(prize)
 	_check(no_room == prize.left.size() and no_room < left0 and SliceBridge.pack_used(w.ctx) <= cap, "take all: %d of %d left for want of room, the pack %d of %d" % [no_room, left0, SliceBridge.pack_used(w.ctx), cap])
@@ -50243,10 +50265,48 @@ func _r18_search_checks(main) -> void:
 		se.refresh()
 		_check(b.done() and not b.in_reach(r.position), "a body searched and emptied can still be searched")
 		se.close()
-	# a man with nothing on him
+	# a man with nothing on him: said at once, no cell
 	var empty = w.add_body(r.position + Vector2(200, 0), [])
 	r.position = empty.position + Vector2(0, 60)
 	run.open_search(empty)
+	_check(empty.opened and se._crate_state.text == "Nothing on him" and se._cells.filter(func(c): return c.get_parent() == se._crate_panel).is_empty(), "a body with nothing, as it opens: searched %s, '%s'" % [str(empty.opened), se._crate_state.text])
+	# now and then two finds on a man, only with bodies on
+	var pack_was: String = str(SliceBridge.pack_items(w.ctx).map(func(x): return [x.get("id"), x.get("pos"), x.get("stack", 1), x.get("rounds", 0)]))
+	var twos := 0
+	var twos_off := 0
+	var t1: Dictionary = w.ctx["t"].duplicate()
+	t1["drop"] = 1.0
+	var c2: Dictionary = w.ctx.duplicate()
+	c2["t"] = t1
+	for _i in range(200):
+		twos += 1 if SliceBridge.kill_drops(c2, {"hard": false}, w.rng).size() >= 2 else 0
+	c2["bodies"] = false
+	for _i in range(100):
+		twos_off += 1 if SliceBridge.kill_drops(c2, {"hard": false}, w.rng).size() >= 2 else 0
+	_check(twos > 30 and twos < 120 and twos_off == 0, "two finds on a man: %d of 200 with bodies on, %d of 100 with them off" % [twos, twos_off])
+	_check(str(SliceBridge.pack_items(w.ctx).map(func(x): return [x.get("id"), x.get("pos"), x.get("stack", 1), x.get("rounds", 0)])) == pack_was and Array(s.mission.get("floor", [])).is_empty(), "300 finds rolled: the pack isn't as it was, or %d lie on the floor" % Array(s.mission.get("floor", [])).size())
+	# a piece worn from the pack over a bigger one, the pack full: what came off goes into the crate, not nowhere
+	var big: Dictionary = s.equipped["Primary"]
+	var small: Dictionary = SliceBridge.place_gun(w.ctx, "Primary", "Claw hammer", w.rng)[0]
+	var crate2 = w.add_crate(r.position + Vector2(0, -150))
+	se.close()
+	r.position = crate2.position + Vector2(0, 90)
+	run.open_search(crate2)
+	_check(se.visible and se.thing == crate2, "the second crate's search didn't open")
+	for x in SliceBridge.pack_items(w.ctx).duplicate().slice(0, 4):
+		SliceBridge.pack_drop(w.ctx, x)
+	var took_small: bool = SliceBridge.pack_take(w.ctx, small)
+	_check(took_small and Items.size(big) > Items.size(small), "the check's own pieces: the hammer in the pack %s, %d cells against the worn gun's %d" % [str(took_small), Items.size(small), Items.size(big)])
+	if took_small:
+		while SliceBridge.pack_take(w.ctx, SliceBridge.place_gun(w.ctx, "Secondary", "Pocket pistol", w.rng)[0]):
+			pass
+		var ok_w: bool = se.wear(small)
+		_check(ok_w and s.equipped["Primary"] == small and (SliceBridge.pack_items(w.ctx).has(big) or crate2.left.has(big)), "worn from a full pack: %s, the piece that came off in the pack %s or the crate %s" % [str(ok_w), str(SliceBridge.pack_items(w.ctx).has(big)), str(crate2.left.has(big))])
+	se.close()
+	r.position = empty.position + Vector2(0, 60)
+	empty.left.append(SliceBridge.place_gun(w.ctx, "Secondary", "Pocket pistol", w.rng)[0])     # something on him again, so he can be opened
+	run.open_search(empty)
+	empty.left.clear()
 	for _i in range(int(SliceTuning.G_BODY_SEARCH_S * 60.0) + 6):
 		_r6_tick(w)
 		r.position = empty.position + Vector2(0, 60)

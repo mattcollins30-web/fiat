@@ -172,6 +172,7 @@ func start(lv: int) -> void:
 	var ctx: Dictionary = SliceBridge.runner_ctx(camp if camp.sim != null else null, dice, lv, place)
 	if place.is_empty():
 		ctx["their_dmg_x"] = SliceTuning.THEIR_DMG_X
+	ctx["bodies"] = search_default           # (board M) a man down leaves a body: now and then two finds on him
 	ctx["loop"] = loop_default or run_i >= 0   # (board I) the run's loop: gangs till he leaves, crates after each
 	if main != null:
 		if main.get("_menu") != null:
@@ -270,6 +271,7 @@ func next_place() -> void:
 ## the web's points a level, spent as the balance bot spends a Poacher's), his HP full for the next.
 func _carry(stats: Dictionary) -> void:
 	var s = world.ctx["sim"]
+	SliceBridge.pack_home(world.ctx)          # (board M) the pack tipped into the stash: the Kit before the next site sorts it
 	s.mission = null
 	var was: int = int(s.level())
 	s.xp += float(stats.get("xp", 0.0))
