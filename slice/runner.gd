@@ -33,6 +33,8 @@ var refilling := false               # this reload fills the magazine from the p
 var jammed := false
 var jam_left := 0.0
 var swap_left := 0.0
+var steady_left := 0.0               # (round 7, board F) Clean shot: steadying, seconds to go (no fire meanwhile)
+var clean_armed := false             # ...steadied: the next round can't miss the head it's aimed at and goes through one man
 var dodge_t := 0.0                   # (round 7, board G) in a dodge: seconds of it left (nothing lands on him meanwhile)
 var dodge_cd := 0.0                  # ...and seconds till the next
 var dodge_dir := Vector2.RIGHT
@@ -192,11 +194,32 @@ func dodge() -> bool:
 	dodge_dir = want.normalized() if want.length() > 0.1 else (velocity.normalized() if velocity.length() > 40.0 else aim_dir)
 	dodge_t = T.DODGE_S
 	dodge_cd = T.DODGE_EVERY_S
+	steady_left = 0.0                        # a dive breaks the steadying (a round already steadied is kept)
 	dodges += 1
 	reloading = false
 	refilling = false
 	sights = false
 	return true
+
+
+## Clean shot can be started: a gun in hand, and no round steadied or steadying already.
+func can_steady() -> bool:
+	return gun_i < guns.size() and not is_melee() and not clean_armed and steady_left <= 0.0 and not dead
+
+
+## (round 7, board F) Clean shot: `secs` steadying, then the next round is the clean one. A dodge breaks it.
+func steady(secs: float) -> void:
+	steady_left = maxf(0.01, secs)
+	clean_armed = false
+
+
+## (round 7, board F) One for the pot: the magazine in the gun filled where he stands, a reload under way dropped.
+func fill_magazine() -> void:
+	if gun_i >= guns.size() or is_melee():
+		return
+	rounds[gun_i] = int(gun().get("mag", rounds[gun_i]))
+	reloading = false
+	refilling = false
 
 
 func dodging() -> bool:
@@ -273,6 +296,11 @@ func _gun_timers(dt: float) -> void:
 	if not Input.is_action_pressed("slice_fire") or reloading or jammed or swap_left > 0.0:     # no burst saved up
 		shot_cd = maxf(0.0, shot_cd)
 	swap_left = maxf(0.0, swap_left - dt)
+	if steady_left > 0.0:
+		steady_left -= dt
+		if steady_left <= 0.0:
+			steady_left = 0.0
+			clean_armed = true
 	kick_t += dt
 	var kmax: float = float(gun().get("kick_max", 0.0)) if gun_i < guns.size() else 0.0
 	kick = minf(kick, kmax)                  # a swap: the gun in hand's own most
@@ -299,7 +327,7 @@ func _gun_timers(dt: float) -> void:
 
 
 func can_fire() -> bool:
-	return not dead and dodge_t <= 0.0 and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
+	return not dead and dodge_t <= 0.0 and steady_left <= 0.0 and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
 
 
 ## (build 76) A melee weapon in hand: it swings, no rounds.
@@ -338,6 +366,8 @@ func _trigger(fresh: bool = false) -> void:
 func spread_deg() -> float:
 	if gun_i >= guns.size():
 		return T.SPREAD_DEG
+	if clean_armed:
+		return 0.0                           # (round 7) the clean round: where it's aimed
 	var own: float = float(gun().get("spread_deg", T.SPREAD_DEG))
 	return own * T.G_SIGHTS_SPREAD_X + kick * T.G_SIGHTS_KICK_X if sights and gun_i == 0 else own + kick
 
@@ -370,6 +400,12 @@ func fire_once() -> Dictionary:
 	if sights and world.get("stats") is Dictionary:
 		world.stats["sight_shots"] = int(world.stats.get("sight_shots", 0)) + 1     # the run log's: presses down the sights
 	var sent: Array = rl.fire_runner(self, g)
+	if clean_armed:
+		for rd in sent:
+			rd["head"] = true
+			rd["pierce"] = 1
+			rd["clean"] = true               # the game's own bonus rides on the round (the review: not a flag any hit could take)
+		clean_armed = false
 	kick = minf(float(g.get("kick_max", 0.0)), kick + float(g.get("kick_deg", 0.0)))     # the round gone, the next is wider
 	kick_t = 0.0
 	if rounds[gun_i] <= 0 and (mags[gun_i] > 0 or box_rounds() > 0):

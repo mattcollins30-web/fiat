@@ -139,6 +139,8 @@ func start(lv: int) -> void:
 	pause.to_title.connect(back_to_title)
 	pause.show_hp_x(float(ctx.get("man_hp_x", SliceTuning.MAN_HP_X)))
 	pause.hp_x_changed.connect(set_hp_x)
+	pause.show_skill_set(0, bool(ctx.get("fixture", false)))     # (round 7) the test Poacher's skills, switched on the pause
+	pause.skill_set_changed.connect(func(k): SliceBridge.set_skill_set(world, k))
 	pause.show_dmg_x(float(ctx.get("their_dmg_x", SliceTuning.THEIR_DMG_X)))
 	pause.dmg_x_changed.connect(set_dmg_x)
 	kit = KitScript.new()

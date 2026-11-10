@@ -238,6 +238,17 @@ and the generated levels are designed):
 Read against the game's run: a gang, then the search in the quiet before the next, the pack filling, the choice to
 push on or get out. The slice today has its crates out from the start and on the minimap, and one open rectangle.
 
+The pass after round 7, drawn (10 Nov; Matt, on the run's loop put to him - an objective, gangs on the clock, crates in
+the quiet, the way out where you came in: "ok well we may as well do that and ill playtest the lot as intended -
+otherwise its too hards to judge"). Boards I to L on the slice's canvas, for his word before any build: I the run's
+shape (the game's own loop: a gang, the quiet, the search, push on or get out; gangs keep coming till you leave);
+J a place's layout, two worked examples (the Allotments open, the Garden Centre rooms and aisles; the way out is the
+way in, a prize at the far end, gang gates on the far sides); K three levels from a fresh runner (the Allotments on
+hammers, the Garden Centre with a first gun, Top Farm with guns - the game's own first three places and what they
+drop; melee's swing; a soft death); L a level dealt from hand-made pieces by rule (a four by three grid, two ways to
+everywhere, the seed kept). Open in them for him: the word "prize"; how soft a death; whose picks the web's points
+are; the grid and the piece count.
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison

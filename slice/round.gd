@@ -143,6 +143,8 @@ func _fly(rd: Dictionary, dt: float) -> void:
 	var who = null
 	if bool(rd["mine"]):
 		for mn in world.men():
+			if rd.get("through") == mn:
+				continue                             # (round 7) a Clean shot's round is past him
 			var t := seg_circle(a, b, mn.position, float(mn.get("radius") if mn.get("radius") != null else T.MAN_R))
 			if t >= 0.0 and t < best_t:
 				best_t = t
@@ -164,6 +166,11 @@ func _fly(rd: Dictionary, dt: float) -> void:
 	rd["pos"] = p
 	if who == null:
 		_end(rd, p, "cover")
+	elif bool(rd["mine"]) and int(rd.get("pierce", 0)) > 0:
+		rd["pierce"] = int(rd["pierce"]) - 1     # (round 7, board F) a Clean shot's round goes through the first man it hits
+		rd["through"] = who
+		rd["left"] = float(rd["left"]) - go * best_t
+		rd["out"] = _hit_man(rd, who, p)
 	elif bool(rd["mine"]):
 		_end(rd, p, "hit")
 		rd["out"] = _hit_man(rd, who, p)
@@ -190,7 +197,7 @@ func _hit_man(rd: Dictionary, mn, p: Vector2) -> Dictionary:
 	var g: Dictionary = rd["gun"]
 	var dir: Vector2 = rd["dir"]
 	var shot := {"gun": g, "from": rd["from"], "point": p, "dir": dir, "dist": Vector2(rd["from"]).distance_to(p), "runner": world.runner,
-		"world": world, "share": float(rd["share"])}
+		"world": world, "share": float(rd["share"]), "sure_head": bool(rd.get("head", false)), "clean": bool(rd.get("clean", false))}     # (round 7) a Clean shot's round: the head
 	var res: Dictionary = mn.take_shot(shot)
 	if res.get("missed", false):
 		world.missed.emit(p)

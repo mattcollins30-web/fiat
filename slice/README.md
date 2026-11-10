@@ -123,6 +123,21 @@ Stage 2, the dodge and three kinds of men (board G):
   a ring of his kind's colour till he has his sprite. `ctx["kinds_off"]` gives a check its plain gang. The game's own
   fight knows none of this.
 
+Stage 3, the Poacher's six skills as tools (board F; Matt: "they arent interesting enough to use"). The gun stays the
+star; each skill does a job it does badly. Each keeps its name, lane, energy and cooldown, and its own form in the
+game's fight; this is its form under your hands (bridge.use_skill; the seconds are SliceTuning's, first guesses):
+- Gin trap: put down at his feet, G_TRAPS_MAX (2) at once; the first man on it is rooted G_TRAP_HOLD_S and bleeds.
+- Flush them out: thrown to the crosshair; every man within G_FLUSH_R leaves his cover for G_FLUSH_S (the smoke).
+- Collared: the man under the crosshair rooted and not firing G_COLLAR_S (the hard man half).
+- Clean shot: G_STEADY_S steadying (no fire), then the next round can't miss the head it's aimed at and goes through
+  the first man it hits, with the game's own bonus. A dodge breaks the steadying.
+- One for the pot: the nearest man to the crosshair under a quarter of his HP is down, and the magazine is filled.
+- Net every hole: every man within G_NET_R of the crosshair rooted G_NET_S (they can still fire), and bleeding.
+Rooted (`root_t`) is new: he can't walk, he can fire; stunned (`stun_t`) is neither. A man still waiting his turn is
+none of these. A skill with no one to use it on isn't spent and says so on the news line. The marks on the ground
+(the trap, the smoke, the net) are slice/hazards.gd's. The test Poacher's three slots switch on the pause between
+SliceTuning.G_SKILL_SETS ("Skills: mixed / Stalking / Snares"); the camp's own runner's are his own.
+
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.
 

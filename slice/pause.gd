@@ -10,6 +10,7 @@ const SliceTuning := preload("res://slice/tuning.gd")     # (no class_name: Matt
 signal resumed
 signal to_title
 signal hp_x_changed(x: float)            # the test setting: the men's HP times this, live
+signal skill_set_changed(k: int)         # (round 7) the test Poacher's three skills: SliceTuning.G_SKILL_SETS[k]
 signal dmg_x_changed(x: float)           # (build 76) the test setting: their damage a round times this, live
 
 const HP_STEPS := [0.06, 0.1, 0.04]    # "Gang HP" (10 Nov, by rounds to kill: about 12 of the rifle's a man at level 12 (MAN_HP_X, the start), about 20, about 8)
@@ -25,7 +26,7 @@ const ROW_H := 42.0
 const ROW_GAP := 9.0
 const CARD_W := 2.0 * COL_W + 3.0 * 40.0
 const HEAD := 112.0                    # the title, the sub line
-const FOOT := 124.0                    # the buttons, the test settings' head over theirs
+const FOOT := 186.0                    # the buttons, the test settings' head over theirs
 
 var _card: Panel
 var _title: Label
@@ -34,6 +35,8 @@ var _heads: Array = []
 var _rows: Array = []                 # [[what, key]] labels
 var buttons: Array = []               # Resume, Back to the title, Gang HP, Gang damage
 var hp_x := 1.0
+var skill_set := 0
+var skills_test := true
 var dmg_x := 1.0
 var _test: Label
 
@@ -74,7 +77,11 @@ func _init() -> void:
 		var tb := UI.button(_card, Rect2(tx + k * 290.0, by, 270, 52), false)
 		tb.pressed.connect(_on_hp_x if k == 0 else _on_dmg_x)
 		buttons.append(tb)
-	_test = UI.head(_card, Rect2(tx, by - 30, 560, 22), "Test settings")
+	var sb := UI.button(_card, Rect2(tx, by - 62, 560, 52), false)     # (round 7) a row over the two: the test Poacher's skills
+	sb.pressed.connect(_on_skills)
+	buttons.append(sb)
+	_test = UI.head(_card, Rect2(tx, by - 92, 560, 22), "Test settings")
+	show_skill_set(0, true)
 	show_hp_x(SliceTuning.MAN_HP_X)
 	show_dmg_x(SliceTuning.THEIR_DMG_X)
 	visible = false
@@ -104,6 +111,22 @@ func show_dmg_x(x: float) -> void:
 func _show_damage() -> void:
 	if buttons.size() > 3:
 		buttons[3].text = "Gang damage %s" % hp_words(SliceBridge.their_x({"their_dmg_x": dmg_x, "man_hp_x": hp_x}))
+
+
+## (round 7) The skills' button: the set's name (the game's lanes, or "Mixed"); with the camp's own runner, his own.
+func show_skill_set(k: int, test_runner: bool) -> void:
+	skill_set = clampi(k, 0, SliceTuning.G_SKILL_SETS.size() - 1)
+	skills_test = test_runner
+	if buttons.size() > 4:
+		buttons[4].text = "Skills: %s" % str(SliceTuning.G_SKILL_SETS[skill_set][0]) if test_runner else "Skills: the runner's own"
+		buttons[4].disabled = not test_runner
+
+
+func _on_skills() -> void:
+	if not skills_test:
+		return
+	show_skill_set((skill_set + 1) % SliceTuning.G_SKILL_SETS.size(), true)
+	skill_set_changed.emit(skill_set)
 
 
 func _on_dmg_x() -> void:

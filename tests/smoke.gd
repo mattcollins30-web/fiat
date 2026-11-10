@@ -47932,7 +47932,8 @@ func _h75_review_checks(main) -> void:
 		r.skill_state.erase(0)
 		var used: bool = SliceBridge.use_skill(w, 0, aim)
 		var flushed: Array = g.live_men().filter(func(mn): return float(mn.ms.get("exposed_t", 0.0)) > 0.0)
-		_check(used and flushed.size() == 1 and not flushed[0].is_held() and float(held.ms.get("exposed_t", 0.0)) <= 0.0, "Flush them out at a waiting man: used %s, %d flushed, the waiting man's exposed %.1f" % [str(used), flushed.size(), float(held.ms.get("exposed_t", 0.0))])
+		# (round 7, board F) everyone in the smoke now, not the nearest one: still never a man waiting his turn
+		_check(used and flushed.size() >= 1 and flushed.has(front) and flushed.all(func(mn): return not mn.is_held() and mn.global_position.distance_to(aim) <= SliceTuning.G_FLUSH_R + 0.5) and float(held.ms.get("exposed_t", 0.0)) <= 0.0, "Flush them out at a waiting man: used %s, %d flushed, the waiting man's exposed %.1f" % [str(used), flushed.size(), float(held.ms.get("exposed_t", 0.0))])
 	run.back_to_title()
 	main._menu.close()
 	print("h75 review ok: finds out by id, the spares re-read, on you without the dead, held_shot, a beat a gap, flush on the front")
@@ -48894,6 +48895,190 @@ func _r12_men_checks(main) -> void:
 	print("r12 men ok: the gangs' make-up %s; a rusher's swing, a marksman's round after %.1f s, a bottle's %.1f s flight and %.0f s burn; the dodge %.0f px in %.2f s" % [str(made), SliceTuning.G_MARK_AIM_S, SliceTuning.G_THROW_FLY_S, SliceTuning.G_THROW_BURN_S, SliceTuning.DODGE_PX, SliceTuning.DODGE_S])
 
 
+## Round 7, stage 3 (board F; Matt: "they arent interesting enough to use", then "direction is right - yes to the
+## poachers first"): the Poacher's six as tools - a trap put down at his feet that holds and bleeds the first man on
+## it, smoke that turns out everyone in it, a collar that roots one man and stops his fire, a steadied round that
+## can't miss the head and goes through one man, a finisher that fills the magazine, a net that roots an area - and a
+## skill with no one to use it on isn't spent.
+func _r13_skill_checks(main) -> void:
+	var Haz = load("res://slice/hazards.gd")
+	var world = load("res://slice/slice.tscn").instantiate()
+	main.add_child(world)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	ctx["kinds_off"] = true
+	world.start(ctx, 72)
+	var r = world.runner
+	var g = world.gang
+	for k in range(60 * 8):
+		_r6_tick(world)
+	var men: Array = world.men()
+	_check(men.size() >= 4, "only %d men in to try the skills on" % men.size())
+	if men.size() < 4:
+		world.queue_free()
+		return
+	g._queue = []
+	g._front = men.duplicate()               # all of them in it: none waiting
+	for mn in men:
+		mn.state = "cover"
+		mn.move_left = 99.0
+		mn.ms["hp"] = mn.hp_max
+	var use := func(id: String, aim: Vector2) -> Array:     # the skill in slot 0, ready: [used, energy spent, on cooldown]
+		ctx["skills"][0] = {"id": id, "name": str(Data.SKILLS[id]["name"]), "cd": 5.0, "cost": 20.0, "aimed": true, "in_slice": true}
+		r.energy = r.energy_max
+		r.skill_state.erase(0)
+		var used: bool = SliceBridge.use_skill(world, 0, aim)
+		return [used, int(round(float(r.energy_max) - float(r.energy))), float(r.skill_state.get(0, {}).get("cd_left", 0.0)) > 0.0]
+	var far := Vector2(200, 200)             # a corner with no one near
+	for mn in men:
+		mn.position = Vector2(3000.0 + 200.0 * men.find(mn), 1600.0)
+	r.position = world.resolve_circle(Vector2(1500, 1600), SliceTuning.RUNNER_R)
+	# nothing to act on: not spent, and said
+	SliceBridge.pop_events(ctx)
+	var none: Array = []
+	for id in ["collared", "one_for_the_pot", "flush_them_out", "net_every_hole"]:
+		none.append(use.call(id, far))
+	var said: Array = SliceBridge.pop_events(ctx).filter(func(e): return str(e.get("kind", "")) == "skill_none").map(func(e): return str(e.get("name", "")))
+	_check(none == [[false, 0, false], [false, 0, false], [false, 0, false], [false, 0, false]] and said == ["Collared", "One for the pot", "Flush them out", "Net every hole"], "four skills with no one near were %s (used, energy, cooldown), saying %s" % [str(none), str(said)])
+	var line: Array = HudScript72.event_words({"kind": "skill_none", "id": "collared", "name": "Collared"})
+	var pot_line: Array = HudScript72.event_words({"kind": "skill_none", "id": "one_for_the_pot", "name": "One for the pot"})
+	_check(line == ["Collared · no one to use it on", "No one to use it on"] and pot_line == ["One for the pot · no one under 25% HP", "No one under 25% HP"], "the HUD's lines for it: %s, %s" % [str(line), str(pot_line)])
+	# (the review) a man still waiting his turn isn't collared, netted or trapped
+	var waiting = men[3]
+	waiting.position = Vector2(4600, 600)        # on his own: what the ring holds is him
+	waiting.hold(waiting.position)
+	var held_col: Array = use.call("collared", waiting.position)
+	var held_net: Array = use.call("net_every_hole", waiting.position)
+	ctx["traps"].append({"at": waiting.position, "r": SliceTuning.G_TRAP_R})
+	SliceBridge.tick(world, 1.0 / 60.0)
+	_check(float(waiting.ms["stun_t"]) == 0.0 and float(waiting.ms.get("root_t", 0.0)) == 0.0 and ctx["traps"].size() == 1 and held_net == [false, 0, false], "a waiting man: collared %s (stun %.1f), netted %s, the trap under him %s" % [str(held_col), float(waiting.ms["stun_t"]), str(held_net), "kept" if ctx["traps"].size() == 1 else "sprung"])
+	ctx["traps"].clear()
+	for mn in men:
+		mn.ms["stun_t"] = 0.0
+	waiting.state = "cover"
+	# Collared: the man under the crosshair rooted and silent; the hard man for half as long
+	var a = men[0]
+	var b = men[1]
+	var c = men[2]
+	var d = men[3]
+	var col: Array = use.call("collared", a.position + Vector2(40, 0))
+	_check(col == [true, 20, true] and is_equal_approx(float(a.ms["stun_t"]), SliceTuning.G_COLLAR_S) and float(b.ms["stun_t"]) == 0.0, "Collared: %s, his stun %.1f s, the next man's %.1f" % [str(col), float(a.ms["stun_t"]), float(b.ms["stun_t"])])
+	a.ms["stun_t"] = 0.0
+	a.ms["hard"] = true
+	use.call("collared", a.position)
+	_check(is_equal_approx(float(a.ms["stun_t"]), SliceTuning.G_COLLAR_S * SliceTuning.G_COLLAR_HARD_X), "Collared on a hard man holds %.1f s, not half of %.1f" % [float(a.ms["stun_t"]), SliceTuning.G_COLLAR_S])
+	a.ms["hard"] = false
+	a.ms["stun_t"] = 0.0
+	# Net every hole: everyone in the ring rooted - no walking, still firing - and no one outside it
+	d.position = b.position + Vector2(SliceTuning.G_NET_R + 200.0, 600.0)
+	var net: Array = use.call("net_every_hole", b.position)
+	var in_ring: Array = men.filter(func(mn): return mn.position.distance_to(b.position) <= SliceTuning.G_NET_R)
+	_check(net == [true, 20, true] and in_ring.size() >= 2 and in_ring.all(func(mn): return is_equal_approx(float(mn.ms["root_t"]), SliceTuning.G_NET_S) and float(mn.ms["stun_t"]) == 0.0) and float(d.ms.get("root_t", 0.0)) == 0.0 and Haz.layer(world).shown.any(func(m): return str(m["kind"]) == "net"), "Net every hole: %s, %d in the ring rooted, the man outside %.1f s" % [str(net), in_ring.size(), float(d.ms.get("root_t", 0.0))])
+	b.state = "move"
+	b.target = b.position + Vector2(0, 900)
+	d.state = "move"
+	d.target = d.position + Vector2(0, 900)
+	var b0: Vector2 = b.position
+	var d0: Vector2 = d.position
+	for k in range(60):
+		b.step(1.0 / 60.0)
+		d.step(1.0 / 60.0)
+	_check(b.position.distance_to(b0) < 30.0 and d.position.distance_to(d0) > 100.0, "a second on, the rooted man has walked %.0f px and the free one %.0f" % [b.position.distance_to(b0), d.position.distance_to(d0)])
+	for mn in men:
+		mn.ms["root_t"] = 0.0
+		mn.state = "cover"
+	# Gin trap: at his feet, two at most, the first man on it held and bleeding
+	var t1: Array = use.call("gin_trap", far)
+	var first_at: Vector2 = ctx["traps"][0]["at"] if not ctx["traps"].is_empty() else Vector2.INF
+	r.position += Vector2(0, 300)
+	use.call("gin_trap", far)
+	r.position += Vector2(0, 300)
+	use.call("gin_trap", far)
+	_check(t1 == [true, 20, true] and first_at.distance_to(r.position - Vector2(0, 600)) < 1.0 and ctx["traps"].size() == SliceTuning.G_TRAPS_MAX and not ctx["traps"].any(func(tp): return Vector2(tp["at"]).distance_to(first_at) < 1.0), "three Gin traps: the first at %s (his feet %s), %d down, the first still there" % [str(first_at), str(r.position - Vector2(0, 600)), ctx["traps"].size()])
+	c.position = Vector2(ctx["traps"][0]["at"]) + Vector2(20, 0)
+	c.ms["dots"] = {}
+	SliceBridge.tick(world, 1.0 / 60.0)
+	_check(float(c.ms.get("root_t", 0.0)) > SliceTuning.G_TRAP_HOLD_S - 0.1 and float(c.ms["dots"].get("bleed", 0.0)) > 0.0 and ctx["traps"].size() == SliceTuning.G_TRAPS_MAX - 1, "a man on a Gin trap: held %.1f s, bleeding %.1f, %d traps left" % [float(c.ms.get("root_t", 0.0)), float(c.ms["dots"].get("bleed", 0.0)), ctx["traps"].size()])
+	c.ms["root_t"] = 0.0
+	c.ms["dots"] = {}
+	# One for the pot: only under a quarter, and it fills the magazine
+	r.rounds[r.gun_i] = 3
+	r.reloading = true
+	a.ms["hp"] = a.hp_max * (SliceTuning.G_POT_UNDER + 0.1)
+	var pot_no: Array = use.call("one_for_the_pot", a.position)
+	a.ms["hp"] = a.hp_max * (SliceTuning.G_POT_UNDER - 0.05)
+	b.position = a.position + Vector2(30, 0)     # (the review) a healthy man nearer the aim doesn't refuse it
+	var pot: Array = use.call("one_for_the_pot", b.position + Vector2(10, 0))
+	b.position = a.position + Vector2(200, 0)
+	_check(pot_no == [false, 0, false] and pot == [true, 20, true] and a.is_dead() and r.rounds[r.gun_i] == int(r.gun()["mag"]) and not r.reloading, "One for the pot over a quarter %s, under it %s: dead %s, %d rounds of %d, reloading %s" % [str(pot_no), str(pot), str(a.is_dead()), r.rounds[r.gun_i], int(r.gun()["mag"]), str(r.reloading)])
+	# Flush them out: the smoke where it's thrown, everyone in it exposed for its life, a mark on the ground
+	var fl: Array = use.call("flush_them_out", b.position)
+	var smoked: Array = men.filter(func(mn): return not mn.is_dead() and mn.position.distance_to(b.position) <= SliceTuning.G_FLUSH_R)
+	_check(fl == [true, 20, true] and smoked.size() >= 1 and smoked.all(func(mn): return is_equal_approx(float(mn.ms["exposed_t"]), SliceTuning.G_FLUSH_S) and mn.state == "move") and Haz.layer(world).shown.any(func(m): return str(m["kind"]) == "smoke" and is_equal_approx(float(m["life"]), SliceTuning.G_FLUSH_S)), "Flush them out: %s, %d in the smoke out of cover" % [str(fl), smoked.size()])
+	# Clean shot: a beat steadying (no fire), then one round that can't miss, at the head, through the first man
+	r.position = world.resolve_circle(Vector2(1500, 2400), SliceTuning.RUNNER_R)
+	b.position = r.position + Vector2(500, 0)
+	c.position = r.position + Vector2(800, 0)
+	d.position = r.position + Vector2(0, -900)
+	ctx["traps"].clear()
+	for mn in men:
+		if not mn.is_dead():
+			mn.hold(mn.position)                 # (the review) where they are now: they don't walk off the line
+			mn.ms["exposed_t"] = 0.0
+			mn.ms["hp"] = mn.hp_max * 40.0
+	r.debug_aim_at(b.position)
+	r.kick = 4.0
+	r.rounds[r.gun_i] = 10
+	r.reloading = false
+	var cs: Array = use.call("clean_shot", b.position)
+	var mid: Array = [r.steady_left > 0.0, r.can_fire(), r.clean_armed]
+	for k in range(int(SliceTuning.G_STEADY_S * 60.0) + 2):
+		_r6_tick(world)
+		r.debug_aim_at(b.position)
+	var armed: Array = [r.clean_armed, r.spread_deg(), r.can_steady()]
+	var twice: Array = use.call("clean_shot", b.position)     # (the review) one steadied already: not paid for again
+	var hits: Array = []
+	world.hit_landed.connect(func(m, res, _p): hits.append([m, bool(res.get("headshot", false))]))
+	r.shot_cd = 0.0                          # ready whatever the checks before left on him
+	r.swap_left = 0.0
+	r.dodge_t = 0.0
+	r.jammed = false
+	r.reloading = false
+	Input.action_release("slice_fire")
+	var could: bool = r.can_fire()
+	var sent = r.fire_once()
+	var rounds = load("res://slice/round.gd")
+	rounds.settle(world, 2.0)
+	_check(cs == [true, 20, true] and mid == [true, false, false] and armed == [true, 0.0, false] and twice == [false, 0, false], "Clean shot: %s; steadying %s (steady, can fire, armed); steadied %s (armed, spread, can steady again); a second press %s" % [str(cs), str(mid), str(armed), str(twice)])
+	_check(hits.size() == 2 and hits[0] == [b, true] and hits[1] == [c, true] and not r.clean_armed and r.spread_deg() > 0.0 and not bool(ctx["buffs"].get("clean_shot", false)), "the clean round (could fire %s, sent %s) landed on %s (the two men in line, at the head), armed after %s" % [str(could), str(sent).left(80), str(hits.map(func(h): return [h[0] == b, h[0] == c, h[1]])), str(r.clean_armed)])
+	hits.clear()
+	r.kick = 0.0
+	r.shot_cd = 0.0
+	r.fire_once()
+	rounds.settle(world, 2.0)
+	_check(hits.size() <= 1, "the round after it went through a man too: %d hits" % hits.size())
+	# the pause's button: the test Poacher's three, set by set; the camp's own runner's are his own
+	for k in range(SliceTuning.G_SKILL_SETS.size()):
+		_check(SliceBridge.set_skill_set(world, k) and (ctx["skills"] as Array).map(func(sk): return str(sk["id"])) == SliceTuning.G_SKILL_SETS[k][1] and r.skill_state.is_empty(), "the skills' set %d reads %s" % [k, str((ctx["skills"] as Array).map(func(sk): return str(sk["id"])))])
+	ctx["fixture"] = false
+	_check(not SliceBridge.set_skill_set(world, 0), "the camp's own runner's skills were swapped for a test set")
+	ctx["fixture"] = true
+	world.queue_free()
+	var run = load("res://slice/launch.gd").open(main, H72_SEED, false, 12)
+	var pb = run.pause.buttons[4]
+	var was_text: String = pb.text
+	pb.pressed.emit()
+	_check(was_text == "Skills: mixed" and pb.text == "Skills: Stalking" and not pb.disabled and (run.world.ctx["skills"] as Array).map(func(sk): return str(sk["id"])) == SliceTuning.G_SKILL_SETS[1][1], "the pause's skills button read '%s' then '%s', the slots %s" % [was_text, pb.text, str((run.world.ctx["skills"] as Array).map(func(sk): return str(sk["id"])))])
+	run.pause.show_skill_set(0, false)
+	_check(pb.text == "Skills: the runner's own" and pb.disabled, "with the camp's own runner the button reads '%s' (disabled %s)" % [pb.text, str(pb.disabled)])
+	run.pause.show_skill_set(1, true)
+	run.pause.layout(Vector2(1920, 1080))
+	var cardr: Rect2 = run.pause.card_rect() if run.pause.has_method("card_rect") else Rect2(0, 0, 1, 1)
+	_check(cardr.size.y <= 1080.0 and _check_nodes(run.pause.text_nodes(), [], "the slice's pause, round 7") == 0, "the pause's card is %s or its words don't fit" % str(cardr))
+	run.back_to_title()
+	run.free()
+	print("r13 skills ok: the trap at his feet (%d at most, held %.0f s), the smoke %.0f s, the collar %.0f s, the net %.0f s, the pot's magazine, the clean round through two; nothing to act on, nothing spent" % [SliceTuning.G_TRAPS_MAX, SliceTuning.G_TRAP_HOLD_S, SliceTuning.G_FLUSH_S, SliceTuning.G_COLLAR_S, SliceTuning.G_NET_S])
+
+
 class R9Target:
 	extends Node2D
 	var radius := 34.0
@@ -49448,4 +49633,5 @@ func _r6_checks(_main) -> void:
 	_r10_sights_checks(_main)
 	_r11_band_checks(_main)
 	_r12_men_checks(_main)
+	_r13_skill_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

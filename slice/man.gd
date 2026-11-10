@@ -18,6 +18,7 @@ const C_HARD_LINE := Color("d9a441")
 const C_HURT := Color("e6e1d3")
 const C_STUN := Color("7fb4d9")
 const C_KIND := {"rusher": Color("e07a2e"), "marksman": Color("c58be0"), "thrower": Color("3fb0bf")}     # (round 7) a kind's ring, till each has his sprite
+const C_ROOT := Color("e3a33b")       # (round 7, board F) rooted: held where he is, by a trap or the net
 const C_AIM := Color("e0705a")        # a marksman's line on the runner
 const Hazards := preload("res://slice/hazards.gd")
 const NAME_PX := 22                   # the hard man's name over his token, on screen (drawn at NAME_PX / CAM_ZOOM in the world)
@@ -124,7 +125,9 @@ func take_shot(shot: Dictionary) -> Dictionary:
 		return {"damage": 0, "headshot": false, "killed": false}
 	if state == "held" and gang != null and gang.has_method("held_shot"):
 		gang.held_shot(self)                      # (round 4) found at the back and shot: he's in it now, one of the front goes back
-	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)), float(shot.get("share", 1.0)))
+	if bool(shot.get("clean", false)):
+		world.ctx["buffs"]["clean_shot"] = true      # (round 7) a Clean shot's round: the game's bonus on this hit, taken by shot_damage below
+	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)), float(shot.get("share", 1.0)), bool(shot.get("sure_head", false)))
 	flash_t = T.G_FLASH_S
 	if flinch_cd <= 0.0 and not bool(res.get("missed", false)):     # (round 7, board G) hit, he's off his aim a moment
 		react_left = maxf(react_left, T.G_FLINCH_S)
@@ -272,7 +275,10 @@ func step(dt: float) -> void:
 	if kind == "thrower":
 		_throw_step(dt, rp, dist, stunned)
 	if not stunned:
-		_move(dt)
+		if float(ms.get("root_t", 0.0)) > 0.0:        # (round 7, board F) rooted: he stays where he is, and can still fire
+			_stand(dt)
+		else:
+			_move(dt)
 		_fire(dt, rp, dist)
 	else:
 		_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)     # (the review) stunned: his walk runs down, and no shove waits for him
@@ -295,7 +301,10 @@ func _rush(dt: float, rp: Vector2, dist: float, stunned: bool) -> void:
 		velocity = _walk_v
 		knock_left = Vector2.ZERO
 		return
-	_move(dt)
+	if float(ms.get("root_t", 0.0)) > 0.0:
+		_stand(dt)                               # rooted: he swings only at what's in his reach
+	else:
+		_move(dt)
 	var runner = world.runner
 	if swing_cd > 0.0 or runner.is_dead() or dist > radius + T.RUNNER_R + T.G_RUSH_REACH_PX:
 		return
@@ -310,6 +319,18 @@ func _rush(dt: float, rp: Vector2, dist: float, stunned: bool) -> void:
 	if not bool(res["missed"]) and (int(res["hp_loss"]) > 0 or int(res["guard_loss"]) > 0):
 		runner.apply_hit(res)
 		landed += 1
+
+
+## Held where he is (rooted): his walk runs down; a shove still moves him.
+func _stand(dt: float) -> void:
+	_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)
+	var shove: Vector2 = knock_left.limit_length(T.KNOCK_SPEED * dt)
+	knock_left -= shove
+	velocity = _walk_v + (shove / dt if dt > 0.0 else Vector2.ZERO)
+	if is_inside_tree():
+		move_and_slide()
+	else:
+		position += velocity * dt
 
 
 ## (round 7, board G) The thrower: a plain man who, the runner in sight and in range, lobs a bottle at where he stands
@@ -365,7 +386,7 @@ func _think(dt: float, _rp: Vector2) -> void:
 				# the walk home at a hit leg's pace, and G_DUCK_MAX_S over
 				duck_left = T.G_DUCK_MAX_S + global_position.distance_to(home) / (T.G_MAN_SPEED * T.G_LEG_SLOW_X)
 		"duck":
-			if float(ms.get("stun_t", 0.0)) <= 0.0:
+			if float(ms.get("stun_t", 0.0)) <= 0.0 and float(ms.get("root_t", 0.0)) <= 0.0:
 				duck_left -= dt                           # stunned he isn't walking: the time isn't counted
 			if global_position.distance_to(target) <= T.G_ARRIVE_PX or duck_left <= 0.0:
 				state = "cover"
@@ -617,6 +638,10 @@ func _draw() -> void:
 		draw_line(f * 0.4, f * 1.15, C_LINE, 5.0)
 	if float(ms.get("stun_t", 0.0)) > 0.0:
 		draw_arc(Vector2.ZERO, radius + 8.0, 0.0, TAU, 40, C_STUN, 3.0)
+	if float(ms.get("root_t", 0.0)) > 0.0 and not dead:
+		for i in range(8):                       # rooted: a broken amber ring at his feet
+			if i % 2 == 0:
+				draw_arc(Vector2.ZERO, radius + 12.0, i * TAU / 8.0, (i + 1) * TAU / 8.0, 6, C_ROOT, 4.0)
 	if kind != "" and not dead:                  # (round 7) his kind's ring, and a marksman's line as it settles on the runner
 		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 40, C_KIND.get(kind, C_LINE), 5.0)
 		if kind == "marksman" and aim_t > 0.0 and world != null and world.runner != null:

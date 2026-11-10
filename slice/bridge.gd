@@ -534,7 +534,7 @@ static func man_state(ctx: Dictionary, gang_i: int, hard_name := "", traits: Arr
 	var hp_v: float = float(t["hp"]) * (Data.HARD66_HP if hard_name != "" else 1.0) * float(ctx.get("man_hp_x", T.MAN_HP_X))
 	var ms := {"hp": hp_v, "hp_max": hp_v, "dps": float(t["dps"]) * T.G_MAN_DPS_X, "types": t["types"], "res": t["res"], "gang": gang_i,
 		"hard": hard_name != "", "name": hard_name, "traits": traits.duplicate(), "dots": {}, "opened": false,
-		"chill_t": 0.0, "shock_t": 0.0, "arm_t": 0.0, "leg_t": 0.0, "stun_t": 0.0, "exposed_t": 0.0, "supp": 0.0,
+		"chill_t": 0.0, "shock_t": 0.0, "arm_t": 0.0, "leg_t": 0.0, "stun_t": 0.0, "root_t": 0.0, "exposed_t": 0.0, "supp": 0.0,
 		"trap": false, "acted": {}, "since_shot": 99.0}
 	return ms
 
@@ -556,7 +556,7 @@ static func jams(ctx: Dictionary, gun: Dictionary, rng: RandomNumberGenerator) -
 ## One round of the runner's `gun` (a ctx gun entry) on a man, as the real fight computes it. Writes the man's HP, dots and
 ## timers into `ms`; returns {damage:int, amount:float, by_type, headshot, helmet, leg, arm, killed, hard, clean}.
 ## (build 76) `part`: this round's part of the press - a shotgun's pellet 1 / pellets, else 1.
-static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: RandomNumberGenerator, aimed_head := false, part := 1.0) -> Dictionary:
+static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: RandomNumberGenerator, aimed_head := false, part := 1.0, sure_head := false) -> Dictionary:
 	var s = ctx["sim"]
 	var m: Dictionary = s.mission
 	var t: Dictionary = ctx["t"]
@@ -625,6 +625,8 @@ static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: R
 	var base_hit: float = x
 	var head_pct: float = clampf(Data.HEAD66_PCT + float(sv["head_pct"]) + (T.G_AIM_HEAD_PCT if aimed_head else 0.0), 0.0, 100.0)
 	var heads: int = 1 if rng.randf() < head_pct / 100.0 else 0
+	if sure_head:
+		heads = 1                                # (round 7, board F) a Clean shot's round: the head, whatever the dice said
 	heads = s.u67_heads(m, slot, it, 1.0, heads)
 	heads = s.s68_heads(m, 1.0, heads)
 	var helmet := false
@@ -712,7 +714,7 @@ static func man_dots_tick(ctx: Dictionary, ms: Dictionary, dt: float) -> Diction
 			ms["dots"][ty] = pool - drain
 		dealt += drain
 		by[ty] = drain
-	for k in ["chill_t", "shock_t", "arm_t", "leg_t", "stun_t", "exposed_t"]:
+	for k in ["chill_t", "shock_t", "arm_t", "leg_t", "stun_t", "root_t", "exposed_t"]:
 		ms[k] = maxf(0.0, float(ms.get(k, 0.0)) - dt)
 	ms["since_shot"] = float(ms.get("since_shot", 0.0)) + dt
 	if float(ms.get("since_shot", 0.0)) > T.G_PIN_GRACE_S:
@@ -913,50 +915,96 @@ static func use_skill(world, i: int, aim: Vector2) -> bool:
 	var hit: Array = []
 	match id:
 		"clean_shot":
-			ctx["buffs"]["clean_shot"] = true
+			# (round 7, board F) a beat steadying, then the next round can't miss the head it's aimed at and goes through one man
+			if not runner.has_method("steady"):
+				ctx["buffs"]["clean_shot"] = true
+			elif runner.can_steady():
+				runner.steady(T.G_STEADY_S)
+			else:
+				return _nothing(ctx, sk)                      # (the review) a melee weapon in hand, or one steadied already: not paid for twice
 		"flush_them_out":
-			var mn = _nearest(men, aim, T.G_AIM_PICK_R, true)     # (the review) never a man still waiting his turn
-			if mn == null:
-				return false
-			mn.state_data()["exposed_t"] = float(fx["exposed_s"])
-			if mn.has_method("flush"):
-				mn.flush(runner.global_position)
-			hit.append(mn)
+			# (round 7, board F) thrown to the crosshair: every man in it out of cover till the smoke clears
+			for mn in men:
+				if mn.is_dead() or (mn.has_method("is_held") and mn.is_held()) or mn.global_position.distance_to(aim) > T.G_FLUSH_R:
+					continue
+				mn.state_data()["exposed_t"] = T.G_FLUSH_S
+				if mn.has_method("flush"):
+					mn.flush(runner.global_position)
+				hit.append(mn)
+			if hit.is_empty():
+				return _nothing(ctx, sk)
+			_marks(world).mark("smoke", aim, T.G_FLUSH_R, T.G_FLUSH_S)
 		"go_to_ground":
 			ctx["buffs"]["hidden_t"] = float(fx["hidden_s"])
 			for ty in fx["clears"]:
 				ctx["sim"].mission["my_dots"].erase(ty)
 		"one_for_the_pot":
-			var mn = _nearest(men, aim, T.G_AIM_PICK_R)
-			if mn == null or float(mn.state_data()["hp"]) > float(mn.state_data()["hp_max"]) * T.G_POT_UNDER:
-				return false                                  # the finisher's rule: a man under a quarter
+			# the finisher's rule: a man under a quarter - the nearest such to the aim (the review: not the nearest man, refused)
+			var mn = _nearest(men.filter(func(x): return float(x.state_data()["hp"]) <= float(x.state_data()["hp_max"]) * T.G_POT_UNDER), aim, T.G_AIM_PICK_R)
+			if mn == null:
+				return _nothing(ctx, sk)
 			var ms: Dictionary = mn.state_data()
 			var res := {"damage": int(ceil(float(ms["hp"]))), "amount": float(ms["hp"]), "headshot": false, "killed": true, "skill": id}
 			ms["hp"] = 0.0
 			res.merge(on_kill(ctx, ms, world.rng), true)
 			mn.die_by(res)
 			hit.append(mn)
+			if runner.has_method("fill_magazine"):
+				runner.fill_magazine()                        # (round 7, board F) and your magazine is full where you stand
 		"collared":
-			var mn = _nearest(men, aim, T.G_AIM_PICK_R)
+			var mn = _nearest(men, aim, T.G_AIM_PICK_R, true)     # (the review) never a man still waiting his turn
 			if mn == null:
-				return false
-			mn.state_data()["stun_t"] = float(fx["stun_one_s"])
+				return _nothing(ctx, sk)
+			# (round 7, board F) rooted and not firing; the hard man for half as long
+			mn.state_data()["stun_t"] = T.G_COLLAR_S * (T.G_COLLAR_HARD_X if bool(mn.state_data().get("hard", false)) else 1.0)
 			hit.append(mn)
 		"gin_trap":
-			ctx["traps"].append({"at": aim, "r": T.G_TRAP_R})
+			# (round 7, board F) put down where he stands; a third lifts the first
+			ctx["traps"].append({"at": runner.global_position, "r": T.G_TRAP_R})
+			while ctx["traps"].size() > T.G_TRAPS_MAX:
+				ctx["traps"].pop_front()
 		"decoy":
 			ctx["buffs"]["decoy_t"] = float(fx["less_in_s"])
 		"net_every_hole":
 			for mn in men:
-				if mn.global_position.distance_to(aim) <= T.G_NET_R:
-					mn.state_data()["stun_t"] = float(fx["stun_all_s"])
+				if not mn.is_dead() and not (mn.has_method("is_held") and mn.is_held()) and mn.global_position.distance_to(aim) <= T.G_NET_R:
+					mn.state_data()["root_t"] = maxf(float(mn.state_data().get("root_t", 0.0)), T.G_NET_S)     # (round 7, board F) rooted: they can still fire
 					_skill_dot_on(ctx, mn.state_data(), "bleed", float(fx["bleed_s"]))
 					hit.append(mn)
 			if hit.is_empty():
-				return false
+				return _nothing(ctx, sk)
+			_marks(world).mark("net", aim, T.G_NET_R, 0.5)
 	runner.energy = float(runner.energy) - float(sk["cost"])
 	runner.skill_state[i] = {"cd_left": float(sk["cd"]), "cd": float(sk["cd"])}
 	_event(ctx, "skill", {"i": i, "id": id, "name": str(sk["name"]), "at": aim, "men": hit.size()})
+	return true
+
+
+## (round 7) The marks on the ground (slice/hazards.gd; loaded here, not preloaded: it preloads this script).
+static func _marks(world) -> Node:
+	return load("res://slice/hazards.gd").layer(world)
+
+
+## (round 7, board F) A skill with nothing to act on isn't spent, and says so: no energy, no cooldown, a news line.
+static func _nothing(ctx: Dictionary, sk: Dictionary) -> bool:
+	_event(ctx, "skill_none", {"id": str(sk.get("id", "")), "name": str(sk.get("name", ""))})
+	return false
+
+
+## (round 7) The test Poacher's three slots set to one of SliceTuning.G_SKILL_SETS: the skills rebuilt, their
+## cooldowns cleared. False with the camp's own runner (his are his own).
+static func set_skill_set(world, k: int) -> bool:
+	var ctx: Dictionary = world.ctx
+	if not bool(ctx.get("fixture", false)) or k < 0 or k >= T.G_SKILL_SETS.size():
+		return false
+	var s = ctx["sim"]
+	var ids: Array = T.G_SKILL_SETS[k][1]
+	for i in range(3):
+		s.skill_slots[i] = ids[i]
+	ctx["skills"] = _skills(s, true)
+	ctx["skill_set"] = k
+	if world.runner != null:
+		world.runner.skill_state = {}
 	return true
 
 
@@ -1046,9 +1094,11 @@ static func tick(world, dt: float) -> void:
 	# Gin traps: the first man to step in
 	for trap in ctx["traps"].duplicate():
 		for mn in world.men():
-			if is_instance_valid(mn) and not mn.is_dead() and mn.global_position.distance_to(trap["at"]) <= float(trap["r"]):
+			if is_instance_valid(mn) and not mn.is_dead() and not (mn.has_method("is_held") and mn.is_held()) and mn.global_position.distance_to(trap["at"]) <= float(trap["r"]):     # (the review) a man still waiting his turn walks over it
 				mn.state_data()["trap"] = true
-				mn.state_data()["stun_t"] = maxf(float(mn.state_data()["stun_t"]), T.G_TRAP_HOLD_S)
+				# (round 7, board F) held where he is - rooted, he can still fire - and bleeding
+				mn.state_data()["root_t"] = maxf(float(mn.state_data().get("root_t", 0.0)), T.G_TRAP_HOLD_S)
+				_skill_dot_on(ctx, mn.state_data(), "bleed", float(Data.SKILLS["net_every_hole"]["fx"].get("bleed_s", 1.0)))     # the net's bleed: seconds of your damage into his pool, not a length
 				ctx["traps"].erase(trap)
 				_event(ctx, "trap", {"at": trap["at"]})
 				break

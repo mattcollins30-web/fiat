@@ -20,7 +20,7 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   rifle rounds a man), gang damage its own at ×2, a hit's shove fixed; a test Poacher in kit for the level picked.
   Round 7 on Matt's "build it" (boards F to H), in three
   stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men (in), 3 the Poacher's six skills as
-  tools. After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
+  tools (in). After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
   and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
@@ -8403,3 +8403,20 @@ coloured ring each), sounds for a swing and a bottle, pad buttons for the dodge 
 smoke, proved red five ways; a review; lint 0; the full smoke on Matt's machine. Stage 1's commit follows this entry's
 in the log. Matt's runs since the sights: two clears at level 12 (time x0.91 and x0.81, HP lost x0.21 and x0.18
 against the game's own), a death at level 15 with 9 of 15 down.
+
+The slice, round 7, stage 3 (10 Nov; board F on Matt's "build it"; his words on the skills: "I'm not using them because
+they arent interesting enough to use ... in diablo etc - your basic left click attack is supposed to suck and skill
+usage is pretty much a requirement to progress - here the skills feel pointless", and on the direction - the gun the
+star, skills as tools - "direction is right - yes to the poachers first"). The Poacher's six under your hands: Gin
+trap at his feet (two at once; the first man on it rooted 4 s and bleeding), Flush them out thrown to the crosshair
+(everyone in the smoke out of cover 4 s), Collared (one man rooted and silent 4 s, the hard man 2), Clean shot (0.6 s
+steadying, then a round that can't miss the head and goes through one man), One for the pot (a man under a quarter
+down, the magazine filled), Net every hole (an area rooted 3 s, still firing). A skill with no one to use it on isn't
+spent and says so. The pause switches the test Poacher's three slots: mixed, Stalking, Snares. The game's own fight
+keeps each skill as it was. Off the board: Clean shot is a press and a beat, not a held key; the skills' names aren't
+under their tiles (they don't fit a tile's width). From the review, fixed: waiting men netted and trapped; Clean shot's
+bonus riding on the round, not a flag any hit could take; a second press paid for twice; the trap's bleed four times
+the game's. From the language pass: "Skills: mixed", "Skills: the runner's own", the news lines; its names for the
+men - bruiser, marksman, petrol bomber - are for Matt (rusher, marksman, thrower in the code and here). Stages 1 and
+2: 3917218, f5aed8f. Checked: r13 in the smoke, proved red four ways; a screenshot of the marks; lint 0; the full
+smoke on Matt's machine.

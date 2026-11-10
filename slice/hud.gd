@@ -633,6 +633,11 @@ static func event_words(e: Dictionary) -> Array:
 			return [L["jam"] % [str(e.get("gun", "")), str(snappedf(float(e.get("s", 0.0)), 0.1))], "Jammed"]
 		"skill":
 			return [str(e.get("name", ""))]
+		"skill_none":
+			if str(e.get("id", "")) == "one_for_the_pot":     # its own reason, in the skill's words (the language pass)
+				var pct: int = int(round(SliceTuning.G_POT_UNDER * 100.0))
+				return ["%s · no one under %d%% HP" % [str(e.get("name", "")), pct], "No one under %d%% HP" % pct]
+			return ["%s · no one to use it on" % str(e.get("name", "")), "No one to use it on"]
 		"streak_end":
 			return ["Hit: the streak of %d ends" % int(e.get("was", 0)), "The streak ends"]
 		"med":

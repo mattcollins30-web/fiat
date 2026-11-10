@@ -10,9 +10,14 @@ const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt
 
 const C_WARN := Color("e0705a")
 const C_BURN := Color("f08a3c")
+const C_SMOKE := Color("c8cdd2")
+const C_SKILL := Color("e3a33b")
+
+var _drew := false                    # something was drawn last frame: one more redraw clears it
 
 var world = null
 var items: Array = []                 # {at, fly, burn, acc, ms, landed}
+var shown: Array = []                 # (board F) marks that only show: {kind: "smoke" | "net", at, r, left, life}
 var landed := 0                       # bottles that have landed (a check's)
 var burnt := 0                        # ticks that reached the runner
 
@@ -41,7 +46,18 @@ func throw(mn, at: Vector2) -> Dictionary:
 	return it
 
 
+## (round 7, board F) A skill's mark on the ground for `secs`: Flush them out's smoke, Net every hole's ring.
+func mark(kind: String, at: Vector2, r: float, secs: float) -> void:
+	shown.append({"kind": kind, "at": at, "r": r, "left": secs, "life": secs})
+	queue_redraw()
+
+
 func step(dt: float) -> void:
+	for m in shown:
+		m["left"] = float(m["left"]) - dt
+	shown = shown.filter(func(m): return float(m["left"]) > 0.0)
+	if not shown.is_empty() or (world != null and not (world.ctx.get("traps", []) as Array).is_empty()) or _drew:
+		queue_redraw()
 	if items.is_empty():
 		return
 	var r = world.runner if world != null else null
@@ -68,6 +84,24 @@ func step(dt: float) -> void:
 
 
 func _draw() -> void:
+	_drew = false
+	for m in shown:                          # the smoke and the net, fading
+		_drew = true
+		var k: float = clampf(float(m["left"]) / float(m["life"]), 0.0, 1.0)
+		if str(m["kind"]) == "smoke":
+			draw_circle(m["at"], float(m["r"]), Color(C_SMOKE, 0.12 + 0.22 * k))
+			draw_arc(m["at"], float(m["r"]), 0.0, TAU, 48, Color(C_SMOKE, 0.35 + 0.3 * k), 3.0 / T.CAM_ZOOM)
+		else:
+			draw_circle(m["at"], float(m["r"]), Color(C_SKILL, 0.16 * k))
+			draw_arc(m["at"], float(m["r"]), 0.0, TAU, 48, Color(C_SKILL, 0.9 * k), 4.0 / T.CAM_ZOOM)
+	if world != null:
+		for trap in world.ctx.get("traps", []):     # a Gin trap down: its jaws' ring where he put it
+			_drew = true
+			var at: Vector2 = trap["at"]
+			for i in range(12):
+				if i % 2 == 0:
+					draw_arc(at, float(trap["r"]), i * TAU / 12.0, (i + 1) * TAU / 12.0, 6, C_SKILL, 4.0 / T.CAM_ZOOM)
+			draw_circle(at, 10.0, C_SKILL)
 	for it in items:
 		var at: Vector2 = it["at"]
 		if float(it["fly"]) > 0.0:
