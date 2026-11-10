@@ -179,6 +179,19 @@ Stages 2 to 4, built as one (boards J to L): melee, levels dealt from pieces, th
   way in, never the prize's or a gate's, on the map from the start (deal.gd, G_EXIT_FROM; "extract should be
   randomised"); a man with a gun stands and fires when a hand weapon is out and within G_STAND_PX in his sight - no
   falling back hurt, no move to other cover (man.gd stands(); "enemies with guns run away from you").
+- **The search** (board M, 10 Nov; slice/search.gd; Matt: "the inventory screen needs to be shown when searching
+  crates ... Tarkov style", "bodies being searchable as well as crates", then "your picks, build it"). F (a press, not
+  a hold) at a crate or a body opens a card over the fight, which goes on: what he wears on the left, what's in it
+  top right, the pack under it. Finds are rolled once (slice.gd roll_crate) and turn up one at a time over the crate's
+  seconds (search_tick; a body G_BODY_SEARCH_S). A find is pressed or dragged into the pack, or dragged onto its slot
+  with no pack room needed - what he had on goes into the crate (bridge.wear_from, the game's equip_item); a med onto
+  the rig. F takes all there's room for; walking off, Esc, Tab or Close shuts it and what's left stays. Every man
+  down leaves a body holding what he dropped (no mark on one that holds something). The pack is what he's found since
+  he came in (the stash less what he brought: bridge.pack_items), counted in the bag's cells; a full pack takes no
+  more. The run's haul is what he took or wore. The hold-F ring is kept behind world.search_ui for the smoke's older
+  checks (launch.search_default). Known: its own card, not the Kit room's widget - no compare panel, and the pack is
+  a count of cells, not the bag's shape; nothing on the pad but A for take all; the Kit on Tab isn't held to the
+  pack's cells; rounds on a body reach the box only when it's searched.
 - Known: rounds aren't scarce or carried (each site starts on the slice's own box for a gun worn); cover all blocks
   sight and rounds, beds included; the three sites' test settings are first guesses, not played; "3 sites in a row" is
   the language pass's name for it ("run" is one trip out in the glossary) - Matt's to rename.

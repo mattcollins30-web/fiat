@@ -76,6 +76,9 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0, place := {}) -> Diction
 	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
 	ctx["their_dmg_x"] = T.THEIR_DMG_X
 	ctx["camp_level"] = int(camp.level()) if camp != null and str(camp.cls) != "" else 0     # the camp's own runner, whoever plays (the run log's)
+	ctx["pack_base"] = {}                    # (board M) the stash as he came in: not the pack's
+	for it0 in s.stash:
+		ctx["pack_base"][int(it0.get("id", -1))] = true
 	if not place.is_empty():
 		ctx["place"] = place
 		ctx["site"]["name"] = str(place["name"])
@@ -85,6 +88,88 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0, place := {}) -> Diction
 		ctx["man_hp_x"] = float(place["gang_hp_x"])
 		ctx["their_dmg_x"] = float(place["gang_dmg_x"])
 	return ctx
+
+
+# ------------------------------------------------------------------ the pack (board M)
+## The pack is what he's carrying out: the slice's stash, counted in the bag's cells (the game's capacity()).
+## What he had in the stash coming in isn't in it (the review: a camp's whole stash filled it from the first second).
+static func pack_items(ctx: Dictionary) -> Array:
+	var base: Dictionary = ctx.get("pack_base", {})
+	return ctx["sim"].stash.filter(func(it): return not base.has(int(it.get("id", -1))))
+
+
+static func pack_used(ctx: Dictionary) -> int:
+	var n := 0
+	for it in pack_items(ctx):
+		n += Items.size(it)
+	return n
+
+
+static func pack_cap(ctx: Dictionary) -> int:
+	return int(ctx["sim"].capacity())
+
+
+## Room in the pack for `it`: a box of rounds for a gun he's holding goes into the box's count, no cells.
+static func pack_room(ctx: Dictionary, it: Dictionary) -> bool:
+	if it.has("base") and Items.is_ammo(it) and ctx.get("boxes", {}).has(str(Items.base_of(it)["type"])):
+		return true
+	return pack_used(ctx) + Items.size(it) <= pack_cap(ctx)
+
+
+## A piece out of the pack (to go back in a crate): false when it isn't there.
+static func pack_drop(ctx: Dictionary, it: Dictionary) -> bool:
+	var s = ctx["sim"]
+	if not pack_items(ctx).has(it):
+		return false
+	s.stash.erase(it)
+	return true
+
+
+## A piece worn by the game's own rule (Sim.equip_item), from a crate or the pack, the run put by for the moment as the
+## Kit room does: {"ok", "off": what came off, taken out of the pack when the piece came from a crate}.
+static func wear_from(ctx: Dictionary, it: Dictionary) -> Dictionary:
+	var s = ctx["sim"]
+	if not it.has("slot") or not s.equipped.has(str(it["slot"])):
+		return {"ok": false, "off": []}
+	var held = s.mission
+	s.mission = null
+	var in_pack: bool = s.stash.has(it)
+	var before := {}
+	for x in s.stash:
+		before[int(x.get("id", -1))] = true
+	if not in_pack:
+		s.stash.append(it)
+	var ok: bool = s.equip_item(int(it["id"]))
+	var off: Array = []
+	if not ok:
+		if not in_pack:
+			s.stash.erase(it)
+	elif not in_pack:
+		for x in s.stash.duplicate():
+			if not before.has(int(x.get("id", -1))):
+				off.append(x)
+				s.stash.erase(x)
+	s.mission = held
+	if ok:
+		kit_changed(ctx)
+	return {"ok": ok, "off": off}
+
+
+## A med out of a crate or the pack into the rig's pouches (the game's take): false with no pouch free or not a rig piece.
+static func rig_from(ctx: Dictionary, it: Dictionary) -> bool:
+	var s = ctx["sim"]
+	var held = s.mission
+	s.mission = null
+	var in_pack: bool = s.stash.has(it)
+	if not in_pack:
+		s.stash.append(it)
+	var ok: bool = s.take(int(it["id"]))
+	if not ok and not in_pack:
+		s.stash.erase(it)
+	s.mission = held
+	if ok:
+		kit_changed(ctx)
+	return ok
 
 
 ## A site's name in running text: its "The" lower-case (the style guide: capital only when the name stands alone).

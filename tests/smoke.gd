@@ -261,6 +261,7 @@ func _init() -> void:
 	Sim.exploits_off = true     # no other check meets an exploit by chance (the review); _exploit_checks turns them on
 	load("res://slice/launch.gd").loop_default = false     # the slice's older checks are of the three gangs and the clear; r14 plays the loop
 	load("res://slice/run_log.gd").off = true     # the smoke's slice runs write no lines to Matt's run log (10 Nov)
+	load("res://slice/launch.gd").search_default = false     # ...and keep the hold-F search; r18 plays the search screen (board M)
 	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
 	var si := args.find("seed")
@@ -49758,6 +49759,7 @@ func _r6_checks(_main) -> void:
 	_r15_melee_checks(_main)
 	_r16_run_checks(_main)
 	_r17_checks(_main)
+	_r18_search_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])
 
 
@@ -50124,3 +50126,134 @@ func _r17_checks(main) -> void:
 		_check(not gm.stands() and gm.state != "stand", "flushed out, he stood all the same ('%s')" % gm.state)
 	run.back_to_title()
 	print("r17 ok: the way out dealt into a far piece, on the map; a man with a gun stands against a hand weapon")
+
+
+## (board M; Matt: "the inventory screen needs to be shown when searching crates ... it searches as you're in the
+## inventory and then you drag and drop from the crate to the inventory", "bodies being searchable as well as crates")
+## F at a crate opens the search over the fight, which goes on; its finds turn up one at a time over the crate's
+## seconds; a find goes into the pack while there's room, or straight onto its slot with none - what he had on goes
+## into the crate; a man down leaves a body holding what he dropped; walking off shuts it.
+func _r18_search_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	Launch.search_default = true
+	var run = Launch.open(main, H72_SEED, false, -1)
+	run.start_run(0)
+	Launch.search_default = false
+	var w = run.world
+	var r = w.runner
+	var se = run.search
+	var s = w.ctx["sim"]
+	var prize = w.crates().filter(func(c): return c.prize)[0]
+	r.position = prize.position + Vector2(0, 90)
+	w.search_step(r, false, 1.0 / 60.0)
+	_check(w.search_ui and prize.near and prize.prompt == "F · Search" and not se.visible, "at the prize: the search a screen %s, its prompt '%s'" % [str(w.search_ui), prize.prompt])
+	var pack0: int = s.stash.size()
+	_check(pack0 > 0 and SliceBridge.pack_used(w.ctx) == 0 and SliceBridge.pack_items(w.ctx).is_empty(), "the pack at the start: %d cells used with %d pieces in the stash he came with" % [SliceBridge.pack_used(w.ctx), pack0])
+	var asked := [0]
+	w.search_asked.connect(func(_t): asked[0] += 1)
+	w.search_step(r, true, 1.0 / 60.0)
+	w.search_step(r, true, 1.0 / 60.0)                # held on: one ask, not one a frame
+	_check(asked[0] == 1 and se.visible and w.search_thing == prize and r.hands_full and w.process_mode != Node.PROCESS_MODE_DISABLED and prize.rolled and prize.found_n == 0 and w.stats["haul"].is_empty(),
+		"F at the prize: asked %d times, the screen up %s, the fight held %s, %d found at once, %d in the haul" % [asked[0], str(se.visible), str(w.process_mode == Node.PROCESS_MODE_DISABLED), prize.found_n, w.stats["haul"].size()])
+	var n: int = prize.finds.size()
+	var secs: float = w.search_secs(prize)
+	_check(n >= 3 and prize.finds.any(func(it): return str(it.get("base", "")) == "Pocket pistol") and is_equal_approx(secs, SliceBridge.search_s(w.ctx) * SliceTuning.G_PRIZE_SEARCH_X), "the prize holds %d finds, %.1f s to search" % [n, secs])
+	var t0: float = w.time_s
+	var first_at := -1.0
+	var t := 0.0
+	while not prize.opened and t < secs * 3.0:
+		_r6_tick(w)
+		t += 1.0 / 60.0
+		if first_at < 0.0 and prize.found_n >= 1:
+			first_at = t
+	_check(absf(first_at - secs / n) < 0.06 and absf(t - secs) < 0.1 and prize.found_n == n and prize.left.size() == n and w.time_s - t0 > secs * 0.9, "the search: the first find at %.2f s (one in %d of %.1f s), all at %.2f s, %d left in it, the fight's clock on %.1f s" % [first_at, n, secs, t, prize.left.size(), w.time_s - t0])
+	_check(bool(w.stats["prize"]) and int(w.stats["crates_opened"]) == 1 and w.stats["haul"].is_empty() and s.stash.size() == pack0, "searched, nothing taken: the prize marked %s, %d in the haul, %d in the pack (was %d)" % [str(w.stats["prize"]), w.stats["haul"].size(), s.stash.size(), pack0])
+	se.refresh()
+	_check(_check_nodes(se.text_nodes(), [], "the search screen") == 0 and se.card_rect().end.y <= 1080.0 - SliceTuning.HUD_BAND_H and se._crate_state.text == "%d found · Searched" % n, "the search screen's words: '%s', its card to %s" % [se._crate_state.text, str(se.card_rect().end)])
+	# into the pack; onto a slot with what he had on going into the crate
+	var pistol: Dictionary = prize.finds.filter(func(it): return str(it.get("base", "")) == "Pocket pistol")[0]
+	var other: Dictionary = prize.finds.filter(func(it): return it != pistol)[0]
+	var used0: int = SliceBridge.pack_used(w.ctx)
+	_check(se.take(other) and s.stash.has(other) and w.stats["haul"].has(other) and not prize.left.has(other) and (SliceBridge.pack_used(w.ctx) == used0 + Items.size(other) or Items.is_ammo(other)), "a find taken: in the pack %s, in the haul %s" % [str(s.stash.has(other)), str(w.stats["haul"].has(other))])
+	_check(se.wear(pistol) and s.equipped["Secondary"] == pistol and r.guns.size() == 2 and not prize.left.has(pistol) and not s.stash.has(pistol), "the pistol worn from the crate: %d guns, still in the crate %s" % [r.guns.size(), str(prize.left.has(pistol))])
+	var bolt: Dictionary = SliceBridge.place_gun(w.ctx, "Primary", "Bolt gun", w.rng)[0]
+	prize.left.append(bolt)
+	var hammer = s.equipped["Primary"]
+	var stash0: int = s.stash.size()
+	_check(se.wear(bolt) and s.equipped["Primary"] == bolt and prize.left.has(hammer) and s.stash.size() == stash0 and not r.is_melee(), "a gun worn over the hammer: the hammer in the crate %s, the pack %d (was %d)" % [str(prize.left.has(hammer)), s.stash.size(), stash0])
+	# a full pack takes no more; a slot still does
+	var filled := 0
+	while filled < 60:
+		var extra: Dictionary = SliceBridge.place_gun(w.ctx, "Secondary", "Pocket pistol", w.rng)[0]
+		prize.left.append(extra)
+		if not se.take(extra):
+			break
+		filled += 1
+	var cap: int = SliceBridge.pack_cap(w.ctx)
+	var spare: Dictionary = prize.left.back()
+	_check(filled > 0 and filled < 60 and SliceBridge.pack_used(w.ctx) <= cap and SliceBridge.pack_used(w.ctx) + Items.size(spare) > cap and se._note.text == se.WORDS["full"], "the pack filled after %d: %d of %d cells, the note '%s'" % [filled, SliceBridge.pack_used(w.ctx), cap, se._note.text])
+	_check(se.wear(spare) and s.equipped["Secondary"] == spare and prize.left.has(pistol) and SliceBridge.pack_used(w.ctx) <= cap, "a full pack, a find onto its slot: worn %s, the old one in the crate %s" % [str(s.equipped["Secondary"] == spare), str(prize.left.has(pistol))])
+	_check(not w.stats["haul"].has(pistol) and w.stats["haul"].has(spare) and w.stats["haul"].count(spare) == 1, "the haul after the swap: the pistol put back in it %s, the one worn in it %d times" % [str(w.stats["haul"].has(pistol)), w.stats["haul"].count(spare)])
+	# the drags themselves: a find to the pack, a pack's piece onto its slot, never onto another's
+	var d_crate := {"slice_find": pistol, "from": "crate"}
+	_check(se._can_drop(Vector2.ZERO, d_crate, "pack") and se._can_drop(Vector2.ZERO, d_crate, "slot:Secondary") and not se._can_drop(Vector2.ZERO, d_crate, "slot:Helmet") and not se._can_drop(Vector2.ZERO, d_crate, "crate") and not se._can_drop(Vector2.ZERO, {"other": 1}, "pack"), "a find's drops: the pack, its own slot, and nowhere else")
+	var back: Dictionary = s.stash.back()
+	var d_pack := {"slice_find": back, "from": "pack"}
+	_check(se._can_drop(Vector2.ZERO, d_pack, "crate") and not se._can_drop(Vector2.ZERO, d_pack, "pack"), "a pack piece's drops: the crate, not the pack")
+	se._drop(Vector2.ZERO, d_pack, "slot:Secondary")
+	_check(s.equipped["Secondary"] == back and s.stash.has(spare), "a pack's piece dragged onto its slot: worn %s, the one it replaced in the pack %s" % [str(s.equipped["Secondary"] == back), str(s.stash.has(spare))])
+	back = s.stash.back()
+	_check(se.leave(back) and prize.left.has(back) and not s.stash.has(back) and not w.stats["haul"].has(back), "a piece put back: in the crate %s, in the haul %s" % [str(prize.left.has(back)), str(w.stats["haul"].has(back))])
+	var left0: int = prize.left.size()
+	var no_room: int = w.take_all(prize)
+	_check(no_room == prize.left.size() and no_room < left0 and SliceBridge.pack_used(w.ctx) <= cap, "take all: %d of %d left for want of room, the pack %d of %d" % [no_room, left0, SliceBridge.pack_used(w.ctx), cap])
+	# walking off shuts it; what's left stays, and it can be opened again
+	r.position += Vector2(0, 80)
+	se._process(1.0 / 60.0)
+	_check(not se.visible and w.search_thing == null and not r.hands_full and prize.left.size() == no_room and not prize.done(), "walked off: the screen up %s, %d left in the crate" % [str(se.visible), prize.left.size()])
+	# a body: what he dropped is on him, a second and a half
+	w.gang.next_in = 0.05
+	t = 0.0
+	while w.gang.gang_i < 0 and t < 3.0:
+		_r6_tick(w)
+		t += 1.0 / 60.0
+	var mn = w.men()[0]
+	var fell: Vector2 = mn.global_position
+	var haul0: int = w.stats["haul"].size()
+	var crates0: int = w.crates().size()
+	var res := {"damage": 1, "amount": 1.0, "headshot": false, "killed": true}
+	mn.ms["hp"] = 0.0
+	res.merge(SliceBridge.on_kill(w.ctx, mn.ms, w.rng), true)
+	res["drops"] = SliceBridge.place_gun(w.ctx, "Secondary", "Pocket pistol", w.rng)
+	mn.die_by(res)
+	var bodies: Array = w.crates().filter(func(c): return c.body)
+	_check(bodies.size() == 1 and w.crates().size() == crates0 + 1 and bodies[0].position.distance_to(fell) < 1.0 and bodies[0].finds == res["drops"] and w.stats["haul"].size() == haul0, "a man down: %d bodies, his drop on him %s, the haul %d (was %d)" % [bodies.size(), str(not bodies.is_empty() and bodies[0].finds == res["drops"]), w.stats["haul"].size(), haul0])
+	if bodies.size() == 1:
+		var b = bodies[0]
+		r.position = b.position + Vector2(0, 60)
+		run.open_search(b)
+		_check(se.visible and se._title.text == "The body" and se._crate_head.text == "ON HIM" and is_equal_approx(w.search_secs(b), SliceTuning.G_BODY_SEARCH_S), "a body's search: up %s, '%s', %.1f s" % [str(se.visible), se._title.text, w.search_secs(b)])
+		t = 0.0
+		while not b.opened and t < 5.0:
+			_r6_tick(w)
+			r.position = b.position + Vector2(0, 60)
+			t += 1.0 / 60.0
+		_check(absf(t - SliceTuning.G_BODY_SEARCH_S) < 0.1 and b.left.size() == 1 and int(w.stats["crates_opened"]) == 1, "the body searched in %.2f s, %d on him, %d crates counted" % [t, b.left.size(), int(w.stats["crates_opened"])])
+		b.left.clear()
+		se.refresh()
+		_check(b.done() and not b.in_reach(r.position), "a body searched and emptied can still be searched")
+		se.close()
+	# a man with nothing on him
+	var empty = w.add_body(r.position + Vector2(200, 0), [])
+	r.position = empty.position + Vector2(0, 60)
+	run.open_search(empty)
+	for _i in range(int(SliceTuning.G_BODY_SEARCH_S * 60.0) + 6):
+		_r6_tick(w)
+		r.position = empty.position + Vector2(0, 60)
+	se.refresh()
+	_check(empty.opened and empty.done() and se._crate_state.text == "Nothing on him", "a body with nothing: searched %s, '%s'" % [str(empty.opened), se._crate_state.text])
+	# the end shuts it
+	w.leave()
+	_check(not se.visible and run.ended, "the run ended with the search up: %s" % str(se.visible))
+	run.back_to_title()
+	print("r18 search ok: the prize's %d finds one at a time over %.1f s with the fight on; into the pack, onto a slot from a full pack; a body in %.1f s" % [n, secs, SliceTuning.G_BODY_SEARCH_S])

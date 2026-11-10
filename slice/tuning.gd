@@ -243,6 +243,7 @@ const PLACES := [
 		"open": ["yard", "yard", "path", "plots"], "shut": ["hall", "hall", "store", "office", "room"],
 		"armed": "half", "thrower": true, "hard_from": 1, "gang_hp_x": 0.2, "gang_dmg_x": 8.0, "rush_pace_x": 1.3, "prize_gun": []},
 ]
+const G_BODY_SEARCH_S := 1.5          # (board M) a body's search: this long, whatever's on him
 const G_STAND_PX := 420.0             # (10 Nov, Matt: "enemies with guns run away from you which is annoying when you have a melee weapon") a hand weapon out and this near, in his sight: a man with a gun stands and fires - no falling back, no move to other cover
 const G_STAND_OFF_PX := 560.0         # ...till the runner's this far off again
 const G_EXIT_FROM := 2                # (10 Nov, Matt: "extract should be randomised") a dealt level's way out: a piece this many from the way in at least

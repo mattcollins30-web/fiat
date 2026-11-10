@@ -705,6 +705,8 @@ class MiniMap extends Control:
 			out["exit"] = bool(lv.get("exit_seen"))
 		if w.has_method("crates"):
 			for c in w.crates():
+				if bool(c.get("body")):
+					continue                             # (board M) a body is never on the map
 				var prize_c: bool = bool(w.get("loop")) and bool(c.get("prize"))
 				if not prize_c and (c.get("seen") == false or not c.visible):
 					continue

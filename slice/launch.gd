@@ -14,6 +14,7 @@ const EndScript := preload("res://slice/end_screen.gd")
 const KitScript := preload("res://slice/kit_room.gd")     # (round 4) the game's own Kit room, on the slice's Sim
 const SoundsScript := preload("res://slice/sounds.gd") # (round 6) the game's own sounds off the world's signals
 const PickScript := preload("res://slice/level_pick.gd")  # (build 76) the level picker before the fight
+const SearchScript := preload("res://slice/search.gd")    # (board M) the search: a crate or a body, over the fight
 const RunLog := preload("res://slice/run_log.gd")        # (10 Nov) a line a run ended, for the read after a play
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
@@ -27,6 +28,8 @@ var hud = null
 var pause = null
 var end = null
 var sounds = null                     # (round 6) the fight's sounds
+var search = null                     # (board M) the search screen
+static var search_default := true     # ...on in a run from the title; the smoke's older checks keep the hold-F ring
 var kit = null                        # the Kit room (round 4): Tab or Back
 var over: CanvasLayer
 var ended := false
@@ -141,7 +144,7 @@ func start_run(i := 0, again := false) -> void:
 
 ## The level before this one goes: its world, HUD, sounds, pause, Kit room and end.
 func _clear_level() -> void:
-	for n in [world, sounds, pause, kit, end]:
+	for n in [world, sounds, pause, kit, search, end]:
 		if n != null and is_instance_valid(n):
 			n.get_parent().remove_child(n)
 			n.queue_free()
@@ -150,6 +153,7 @@ func _clear_level() -> void:
 	sounds = null
 	pause = null
 	kit = null
+	search = null
 	end = null
 	ended = false
 
@@ -202,6 +206,10 @@ func start(lv: int) -> void:
 	kit = KitScript.new()
 	over.add_child(kit)
 	kit.closed.connect(close_kit)
+	search = SearchScript.new()
+	over.add_child(search)
+	world.search_ui = search_default
+	world.search_asked.connect(open_search)
 	end = EndScript.new()
 	over.add_child(end)
 	end.to_title.connect(back_to_title)
@@ -216,6 +224,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if is_inside_tree():
 		get_viewport().set_input_as_handled()
+	if search != null and search.visible:
+		search.close()                         # Tab shuts the search; again for the Kit
+		return
 	if kit.visible:
 		close_kit()
 	else:
@@ -226,12 +237,21 @@ func _input(event: InputEvent) -> void:
 func _process(_dt: float) -> void:
 	if world == null or ended or not is_instance_valid(world):
 		return
-	var live: bool = world.process_mode != Node.PROCESS_MODE_DISABLED and world.runner.aim_mode != "pad"
+	var live: bool = world.process_mode != Node.PROCESS_MODE_DISABLED and world.runner.aim_mode != "pad" and not (search != null and search.visible)
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if live else Input.MOUSE_MODE_VISIBLE
 
 
 ## The fight held still under the Kit room (a sandbox: the clock stops too).
+## (board M) F at a crate or a body: the search opens on it, the fight going on behind.
+func open_search(thing) -> void:
+	if ended or search == null or search.visible or (pause != null and pause.visible) or (kit != null and kit.visible):
+		return
+	search.open(world, hud, thing)
+
+
 func open_kit(before := "") -> void:
+	if search != null:
+		search.close()
 	_world_mode = world.process_mode
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -286,6 +306,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if is_inside_tree():
 		get_viewport().set_input_as_handled()
+	if search != null and search.visible:
+		search.close()                         # Esc shuts the search first
+		return
 	if pause.visible:
 		_resume()
 	else:
@@ -309,6 +332,8 @@ func _on_ended(outcome: String, stats: Dictionary) -> void:
 	ended = true
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	pause.close()
+	if search != null:
+		search.close()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var site: Dictionary = world.ctx.get("site", {}) if world.ctx.get("site") is Dictionary else {}
 	var game: Dictionary = SliceBridge.game_fight(world.ctx)

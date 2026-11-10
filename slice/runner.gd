@@ -67,6 +67,7 @@ var dead := false
 var trigger_was := false            # the trigger held last step (a fresh pull)
 var heavy_t := 0.0                  # (board K) a melee weapon's button held this long since his last swing
 var heavy_next := false             # ...the swing about to land is a heavy one
+var hands_full := false             # (board M) the search screen's up: the mouse is on it, not on the trigger
 var debug_hold := false             # a check's held button
 var press_kept := 0.0               # (build 76) a press on a semi gun inside its cap: kept this long, fires when it can
 var auto_move := Vector2.ZERO        # a check's walk (debug_move_dir); zero means the controls
@@ -163,7 +164,7 @@ func tick(dt: float) -> void:
 	_move(dt)
 	_aim()
 	_gun_timers(dt)
-	var pulled := Input.is_action_pressed("slice_fire")
+	var pulled := Input.is_action_pressed("slice_fire") and not hands_full
 	if pulled and not trigger_was:
 		press_kept = T.G_PRESS_KEEP_S
 	if pulled or press_kept > 0.0:
@@ -285,7 +286,7 @@ func _input(event: InputEvent) -> void:
 ## (10 Nov) Down the sights: the right button held (or a check's debug_sights) with the main gun up and ready - not the
 ## spare, not a melee weapon, not mid-reload, swap or search.
 func sights_wanted() -> bool:
-	return debug_sights or (InputMap.has_action("slice_sights") and Input.is_action_pressed("slice_sights"))
+	return not hands_full and (debug_sights or (InputMap.has_action("slice_sights") and Input.is_action_pressed("slice_sights")))
 
 
 func _sights_step() -> void:

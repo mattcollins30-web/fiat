@@ -26,7 +26,8 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   and the Allotments, 3 levels dealt from pieces, 4 the Garden Centre, Top Farm and kit carried between (2 to 4 in,
   built as one, 0e4bc0d: "3 sites in a row" on the slice's picker). Matt played all three through first try, 10 Nov
   ("weapon felt good"): from it, the way out dealt somewhere else and gun men standing against a hand weapon (in);
-  next, on a mockup and his word, the search in the Kit for crates and bodies.
+  2c8954b. The search for crates and bodies as a screen over the fight (board M, "your picks, build it"): in.
+  Waiting on Matt: his play of it.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8469,3 +8470,17 @@ commit: 0e4bc0d. Read from the log for the settings, not acted on: no hand-tool 
 Checked: r17 in the smoke, proved red two ways; a review (three finds fixed: Flush them out undone by the stand, a
 released man treating open ground as cover, the check not covering the release); lint 0; the full smoke on Matt's
 machine.
+
+The slice, the search (10 Nov, board M; Matt: "we should build the inventory change now with bodies being searchable as
+well as crates", and on the board's three calls, "your picks, build it" - the fight runs on, no mark on a body that
+holds something, the crate on the stash's side). F at a crate or a body opens a card over the fight: what he wears,
+what's in it turning up one find at a time over the crate's seconds, the pack in the bag's cells. A find goes into the
+pack by a press or a drag, or straight onto its slot with what he had on going into the crate; F takes all there's
+room for; walking off shuts it. Every man down leaves a body with what he dropped. The pack counts for the first time:
+what he's found since he came in, against the bag's cells. Off the board: it's a card of its own, not the Kit room's
+(the Kit's grid and compare panel are built round the stash; a second container in it was a bigger job than the
+board) - so no compare against what's worn yet, and the pack is a count, not the bag's shape. The way out and the gun
+men's commit: 2c8954b. The review's finds fixed: the camp's whole stash counted against the pack, the cells laid again
+fifty times a search (lost clicks and drags), the haul counting a swapped piece twice, a searched body hiding one
+beside it, bodies pushing a gang's crates away, bodies on the map. Checked: r18 in the smoke, proved red three ways; a
+review; a language pass; lint 0; the full smoke on Matt's machine.

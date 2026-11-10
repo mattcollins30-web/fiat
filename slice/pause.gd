@@ -20,9 +20,9 @@ var dmg_steps: Array = DMG_STEPS.duplicate()
 
 ## Board C's two columns, as drawn: what it does, the key.
 const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Aim down sights", "Right button, held"], ["Heavy swing", "Left button, held"], ["Dodge", "Space"], ["Swap gun", "Mouse wheel or V"], ["Reload", "R"],
-		["Skills", "Q E C"], ["Med from the rig", "1 2 3 4"], ["Search, pick up", "F, held"], ["Get out", "X, held"], ["Kit and runner", "Tab"], ["Pause", "Esc"]]
+		["Skills", "Q E C"], ["Med from the rig", "1 2 3 4"], ["Search a crate or a body", "F"], ["Get out", "X, held"], ["Kit and runner", "Tab"], ["Pause", "Esc"]]
 const PAD := [["Move", "Left stick"], ["Aim", "Right stick, with a lock-on"], ["Fire", "Right trigger"], ["Swap gun", "Y"], ["Reload", "X"],
-		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search, pick up", "A, held"], ["Get out", "B, held"], ["Kit and runner", "Back"], ["Pause", "Start"]]
+		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search a crate or a body", "A"], ["Get out", "B, held"], ["Kit and runner", "Back"], ["Pause", "Start"]]
 const COL_W := 560.0
 const ROW_H := 42.0
 const ROW_GAP := 9.0

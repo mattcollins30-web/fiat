@@ -23,6 +23,8 @@ const SightScript := preload("res://slice/sight.gd")
 const WORDS := {
 	"you": "You",
 	"search_key": "Hold F · Search",
+	"open_key": "F · Search",
+	"open_pad": "A · Search",
 	"search_pad": "Hold A · Search",
 	"out_key": "Hold X · Get out",
 	"out_pad": "Hold B · Get out",
@@ -39,6 +41,7 @@ signal man_down(man: Node)                      # (round 6) every man's death, w
 signal swapped(gun_index: int)
 signal search_progress(crate: Node, frac: float)
 signal crate_opened(crate: Node, finds: Array)
+signal search_asked(thing: Node)                # (board M) F at a crate or a body: the search screen opens on it
 signal runner_hurt(res: Dictionary)
 signal last_legs()
 signal died()
@@ -57,6 +60,9 @@ var sight: Node2D                    # (build 76) slice/sight.gd: the fog over w
 var camera: Camera2D
 var hud_layer: CanvasLayer
 var gang: Node = null
+var search_ui := false               # (board M) the search is a screen (launch.gd sets it): F opens it, a man down leaves a body
+var search_thing: SliceCrate = null  # ...the crate or body being searched while it's open
+var _use_was := false
 var nav: AStarGrid2D = null          # (board L) a dealt level's ways round its walls, for the men; null in the car park
 var park_rect := Rect2(0, 0, T.PARK_W, T.PARK_H)
 var exit_rect := Rect2()
@@ -169,6 +175,8 @@ func tick(dt: float) -> void:
 	runner.tick(dt)
 	if gang != null and gang.has_method("tick"):
 		gang.tick(dt)
+	if search_thing != null and is_instance_valid(search_thing):
+		search_tick(search_thing, dt)
 	fx.exit_prompt = ""
 	if exit_rect.has_point(runner.position) and not ended:
 		fx.exit_prompt = WORDS["out_pad"] if pad else WORDS["out_key"]
@@ -486,7 +494,7 @@ func drop_crates(fell: Array) -> Array:
 		for i_try in range(30):
 			var p: Vector2 = from + Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU)) * rng.randf_range(T.G_CRATE_NEAR_PX[0], T.G_CRATE_NEAR_PX[1] * (1.0 + i_try / 30.0))
 			p = Vector2(clampf(p.x, T.EDGE + 80.0, park_rect.size.x - T.EDGE - 80.0), clampf(p.y, T.EDGE + 80.0, park_rect.size.y - T.EDGE - 80.0))
-			if resolve_circle(p, T.CRATE_SIZE).distance_to(p) < 1.0 and not exit_rect.grow(120.0).has_point(p) and not crates().any(func(c): return c.position.distance_to(p) < T.CRATE_SIZE * 2.5):
+			if resolve_circle(p, T.CRATE_SIZE).distance_to(p) < 1.0 and not exit_rect.grow(120.0).has_point(p) and not crates().any(func(c): return not c.body and c.position.distance_to(p) < T.CRATE_SIZE * 2.5):
 				at = p
 				break
 		if exit_rect.grow(120.0).has_point(at):       # (the review) the last resort landed on the way out: off it
@@ -604,7 +612,10 @@ func on_man_killed(_man: Node, result: Dictionary) -> void:
 	if ctx.get("place") is Dictionary:           # (board K) a run: a kill's XP, his when he gets out
 		stats["xp"] = float(stats.get("xp", 0.0)) + float(ctx["t"].get("xp", 0.0)) * T.G_RUN_XP_X
 	man_down.emit(_man)
-	add_haul(result.get("drops", []))
+	if search_ui:
+		add_body(_man.global_position, result.get("drops", []))     # (board M) what he dropped is on him, to be searched for
+	else:
+		add_haul(result.get("drops", []))
 	if runner != null:
 		_heal_frac += maxf(0.0, float(result.get("heal", 0.0)))
 		var whole: int = int(floor(_heal_frac))
@@ -644,14 +655,22 @@ func search_step(r: SliceRunner, held: bool, dt: float) -> void:
 		var cr: SliceCrate = c
 		cr.near = false
 		if cr.in_reach(r.position):
-			var d := cr.position.distance_to(r.position)
+			var d := cr.position.distance_to(r.position) + (10000.0 if search_ui and cr.opened else 0.0)     # (the review) one not yet searched before one left with things in it
 			if d < nd:
 				nd = d
 				near_c = cr
 	r.searching = null
+	var fresh: bool = held and not _use_was
+	_use_was = held
 	if near_c == null:
 		return
 	near_c.near = true
+	if search_ui:
+		near_c.prompt = WORDS["open_pad"] if pad else WORDS["open_key"]
+		near_c.queue_redraw()
+		if fresh and search_thing == null:
+			search_asked.emit(near_c)
+		return
 	near_c.prompt = WORDS["search_pad"] if pad else WORDS["search_key"]
 	if held:
 		r.searching = near_c
@@ -663,26 +682,128 @@ func search_step(r: SliceRunner, held: bool, dt: float) -> void:
 	near_c.queue_redraw()
 
 
-func open_crate(cr: SliceCrate) -> Array:
-	if cr.opened:
-		return []
-	cr.opened = true
-	cr.progress = 1.0
-	cr.near = false
+## What's in a crate, rolled once: the sim's finds; the prize's three crates' worth and the place's gun.
+func roll_crate(cr: SliceCrate) -> void:
+	if cr.rolled:
+		return
+	cr.rolled = true
 	cr.finds = SliceBridge.crate_finds(ctx, rng)
 	if cr.prize:
 		for _k in range(T.G_PRIZE_FINDS - 1):
 			cr.finds.append_array(SliceBridge.crate_finds(ctx, rng))     # (board I) the prize: so many crates' worth
-		stats["prize"] = true
 		var pg: Array = ctx["place"].get("prize_gun", []) if ctx.get("place") is Dictionary else []
 		if pg.size() == 2:
 			cr.finds.append_array(SliceBridge.place_gun(ctx, str(pg[0]), str(pg[1]), rng))     # (board K) the place's gun, found
-	if loop:
+
+
+## Searched through: the crate's count and the prize's mark (a body counts for neither).
+func _searched(cr: SliceCrate) -> void:
+	if cr.opened:
+		return
+	cr.opened = true
+	cr.progress = 1.0
+	if cr.prize:
+		stats["prize"] = true
+	if loop and not cr.body:
 		stats["crates_opened"] = int(stats.get("crates_opened", 0)) + 1
-	add_haul(cr.finds)
 	cr.queue_redraw()
 	crate_opened.emit(cr, cr.finds)
+
+
+## The whole crate at once, all of it taken (the hold-F search's end, and a check's hand).
+func open_crate(cr: SliceCrate) -> Array:
+	if cr.opened:
+		return []
+	roll_crate(cr)
+	cr.near = false
+	cr.found_n = cr.finds.size()
+	cr.left = []
+	_searched(cr)
+	add_haul(cr.finds)
 	return cr.finds
+
+
+## (board M) A man put down: a body where he fell, holding what he dropped.
+func add_body(p: Vector2, drops: Array) -> SliceCrate:
+	var b: SliceCrate = add_crate(p)
+	b.body = true
+	b.rolled = true
+	b.finds = drops.duplicate()
+	return b
+
+
+## How long a crate or a body takes to search through, undisturbed.
+func search_secs(cr: SliceCrate) -> float:
+	if cr.body:
+		return T.G_BODY_SEARCH_S
+	return maxf(0.1, SliceBridge.search_s(ctx) * (T.G_PRIZE_SEARCH_X if cr.prize else 1.0))
+
+
+## (board M) The search going on while its screen is open: one find turned up at a time over the crate's seconds
+## (slower under fire, as the ring was); the last one found, it's searched.
+func search_tick(cr: SliceCrate, dt: float) -> void:
+	roll_crate(cr)
+	if cr.opened:
+		return
+	var each: float = search_secs(cr) / maxf(1.0, float(cr.finds.size()))
+	cr.search_t += dt * (T.SEARCH_UNDER_FIRE if runner.under_fire() else 1.0)
+	while cr.search_t >= each and cr.found_n < cr.finds.size():
+		cr.search_t -= each
+		cr.left.append(cr.finds[cr.found_n])
+		cr.found_n += 1
+	cr.progress = (float(cr.found_n) + clampf(cr.search_t / each, 0.0, 1.0)) / maxf(1.0, float(cr.finds.size()))
+	if cr.found_n >= cr.finds.size() and (not cr.finds.is_empty() or cr.search_t >= each):
+		_searched(cr)
+	cr.queue_redraw()
+
+
+## A find out of the crate into the pack: false with no room for it.
+func take_find(cr: SliceCrate, it: Dictionary) -> bool:
+	if not cr.left.has(it) or not SliceBridge.pack_room(ctx, it):
+		return false
+	cr.left.erase(it)
+	SliceBridge.stow(ctx, [it])
+	if not stats["haul"].has(it):
+		stats["haul"].append(it)                  # (the review) a piece taken, put back and taken again is in the haul once
+	cr.queue_redraw()
+	return true
+
+
+## Every find turned up so far that the pack has room for. Returns how many were left behind for want of room.
+func take_all(cr: SliceCrate) -> int:
+	var no_room := 0
+	for it in cr.left.duplicate():
+		if not take_find(cr, it):
+			no_room += 1
+	return no_room
+
+
+## A find worn straight from the crate (no pack room needed): what he had on goes into the crate.
+func wear_find(cr: SliceCrate, it: Dictionary) -> bool:
+	if not cr.left.has(it):
+		return false
+	var got: Dictionary = SliceBridge.wear_from(ctx, it)
+	if not bool(got["ok"]):
+		return false
+	cr.left.erase(it)
+	cr.left.append_array(got["off"])
+	for x in got["off"]:
+		stats["haul"].erase(x)                    # (the review) what came off and went back in the crate isn't hauled
+	if not stats["haul"].has(it):
+		stats["haul"].append(it)
+	runner.kit_changed(ctx)
+	cr.queue_redraw()
+	return true
+
+
+## A piece out of the pack back into the crate.
+func leave_find(cr: SliceCrate, it: Dictionary) -> bool:
+	if not SliceBridge.pack_drop(ctx, it):
+		return false
+	cr.left.append(it)
+	stats["haul"].erase(it)
+	cr.queue_redraw()
+	return true
 
 
 func debug_open_crate(cr: SliceCrate) -> Array:
