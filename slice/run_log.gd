@@ -20,7 +20,7 @@ static func entry(world, outcome: String, stats: Dictionary, game: Dictionary) -
 	var shots: int = int(stats.get("shots", 0))
 	var e := {
 		"at": Time.get_datetime_string_from_system(), "round": ROUND, "outcome": outcome,
-		"class": str(ctx.get("class_name", "")), "level": int(ctx.get("level", 0)), "fixture": bool(ctx.get("fixture", false)),
+		"class": str(ctx.get("class_name", "")), "level": int(ctx.get("level", 0)), "fixture": bool(ctx.get("fixture", false)), "camp_level": int(ctx.get("camp_level", 0)),
 		"site_level": int(game.get("level", 0)), "seed": int(ctx.get("seed", 0)), "hp_max": int(ctx.get("hp_max", 0)),
 		"guns": (ctx.get("guns", []) as Array).map(func(g): return "%s (%s)" % [str(g.get("name", "")), str(g.get("kind", ""))]),
 		"gang_hp_x": float(ctx.get("man_hp_x", T.MAN_HP_X)), "gang_damage_x": SliceBridge.their_x(ctx),

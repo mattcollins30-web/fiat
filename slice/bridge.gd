@@ -36,12 +36,12 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
 	var s := Sim.new()
 	var fixture := true
 	var camp = main.get("sim") if main != null and main is Object else null
-	if camp != null and str(camp.cls) != "":
+	if not uses_test_runner(camp, site_lv):
 		s.load_dict(camp.to_dict())
 		s.mission = null                      # a camp with a run out: the slice is its own fight
 		fixture = false
 	else:
-		_fixture(s, seed_v)
+		_fixture(s, seed_v, test_level(site_lv))
 	s.rng.seed = seed_v
 	s.fight_rng.seed = seed_v + 1
 	var stand_in: String = _stand_in(s, seed_v)
@@ -71,6 +71,7 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
 	ctx["boxes"] = boxes_for(s, ctx["guns"])
 	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
 	ctx["their_dmg_x"] = T.THEIR_DMG_X
+	ctx["camp_level"] = int(camp.level()) if camp != null and str(camp.cls) != "" else 0     # the camp's own runner, whoever plays (the run log's)
 	return ctx
 
 
@@ -179,20 +180,38 @@ static func refill_s(gun: Dictionary, rounds_in := -1) -> float:
 	return full * float(n) / float(mag)
 
 
-## A level-14 Poacher in worn kit of his level, rolled with affixes on a fixed seed: no camp, no web past the class's start.
-static func _fixture(s, seed_v: int) -> void:
+## (10 Nov, Matt: "level 12 with a hammer is impossible - can you provide some level appropriate gear per level
+## selection?") Who plays the car park at `site_lv`: the test Poacher when the camp has no runner, or its runner is more
+## than SliceTuning.TEST_RUNNER_UNDER levels under the level picked (a level-1 runner and his hammer at level 12).
+## No level picked (0): the camp's runner whenever there is one, his car park following him.
+static func uses_test_runner(camp, site_lv: int) -> bool:
+	if camp == null or str(camp.cls) == "":
+		return true
+	return site_lv > 0 and int(camp.level()) < site_lv - T.TEST_RUNNER_UNDER
+
+
+## The test Poacher's level for a car park: SliceTuning.SITE_LEVEL_UNDER over the level picked (level 12: the level-14
+## fixture, as before); none picked, FIXTURE_LEVEL.
+static func test_level(site_lv: int) -> int:
+	return FIXTURE_LEVEL if site_lv <= 0 else clampi(site_lv + T.SITE_LEVEL_UNDER, 1, Data.MAX_LEVEL)
+
+
+## The test Poacher at level `lv` (14 with none given) in kit rolled at his level (the pieces' item level; the same two
+## guns at every level, a piece's figures growing with its level), with affixes, on a fixed seed:
+## no camp, the web as the balance bot trains a Poacher of that level.
+static func _fixture(s, seed_v: int, lv := FIXTURE_LEVEL) -> void:
 	s.rng.seed = seed_v
 	s.start()
 	s.set_class("Poacher")
-	s.xp = Data.xp_for_level(FIXTURE_LEVEL)
+	s.xp = Data.xp_for_level(lv)
 	var r := RandomNumberGenerator.new()
 	r.seed = seed_v
 	for k in range(SLOT_NAMES.size()):
 		var b: Dictionary = Items.base_named(SLOT_NAMES[k], FIXTURE_GUNS[k])
 		if not b.is_empty():
-			s.equipped[SLOT_NAMES[k]] = Items.roll_on(SLOT_NAMES[k], b, r, 1.0, true, false, 0, FIXTURE_LEVEL)
+			s.equipped[SLOT_NAMES[k]] = Items.roll_on(SLOT_NAMES[k], b, r, 1.0, true, false, 0, lv)
 	for slot in ["Helmet", "Armour", "Gloves", "Rig"]:
-		var it: Dictionary = Items.roll(slot, Sim.loot_tier_at(FIXTURE_LEVEL), r, 1.0, true, false, "", "", 0.33, 0, FIXTURE_LEVEL)
+		var it: Dictionary = Items.roll(slot, Sim.loot_tier_at(lv), r, 1.0, true, false, "", "", 0.33, 0, lv)
 		if not it.is_empty():
 			s.equipped[slot] = it
 	s.rig = s.rig.filter(func(x): return not Items.is_medical(x))
@@ -201,8 +220,8 @@ static func _fixture(s, seed_v: int) -> void:
 	for k in range(3):
 		s.skill_slots[k] = FIXTURE_SKILLS[k]
 	s._stats_dirty()
-	s.training_points = (FIXTURE_LEVEL - 1) * Data.POINTS_A_LEVEL     # the points a level-14 runner has had
-	var bot = load("res://tests/bot.gd").new()     # the web as the balance bot trains a level-14 Poacher: his poison build
+	s.training_points = (lv - 1) * Data.POINTS_A_LEVEL     # the points a runner of that level has had
+	var bot = load("res://tests/bot.gd").new()     # the web as the balance bot trains a Poacher of that level: his poison build
 	bot.element = FIXTURE_ELEMENT
 	bot.cls = "Poacher"
 	bot._train_tree(s)

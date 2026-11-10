@@ -76,6 +76,16 @@ rounds and hits, damage done, finds, the gang reached and men left, searches, La
 the review of what the shift keeps calibrates on. Back to the title from the pause writes none; the smoke's own runs
 write none (RunLog.off). ROUND in run_log.gd is bumped with each round.
 
+## The test runner per level (10 Nov, Matt: "level 12 with a hammer is impossible - can you provide some level appropriate gear per level selection?")
+
+The camp's runner plays a car park up to TEST_RUNNER_UNDER (3) levels over his own. Past that, or with no runner at
+camp, the test Poacher plays: SITE_LEVEL_UNDER (2) levels over the level picked (level 12: the level-14 Poacher of every
+round before), the same rifle and revolver, his kit rolled at his level, the web as the bot trains a Poacher of that
+level (SliceBridge.uses_test_runner, test_level, _fixture). The picker says which under its row; the HUD's plate reads
+"Test Poacher · Level 14"; the run log's `fixture` and `camp_level` say who played. With the test Poacher the Kit room
+is his (no camp stash). The game's own fight for him by car park level: 9 0:27, 12 3:27, 16 7:34, 22 14:22, 34 47:30,
+50 123:07 - past the low 20s the same two guns fall well behind the gangs.
+
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.
 

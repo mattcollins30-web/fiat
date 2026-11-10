@@ -46567,7 +46567,7 @@ func _h72_slice_checks(main) -> void:
 	_check(hud._site_name.text == str(site["name"]) and hud._site_kicker.text == ("%s · level %d" % [site["place"], int(site["level"])]).to_upper(), "the HUD's site reads '%s' / '%s'" % [hud._site_kicker.text, hud._site_name.text])
 	_check(hud._site_clock.text.begins_with("First gang in") or hud._site_clock.text.begins_with("Gang 1 of"), "the HUD's gang clock before the first: '%s'" % hud._site_clock.text)
 	_check(hud._gun_rounds.text == str(int(ctx["guns"][0]["mag"])) and hud._gun_spare.text.begins_with("/ %d" % int(ctx["guns"][0]["mag"])), "the HUD's rounds read '%s %s' for a magazine of %d" % [hud._gun_rounds.text, hud._gun_spare.text, int(ctx["guns"][0]["mag"])])
-	_check(hud._me_name.text == "Poacher · Level 14" and hud._me_hp.text == "%s / %s" % [Fmt.group(r.hp), Fmt.group(r.hp_max)], "the HUD's runner reads '%s' '%s'" % [hud._me_name.text, hud._me_hp.text])
+	_check(hud._me_name.text == "Test Poacher · Level 14" and hud._me_hp.text == "%s / %s" % [Fmt.group(r.hp), Fmt.group(r.hp_max)], "the HUD's runner reads '%s' '%s'" % [hud._me_name.text, hud._me_hp.text])
 	_check(hud._face.texture != null and hud._gun_pic.texture != null, "the HUD has no portrait or no gun picture")
 	_check(hud._skills.all(func(d): return d["pic"].visible and d["pic"].texture != null), "a skill slot has no picture")
 	# a crate in the clear: its time is the bridge's; under fire it goes at SEARCH_UNDER_FIRE
@@ -48536,6 +48536,80 @@ func _r6_end_checks(main) -> void:
 	print("r6 end ok: the game's own fight at level 12 %s, %d HP" % [Fmt.mss(float(game["time_s"])), int(round(float(game["hp_lost"])))])
 
 
+## The test runner per level (10 Nov, Matt: "level 12 with a hammer is impossible - can you provide some level
+## appropriate gear per level selection?"): a camp's runner more than TEST_RUNNER_UNDER levels under the car park picked
+## gives way to the test Poacher, SITE_LEVEL_UNDER levels over it in kit he can wear; within it, the camp's own plays.
+func _r8_test_runner_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var Pick = load("res://slice/level_pick.gd")
+	var camp = Launch.Camp.new()
+	camp.sim = Sim.new()
+	camp.sim.start()
+	camp.sim.set_class("Poacher")
+	var own_lv: int = int(camp.sim.level())
+	var camp_then: Dictionary = camp.sim.to_dict()
+	camp_then.erase("next_id")
+	var camp_was: String = JSON.stringify(camp_then)
+	var ctx: Dictionary = SliceBridge.runner_ctx(camp, 72, 12)
+	var gun: Dictionary = ctx["guns"][0] if not (ctx["guns"] as Array).is_empty() else {}
+	_check(own_lv == 1 and bool(ctx["fixture"]) and int(ctx["level"]) == 14 and str(gun.get("kind", "melee")) != "melee" and int(ctx["hp_max"]) > 100, "a level-%d runner at level 12 plays as %s, level %d, %d HP, holding %s" % [own_lv, "the test Poacher" if bool(ctx["fixture"]) else "himself", int(ctx["level"]), int(ctx["hp_max"]), str(gun.get("name", "nothing"))])
+	var edge: int = own_lv + SliceTuning.TEST_RUNNER_UNDER
+	_check(not SliceBridge.uses_test_runner(camp.sim, edge) and SliceBridge.uses_test_runner(camp.sim, edge + 1) and not SliceBridge.uses_test_runner(camp.sim, 0) and SliceBridge.uses_test_runner(null, 0), "the cut-off: his own runner to level %d, the test Poacher from %d, his own with no level picked, the test Poacher with no camp" % [edge, edge + 1])
+	var near: Dictionary = SliceBridge.runner_ctx(camp, 72, edge)
+	_check(not bool(near["fixture"]) and int(near["level"]) == own_lv, "within %d levels the camp's runner doesn't play: %s level %d" % [SliceTuning.TEST_RUNNER_UNDER, "fixture" if bool(near["fixture"]) else "own", int(near["level"])])
+	var camp_now: Dictionary = camp.sim.to_dict()
+	camp_now.erase("next_id")              # Items' id counter, the same for every Sim: the launcher puts it back as the slice closes
+	_check(JSON.stringify(camp_now) == camp_was, "the camp's runner was changed by the test runner standing in")
+	_check(int(ctx["camp_level"]) == own_lv and int(near["camp_level"]) == own_lv and int(SliceBridge.runner_ctx(null, 72, 12)["camp_level"]) == 0, "the camp's own level isn't carried for the run log: %d, %d" % [int(ctx["camp_level"]), int(near["camp_level"])])
+	# at every level the picker can offer: his level, kit he can wear, a gun that fires, a fight the game can read
+	var lows: Array = []
+	var lv: int = Pick.first_level()
+	while lv <= Data.MAX_LEVEL:
+		var c: Dictionary = SliceBridge.runner_ctx(null, 72, lv)
+		var s = c["sim"]
+		var want: int = mini(lv + SliceTuning.SITE_LEVEL_UNDER, Data.MAX_LEVEL)
+		var worn: Array = ["Primary", "Secondary", "Helmet", "Armour", "Gloves", "Rig"].map(func(sl): return s.equipped[sl]).filter(func(it): return it != null)
+		var past: Array = worn.filter(func(it): return Items.ilvl(it) != want).map(func(it): return "%s (%d)" % [Items.full_name(it), Items.ilvl(it)])
+		var first: Dictionary = c["guns"][0] if not (c["guns"] as Array).is_empty() else {}
+		var game: Dictionary = SliceBridge.game_fight(c)
+		_check(int(c["level"]) == want and bool(c["fixture"]), "the test Poacher for a level-%d car park is level %d" % [lv, int(c["level"])])
+		_check(past.is_empty() and worn.size() == 6, "the test Poacher at level %d wears %d pieces, not rolled at his level: %s" % [want, worn.size(), str(past)])
+		_check(str(first.get("kind", "melee")) != "melee" and (c["guns"] as Array).size() == 2 and (c["meds"] as Array).size() > 0, "the test Poacher at level %d holds %s with %d meds" % [want, str((c["guns"] as Array).map(func(g): return g.get("name", ""))), (c["meds"] as Array).size()])
+		_check(float(game["time_s"]) > 10.0 and float(game["hp_lost"]) > 0.0, "the game's own fight for the test Poacher at a level-%d car park: %s" % [lv, str(game)])
+		lows.append("%d %s" % [lv, Fmt.mss(float(game["time_s"]))])
+		lv = Data.MAX_LEVEL + 1 if lv == Data.MAX_LEVEL else mini(lv + (1 if lv < 16 else 6), Data.MAX_LEVEL)
+	var twelve: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	_check((twelve["guns"] as Array).map(func(g): return str(g["name"]).contains("Regimental rifle") or str(g["name"]).contains("Officer's revolver")) == [true, true], "level 12's test Poacher no longer holds the fixture's guns: %s" % str((twelve["guns"] as Array).map(func(g): return g["name"])))
+	# the picker says who plays it, and the HUD names him
+	for has in [true, false]:
+		var pick = Pick.new()
+		main.add_child(pick)
+		pick.setup(12, "Poacher", 1 if has else 14, true, has)
+		_check(pick._rule.text == Pick.rule_words(has) and pick._rule.text.contains("test Poacher") and pick._rule.text.contains(str(SliceTuning.TEST_RUNNER_UNDER if has else SliceTuning.SITE_LEVEL_UNDER)), "the picker's rule line reads '%s'" % pick._rule.text)
+		var card: Rect2 = pick.card_rect()
+		_check(pick._rule.position.y >= pick._mark.position.y + pick._mark.size.y and pick._rule.position.y + pick._rule.size.y <= pick.buttons.back().position.y, "the picker's rule line at %.0f sits over the mark or Back (%s)" % [pick._rule.position.y, str(card)])
+		_check(_check_nodes(pick.text_nodes(), [], "the slice's level picker, the test runner's line") == 0, "the picker's words don't fit")
+		pick.queue_free()
+	# opened from the title over a camp whose runner is level 1: the picker says so, level 12 is the test Poacher's
+	var sim_was = main.sim
+	main.sim = camp.sim
+	var run = Launch.open(main, H72_SEED, true, -1)
+	_check(run.picker != null and run.picker._rule.text == Pick.rule_words(true) and run.picker._sub.text.contains("level 1 Poacher"), "the picker over a level-1 runner's camp reads '%s' / '%s'" % [run.picker._sub.text if run.picker != null else "", run.picker._rule.text if run.picker != null else ""])
+	run.start(12)
+	run.hud.show_state(run.hud.read_state())
+	var own_run_name: String = run.hud._me_name.text
+	_check(bool(run.world.ctx["fixture"]) and int(run.world.ctx["camp_level"]) == own_lv and own_run_name == "Test Poacher · Level 14", "from the title at level 12 a level-1 runner's camp plays '%s' (fixture %s)" % [own_run_name, str(run.world.ctx["fixture"])])
+	_check(_check_nodes([run.hud._me_name], [], "the slice's HUD, the test runner's name") == 0, "the test runner's name doesn't fit")
+	run.back_to_title()
+	run.free()
+	main.sim = sim_was
+	var bare = Launch.open(main, H72_SEED, false, -1)
+	_check(bare.picker != null and bare.picker._rule.text == Pick.rule_words(false) and bare.picker._sub.text == "A fresh camp", "the picker with no runner reads '%s' / '%s'" % [bare.picker._sub.text if bare.picker != null else "", bare.picker._rule.text if bare.picker != null else ""])
+	bare.back_to_title()
+	bare.free()
+	print("r8 test runner ok: a level-1 runner at level 12 plays the level-14 test Poacher; his own to level %d; kit rolled at his level at every one (the game's own fight by car park level: %s)" % [edge, ", ".join(lows)])
+
+
 ## The run log (10 Nov, Matt: "is there anything in the slice that records this info for you to read? If not let's
 ## build it"): a run's end adds one line to slice_runs.jsonl - the run's figures, the game's own fight, the settings in
 ## force, you over the game's when cleared - and the headless smoke's own runs write none.
@@ -48915,4 +48989,5 @@ func _r6_checks(_main) -> void:
 	_r6_kick_checks(_main)
 	_r6_end_checks(_main)
 	_r7_log_checks(_main)
+	_r8_test_runner_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

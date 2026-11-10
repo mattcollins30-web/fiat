@@ -81,6 +81,7 @@ const G_HARD_SURE := true            # no hard man by the last gang: it brings o
 const MAN_HP_X := 0.5                # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man  (round 4, Matt: "0.5x HP is the better setting")
                                      # takes ~38 rounds, at 0.25 ~10; the pause's "Gang HP" switches it live (README)
 const SITE_LEVEL_UNDER := 2          # (merge) the car park's level: the runner's less this, at least 1
+const TEST_RUNNER_UNDER := 3         # (10 Nov) a camp's runner more than this many levels under the car park picked: the test Poacher plays it
 const G_MAN_DPS_X := 1.0             # their fire: the sim's times this (1: the game's maths)
 const G_MAN_ROF := 5.0               # (build 76) a man's rounds a second within a burst (was 1.6, one round at a time)
 const G_MAN_RANGE := 1500.0          # px: a man fires from this near, in sight
@@ -190,7 +191,7 @@ const G_HOLD_CHECK_S := 0.5          # the waiting men: how often the gang check
 const G_HOLD_FILE_PX := 70.0   # the waiting men out of his sight: a place each, this far apart, in the cover's shadow
 const G_HOLD_FILE := 10        # ... and this many rows deep at most
 # ---------------------------------------------------------------- H: the start, the HUD, the pause (build 76)
-const H_LEVEL_FRESH := 12            # the level picker's default on a fresh camp (the fixture's car park)
+const H_LEVEL_FRESH := 12            # the level picker's default on a fresh camp (the level-14 test Poacher's car park)
 const H_LEVEL_STEPS := 3             # the picker offers this many levels either side of the default
 
 # -- sound (round 6, board E part 2): the game's own sounds, placed

@@ -8334,3 +8334,16 @@ lost, accuracy, kills, the gang reached, and the game's own fight; a cleared run
 over the game's. No screen changed. The smoke's own runs write none; its check (r7) proved red three ways; a review,
 lint 0, the full smoke on Matt's machine. Round 6 itself is eaff9e0. The same morning, Matt on the review of what the
 shift keeps: "want to keep both and allow auto runs on already cleared sites" - logged in the backlog, no build.
+
+The slice's test runner per level (10 Nov; Matt, after two runs logged dead in 25 s - his fresh camp's level-1 Poacher
+and claw hammer at level 12: "level 12 with a hammer is impossible - can you provide some level appropriate gear per
+level selection?", then "go" on the automatic cut-off): the camp's runner plays up to 3 levels over his own; past that,
+or with no runner, a test Poacher two levels over the car park in kit rolled at his level (level 12 is the level-14
+Poacher as before, to the figure). The picker says which under its row ("Your runner plays up to 3 levels over their
+own – above that, a test Poacher plays"; the language pass's wording), the HUD's plate reads "Test Poacher"; the run
+log carries the camp's own level. Checked: r8 in the smoke, proved red four ways; a review and a language pass; lint
+0; the full smoke on Matt's machine. For Matt: with the picker's row starting at level 9, a runner under level 6
+never plays his own; with the test Poacher the Kit room has no camp stash; past the low 20s the test Poacher's two
+guns fall well behind (the game's own fight 14 minutes at level 22, two hours at 50); the level-14 Poacher's kit was
+always rolled at item level 14, which the game's own rule wouldn't let a level-14 runner wear (wear 16) - left as it
+was so earlier figures still compare.

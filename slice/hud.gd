@@ -304,6 +304,7 @@ func read_state() -> Dictionary:
 			st["waiting"] = int(g.waiting_count())
 	st["cls"] = str(ctx.get("class_name", "Poacher"))
 	st["level"] = int(ctx.get("level", 1))
+	st["test_runner"] = bool(ctx.get("fixture", false))     # (10 Nov) the test Poacher, not the camp's runner
 	st["portrait"] = str(ctx.get("portrait", ""))
 	if r == null or not is_instance_valid(r):
 		return st
@@ -353,7 +354,7 @@ func show_state(st: Dictionary) -> void:
 	# the runner
 	_face.texture = face_picture(str(st.get("portrait", "")), str(st.get("cls", "")))
 	_face.visible = _face.texture != null
-	_me_name.text = UI.dots("%s · level %d" % [str(st.get("cls", "")), int(st.get("level", 0))])
+	_me_name.text = UI.dots("%s%s · level %d" % ["Test " if bool(st.get("test_runner", false)) else "", str(st.get("cls", "")), int(st.get("level", 0))])
 	var hp: int = int(st.get("hp", 0))
 	var hp_max: int = maxi(1, int(st.get("hp_max", 1)))
 	_me_hp.text = "%s / %s" % [Fmt.group(hp), Fmt.group(hp_max)]

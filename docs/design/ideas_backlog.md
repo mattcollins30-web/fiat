@@ -168,6 +168,12 @@ and onto the board for now"):
 - Melee, damage over time and splash. Matt: "melee needs some thought along with dots and splash damage."
 Each needs the talk, its mockup and Matt's word before a build.
 
+The slice's test runner (10 Nov, built on Matt's "go"; his words: "level 12 with a hammer is impossible - can you
+provide some level appropriate gear per level selection?"). Left open from its review, for the talk: a runner under
+level 6 never plays his own (the picker's row starts at level 9); with the test Poacher the Kit room has no camp
+stash; past the low 20s the test Poacher's two guns fall well behind the gangs; a choice of runner on the picker
+("Your runner" or "Test runner") would need its mockup; other classes wait on their skills.
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison

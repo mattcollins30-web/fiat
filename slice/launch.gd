@@ -1,6 +1,7 @@
 extends Node
 ## The slice opened from the title (BUILD72): "Try the ARPG slice". It loads the camp's runner (the autosave's, read
-## into a Sim of its own - the save file is only read) or, on a fresh camp, the bridge's level-14 Poacher fixture;
+## into a Sim of its own - the save file is only read) or, with no runner or one too far under the level picked, the
+## bridge's test Poacher (10 Nov: two levels over the car park, in kit rolled for his level);
 ## starts the world beside the title's shell (hidden meanwhile); puts the HUD on the world's HUD layer and the pause
 ## and the end screen over it; and on Back to the title frees it all and shows the title again. Nothing goes back to
 ## the camp: the slice is a sandbox.
@@ -97,7 +98,7 @@ func show_picker(def: int) -> void:
 	add_child(over)
 	picker = PickScript.new()
 	var fresh: bool = PickScript.is_fresh(_camp.sim)
-	picker.setup(def, "Poacher" if _camp.sim == null else str(_camp.sim.cls), SliceBridge.FIXTURE_LEVEL if _camp.sim == null else int(_camp.sim.level()), fresh)
+	picker.setup(def, "Poacher" if _camp.sim == null else str(_camp.sim.cls), SliceBridge.FIXTURE_LEVEL if _camp.sim == null else int(_camp.sim.level()), fresh, _camp.sim != null)
 	over.add_child(picker)
 	picker.picked.connect(start)
 	picker.to_title.connect(back_to_title)

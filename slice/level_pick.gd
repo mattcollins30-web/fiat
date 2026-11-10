@@ -27,6 +27,7 @@ var _kicker: Label
 var _title: Label
 var _sub: Label
 var _mark: Label                      # under the default's button: "Reach" or "Fresh camp"
+var _rule: Label                      # (10 Nov) who plays it: the camp's runner, or the test Poacher in kit for the level
 
 
 ## A fresh camp: no runner, or a runner who's cleared nothing yet.
@@ -70,18 +71,26 @@ func _init() -> void:
 	add_child(dim)
 
 
-## The card for the camp's runner (`cls_v`, `level_v`; `fresh` with no runner) and its default level.
-func setup(def: int, cls_v: String, level_v: int, fresh: bool) -> void:
+## Who plays a level, said under the row: with a runner at camp, the rule; with none, the test Poacher always.
+static func rule_words(has_runner: bool) -> String:
+	if not has_runner:
+		return "No runner to send – a test Poacher plays, %d levels over the car park, with kit to match" % SliceTuning.SITE_LEVEL_UNDER
+	return "Your runner plays up to %d levels over their own – above that, a test Poacher plays" % SliceTuning.TEST_RUNNER_UNDER
+
+
+## The card for the camp's runner (`cls_v`, `level_v`; `fresh` with no runner or nothing cleared) and its default
+## level. `has_runner`: the camp has one (a fresh camp may: a level-1 runner who's cleared nothing).
+func setup(def: int, cls_v: String, level_v: int, fresh: bool, has_runner := true) -> void:
 	default_level = def
 	levels = levels_round(def)
 	var n: int = levels.size()
 	var w: float = 2.0 * PAD + n * LV_W + (n - 1) * LV_GAP
-	var h: float = HEAD + LV_H + 34.0 + 30.0 + 52.0 + PAD
+	var h: float = HEAD + LV_H + 34.0 + 30.0 + 30.0 + 52.0 + PAD
 	_card = UI.panel(self, Rect2(0, 0, w, h), UI.box(Pal.PANEL, 10, 1, Pal.CARD_LINE))
 	_kicker = UI.label(_card, Rect2(PAD, 30, w - 2.0 * PAD, 20), "THE ARPG SLICE", "SemiBold", 14, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	UI.track(_kicker, 1)
 	_title = UI.label(_card, Rect2(PAD, 52, w - 2.0 * PAD, 40), "Pick the car park's level", "Bold", 30, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var who: String = "A fresh camp: a level %d %s" % [level_v, cls_v] if fresh else "%s, level %d · your reach, level %d" % [cls_v, level_v, def]
+	var who: String = ("A fresh camp: a level %d %s" % [level_v, cls_v] if has_runner else "A fresh camp") if fresh else "%s, level %d · your reach, level %d" % [cls_v, level_v, def]
 	_sub = UI.label(_card, Rect2(PAD, 94, w - 2.0 * PAD, 24), "", "Regular", 16, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	UI.fit(_sub, [who, "Your reach, level %d" % def if not fresh else "A fresh camp"])
 	for k in range(n):
@@ -94,6 +103,7 @@ func setup(def: int, cls_v: String, level_v: int, fresh: bool) -> void:
 		buttons.append(b)
 		if lv == def:
 			_mark = UI.label(_card, Rect2(b.position.x - 20.0, HEAD + LV_H + 8.0, LV_W + 40.0, 22), "Fresh camp" if fresh else "Reach", "SemiBold", 14, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_rule = UI.label(_card, Rect2(PAD, HEAD + LV_H + 38.0, w - 2.0 * PAD, 22), rule_words(has_runner), "Regular", 15, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var back := UI.button(_card, Rect2(PAD, h - PAD - 52.0, 260, 52), false)
 	back.text = "Back to the title"
 	back.pressed.connect(_on_title)
@@ -138,7 +148,7 @@ func default_button() -> Button:
 
 
 func text_nodes() -> Array:
-	return [_kicker, _title, _sub, _mark] + buttons
+	return [_kicker, _title, _sub, _mark, _rule] + buttons
 
 
 func card_rect() -> Rect2:
