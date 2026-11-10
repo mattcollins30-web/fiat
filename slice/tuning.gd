@@ -30,7 +30,9 @@ const SHOT_RANGE := 2200.0           # a round flies this far
 const SPREAD_DEG := 1.2              # a round's spread either side (the sim's misses are its own; this is the look)
 const BARREL := 58.0                 # the muzzle, out from the runner's centre
 const SWAP_S := 0.3                 # a swap to the spare: no fire for this long
-const KNOCK_PX := 14.0               # a man knocked back by a hit
+const KNOCK_PX := 14.0               # (10 Nov) a second of a gun's hits shoves a man this far: a round's shove is this over its rate (a shell's shared by its pellets)
+const KNOCK_MAX_PX := 20.0           # ...and no more than this is ever outstanding
+const KNOCK_SPEED := 300.0           # ...given at this pace, px a second
 const HURT_FLASH_S := 0.12           # the runner's token flashes when hit
 const UNDER_FIRE_S := 1.5            # hit within this long, he's under fire (a search slows)
 
@@ -78,8 +80,8 @@ const G_QUIET_MAX_S := 10.0          # the park quiet (every man down): the next
 const G_STEP_UP_S := 1.2            # (round 4) a man of the front down: the next steps up after this beat
 const G_HARD_SURE := true            # no hard man by the last gang: it brings one (the slice shows him)
 # Their fire
-const MAN_HP_X := 0.5                # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man  (round 4, Matt: "0.5x HP is the better setting")
-                                     # takes ~38 rounds, at 0.25 ~10; the pause's "Gang HP" switches it live (README)
+const MAN_HP_X := 0.06               # (10 Nov, Matt: "Enemy HP is off - you don't do any damage to them": about 12 landed rounds of the test Poacher's rifle a man at level 12; 0.5 before, 96-133 rounds since round 5's real rates) # (merge, the coordinator's call for feel) a man's HP: the sim's times this - at 1 a man  (round 4, Matt: "0.5x HP is the better setting")
+                                     # the pause's "Gang HP" switches it live (README)
 const SITE_LEVEL_UNDER := 2          # (merge) the car park's level: the runner's less this, at least 1
 const TEST_RUNNER_UNDER := 3         # (10 Nov) a camp's runner more than this many levels under the car park picked: the test Poacher plays it
 const G_MAN_DPS_X := 1.0             # their fire: the sim's times this (1: the game's maths)
@@ -160,7 +162,7 @@ const G_HIT_OPEN := 0.4              # Matt's figure on the board: this share of
                                      # their aim's error is spread so a round crosses his token this often (led for his move)
 const G_LEAD := 1.0                  # they lead a moving runner by this share of the round's flight
 const G_MOVING_X := 0.75             # a man on the move: his share of hits times this
-const THEIR_DMG_X := 1.0             # (build 76) the "Gang damage" test knob's start (×0.5 / ×1 / ×1.5 on the pause, live:
+const THEIR_DMG_X := 2.0             # the "Gang damage" test knob's start (10 Nov: ×2, its own - round 6's tie to gang HP gone; ×2 / ×3 / ×1 on the pause, live:
                                      # ctx["their_dmg_x"]); a round's damage is the sim's damage a second over their rate, times this
 # (round 6, board E) Leaning out: a man behind cover with no line to the runner steps sideways to the nearest spot with
 # one, fires while he's out, and ducks back - so about three have him in sight and their fire lands at the game's rate.

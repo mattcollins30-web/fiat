@@ -46617,7 +46617,7 @@ func _h72_slice_checks(main) -> void:
 			run.pause.buttons[2].pressed.emit()
 			seen_x.append(float(ctx["man_hp_x"]))
 			_check(is_equal_approx(plain_man.hp_max, base_hp * float(ctx["man_hp_x"])) and run.pause.buttons[2].text == "Gang HP " + PauseScript72.hp_words(float(ctx["man_hp_x"])), "Their HP ×%.2f left a man at %.0f of %.0f ('%s')" % [float(ctx["man_hp_x"]), plain_man.hp_max, base_hp, run.pause.buttons[2].text])
-		_check(seen_x == [0.25, 0.15, 0.5], "Gang HP steps %s from ×0.5, not ×0.25, ×0.15, ×0.5 (round 4: ×0.5 the start)" % str(seen_x))
+		_check(seen_x == [0.1, 0.04, 0.06], "Gang HP steps %s from ×0.06, not ×0.1, ×0.04, ×0.06 (10 Nov: ×0.06 the start)" % str(seen_x))
 	hud.show_state(hud.read_state())
 	_check(hud._site_clock.text.begins_with("Gang 1 of %d" % int(site["gangs"])), "the HUD's clock with the first gang in: '%s'" % hud._site_clock.text)
 	# a hit: what the man takes is the bridge's figure for that round on him
@@ -47561,28 +47561,31 @@ func _h73_round2_checks(main) -> void:
 	var r = w.runner
 	var hud = run.hud
 	# 1. gang HP: ×1 gone, ×0.15 in, ×0.25 the start
-	_check(PauseScript72.HP_STEPS == [0.5, 0.25, 0.15] and is_equal_approx(SliceTuning.MAN_HP_X, 0.5) and run.pause.buttons[2].text == "Gang HP ×0.5", "the pause's gang HP: %s, '%s'" % [str(PauseScript72.HP_STEPS), run.pause.buttons[2].text])
+	_check(PauseScript72.HP_STEPS == [0.06, 0.1, 0.04] and is_equal_approx(SliceTuning.MAN_HP_X, 0.06) and run.pause.buttons[2].text == "Gang HP ×0.06", "the pause's gang HP: %s, '%s'" % [str(PauseScript72.HP_STEPS), run.pause.buttons[2].text])
 	# 3. (build 76) the magazine's knob gone (real sizes, G's): the pause's fourth button is their damage, ×1 / ×1.5 / ×0.5
 	# live into the ctx the bridge reads, and the HUD's test line says so
 	var g0: Dictionary = ctx["guns"][0]
 	var seen: Array = []
 	_check(run.pause.buttons[3].text == "Gang damage ×2" and is_equal_approx(float(ctx["their_dmg_x"]), SliceTuning.THEIR_DMG_X), "the pause's fourth test setting: '%s'" % run.pause.buttons[3].text)
 	hud.show_state(hud.read_state())
-	_check(hud._tests.text == "Test settings: gang HP ×0.5 · gang damage ×2", "the HUD's test line at the start (round 6's tie): '%s'" % hud._tests.text)
+	_check(hud._tests.text == "Test settings: gang HP ×0.06 · gang damage ×2", "the HUD's test line at the start: '%s'" % hud._tests.text)
 	for k in range(3):
 		run.pause.buttons[3].pressed.emit()
 		seen.append([float(ctx["their_dmg_x"]), run.pause.buttons[3].text])
-	_check(seen == [[1.5, "Gang damage ×3"], [0.5, "Gang damage ×1"], [1.0, "Gang damage ×2"]], "the pause's gang damage steps, the figure in force: %s" % str(seen))
-	# (round 6's language pass) the button reads the figure in force, so the gang HP knob moves it too
+	_check(seen == [[3.0, "Gang damage ×3"], [1.0, "Gang damage ×1"], [2.0, "Gang damage ×2"]], "the pause's gang damage steps, the figure in force: %s" % str(seen))
+	# (10 Nov, Matt's "go") gang damage is its own again: the gang HP knob no longer moves it (round 6's tie made ×0.15
+	# HP ×6.7 damage, so making them killable made them deadlier)
 	var hp_was: float = run.pause.hp_x
-	run.pause.show_hp_x(0.15)
-	var at_15: String = run.pause.buttons[3].text
+	run.pause.show_hp_x(0.04)
+	var at_low: String = run.pause.buttons[3].text
+	ctx["man_hp_x"] = 0.04
+	var x_low: float = SliceBridge.their_x(ctx)
+	ctx["man_hp_x"] = hp_was
 	run.pause.show_hp_x(hp_was)
-	_check(at_15 == "Gang damage ×6.7" and run.pause.buttons[3].text == "Gang damage ×2", "the gang damage button at gang HP ×0.15: '%s', back at ×0.5 '%s'" % [at_15, run.pause.buttons[3].text])
+	_check(at_low == "Gang damage ×2" and run.pause.buttons[3].text == "Gang damage ×2" and is_equal_approx(x_low, 2.0) and is_equal_approx(SliceBridge.their_x(ctx), 2.0), "gang damage moved with gang HP: at ×0.04 '%s' (×%.2f in force), back '%s'" % [at_low, x_low, run.pause.buttons[3].text])
 	run.pause.buttons[3].pressed.emit()
 	hud.show_state(hud.read_state())
-	# (round 6) their damage is tied to gang HP: ×0.5 HP is ×2, and the pause's ×1.5 on top makes ×3
-	_check(hud._tests.text == "Test settings: gang HP ×0.5 · gang damage ×3", "the HUD's test line: '%s'" % hud._tests.text)
+	_check(hud._tests.text == "Test settings: gang HP ×0.06 · gang damage ×3", "the HUD's test line: '%s'" % hud._tests.text)
 	_check(not run.pause.text_nodes().any(func(l): return str(l.text).contains("Magazine")), "the magazine's test knob is still on the pause")
 	# 3. (build 76, G) MAG_X gone: the fixture's rifle is an AR with its kind's magazine (H: the pause's and the HUD's lines)
 	_check(str(g0["kind"]) == "ar" and int(g0["mag"]) == 30 and int(r.gun()["mag"]) == 30 and r.rounds[0] == 30 and not ctx.has("mag_x"),
@@ -48269,9 +48272,9 @@ func _g76_checks(main) -> void:
 		_check(cover_rate < open_rate * 0.75, "behind cover hiding half of him %.0f%% landed, in the open %.0f%%" % [cover_rate * 100.0, open_rate * 100.0])
 	# their round's damage: the sim's damage a second over their rate; the knob times it, live
 	ctx["their_dmg_x"] = 1.0
-	ctx["man_hp_x"] = 1.0  # round 6: their damage is tied to the gang HP knob; these read the untied figure
+	ctx["man_hp_x"] = 1.0
 	var one: float = SliceBridge.their_round(ctx, mstate)
-	_check(is_equal_approx(one * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, float(mstate["dps"])) and is_equal_approx(SliceTuning.THEIR_DMG_X, 1.0), "their round %.2f at %.2f a second, %.0f%% landing, isn't the sim's %.2f a second" % [one, SliceBridge.their_rps(), SliceTuning.G_HIT_OPEN * 100.0, float(mstate["dps"])])
+	_check(is_equal_approx(one * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, float(mstate["dps"])) and is_equal_approx(SliceTuning.THEIR_DMG_X, 2.0), "their round %.2f at %.2f a second, %.0f%% landing, isn't the sim's %.2f a second" % [one, SliceBridge.their_rps(), SliceTuning.G_HIT_OPEN * 100.0, float(mstate["dps"])])
 	var took: Array = []
 	for x in [0.5, 1.0, 1.5]:
 		ctx["their_dmg_x"] = x
@@ -48353,7 +48356,7 @@ func _r5_checks(main) -> void:
 	# 1. their round: landed damage a second (their rate x the share landing in the open) is the sim's figure
 	var ms := {"dps": 12.0}
 	ctx["their_dmg_x"] = 1.0
-	ctx["man_hp_x"] = 1.0  # round 6: their damage is tied to the gang HP knob; these read the untied figure
+	ctx["man_hp_x"] = 1.0
 	var per: float = SliceBridge.their_round(ctx, ms)
 	_check(is_equal_approx(per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN, 12.0), "their round %.2f lands %.2f a second in the open, not the sim's 12" % [per, per * SliceBridge.their_rps() * SliceTuning.G_HIT_OPEN])
 	# 2. the reload: the same share of the fight firing as the sim's gun (its magazine over its rate, and the reload)
@@ -48536,6 +48539,102 @@ func _r6_end_checks(main) -> void:
 	print("r6 end ok: the game's own fight at level 12 %s, %d HP" % [Fmt.mss(float(game["time_s"])), int(round(float(game["hp_lost"])))])
 
 
+class R9Target:
+	extends Node2D
+	var radius := 34.0
+	var px := -1.0
+	func is_dead() -> bool:
+		return false
+	func take_shot(_shot: Dictionary) -> Dictionary:
+		return {"damage": 10, "headshot": false, "killed": false}
+	func knock(_dir: Vector2, px_v: float) -> void:
+		px = px_v
+
+
+## From Matt's play of round 6 (10 Nov: "Enemy HP is off - you don't do any damage to them - also thier knock back is
+## too strong - hitting them flings them across the map"): a man at level 12 falls to about a dozen landed rounds of the
+## test Poacher's rifle; a second of its hits shoves him KNOCK_PX and no burst flings him; gang damage is its own.
+func _r9_feel_checks(main) -> void:
+	var world = load("res://slice/slice.tscn").instantiate()
+	main.add_child(world)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	world.start(ctx, 72)
+	var g: Dictionary = ctx["guns"][0]
+	var counts: Array = []
+	for sd in [72, 743201, 764104]:     # the fixture's, and the two Matt played
+		var c: Dictionary = SliceBridge.runner_ctx(null, sd, 12)
+		var ms: Dictionary = SliceBridge.man_state(c, 0)
+		var rg := RandomNumberGenerator.new()
+		rg.seed = 5
+		var n := 0
+		while n < 400:
+			n += 1
+			if bool(SliceBridge.shot_damage(c, c["guns"][0], ms, rg, false, 1.0).get("killed", false)):
+				break
+		counts.append(n)
+	_check(counts.min() >= 8 and counts.max() <= 18, "a level-12 man takes %s landed rounds of the test Poacher's rifle, not about a dozen (gang HP ×%.2f)" % [str(counts), SliceTuning.MAN_HP_X])
+	# the knock: a second of the rifle's hits, then a burst of forty in one frame
+	for k in range(60 * 12):
+		_r6_tick(world)
+	var men: Array = world.men()
+	_check(not men.is_empty(), "no man in the car park after 12 s to knock")
+	var far := 0.0
+	var top := 0.0
+	var burst := 0.0
+	if not men.is_empty():
+		var mn = men[0]
+		var rof: float = float(g.get("rof", 1.0))
+		var per: int = maxi(1, int(round(60.0 / rof)))
+		# he walks as he likes meanwhile: the shove is what leaves knock_left, and his speed is his walk and it
+		for k in range(60 + 30):
+			if k < 60 and k % per == 0:
+				mn.knock(Vector2.RIGHT, SliceTuning.KNOCK_PX / rof)
+			var left: Vector2 = mn.knock_left
+			_r6_tick(world)
+			far += (left - mn.knock_left).length()
+			top = maxf(top, mn.velocity.length())
+		_check(far >= SliceTuning.KNOCK_PX * 0.8 and far <= SliceTuning.KNOCK_PX * 1.2 and top <= SliceTuning.KNOCK_SPEED + SliceTuning.G_MAN_SPEED + 1.0, "a second of the rifle's hits shoved him %.1f px, his speed up to %.0f px a second, not about %.0f px (he was flung 3,417 px at 2,330)" % [far, top, SliceTuning.KNOCK_PX])
+		for k in range(40):
+			mn.knock(Vector2.RIGHT, SliceTuning.KNOCK_PX)
+		_check(mn.knock_left.length() <= SliceTuning.KNOCK_MAX_PX + 0.01, "forty hits at once left %.0f px of shove outstanding, past %.0f" % [mn.knock_left.length(), SliceTuning.KNOCK_MAX_PX])
+		var top2 := 0.0
+		for k in range(60):
+			var left2: Vector2 = mn.knock_left
+			_r6_tick(world)
+			burst += (left2 - mn.knock_left).length()
+			top2 = maxf(top2, mn.velocity.length())
+		_check(burst <= SliceTuning.KNOCK_MAX_PX + 0.01 and mn.knock_left.length() < 0.01 and top2 <= SliceTuning.KNOCK_SPEED + SliceTuning.G_MAN_SPEED + 1.0, "forty hits at once shoved him %.0f px at up to %.0f px a second, %.1f left" % [burst, top2, mn.knock_left.length()])
+		# (the review) the shove moves him: on a shove's frame his speed is his walk and the shove over the frame
+		mn.knock(Vector2.RIGHT, 5.0)
+		var owed: Vector2 = mn.knock_left
+		_r6_tick(world)
+		var paid: Vector2 = owed - mn.knock_left
+		_check(paid.length() > 4.0 and (mn.velocity - mn._walk_v).distance_to(paid * 60.0) < 1.0, "a shove of %.1f px in a frame moved him at %s over his walk, not %s" % [paid.length(), str(mn.velocity - mn._walk_v), str(paid * 60.0)])
+	# ...and what a landed round asks for: KNOCK_PX over the gun's rate, a shell's shared by its pellets
+	var rounds = load("res://slice/round.gd").layer(world)
+	var asked: Array = []
+	for kind in [["ar", 1.0], ["bolt", 1.0], ["shotgun", 1.0 / 8.0]]:
+		var tgt := R9Target.new()
+		world.men_root.add_child(tgt)
+		var kr: float = float(SliceTuning.G_KINDS.get(str(kind[0]), {}).get("rate", 0.0))
+		var gun := g.duplicate()
+		gun["rof"] = kr
+		rounds._hit_man({"gun": gun, "dir": Vector2.RIGHT, "from": Vector2.ZERO, "share": float(kind[1]), "press": {}}, tgt, Vector2(100, 0))
+		asked.append(tgt.px)
+		_check(kr > 0.0 and absf(tgt.px - SliceTuning.KNOCK_PX * float(kind[1]) / maxf(1.0, kr)) < 0.001, "a landed %s round (%.1f a second, share %.3f) asked for a shove of %.2f px" % [str(kind[0]), kr, float(kind[1]), tgt.px])
+		tgt.queue_free()
+	_check(asked[0] < 2.0 and asked[1] > 10.0, "the rifle's round shoves %.2f px and a bolt's %.2f: not a second's worth each" % [asked[0], asked[1]])
+	# gang damage its own: whatever the gang's HP
+	var each: Array = []
+	for hx in [1.0, 0.06, 0.04]:
+		ctx["man_hp_x"] = hx
+		each.append(SliceBridge.their_x(ctx))
+	ctx["man_hp_x"] = SliceTuning.MAN_HP_X
+	_check(each == [SliceTuning.THEIR_DMG_X, SliceTuning.THEIR_DMG_X, SliceTuning.THEIR_DMG_X] and is_equal_approx(SliceTuning.THEIR_DMG_X, 2.0), "gang damage by gang HP ×1, ×0.06, ×0.04: %s, not ×2 at each" % str(each))
+	world.queue_free()
+	print("r9 feel ok: a level-12 man %s landed rifle rounds; a second of hits %.0f px (top %.0f px a second), forty at once %.0f px; gang damage ×%.0f whatever their HP" % [str(counts), far, top, burst, SliceTuning.THEIR_DMG_X])
+
+
 ## The test runner per level (10 Nov, Matt: "level 12 with a hammer is impossible - can you provide some level
 ## appropriate gear per level selection?"): a camp's runner more than TEST_RUNNER_UNDER levels under the car park picked
 ## gives way to the test Poacher, SITE_LEVEL_UNDER levels over it in kit he can wear; within it, the camp's own plays.
@@ -48643,7 +48742,7 @@ func _r7_log_checks(main) -> void:
 		_check(is_equal_approx(float(a["time_s"]), 228.0) and int(a["hp_lost"]) == 612 and int(a["kills"]) == 20 and int(a["shots"]) == 200 and is_equal_approx(float(a["accuracy"]), 0.41) and int(a["finds"]) == 1, "the cleared run's figures: %s" % str(a))
 		_check(is_equal_approx(float(a["game_time_s"]), snappedf(float(game["time_s"]), 0.1)) and int(a["game_hp_lost"]) == int(round(float(game["hp_lost"]))), "the game's fight on the line: %s against %s" % [str(a), str(game)])
 		_check(absf(float(a["time_x"]) - 228.04 / float(game["time_s"])) < 0.001 and absf(float(a["hp_lost_x"]) - 612.0 / float(game["hp_lost"])) < 0.001, "you over the game's: time x%s, HP lost x%s" % [str(a.get("time_x")), str(a.get("hp_lost_x"))])
-		_check(is_equal_approx(float(a["gang_hp_x"]), 0.25) and is_equal_approx(float(a["gang_damage_x"]), SliceBridge.their_x(run.world.ctx)) and is_equal_approx(float(a["gang_damage_x"]), SliceTuning.THEIR_DMG_X / 0.25), "the settings in force on the line: gang HP x%s, gang damage x%s" % [str(a["gang_hp_x"]), str(a["gang_damage_x"])])
+		_check(is_equal_approx(float(a["gang_hp_x"]), 0.25) and is_equal_approx(float(a["gang_damage_x"]), SliceBridge.their_x(run.world.ctx)) and is_equal_approx(float(a["gang_damage_x"]), SliceTuning.THEIR_DMG_X), "the settings in force on the line: gang HP x%s, gang damage x%s" % [str(a["gang_hp_x"]), str(a["gang_damage_x"])])
 		_check(a.has("gang_reached") and a.has("men_left") and a.has("hp_end") and a.has("last_legs_used") and (a["guns"] as Array).size() >= 1, "the line lacks where the run had got to: %s" % str(a))
 		_check(str(b["outcome"]) == "died" and int(b["hp_lost"]) == 204 and not b.has("time_x") and not b.has("hp_lost_x"), "a run that died carries a figure against the game's: %s" % str(b))
 	else:
@@ -48925,10 +49024,10 @@ func _r6_review_checks(world) -> void:
 
 
 func _r6_checks(_main) -> void:
-	# 1. stood in the open he loses about the game's own rate times the tie (gang HP x0.5: their damage x2)
+	# 1. stood in the open he loses about the game's own rate times gang damage (x2; round 6's tie to gang HP went 10 Nov)
 	var st: Dictionary = _r6_stood(60.0)
 	var want: float = float(st["game"]) * float(st["tie"])
-	_check(is_equal_approx(float(st["tie"]), 2.0), "the tie at gang HP x0.5 is x%.2f, not x2" % float(st["tie"]))
+	_check(is_equal_approx(float(st["tie"]), 2.0), "gang damage in force is x%.2f, not x2" % float(st["tie"]))
 	_check(float(st["rate"]) >= want * 0.6 and float(st["rate"]) <= want * 1.4, "stood in the open he loses %.2f HP a second; the game's %.2f x the tie %.1f is %.2f" % [float(st["rate"]), float(st["game"]), float(st["tie"]), want])
 	_check(float(st["seeing"]) >= 1.8, "stood in the open %.2f men have him in sight on average, not about three" % float(st["seeing"]))
 	# 2. the search (part 3). Men on their way in haven't lost him; only a man who sees him says where he is
@@ -48990,4 +49089,5 @@ func _r6_checks(_main) -> void:
 	_r6_end_checks(_main)
 	_r7_log_checks(_main)
 	_r8_test_runner_checks(_main)
+	_r9_feel_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

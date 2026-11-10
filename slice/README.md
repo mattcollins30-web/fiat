@@ -24,9 +24,10 @@ fire, the way out. Out: every other site and class, final art (tokens drawn in c
 
 ## The two tuning knobs (build 72, the coordinator's call for feel)
 
-- `MAN_HP_X` (tuning.gd, default 0.5 since round 4, Matt: "0.5x HP is the better setting"): a gang man's HP is the
-  sim's times this. At the game's own figures a man takes about 38 rounds - a sponge under your own hands. The pause's
-  "Gang HP" button (a test setting) switches ×0.5, ×0.25 and ×0.15 live.
+- `MAN_HP_X` (tuning.gd, default 0.06 since 10 Nov, Matt: "Enemy HP is off - you don't do any damage to them"): a
+  gang man's HP is the sim's times this - about a dozen landed rounds of the test Poacher's rifle a man at level 12
+  (11-16 by his kit's roll). It was 0.5 from round 4, which round 5's real fire rates turned into 96-133 rounds. The
+  pause's "Gang HP" button (a test setting) switches ×0.06, ×0.1 and ×0.04 live.
 - (build 76) The car park's level is picked at the start (level_pick.gd, H): the default is the camp's reach (its
   furthest cleared level, Sim.deepest_cleared_level), or 12 on a fresh camp (no runner, or nothing cleared), with three
   levels either side (H_LEVEL_STEPS), never under level 9: levels 1 to 9 play the same fight (round 5's review). The
@@ -42,10 +43,12 @@ Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left 
 / RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
 X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
-The test knobs on the pause: "Gang HP" ×0.5 (MAN_HP_X, the start) / ×0.25 / ×0.15, and "Gang damage" (round 6; build
-76's "Their damage"): THEIR_DMG_X ×1 (the start) / ×1.5 / ×0.5, tied to the gang HP knob (SliceBridge.their_x: the knob
-over MAN_HP_X), so a gang at half HP deals double and the fight costs about what the game's would. The button and the
-HUD show the figure in force: "Test settings: gang HP ×0.5 · gang damage ×2". The magazine's knob went with build 76's
+The test knobs on the pause: "Gang HP" ×0.06 (MAN_HP_X, the start) / ×0.1 / ×0.04, and "Gang damage": THEIR_DMG_X
+×2 (the start) / ×3 / ×1, its own (10 Nov: round 6 tied it to the gang HP knob, so turning their HP down turned their
+damage up - ×6.7 at ×0.15 - and that went on Matt's "go"). The button and the HUD show the figure in force: "Test
+settings: gang HP ×0.06 · gang damage ×2". A hit's shove (10 Nov, Matt: "hitting them flings them across the map"):
+KNOCK_PX over the gun's rate a round, so a second of any gun's hits moves a man about 14 px, never more than
+KNOCK_MAX_PX outstanding; it was added to his speed every frame and kept (3,417 px in a second of rifle fire). The magazine's knob went with build 76's
 real magazine sizes by gun kind. The gun's line over its rounds reads "AR · 10 a second".
 
 ## Round 6 (9 Nov, board E; Matt: "Build it")

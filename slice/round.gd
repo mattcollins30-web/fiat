@@ -205,7 +205,7 @@ func _hit_man(rd: Dictionary, mn, p: Vector2) -> Dictionary:
 	if world.get("fx") != null and world.fx.has_method("hit_flash"):
 		world.fx.hit_flash(mn)
 	if mn.has_method("knock"):
-		mn.knock(dir, T.KNOCK_PX * float(rd["share"]))
+		mn.knock(dir, T.KNOCK_PX * float(rd["share"]) / maxf(1.0, float(g.get("rof", 1.0))))
 	if world.has_method("shake"):
 		world.shake(T.SHAKE_HIT)
 	world.hit_landed.emit(mn, res, p)

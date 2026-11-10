@@ -50,7 +50,8 @@ var stuck_t := 0.0
 var detour := Vector2.ZERO
 var detour_t := 0.0
 var flash_t := 0.0
-var knock_v := Vector2.ZERO
+var knock_left := Vector2.ZERO          # (10 Nov) the shove still to give him, in pixels: given at KNOCK_SPEED, never added to his walk
+var _walk_v := Vector2.ZERO             # his own walk, apart from any shove
 var tracer_to := Vector2.ZERO
 var tracer_t := 0.0
 var dead := false
@@ -119,9 +120,11 @@ func take_shot(shot: Dictionary) -> Dictionary:
 	return res
 
 
-## W's knock on a hit: a shove and the flash.
-func knock(dir: Vector2, strength: float) -> void:
-	knock_v += dir.normalized() * strength * 10.0
+## W's knock on a hit: a shove of `px` pixels along the round and the flash. (10 Nov, Matt: "hitting them flings them
+## across the map" - the shove was added to his speed every frame and kept, ten hits a second.) Hits add up to
+## KNOCK_MAX_PX of shove outstanding and no further.
+func knock(dir: Vector2, px: float) -> void:
+	knock_left = (knock_left + dir.normalized() * maxf(0.0, px)).limit_length(T.KNOCK_MAX_PX)
 	flash_t = T.G_FLASH_S
 
 
@@ -242,7 +245,9 @@ func step(dt: float) -> void:
 		_move(dt)
 		_fire(dt, rp, dist)
 	else:
-		velocity = velocity.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)
+		_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)     # (the review) stunned: his walk runs down, and no shove waits for him
+		velocity = _walk_v
+		knock_left = Vector2.ZERO
 	queue_redraw()
 
 
@@ -409,8 +414,10 @@ func _move(dt: float) -> void:
 		want = (want + detour * 1.2).normalized()
 	var speed: float = T.G_MAN_SPEED * (T.G_LEG_SLOW_X if float(ms.get("leg_t", 0.0)) > 0.0 else 1.0) * (1.0 - (ctx_chill() if float(ms.get("chill_t", 0.0)) > 0.0 else 0.0))
 	var goal: Vector2 = want.limit_length(1.0) * speed
-	velocity = velocity.move_toward(goal, T.G_MAN_ACCEL * dt) + knock_v
-	knock_v = knock_v.move_toward(Vector2.ZERO, 2000.0 * dt)
+	_walk_v = _walk_v.move_toward(goal, T.G_MAN_ACCEL * dt)
+	var shove: Vector2 = knock_left.limit_length(T.KNOCK_SPEED * dt)
+	knock_left -= shove
+	velocity = _walk_v + (shove / dt if dt > 0.0 else Vector2.ZERO)
 	var before := global_position
 	if is_inside_tree():
 		move_and_slide()

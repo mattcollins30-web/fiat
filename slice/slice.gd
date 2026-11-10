@@ -437,7 +437,7 @@ func shoot(r: SliceRunner, g: Dictionary) -> Dictionary:
 		stats["headshots"] += 1
 	fx.hit_flash(hit_man)
 	if hit_man.has_method("knock"):
-		hit_man.knock(dir, T.KNOCK_PX)
+		hit_man.knock(dir, T.KNOCK_PX / maxf(1.0, float(g.get("rof", 1.0))))
 	shake(T.SHAKE_HIT)
 	hit_landed.emit(hit_man, res, point)
 	return {"man": hit_man, "point": point, "result": res}

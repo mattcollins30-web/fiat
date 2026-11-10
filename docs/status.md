@@ -16,7 +16,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 - **Alongside (9 Nov, night): the ARPG slice, round 6** (board E, Matt: "Build it") - the gang as a threat (men lean
   out of cover, fire and duck back; two search where they last saw you), gang damage tied to the gang HP knob (x2 at
   x0.5 HP), the game's sounds, the gun's kick and a crosshair, the end screen's "You against the runner alone". Round
-  5 before it (1d82108; its sprites 0e0d00f). Waiting on Matt: his play of round 6, each
+  5 before it (1d82108; its sprites 0e0d00f). 10 Nov, from his first plays (none cleared): gang HP ×0.06 (about a dozen
+  rifle rounds a man), gang damage its own at ×2, a hit's shove fixed; a test Poacher in kit for the level picked.
+  Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
   keeps"). Next for the slice, on his word and
@@ -8347,3 +8349,18 @@ never plays his own; with the test Poacher the Kit room has no camp stash; past 
 guns fall well behind (the game's own fight 14 minutes at level 22, two hours at 50); the level-14 Poacher's kit was
 always rolled at item level 14, which the game's own rule wouldn't let a level-14 runner wear (wear 16) - left as it
 was so earlier figures still compare.
+
+The slice after Matt's first plays of round 6 (10 Nov; four runs logged, none cleared; Matt: "Enemy HP is off - you
+don't do any damage to them - also thier knock back is too strong - hitting them flings them across the map", then
+"go" on three changes). Measured first: a level-12 man had 1,723 HP at gang HP x0.5 against 12-16 a rifle round since
+round 5's real rates (96-133 landed rounds a man, about 300 fired at his 29-39% hit rate); round 6's tie made lower
+gang HP higher gang damage (x6.7 at x0.15), so the setting couldn't fix it; ten hits in a second carried a man 3,417
+px, the shove added to his speed every frame and kept. Changed: gang HP x0.06 by default (11-16 landed rifle rounds a
+man at level 12; the pause steps x0.06 / x0.1 / x0.04); gang damage its own again, x2 by default (x2 / x3 / x1); a
+hit's shove is pixels owed, paid at a set pace and capped, sized so a second of any gun's hits moves a man about 14
+px. From the review, fixed with it: a stunned man's walk now runs down as before; a First aider's heal follows the
+gang HP setting (unscaled, it was 7% of his pool a second at x0.06). Consequence to know: a clear will now come in well
+under the game's own time, so time_x is a conversion, not a like-for-like; hp_lost_x stays the comparison. Damage over
+time, kill heals and drops all arrive faster against the smaller pools - for his play to judge. Checked: r9 in the
+smoke, proved red five ways; a review; lint 0; the full smoke on Matt's machine. Logged, not built: aiming down sights
+on the right button (the backlog).

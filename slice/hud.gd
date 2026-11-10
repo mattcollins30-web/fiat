@@ -475,7 +475,7 @@ static func gun_line(gun: Dictionary) -> Array:
 static func x_words(x: float) -> String:
 	if is_equal_approx(x, roundf(x)):
 		return "×%d" % roundi(x)
-	# round 6: the tie's ×6.67 reads ×6.7; the knobs' own ×0.25 and ×0.15 keep their hundredths
+	# the knobs' own ×0.06 and ×0.04 keep their hundredths; a tenth from ×2 up
 	return "×%s" % str(snappedf(x, 0.1 if x >= 2.0 else 0.01))
 
 

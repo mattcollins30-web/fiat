@@ -718,7 +718,7 @@ static func man_dots_tick(ctx: Dictionary, ms: Dictionary, dt: float) -> Diction
 	if float(ms.get("since_shot", 0.0)) > T.G_PIN_GRACE_S:
 		ms["supp"] = maxf(0.0, float(ms.get("supp", 0.0)) - dt / Data.SUPP66_DRAIN_S)
 	if bool(ms.get("hard", false)) and "medic" in ms.get("traits", []) and float(ms["hp"]) > 0.0:
-		ms["hp"] = minf(float(ms["hp_max"]), float(ms["hp"]) + Data.MEDIC66_PCT / 100.0 * float(ctx["t"]["hp"]) * dt)     # First aider: himself (the sim's: the man in front)
+		ms["hp"] = minf(float(ms["hp_max"]), float(ms["hp"]) + Data.MEDIC66_PCT / 100.0 * float(ctx["t"]["hp"]) * float(ctx.get("man_hp_x", T.MAN_HP_X)) * dt)     # First aider: himself (the sim's: the man in front), on the gang HP knob's scale (the review, 10 Nov: at ×0.06 the unscaled heal was 7% of his pool a second)
 	ms["hp"] = float(ms["hp"]) - dealt
 	return {"amount": dealt, "by": by, "killed": dealt > 0.0 and float(ms["hp"]) <= 0.0}
 
@@ -854,10 +854,11 @@ static func their_round(ctx: Dictionary, ms: Dictionary) -> float:
 	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * their_x(ctx)
 
 
-## (round 6, board E) Their damage against the game's: tied to the gang's HP (half the HP, twice the damage: a fight as
-## dangerous as the game's in half the time), times the pause's knob. The HUD's and the pause's "gang damage ×2" are this.
+## Their damage against the game's: the pause's knob, its own (10 Nov, Matt's "go": round 6 tied it to the gang's HP -
+## half the HP, twice the damage - so turning their HP down to make them killable turned their damage up, x6.7 at x0.15).
+## The HUD's and the pause's "gang damage ×2" are this.
 static func their_x(ctx: Dictionary) -> float:
-	return float(ctx.get("their_dmg_x", T.THEIR_DMG_X)) / maxf(0.01, float(ctx.get("man_hp_x", T.MAN_HP_X)))
+	return float(ctx.get("their_dmg_x", T.THEIR_DMG_X))
 
 
 ## What reaches the runner: Guard first (the sim's _take), the streak's hit (_f66_taken).

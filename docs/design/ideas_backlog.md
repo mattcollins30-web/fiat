@@ -174,6 +174,30 @@ level 6 never plays his own (the picker's row starts at level 9); with the test 
 stash; past the low 20s the test Poacher's two guns fall well behind the gangs; a choice of runner on the picker
 ("Your runner" or "Test runner") would need its mockup; other classes wait on their skills.
 
+The slice, from Matt's play of round 6 (10 Nov, four runs logged, none cleared):
+- Aiming down sights (new). Matt: "We also need right click to aim down sights with the masin weapon with left click
+  just being hip firing if you dont right click." Right click swaps guns today (board C), so the swap needs another
+  key; to settle in the talk: what sights give (spread, kick, pace, how far the camera leans), the pad's button.
+- Gang HP (a bug as played, a design call to fix). Matt: "Enemy HP is off - you don't do any damage to them." Measured:
+  a level-12 man has 1,723 HP at gang HP x0.5 and the AR's round does 12-16 since round 5's real fire rates, so 96-133
+  rounds landed a man; at his 29-39% hit rate about 300 fired. Lowering gang HP raises gang damage through round 6's
+  tie (x0.15 HP is x6.7 damage), so the setting can't fix it.
+- The knock (a bug). Matt: "thier knock back is too strong - hitting them flings them across the map." Measured: ten
+  hits in a second carry a man 3,417 px at up to 2,330 px a second (his walk is 230): the shove is added to his speed
+  every frame and kept, and the AR lands ten a second since round 5.
+
+The slice, Matt's second plays (10 Nov, after gang HP x0.06: two runs dead at 2:05 and 2:26, 11 of 15 killed each,
+32-36% of rounds landing, about 10 landed and 31-38 fired a kill; Matt: "two runs dead / too many enemies I'd say ? /
+too hard to hit enemies"):
+- Too hard to hit. The rifle's spread is 2 degrees and held fire adds up to 5 more within a second; at 1,000 px a
+  man's token is 2 degrees wide. Aiming down sights (above) is the first answer; the kick's top is the second.
+- Too many. Fifteen men in three gangs, each gang in on the game's clock whether or not the last is down. To weigh
+  once hitting is right: the next gang waiting on the last one's kills, or smaller gangs.
+- Generated levels (new, for the full game). Matt: "general point but the extraction, crates and levels in general
+  need to be procedurally generated for the full game." Bears on the review of what the shift keeps: a layout a site
+  by hand was its largest cost. Needs its own design talk (what is fixed a site - its look, its gangs, its head - and
+  what is dealt a run - cover, crates, the way out).
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison
