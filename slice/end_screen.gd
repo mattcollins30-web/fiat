@@ -82,7 +82,10 @@ func open(outcome_v: String, stats: Dictionary, place := "The car park", game :=
 	UI.set_tile(_tiles[0], "Kills", [Fmt.group(int(stats.get("kills", 0)))])
 	UI.set_tile(_tiles[1], "Headshots", [Fmt.group(int(stats.get("headshots", 0)))])
 	UI.set_tile(_tiles[2], "Accuracy", ["%d%%" % int(round(100.0 * float(stats.get("hits", 0)) / shots)) if shots > 0 else "No rounds fired"])
-	UI.set_tile(_tiles[3], "Damage done", [Fmt.group(int(stats.get("damage_done", 0))), Fmt.short_num(float(stats.get("damage_done", 0)))])
+	if stats.has("gangs_beaten"):                    # (board I) the loop's measure: how many gangs he saw off before he left
+		UI.set_tile(_tiles[3], "Gangs beaten", [Fmt.group(int(stats.get("gangs_beaten", 0)))])
+	else:
+		UI.set_tile(_tiles[3], "Damage done", [Fmt.group(int(stats.get("damage_done", 0))), Fmt.short_num(float(stats.get("damage_done", 0)))])
 	UI.set_tile(_tiles[4], "HP lost", [Fmt.group(lost)])
 	UI.set_tile(_tiles[5], "Time", [Fmt.mss(float(stats.get("time_s", 0.0)))])
 	var vs: bool = outcome_v == "cleared" and float(game.get("time_s", 0.0)) > 0.0

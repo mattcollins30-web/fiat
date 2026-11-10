@@ -23,6 +23,9 @@ var alive := 0                       # men standing in the park
 var hard_man: Node = null            # the hard man while he lives
 var hard_seen := false
 var cleared := false
+var loop := false                    # (board I) gangs till he leaves: no last gang, no clear (the world's)
+var quiet := false                   # ...the car park empty of them, the next gang on its clock
+var fell := {}                       # ...gang i -> where its men went down (its crates appear near)
 var men_by_gang := {}                # gang i -> men left
 var last_seen := Vector2.ZERO        # the runner where they last saw him
 var seen_ago := 0.0                  # (round 6) seconds since one of the front saw him
@@ -44,6 +47,7 @@ var _step_up_ts: Array = []          # (the review) a beat for each gap in the f
 func setup(world_v) -> void:
 	world = world_v
 	gangs = int(world.ctx["site"].get("gangs", T.G_GANGS))
+	loop = bool(world.get("loop"))
 	next_in = float(world.ctx["site"].get("first_gang_s", T.G_FIRST_GANG_S))
 	world.ctx["world"] = world
 
@@ -268,7 +272,7 @@ func _step(dt: float) -> void:
 	for mn in _front:
 		if is_instance_valid(mn) and not mn.is_dead() and mn.sees:
 			_on_you += 1
-	if gang_i + 1 < gangs:
+	if loop or gang_i + 1 < gangs:
 		var rate := 1.0
 		if hard_man != null and is_instance_valid(hard_man) and not hard_man.is_dead() and "runner" in hard_man.traits:
 			rate += Data.RUNNER66_RATE                 # a Messenger: the next gang sooner while he lives
@@ -277,7 +281,7 @@ func _step(dt: float) -> void:
 		if push > 0.0:
 			next_in += minf(push, Data.LEG66_CAP_S)    # leg shots: the next gang later (the sim's cap)
 			world.ctx["leg_push"] = 0.0
-		if alive == 0 and gang_i >= 0 and next_in > T.G_QUIET_MAX_S:
+		if not loop and alive == 0 and gang_i >= 0 and next_in > T.G_QUIET_MAX_S:
 			next_in = T.G_QUIET_MAX_S                  # every man down: the next isn't long
 		if next_in <= 0.0:
 			_arrive(gang_i + 1)
@@ -291,9 +295,15 @@ func _step(dt: float) -> void:
 ## Gang `i` comes in at the edges furthest from the runner: the site's gang size, a hard man on the sim's odds.
 func _arrive(i: int) -> void:
 	gang_i = i
+	quiet = false
 	var ctx: Dictionary = world.ctx
-	var size: int = int(ctx["site"]["gang_sizes"][i])
+	var sizes: Array = ctx["site"]["gang_sizes"]
+	while sizes.size() <= i:                       # (the loop, board I) gangs past the place's three: each a man bigger
+		sizes.append(mini(T.G_GANG_MAX, int(sizes.back()) + 1))
+	var size: int = int(sizes[i])
 	next_in = float(ctx["site"]["next_gang_s"]) if i + 1 < gangs else -1.0
+	if loop:
+		next_in = T.G_GANG_PATIENCE_S             # (board I) the next waits on this one's last man (the quiet), or on this long
 	SliceBridge.gang_arrives(world, i)
 	var spawns: Array = world.spawn_points()
 	var rp: Vector2 = world.runner.global_position if world.runner != null else Vector2.ZERO
@@ -305,7 +315,7 @@ func _arrive(i: int) -> void:
 	var ways: Array = spawns.slice(0, mini(2, spawns.size()))
 	var r: RandomNumberGenerator = ctx["sim"].fight_rng
 	var hard_at := -1
-	if int(ctx["site"]["level"]) >= Data.HARD66_LEVEL and (r.randf() < Data.HARD66_ODDS or (T.G_HARD_SURE and not hard_seen and i == gangs - 1)):
+	if int(ctx["site"]["level"]) >= Data.HARD66_LEVEL and (r.randf() < Data.HARD66_ODDS or (T.G_HARD_SURE and not hard_seen and i == gangs - 1) or (loop and i >= T.G_HARD_FROM_GANG and (hard_man == null or not is_instance_valid(hard_man) or hard_man.is_dead()))):
 		hard_at = size - 1                             # the sim's: he's the gang's last man
 	men_by_gang[i] = size
 	for k in range(size):
@@ -362,5 +372,16 @@ func man_down(mn: Node, _res: Dictionary) -> void:
 	men_by_gang[gi] = maxi(0, int(men_by_gang.get(gi, 0)) - 1)
 	if mn == hard_man:
 		hard_man = null
+	if not fell.has(gi):
+		fell[gi] = []
+	fell[gi].append(mn.global_position)
 	if int(men_by_gang[gi]) == 0:
 		gang_down.emit(gi)
+		if loop:
+			# (board I) the gang's crates where it fell, and the quiet: the next gang this long off, never sooner than it was
+			if world.has_method("drop_crates"):
+				world.drop_crates(fell[gi])
+			if _men.filter(func(m): return m != mn and is_instance_valid(m) and not m.is_dead()).is_empty():
+				next_in = T.G_QUIET_S
+				quiet = true
+			SliceBridge._event(world.ctx, "gang_down", {"n": gi + 1})

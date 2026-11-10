@@ -15,6 +15,7 @@ var opened := false
 var near := false                    # the runner is in reach (the prompt shows)
 var prompt := ""                     # the world sets it (the keyboard's or the pad's word)
 var finds: Array = []
+var prize := false                   # (the loop, board I) the place's prize: the far crate, on the map, longer to open, worth more
 var seen := false                    # (build 76) the runner has seen it: drawn from then on (slice/sight.gd)
 
 
@@ -45,6 +46,8 @@ func _draw() -> void:
 	else:
 		draw_rect(r, C_OPEN if opened else C_BOX)
 	draw_rect(r, Color(C_LINE, 0.4) if opened else C_LINE, false, 4.0)
+	if prize and not opened:
+		draw_rect(r.grow(10.0), C_RING, false, 5.0)     # the prize: a second, wider line
 	if opened:
 		draw_line(r.position, r.end, Color(C_LINE, 0.3), 3.0)
 		draw_line(Vector2(r.position.x, r.end.y), Vector2(r.end.x, r.position.y), Color(C_LINE, 0.3), 3.0)

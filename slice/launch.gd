@@ -29,6 +29,7 @@ var sounds = null                     # (round 6) the fight's sounds
 var kit = null                        # the Kit room (round 4): Tab or Back
 var over: CanvasLayer
 var ended := false
+static var loop_default := true      # (board I) a run opened from the title plays the loop; the smoke's older checks turn it off
 var _next_id := 0                     # Items' id counter when the slice opened: put back on the way out (the review)
 var _world_mode := Node.PROCESS_MODE_INHERIT     # the world's own, put back on resume
 var picker = null                     # (build 76) the level picker, up from the title until a level's picked
@@ -115,6 +116,7 @@ func start(lv: int) -> void:
 	var dice := _dice
 	var ctx: Dictionary = SliceBridge.runner_ctx(camp if camp.sim != null else null, dice, lv)
 	ctx["their_dmg_x"] = SliceTuning.THEIR_DMG_X
+	ctx["loop"] = loop_default               # (board I) the run's loop: gangs till he leaves, crates after each
 	if main != null:
 		if main.get("_menu") != null:
 			main._menu.close()

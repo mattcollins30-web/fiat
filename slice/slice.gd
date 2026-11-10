@@ -61,6 +61,7 @@ var park_rect := Rect2(0, 0, T.PARK_W, T.PARK_H)
 var exit_rect := Rect2()
 var time_s := 0.0
 var cleared := false
+var loop := false                    # (board I) the run's loop: gangs till he leaves, crates after each, no clear (ctx["loop"])
 var ended := false
 var outcome := ""                    # "", "cleared", "out", "died"
 var stats: Dictionary = {}
@@ -91,10 +92,20 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	crates_root = Node2D.new()
 	crates_root.name = "Crates"
 	add_child(crates_root)
-	for p in SliceLevel.CRATES:
-		var cr: SliceCrate = CrateScript.new()
-		cr.position = p
-		crates_root.add_child(cr)
+	loop = bool(ctx.get("loop", false))
+	if loop:
+		# (board I) no crates stand out at the start: only the prize, the place's crate furthest from the way out
+		var far: Vector2 = SliceLevel.CRATES[0]
+		for p in SliceLevel.CRATES:
+			if p.distance_to(exit_rect.get_center()) > far.distance_to(exit_rect.get_center()):
+				far = p
+		add_crate(far, true)
+		stats["gangs_beaten"] = 0
+		stats["crates_opened"] = 0
+		stats["prize"] = false
+	else:
+		for p in SliceLevel.CRATES:
+			add_crate(p)
 	men_root = Node2D.new()
 	men_root.name = "Men"
 	add_child(men_root)
@@ -382,6 +393,38 @@ func men() -> Array:
 	return men_root.get_children().filter(func(m): return m.is_in_group("slice_man") and not m.is_dead())
 
 
+## A crate at `p`; `prize`: the place's prize.
+func add_crate(p: Vector2, prize := false) -> SliceCrate:
+	var cr: SliceCrate = CrateScript.new()
+	cr.position = p
+	cr.prize = prize
+	crates_root.add_child(cr)
+	return cr
+
+
+## (the loop, board I) A gang's last man is down: its crates appear near where its men fell (`fell`: their places), on
+## clear ground, found by eye - sight shows them once seen, the map never does. Returns the crates.
+func drop_crates(fell: Array) -> Array:
+	var out: Array = []
+	if not loop or fell.is_empty():
+		return out
+	stats["gangs_beaten"] = int(stats.get("gangs_beaten", 0)) + 1
+	for k in range(T.G_CRATES_A_GANG):
+		var from: Vector2 = fell[rng.randi_range(0, fell.size() - 1)]
+		# a man who fell at the park's edge or in a crowd: wider as the tries go, then the nearest clear ground to him
+		var at: Vector2 = resolve_circle(Vector2(clampf(from.x + 170.0 * k, T.EDGE + 80.0, T.PARK_W - T.EDGE - 80.0), clampf(from.y, T.EDGE + 80.0, T.PARK_H - T.EDGE - 80.0)), T.CRATE_SIZE)
+		for i_try in range(30):
+			var p: Vector2 = from + Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU)) * rng.randf_range(T.G_CRATE_NEAR_PX[0], T.G_CRATE_NEAR_PX[1] * (1.0 + i_try / 30.0))
+			p = Vector2(clampf(p.x, T.EDGE + 80.0, T.PARK_W - T.EDGE - 80.0), clampf(p.y, T.EDGE + 80.0, T.PARK_H - T.EDGE - 80.0))
+			if resolve_circle(p, T.CRATE_SIZE).distance_to(p) < 1.0 and not exit_rect.grow(120.0).has_point(p) and not crates().any(func(c): return c.position.distance_to(p) < T.CRATE_SIZE * 2.5):
+				at = p
+				break
+		if exit_rect.grow(120.0).has_point(at):       # (the review) the last resort landed on the way out: off it
+			at = resolve_circle(at + (Vector2(T.PARK_W, T.PARK_H) * 0.5 - at).normalized() * 320.0, T.CRATE_SIZE)
+		out.append(add_crate(at))
+	return out
+
+
 func crates() -> Array:
 	return crates_root.get_children() if crates_root != null else []
 
@@ -540,7 +583,7 @@ func search_step(r: SliceRunner, held: bool, dt: float) -> void:
 	near_c.prompt = WORDS["search_pad"] if pad else WORDS["search_key"]
 	if held:
 		r.searching = near_c
-		var rate := (1.0 / maxf(0.1, SliceBridge.search_s(ctx))) * (T.SEARCH_UNDER_FIRE if r.under_fire() else 1.0)
+		var rate := (1.0 / maxf(0.1, SliceBridge.search_s(ctx) * (T.G_PRIZE_SEARCH_X if near_c.prize else 1.0))) * (T.SEARCH_UNDER_FIRE if r.under_fire() else 1.0)
 		near_c.progress = minf(1.0, near_c.progress + rate * dt)
 		search_progress.emit(near_c, near_c.progress)
 		if near_c.progress >= 1.0:
@@ -555,6 +598,12 @@ func open_crate(cr: SliceCrate) -> Array:
 	cr.progress = 1.0
 	cr.near = false
 	cr.finds = SliceBridge.crate_finds(ctx, rng)
+	if cr.prize:
+		for _k in range(T.G_PRIZE_FINDS - 1):
+			cr.finds.append_array(SliceBridge.crate_finds(ctx, rng))     # (board I) the prize: so many crates' worth
+		stats["prize"] = true
+	if loop:
+		stats["crates_opened"] = int(stats.get("crates_opened", 0)) + 1
 	add_haul(cr.finds)
 	cr.queue_redraw()
 	crate_opened.emit(cr, cr.finds)

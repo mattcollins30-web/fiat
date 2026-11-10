@@ -138,6 +138,22 @@ none of these. A skill with no one to use it on isn't spent and says so on the n
 (the trap, the smoke, the net) are slice/hazards.gd's. The test Poacher's three slots switch on the pause between
 SliceTuning.G_SKILL_SETS ("Skills: mixed / Stalking / Snares"); the camp's own runner's are his own.
 
+## The pass after round 7 (10 Nov, boards I to L; Matt: "build all 4 and ill play when the lot are done")
+
+Stage 1, the run's loop (board I; Matt: "the searching AFTER the gangs are defeated and the pressure of searching
+before the next gang arrives ... crates during the level need to be removed and appear after the last enemy, not
+displayed on the mini map"). A run opened from the title plays it (`ctx["loop"]`, launch.gd's loop_default; the smoke's
+older checks turn it off and keep the three gangs and the clear):
+- Only the prize stands at the start: the place's crate furthest from the way out, on the map from the first, three
+  times a crate's seconds to open and three crates' worth (crate.prize; G_PRIZE_SEARCH_X, G_PRIZE_FINDS).
+- A gang's crates (G_CRATES_A_GANG) appear near where its men fell when its last man is down (SliceWorld.drop_crates),
+  found by eye, never on the map; the news line and a sound say the gang's down.
+- The clock: the car park empty of them, the next gang is G_QUIET_S (25 s) off - the search's time. A gang not beaten
+  in G_GANG_PATIENCE_S (60 s) gets the next on top of it. (The game's own gap, about 18 s, is shorter than a gang takes
+  by hand.) Gangs keep coming, each a man bigger to G_GANG_MAX, a hard man with each from the third; there is no clear.
+- He ends it by getting out at the gate he came in by: "Got out", with "Gangs beaten" on the end screen; the run log
+  carries loop, gangs_beaten, crates_opened and prize.
+
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.
 

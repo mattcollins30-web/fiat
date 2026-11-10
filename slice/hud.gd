@@ -312,6 +312,8 @@ func read_state() -> Dictionary:
 	st["site_level"] = int(site.get("level", 12))
 	st["place"] = str(site.get("name", "The car park"))
 	st["cleared"] = bool(world.cleared)
+	st["loop"] = bool(world.get("loop"))
+	st["quiet"] = world.gang != null and bool(world.gang.get("quiet"))
 	var g = world.gang
 	st["gangs"] = int(site.get("gangs", 3))
 	st["gang"] = _arrived
@@ -530,6 +532,10 @@ static func clock_words(st: Dictionary) -> Array:
 		return ["Cleared · the way out's open", "Cleared"]
 	if gang <= 0:
 		return ["First gang in %s" % Fmt.mss(next_s), Fmt.mss(next_s)] if next_s >= 0.0 else ["Quiet for now"]
+	if bool(st.get("loop", false)):                  # (board I) no last gang: the quiet's clock is the search's
+		if bool(st.get("quiet", false)) and next_s >= 0.0:
+			return ["Quiet · next gang in %s" % Fmt.mss(next_s), "Next gang in %s" % Fmt.mss(next_s)]
+		return ["Gang %d · next in %s" % [gang, Fmt.mss(next_s)], "Gang %d · %s" % [gang, Fmt.mss(next_s)]] if next_s >= 0.0 else ["Gang %d" % gang]
 	if gang < gangs and next_s >= 0.0:
 		return ["Gang %d of %d · next in %s" % [gang, gangs, Fmt.mss(next_s)], "Gang %d of %d · %s" % [gang, gangs, Fmt.mss(next_s)]]
 	return ["Gang %d of %d · the last" % [gang, gangs], "Gang %d of %d" % [gang, gangs]]
@@ -633,6 +639,8 @@ static func event_words(e: Dictionary) -> Array:
 			return [L["jam"] % [str(e.get("gun", "")), str(snappedf(float(e.get("s", 0.0)), 0.1))], "Jammed"]
 		"skill":
 			return [str(e.get("name", ""))]
+		"gang_down":                                    # (board I) a gang beaten: its crates are out, and not on the map
+			return ["Gang %d down · their crates are about" % int(e.get("n", 0)), "Gang %d down" % int(e.get("n", 0))]
 		"skill_none":
 			if str(e.get("id", "")) == "one_for_the_pot":     # its own reason, in the skill's words (the language pass)
 				var pct: int = int(round(SliceTuning.G_POT_UNDER * 100.0))
@@ -692,8 +700,11 @@ class MiniMap extends Control:
 			out["exit"] = bool(lv.get("exit_seen"))
 		if w.has_method("crates"):
 			for c in w.crates():
-				if c.get("seen") == false or not c.visible:
+				var prize_c: bool = bool(w.get("loop")) and bool(c.get("prize"))
+				if not prize_c and (c.get("seen") == false or not c.visible):
 					continue
+				if bool(w.get("loop")) and not prize_c:
+					continue                             # (board I) a gang's crates are found by eye; only the prize is on the map, from the start (the review)
 				out["crates"].append([c.global_position, bool(c.get("opened")) if c.get("opened") != null else false])
 		if w.has_method("men"):
 			for m in w.men():

@@ -32,6 +32,7 @@ func bind(world_v, shell_sound = null) -> void:
 	world.cleared_park.connect(func(): sound.cue("way_out"))
 	if world.gang != null:
 		world.gang.gang_arrived.connect(func(_i, _n): sound.cue("gang_arrives"))
+		world.gang.gang_down.connect(func(_i): if bool(world.get("loop")): sound.cue("way_out"))     # (board I) a gang beaten: its crates are out
 	_guard = int(world.runner.guard)
 
 

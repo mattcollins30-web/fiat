@@ -22,6 +22,8 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men (in), 3 the Poacher's six skills as
   tools (in). After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
   and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
+  The pass after it (boards I to L, "build all 4 and ill play when the lot are done"): 1 the run's loop (in), 2 melee
+  and the Allotments, 3 levels dealt from pieces, 4 the Garden Centre, Top Farm and kit carried between.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8420,3 +8422,17 @@ the game's. From the language pass: "Skills: mixed", "Skills: the runner's own",
 men - bruiser, marksman, petrol bomber - are for Matt (rusher, marksman, thrower in the code and here). Stages 1 and
 2: 3917218, f5aed8f. Checked: r13 in the smoke, proved red four ways; a screenshot of the marks; lint 0; the full
 smoke on Matt's machine.
+
+The slice, the pass after round 7, stage 1: the run's loop (10 Nov; Matt's design thoughts - "we need to keep as much
+of what works in the auto battler version as possible ... the searching AFTER the gangs are defeated and the pressure
+of searching before the next gang arrives ... crates ... appear after the last enemy, not displayed on the mini map" -
+then on the loop put to him, "ok well we may as well do that", and on boards I to L, "build all 4 and ill play when
+the lot are done"). From the title a run is now the game's loop in the car park: only the prize (the far crate, on the
+map, three times as long to open, three crates' worth) stands at the start; a gang's two crates appear where it fell
+when its last man is down, off the map; the quiet gives 25 s to the next gang; gangs keep coming, each bigger, with no
+clear; he ends it by getting out ("Got out", gangs beaten on the end screen and in the run log). Off the board: the
+next gang waits on the last one's last man (or 60 s), not the game's own 18 s gap - at that gap gangs piled up without
+limit, and a runner with "Never there" got none (the review). Known: the row against the runner alone never shows now
+(no clear); the way out isn't lit; a gang's crates often land in plain sight of where he stands. The older three-gang
+run is kept behind ctx["loop"] for the smoke's checks. Round 7's last commit: 1234cf5. Checked: r14 in the smoke,
+proved red three ways; a review; lint 0; the full smoke on Matt's machine.

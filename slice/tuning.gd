@@ -108,6 +108,19 @@ const G_GANGS := 3                   # three gangs, then the clear
 const G_GANG_MAX := 7                # no gang bigger than this (the site's pool over three, +1 a gang)
 const G_FIRST_GANG_S := 4.0          # the first gang this long after you're in
 const G_CLOCK_X := 0.75              # the sim's gap between gangs (patrol_s) times this: a slice's few minutes
+# (the pass after round 7, board I; Matt: "we need to keep as much of what works in the auto battler version as
+# possible, namely the searching AFTER the gangs are defeated and the pressure of searching before the next gang arrives
+# ... crates during the level need to be removed and appear after the last enemy, not displayed on the mini map")
+# The run's loop (ctx["loop"]): gangs keep coming till he gets out, each a man bigger; a gang's crates appear where it
+# fell when its last man is down, not on the map; the quiet is the search's clock; the prize is the far crate.
+const G_QUIET_S := 25.0               # the car park empty of them: the next gang is this long off (the search's clock)
+const G_GANG_PATIENCE_S := 60.0       # a gang not beaten in this long: the next comes in on top of it (the review: the game's own gap, about
+                                      # 18 s, is shorter than a gang takes by hand - gangs without end piled up without limit - and is no time at all with "Never there")
+const G_CRATES_A_GANG := 2            # crates a gang leaves
+const G_CRATE_NEAR_PX := [140.0, 320.0]     # ...each this far from where one of its men fell
+const G_PRIZE_SEARCH_X := 3.0         # the prize takes this many times a crate's seconds to open
+const G_PRIZE_FINDS := 3              # ...and holds this many crates' worth
+const G_HARD_FROM_GANG := 2           # in the loop the hard man is sure from this gang on (counted from 0), one a gang at most
 const G_QUIET_MAX_S := 10.0          # the park quiet (every man down): the next gang no longer than this
 const G_STEP_UP_S := 1.2            # (round 4) a man of the front down: the next steps up after this beat
 const G_HARD_SURE := true            # no hard man by the last gang: it brings one (the slice shows him)

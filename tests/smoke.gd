@@ -259,6 +259,7 @@ const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of 
 func _init() -> void:
 	load("res://scripts/ui/barracks.gd").clip_off = true     # the smoke never writes the system clipboard (the fix round, 30 Oct: it ran beside Matt's work)
 	Sim.exploits_off = true     # no other check meets an exploit by chance (the review); _exploit_checks turns them on
+	load("res://slice/launch.gd").loop_default = false     # the slice's older checks are of the three gangs and the clear; r14 plays the loop
 	load("res://slice/run_log.gd").off = true     # the smoke's slice runs write no lines to Matt's run log (10 Nov)
 	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
@@ -49079,6 +49080,123 @@ func _r13_skill_checks(main) -> void:
 	print("r13 skills ok: the trap at his feet (%d at most, held %.0f s), the smoke %.0f s, the collar %.0f s, the net %.0f s, the pot's magazine, the clean round through two; nothing to act on, nothing spent" % [SliceTuning.G_TRAPS_MAX, SliceTuning.G_TRAP_HOLD_S, SliceTuning.G_FLUSH_S, SliceTuning.G_COLLAR_S, SliceTuning.G_NET_S])
 
 
+## A man down by the check's hand, as a round's kill lands it.
+func _r14_kill(world, mn) -> void:
+	var res := {"damage": 1, "amount": 1.0, "headshot": false, "killed": true}
+	mn.ms["hp"] = 0.0
+	res.merge(SliceBridge.on_kill(world.ctx, mn.ms, world.rng), true)
+	mn.die_by(res)
+
+
+## The pass after round 7, stage 1 (board I; Matt: "the searching AFTER the gangs are defeated and the pressure of
+## searching before the next gang arrives ... crates during the level need to be removed and appear after the last
+## enemy, not displayed on the mini map"): from the title a run is the game's loop - only the prize stands at the
+## start; a gang's crates appear where it fell when its last man is down, off the map; the quiet's clock runs to the
+## next gang; gangs keep coming, each bigger, with no clear; he ends it by getting out.
+func _r14_loop_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	Launch.loop_default = true
+	var run = Launch.open(main, H72_SEED, false, 12)
+	Launch.loop_default = false
+	var w = run.world
+	var g = w.gang
+	var exit_mid: Vector2 = w.exit_rect.get_center()
+	var far: Vector2 = SliceLevel.CRATES[0]
+	for p in SliceLevel.CRATES:
+		if p.distance_to(exit_mid) > far.distance_to(exit_mid):
+			far = p
+	var map0: Array = HudScript72.MiniMap.shown(w)["crates"]     # (the review) the prize is on the map before he's seen it
+	_check(map0.size() == 1 and Vector2(map0[0][0]).distance_to(far) < 1.0 and not w.crates()[0].seen, "at the start the map shows %d crates (the prize unseen: %s)" % [map0.size(), str(not w.crates()[0].seen)])
+	_check(w.loop and g.loop and w.crates().size() == 1 and w.crates()[0].prize and w.crates()[0].position == far, "the loop's start: %d crates out, the prize at %s (the far one is %s)" % [w.crates().size(), str(w.crates()[0].position if not w.crates().is_empty() else Vector2.ZERO), str(far)])
+	var sizes: Array = []
+	var crates_after: Array = []
+	var quiets: Array = []
+	for gi in range(5):
+		g.next_in = 0.05
+		var t := 0.0
+		while g.gang_i < gi and t < 3.0:
+			_r6_tick(w)
+			t += 1.0 / 60.0
+		var men: Array = w.men().filter(func(mn): return not mn.is_dead())
+		sizes.append(men.size())
+		_check(is_equal_approx(g.next_in, SliceTuning.G_GANG_PATIENCE_S) or t > 0.5, "gang %d in, the next is %.1f s off, not the %.0f s it's given to beat this one" % [gi + 1, g.next_in, SliceTuning.G_GANG_PATIENCE_S])
+		var before: int = w.crates().size()
+		var falls: Array = men.map(func(mn): return mn.global_position)
+		for k in range(men.size()):
+			if k == men.size() - 1:
+				_check(w.crates().size() == before and not g.quiet, "gang %d's crates were out (%d) or the quiet on with a man still up" % [gi + 1, w.crates().size() - before])
+				g.next_in = 3.0                      # the next gang nearly on him: the quiet gives the search its time
+			_r14_kill(w, men[k])
+		var fresh: Array = w.crates().slice(before)
+		crates_after.append(fresh.size())
+		quiets.append(g.quiet and is_equal_approx(g.next_in, SliceTuning.G_QUIET_S))
+		_check(fresh.size() == SliceTuning.G_CRATES_A_GANG and fresh.all(func(c): return not c.prize and not c.opened and w.resolve_circle(c.position, SliceTuning.CRATE_SIZE).distance_to(c.position) < 1.0 and falls.any(func(f): return f.distance_to(c.position) <= SliceTuning.G_CRATE_NEAR_PX[1] * 2.0 + 1.0)) and (fresh.size() < 2 or fresh[0].position.distance_to(fresh[1].position) > SliceTuning.CRATE_SIZE * 2.0), "gang %d down: %d crates appeared, at %s (its men fell at %s)" % [gi + 1, fresh.size(), str(fresh.map(func(c): return c.position.round())), str(falls.map(func(f): return f.round()))])
+		for c in w.crates():
+			c.seen = true
+			c.visible = true
+		var on_map: Array = HudScript72.MiniMap.shown(w)["crates"]
+		_check(on_map.size() == 1 and Vector2(on_map[0][0]).distance_to(far) < 1.0, "the map shows %d crates with %d out: only the prize should be on it" % [on_map.size(), w.crates().size()])
+		if gi == 0:
+			run.hud.show_state(run.hud.read_state())
+			_check(run.hud._site_clock.text.begins_with("Quiet · Next gang in ") and int(w.stats["gangs_beaten"]) == 1, "the first gang down, the clock reads '%s' (gangs beaten %d)" % [run.hud._site_clock.text, int(w.stats["gangs_beaten"])])
+	_check(quiets == [true, true, true, true, true] and crates_after == [2, 2, 2, 2, 2] and not w.cleared and not g.cleared and g.gang_i == 4, "five gangs through: the quiet after each %s, crates %s, cleared %s, the last in gang %d" % [str(quiets), str(crates_after), str(w.cleared), g.gang_i + 1])
+	_check(sizes[3] >= sizes[2] and sizes[4] >= sizes[3] and sizes[4] <= SliceTuning.G_GANG_MAX and sizes[4] > sizes[0], "the gangs' sizes %s don't grow past the place's three (to %d at most)" % [str(sizes), SliceTuning.G_GANG_MAX])
+	# (the review) two gangs in at once: the first's crates appear with its last man, but there's no quiet with the second up
+	g.next_in = 0.05
+	for k in range(6):
+		_r6_tick(w)
+	var first: Array = w.men().filter(func(mn): return not mn.is_dead())
+	g.next_in = 0.05
+	for k in range(6):
+		_r6_tick(w)
+	var both: Array = w.men().filter(func(mn): return not mn.is_dead())
+	var n0: int = w.crates().size()
+	SliceBridge.pop_events(w.ctx)
+	for mn in first:
+		_r14_kill(w, mn)
+	var said: Array = SliceBridge.pop_events(w.ctx).filter(func(e): return str(e.get("kind", "")) == "gang_down")
+	_check(both.size() > first.size() and w.crates().size() == n0 + SliceTuning.G_CRATES_A_GANG and not g.quiet and g.next_in > SliceTuning.G_QUIET_S and said.size() == 1 and HudScript72.event_words(said[0])[0] == "Gang %d down · their crates are about" % int(said[0]["n"]), "one of two gangs beaten: %d crates more, quiet %s, the next %.0f s off, said %s" % [w.crates().size() - n0, str(g.quiet), g.next_in, str(said)])
+	for mn in both:
+		if not mn.is_dead():
+			_r14_kill(w, mn)
+	_check(g.quiet and is_equal_approx(g.next_in, SliceTuning.G_QUIET_S), "both down: quiet %s, the next %.1f s off" % [str(g.quiet), g.next_in])
+	# the quiet's clock runs down to the next gang
+	var was_gang: int = g.gang_i
+	g.next_in = 0.5
+	for k in range(45):
+		_r6_tick(w)
+	_check(g.gang_i == was_gang + 1 and not g.quiet, "half a second of quiet on, the next gang isn't in (gang %d, quiet %s)" % [g.gang_i + 1, str(g.quiet)])
+	run.hud.show_state(run.hud.read_state())
+	_check(run.hud._site_clock.text.begins_with("Gang %d · Next in " % (was_gang + 2)), "with a gang in the clock reads '%s'" % run.hud._site_clock.text)
+	# the prize: three times as long to open, three crates' worth; a gang's crate the usual
+	var r = w.runner
+	var prize = w.crates()[0]
+	var plain = w.crates()[1]
+	for mn in w.men():
+		mn.hold(mn.position)
+	var secs := {}
+	for cr in [plain, prize]:
+		r.debug_move_to(cr.position + Vector2(0, SliceTuning.CRATE_SIZE * 0.5 + SliceTuning.RUNNER_R + 8.0))
+		r.last_hurt_t = -100.0
+		var n := 0
+		while not cr.opened and n < 4000:
+			w.search_step(r, true, 1.0 / 60.0)
+			n += 1
+		secs[cr] = n / 60.0
+	_check(absf(float(secs[prize]) / maxf(0.01, float(secs[plain])) - SliceTuning.G_PRIZE_SEARCH_X) < 0.15 and bool(w.stats["prize"]) and int(w.stats["crates_opened"]) == 2, "the prize took %.1f s to open against a crate's %.1f (opened %d, prize %s)" % [float(secs[prize]), float(secs[plain]), int(w.stats["crates_opened"]), str(w.stats["prize"])])
+	# out by the way in: "Got out", the gangs beaten on the end screen and in the log's line
+	var RunLog = load("res://slice/run_log.gd")
+	var line: Dictionary = RunLog.entry(w, "out", w.stats, SliceBridge.game_fight(w.ctx))
+	r.debug_move_to(exit_mid)
+	w.leave()
+	_check(w.ended and w.outcome == "out" and run.end.visible and run.end._title.text == "Got out" and run.end._tiles[3]["key"].text == "Gangs beaten" and run.end._tiles[3]["value"].text == "7", "out of the loop: outcome '%s', the end reads '%s', its fourth tile '%s %s'" % [w.outcome, run.end._title.text, run.end._tiles[3]["key"].text, run.end._tiles[3]["value"].text])
+	_check(bool(line["loop"]) and int(line["gangs_beaten"]) == 7 and int(line["crates_opened"]) == 2 and bool(line["prize"]) and int(line["round"]) == RunLog.ROUND, "the run log's line for it: %s" % str(line))
+	_check(_check_nodes(run.end.text_nodes(), [], "the slice's end screen, the loop") == 0 and _check_nodes(run.hud.text_nodes(), [], "the slice's HUD, the loop") == 0, "the loop's words don't fit")
+	run.back_to_title()
+	run.free()
+	print("r14 loop ok: only the prize at the start; gangs of %s, %d crates after each where it fell, off the map; a %.0f s quiet; the prize %.1f s against %.1f; out with 7 gangs beaten" % [str(sizes), SliceTuning.G_CRATES_A_GANG, SliceTuning.G_QUIET_S, float(secs[prize]), float(secs[plain])])
+
+
 class R9Target:
 	extends Node2D
 	var radius := 34.0
@@ -49634,4 +49752,5 @@ func _r6_checks(_main) -> void:
 	_r11_band_checks(_main)
 	_r12_men_checks(_main)
 	_r13_skill_checks(_main)
+	_r14_loop_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])
