@@ -106,6 +106,7 @@ func build() -> void:
 		size = layout["size"]
 		park_rect = Rect2(Vector2.ZERO, size)
 		exit_rect = layout["exit_rect"]
+		exit_seen = true                      # (10 Nov) the way out is somewhere else: on the map from the start
 		for w in layout["walls"]:
 			cover.append(w)                 # a wall hides and stops as cover does
 		for c in layout["cover"]:

@@ -168,6 +168,15 @@ and onto the board for now"):
 - Melee, damage over time and splash. Matt: "melee needs some thought along with dots and splash damage."
 Each needs the talk, its mockup and Matt's word before a build.
 
+The slice, from Matt's first play of 3 sites in a row (10 Nov, all three beaten first try; "weapon felt good"):
+- Men with guns back off from a runner on a melee weapon. Matt: "enemies with guns run away from youy which is
+  annoying when you have a melee weapon." A bug in how they play against melee, not a new thing: for the talk, what
+  a gun man does when the runner closes on him with a hand weapon.
+- The way out somewhere else. Matt: "extract should be randomised." New: board I drew the way out as the way in.
+- The search in the Kit room, crates and bodies both, to be built now. Matt: "we should build the inventory change
+  now with bodies being searchable as well as crates." (The two items above, 10 Nov.) Its talk and mockup first; the
+  open question stands: wearing a find straight off the floor with no pack space.
+
 The slice's test runner (10 Nov, built on Matt's "go"; his words: "level 12 with a hammer is impossible - can you
 provide some level appropriate gear per level selection?"). Left open from its review, for the talk: a runner under
 level 6 never plays his own (the picker's row starts at level 9); with the test Poacher the Kit room has no camp

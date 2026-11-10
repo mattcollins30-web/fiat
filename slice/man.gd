@@ -139,7 +139,7 @@ func take_shot(shot: Dictionary) -> Dictionary:
 		flinched += 1
 	if state == "cover" or state == "enter":
 		move_left = minf(move_left, 0.6)          # shot at: he thinks about moving
-	if not res["killed"] and hp < hp_max * T.G_RETREAT_HP and state != "retreat" and kind != "rusher":     # (round 7) a rusher doesn't stop for fire
+	if not res["killed"] and hp < hp_max * T.G_RETREAT_HP and state != "retreat" and kind != "rusher" and not stands():     # (round 7) a rusher doesn't stop for fire
 		_retreat()
 	if res["killed"]:
 		_die(res)
@@ -376,8 +376,24 @@ func _mark_fire(dt: float, rp: Vector2) -> void:
 	fired_at.emit(self, true, rp)
 
 
+## (10 Nov) The runner on him with a hand weapon: he stands where he is and fires.
+func stands() -> bool:
+	if kind == "rusher" or world == null or world.runner == null or not sees or not world.runner.has_method("is_melee") or not world.runner.is_melee():
+		return false
+	if float(ms.get("exposed_t", 0.0)) > 0.0:
+		return false                              # (the review) flushed out: he moves as the skill sends him
+	return global_position.distance_to(world.runner.global_position) <= (T.G_STAND_OFF_PX if state == "stand" else T.G_STAND_PX)
+
+
 func _think(dt: float, _rp: Vector2) -> void:
 	move_left -= dt
+	if stands():
+		if state != "stand":
+			state = "stand"
+			target = global_position
+		return
+	if state == "stand":
+		_pick_spot()                              # the runner's off, lost, or a gun's out: on to cover (the review: where he stood isn't any)
 	var pinned: bool = float(ms.get("supp", 0.0)) >= 1.0
 	match state:
 		"enter", "move", "retreat":

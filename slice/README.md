@@ -175,6 +175,10 @@ Stages 2 to 4, built as one (boards J to L): melee, levels dealt from pieces, th
 - **The gangs by site** (gang.gd place_kind): the Allotments all hand tools; the Garden Centre one gun a gang; Top
   Farm every other man armed, one throwing, a hard man from its second gang. The Allotments' prize holds a Pocket
   pistol, the Garden Centre's a Bolt gun.
+- From Matt's first play (10 Nov, all three beaten): the way out of a dealt level is in a piece two or more from the
+  way in, never the prize's or a gate's, on the map from the start (deal.gd, G_EXIT_FROM; "extract should be
+  randomised"); a man with a gun stands and fires when a hand weapon is out and within G_STAND_PX in his sight - no
+  falling back hurt, no move to other cover (man.gd stands(); "enemies with guns run away from you").
 - Known: rounds aren't scarce or carried (each site starts on the slice's own box for a gun worn); cover all blocks
   sight and rounds, beds included; the three sites' test settings are first guesses, not played; "3 sites in a row" is
   the language pass's name for it ("run" is one trip out in the glossary) - Matt's to rename.

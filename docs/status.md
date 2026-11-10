@@ -24,7 +24,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
   The pass after it (boards I to L, "build all 4 and ill play when the lot are done"): 1 the run's loop (in, 5ce0218), 2 melee
   and the Allotments, 3 levels dealt from pieces, 4 the Garden Centre, Top Farm and kit carried between (2 to 4 in,
-  built as one: "3 sites in a row" on the slice's picker). Waiting on Matt: his play of the lot.
+  built as one, 0e4bc0d: "3 sites in a row" on the slice's picker). Matt played all three through first try, 10 Nov
+  ("weapon felt good"): from it, the way out dealt somewhere else and gun men standing against a hand weapon (in);
+  next, on a mockup and his word, the search in the Kit for crates and bodies.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8456,3 +8458,14 @@ shove lost on a staggered man, his blow landing through a wall, men coming in on
 after the Kit, the same three levels on a second go. Stage 1's commit: 5ce0218. Checked: r15 (600 levels dealt and
 walked; melee) and r16 (the three sites end to end) in the smoke, proved red six ways; a review; a language pass;
 lint 0; the full smoke on Matt's machine.
+
+The slice, from Matt's first play of 3 sites in a row (10 Nov, 14:19 to 14:25: the Allotments 3:41 with 14 kills and no
+HP lost, the Garden Centre 2:05, Top Farm 2:02 with 105 HP lost; "weapon felt good. enemies with guns run away from
+youy which is annoying when you have a melee weapon. extract should be randomised."; then "ok proceed"). A dealt
+level's way out is now in a piece two or more from the way in - never the prize's piece or a gate's - and on the map
+from the start. A man with a gun stands and fires when the runner has a hand weapon out within 420 px in his sight
+(till 560 px): he doesn't fall back hurt or move to other cover; a rifle out, he plays as before. Stages 2 to 4's
+commit: 0e4bc0d. Read from the log for the settings, not acted on: no hand-tool man landed a swing at the Allotments.
+Checked: r17 in the smoke, proved red two ways; a review (three finds fixed: Flush them out undone by the stand, a
+released man treating open ground as cover, the check not covering the release); lint 0; the full smoke on Matt's
+machine.

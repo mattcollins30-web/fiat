@@ -49757,6 +49757,7 @@ func _r6_checks(_main) -> void:
 	_r15_deal_checks()
 	_r15_melee_checks(_main)
 	_r16_run_checks(_main)
+	_r17_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])
 
 
@@ -50047,3 +50048,79 @@ func _r16_run_checks(main) -> void:
 	_check(run.run_i == 0 and int(w.ctx["level"]) == 1 and w.runner.guns.size() == 1 and w.runner.is_melee() and str(w.ctx["layout"]["cover"]) != walls0 and run.runs == 2, "from the start again: place %d, level %d, %d guns (or the same level dealt)" % [run.run_i, int(w.ctx["level"]), w.runner.guns.size()])
 	run.back_to_title()
 	print("r16 run ok: Start a run, the Allotments' pistol and XP carried, the Kit before the Garden Centre, dead and back in as he came, Top Farm's hard man, another run")
+
+
+## (10 Nov, from Matt's first play of 3 sites in a row) "extract should be randomised": a dealt level's way out is in a
+## piece two or more from the way in, never the prize's or a gate's, on the map from the start, and not the same piece
+## every seed. "enemies with guns run away from you which is annoying when you have a melee weapon": a hand weapon out
+## and near, in his sight, a man with a gun stands and fires - hurt and hit he doesn't fall back; with a gun out he does.
+func _r17_checks(main) -> void:
+	var Deal = load("res://slice/deal.gd")
+	var Launch = load("res://slice/launch.gd")
+	for place in SliceTuning.PLACES:
+		var cells := {}
+		for seed_v in range(1, 121):
+			var L: Dictionary = Deal.deal(place, seed_v)
+			var ec: Vector2i = L["exit_cell"]
+			cells[ec] = true
+			var gate_here: bool = L["spawns"].any(func(sp): return Vector2i(int(Vector2(sp).x / Deal.CW), int(Vector2(sp).y / Deal.CH)) == ec)
+			_check(ec != Vector2i(0, Deal.ROWS - 1) and ec != L["prize_cell"] and int(L["dist"][ec]) >= SliceTuning.G_EXIT_FROM and not gate_here and Rect2(L["exit_rect"]).get_center().distance_to(Deal.cell_rect(ec).get_center()) < 1.0,
+				"%s, seed %d: the way out in piece %s (%d from the way in; the prize's %s; a gate's %s)" % [place["name"], seed_v, str(ec), int(L["dist"][ec]), str(ec == L["prize_cell"]), str(gate_here)])
+			_check(not L["cover"].any(func(c): return Rect2(c["rect"]).intersects(Rect2(L["exit_rect"]))), "%s, seed %d: something stands on the way out" % [place["name"], seed_v])
+		_check(cells.size() >= 4, "%s: the way out in %d different pieces over 120 seeds" % [place["name"], cells.size()])
+	var run = Launch.open(main, H72_SEED, false, -1)
+	run.start_run(1)
+	var w = run.world
+	var r = w.runner
+	_check(w.level.exit_seen and bool(HudScript72.MiniMap.shown(w)["exit"]) and w.exit_rect == w.ctx["layout"]["exit_rect"] and not w.exit_rect.has_point(r.position), "the way out at the start: seen %s, on the map %s, the runner on it %s" % [str(w.level.exit_seen), str(HudScript72.MiniMap.shown(w)["exit"]), str(w.exit_rect.has_point(r.position))])
+	w.gang.next_in = 0.05
+	var t := 0.0
+	while w.gang.gang_i < 0 and t < 3.0:
+		_r6_tick(w)
+		t += 1.0 / 60.0
+	var guns: Array = w.men().filter(func(mn): return str(mn.kind) == "")
+	_check(guns.size() == 1, "the Garden Centre's first gang: %d men with a gun" % guns.size())
+	if guns.size() >= 1:
+		var gm = guns[0]
+		for mn in w.men():
+			if mn != gm:
+				mn.hold(mn.position)
+		w.gang._queue = []
+		w.gang._front = [gm]
+		w.gang._firing = [gm]
+		gm.engage()
+		var at: Vector2 = r.position + Vector2(300, 0)
+		gm.position = at
+		gm.ms["hp"] = gm.hp_max * 0.1                 # hurt: as it was he'd fall back at the first hit
+		gm.hurt_back = false
+		for _i in range(30):
+			_r6_tick(w)
+			gm.ms["hp"] = gm.hp_max * 0.1
+		gm.take_shot({"gun": r.gun(), "from": r.position, "point": gm.position, "dir": Vector2.RIGHT, "dist": 300.0, "runner": r, "world": w, "share": 0.001})
+		for _i in range(120):
+			_r6_tick(w)
+		_check(r.is_melee() and gm.sees and gm.stands() and gm.state == "stand" and gm.position.distance_to(at) < 30.0 and not gm.hurt_back, "a hammer 300 px off a hurt man with a gun: melee %s, he sees %s, state '%s', %.0f px from where he stood, fell back %s" % [str(r.is_melee()), str(gm.sees), gm.state, gm.position.distance_to(at), str(gm.hurt_back)])
+		_check(gm.fired > 0, "standing, he fired %d rounds in two and a half seconds" % gm.fired)
+		# far off he's a plain man again; with a gun out too
+		gm.position = r.position + Vector2(SliceTuning.G_STAND_OFF_PX + 80.0, 0)
+		_r6_tick(w)
+		_check(not gm.stands() and gm.state != "stand", "%.0f px off he still stands (state '%s')" % [SliceTuning.G_STAND_OFF_PX + 80.0, gm.state])
+		gm.position = at
+		for _i in range(20):
+			_r6_tick(w)
+		_check(gm.state == "stand", "back in reach he's '%s', not standing" % gm.state)
+		r.guns[r.gun_i]["melee"] = false
+		_r6_tick(w)
+		_check(gm.state == "move", "a gun out, the man who stood went to '%s', not on to cover" % gm.state)
+		gm.ms["exposed_t"] = 0.0
+		gm.hurt_back = false
+		gm.take_shot({"gun": r.gun(), "from": r.position, "point": gm.position, "dir": Vector2.RIGHT, "dist": 300.0, "runner": r, "world": w, "share": 0.001})
+		_check(not gm.stands() and (gm.state == "retreat" or gm.is_dead()), "with a gun out, hurt and hit, he went to '%s'" % gm.state)
+		r.guns[r.gun_i]["melee"] = true
+		gm.ms["exposed_t"] = 2.0
+		gm.state = "move"
+		gm.position = at
+		_r6_tick(w)
+		_check(not gm.stands() and gm.state != "stand", "flushed out, he stood all the same ('%s')" % gm.state)
+	run.back_to_title()
+	print("r17 ok: the way out dealt into a far piece, on the map; a man with a gun stands against a hand weapon")

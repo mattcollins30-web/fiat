@@ -1,6 +1,6 @@
 extends RefCounted
 ## A level dealt from pieces (board L, 10 Nov): a 4 x 3 grid of pieces, each a walled room or open ground, picked and
-## joined by the seed. The way in (and out) is the bottom-left piece; the prize is in the piece furthest from it by the
+## joined by the seed. The way in is the bottom-left piece, the way out a piece two or more from it (10 Nov); the prize is in the piece furthest from it by the
 ## ways through; the gangs' gates are on the outer edge of far pieces. Open pieces run into each other; a walled piece
 ## has a doorway to each piece it's joined to, two at least, so no room is a dead end with one door (bar the grid's
 ## corners, which have two neighbours and a door to both). Every piece keeps a clear cross through its middle, so each
@@ -117,13 +117,16 @@ static func deal(place: Dictionary, seed_v: int) -> Dictionary:
 	far.sort_custom(func(a, b): return int(dist.get(a, 0)) > int(dist.get(b, 0)))
 	var prize_c: Vector2i = far[0]
 	var prize: Vector2 = cell_rect(prize_c).get_center()
-	# the gangs' gates: on the outer edge of pieces two or more from the way in, never the prize's
+	# (10 Nov, Matt: "extract should be randomised") the way out: a piece G_EXIT_FROM or more from the way in, not the prize's
+	var outs: Array = far.filter(func(c): return c != prize_c and int(dist.get(c, 0)) >= T.G_EXIT_FROM)
+	var exit_c: Vector2i = outs[rng.randi_range(0, outs.size() - 1)] if not outs.is_empty() else entry_c
+	# the gangs' gates: on the outer edge of pieces two or more from the way in, never the prize's or the way out's
 	var gates: Array = []
 	var spawns: Array = []
 	for c in far:
 		if spawns.size() >= int(place.get("gates", 3)):
 			break
-		if c == prize_c or int(dist.get(c, 0)) < 2:
+		if c == prize_c or c == exit_c or int(dist.get(c, 0)) < 2:
 			continue
 		var mid: Vector2 = cell_rect(c).get_center()
 		var sides: Array = []
@@ -141,6 +144,8 @@ static func deal(place: Dictionary, seed_v: int) -> Dictionary:
 		spawns.append(side[0])
 		gates.append(side[1])
 	var exit_rect := Rect2(T.EDGE + 40.0, size.y - T.EDGE - 40.0 - T.EXIT_H, T.EXIT_W, T.EXIT_H)
+	if exit_c != entry_c:
+		exit_rect = Rect2(cell_rect(exit_c).get_center() - Vector2(T.EXIT_W, T.EXIT_H) * 0.5, Vector2(T.EXIT_W, T.EXIT_H))     # on its piece's clear cross
 	var entry := Vector2(600.0, size.y - CH * 0.5)
 	# what stands in each piece, clear of the way in and out
 	var cover: Array = []
@@ -151,11 +156,11 @@ static func deal(place: Dictionary, seed_v: int) -> Dictionary:
 		for it in _piece(str(pieces[c]), rng):
 			var rect: Rect2 = it["rect"]
 			rect.position += r.position
-			if rect.intersects(exit_rect.grow(220.0)) or rect.grow(170.0).has_point(entry):
+			if rect.intersects(exit_rect.grow(220.0 if exit_c == entry_c else 50.0)) or rect.grow(170.0).has_point(entry):
 				continue
 			cover.append({"kind": it["kind"], "rect": rect})
 	return {"size": size, "floors": floors, "walls": walls, "cover": cover, "spawns": spawns, "gates": gates, "entry": entry,
-		"exit_rect": exit_rect, "prize": prize, "prize_cell": prize_c, "cells": pieces, "walled": walled, "doors": doors,
+		"exit_rect": exit_rect, "prize": prize, "prize_cell": prize_c, "exit_cell": exit_c, "cells": pieces, "walled": walled, "doors": doors,
 		"dist": dist, "seed": seed_v, "place": str(place.get("id", ""))}
 
 

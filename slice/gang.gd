@@ -171,7 +171,7 @@ func _shadow_spot(spot: Vector2, rp: Vector2, taken: Array) -> Vector2:
 	return spot
 
 
-const SETTLED := ["cover", "lean", "duck"]
+const SETTLED := ["cover", "lean", "duck", "stand"]
 
 ## (round 6, board E) Nobody of the front has seen him for a while: the gang has lost him.
 func lost_him() -> bool:
