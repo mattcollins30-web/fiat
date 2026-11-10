@@ -57,6 +57,14 @@ const CAM_ZOOM := 0.5                # (build 76, board D; Matt: "the view is al
 const CAM_LEAD := 0.3                # (build 76) the camera leans this share of the way toward the aim (the mouse's lean
                                      # settles at 0.43 of its distance from the runner: further when it's pushed out)
 const CAM_LEAD_MAX := 760.0          # ...at most this far (world px; 380 on screen)
+# (round 7, board H; Matt: "the skill bar needs to sit outside of the play as the player can walk behind it and miss
+# things") The HUD's band along the screen's foot: the play is the screen above it, and the camera stops at its top.
+const HUD_BAND_H := 156.0
+# (round 7, board G) Hit feedback: the crosshair's mark for a round landed, and the man's flinch.
+const G_MARK_S := 0.12                # a hit's ticks on the crosshair last this long (white; a headshot's red)
+const G_MARK_KILL_S := 0.3            # ...a kill's cross this long
+const G_FLINCH_S := 0.15              # hit, he's off his aim this long before his next round
+const G_FLINCH_EVERY_S := 0.6         # ...no more often than this (a stream of hits doesn't hold him silent)
 const CAM_FOLLOW := 12.0             # catch-up rate a second (higher is tighter)
 const SHAKE_FIRE := 1.5              # px, each round
 const SHAKE_HIT := 3.0               # a hit landed

@@ -18,6 +18,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   x0.5 HP), the game's sounds, the gun's kick and a crosshair, the end screen's "You against the runner alone". Round
   5 before it (1d82108; its sprites 0e0d00f). 10 Nov, from his first plays (none cleared): gang HP ×0.06 (about a dozen
   rifle rounds a man), gang damage its own at ×2, a hit's shove fixed; a test Poacher in kit for the level picked.
+  Round 7 on Matt's "build it" (boards F to H), in three
+  stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men, 3 the Poacher's six skills as
+  tools. After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
+  and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8375,3 +8379,15 @@ skill). The run log counts rounds fired down the sights. Gang HP x0.06 commit: b
 many enemies" (15 men, each gang in on the game's clock) - the next gang waiting on the last one's kills is the
 change to weigh; generated levels, crates and the way out for the full game (the backlog). Checked: r10 in the smoke,
 proved red; a review; lint 0; the full smoke on Matt's machine.
+
+The slice, round 7, stage 1 (10 Nov; Matt's first clear at 11:00 - 3:50 against the game's 4:13, 343 HP lost against
+1,607, 52% landing - then: "the skill bar needs to sit outside of the play as the player can walk behind it and miss
+things"; on the skills, "they arent interesting enough to use ... lets discuss", "direction is right - yes to the
+poachers first. do the mock ups", and on boards F to H, "build it"). In: the HUD's four panels in a 156 px band along
+the screen's foot (the site's panel and the minimap down from the top corners, the test settings' line in the site's
+panel), the play the screen above it, the camera stopping at the band's top; the crosshair's mark for a round landed
+(white, a headshot's red, a kill's cross, none for a man in the fog); a man's flinch (0.15 s off his aim, once every
+0.6 s). Off the board: the damage numbers and the HP bar over a hurt man were already there from board A and stay
+(board G said none - Matt's call); the minimap wasn't on board H and went into the band with the rest. Checked: r11 in
+the smoke, proved red three ways; a screenshot looked at; a review (the mouse over the band, the fog's men, the notes
+over the bar fixed from it); lint 0; the full smoke on Matt's machine. Sights: 7d9e8ae.

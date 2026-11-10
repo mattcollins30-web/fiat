@@ -16,6 +16,21 @@ var reticle := Vector2.INF          # the pad's aim point (the mouse has its own
 var reticle_locked := false
 var cross := Vector2.INF            # (round 6) the crosshair at the aim, mouse or pad: four ticks, their gap the spread there
 var cross_r := 0.0
+var mark_kind := ""                  # (round 7, board G) the crosshair's mark for the last round landed: "hit", "head", "kill"
+var mark_t := 0.0
+const C_MARK := Color("ffffff")
+const C_MARK_HEAD := Color("e0705a")
+const MARK_RANK := {"": 0, "hit": 1, "head": 2, "kill": 3}
+
+
+## A round landed (a headshot's is red) or a man went down (a cross): shown on the crosshair for a moment. A kill's
+## mark isn't replaced by a lesser one while it shows.
+func hit_mark(kind: String) -> void:
+	if mark_t > 0.0 and int(MARK_RANK.get(kind, 0)) < int(MARK_RANK.get(mark_kind, 0)):
+		return
+	mark_kind = kind
+	mark_t = T.G_MARK_KILL_S if kind == "kill" else T.G_MARK_S
+	queue_redraw()
 
 
 func tracer(a: Vector2, b: Vector2) -> void:
@@ -40,6 +55,7 @@ func step(dt: float) -> void:
 	for m in marks:
 		m["t"] -= dt
 	marks = marks.filter(func(m): return m["t"] > 0.0)
+	mark_t = maxf(0.0, mark_t - dt)
 	queue_redraw()
 
 
@@ -71,6 +87,14 @@ func _draw() -> void:
 			draw_line(cross + d * cross_r, cross + d * (cross_r + tick), Color(0, 0, 0, 0.55), 5.0 / T.CAM_ZOOM)
 			draw_line(cross + d * cross_r, cross + d * (cross_r + tick), C_TRACER, 2.5 / T.CAM_ZOOM)
 		draw_circle(cross, 2.0 / T.CAM_ZOOM, C_TRACER)
+		if mark_t > 0.0:                         # (round 7) the hit's ticks between the crosshair's own, a kill's cross through it
+			var col: Color = C_MARK if mark_kind == "hit" else C_MARK_HEAD
+			var r0: float = (0.0 if mark_kind == "kill" else 7.0) / T.CAM_ZOOM
+			var r1: float = (15.0 if mark_kind == "kill" else 16.0) / T.CAM_ZOOM
+			for i in range(4):
+				var dd := Vector2.RIGHT.rotated(PI / 4.0 + i * PI / 2.0)
+				draw_line(cross + dd * r0, cross + dd * r1, Color(0, 0, 0, 0.6), 6.0 / T.CAM_ZOOM)
+				draw_line(cross + dd * r0, cross + dd * r1, col, 3.0 / T.CAM_ZOOM)
 	if exit_prompt != "":
 		var f: Font = (get_parent() as SliceWorld).font()
 		var fs := prompt_px()

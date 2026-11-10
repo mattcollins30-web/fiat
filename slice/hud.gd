@@ -19,10 +19,12 @@ const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 
 # the board's measures (board A, 1920 x 1080); the bottom row sits on the screen's foot at any height
 const EDGE := 24.0                    # the panels' gap from the screen's edge
-const SITE_W := 300.0                 # top left: the site and the gang clock
-const SITE_H := 116.0                 # (round 4) a line more: "3 on you · 4 waiting"
-const MAP_W := 240.0                  # top right: the minimap's panel
-const MAP_H := 158.0
+const SITE_W := 300.0                 # the site and the gang clock (round 7: in the band)
+const SITE_H := 132.0                 # (round 4) a line more: "3 on you · 4 waiting"; (round 7) the band's height, the test settings' line in it
+const MAP_W := 211.0                  # the minimap's panel (round 7: in the band, at its right end)
+const MAP_H := 132.0
+const BAND_H := SliceTuning.HUD_BAND_H     # (round 7, board H) the HUD's own strip along the screen's foot: every panel in it, the play above
+const BAND_PAD := 12.0                # ...its panels this far from its edges and each other
 const MAP_IN := 16.0                  # the park drawn inside it
 const ME_W := 500.0                   # bottom left: the runner
 const ME_H := 118.0
@@ -49,6 +51,8 @@ var pops: Array = []                  # [{label, t, at}] the numbers in flight
 var _arrived := 0                     # gangs come so far (the director's gang_arrived)
 
 var _site: Panel
+var _band: ColorRect                  # (round 7) the band's ground and its top line
+var _band_line: ColorRect
 var _site_kicker: Label
 var _site_name: Label
 var _site_clock: Label
@@ -93,6 +97,14 @@ func _init() -> void:
 	_pop_root = Control.new()
 	_pop_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_pop_root)
+	_band = ColorRect.new()                  # (round 7) under every panel: nothing of the play shows through the band
+	_band.color = Pal.BG
+	_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_band)
+	_band_line = ColorRect.new()
+	_band_line.color = Pal.CARD_LINE
+	_band_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_band_line)
 	_build_site()
 	_build_map()
 	_build_me()
@@ -108,8 +120,7 @@ func _init() -> void:
 	UI.shadow(_note_gun)
 	_reload_hint = UI.label(self, Rect2(0, 0, 20.0 + GUN_W + 20.0, 26), "", "Bold", 18, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
 	UI.shadow(_reload_hint)
-	_tests = UI.label(self, Rect2(0, 58, NEWS_W, 22), "", "Regular", 14, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER)
-	UI.shadow(_tests)
+	_tests = UI.label(_site, Rect2(16, 106, SITE_W - 32, 20), "", "Regular", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)     # (round 7) in the site's panel, in the band
 	UI.shadow(_note_sk)
 	layout(Vector2(1920, 1080))
 
@@ -259,16 +270,21 @@ func _slot(x: float, key: String) -> Dictionary:
 ## Everything placed for a screen of size s: the top row on the top, the bottom row on the foot, centred across.
 func layout(s: Vector2) -> void:
 	size = s
-	_site.position = Vector2(EDGE, 20)
-	_map.position = Vector2(s.x - EDGE - MAP_W, 20)
-	_me.position = Vector2(EDGE, s.y - EDGE - ME_H)
-	_bar.position = Vector2(roundf((s.x - _bar_w()) / 2.0), s.y - EDGE - BAR_H)
+	var by: float = s.y - BAND_H               # (round 7, board H) the band's top: every panel below it
+	_band.position = Vector2(0, by)
+	_band.size = Vector2(s.x, BAND_H)
+	_band_line.position = Vector2(0, by)
+	_band_line.size = Vector2(s.x, 1)
+	_me.position = Vector2(BAND_PAD, by + roundf((BAND_H - ME_H) / 2.0))
+	_map.position = Vector2(s.x - BAND_PAD - MAP_W, by + BAND_PAD)
+	_site.position = Vector2(_map.position.x - BAND_PAD - SITE_W, by + BAND_PAD)
+	var me_end: float = _me.position.x + ME_W
+	_bar.position = Vector2(maxf(me_end + BAND_PAD, roundf((me_end + _site.position.x - _bar_w()) / 2.0)), by + BAND_PAD)
 	_banner.position = Vector2(roundf((s.x - _banner.size.x) / 2.0), _bar.position.y - 110)
 	_news.position = Vector2(roundf((s.x - NEWS_W) / 2.0), 24)
-	_note_gun.position = Vector2(_bar.position.x + 20.0, _bar.position.y - 26)
-	_reload_hint.position = Vector2(_bar.position.x + 20.0, _bar.position.y - 56)
-	_tests.position = Vector2(roundf((s.x - NEWS_W) / 2.0), 58)
-	_note_sk.position = Vector2(_bar.position.x + 20.0 + GUN_W + 20.0 + 1.0 + 20.0, _bar.position.y - 26)
+	_note_gun.position = Vector2(_bar.position.x + 20.0, by - 28)                # (the review) over the band's top, not across it
+	_reload_hint.position = Vector2(_bar.position.x + 20.0, by - 58)
+	_note_sk.position = Vector2(_bar.position.x + 20.0 + GUN_W + 20.0 + 1.0 + 20.0, by - 28)
 
 
 func _process(dt: float) -> void:
@@ -402,7 +418,7 @@ func show_state(st: Dictionary) -> void:
 	_reload_hint.visible = low
 	_reload_hint.text = ("X · Reload" if bool(st.get("pad", false)) else "R · Reload") if low else ""
 	# the test settings in force
-	_tests.text = "Test settings: gang HP %s · gang damage %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(SliceBridge.their_x(st))]
+	_tests.text = "Test: gang HP %s · gang damage %s" % [x_words(float(st.get("man_hp_x", SliceTuning.MAN_HP_X))), x_words(SliceBridge.their_x(st))]
 	_note_gun.visible = str(st.get("stand_in", "")) != ""
 	if _note_gun.visible:
 		UI.fit(_note_gun, ["Stand-in gun · %s" % str(st["stand_in"]), "Stand-in gun"])

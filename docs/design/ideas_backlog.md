@@ -198,6 +198,46 @@ too hard to hit enemies"):
   by hand was its largest cost. Needs its own design talk (what is fixed a site - its look, its gangs, its head - and
   what is dealt a run - cover, crates, the way out).
 
+The slice, Matt's first clear (10 Nov 11:00, with the sights: 3:50 against the game's 4:13, 343 HP lost against
+1,607, 52% of rounds landing, 359 of 384 fired down the sights; Matt: "much better - cleared one run"):
+- The HUD's bottom bar over the play (a UI change). Matt: "the skill bar needs to sit outside of the play as the
+  player can walk behind it and miss things." To draw first: the bar on its own band under the play, the view ending
+  above it.
+- Seen in the log, to raise: no search was sent in any of his seven runs (the front never lost him for 2.5 s).
+
+Skills reworked for the fight under your hands (new, 10 Nov, a talk first). Matt: "So before that I think skills need
+a total rework - I'm not using them because they arent interesting enough to use. The difficulty hewre is that in
+diablo etc - your basic left click attack is supposed to suck and skill usage is pretty much a requirement to progress
+- here the skills feel pointless in this setting and in the auto battler version they work because they are set to
+auto or are made for that in mind. lets discuss how this looks and then I think we're probably at the point of
+building a bigger portion of the list in the next pass." Ahead of the HUD band and hit feedback in his order.
+
+The skills' direction agreed (10 Nov, Matt: "direction is right - yes to the poachers first. do the mock ups"): the
+gun stays the star; skills are tools for what the gun does badly, one slot a gun mode, a signature, and a dodge every
+class shares; the Poacher's six first; each skill one name with two forms (the game's own fight keeps its own).
+Boards F to H on the slice's canvas, for his word before any build.
+
+After that pass (new, 10 Nov, Matt): "I think after this we need to look at some sort of progression - 3 levels starting
+from a fresh runner with yuou asnd the enemy as melee and finding guns on the run etc. Also at the same time the proc
+gen stuff." So: three levels from a fresh runner, both sides on melee at first, guns found on the run; and the
+generated levels, crates and way out with it. Needs its talk and boards.
+
+Design thoughts for the pass after round 7 (10 Nov, Matt, while round 7 was being built; to hold to when the stages
+and the generated levels are designed):
+- "we need to keep as much of what works in the auto battler version as possible"
+- "namely the searching AFTER the gangs are defeated and the pressure of searching before the next gang arrives"
+- "crates during the level need to be removed and appear after the last enemy, not displayed on the mini map so the
+  pressure is actively searching for them + opening them and extracting while under fire"
+- "one thing we dont need to take from the autobattler is just a statci arena - whats the objective of the level ?"
+- "ratyher than a rectangle arena do we introduce corridors and rooms etc ? obviously levels like the allotments and
+  streets would jstill be open areas."
+- "we need to keep this in mind when designing stages and before the proc gen stuff."
+- "im very aware that what we have in game at the mom,ent does actually work and maybe an auto battler is fine for
+  this - this experiment therfore needs to retain as much as possible of the feel which is the oppsoite problem we
+  had in green horn and its the better side of the fence to be on"
+Read against the game's run: a gang, then the search in the quiet before the next, the pack filling, the choice to
+push on or get out. The slice today has its crates out from the start and on the minimap, and one open rectangle.
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison

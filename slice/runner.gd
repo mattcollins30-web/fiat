@@ -188,6 +188,8 @@ func _aim() -> void:
 		aim = locked.position if locked != null else position + dir * T.AIM_STICK_PX
 	elif aim_mode == "mouse" and is_inside_tree():
 		aim = world.get_global_mouse_position()
+		if world.has_method("play_foot_y"):
+			aim.y = minf(aim.y, world.play_foot_y())     # (round 7, the review) the mouse over the HUD's band: the aim stops at the play's foot, the crosshair in view
 		locked = null
 	elif aim_mode == "pad" and locked != null and is_instance_valid(locked) and not locked.is_dead():
 		aim = locked.position

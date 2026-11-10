@@ -50,6 +50,8 @@ var stuck_t := 0.0
 var detour := Vector2.ZERO
 var detour_t := 0.0
 var flash_t := 0.0
+var flinch_cd := 0.0                    # (round 7) seconds till a hit can put him off his aim again
+var flinched := 0                       # ...and how often one has (a check's)
 var knock_left := Vector2.ZERO          # (10 Nov) the shove still to give him, in pixels: given at KNOCK_SPEED, never added to his walk
 var _walk_v := Vector2.ZERO             # his own walk, apart from any shove
 var tracer_to := Vector2.ZERO
@@ -111,6 +113,10 @@ func take_shot(shot: Dictionary) -> Dictionary:
 		gang.held_shot(self)                      # (round 4) found at the back and shot: he's in it now, one of the front goes back
 	var res: Dictionary = SliceBridge.shot_damage(world.ctx, shot.get("gun", {}), ms, rng, bool(shot.get("head", false)), float(shot.get("share", 1.0)))
 	flash_t = T.G_FLASH_S
+	if flinch_cd <= 0.0 and not bool(res.get("missed", false)):     # (round 7, board G) hit, he's off his aim a moment
+		react_left = maxf(react_left, T.G_FLINCH_S)
+		flinch_cd = T.G_FLINCH_EVERY_S
+		flinched += 1
 	if state == "cover" or state == "enter":
 		move_left = minf(move_left, 0.6)          # shot at: he thinks about moving
 	if not res["killed"] and hp < hp_max * T.G_RETREAT_HP and state != "retreat":
@@ -202,6 +208,7 @@ func step(dt: float) -> void:
 	if world == null:
 		return
 	flash_t = maxf(0.0, flash_t - dt)
+	flinch_cd = maxf(0.0, flinch_cd - dt)
 	tracer_t = maxf(0.0, tracer_t - dt)
 	if dead:
 		fade_t -= dt

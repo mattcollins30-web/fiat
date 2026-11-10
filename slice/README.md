@@ -98,6 +98,18 @@ down the sights against 6 of 90 from the hip. The swap moved to the mouse wheel 
 are set as the runner starts (SliceRunner.ensure_actions), project.godot untouched. The run log counts `sight_shots`.
 Nothing on the pad yet: LT is a skill.
 
+## Round 7 (10 Nov, boards F to H; Matt: "build it")
+
+Stage 1, the HUD's band and hit feedback:
+- The band (board H; Matt: "the skill bar needs to sit outside of the play as the player can walk behind it and miss
+  things"): the bottom HUD_BAND_H (156) px is the HUD's - the runner's panel, the gun's bar, the site's panel (with the
+  test settings' line, now "Test: gang HP ×0.06 · gang damage ×2") and the minimap, all in it. The play is the screen
+  above (SliceWorld.play_size); the camera stops there, so the car park's foot meets the band's top and nothing of it
+  is under a panel. The mouse's aim stops at the play's foot.
+- Hit feedback (board G): the crosshair's mark for a round landed (white ticks; red for a headshot; a cross for a
+  kill; none for a man the fog hides), and a man's flinch - hit, he's off his aim G_FLINCH_S, at most once every
+  G_FLINCH_EVERY_S. The damage numbers and the HP bar over a hurt man were there already (board A) and stay.
+
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.
 

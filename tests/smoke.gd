@@ -47166,7 +47166,7 @@ func _slice_world_checks(main) -> void:
 	_w72_steps(world, 1.0)
 	_check(world.cam_center.x > r.position.x + 100.0 and world.cam_center.x <= r.position.x + T.CAM_LEAD_MAX + 1.0, "the camera leans %.0f px toward the aim" % (world.cam_center.x - r.position.x))
 	var sp: Vector2 = world.world_to_screen(r.position)
-	_check(Rect2(Vector2.ZERO, world.view_size()).has_point(sp), "the runner is off the screen at %s" % str(sp))
+	_check(Rect2(Vector2.ZERO, world.play_size()).has_point(sp), "the runner is off the play (the screen above the band) at %s" % str(sp))
 	r.debug_move_to(Vector2(100, 100))
 	_w72_steps(world, 1.5)
 	var half: Vector2 = world.view_world() * 0.5     # (build 76) the zoomed-out view's half
@@ -47238,8 +47238,8 @@ func _w76_sight_checks(main) -> void:
 	var fig_px: float = T.RUNNER_R * 2.0 * T.CAM_ZOOM
 	_check(world.camera.zoom.is_equal_approx(Vector2(T.CAM_ZOOM, T.CAM_ZOOM)) and absf(tile_px - 32.0) < 0.5 and fig_px >= 28.0 and fig_px <= 44.0 and T.MAN_R * 2.0 * T.CAM_ZOOM >= 28.0,
 		"the zoom: camera %s, a tile %.1f px on screen (not 32), the runner %.0f px" % [str(world.camera.zoom), tile_px, fig_px])
-	_check(world.view_world().is_equal_approx(world.view_size() * 2.0) and world.screen_to_world(world.world_to_screen(Vector2(1234, 567))).distance_to(Vector2(1234, 567)) < 0.01,
-		"the view's ground %s isn't twice the screen %s, or screen_to_world isn't world_to_screen's inverse" % [str(world.view_world()), str(world.view_size())])
+	_check(world.view_world().is_equal_approx(world.play_size() * 2.0) and is_equal_approx(world.play_size().y, world.view_size().y - T.HUD_BAND_H) and world.screen_to_world(world.world_to_screen(Vector2(1234, 567))).distance_to(Vector2(1234, 567)) < 0.01,
+		"the view's ground %s isn't twice the play %s (the screen above the HUD's band), or screen_to_world isn't world_to_screen's inverse" % [str(world.view_world()), str(world.play_size())])
 	# the lean: toward the aim, further the further it's pushed out, never past CAM_LEAD_MAX; the runner stays on screen
 	r.debug_move_to(Vector2(2880, 1600))
 	var leans: Array = []
@@ -47249,7 +47249,7 @@ func _w76_sight_checks(main) -> void:
 		leans.append(world.cam_center.x - r.position.x)
 	_check(leans[0] > 60.0 and leans[1] > leans[0] + 150.0 and leans[2] <= T.CAM_LEAD_MAX + 0.5 and leans[2] > leans[1],
 		"the camera's lean at an aim 400 / 1200 / 6000 px out: %s (max %.0f)" % [str(leans), T.CAM_LEAD_MAX])
-	_check(Rect2(Vector2.ZERO, world.view_size()).grow(-60.0).has_point(world.world_to_screen(r.position)), "leaning, the runner's off the screen at %s" % str(world.world_to_screen(r.position)))
+	_check(Rect2(Vector2.ZERO, world.play_size()).grow(-60.0).has_point(world.world_to_screen(r.position)), "leaning, the runner's off the play at %s" % str(world.world_to_screen(r.position)))
 	# the camera on the park at both screens: no ground past its edges, top left and bottom right
 	for sz in [Vector2(1920, 1080), Vector2(1920, 1200)]:
 		world.screen_override = sz
@@ -47258,8 +47258,10 @@ func _w76_sight_checks(main) -> void:
 			r.debug_aim_at(corner * 2.0 - Vector2(T.PARK_W, T.PARK_H) * 0.5)
 			_w72_steps(world, 1.5)
 			var tl: Vector2 = world.screen_to_world(Vector2.ZERO)
-			var br: Vector2 = world.screen_to_world(sz)
+			var br: Vector2 = world.screen_to_world(world.play_size())     # (round 7) the play's foot: the band's top
 			_check(tl.x >= -0.5 and tl.y >= -0.5 and br.x <= T.PARK_W + 0.5 and br.y <= T.PARK_H + 0.5, "at %s the camera shows past the park: %s to %s" % [str(sz), str(tl), str(br)])
+			if corner.y > T.PARK_H * 0.5:
+				_check(absf(br.y - T.PARK_H) < 1.0 and is_equal_approx(world.play_size().y, sz.y - T.HUD_BAND_H), "at %s the park's foot is at %.0f in the play's last row, not on the band's top (%.0f)" % [str(sz), br.y, T.PARK_H])
 	# the prompts their size on screen, and the way out's on the screen at both (the bottom left corner, clamped)
 	_check(absf(FxS.prompt_px() * T.CAM_ZOOM - 28.0) <= 1.0 and absf(load("res://slice/crate.gd").prompt_px() * T.CAM_ZOOM - 26.0) <= 1.0,
 		"the prompts on screen: the way out %.0f px, a crate %.0f px (28 and 26 before the zoom)" % [FxS.prompt_px() * T.CAM_ZOOM, load("res://slice/crate.gd").prompt_px() * T.CAM_ZOOM])
@@ -47271,7 +47273,7 @@ func _w76_sight_checks(main) -> void:
 		var pw: float = f.get_string_size(world.fx.exit_prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, FxS.prompt_px()).x * T.CAM_ZOOM
 		var at: Vector2 = world.world_to_screen(world.fx.exit_at)
 		var box := Rect2(at - Vector2(pw * 0.5, FxS.prompt_px() * T.CAM_ZOOM), Vector2(pw, FxS.prompt_px() * T.CAM_ZOOM))
-		_check(world.fx.exit_prompt != "" and Rect2(Vector2.ZERO, sz).encloses(box), "at %s the way out's prompt %s is off the screen" % [str(sz), str(box)])
+		_check(world.fx.exit_prompt != "" and Rect2(Vector2.ZERO, world.play_size()).encloses(box), "at %s the way out's prompt %s is off the play (the screen above the band)" % [str(sz), str(box)])
 	world.screen_override = Vector2.ZERO
 	# sight: above the long wall, a man below it hidden, a man in the open seen; the wall itself lit, behind it dark
 	var wall: Rect2 = SliceLevel.tiles_px(SliceLevel.COVER[2]["tiles"])
@@ -47568,7 +47570,7 @@ func _h73_round2_checks(main) -> void:
 	var seen: Array = []
 	_check(run.pause.buttons[3].text == "Gang damage ×2" and is_equal_approx(float(ctx["their_dmg_x"]), SliceTuning.THEIR_DMG_X), "the pause's fourth test setting: '%s'" % run.pause.buttons[3].text)
 	hud.show_state(hud.read_state())
-	_check(hud._tests.text == "Test settings: gang HP ×0.06 · gang damage ×2", "the HUD's test line at the start: '%s'" % hud._tests.text)
+	_check(hud._tests.text == "Test: gang HP ×0.06 · gang damage ×2", "the HUD's test line at the start: '%s'" % hud._tests.text)
 	for k in range(3):
 		run.pause.buttons[3].pressed.emit()
 		seen.append([float(ctx["their_dmg_x"]), run.pause.buttons[3].text])
@@ -47585,7 +47587,7 @@ func _h73_round2_checks(main) -> void:
 	_check(at_low == "Gang damage ×2" and run.pause.buttons[3].text == "Gang damage ×2" and is_equal_approx(x_low, 2.0) and is_equal_approx(SliceBridge.their_x(ctx), 2.0), "gang damage moved with gang HP: at ×0.04 '%s' (×%.2f in force), back '%s'" % [at_low, x_low, run.pause.buttons[3].text])
 	run.pause.buttons[3].pressed.emit()
 	hud.show_state(hud.read_state())
-	_check(hud._tests.text == "Test settings: gang HP ×0.06 · gang damage ×3", "the HUD's test line: '%s'" % hud._tests.text)
+	_check(hud._tests.text == "Test: gang HP ×0.06 · gang damage ×3", "the HUD's test line: '%s'" % hud._tests.text)
 	_check(not run.pause.text_nodes().any(func(l): return str(l.text).contains("Magazine")), "the magazine's test knob is still on the pause")
 	# 3. (build 76, G) MAG_X gone: the fixture's rifle is an AR with its kind's magazine (H: the pause's and the HUD's lines)
 	_check(str(g0["kind"]) == "ar" and int(g0["mag"]) == 30 and int(r.gun()["mag"]) == 30 and r.rounds[0] == 30 and not ctx.has("mag_x"),
@@ -48632,6 +48634,88 @@ func _r10_sights_checks(main) -> void:
 	world.queue_free()
 
 
+## Round 7, stage 1 (boards H and G; Matt: "the skill bar needs to sit outside of the play as the player can walk
+## behind it and miss things"): every panel of the HUD in a band along the screen's foot, nothing of it over the play
+## but the news and the prompts, the camera's view ending at the band's top; the crosshair's mark for a round landed,
+## and a man's flinch.
+func _r11_band_checks(main) -> void:
+	var run = load("res://slice/launch.gd").open(main, H72_SEED, false, 12)
+	var hud = run.hud
+	var w = run.world
+	for sz in [Vector2(1920, 1080), Vector2(1920, 1200), Vector2(2560, 1080)]:
+		w.screen_override = sz
+		hud.layout(sz)
+		hud.show_state(hud.read_state())
+		var top: float = sz.y - SliceTuning.HUD_BAND_H
+		var band := Rect2(0, top, sz.x, SliceTuning.HUD_BAND_H)
+		var panels: Array = [["the runner's", hud._me], ["the gun's bar", hud._bar], ["the site's", hud._site], ["the map's", hud._map]]
+		var out: Array = panels.filter(func(pn): return not band.encloses(Rect2(pn[1].position, pn[1].size))).map(func(pn): return "%s %s" % [pn[0], str(Rect2(pn[1].position, pn[1].size))])
+		_check(out.is_empty() and Rect2(hud._band.position, hud._band.size).is_equal_approx(band) and hud._band.color.a == 1.0, "at %s the band is %s and these panels leave it: %s" % [str(sz), str(Rect2(hud._band.position, hud._band.size)), str(out)])
+		var over: Array = []
+		for i in range(panels.size()):
+			for j in range(i + 1, panels.size()):
+				if Rect2(panels[i][1].position, panels[i][1].size).grow(3.0).intersects(Rect2(panels[j][1].position, panels[j][1].size)):
+					over.append("%s on %s" % [panels[i][0], panels[j][0]])
+		_check(over.is_empty(), "at %s the band's panels crowd each other: %s" % [str(sz), str(over)])
+		_check(is_equal_approx(w.play_size().y, top) and absf(w.world_to_screen(w.cam_center).y - top * 0.5) < 0.5, "at %s the play is %.0f px high and the camera's middle at %.0f, not the screen above the band (%.0f)" % [sz, w.play_size().y, w.world_to_screen(w.cam_center).y, top])
+		_check(_check_nodes(hud.text_nodes(), [], "the slice's HUD in its band at %s" % str(sz)) == 0, "the band's words don't fit at %s" % str(sz))
+	_check(hud._tests.get_parent() == hud._site and hud._tests.text == "Test: gang HP ×0.06 · gang damage ×2", "the test settings' line isn't in the site's panel: '%s'" % hud._tests.text)
+	w.screen_override = Vector2.ZERO
+	# the camera node sits lower than the play's middle by half the band, so the play's middle is the camera's centre
+	_check(w.camera.position.is_equal_approx(w.cam_center + Vector2(0, SliceTuning.HUD_BAND_H * 0.5 / SliceTuning.CAM_ZOOM)), "the camera at %s against its centre %s: not half the band lower" % [str(w.camera.position), str(w.cam_center)])
+	# the crosshair's marks: a hit's, a headshot's over it, a kill's kept over both till it fades
+	var fx = w.fx
+	w.hit_landed.emit(null, {"headshot": false}, Vector2.ZERO)
+	var a: Array = [fx.mark_kind, fx.mark_t]
+	w.hit_landed.emit(null, {"headshot": true}, Vector2.ZERO)
+	var b: String = fx.mark_kind
+	w.man_down.emit(null)
+	w.hit_landed.emit(null, {"headshot": false}, Vector2.ZERO)
+	var c: Array = [fx.mark_kind, fx.mark_t]
+	fx.step(SliceTuning.G_MARK_KILL_S + 0.01)
+	# (the review) a man the fog hides gives no mark, hit or dead; the notes over the bar end at the band's top; the
+	# mouse's aim stops at the play's foot
+	var hidden := Node2D.new()
+	hidden.visible = false
+	w.add_child(hidden)
+	w.hit_landed.emit(hidden, {"headshot": true}, Vector2.ZERO)
+	w.man_down.emit(hidden)
+	var hidden_mark: float = fx.mark_t
+	hidden.visible = true
+	w.hit_landed.emit(hidden, {"headshot": false}, Vector2.ZERO)
+	_check(hidden_mark == 0.0 and fx.mark_kind == "hit" and fx.mark_t > 0.0, "a hidden man's hit and death marked the crosshair for %.2f s; in sight his hit reads '%s'" % [hidden_mark, fx.mark_kind])
+	hidden.queue_free()
+	fx.step(1.0)
+	hud.layout(Vector2(1920, 1080))
+	var band_top: float = 1080.0 - SliceTuning.HUD_BAND_H
+	var low: Array = [hud._note_gun, hud._note_sk, hud._reload_hint, hud._banner].filter(func(l): return l.position.y + l.size.y > band_top + 0.5).map(func(l): return str(Rect2(l.position, l.size)))
+	_check(low.is_empty(), "these lines over the bar cross the band's top at %.0f: %s" % [band_top, str(low)])
+	_check(absf(w.world_to_screen(Vector2(0, w.play_foot_y())).y - (w.play_size().y - 14.0)) < 0.5 and w.play_foot_y() < w.screen_to_world(Vector2(0, w.play_size().y)).y, "the mouse's lowest aim is at %.0f on screen, not just above the band" % w.world_to_screen(Vector2(0, w.play_foot_y())).y)
+	_check(a == ["hit", SliceTuning.G_MARK_S] and b == "head" and c == ["kill", SliceTuning.G_MARK_KILL_S] and fx.mark_t == 0.0, "the crosshair's marks: a hit %s, a headshot '%s', a kill then a hit %s, %.2f s left after it fades" % [str(a), b, str(c), fx.mark_t])
+	# a man's flinch: a round landed puts him off his aim once, not on every round of a stream
+	for k in range(60 * 12):
+		_r6_tick(w)
+	var men: Array = w.men()
+	_check(not men.is_empty(), "no man in the car park after 12 s to flinch")
+	if not men.is_empty():
+		var mn = men[0]
+		mn.ms["hp"] = mn.hp_max * 50.0
+		mn.react_left = 0.0
+		mn.flinch_cd = 0.0
+		var was: int = mn.flinched
+		var gun: Dictionary = w.runner.gun()
+		for k in range(6):                   # six rounds in a tenth of a second
+			mn.take_shot({"gun": gun, "from": w.runner.position, "point": mn.position, "dir": Vector2.RIGHT, "dist": 100.0, "runner": w.runner, "world": w, "share": 1.0})
+		_check(mn.flinched == was + 1 and mn.react_left >= SliceTuning.G_FLINCH_S - 0.001 and mn.flinch_cd > 0.0, "six rounds made him flinch %d times, %.2f s off his aim" % [mn.flinched - was, mn.react_left])
+		for k in range(int(ceil(SliceTuning.G_FLINCH_EVERY_S * 60.0)) + 2):
+			_r6_tick(w)
+		mn.take_shot({"gun": gun, "from": w.runner.position, "point": mn.position, "dir": Vector2.RIGHT, "dist": 100.0, "runner": w.runner, "world": w, "share": 1.0})
+		_check(mn.flinched == was + 2, "%.1f s on, the next round didn't make him flinch again (%d)" % [SliceTuning.G_FLINCH_EVERY_S, mn.flinched - was])
+	run.back_to_title()
+	run.free()
+	print("r11 band ok: the HUD's four panels in a %d px band at 1920 x 1080, 1920 x 1200 and 2560 x 1080, the play above it; the crosshair's marks; a flinch a %.1f s" % [int(SliceTuning.HUD_BAND_H), SliceTuning.G_FLINCH_EVERY_S])
+
+
 class R9Target:
 	extends Node2D
 	var radius := 34.0
@@ -49184,4 +49268,5 @@ func _r6_checks(_main) -> void:
 	_r8_test_runner_checks(_main)
 	_r9_feel_checks(_main)
 	_r10_sights_checks(_main)
+	_r11_band_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

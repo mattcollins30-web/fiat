@@ -116,7 +116,9 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	if camera.is_inside_tree():
 		camera.make_current()            # (outside the tree - a headless check - there's no viewport to own)
 	cam_center = _cam_goal()
-	camera.position = cam_center
+	camera.position = _cam_pos()
+	hit_landed.connect(func(m, res, _p): _mark_for(m, "head" if bool(res.get("headshot", false)) else "hit"))     # (round 7) the crosshair's marks
+	man_down.connect(func(m): _mark_for(m, "kill"))
 	hud_layer = CanvasLayer.new()
 	hud_layer.name = "HudLayer"
 	hud_layer.layer = 10
@@ -191,7 +193,7 @@ func _cam_goal() -> Vector2:
 
 func _camera_step(dt: float) -> void:
 	cam_center = cam_center.lerp(_cam_goal(), clampf(T.CAM_FOLLOW * dt, 0.0, 1.0))
-	camera.position = cam_center
+	camera.position = _cam_pos()
 	shake_px = maxf(0.0, shake_px - T.SHAKE_DECAY * dt)
 	camera.offset = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * shake_px if shake_px > 0.0 else Vector2.ZERO
 
@@ -206,9 +208,34 @@ func view_size() -> Vector2:
 	return v
 
 
-## (build 76) The ground the camera shows, in world px: the screen over the zoom (3840 x 2160 at 1920 x 1080).
+## The crosshair's mark for a round landed on `m` or his death - not for a man the fog hides (round 5's rule: no flash,
+## no number, nothing that gives him away).
+func _mark_for(m, kind: String) -> void:
+	if m != null and is_instance_valid(m) and m is CanvasItem and not m.visible:
+		return
+	fx.hit_mark(kind)
+
+
+## The world's y at the play's foot, a little in from the band's top: the lowest the mouse's aim goes.
+func play_foot_y() -> float:
+	return screen_to_world(Vector2(0.0, play_size().y - 14.0)).y
+
+
+## (round 7, board H) The play's part of the screen: all of it above the HUD's band.
+func play_size() -> Vector2:
+	var v := view_size()
+	return Vector2(v.x, maxf(1.0, v.y - T.HUD_BAND_H))
+
+
+## The camera's own position for cam_center to sit at the play's middle, not the screen's (the band is under it).
+func _cam_pos() -> Vector2:
+	return cam_center + Vector2(0.0, T.HUD_BAND_H * 0.5 / T.CAM_ZOOM)
+
+
+## (build 76) The ground the camera shows, in world px: the play over the zoom (3840 x 1848 at 1920 x 1080; round 7: the
+## band's strip is the HUD's, so the car park's edge meets the band's top and nothing of it is under a panel).
 func view_world() -> Vector2:
-	return view_size() / T.CAM_ZOOM
+	return play_size() / T.CAM_ZOOM
 
 
 func shake(strength: float) -> void:
@@ -216,11 +243,11 @@ func shake(strength: float) -> void:
 
 
 func world_to_screen(p: Vector2) -> Vector2:
-	return (p - cam_center) * T.CAM_ZOOM + view_size() * 0.5
+	return (p - cam_center) * T.CAM_ZOOM + play_size() * 0.5
 
 
 func screen_to_world(s: Vector2) -> Vector2:
-	return (s - view_size() * 0.5) / T.CAM_ZOOM + cam_center
+	return (s - play_size() * 0.5) / T.CAM_ZOOM + cam_center
 
 
 # ---------------------------------------------------------------- the geometry
