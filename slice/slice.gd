@@ -175,10 +175,15 @@ func _input(event: InputEvent) -> void:
 
 
 # ---------------------------------------------------------------- the camera
+## How far the camera leans from the runner toward his aim: further down the sights (10 Nov).
+func cam_lead() -> Vector2:
+	var down: bool = bool(runner.get("sights"))
+	var lead: Vector2 = (runner.aim - runner.position) * (T.G_SIGHTS_LEAD if down else T.CAM_LEAD)
+	return lead.limit_length(T.G_SIGHTS_LEAD_MAX if down else T.CAM_LEAD_MAX)
+
+
 func _cam_goal() -> Vector2:
-	var lead := (runner.aim - runner.position) * T.CAM_LEAD
-	if lead.length() > T.CAM_LEAD_MAX:
-		lead = lead.normalized() * T.CAM_LEAD_MAX
+	var lead := cam_lead()
 	var half := view_world() * 0.5
 	var g := runner.position + lead
 	return Vector2(clampf(g.x, half.x, T.PARK_W - half.x), clampf(g.y, half.y, T.PARK_H - half.y))

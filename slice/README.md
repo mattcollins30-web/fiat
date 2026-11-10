@@ -40,7 +40,7 @@ rounds at REFILL_MULT times the reload. The box is the camp's boxes of that type
 swapped for the fixture's rifle, said on the HUD; skills the slice doesn't play show greyed, "Not in the slice".
 
 Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left stick, mouse / right stick, left button
-/ RT fire, right button / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
+/ RT fire, right button held aim down sights (10 Nov; no pad button yet), mouse wheel or V / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
 X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
 The test knobs on the pause: "Gang HP" ×0.06 (MAN_HP_X, the start) / ×0.1 / ×0.04, and "Gang damage": THEIR_DMG_X
@@ -88,6 +88,15 @@ level (SliceBridge.uses_test_runner, test_level, _fixture). The picker says whic
 "Test Poacher · Level 14"; the run log's `fixture` and `camp_level` say who played. With the test Poacher the Kit room
 is his (no camp stash). The game's own fight for him by car park level: 9 0:27, 12 3:27, 16 7:34, 22 14:22, 34 47:30,
 50 123:07 - past the low 20s the same two guns fall well behind the gangs.
+
+## Aim down sights (10 Nov, Matt: "we also need right click to aim down sights with the masin weapon with left click just being hip firing")
+
+The right button held, the main gun up and ready (not the spare, a melee weapon, mid-reload, swap or search): the
+gun's spread times G_SIGHTS_SPREAD_X (0.4), the kick counting G_SIGHTS_KICK_X (0.5), his pace G_SIGHTS_PACE_X (0.5),
+the camera leaning G_SIGHTS_LEAD of the way to the aim. The hip is the gun as it was. Held at 1,300 px, 24 of 90 land
+down the sights against 6 of 90 from the hip. The swap moved to the mouse wheel and V; both, and the sights' action,
+are set as the runner starts (SliceRunner.ensure_actions), project.godot untouched. The run log counts `sight_shots`.
+Nothing on the pad yet: LT is a skill.
 
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.

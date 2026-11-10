@@ -26,7 +26,7 @@ static func entry(world, outcome: String, stats: Dictionary, game: Dictionary) -
 		"gang_hp_x": float(ctx.get("man_hp_x", T.MAN_HP_X)), "gang_damage_x": SliceBridge.their_x(ctx),
 		"time_s": snappedf(float(stats.get("time_s", 0.0)), 0.1), "hp_lost": int(stats.get("damage_taken", 0)),
 		"kills": int(stats.get("kills", 0)), "headshots": int(stats.get("headshots", 0)), "shots": shots,
-		"hits": int(stats.get("hits", 0)), "accuracy": snappedf(float(stats.get("hits", 0)) / shots, 0.001) if shots > 0 else 0.0,
+		"hits": int(stats.get("hits", 0)), "sight_shots": int(stats.get("sight_shots", 0)), "accuracy": snappedf(float(stats.get("hits", 0)) / shots, 0.001) if shots > 0 else 0.0,
 		"damage_done": int(stats.get("damage_done", 0)), "finds": (stats.get("haul", []) as Array).size(),
 		"game_time_s": snappedf(float(game.get("time_s", 0.0)), 0.1), "game_hp_lost": int(round(float(game.get("hp_lost", 0.0)))),
 	}

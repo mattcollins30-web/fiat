@@ -48539,6 +48539,99 @@ func _r6_end_checks(main) -> void:
 	print("r6 end ok: the game's own fight at level 12 %s, %d HP" % [Fmt.mss(float(game["time_s"])), int(round(float(game["hp_lost"])))])
 
 
+## Aim down sights (10 Nov, Matt: "we also need right click to aim down sights with the masin weapon with left click
+## just being hip firing if you dont right click", then "too hard to hit enemies", "go"): the right button held tightens
+## the main gun's spread and its kick, halves his pace and leans the camera further; the hip is the gun as it was; the
+## swap has moved to the wheel and V.
+func _r10_sights_checks(main) -> void:
+	var Runner = load("res://slice/runner.gd")
+	Runner.ensure_actions()
+	Runner.ensure_actions()                  # twice: nothing doubled
+	var sight_evs: Array = InputMap.action_get_events("slice_sights") if InputMap.has_action("slice_sights") else []
+	var swap_evs: Array = InputMap.action_get_events("slice_swap")
+	_check(sight_evs.size() == 1 and sight_evs[0] is InputEventMouseButton and sight_evs[0].button_index == MOUSE_BUTTON_RIGHT, "the sights aren't on the right button alone: %s" % str(sight_evs))
+	_check(not swap_evs.any(func(e): return e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_RIGHT) and swap_evs.filter(func(e): return e is InputEventKey and e.physical_keycode == KEY_V).size() == 1 and swap_evs.any(func(e): return e is InputEventJoypadButton), "the swap's keys: %s (not V once, the pad's Y, and no right button)" % str(swap_evs))
+	var keys: Array = PauseScript72.KEYS.map(func(k): return "%s: %s" % [k[0], k[1]])
+	_check(keys.has("Aim down sights: Right button, held") and keys.has("Swap gun: Mouse wheel or V") and keys.find("Aim down sights: Right button, held") == keys.find("Fire: Left button") + 1, "the pause's keys: %s" % str(keys))
+	var world = _w72_world(main)
+	var r = world.runner
+	var g: Dictionary = r.gun()
+	var own: float = float(g.get("spread_deg", 0.0))
+	var at: Vector2 = _h72_clear_spot(world, r.position, 1300.0)
+	var d: float = at.distance_to(r.position)
+	r.debug_aim_at(at)
+	_w72_steps(world, 0.5)
+	var hip_gap: float = world.fx.cross_r
+	var hip_cam: float = world.cam_lead().length()
+	_check(not r.sights and is_equal_approx(r.spread_deg(), own), "from the hip the spread is %.2f against the gun's %.2f" % [r.spread_deg(), own])
+	r.debug_sights = true
+	_w72_steps(world, 0.5)
+	var down_cam: float = world.cam_lead().length()
+	_check(r.sights and is_equal_approx(r.spread_deg(), own * SliceTuning.G_SIGHTS_SPREAD_X) and world.fx.cross_r < hip_gap * 0.6, "down the sights the spread is %.2f (the gun's %.2f), the crosshair's gap %.1f against %.1f from the hip" % [r.spread_deg(), own, world.fx.cross_r, hip_gap])
+	_check(absf(hip_cam - minf(d * SliceTuning.CAM_LEAD, SliceTuning.CAM_LEAD_MAX)) < 1.0 and absf(down_cam - minf(d * SliceTuning.G_SIGHTS_LEAD, SliceTuning.G_SIGHTS_LEAD_MAX)) < 1.0 and down_cam > hip_cam * 1.2, "the camera leans %.0f px down the sights against %.0f from the hip" % [down_cam, hip_cam])
+	# (the review) the lean feeds the mouse's aim (it settles at lead / (1 - lead) of the cursor's offset): with the cursor
+	# at the screen's top edge he stays clear of the HUD's bar at the bottom
+	var settled: float = SliceTuning.G_SIGHTS_LEAD / (1.0 - SliceTuning.G_SIGHTS_LEAD) * 540.0 + SliceTuning.RUNNER_R * SliceTuning.CAM_ZOOM
+	_check(settled <= 540.0 - HudScript72.EDGE - HudScript72.BAR_H, "down the sights with the mouse at the top edge he sits %.0f px under the centre: under the HUD's bar at %.0f" % [settled, 540.0 - HudScript72.EDGE - HudScript72.BAR_H])
+	# his pace down the sights, and back at the hip
+	var paces: Array = []
+	for on in [true, false]:
+		r.debug_sights = on
+		r.velocity = Vector2.ZERO
+		r.auto_move = Vector2.RIGHT if world.resolve_circle(r.position + Vector2(300, 0), SliceTuning.RUNNER_R).distance_to(r.position + Vector2(300, 0)) < 1.0 else Vector2.LEFT
+		_w72_steps(world, 0.6)
+		paces.append(r.velocity.length())
+		r.auto_move = Vector2.ZERO
+		_w72_steps(world, 0.4)
+	_check(absf(float(paces[0]) - r.pace_px * SliceTuning.G_SIGHTS_PACE_X) < 2.0 and absf(float(paces[1]) - r.pace_px) < 2.0, "he walks at %.0f px a second down the sights and %.0f from the hip (his pace %.0f)" % [float(paces[0]), float(paces[1]), r.pace_px])
+	# only the main gun, ready: not the spare, not mid-reload
+	r.debug_sights = true
+	r.debug_aim_at(at)
+	if r.guns.size() > 1:
+		r.swap()
+		r.swap_left = 0.0
+		_w72_steps(world, 0.1)
+		_check(r.gun_i == 1 and not r.sights and is_equal_approx(r.spread_deg(), float(r.gun().get("spread_deg", 0.0)) + r.kick), "the spare took the sights: %s, spread %.2f" % [str(r.sights), r.spread_deg()])
+		r.swap()
+		r.swap_left = 0.0
+	r.reloading = true
+	r._sights_step()
+	_check(not r.sights, "he kept the sights through a reload")
+	r.reloading = false
+	# the wheel: a spin is one swap
+	if r.guns.size() > 1:
+		var was_gun: int = r.gun_i
+		for k in range(2):
+			var notch := InputEventMouseButton.new()
+			notch.button_index = MOUSE_BUTTON_WHEEL_DOWN
+			notch.pressed = true
+			r._input(notch)
+			world.tick(H72_DT)               # a notch a frame, as a spin comes: the second lands inside the swap
+		_check(r.gun_i != was_gun and r.swap_left > 0.0 and not r.swap_asked, "two notches of the wheel, a frame apart, left him on gun %d (he held %d), swap %.2f s: a spin is one swap" % [r.gun_i, was_gun, r.swap_left])
+		r.swap()
+		r.swap_left = 0.0
+	# thirty rounds held at range: the sights land more than the hip, and the log counts them
+	var target := W72Target.new()
+	world.men_root.add_child(target)
+	target.position = at
+	var fired := [0]
+	world.fired.connect(func(_a = null, _b = null, _c = null): fired[0] += 1)
+	r.debug_sights = false
+	var hip: Array = _r6_kick_run(world, r, at, target, fired, 90, 0)
+	_w72_steps(world, 1.0)
+	var counted: int = int(world.stats.get("sight_shots", 0))
+	r.debug_sights = true
+	var down: Array = _r6_kick_run(world, r, at, target, fired, 90, 0)
+	r.debug_sights = false
+	Input.action_release("slice_fire")
+	var hip_share: float = float(hip[1]) / maxf(1.0, float(hip[0]))
+	var down_share: float = float(down[1]) / maxf(1.0, float(down[0]))
+	_check(counted == 0 and int(world.stats.get("sight_shots", 0)) == int(down[0]), "the run's rounds down the sights: %d from the hip, %d of %d after" % [counted, int(world.stats.get("sight_shots", 0)), int(down[0])])
+	_check(int(hip[0]) >= 80 and int(down[0]) >= 80 and down_share > hip_share * 1.5 and float(down[2]) > 0.0, "at %.0f px held, %.0f%% landed down the sights and %.0f%% from the hip" % [d, down_share * 100.0, hip_share * 100.0])
+	print("r10 sights ok: at %.0f px held, %d of %d down the sights against %d of %d from the hip; spread %.1f to %.1f, pace %.0f to %.0f, the camera %.0f to %.0f px out" % [d, int(down[1]), int(down[0]), int(hip[1]), int(hip[0]), own, own * SliceTuning.G_SIGHTS_SPREAD_X, float(paces[1]), float(paces[0]), hip_cam, down_cam])
+	world.queue_free()
+
+
 class R9Target:
 	extends Node2D
 	var radius := 34.0
@@ -49090,4 +49183,5 @@ func _r6_checks(_main) -> void:
 	_r7_log_checks(_main)
 	_r8_test_runner_checks(_main)
 	_r9_feel_checks(_main)
+	_r10_sights_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

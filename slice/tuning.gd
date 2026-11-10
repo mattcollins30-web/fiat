@@ -144,6 +144,15 @@ const G_KINDS := {
 }
 const G_KICK_HOLD_S := 0.14           # (round 6) the kick holds this long after a round (over an AR's beat), then settles
 const G_KICK_SETTLE_S := 0.35         # ...from its most to nothing in this long
+# (10 Nov, Matt: "we also need right click to aim down sights with the main weapon with left click just being hip
+# firing"; then, after two runs dead at a third of rounds landing, "too hard to hit enemies") Sights: the right button
+# held, the main gun only. Hip fire is the gun as it was.
+const G_SIGHTS_SPREAD_X := 0.4        # the gun's own spread times this down the sights (the rifle's 2 degrees: 0.8)
+const G_SIGHTS_KICK_X := 0.5          # ...and the kick built counts this much
+const G_SIGHTS_PACE_X := 0.5          # he walks at this share of his pace
+const G_SIGHTS_LEAD := 0.38           # the camera leans this share of the way to the aim (CAM_LEAD from the hip; the review: at 0.45 the
+                                      # mouse at the screen's top put him under the HUD's bar - the lean feeds the aim, lead / (1 - lead))
+const G_SIGHTS_LEAD_MAX := 900.0      # ...at most this far (CAM_LEAD_MAX from the hip)
 const G_CROSS_MIN_PX := 9.0           # the crosshair's gap on screen at its least; past it the gap is the spread at the aim
 const G_CROSS_TICK_PX := 9.0          # ...and a tick's length on screen
 const G_AR_ROF := 2.0                # a rifle at the game's rate of this or more is an AR (the Regimental rifle's 2.45)

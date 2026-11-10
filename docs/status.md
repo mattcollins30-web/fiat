@@ -8364,3 +8364,14 @@ under the game's own time, so time_x is a conversion, not a like-for-like; hp_lo
 time, kill heals and drops all arrive faster against the smaller pools - for his play to judge. Checked: r9 in the
 smoke, proved red five ways; a review; lint 0; the full smoke on Matt's machine. Logged, not built: aiming down sights
 on the right button (the backlog).
+
+The slice: aim down sights (10 Nov; Matt: "We also need right click to aim down sights with the masin weapon with
+left click just being hip firing if you dont right click", and after two more runs dead - 11 of 15 killed each, a third
+of his rounds landing - "too hard to hit enemies", then "go"). The right button held, the main gun only: spread x0.4
+(the rifle's 2 degrees to 0.8), the kick counting half, his pace halved, the camera leaning further toward the aim; the
+hip is the gun as it was. Held at 1,300 px, 24 of 90 rounds land down the sights against 6 of 90 from the hip. The
+swap moved to the mouse wheel and V (the pad's Y stays); the pause's keys say so. Nothing on the pad yet (LT is a
+skill). The run log counts rounds fired down the sights. Gang HP x0.06 commit: bf470cb. Left for after his play: "too
+many enemies" (15 men, each gang in on the game's clock) - the next gang waiting on the last one's kills is the
+change to weigh; generated levels, crates and the way out for the full game (the backlog). Checked: r10 in the smoke,
+proved red; a review; lint 0; the full smoke on Matt's machine.

@@ -33,6 +33,9 @@ var refilling := false               # this reload fills the magazine from the p
 var jammed := false
 var jam_left := 0.0
 var swap_left := 0.0
+var swap_asked := false              # (10 Nov) the wheel turned since the last tick
+var sights := false                  # (10 Nov) down the sights this tick: the right button held, the main gun ready
+var debug_sights := false            # a check's hold of the right button
 var shot_cd := 0.0
 var kick := 0.0                      # (round 6) degrees the fire so far adds to the spread; it settles when he eases off
 var kick_t := 0.0                    # seconds since the last round
@@ -59,7 +62,31 @@ var press_kept := 0.0               # (build 76) a press on a semi gun inside it
 var auto_move := Vector2.ZERO        # a check's walk (debug_move_dir); zero means the controls
 
 
+## The slice's controls that aren't the project's own (10 Nov; project.godot is left alone): sights on the right
+## button, held; the swap off it, onto V (the wheel is _input's; the pad's Y stays).
+static func ensure_actions() -> void:
+	if not InputMap.has_action("slice_sights"):
+		InputMap.add_action("slice_sights", 0.5)
+		var rb := InputEventMouseButton.new()
+		rb.button_index = MOUSE_BUTTON_RIGHT
+		rb.device = -1
+		InputMap.action_add_event("slice_sights", rb)
+	if InputMap.has_action("slice_swap"):
+		var has_v := false
+		for ev in InputMap.action_get_events("slice_swap"):
+			if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_RIGHT:
+				InputMap.action_erase_event("slice_swap", ev)
+			elif ev is InputEventKey and ev.physical_keycode == KEY_V:
+				has_v = true
+		if not has_v:
+			var kv := InputEventKey.new()
+			kv.physical_keycode = KEY_V
+			kv.device = -1
+			InputMap.action_add_event("slice_swap", kv)
+
+
 func setup(w: Node, c: Dictionary) -> void:
+	ensure_actions()
 	world = w
 	ctx = c
 	hp_max = maxi(1, int(c.get("hp_max", 100)))
@@ -108,6 +135,7 @@ func tick(dt: float) -> void:
 	_last_legs_step(dt)
 	if dead:
 		return
+	_sights_step()
 	_move(dt)
 	_aim()
 	_gun_timers(dt)
@@ -120,8 +148,9 @@ func tick(dt: float) -> void:
 	trigger_was = pulled
 	if Input.is_action_just_pressed("slice_reload"):
 		start_reload()
-	if Input.is_action_just_pressed("slice_swap"):
+	if Input.is_action_just_pressed("slice_swap") or (swap_asked and swap_left <= 0.0):     # a spin of the wheel is one swap
 		swap()
+	swap_asked = false
 	for i in range(3):
 		if Input.is_action_just_pressed("slice_skill_%d" % (i + 1)):
 			world.use_skill(i)
@@ -139,7 +168,7 @@ func _move(dt: float) -> void:
 		want = Input.get_vector("slice_move_left", "slice_move_right", "slice_move_up", "slice_move_down", T.MOVE_DEADZONE)
 	if want.length() > 1.0:
 		want = want.normalized()
-	var target := want * pace_px
+	var target := want * pace_px * (T.G_SIGHTS_PACE_X if sights else 1.0)
 	var rate := T.ACCEL if target.length() > 1.0 and target.dot(velocity) >= 0.0 else T.DECEL
 	velocity = velocity.move_toward(target, rate * dt)
 	var before := position
@@ -171,6 +200,18 @@ func _aim() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and aim_mode == "pad":
 		aim_mode = "mouse"
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		swap_asked = true                    # the wheel's notch is gone within the frame: kept for the next tick
+
+
+## (10 Nov) Down the sights: the right button held (or a check's debug_sights) with the main gun up and ready - not the
+## spare, not a melee weapon, not mid-reload, swap or search.
+func sights_wanted() -> bool:
+	return debug_sights or (InputMap.has_action("slice_sights") and Input.is_action_pressed("slice_sights"))
+
+
+func _sights_step() -> void:
+	sights = sights_wanted() and gun_i == 0 and gun_i < guns.size() and not is_melee() and not reloading and not refilling and swap_left <= 0.0 and searching == null and not dead
 
 
 # ---------------------------------------------------------------- the gun
@@ -244,7 +285,10 @@ func _trigger(fresh: bool = false) -> void:
 
 ## (round 6) Degrees either side of the aim the next round can go: the gun's own spread and the kick held fire has built.
 func spread_deg() -> float:
-	return float(gun().get("spread_deg", T.SPREAD_DEG)) + kick if gun_i < guns.size() else T.SPREAD_DEG
+	if gun_i >= guns.size():
+		return T.SPREAD_DEG
+	var own: float = float(gun().get("spread_deg", T.SPREAD_DEG))
+	return own * T.G_SIGHTS_SPREAD_X + kick * T.G_SIGHTS_KICK_X if sights and gun_i == 0 else own + kick
 
 
 ## The crosshair's gap in the world's px: the spread's width at the aim point, never under its least on screen.
@@ -272,6 +316,8 @@ func fire_once() -> Dictionary:
 		world.runner_event("jammed", g)
 		return {"jammed": true}
 	rounds[gun_i] -= 1
+	if sights and world.get("stats") is Dictionary:
+		world.stats["sight_shots"] = int(world.stats.get("sight_shots", 0)) + 1     # the run log's: presses down the sights
 	var sent: Array = rl.fire_runner(self, g)
 	kick = minf(float(g.get("kick_max", 0.0)), kick + float(g.get("kick_deg", 0.0)))     # the round gone, the next is wider
 	kick_t = 0.0
