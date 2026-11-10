@@ -48784,6 +48784,7 @@ func _r12_men_checks(main) -> void:
 			var landed0: int = ru.landed
 			var swings0: int = ru.swings
 			ru.swing_cd = 0.0
+			ru.wind_t = 0.001                    # (board K) drawn back, the swing landing this step
 			ru.position = r.position + Vector2(60, 0)
 			r.dodge_cd = 0.0
 			r.debug_dodge = true
@@ -49753,4 +49754,296 @@ func _r6_checks(_main) -> void:
 	_r12_men_checks(_main)
 	_r13_skill_checks(_main)
 	_r14_loop_checks(_main)
+	_r15_deal_checks()
+	_r15_melee_checks(_main)
+	_r16_run_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])
+
+
+## (boards K and L) A level dealt from pieces: the same seed deals the same level; every piece, doorway, gate and the
+## prize can be walked to from the way in, over many seeds, for each place; a walled piece has two doors at least; the
+## prize is in the piece furthest from the way in; the gates are two pieces off or more.
+func _r15_deal_checks() -> void:
+	var Deal = load("res://slice/deal.gd")
+	var World = load("res://slice/slice.gd")
+	var LevelS = load("res://slice/level.gd")
+	var dealt := 0
+	var differ := 0
+	for place in SliceTuning.PLACES:
+		var first: Dictionary = Deal.deal(place, 1)
+		var again: Dictionary = Deal.deal(place, 1)
+		_check(str(first["walls"]) == str(again["walls"]) and str(first["cover"]) == str(again["cover"]) and first["prize"] == again["prize"] and str(first["spawns"]) == str(again["spawns"]), "%s, seed 1 dealt twice: two levels" % place["name"])
+		for seed_v in range(1, 201):
+			var L: Dictionary = Deal.deal(place, seed_v)
+			dealt += 1
+			if seed_v > 1 and str(L["cover"]) != str(first["cover"]):
+				differ += 1
+			var blocks: Array = L["walls"].duplicate()
+			for c in L["cover"]:
+				blocks.append(c["rect"])
+			var size: Vector2 = L["size"]
+			var e: float = SliceTuning.EDGE
+			blocks.append_array([Rect2(0, 0, size.x, e), Rect2(0, size.y - e, size.x, e), Rect2(0, 0, e, size.y), Rect2(size.x - e, 0, e, size.y)])
+			var nav: AStarGrid2D = World.nav_grid(size, blocks)
+			var cell := func(p: Vector2) -> Vector2i: return Vector2i(int(p.x / World.NAV_CELL), int(p.y / World.NAV_CELL))
+			var from: Vector2i = cell.call(L["entry"])
+			var goals: Array = [L["prize"], Rect2(L["exit_rect"]).get_center()]
+			goals.append_array(L["spawns"])
+			for cx in range(Deal.COLS):
+				for cy in range(Deal.ROWS):
+					goals.append(Deal.cell_rect(Vector2i(cx, cy)).get_center())
+			var lost := 0
+			for gp in goals:
+				var to: Vector2i = cell.call(gp)
+				if nav.is_point_solid(from) or nav.is_point_solid(to) or nav.get_id_path(from, to).is_empty():
+					lost += 1
+			_check(lost == 0, "%s, seed %d: %d of its %d places (the prize, the way out, the gates, each piece's middle) can't be walked to from the way in" % [place["name"], seed_v, lost, goals.size()])
+			var walled: Dictionary = L["walled"]
+			_check(walled.size() == int(place["walled"]) and not walled.has(Vector2i(0, Deal.ROWS - 1)), "%s, seed %d: %d walled pieces for the place's %d (the way in walled: %s)" % [place["name"], seed_v, walled.size(), int(place["walled"]), str(walled.has(Vector2i(0, Deal.ROWS - 1)))])
+			for c in walled.keys():
+				var doors := 0
+				for n in Deal._near(c):
+					doors += 1 if L["doors"].has(Deal._key(c, n)) else 0
+				_check(doors >= 2, "%s, seed %d: the room at %s has %d doors" % [place["name"], seed_v, str(c), doors])
+			var far := 0
+			for c in L["dist"].keys():
+				far = maxi(far, int(L["dist"][c]))
+			_check(L["dist"].size() == Deal.COLS * Deal.ROWS and int(L["dist"][L["prize_cell"]]) == far and far >= 3, "%s, seed %d: the prize is %d pieces from the way in, the furthest piece %d (%d pieces reached)" % [place["name"], seed_v, int(L["dist"].get(L["prize_cell"], -1)), far, L["dist"].size()])
+			_check(L["spawns"].size() == int(place["gates"]) and L["gates"].size() == L["spawns"].size(), "%s, seed %d: %d gates for the place's %d" % [place["name"], seed_v, L["spawns"].size(), int(place["gates"])])
+			for sp in L["spawns"]:
+				var sc := Vector2i(int(Vector2(sp).x / Deal.CW), int(Vector2(sp).y / Deal.CH))
+				_check(int(L["dist"][sc]) >= 2 and sc != L["prize_cell"], "%s, seed %d: a gate %d pieces from the way in (the prize's piece: %s)" % [place["name"], seed_v, int(L["dist"][sc]), str(sc == L["prize_cell"])])
+		# one of each walked on the level's own fine grid, at the runner's width: the same places
+		var lv = LevelS.new()
+		lv.layout = first
+		lv.build()
+		var rc: Dictionary = lv.reach(first["entry"], SliceTuning.RUNNER_R)
+		var goals2: Array = [first["prize"], Rect2(first["exit_rect"]).get_center()]
+		goals2.append_array(first["spawns"])
+		for gp in goals2:
+			_check(LevelS.reached_near(rc, gp, 60.0), "%s, seed 1: the runner can't walk to %s" % [place["name"], str(gp)])
+		lv.free()
+	_check(differ >= 590, "%d of 597 other seeds dealt a level unlike seed 1's" % differ)
+	print("r15 deal ok: %d levels dealt over three places, every prize, gate, piece and way out walked to" % dealt)
+
+
+## (board K) Melee and the Allotments: a fresh runner's hammer lands on every man in its arc and staggers each; held,
+## the swing is a heavy one; a man with a hand tool draws back before his swing - step out and it misses, hit him and
+## it's broken off; the Allotments' gangs are all hand tools, Top Farm's half armed with a hard man from its second.
+func _r15_melee_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var Gang = load("res://slice/gang.gd")
+	var run = Launch.open(main, H72_SEED, false, -1)
+	run.start_run(0)
+	var w = run.world
+	var r = w.runner
+	var g = w.gang
+	_check(w.level.dealt() and w.nav != null and w.loop and str(w.ctx["site"]["name"]) == "The Allotments" and r.position == w.ctx["layout"]["entry"], "the run's first place: dealt %s, nav %s, the loop %s, '%s', the runner at %s" % [str(w.level.dealt()), str(w.nav != null), str(w.loop), str(w.ctx["site"]["name"]), str(r.position)])
+	_check(int(w.ctx["level"]) == 1 and r.is_melee() and r.guns.size() == 1 and w.crates().size() == 1 and w.crates()[0].prize and w.crates()[0].position == w.ctx["layout"]["prize"], "the fresh runner: level %d, melee %s, %d guns; %d crates out" % [int(w.ctx["level"]), str(r.is_melee()), r.guns.size(), w.crates().size()])
+	g.next_in = 0.05
+	var t := 0.0
+	while g.gang_i < 0 and t < 3.0:
+		_r6_tick(w)
+		t += 1.0 / 60.0
+	var men: Array = w.men()
+	_check(men.size() >= 2 and men.all(func(mn): return str(mn.kind) == "rusher"), "the Allotments' first gang: %d men, kinds %s" % [men.size(), str(men.map(func(mn): return mn.kind))])
+	_check(men.all(func(mn): return w.ctx["layout"]["spawns"].any(func(sp): return Vector2(sp).distance_to(mn.get_meta("way")) < 200.0)), "the gang came in away from the level's gates")
+	# a swing: both men in the arc, the one behind him not
+	var a = men[0]
+	var b = men[1]
+	r.position = w.ctx["layout"]["entry"]
+	r.aim_dir = Vector2.RIGHT
+	r.aim = r.position + Vector2(300, 0)
+	a.position = r.position + Vector2(110, -40)
+	b.position = r.position + Vector2(110, 40)
+	for mn in men:
+		mn.ms["hp"] = 500.0
+		mn.ms["hp_max"] = 500.0
+		mn.ms["stun_t"] = 0.0
+		mn.ms["stag_cd"] = 0.0
+		if mn != a and mn != b:
+			mn.position = r.position + Vector2(-110, 0)
+	r.shot_cd = 0.0
+	var hits0: int = int(w.stats["hits"])
+	var out: Dictionary = r.fire_once()
+	var light: float = 500.0 - float(a.ms["hp"])
+	_check(int(out.get("men", 0)) == 2 and light > 0.0 and float(b.ms["hp"]) < 500.0 and int(w.stats["hits"]) == hits0 + 1, "a swing at two men: landed on %d (%.1f and %.1f off them), %d hits counted" % [int(out.get("men", 0)), light, 500.0 - float(b.ms["hp"]), int(w.stats["hits"]) - hits0])
+	_check(is_equal_approx(float(a.ms["stun_t"]), SliceTuning.G_STAGGER_S) and is_equal_approx(float(b.ms["stun_t"]), SliceTuning.G_STAGGER_S), "a swing's stagger: %.2f s and %.2f s" % [float(a.ms["stun_t"]), float(b.ms["stun_t"])])
+	if men.size() > 2:
+		_check(is_equal_approx(float(men[2].ms["hp"]), 500.0), "the man behind him took %.1f from the swing" % (500.0 - float(men[2].ms["hp"])))
+	# held: a heavy swing after G_HEAVY_HOLD_S, worth G_HEAVY_SHARE swings, a longer stagger
+	for mn in men:
+		mn.ms["hp"] = 500.0
+		mn.ms["stun_t"] = 0.0
+		mn.ms["stag_cd"] = 0.0
+	r.shot_cd = 0.0
+	r.heavy_t = 0.0
+	r.debug_hold = true
+	var shots0: int = int(w.stats["shots"])
+	var held := 0.0
+	while int(w.stats["shots"]) == shots0 and held < 2.0:
+		a.position = r.position + Vector2(110, -40)
+		b.position = r.position + Vector2(110, 40)
+		r.aim = r.position + Vector2(300, 0)
+		r._heavy_step(1.0 / 60.0, true)
+		held += 1.0 / 60.0
+	r.debug_hold = false
+	var heavy: float = 500.0 - float(a.ms["hp"])
+	_check(absf(held - SliceTuning.G_HEAVY_HOLD_S) < 0.05 and absf(heavy - light * SliceTuning.G_HEAVY_SHARE) <= maxf(1.0, light * 0.35), "held %.2f s: a swing worth %.1f against a light one's %.1f" % [held, heavy, light])
+	_check(is_equal_approx(float(a.ms["stun_t"]), SliceTuning.G_STAGGER_HEAVY_S) and r.shot_cd > 1.2 / maxf(0.05, float(r.gun().get("rof", 1.0))), "a heavy swing's stagger %.2f s, the next swing %.2f s off" % [float(a.ms["stun_t"]), r.shot_cd])
+	# his swing: drawn back G_RUSH_WIND_S, then it lands; stepped out of, it misses; staggered, it's broken off
+	for mn in men:
+		if mn != a:
+			mn.hold(mn.position + Vector2(-3000, 0))
+			mn.position = r.position + Vector2(-2500, -900)
+	g._queue = []
+	g._front = [a]
+	a.engage()
+	a.ms["stun_t"] = 0.0
+	a.ms["stag_cd"] = 0.0
+	a.swing_cd = 0.0
+	a.wind_t = 0.0
+	a.position = r.position + Vector2(70, 0)
+	var swings0: int = a.swings
+	var landed0: int = a.landed
+	var wind := 0.0
+	var drew := false
+	while a.swings == swings0 and wind < 2.0:
+		_r6_tick(w)
+		drew = drew or a.wind_t > 0.0
+		wind += 1.0 / 60.0
+	_check(drew and absf(wind - SliceTuning.G_RUSH_WIND_S) < 0.1 and a.landed == landed0 + 1, "his swing: drawn back %s, %.2f s to land, %d landed" % [str(drew), wind, a.landed - landed0])
+	a.swing_cd = 0.0
+	a.position = r.position + Vector2(70, 0)
+	_r6_tick(w)
+	_check(a.wind_t > 0.0, "in reach again he didn't draw back (wind %.2f)" % a.wind_t)
+	a.position = r.position + Vector2(70 + SliceTuning.G_RUSH_REACH_PX + SliceTuning.G_RUSH_WIND_REACH + 12.0, 0)
+	a.wind_t = 0.001
+	a.ms["root_t"] = 1.0                         # held where he is, so the step out is the check's alone
+	swings0 = a.swings
+	landed0 = a.landed
+	_r6_tick(w)
+	_check(a.swings == swings0 + 1 and a.landed == landed0, "stepped out of his swing: %d swings, %d landed" % [a.swings - swings0, a.landed - landed0])
+	a.ms["root_t"] = 0.0
+	a.swing_cd = 0.0
+	a.position = r.position + Vector2(70, 0)
+	_r6_tick(w)
+	swings0 = a.swings
+	_check(a.wind_t > 0.0, "he wasn't drawing back before the stagger")
+	a.ms["stag_cd"] = 0.0
+	SliceBridge.stagger(a.ms, SliceTuning.G_STAGGER_S)
+	var stun0: float = float(a.ms["stun_t"])
+	a.ms["stun_t"] = 0.0
+	SliceBridge.stagger(a.ms, SliceTuning.G_STAGGER_S)
+	_check(float(a.ms["stun_t"]) == 0.0, "staggered again straight after: %.2f s" % float(a.ms["stun_t"]))
+	a.ms["stun_t"] = stun0
+	_r6_tick(w)
+	_check(a.wind_t == 0.0 and a.swings == swings0, "staggered as he drew back: wind %.2f, %d swings" % [a.wind_t, a.swings - swings0])
+	# the places' gangs
+	var none: Array = range(4).map(func(k): return Gang.place_kind(k, 4, {"armed": "none"}))
+	var one: Array = range(4).map(func(k): return Gang.place_kind(k, 4, {"armed": "one"}))
+	var half: Array = range(4).map(func(k): return Gang.place_kind(k, 4, {"armed": "half", "thrower": true}))
+	_check(none == ["rusher", "rusher", "rusher", "rusher"] and one == ["rusher", "rusher", "rusher", ""] and half == ["rusher", "thrower", "rusher", ""], "the places' gangs: %s, %s, %s" % [str(none), str(one), str(half)])
+	# the way round a wall: a man in the Garden Centre walks from a gate to the way in, never through a wall
+	run.start_run(1)
+	w = run.world
+	_check(str(w.ctx["site"]["name"]) == "The Garden Centre" and w.ctx["layout"]["walls"].size() > 8 and w.nav != null, "the second place: '%s', %d walls" % [str(w.ctx["site"]["name"]), w.ctx["layout"]["walls"].size()])
+	var at: Vector2 = w.ctx["layout"]["spawns"][0]
+	var goal: Vector2 = w.ctx["layout"]["entry"]
+	var steps := 0
+	var inside := 0
+	while at.distance_to(goal) > 40.0 and steps < 3000:
+		var nxt: Vector2 = w.way_to(at, goal)
+		at = w.resolve_circle(at + (nxt - at).limit_length(12.0), SliceTuning.MAN_R)
+		for blk in w.level.blocks:
+			inside += 1 if Rect2(blk).has_point(at) else 0
+		steps += 1
+	_check(at.distance_to(goal) <= 40.0 and inside == 0, "a man's way from a gate to the way in: %.0f px short after %d steps (%d inside a wall)" % [at.distance_to(goal), steps, inside])
+	run.back_to_title()
+	print("r15 melee ok: a swing on two men at once, a heavy one for %.1f against %.1f, his swing drawn back %.1f s; a way found round the Garden Centre's walls in %d steps" % [heavy, light, SliceTuning.G_RUSH_WIND_S, steps])
+
+
+
+## (boards J to L) The run: the picker's "Start a run" opens the Allotments with a fresh runner; a kill's XP and the
+## prize's pistol go on with him; the Kit opens before the Garden Centre, and what he wears there is what he brought;
+## dead, he's back at that place's way in as he came, the same level dealt; out of Top Farm, the run's done.
+func _r16_run_checks(main) -> void:
+	var Launch = load("res://slice/launch.gd")
+	var run = Launch.open(main, H72_SEED, false, -1)
+	_check(run.picker != null and run.picker.run_button != null and run.picker.run_button.text == "3 sites in a row", "the picker has no '3 sites in a row'")
+	run.picker.run_button.pressed.emit()
+	var w = run.world
+	_check(run.run_i == 0 and run.picker == null and w != null and str(w.ctx["site"]["name"]) == "The Allotments" and int(w.ctx["level"]) == 1 and run.tries == 1, "Start a run: place %d, level %d" % [run.run_i, int(w.ctx["level"]) if w != null else -1])
+	var walls0: String = str(w.ctx["layout"]["cover"])
+	w.gang.next_in = 0.05
+	var t := 0.0
+	while w.gang.gang_i < 0 and t < 3.0:
+		_r6_tick(w)
+		t += 1.0 / 60.0
+	var men: Array = w.men()
+	var xp_each: float = float(w.ctx["t"]["xp"]) * SliceTuning.G_RUN_XP_X
+	for mn in men:
+		_r14_kill(w, mn)
+	_check(men.size() >= 2 and is_equal_approx(float(w.stats.get("xp", 0.0)), xp_each * men.size()), "%d kills on a run: %.1f XP, not %.1f each" % [men.size(), float(w.stats.get("xp", 0.0)), xp_each])
+	var prize = w.crates().filter(func(c): return c.prize)[0]
+	var finds: Array = w.open_crate(prize)
+	var pistol: Array = finds.filter(func(it): return str(it.get("base", "")) == "Pocket pistol" and str(it.get("slot", "")) == "Secondary")
+	_check(pistol.size() >= 1, "the Allotments' prize: %s (no Pocket pistol)" % str(finds.map(func(it): return it.get("base", "?"))))
+	w.stats["xp"] = 400.0                        # enough for a level or two
+	w.leave()
+	var end = run.end
+	_check(run.ended and end.visible and end.run_way == "next" and end.run_button.visible and end.run_button.text == "On to the Garden Centre" and end._title.text == "Got out", "out of the Allotments: '%s', way '%s', button '%s'" % [end._title.text, end.run_way, end.run_button.text])
+	_check(end._sub.text == "THE ALLOTMENTS · SITE 1 OF 3" and int(run._run.sim.level()) >= 2 and run._run.sim.mission == null, "the end's head '%s'; the runner goes on at level %d" % [end._sub.text, int(run._run.sim.level())])
+	var lv1: int = int(run._run.sim.level())
+	_check(int(run._run.sim.training_points) == 0 or run._run.sim.tree.size() > 0, "a level up on a run: %d points unspent, %d of the web taken" % [int(run._run.sim.training_points), run._run.sim.tree.size()])
+	_check(run._run.sim.stash.any(func(it): return it is Dictionary and str(it.get("base", "")) == "Pocket pistol"), "the prize's pistol isn't in what he took on")
+	_check(_check_nodes(end.text_nodes(), [], "the run's end, out") == 0, "the run's end (out): its words don't fit")
+	end.run_button.pressed.emit()
+	w = run.world
+	_check(run.run_i == 1 and str(w.ctx["site"]["name"]) == "The Garden Centre" and int(w.ctx["level"]) == lv1 and run.kit.visible and w.process_mode == Node.PROCESS_MODE_DISABLED and not run.ended, "on to the next: place %d '%s', level %d (was %d), the Kit open %s" % [run.run_i, str(w.ctx["site"]["name"]), int(w.ctx["level"]), lv1, str(run.kit.visible)])
+	_check(run.kit.back_button.text == "Into the Garden Centre" and run.kit._sub.text == "Before the Garden Centre · Put on what the runner found", "the Kit before a place: '%s', '%s'" % [run.kit.back_button.text, run.kit._sub.text])
+	_check(_check_nodes([run.kit._title, run.kit._sub, run.kit.back_button], [], "the Kit before a place") == 0, "the Kit before a place: its words don't fit")
+	var s = w.ctx["sim"]
+	var gun = s.stash.filter(func(it): return it is Dictionary and str(it.get("base", "")) == "Pocket pistol")[0]
+	s.stash.erase(gun)
+	s.equipped["Secondary"] = gun
+	run.close_kit()
+	var r = w.runner
+	_check(not run.kit.visible and w.process_mode != Node.PROCESS_MODE_DISABLED and r.guns.size() == 2 and str(r.guns[1].get("name", "")).contains("ocket pistol") and r.box_rounds(1) > 0, "the pistol worn in the Kit: %d guns (%s), %d rounds in its box" % [r.guns.size(), str(r.guns.map(func(g): return g.get("name", ""))), r.box_rounds(1) if r.guns.size() > 1 else -1])
+	var cover1: String = str(w.ctx["layout"]["cover"])
+	_check(cover1 != walls0, "the Garden Centre was dealt as the Allotments were")
+	w.stats["xp"] = 999.0
+	_r6_tick(w)
+	w.on_runner_died()
+	end = run.end
+	_check(run.ended and end.run_way == "again" and end.run_button.text == "The Garden Centre again" and end._title.text == "Dead", "dead in the Garden Centre: '%s', way '%s', button '%s'" % [end._title.text, end.run_way, end.run_button.text])
+	_check(_check_nodes(end.text_nodes(), [], "the run's end, dead") == 0, "the run's end (dead): its words don't fit")
+	end.run_button.pressed.emit()
+	w = run.world
+	r = w.runner
+	_check(run.run_i == 1 and run.tries == 2 and not run.ended and not run.kit.visible and int(w.ctx["level"]) == lv1 and r.guns.size() == 2 and str(w.ctx["layout"]["cover"]) == cover1, "that place again: place %d, try %d, level %d (came in at %d), %d guns, the same level dealt %s" % [run.run_i, run.tries, int(w.ctx["level"]), lv1, r.guns.size(), str(str(w.ctx["layout"]["cover"]) == cover1)])
+	w.leave()
+	run.end.run_button.pressed.emit()
+	w = run.world
+	_check(run.run_i == 2 and str(w.ctx["site"]["name"]) == "Top Farm" and run.kit.visible, "the third place: %d '%s'" % [run.run_i, str(w.ctx["site"]["name"])])
+	run.close_kit()
+	w.gang.next_in = 0.05
+	t = 0.0
+	while w.gang.gang_i < 1 and t < 8.0:          # its second gang: half armed, and the place's first hard man
+		if w.gang.gang_i == 0:
+			for mn in w.men():
+				_r14_kill(w, mn)
+			w.gang.next_in = minf(w.gang.next_in, 0.05)
+		_r6_tick(w)
+		t += 1.0 / 60.0
+	var kinds: Array = w.men().map(func(mn): return "hard" if mn.hard else str(mn.kind))
+	_check(kinds.has("hard") and kinds.has("rusher") and kinds.has("thrower"), "Top Farm's second gang: %s" % str(kinds))
+	w.leave()
+	end = run.end
+	_check(end.run_way == "new" and end.run_button.text == "Start again from level 1" and end._sub.text == "TOP FARM · SITE 3 OF 3", "out of Top Farm: way '%s', '%s', '%s'" % [end.run_way, end.run_button.text, end._sub.text])
+	_check(_check_nodes(end.text_nodes(), [], "the run's end, done") == 0, "the run's end (done): its words don't fit")
+	end.run_button.pressed.emit()
+	w = run.world
+	_check(run.run_i == 0 and int(w.ctx["level"]) == 1 and w.runner.guns.size() == 1 and w.runner.is_melee() and str(w.ctx["layout"]["cover"]) != walls0 and run.runs == 2, "from the start again: place %d, level %d, %d guns (or the same level dealt)" % [run.run_i, int(w.ctx["level"]), w.runner.guns.size()])
+	run.back_to_title()
+	print("r16 run ok: Start a run, the Allotments' pistol and XP carried, the Kit before the Garden Centre, dead and back in as he came, Top Farm's hard man, another run")

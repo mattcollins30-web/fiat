@@ -12,6 +12,7 @@ const C_MINE := Color("f0c060")
 const C_THEIRS := Color("ff7a4a")
 const C_FLASH := Color("fff2c0")
 const C_SWING := Color("e6e1d3")
+const C_HEAVY := Color("e3a33b")              # the heavy swing drawing back
 const FLASH_S := 0.05
 const SWING_S := 0.12
 
@@ -82,30 +83,47 @@ func fire_man(mn, at: Vector2) -> Dictionary:
 	return rd
 
 
-## A melee weapon's blow: the nearest man in reach and in the arc before him, in sight. Returns {man, point, result}.
-func swing(r, g: Dictionary) -> Dictionary:
+## A melee weapon's blow (board K): every man in reach and in the arc before him, in sight - each staggered, stood where
+## he is a moment. `heavy`: the held swing, worth more, reaching further, staggering longer.
+## Returns the nearest man's {man, point, result}, and "men": how many it landed on.
+func swing(r, g: Dictionary, heavy := false) -> Dictionary:
 	world.stats["shots"] += 1
 	world.fired.emit(g)
-	swings.append({"at": r.position, "dir": r.aim_dir, "t": SWING_S})
+	swings.append({"at": r.position, "dir": r.aim_dir, "t": SWING_S * (2.0 if heavy else 1.0), "heavy": heavy})
 	queue_redraw()
-	var best = null
-	var bd := INF
-	var reach: float = T.RUNNER_R + T.G_MELEE_REACH
+	var reach: float = T.RUNNER_R + T.G_MELEE_REACH + (T.G_HEAVY_REACH if heavy else 0.0)
+	var found: Array = []
 	for mn in world.men():
 		var to: Vector2 = mn.position - r.position
 		var d: float = to.length() - float(mn.get("radius") if mn.get("radius") != null else T.MAN_R)
-		if d > reach or d >= bd:
+		if d > reach:
 			continue
 		if to.length() > 1.0 and absf(r.aim_dir.angle_to(to)) > deg_to_rad(T.G_MELEE_ARC_DEG):
 			continue
 		if not world.has_los(r.position, mn.position):
 			continue
-		bd = d
-		best = mn
-	if best == null:
-		return {"man": null, "point": r.position + r.aim_dir * reach, "result": {}}
-	var rd := {"mine": true, "pos": best.position, "from": r.position, "dir": r.aim_dir, "gun": g, "share": 1.0, "head": false}
-	return _hit_man(rd, best, best.position)
+		found.append([d, mn])
+	if found.is_empty():
+		return {"man": null, "point": r.position + r.aim_dir * reach, "result": {}, "men": 0}
+	found.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
+	var press := {}                              # one swing: one hit counted, however many men it lands on
+	var out := {}
+	var n := 0
+	for f in found:
+		var mn = f[1]
+		var rd := {"mine": true, "pos": mn.position, "from": r.position, "dir": (mn.position - r.position).normalized() if mn.position.distance_to(r.position) > 1.0 else r.aim_dir,
+			"gun": g, "share": T.G_HEAVY_SHARE if heavy else 1.0, "head": false, "press": press}
+		var res: Dictionary = _hit_man(rd, mn, mn.position)
+		if not bool(res["result"].get("missed", false)):
+			n += 1
+			if not bool(res["result"].get("killed", false)) and mn.has_method("state_data"):
+				SliceBridge.stagger(mn.state_data(), T.G_STAGGER_HEAVY_S if heavy else T.G_STAGGER_S)
+				if heavy and mn.has_method("knock"):
+					mn.knock(rd["dir"], T.KNOCK_MAX_PX)
+		if out.is_empty():
+			out = res
+	out["men"] = n
+	return out
 
 
 # ---------------------------------------------------------------- flight
@@ -294,4 +312,12 @@ func _draw() -> void:
 		var k: float = clampf(float(s["t"]) / SWING_S, 0.0, 1.0)
 		var a: float = Vector2(s["dir"]).angle()
 		var arc: float = deg_to_rad(T.G_MELEE_ARC_DEG)
-		draw_arc(s["at"], T.RUNNER_R + T.G_MELEE_REACH * 0.8, a - arc, a + arc, 16, Color(C_SWING, 0.8 * k), 6.0)
+		var heavy: bool = bool(s.get("heavy", false))
+		draw_arc(s["at"], T.RUNNER_R + (T.G_MELEE_REACH + (T.G_HEAVY_REACH if heavy else 0.0)) * 0.8, a - arc, a + arc, 16, Color(C_SWING, 0.8 * k), 12.0 if heavy else 6.0)
+	var rn = world.runner if world != null else null
+	if rn != null and is_instance_valid(rn) and float(rn.get("heavy_t")) > 0.15 and rn.is_melee() and not rn.is_dead():
+		# the button held: the heavy swing drawing back, its arc filling
+		var hk: float = clampf(float(rn.heavy_t) / T.G_HEAVY_HOLD_S, 0.0, 1.0)
+		var ha: float = Vector2(rn.aim_dir).angle()
+		var harc: float = deg_to_rad(T.G_MELEE_ARC_DEG) * hk
+		draw_arc(rn.position, T.RUNNER_R + (T.G_MELEE_REACH + T.G_HEAVY_REACH) * 0.8, ha - harc, ha + harc, 16, Color(C_HEAVY, 0.35 + 0.45 * hk), 5.0)

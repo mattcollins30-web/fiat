@@ -315,7 +315,11 @@ func _arrive(i: int) -> void:
 	var ways: Array = spawns.slice(0, mini(2, spawns.size()))
 	var r: RandomNumberGenerator = ctx["sim"].fight_rng
 	var hard_at := -1
-	if int(ctx["site"]["level"]) >= Data.HARD66_LEVEL and (r.randf() < Data.HARD66_ODDS or (T.G_HARD_SURE and not hard_seen and i == gangs - 1) or (loop and i >= T.G_HARD_FROM_GANG and (hard_man == null or not is_instance_valid(hard_man) or hard_man.is_dead()))):
+	var mix: Dictionary = ctx["mix"] if ctx.get("mix") is Dictionary else {}
+	var no_hard: bool = hard_man == null or not is_instance_valid(hard_man) or hard_man.is_dead()
+	if int(mix.get("hard_from", -1)) >= 0 and i >= int(mix["hard_from"]) and no_hard and size >= 2:
+		hard_at = size - 1                             # (board J) the place's first hard man, from this gang on
+	elif int(ctx["site"]["level"]) >= Data.HARD66_LEVEL and (r.randf() < Data.HARD66_ODDS or (T.G_HARD_SURE and not hard_seen and i == gangs - 1) or (loop and i >= T.G_HARD_FROM_GANG and (hard_man == null or not is_instance_valid(hard_man) or hard_man.is_dead()))):
 		hard_at = size - 1                             # the sim's: he's the gang's last man
 	men_by_gang[i] = size
 	for k in range(size):
@@ -329,10 +333,14 @@ func _arrive(i: int) -> void:
 				traits_v.append(pool[r.randi_range(0, pool.size() - 1)])
 		var ms: Dictionary = SliceBridge.man_state(ctx, i, hname, traits_v)
 		var kd: String = kind_for(i, k, size, hard_at >= 0, bool(ctx.get("kinds_off", false)))
+		if ctx.get("mix") is Dictionary and not bool(ctx.get("kinds_off", false)):
+			kd = "" if k == hard_at else place_kind(k, size - (1 if hard_at >= 0 else 0), ctx["mix"])     # (board J) the place's own gangs
 		if kd != "":
 			SliceBridge.make_kind(ms, kd)
 		var mn := SliceMan.new()
 		var at: Vector2 = ways[k % ways.size()] + Vector2(world.rng.randf_range(-90.0, 90.0), world.rng.randf_range(-90.0, 90.0)) if not ways.is_empty() else rp + Vector2(1200, 0)
+		if world.get("level") != null and world.level.dealt():
+			at = world.resolve_circle(at, T.G_HARD_R)      # (the review) a dealt level's gate: never in the cover beside it
 		var root: Node = world.men_root if world.get("men_root") != null else self
 		root.add_child(mn)
 		mn.setup(world, self, ms, at, world.rng.randf() < T.G_FLANK_SHARE)
@@ -364,6 +372,20 @@ static func kind_for(i: int, k: int, size: int, has_hard: bool, off := false) ->
 	if k >= n:
 		return ""
 	return str(kinds[k])
+
+
+## (board J) A place's gang: man k of its `plain` men (the hard man apart). mix.armed - "none": every man has a hand
+## tool (the rusher); "one": one man has a gun, its last; "half": every other man, and the first of those throws when
+## mix.thrower.
+static func place_kind(k: int, plain: int, mix: Dictionary) -> String:
+	match str(mix.get("armed", "none")):
+		"one":
+			return "" if k == plain - 1 and plain >= 2 else "rusher"
+		"half":
+			if k % 2 == 0:
+				return "rusher"
+			return "thrower" if k == 1 and bool(mix.get("thrower", false)) else ""
+	return "rusher"
 
 
 ## A man down (SliceMan calls it): the gang's count, the hard man gone.

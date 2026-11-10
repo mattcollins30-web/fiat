@@ -215,6 +215,34 @@ const G_PRESS_KEEP_S := 0.15         # a press while the gun's cap holds it is k
 const G_ROUND_PX_S := 2600.0         # the runner's rounds: px a second (a 64 px tile, 32 on screen at half zoom)
 const G_ROUND_RANGE := 2600.0        # ...and how far they fly
 const G_TRACER_PX := 70.0            # a round's tracer: this long behind it
+# (board K, 10 Nov) Melee: a swing lands on every man in its arc and staggers him; held, the next is a heavy one.
+const G_HEAVY_HOLD_S := 0.6          # the button held this long: a heavy swing
+const G_HEAVY_SHARE := 2.0           # ...worth this many swings
+const G_HEAVY_BEAT_X := 2.0          # ...and this much longer before the next
+const G_HEAVY_REACH := 30.0          # ...reaching this much further
+const G_STAGGER_S := 0.35            # a man hit by a swing stands this long
+const G_STAGGER_HEAVY_S := 0.8       # ...by a heavy one
+const G_STAGGER_AGAIN_S := 0.9         # ...and can't be staggered again till this long after it ends (the review: in the arc he never got a swing in)
+const G_STAGGER_HARD_X := 0.5        # ...a hard man, this much of it
+const G_RUSH_WIND_S := 0.4           # a man with a hand tool draws back this long before his swing lands: step out or hit him first
+const G_RUSH_WIND_REACH := 50.0      # ...and it lands if you're within this much past his reach when it comes
+# (boards J to L) The three places of a run, from a fresh runner: the game's first three sites, each a level dealt from
+# pieces (slice/deal.gd). walled: how many of its twelve pieces are rooms; open, shut: the pieces it draws on;
+# armed: who in a gang has a gun ("none", "one", "half"); gang_hp_x, gang_dmg_x: the test settings it starts on (a
+# fresh runner's hammer against the game's HP for a man is a minute a man; their damage a second is the game's, a
+# quarter of an HP - both set so a swing matters either way); rush_pace_x: a hand-tool man's pace against a gun man's.
+const G_RUN_XP_X := 6.0              # a kill's XP on a run: the site's own times this (three places take him up a few levels)
+const PLACES := [
+	{"id": "allotments", "name": "The Allotments", "tier": 0, "level": 1, "walled": 0, "gates": 3,
+		"open": ["plots", "plots", "plots", "shed", "greenhouse", "path"], "shut": ["room"],
+		"armed": "none", "thrower": false, "hard_from": -1, "gang_hp_x": 0.2, "gang_dmg_x": 16.0, "rush_pace_x": 1.0, "prize_gun": ["Secondary", "Pocket pistol"]},
+	{"id": "garden_centre", "name": "The Garden Centre", "tier": 1, "level": 2, "walled": 8, "gates": 3,
+		"open": ["yard", "plots", "path"], "shut": ["aisles", "aisles", "tills", "store", "room"],
+		"armed": "one", "thrower": false, "hard_from": -1, "gang_hp_x": 0.2, "gang_dmg_x": 10.0, "rush_pace_x": 1.15, "prize_gun": ["Primary", "Bolt gun"]},
+	{"id": "top_farm", "name": "Top Farm", "tier": 2, "level": 3, "walled": 6, "gates": 4,
+		"open": ["yard", "yard", "path", "plots"], "shut": ["hall", "hall", "store", "office", "room"],
+		"armed": "half", "thrower": true, "hard_from": 1, "gang_hp_x": 0.2, "gang_dmg_x": 8.0, "rush_pace_x": 1.3, "prize_gun": []},
+]
 const G_MELEE_REACH := 120.0         # a swing: from the runner's edge, this far
 const G_MELEE_ARC_DEG := 50.0        # ...this many degrees either side of the aim
 # Their fire

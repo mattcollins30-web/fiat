@@ -15,9 +15,11 @@ signal dmg_x_changed(x: float)           # (build 76) the test setting: their da
 
 const HP_STEPS := [0.06, 0.1, 0.04]    # "Gang HP" (10 Nov, by rounds to kill: about 12 of the rifle's a man at level 12 (MAN_HP_X, the start), about 20, about 8)
 const DMG_STEPS := [2.0, 3.0, 1.0]     # "Gang damage" (10 Nov, its own again): twice the game's (THEIR_DMG_X, the start), three times, the game's
+var hp_steps: Array = HP_STEPS.duplicate()
+var dmg_steps: Array = DMG_STEPS.duplicate()
 
 ## Board C's two columns, as drawn: what it does, the key.
-const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Aim down sights", "Right button, held"], ["Dodge", "Space"], ["Swap gun", "Mouse wheel or V"], ["Reload", "R"],
+const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Aim down sights", "Right button, held"], ["Heavy swing", "Left button, held"], ["Dodge", "Space"], ["Swap gun", "Mouse wheel or V"], ["Reload", "R"],
 		["Skills", "Q E C"], ["Med from the rig", "1 2 3 4"], ["Search, pick up", "F, held"], ["Get out", "X, held"], ["Kit and runner", "Tab"], ["Pause", "Esc"]]
 const PAD := [["Move", "Left stick"], ["Aim", "Right stick, with a lock-on"], ["Fire", "Right trigger"], ["Swap gun", "Y"], ["Reload", "X"],
 		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search, pick up", "A, held"], ["Get out", "B, held"], ["Kit and runner", "Back"], ["Pause", "Start"]]
@@ -88,6 +90,12 @@ func _init() -> void:
 
 
 ## The men's HP as the slice has it now, on the button.
+## (boards J to L) A place's own test settings: its gang HP and damage, and a step up and down from each.
+func use_base(hp: float, dmg: float) -> void:
+	hp_steps = [hp, snappedf(hp * 1.6, 0.01), snappedf(hp * 0.6, 0.01)]
+	dmg_steps = [dmg, snappedf(dmg * 1.5, 0.1), snappedf(dmg * 0.5, 0.1)]
+
+
 func show_hp_x(x: float) -> void:
 	hp_x = x
 	buttons[2].text = "Gang HP %s" % hp_words(x)
@@ -130,15 +138,15 @@ func _on_skills() -> void:
 
 
 func _on_dmg_x() -> void:
-	var i: int = DMG_STEPS.find(dmg_x)
-	var x: float = DMG_STEPS[(i + 1) % DMG_STEPS.size()]
+	var i: int = dmg_steps.find(dmg_x)
+	var x: float = dmg_steps[(i + 1) % dmg_steps.size()]
 	show_dmg_x(x)
 	dmg_x_changed.emit(x)
 
 
 func _on_hp_x() -> void:
-	var i: int = HP_STEPS.find(hp_x)
-	var x: float = HP_STEPS[(i + 1) % HP_STEPS.size()]
+	var i: int = hp_steps.find(hp_x)
+	var x: float = hp_steps[(i + 1) % hp_steps.size()]
 	show_hp_x(x)
 	hp_x_changed.emit(x)
 

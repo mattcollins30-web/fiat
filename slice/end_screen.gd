@@ -9,6 +9,8 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 signal to_title
+signal next_place                     # (boards J to L) a run: on to its next place
+signal again                          # ...or this place once more (dead), or the run from its start (done)
 
 const TITLES := {"cleared": "Cleared", "out": "Got out", "died": "Dead"}
 const CARD_W := 760.0
@@ -31,6 +33,8 @@ var _vs_note: Label
 var _haul_head: Label
 var _haul: Array = []                 # labels, a find a row
 var button: Button
+var run_button: Button                # a run's way on: the next place, this one again, another run
+var run_way := ""                     # ..."next", "again", "new"; "": no run
 
 
 func _init() -> void:
@@ -61,6 +65,13 @@ func _init() -> void:
 	button = UI.button(_card, Rect2(40, CARD_H - 84, 260, 52), true)
 	button.text = "Back to the title"
 	button.pressed.connect(func() -> void: to_title.emit())
+	run_button = UI.button(_card, Rect2(40, CARD_H - 84, 340, 52), true)
+	run_button.visible = false
+	run_button.pressed.connect(func() -> void:
+		if run_way == "next":
+			next_place.emit()
+		else:
+			again.emit())
 	visible = false
 
 
@@ -71,16 +82,40 @@ func layout(s: Vector2) -> void:
 
 ## The run's end as the world's stats have it: {kills, headshots, damage_done, damage_taken, shots, hits, time_s,
 ## haul: [item dicts]}. `game` is the bridge's game_fight: {level, time_s, hp_lost}, shown against a cleared run.
-func open(outcome_v: String, stats: Dictionary, place := "The car park", game := {}) -> void:
+## `run` (boards J to L), on a run: {i, of, next: the next place's name ("" at the last), level: his level now, xp:
+## the XP he got out with}.
+func open(outcome_v: String, stats: Dictionary, place := "The car park", game := {}, run := {}) -> void:
 	outcome = outcome_v
+	run_way = ""
+	if not run.is_empty():
+		run_way = "again" if outcome_v == "died" else ("next" if str(run.get("next", "")) != "" else "new")
+	run_button.visible = run_way != ""
+	button.position.x = 40.0 + (356.0 if run_way != "" else 0.0)
+	UI.style_button(button, run_way == "")
+	match run_way:
+		"next":
+			UI.fit_button(run_button, ["On to %s" % str(run["next"]), "The next site"])
+			_note.text = UI.dots("The haul goes with the runner · the Kit opens first")
+		"again":
+			UI.fit_button(run_button, ["%s again" % place, "This site again"])
+			_note.text = "The runner goes back in with the kit he came with"
+		"new":
+			run_button.text = "Start again from level 1"
+			_note.text = UI.dots("Out of all 3 sites · started with a claw hammer")
+		_:
+			_note.text = "None of it goes to the stash"
 	_title.text = str(TITLES.get(outcome_v, "Not cleared"))
 	_title.add_theme_color_override("font_color", Pal.GOOD if outcome_v == "cleared" else (Pal.BAD if outcome_v == "died" else Pal.TEXT))
 	var lv: int = int(game.get("level", 0))
 	_sub.text = UI.dots(place if lv <= 0 else "%s · Level %d" % [place, lv]).to_upper()
+	if not run.is_empty():
+		_sub.text = UI.dots("%s · Site %d of %d" % [place, int(run["i"]) + 1, int(run["of"])]).to_upper()
 	var shots: int = int(stats.get("shots", 0))
 	var lost: int = int(stats.get("damage_taken", 0))
 	UI.set_tile(_tiles[0], "Kills", [Fmt.group(int(stats.get("kills", 0)))])
 	UI.set_tile(_tiles[1], "Headshots", [Fmt.group(int(stats.get("headshots", 0)))])
+	if not run.is_empty():                           # a run: what he takes on in place of the headshots
+		UI.set_tile(_tiles[1], "Runner", ["Level %d" % int(run.get("level", 1))] if outcome_v != "died" else ["Level %d · no XP kept" % int(run.get("level", 1)), "Level %d" % int(run.get("level", 1))])
 	UI.set_tile(_tiles[2], "Accuracy", ["%d%%" % int(round(100.0 * float(stats.get("hits", 0)) / shots)) if shots > 0 else "No rounds fired"])
 	if stats.has("gangs_beaten"):                    # (board I) the loop's measure: how many gangs he saw off before he left
 		UI.set_tile(_tiles[3], "Gangs beaten", [Fmt.group(int(stats.get("gangs_beaten", 0)))])
@@ -120,7 +155,7 @@ func open(outcome_v: String, stats: Dictionary, place := "The car park", game :=
 	visible = true
 	layout(get_viewport_rect().size if is_inside_tree() else size)
 	if is_inside_tree():
-		button.grab_focus()
+		(run_button if run_way != "" else button).grab_focus()
 
 
 ## A find's line: its name (the item's own, or its base), its count when more than one.
@@ -135,7 +170,7 @@ static func find_words(it) -> String:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_title, _sub, _vs_head, _vs_note, _haul_head, _note, button] + _haul
+	var out: Array = [_title, _sub, _vs_head, _vs_note, _haul_head, _note, button, run_button] + _haul
 	for row in _vs:
 		out.append_array(row)
 	for t in _tiles:

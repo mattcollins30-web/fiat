@@ -417,7 +417,12 @@ func show_state(st: Dictionary) -> void:
 	var mags: int = int(st.get("mags", 0))
 	var box: int = int(st.get("box", 0))
 	var mag_n: int = int(st.get("mag", 0))
-	if mags <= 0 and box > 0:
+	if bool(gun.get("melee", false)):            # (board K) no rounds to count: how it's swung
+		_gun_rounds.visible = false
+		_gun_spare.position.x = _gun_rounds.position.x
+		_gun_spare.size.x = GUN_W
+		UI.fit(_gun_spare, ["Hold for a heavy swing", "Hold: heavy"])
+	elif mags <= 0 and box > 0:
 		UI.fit(_gun_spare, ["/ %d · %s in the box" % [mag_n, Fmt.group(box)], "/ %d · box %s" % [mag_n, Fmt.group(box)], "/ %d" % mag_n])
 	else:
 		UI.fit(_gun_spare, ["/ %d · %s" % [mag_n, Fmt.count(mags, "mag")], "/ %d" % mag_n])

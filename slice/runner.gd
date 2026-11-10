@@ -65,6 +65,9 @@ var hurt_left := 0.0
 var last_hurt_t := -100.0
 var dead := false
 var trigger_was := false            # the trigger held last step (a fresh pull)
+var heavy_t := 0.0                  # (board K) a melee weapon's button held this long since his last swing
+var heavy_next := false             # ...the swing about to land is a heavy one
+var debug_hold := false             # a check's held button
 var press_kept := 0.0               # (build 76) a press on a semi gun inside its cap: kept this long, fires when it can
 var auto_move := Vector2.ZERO        # a check's walk (debug_move_dir); zero means the controls
 
@@ -165,6 +168,7 @@ func tick(dt: float) -> void:
 		press_kept = T.G_PRESS_KEEP_S
 	if pulled or press_kept > 0.0:
 		_trigger(pulled and not trigger_was)
+	_heavy_step(dt, pulled or debug_hold)
 	press_kept = maxf(0.0, press_kept - dt)
 	trigger_was = pulled
 	if Input.is_action_just_pressed("slice_reload"):
@@ -330,6 +334,26 @@ func can_fire() -> bool:
 	return not dead and dodge_t <= 0.0 and steady_left <= 0.0 and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
 
 
+## (board K) A melee weapon's button held: G_HEAVY_HOLD_S on from his last swing (and the weapon ready), a heavy one -
+## and another as long as it's held. A tap is the light swing, at once, as before.
+func _heavy_step(dt: float, held: bool) -> void:
+	if not held or not is_melee() or dead or gun_i >= guns.size():
+		heavy_t = 0.0
+		return
+	heavy_t += dt
+	if heavy_t >= T.G_HEAVY_HOLD_S and can_fire():
+		swing_heavy()
+
+
+## The heavy swing itself (a check calls it straight).
+func swing_heavy() -> Dictionary:
+	heavy_next = true
+	var out := fire_once()
+	heavy_next = false
+	heavy_t = 0.0
+	return out
+
+
 ## (build 76) A melee weapon in hand: it swings, no rounds.
 func is_melee() -> bool:
 	return bool(gun().get("melee", false))
@@ -390,7 +414,10 @@ func fire_once() -> Dictionary:
 	shot_cd = shot_cd + beat if bool(g.get("auto", true)) else beat     # held, an auto gun's debt carries (its exact rate); a press: the cap
 	var rl: Node = SliceRound.layer(world)
 	if is_melee():
-		return rl.swing(self, g)
+		if heavy_next:
+			shot_cd = beat * T.G_HEAVY_BEAT_X
+		heavy_t = 0.0
+		return rl.swing(self, g, heavy_next)
 	if world.roll_jam(g):
 		jammed = true
 		jam_left = world.jam_s()

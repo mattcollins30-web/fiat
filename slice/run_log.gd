@@ -6,7 +6,7 @@ extends RefCounted
 const SliceBridge := preload("res://slice/bridge.gd")
 const T := preload("res://slice/tuning.gd")
 
-const ROUND := 8                      # the slice's round the line was played on
+const ROUND := 9                      # the slice's round the line was played on
 const FILE := "slice_runs.jsonl"
 const DIR := "docs/balance"
 

@@ -22,8 +22,9 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men (in), 3 the Poacher's six skills as
   tools (in). After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
   and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
-  The pass after it (boards I to L, "build all 4 and ill play when the lot are done"): 1 the run's loop (in), 2 melee
-  and the Allotments, 3 levels dealt from pieces, 4 the Garden Centre, Top Farm and kit carried between.
+  The pass after it (boards I to L, "build all 4 and ill play when the lot are done"): 1 the run's loop (in, 5ce0218), 2 melee
+  and the Allotments, 3 levels dealt from pieces, 4 the Garden Centre, Top Farm and kit carried between (2 to 4 in,
+  built as one: "3 sites in a row" on the slice's picker). Waiting on Matt: his play of the lot.
   Waiting on Matt: his play of round 6, each
   run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
   are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
@@ -8436,3 +8437,22 @@ limit, and a runner with "Never there" got none (the review). Known: the row aga
 (no clear); the way out isn't lit; a gang's crates often land in plain sight of where he stands. The older three-gang
 run is kept behind ctx["loop"] for the smoke's checks. Round 7's last commit: 1234cf5. Checked: r14 in the smoke,
 proved red three ways; a review; lint 0; the full smoke on Matt's machine.
+
+The slice, the pass after round 7, stages 2 to 4 as one build (10 Nov; Matt: "build all 4 and ill play when the lot are
+done"; before it, "3 levels starting from a fresh runner with yuou asnd the enemy as melee and finding guns on the run
+etc. Also at the same time the proc gen stuff", and "rather than a rectangle arena do we introduce corridors and rooms
+etc ? obviously levels like the allotments and streets would still be open areas"). The slice's picker has "3 sites in
+a row": a level 1 runner with a claw hammer through the Allotments, the Garden Centre and Top Farm, each a level dealt
+from twelve pieces on the seed (open ground or walled rooms with doorways; the prize in the furthest piece; the gangs'
+gates on the far edges), the men finding their way round the walls. Melee: a swing lands on every man in its arc and
+staggers him, held it's a heavy one; a man with a hand tool draws back before his swing, so it can be stepped out of
+or broken. The Allotments' gangs are all hand tools, the Garden Centre's have one gun, Top Farm's are half armed with a
+thrower and a hard man. Kit, finds and XP go on to the next site with the Kit opening first; dead, it's that site again
+as he came in. Stages 2 to 4 went in together because the Allotments needed a level that wasn't the car park, and the
+dealt level needed the walls' way-finding. Off the boards: the name ("3 sites in a row", the language pass: "run" is
+one trip out); rounds aren't scarce or carried; the sites' gang HP and damage are first guesses (x0.2; x16, x10, x8).
+The review's finds fixed before delivery: a man in the arc could never swing (staggered again and again), a swing's
+shove lost on a staggered man, his blow landing through a wall, men coming in on top of cover, going in under full HP
+after the Kit, the same three levels on a second go. Stage 1's commit: 5ce0218. Checked: r15 (600 levels dealt and
+walked; melee) and r16 (the three sites end to end) in the smoke, proved red six ways; a review; a language pass;
+lint 0; the full smoke on Matt's machine.

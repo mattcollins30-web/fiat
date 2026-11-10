@@ -57,6 +57,7 @@ var sight: Node2D                    # (build 76) slice/sight.gd: the fog over w
 var camera: Camera2D
 var hud_layer: CanvasLayer
 var gang: Node = null
+var nav: AStarGrid2D = null          # (board L) a dealt level's ways round its walls, for the men; null in the car park
 var park_rect := Rect2(0, 0, T.PARK_W, T.PARK_H)
 var exit_rect := Rect2()
 var time_s := 0.0
@@ -86,25 +87,26 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	stats = {"kills": 0, "headshots": 0, "damage_done": 0, "damage_taken": 0, "shots": 0, "hits": 0, "time_s": 0.0, "haul": []}
 	level = LevelScript.new()
 	level.name = "Level"
+	if ctx.get("layout") is Dictionary and not (ctx["layout"] as Dictionary).is_empty():
+		level.layout = ctx["layout"]           # (board L) a level dealt from pieces
 	add_child(level)
 	level.build()
+	park_rect = level.park_rect
 	exit_rect = level.exit_rect
+	if level.dealt():
+		_build_nav()
 	crates_root = Node2D.new()
 	crates_root.name = "Crates"
 	add_child(crates_root)
 	loop = bool(ctx.get("loop", false))
 	if loop:
 		# (board I) no crates stand out at the start: only the prize, the place's crate furthest from the way out
-		var far: Vector2 = SliceLevel.CRATES[0]
-		for p in SliceLevel.CRATES:
-			if p.distance_to(exit_rect.get_center()) > far.distance_to(exit_rect.get_center()):
-				far = p
-		add_crate(far, true)
+		add_crate(level.prize_spot(), true)
 		stats["gangs_beaten"] = 0
 		stats["crates_opened"] = 0
 		stats["prize"] = false
 	else:
-		for p in SliceLevel.CRATES:
+		for p in level.crate_spots():
 			add_crate(p)
 	men_root = Node2D.new()
 	men_root.name = "Men"
@@ -114,7 +116,7 @@ func start(c: Dictionary, seed_n: int = 72) -> void:
 	add_child(sight)
 	runner = RunnerScript.new()
 	runner.name = "Runner"
-	runner.position = SliceLevel.ENTRY
+	runner.position = level.entry()
 	add_child(runner)
 	runner.setup(self, ctx)
 	fx = FxScript.new()
@@ -199,7 +201,7 @@ func _cam_goal() -> Vector2:
 	var lead := cam_lead()
 	var half := view_world() * 0.5
 	var g := runner.position + lead
-	return Vector2(clampf(g.x, half.x, T.PARK_W - half.x), clampf(g.y, half.y, T.PARK_H - half.y))
+	return Vector2(clampf(g.x, half.x, park_rect.size.x - half.x), clampf(g.y, half.y, park_rect.size.y - half.y))
 
 
 func _camera_step(dt: float) -> void:
@@ -278,8 +280,8 @@ func resolve_circle(p: Vector2, r: float) -> Vector2:
 				var outs := [q.x - rect.position.x + r, rect.end.x - q.x + r, q.y - rect.position.y + r, rect.end.y - q.y + r]
 				var m: int = outs.find(outs.min())
 				q += [Vector2(-outs[0], 0), Vector2(outs[1], 0), Vector2(0, -outs[2]), Vector2(0, outs[3])][m]
-	q.x = clampf(q.x, T.EDGE + r, T.PARK_W - T.EDGE - r)
-	q.y = clampf(q.y, T.EDGE + r, T.PARK_H - T.EDGE - r)
+	q.x = clampf(q.x, T.EDGE + r, park_rect.size.x - T.EDGE - r)
+	q.y = clampf(q.y, T.EDGE + r, park_rect.size.y - T.EDGE - r)
 	return q
 
 
@@ -320,6 +322,72 @@ static func seg_circle(a: Vector2, b: Vector2, c: Vector2, r: float) -> float:
 		return 0.0                           # starts inside him
 	var t := (-qb - sqrt(disc)) / (2.0 * qa)
 	return t if t >= 0.0 and t <= 1.0 else -1.0
+
+
+# ---------------------------------------------------------------- the ways round the walls (board L)
+const NAV_CELL := 64.0
+
+
+## The grid the men find their way on: a cell is shut when a man standing at its middle would touch cover or a wall.
+func _build_nav() -> void:
+	nav = nav_grid(park_rect.size, level.blocks)
+
+
+static func nav_grid(size_v: Vector2, blocks: Array) -> AStarGrid2D:
+	var g := AStarGrid2D.new()
+	g.region = Rect2i(0, 0, int(ceil(size_v.x / NAV_CELL)), int(ceil(size_v.y / NAV_CELL)))
+	g.cell_size = Vector2(NAV_CELL, NAV_CELL)
+	g.offset = Vector2(NAV_CELL, NAV_CELL) * 0.5
+	g.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	g.update()
+	for b in blocks:
+		var r: Rect2 = (b as Rect2).grow(T.MAN_R + 2.0)
+		for i in range(maxi(0, int(floor((r.position.x - NAV_CELL * 0.5) / NAV_CELL))), mini(g.region.size.x, int(ceil(r.end.x / NAV_CELL)) + 1)):
+			for j in range(maxi(0, int(floor((r.position.y - NAV_CELL * 0.5) / NAV_CELL))), mini(g.region.size.y, int(ceil(r.end.y / NAV_CELL)) + 1)):
+				if r.has_point(Vector2((i + 0.5) * NAV_CELL, (j + 0.5) * NAV_CELL)):
+					g.set_point_solid(Vector2i(i, j), true)
+	return g
+
+
+## The open cell at p, or the nearest to it.
+func _nav_cell(p: Vector2) -> Vector2i:
+	var c := Vector2i(clampi(int(p.x / NAV_CELL), 0, nav.region.size.x - 1), clampi(int(p.y / NAV_CELL), 0, nav.region.size.y - 1))
+	if not nav.is_point_solid(c):
+		return c
+	var best := c
+	var bd := INF
+	for i in range(-3, 4):
+		for j in range(-3, 4):
+			var n := c + Vector2i(i, j)
+			if n.x < 0 or n.y < 0 or n.x >= nav.region.size.x or n.y >= nav.region.size.y or nav.is_point_solid(n):
+				continue
+			var d: float = Vector2((n.x + 0.5) * NAV_CELL, (n.y + 0.5) * NAV_CELL).distance_to(p)
+			if d < bd:
+				bd = d
+				best = n
+	return best
+
+
+## Can a man walk a->b in a straight line (nothing within `r` of it)?
+func walk_clear(a: Vector2, b: Vector2, r: float) -> bool:
+	for rect in level.blocks:
+		if seg_rect(a, b, (rect as Rect2).grow(r)) >= 0.0:
+			return false
+	return true
+
+
+## Where a man at `from` heads to get to `to`: `to` itself with a clear walk (or in the car park); else the furthest
+## point of the way round that he can walk straight at.
+func way_to(from: Vector2, to: Vector2) -> Vector2:
+	if nav == null or walk_clear(from, to, T.MAN_R * 0.9):
+		return to
+	var path: PackedVector2Array = nav.get_point_path(_nav_cell(from), _nav_cell(to), true)
+	if path.size() < 2:
+		return to
+	for i in range(mini(path.size() - 1, 10), 1, -1):
+		if walk_clear(from, path[i], T.MAN_R * 0.9):
+			return path[i]
+	return path[1]
 
 
 ## Cover blocks sight; men don't.
@@ -374,6 +442,8 @@ const SHELTER_POCKET := Rect2(12.5, 5.5, 5, 1.5)     # tiles: inside the shelter
 
 
 func in_pocket(p: Vector2) -> bool:
+	if level.dealt():
+		return false
 	for t in [SliceLevel.KIOSK_INSIDE, SHELTER_POCKET]:
 		if SliceLevel.tiles_px(t).grow(T.MAN_R).has_point(p):
 			return true
@@ -382,7 +452,7 @@ func in_pocket(p: Vector2) -> bool:
 
 func spawn_points() -> Array[Vector2]:
 	var out: Array[Vector2] = []
-	for p in SliceLevel.SPAWNS:
+	for p in level.spawns():
 		out.append(p)
 	return out
 
@@ -412,15 +482,15 @@ func drop_crates(fell: Array) -> Array:
 	for k in range(T.G_CRATES_A_GANG):
 		var from: Vector2 = fell[rng.randi_range(0, fell.size() - 1)]
 		# a man who fell at the park's edge or in a crowd: wider as the tries go, then the nearest clear ground to him
-		var at: Vector2 = resolve_circle(Vector2(clampf(from.x + 170.0 * k, T.EDGE + 80.0, T.PARK_W - T.EDGE - 80.0), clampf(from.y, T.EDGE + 80.0, T.PARK_H - T.EDGE - 80.0)), T.CRATE_SIZE)
+		var at: Vector2 = resolve_circle(Vector2(clampf(from.x + 170.0 * k, T.EDGE + 80.0, park_rect.size.x - T.EDGE - 80.0), clampf(from.y, T.EDGE + 80.0, park_rect.size.y - T.EDGE - 80.0)), T.CRATE_SIZE)
 		for i_try in range(30):
 			var p: Vector2 = from + Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU)) * rng.randf_range(T.G_CRATE_NEAR_PX[0], T.G_CRATE_NEAR_PX[1] * (1.0 + i_try / 30.0))
-			p = Vector2(clampf(p.x, T.EDGE + 80.0, T.PARK_W - T.EDGE - 80.0), clampf(p.y, T.EDGE + 80.0, T.PARK_H - T.EDGE - 80.0))
+			p = Vector2(clampf(p.x, T.EDGE + 80.0, park_rect.size.x - T.EDGE - 80.0), clampf(p.y, T.EDGE + 80.0, park_rect.size.y - T.EDGE - 80.0))
 			if resolve_circle(p, T.CRATE_SIZE).distance_to(p) < 1.0 and not exit_rect.grow(120.0).has_point(p) and not crates().any(func(c): return c.position.distance_to(p) < T.CRATE_SIZE * 2.5):
 				at = p
 				break
 		if exit_rect.grow(120.0).has_point(at):       # (the review) the last resort landed on the way out: off it
-			at = resolve_circle(at + (Vector2(T.PARK_W, T.PARK_H) * 0.5 - at).normalized() * 320.0, T.CRATE_SIZE)
+			at = resolve_circle(at + (park_rect.size * 0.5 - at).normalized() * 320.0, T.CRATE_SIZE)
 		out.append(add_crate(at))
 	return out
 
@@ -531,6 +601,8 @@ func add_damage_done(n: float) -> void:
 ## life (res.heal, the sim's _kill_heal) to the runner, and scavenger's round (res.scav) back in the magazine (the review).
 func on_man_killed(_man: Node, result: Dictionary) -> void:
 	stats["kills"] += 1
+	if ctx.get("place") is Dictionary:           # (board K) a run: a kill's XP, his when he gets out
+		stats["xp"] = float(stats.get("xp", 0.0)) + float(ctx["t"].get("xp", 0.0)) * T.G_RUN_XP_X
 	man_down.emit(_man)
 	add_haul(result.get("drops", []))
 	if runner != null:
@@ -602,6 +674,9 @@ func open_crate(cr: SliceCrate) -> Array:
 		for _k in range(T.G_PRIZE_FINDS - 1):
 			cr.finds.append_array(SliceBridge.crate_finds(ctx, rng))     # (board I) the prize: so many crates' worth
 		stats["prize"] = true
+		var pg: Array = ctx["place"].get("prize_gun", []) if ctx.get("place") is Dictionary else []
+		if pg.size() == 2:
+			cr.finds.append_array(SliceBridge.place_gun(ctx, str(pg[0]), str(pg[1]), rng))     # (board K) the place's gun, found
 	if loop:
 		stats["crates_opened"] = int(stats.get("crates_opened", 0)) + 1
 	add_haul(cr.finds)

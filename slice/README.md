@@ -154,6 +154,31 @@ older checks turn it off and keep the three gangs and the clear):
 - He ends it by getting out at the gate he came in by: "Got out", with "Gangs beaten" on the end screen; the run log
   carries loop, gangs_beaten, crates_opened and prize.
 
+Stages 2 to 4, built as one (boards J to L): melee, levels dealt from pieces, three sites in a row.
+- **3 sites in a row** (the picker's button; launch.gd start_run): a level 1 runner of the slice's own (the game's
+  start: a claw hammer, two bandages, a Poacher) through the Allotments, the Garden Centre and Top Farm
+  (SliceTuning.PLACES: each the game's site at its first depth, its own gang HP and damage test settings). Out of a
+  site his kit, his finds and the kills' XP (the site's times G_RUN_XP_X; a level's web points spent as the balance
+  bot spends them) go on; the Kit opens before the next site, and what he sets off in is what he brought. Dead, it's
+  that site again as he came in, the same level dealt (no XP or finds kept from the try). Out of Top Farm: "Start
+  again from level 1", other levels dealt. The run log's line carries run, place, place_i, tries, xp, level_after.
+- **Levels dealt from pieces** (slice/deal.gd; level.gd builds and draws the layout, the car park when there's none):
+  a 4 x 3 grid of pieces on the seed, each open ground or a walled room with a doorway to each piece it's joined to
+  (two at least); the way in and out bottom left, the prize in the piece furthest by the ways through, the gangs'
+  gates on the outer edge of far pieces; every piece keeps a clear cross through its middle. The Allotments are all
+  open (beds, sheds, greenhouses), the Garden Centre 8 rooms of 12 (aisles, tills, stores), Top Farm 6 (barns, yards).
+  The men find their way round walls on a grid (slice.gd nav_grid, way_to; man.gd _toward). All of it drawn in code.
+- **Melee** (round.gd swing; runner.gd _heavy_step): a swing lands on every man in its arc and staggers him
+  (G_STAGGER_S; not again for G_STAGGER_AGAIN_S); the button held G_HEAVY_HOLD_S is a heavy swing (twice the damage,
+  further, a longer stagger, twice the wait). A man with a hand tool draws back G_RUSH_WIND_S before his swing lands
+  (an arc on him): step out of it, dodge, or hit him first. This changes the car park's rusher too.
+- **The gangs by site** (gang.gd place_kind): the Allotments all hand tools; the Garden Centre one gun a gang; Top
+  Farm every other man armed, one throwing, a hard man from its second gang. The Allotments' prize holds a Pocket
+  pistol, the Garden Centre's a Bolt gun.
+- Known: rounds aren't scarce or carried (each site starts on the slice's own box for a gun worn); cover all blocks
+  sight and rounds, beds included; the three sites' test settings are first guesses, not played; "3 sites in a row" is
+  the language pass's name for it ("run" is one trip out in the glossary) - Matt's to rename.
+
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.
 

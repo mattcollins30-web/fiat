@@ -88,6 +88,9 @@ static func cover_px() -> Array:
 	return COVER.map(func(c): return {"kind": c["kind"], "rect": tiles_px(c["tiles"])})
 
 
+## (board L) A level dealt from pieces (slice/deal.gd's layout), set before build(); empty: the car park above.
+var layout: Dictionary = {}
+var size := Vector2(T.PARK_W, T.PARK_H)     # the level's ground, the edge wall inside it
 var park_rect := Rect2(0, 0, T.PARK_W, T.PARK_H)
 var exit_rect := Rect2(T.EDGE + 40.0, T.PARK_H - T.EDGE - 40.0 - T.EXIT_H, T.EXIT_W, T.EXIT_H)
 var exit_lit := false                # the clear lights the way out up
@@ -99,14 +102,23 @@ var blocks: Array = []               # Rect2s, the cover and the park's edge wal
 func build() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED     # (round 3) the floor's tiles repeat in one draw
 	cover.clear()
-	for c in COVER:
-		cover.append(tiles_px(c["tiles"]))
+	if dealt():
+		size = layout["size"]
+		park_rect = Rect2(Vector2.ZERO, size)
+		exit_rect = layout["exit_rect"]
+		for w in layout["walls"]:
+			cover.append(w)                 # a wall hides and stops as cover does
+		for c in layout["cover"]:
+			cover.append(c["rect"])
+	else:
+		for c in COVER:
+			cover.append(tiles_px(c["tiles"]))
 	blocks = cover.duplicate()
 	var e := T.EDGE
-	blocks.append(Rect2(0, 0, T.PARK_W, e))
-	blocks.append(Rect2(0, T.PARK_H - e, T.PARK_W, e))
-	blocks.append(Rect2(0, 0, e, T.PARK_H))
-	blocks.append(Rect2(T.PARK_W - e, 0, e, T.PARK_H))
+	blocks.append(Rect2(0, 0, size.x, e))
+	blocks.append(Rect2(0, size.y - e, size.x, e))
+	blocks.append(Rect2(0, 0, e, size.y))
+	blocks.append(Rect2(size.x - e, 0, e, size.y))
 	for r in blocks:                    # the physics bodies, for G's men if they move with move_and_slide
 		var body := StaticBody2D.new()
 		body.collision_layer = 1
@@ -121,7 +133,96 @@ func build() -> void:
 	queue_redraw()
 
 
+func dealt() -> bool:
+	return not layout.is_empty()
+
+
+## Where the crates stand at the start (the old three-gang fight), the prize's place, the gangs' ways in, the way in.
+func crate_spots() -> Array:
+	return [layout["prize"]] if dealt() else CRATES
+
+
+func prize_spot() -> Vector2:
+	if dealt():
+		return layout["prize"]
+	var far: Vector2 = CRATES[0]              # the car park: its crate furthest from the way out
+	for p in CRATES:
+		if p.distance_to(exit_rect.get_center()) > far.distance_to(exit_rect.get_center()):
+			far = p
+	return far
+
+
+func spawns() -> Array:
+	return layout["spawns"] if dealt() else SPAWNS
+
+
+func entry() -> Vector2:
+	return layout["entry"] if dealt() else ENTRY
+
+
+const FLOOR_OPEN := {"plots": Color("2f3a2a"), "shed": Color("323b2c"), "greenhouse": Color("2f3a2a"), "path": Color("3a382f"), "yard": Color("34353a")}
+const FLOOR_SHUT := Color("3b3a38")
+const C_GRID := Color(0, 0, 0, 0.10)
+const C_GATE := Color("b0463a")
+const THING := {"bed": [Color("4a3524"), Color("5d7a3a")], "shed": [Color("4b3a2c"), Color("2a2019")], "butt": [Color("35506a"), Color("1e2e3d")],
+	"compost": [Color("5a4630"), Color("33271a")], "glass": [Color(0.62, 0.8, 0.82, 0.55), Color("cfe6e8")], "pallet": [Color("7a6240"), Color("4a3a24")],
+	"tractor": [Color("7a2e26"), Color("3a1512")], "van": [Color("5a5f52"), Color("33362e")], "shelf": [Color("5b6068"), Color("2e3136")],
+	"counter": [Color("8a8272"), Color("4c473d")], "post": [Color("6a6a66"), Color("3a3a38")], "bale": [Color("b89a4a"), Color("6e5a26")],
+	"desk": [Color("6b4f36"), Color("3a2a1c")], "screen": [Color("59606a"), Color("2f343a")]}
+
+
+## (board L) A dealt level, in code: each piece's floor, the walls, the gates, what stands in it.
+func _draw_dealt() -> void:
+	for f in layout["floors"]:
+		var fr: Rect2 = f["rect"]
+		draw_rect(fr, FLOOR_SHUT if bool(f["walled"]) else FLOOR_OPEN.get(str(f["kind"]), Color("33362e")))
+		var x := fr.position.x + T.TILE * 2.0
+		while x < fr.end.x:                      # a faint grid, so the ground reads as he moves over it
+			draw_line(Vector2(x, fr.position.y), Vector2(x, fr.end.y), C_GRID, 2.0)
+			x += T.TILE * 2.0
+		var y := fr.position.y + T.TILE * 2.0
+		while y < fr.end.y:
+			draw_line(Vector2(fr.position.x, y), Vector2(fr.end.x, y), C_GRID, 2.0)
+			y += T.TILE * 2.0
+	var e := T.EDGE
+	for r in [Rect2(0, 0, size.x, e), Rect2(0, size.y - e, size.x, e), Rect2(0, 0, e, size.y), Rect2(size.x - e, 0, e, size.y)]:
+		draw_rect(r, C_EDGE)
+	for g in layout["gates"]:
+		draw_rect(g, Color(C_GATE, 0.55))        # a gang's gate in the edge
+		draw_rect(g, C_GATE, false, 4.0)
+	_draw_exit()
+	for w in layout["walls"]:
+		var wr: Rect2 = w
+		draw_rect(Rect2(wr.position + Vector2(8, 10), wr.size), C_SHADOW)
+		draw_rect(wr, KIND_COLOUR["wall"])
+		draw_rect(wr, KIND_LINE["wall"], false, 3.0)
+	for c in layout["cover"]:
+		var r: Rect2 = c["rect"]
+		var tone: Array = THING.get(str(c["kind"]), [Color("55584f"), Color("2c2e29")])
+		if str(c["kind"]) != "glass":
+			draw_rect(Rect2(r.position + Vector2(8, 10), r.size), C_SHADOW)
+		draw_rect(r, tone[0])
+		draw_rect(r, tone[1], false, 3.0)
+		if str(c["kind"]) == "bed":              # what's growing
+			draw_rect(r.grow(-12.0), Color(tone[1], 0.55))
+
+
+func _draw_exit() -> void:
+	if not exit_seen:
+		return
+	var ec := C_EXIT if exit_lit else Color(C_EXIT, 0.55)
+	draw_rect(exit_rect, Color(ec, 0.10 if not exit_lit else 0.22))
+	draw_rect(exit_rect, ec, false, 4.0)
+	var mid := exit_rect.get_center()
+	draw_line(mid + Vector2(-50, 50), mid + Vector2(50, -50), ec, 6.0)
+	draw_line(mid + Vector2(50, -50), mid + Vector2(10, -50), ec, 6.0)
+	draw_line(mid + Vector2(50, -50), mid + Vector2(50, -10), ec, 6.0)
+
+
 func _draw() -> void:
+	if dealt():
+		_draw_dealt()
+		return
 	# (round 3) the floor from Kenney's tiles: asphalt, repeated in one draw; paving round the edge; the lines drawn
 	var asphalt := Art.tex(Art.FLOOR)
 	if asphalt != null:
@@ -152,14 +253,7 @@ func _draw() -> void:
 	else:
 		draw_rect(tiles_px(KIOSK_INSIDE), Color("26221f"))
 	# the way out, once seen (build 76)
-	if exit_seen:
-		var ec := C_EXIT if exit_lit else Color(C_EXIT, 0.55)
-		draw_rect(exit_rect, Color(ec, 0.10 if not exit_lit else 0.22))
-		draw_rect(exit_rect, ec, false, 4.0)
-		var mid := exit_rect.get_center()
-		draw_line(mid + Vector2(-50, 50), mid + Vector2(50, -50), ec, 6.0)
-		draw_line(mid + Vector2(50, -50), mid + Vector2(10, -50), ec, 6.0)
-		draw_line(mid + Vector2(50, -50), mid + Vector2(50, -10), ec, 6.0)
+	_draw_exit()
 	# the cover, a shadow under each: the pack's props where it has one, code-drawn (shaded to match) where not
 	var bin_i := 0
 	for c in cover_px():
@@ -194,8 +288,8 @@ func _draw() -> void:
 ## Returns {"cell": float, "seen": {Vector2i: true}}; on(p) below asks it. Sight isn't asked: only that the way is open.
 func reach(from: Vector2, r: float) -> Dictionary:
 	var c := T.REACH_CELL
-	var nx := int(T.PARK_W / c)
-	var ny := int(T.PARK_H / c)
+	var nx := int(size.x / c)
+	var ny := int(size.y / c)
 	var free := func(i: int, j: int) -> bool:
 		var p := Vector2((i + 0.5) * c, (j + 0.5) * c)
 		for b in blocks:

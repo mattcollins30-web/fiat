@@ -36,9 +36,9 @@ func _init() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 	_title = UI.label(self, Rect2(0, 0, 400, 40), "The Kit", "Bold", 30, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_sub = UI.label(self, Rect2(0, 0, 900, 24), "The fight is held · Tab or Back to go back", "Regular", 16, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	back_button = UI.button(self, Rect2(0, 0, 260, 48), true)
-	back_button.text = "Back to the fight"
+	_sub = UI.label(self, Rect2(0, 0, 900, 24), SUB, "Regular", 16, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	back_button = UI.button(self, Rect2(0, 0, 320, 48), true)
+	back_button.text = BACK
 	back_button.pressed.connect(func() -> void: closed.emit())
 	room = Armoury.new()
 	room.acted.connect(_refresh)
@@ -58,8 +58,15 @@ func layout(s: Vector2) -> void:
 	back_button.position = Vector2(x + room.size.x - back_button.size.x, y - HEAD_H - 4.0)
 
 
-func open(w) -> void:
+const SUB := "The fight is held · Tab or Back to go back"
+const BACK := "Back to the fight"
+
+
+## `before` (boards J to L): the place he's about to go into - the room opened between a run's places, not mid-fight.
+func open(w, before := "") -> void:
 	world = w
+	_sub.text = UI.dots(SUB if before == "" else "Before %s · put on what the runner found" % before)
+	UI.fit_button(back_button, [BACK if before == "" else "Into %s" % before, "Set off"])
 	var s = sim()
 	_held_mission = s.mission
 	s.mission = null                          # the run put by: the room's kit isn't locked "out on a run"

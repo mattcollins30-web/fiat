@@ -32,7 +32,11 @@ const SLOT_NAMES := ["Primary", "Secondary"]
 # ------------------------------------------------------------------ the ctx
 
 ## The runner and the site for the slice. `main`: the title's main node (anything with a `sim`), or null.
-static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
+## `place` (boards J to L): one of SliceTuning.PLACES - its site's figures, a level dealt for it on the seed, its gangs'
+## mix and the test settings it starts on; none: the car park.
+static func runner_ctx(main, seed_v := 72, site_lv := 0, place := {}) -> Dictionary:
+	if not place.is_empty():
+		site_lv = int(place["level"])
 	var s := Sim.new()
 	var fixture := true
 	var camp = main.get("sim") if main != null and main is Object else null
@@ -46,7 +50,7 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
 	s.fight_rng.seed = seed_v + 1
 	var stand_in: String = _stand_in(s, seed_v)
 	_arm(s)
-	var t := site_figures(s, site_lv)
+	var t := site_figures(s, site_lv, int(place.get("tier", SITE_TIER)), not place.is_empty())
 	var m := _mission(s, t)
 	s.mission = m
 	s.hp = s.max_hp()
@@ -72,7 +76,36 @@ static func runner_ctx(main, seed_v := 72, site_lv := 0) -> Dictionary:
 	ctx["contact"] = int(s.contact(t))     # the sim's: how many of a gang are on you at once
 	ctx["their_dmg_x"] = T.THEIR_DMG_X
 	ctx["camp_level"] = int(camp.level()) if camp != null and str(camp.cls) != "" else 0     # the camp's own runner, whoever plays (the run log's)
+	if not place.is_empty():
+		ctx["place"] = place
+		ctx["site"]["name"] = str(place["name"])
+		ctx["layout"] = load("res://slice/deal.gd").deal(place, seed_v)
+		ctx["mix"] = {"armed": str(place["armed"]), "thrower": bool(place["thrower"]), "hard_from": int(place["hard_from"])}
+		ctx["rush_pace_x"] = float(place["rush_pace_x"])
+		ctx["man_hp_x"] = float(place["gang_hp_x"])
+		ctx["their_dmg_x"] = float(place["gang_dmg_x"])
 	return ctx
+
+
+## A site's name in running text: its "The" lower-case (the style guide: capital only when the name stands alone).
+static func mid_name(nm: String) -> String:
+	return "the " + nm.substr(4) if nm.begins_with("The ") else nm
+
+
+## (board K) A place's gun for its prize: the named base rolled at the site's level, plain dice.
+static func place_gun(ctx: Dictionary, slot: String, base_name: String, rng: RandomNumberGenerator) -> Array:
+	var b: Dictionary = Items.base_named(slot, base_name)
+	if b.is_empty():
+		return []
+	return [Items.roll_on(slot, b, rng, 1.0, true, false, 0, int(ctx["t"].get("level", 1)))]
+
+
+## (board K) A man hit by a swing: stood where he is `secs` (a hard man less), his own swing broken off.
+static func stagger(ms: Dictionary, secs: float) -> void:
+	if float(ms.get("stag_cd", 0.0)) > 0.0:
+		return
+	ms["stag_cd"] = secs + T.G_STAGGER_AGAIN_S
+	ms["stun_t"] = maxf(float(ms.get("stun_t", 0.0)), secs * (T.G_STAGGER_HARD_X if bool(ms.get("hard", false)) else 1.0))
 
 
 ## A primary that can't fire in the slice (no rate, no magazine: a hammer, a bow on no rounds): the fixture's rifle in its
@@ -249,11 +282,12 @@ static func _arm(s) -> void:
 
 ## The car park's figures: the Retail Park as a signal at level 12 plays it (its depth's curve), the Estate's crew's damage
 ## types and resists at that depth.
-static func site_figures(s, lv_in := 0) -> Dictionary:
+static func site_figures(s, lv_in := 0, tier := SITE_TIER, first_depth := false) -> Dictionary:
 	var lv: int = lv_in if lv_in > 0 else site_level(s)     # (build 76) the level picker's, else the runner's less two
-	var d: int = Sim.tier_depth(lv)
-	var t: Dictionary = s.depth_figures(SITE_TIER, d, lv, true, true)
-	var crew: Array = s._crew_types(int(Data.TIERS[SITE_TIER]["zone"]), d, [])
+	var d: int = 1 if first_depth else Sim.tier_depth(lv)     # (board J) a run's place: the site as a fresh camp first plays it
+	var t: Dictionary = s.depth_figures(tier, d, lv, true, true)
+	t["tier"] = tier
+	var crew: Array = s._crew_types(int(Data.TIERS[tier]["zone"]), d, [])
 	t["types"] = crew[0]
 	t["res"] = crew[1]
 	t["level"] = lv
@@ -273,7 +307,7 @@ static func game_fight(ctx: Dictionary) -> Dictionary:
 
 ## The slice's fight as a mission on the slice's sim: what the reads it calls look at, nothing a run's end would.
 static func _mission(s, t: Dictionary) -> Dictionary:
-	var m := {"tier": SITE_TIER, "t": t, "remaining": 0, "target_hp": 0.0, "kills": 0, "found": [], "insured": false,
+	var m := {"tier": int(t.get("tier", SITE_TIER)), "t": t, "remaining": 0, "target_hp": 0.0, "kills": 0, "found": [], "insured": false,
 		"clock": 9999.0, "clock_max": 9999.0, "left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": s.hp,
 		"cleared": false, "search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 0.0, "fire_x": {}, "my_dots": {},
@@ -289,7 +323,7 @@ static func _site_words(s, t: Dictionary) -> Dictionary:
 	var cut: int = (int(Data.FX["node/trapline.heads"]) if s.has_node("trapline") or s.has_node("snare_and_wait") else 0) + (int(Data.FX["yard/flares.heads"]) if s.yard_has("flares") else 0)
 	for g in range(T.G_GANGS):
 		sizes.append(clampi(base_n + g - cut, 1, T.G_GANG_MAX))
-	return {"name": T.G_SITE_NAME, "place": str(Data.ZONES[int(Data.TIERS[SITE_TIER]["zone"])]["name"]), "level": int(t["level"]),
+	return {"name": T.G_SITE_NAME, "place": str(Data.ZONES[int(Data.TIERS[int(t.get("tier", SITE_TIER))]["zone"])]["name"]), "level": int(t["level"]),
 		"man_hp": float(t["hp"]), "man_dps": float(t["dps"]), "types": t["types"], "res": t["res"], "gangs": T.G_GANGS,
 		"gang_sizes": sizes, "first_gang_s": T.G_FIRST_GANG_S, "next_gang_s": s.patrol_s(t) * T.G_CLOCK_X,
 		"hard_odds": Data.HARD66_ODDS if int(t["level"]) >= Data.HARD66_LEVEL else 0.0, "drop": float(t["drop"])}
@@ -563,7 +597,7 @@ static func shot_damage(ctx: Dictionary, gun: Dictionary, ms: Dictionary, rng: R
 	var it: Dictionary = gun.get("item", gun)
 	var slot: String = str(gun.get("slot", "Primary"))
 	var sv: Dictionary = s._f66_sv(m)
-	var one: float = round_damage(ctx, gun) * clampf(part, 0.0, 1.0)
+	var one: float = round_damage(ctx, gun) * clampf(part, 0.0, T.G_HEAVY_SHARE)     # (board K) over 1: a heavy swing
 	var per: Dictionary = s.type_dps()
 	var total: float = 0.0
 	for ty in per:
@@ -714,7 +748,7 @@ static func man_dots_tick(ctx: Dictionary, ms: Dictionary, dt: float) -> Diction
 			ms["dots"][ty] = pool - drain
 		dealt += drain
 		by[ty] = drain
-	for k in ["chill_t", "shock_t", "arm_t", "leg_t", "stun_t", "root_t", "exposed_t"]:
+	for k in ["chill_t", "shock_t", "arm_t", "leg_t", "stun_t", "root_t", "exposed_t", "stag_cd"]:
 		ms[k] = maxf(0.0, float(ms.get(k, 0.0)) - dt)
 	ms["since_shot"] = float(ms.get("since_shot", 0.0)) + dt
 	if float(ms.get("since_shot", 0.0)) > T.G_PIN_GRACE_S:

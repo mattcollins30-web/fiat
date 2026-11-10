@@ -57,6 +57,10 @@ var flash_t := 0.0
 var kind := ""                          # (round 7, board G) "": a plain man; "rusher", "marksman", "thrower"
 var swing_cd := 0.0                     # a rusher's next swing
 var swings := 0                         # ...and how many he's made (a check's)
+var wind_t := 0.0                       # (board K) drawing back: his swing lands when this runs out
+var _way := Vector2.INF                 # (board L) a dealt level: the next point of his way round the walls
+var _way_for := Vector2.INF             # ...the place it leads to
+var _way_t := 0.0                       # ...and how long till he looks again
 var aim_t := 0.0                        # a marksman's line on the runner, seconds unbroken
 var rest_t := 0.0                       # ...and his rest after his round
 var throw_cd := 0.0                     # a thrower's next bottle
@@ -158,6 +162,7 @@ func die_by(res: Dictionary) -> void:
 
 ## (round 4, Matt: "3 on you - 3 next") The director holds him back: to `at` (the park's edge, out of sight), not firing.
 func hold(at: Vector2) -> void:
+	wind_t = 0.0
 	state = "held"
 	target = at
 	sees = false
@@ -281,9 +286,7 @@ func step(dt: float) -> void:
 			_move(dt)
 		_fire(dt, rp, dist)
 	else:
-		_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)     # (the review) stunned: his walk runs down, and no shove waits for him
-		velocity = _walk_v
-		knock_left = Vector2.ZERO
+		_stand(dt)                                # stunned: his walk runs down; a swing's shove still moves him (the review)
 	queue_redraw()
 
 
@@ -299,19 +302,28 @@ func _rush(dt: float, rp: Vector2, dist: float, stunned: bool) -> void:
 	if stunned:
 		_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)
 		velocity = _walk_v
-		knock_left = Vector2.ZERO
+		wind_t = 0.0                             # (board K) stunned or staggered: his swing's broken off
+		_stand(dt)                               # (the review) a swing's shove still moves him
 		return
-	if float(ms.get("root_t", 0.0)) > 0.0:
-		_stand(dt)                               # rooted: he swings only at what's in his reach
+	if float(ms.get("root_t", 0.0)) > 0.0 or wind_t > 0.0:
+		_stand(dt)                               # rooted: he swings only at what's in his reach; drawing back, he's planted
 	else:
 		_move(dt)
 	var runner = world.runner
-	if swing_cd > 0.0 or runner.is_dead() or dist > radius + T.RUNNER_R + T.G_RUSH_REACH_PX:
+	var reach: float = radius + T.RUNNER_R + T.G_RUSH_REACH_PX
+	if wind_t <= 0.0:
+		if swing_cd > 0.0 or runner.is_dead() or dist > reach or not sees:     # (the review) not through a wall or the glass
+			return
+		wind_t = T.G_RUSH_WIND_S                 # (board K) he draws back: step out of it, or hit him first
+		swing_cd = T.G_RUSH_SWING_S + T.G_RUSH_WIND_S
 		return
-	swing_cd = T.G_RUSH_SWING_S
+	wind_t -= dt
+	if wind_t > 0.0:
+		return
+	wind_t = 0.0
 	swings += 1
 	tracer_t = 0.12                              # his pose for the blow
-	if runner.has_method("dodging") and runner.dodging():
+	if runner.is_dead() or dist > reach + T.G_RUSH_WIND_REACH or not world.has_los(global_position, rp) or (runner.has_method("dodging") and runner.dodging()):
 		return
 	var blow: Dictionary = ms.duplicate()
 	blow["round_x"] = T.G_RUSH_FIRE_S * SliceBridge.their_rps() * T.G_HIT_OPEN
@@ -514,8 +526,8 @@ func _in_park(p: Vector2) -> Vector2:
 func _move(dt: float) -> void:
 	var want := Vector2.ZERO
 	if state != "cover" and state != "look":
-		want = (target - global_position)
-		if want.length() > T.G_ARRIVE_PX:
+		want = (_toward(dt) - global_position)
+		if want.length() > (T.G_ARRIVE_PX if _way == Vector2.INF or _way == target else 8.0):
 			want = want.normalized()
 		else:
 			want = Vector2.ZERO
@@ -527,7 +539,7 @@ func _move(dt: float) -> void:
 	if detour_t > 0.0:
 		detour_t -= dt
 		want = (want + detour * 1.2).normalized()
-	var speed: float = T.G_MAN_SPEED * (T.G_RUSH_PACE_X if kind == "rusher" else 1.0) * (T.G_LEG_SLOW_X if float(ms.get("leg_t", 0.0)) > 0.0 else 1.0) * (1.0 - (ctx_chill() if float(ms.get("chill_t", 0.0)) > 0.0 else 0.0))
+	var speed: float = T.G_MAN_SPEED * (float(world.ctx.get("rush_pace_x", T.G_RUSH_PACE_X)) if kind == "rusher" else 1.0) * (T.G_LEG_SLOW_X if float(ms.get("leg_t", 0.0)) > 0.0 else 1.0) * (1.0 - (ctx_chill() if float(ms.get("chill_t", 0.0)) > 0.0 else 0.0))
 	var goal: Vector2 = want.limit_length(1.0) * speed
 	_walk_v = _walk_v.move_toward(goal, T.G_MAN_ACCEL * dt)
 	var shove: Vector2 = knock_left.limit_length(T.KNOCK_SPEED * dt)
@@ -546,6 +558,19 @@ func _move(dt: float) -> void:
 			detour_t = 0.7
 	else:
 		stuck_t = 0.0
+
+
+## (board L) Where his walk heads: his target, or in a dealt level the next point of the way to it round the walls
+## (the world's way_to), looked up again a few times a second or when the target's moved.
+func _toward(dt: float) -> Vector2:
+	if world.get("nav") == null:
+		return target
+	_way_t -= dt
+	if _way == Vector2.INF or _way_t <= 0.0 or _way_for.distance_to(target) > 96.0 or (_way != target and global_position.distance_to(_way) < 12.0):
+		_way = world.way_to(global_position, target)
+		_way_for = target
+		_way_t = 0.3
+	return _way
 
 
 func ctx_chill() -> float:
@@ -642,6 +667,9 @@ func _draw() -> void:
 		for i in range(8):                       # rooted: a broken amber ring at his feet
 			if i % 2 == 0:
 				draw_arc(Vector2.ZERO, radius + 12.0, i * TAU / 8.0, (i + 1) * TAU / 8.0, 6, C_ROOT, 4.0)
+	if wind_t > 0.0 and not dead:                # (board K) drawing back: the arc of the swing that's coming
+		var wk: float = 1.0 - clampf(wind_t / T.G_RUSH_WIND_S, 0.0, 1.0)
+		draw_arc(Vector2.ZERO, radius + T.G_RUSH_REACH_PX + T.RUNNER_R * 0.5, face - 0.3 - 0.6 * wk, face + 0.3 + 0.6 * wk, 16, Color(C_KIND["rusher"], 0.5 + 0.5 * wk), 6.0 + 6.0 * wk)
 	if kind != "" and not dead:                  # (round 7) his kind's ring, and a marksman's line as it settles on the runner
 		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 40, C_KIND.get(kind, C_LINE), 5.0)
 		if kind == "marksman" and aim_t > 0.0 and world != null and world.runner != null:
