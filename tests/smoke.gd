@@ -46607,7 +46607,7 @@ func _h72_slice_checks(main) -> void:
 	_check(int(site["level"]) == maxi(1, 14 - SliceTuning.SITE_LEVEL_UNDER) and int(site["level"]) == 12, "the fixture's car park is level %d, not 12" % int(site["level"]))
 	var plain_man = null
 	for m in w.men():
-		if not m.hard:
+		if not m.hard and str(m.kind) == "":     # (round 7) a plain man, not one of the kinds
 			plain_man = m
 	_check(plain_man != null and is_equal_approx(plain_man.hp_max, float(ctx["t"]["hp"]) * SliceTuning.MAN_HP_X), "a man's HP isn't the sim's ×%.2f: %s" % [SliceTuning.MAN_HP_X, str(plain_man.hp_max if plain_man != null else -1.0)])
 	if plain_man != null:
@@ -47599,7 +47599,7 @@ func _h73_round2_checks(main) -> void:
 	# no frames, a press and release here unsettle slice_world's own presses after it: the whole smoke runs it first
 	# (`-- only` puts slice_world before h73_round2)
 	var presses: Array = []
-	for code in [KEY_R, KEY_SPACE]:
+	for code in [KEY_R]:                     # (round 7) Space is the dodge now; the reload is R alone (r12 checks Space)
 		var ek := InputEventKey.new()
 		ek.physical_keycode = code
 		presses.append(ek)
@@ -47624,7 +47624,7 @@ func _h73_round2_checks(main) -> void:
 	key_r.physical_keycode = KEY_R
 	_check(InputMap.event_is_action(key_c, "slice_skill_3") and not InputMap.event_is_action(key_r, "slice_skill_3") and InputMap.event_is_action(key_r, "slice_reload"), "the third skill isn't on C, or R isn't the reload")
 	_check(hud._skills.map(func(d): return d["key"].text) == ["Q", "E", "C"], "the HUD's skill keys: %s" % str(hud._skills.map(func(d): return d["key"].text)))
-	_check(PauseScript72.KEYS.has(["Reload", "R or Space"]) and PauseScript72.KEYS.has(["Skills", "Q E C"]) and PauseScript72.PAD.has(["Reload", "X"]), "the pause's control rows don't say R and Q E C")
+	_check(PauseScript72.KEYS.has(["Reload", "R"]) and PauseScript72.KEYS.has(["Skills", "Q E C"]) and PauseScript72.PAD.has(["Reload", "X"]), "the pause's control rows don't say R and Q E C")
 	r.reloading = false
 	r.rounds[r.gun_i] = int(mg * 0.25) - 1
 	hud.show_state(hud.read_state())
@@ -48473,6 +48473,7 @@ func _r6_stood(secs: float, lv := 12) -> Dictionary:
 	var world = load("res://slice/slice.tscn").instantiate()
 	root.add_child(world)
 	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, lv)
+	ctx["kinds_off"] = true                  # (round 7) round 6's measures are of plain men: their fire, their search, their cover
 	world.start(ctx, 72)
 	var r = world.runner
 	var taken := 0.0
@@ -48714,6 +48715,183 @@ func _r11_band_checks(main) -> void:
 	run.back_to_title()
 	run.free()
 	print("r11 band ok: the HUD's four panels in a %d px band at 1920 x 1080, 1920 x 1200 and 2560 x 1080, the play above it; the crosshair's marks; a flinch a %.1f s" % [int(SliceTuning.HUD_BAND_H), SliceTuning.G_FLINCH_EVERY_S])
+
+
+## Round 7, stage 2 (board G): three kinds of men among a gang's plain ones - the rusher who comes on and swings, the
+## marksman whose line on you ends in one heavy round, the thrower whose bottle burns a circle - and the dodge on
+## Space, in which nothing lands.
+func _r12_men_checks(main) -> void:
+	var Gang = load("res://slice/gang.gd")
+	var Haz = load("res://slice/hazards.gd")
+	# who's in a gang: its first men, one plain man kept, the hard man none of them
+	var made: Array = []
+	for g in range(3):
+		made.append(range(5).map(func(k): return Gang.kind_for(g, k, 5, g == 2)))
+	_check(made == [["rusher", "", "", "", ""], ["rusher", "marksman", "", "", ""], ["rusher", "marksman", "thrower", "", ""]], "three gangs of five (the last with the hard man) are made up %s" % str(made))
+	_check(range(2).map(func(k): return Gang.kind_for(2, k, 2, false)) == ["rusher", ""] and range(3).map(func(k): return Gang.kind_for(2, k, 3, true)) == ["rusher", "", ""] and Gang.kind_for(0, 0, 1, false) == "" and Gang.kind_for(2, 3, 5, true, true) == "", "a gang of two, of one, and a check's plain gang aren't made up as they should be")
+	var world = load("res://slice/slice.tscn").instantiate()
+	main.add_child(world)
+	var ctx: Dictionary = SliceBridge.runner_ctx(null, 72, 12)
+	world.start(ctx, 72)
+	var r = world.runner
+	for k in range(60 * 6):
+		_r6_tick(world)
+	world.gang._arrive(1)
+	world.gang._arrive(2)
+	var by_kind := {}
+	var plain = null
+	var haz0 = Haz.layer(world)                # (the review) the bottles' node: over the level, under the men
+	var haz_under: bool = haz0.z_index == 0 and haz0.get_index() < world.men_root.get_index() and haz0.get_index() > world.level.get_index()
+	for mn in world.men():
+		if str(mn.kind) != "" and not by_kind.has(str(mn.kind)):
+			by_kind[str(mn.kind)] = mn
+		elif str(mn.kind) == "" and not mn.hard and plain == null:
+			plain = mn
+	_check(by_kind.has("rusher") and by_kind.has("marksman") and by_kind.has("thrower") and plain != null and haz_under, "the three gangs in, the car park holds %s" % str(by_kind.keys()))
+	if by_kind.size() == 3 and plain != null:
+		var ru = by_kind["rusher"]
+		var mk = by_kind["marksman"]
+		var th = by_kind["thrower"]
+		var one: float = SliceBridge.their_round(ctx, plain.ms)
+		_check(is_equal_approx(ru.hp_max, plain.hp_max * SliceTuning.G_RUSH_HP_X) and is_equal_approx(mk.hp_max, plain.hp_max * SliceTuning.G_MARK_HP_X) and is_equal_approx(th.hp_max, plain.hp_max), "their HP against a plain man's %.0f: rusher %.0f, marksman %.0f, thrower %.0f" % [plain.hp_max, ru.hp_max, mk.hp_max, th.hp_max])
+		_check(absf(SliceBridge.their_round(ctx, mk.ms) - float(mk.ms["dps"]) * SliceTuning.G_MARK_FIRE_S * SliceBridge.their_x(ctx)) < 0.01 and SliceBridge.their_round(ctx, mk.ms) > one * 2.0, "a marksman's round is %.1f against a plain round's %.1f, not %.0f s of his fire" % [SliceBridge.their_round(ctx, mk.ms), one, SliceTuning.G_MARK_FIRE_S])
+		# the rusher: stepped up, he comes straight on, swings in reach, and a hit doesn't turn him
+		for other in world.men():
+			if other != ru:
+				other.hold(other.position)       # the rest wait: what reaches the runner is his
+		world.gang._queue = []                   # the director's front is him alone
+		world.gang._front = [ru]
+		ru.engage()
+		ru.position = r.position + Vector2(600, 0)
+		var hp0: int = r.hp_max
+		var took := [0]
+		world.runner_hurt.connect(func(_res): took[0] += 1)
+		var t := 0.0
+		while t < 6.0 and ru.swings == 0:
+			_r6_tick(world)
+			t += 1.0 / 60.0
+		_check(ru.state == "rush" and ru.swings >= 1 and ru.position.distance_to(r.position) <= ru.radius + SliceTuning.RUNNER_R + SliceTuning.G_RUSH_REACH_PX + 12.0 and t < 3.0, "the rusher 600 px off: state '%s', %d swings in %.1f s, %.0f px from him" % [ru.state, ru.swings, t, ru.position.distance_to(r.position)])
+		_check(took[0] >= 1 and ru.landed >= 1, "the rusher's swing didn't land: the runner hurt %d times (his HP %d)" % [took[0], hp0])
+		ru.ms["hp"] = ru.hp_max * 0.1
+		ru.take_shot({"gun": r.gun(), "from": r.position, "point": ru.position, "dir": Vector2.RIGHT, "dist": 50.0, "runner": r, "world": world, "share": 0.01})
+		_check(ru.is_dead() or (ru.state == "rush" and not ru.hurt_back), "a hurt rusher, hit, went to '%s' (fell back: %s)" % [ru.state, str(ru.hurt_back)])
+		_r6_tick(world)
+		# ...and in a dodge his swing misses
+		if not ru.is_dead():
+			ru.ms["hp"] = ru.hp_max
+			var landed0: int = ru.landed
+			var swings0: int = ru.swings
+			ru.swing_cd = 0.0
+			ru.position = r.position + Vector2(60, 0)
+			r.dodge_cd = 0.0
+			r.debug_dodge = true
+			r.auto_move = Vector2.ZERO
+			_r6_tick(world)
+			_check(r.dodging() and ru.swings == swings0 + 1 and ru.landed == landed0, "a swing in his dodge: dodging %s, %d swings, %d landed" % [str(r.dodging()), ru.swings - swings0, ru.landed - landed0])
+		ru.hold(ru.position)
+		# the marksman: his line a second and a half, one round, a rest; out of sight the line's lost
+		var fired0: int = mk.fired
+		mk.aim_t = 0.0
+		mk.rest_t = 0.0
+		var ticks := 0
+		while mk.fired == fired0 and ticks < 200:
+			mk._mark_fire(1.0 / 60.0, r.position)
+			ticks += 1
+		_check(mk.fired == fired0 + 1 and absf(ticks / 60.0 - SliceTuning.G_MARK_AIM_S) < 0.05 and mk.aim_t == 0.0 and is_equal_approx(mk.rest_t, SliceTuning.G_MARK_REST_S), "the marksman fired %d after %.2f s on his line (rest %.1f s)" % [mk.fired - fired0, ticks / 60.0, mk.rest_t])
+		mk._mark_fire(1.0, r.position)
+		mk.rest_t = 0.0
+		mk.aim_t = 1.0
+		mk.sees = false
+		mk._fire(1.0 / 60.0, r.position, 500.0)
+		_check(mk.fired == fired0 + 1 and mk.aim_t == 0.0, "out of his sight the marksman's line stood at %.2f s (fired %d)" % [mk.aim_t, mk.fired - fired0])
+		# the thrower: in sight and in range he throws; the bottle lands after its flight and burns who stands in it
+		var haz = Haz.layer(world)
+		th.throw_cd = 0.0
+		th.sees = true
+		world.gang._front = [th]
+		world.gang._firing = [th]
+		th.engage()
+		th._throw_step(1.0 / 60.0, r.position, 400.0, false)
+		_check(th.thrown == 1 and haz.items.size() == 1 and is_equal_approx(th.throw_cd, SliceTuning.G_THROW_EVERY_S) and Vector2(haz.items[0]["at"]).distance_to(r.position) < 1.0, "the thrower threw %d (%d on the ground), his next in %.1f s" % [th.thrown, haz.items.size(), th.throw_cd])
+		th.throw_cd = 0.0                        # ready again, but out of range, then out of sight: no bottle
+		th._throw_step(1.0 / 60.0, r.position, SliceTuning.G_THROW_RANGE_PX + 10.0, false)
+		th.sees = false
+		th._throw_step(1.0 / 60.0, r.position, 400.0, false)
+		th.sees = true
+		world.gang._firing = []
+		th._throw_step(1.0 / 60.0, r.position, 400.0, false)
+		_check(th.thrown == 1 and haz.items.size() == 1, "out of range, out of sight or not one of those firing, he threw all the same (%d)" % th.thrown)
+		th.hold(th.position)
+		r.dodge_t = 0.0
+		var hurt0: int = took[0]
+		var steps := 0
+		while haz.landed == 0 and steps < 200:
+			haz.step(1.0 / 60.0)
+			steps += 1
+		_check(absf(steps / 60.0 - SliceTuning.G_THROW_FLY_S) < 0.05 and took[0] == hurt0, "the bottle landed after %.2f s, the runner hurt %d times in its flight" % [steps / 60.0, took[0] - hurt0])
+		r.hp = r.hp_max
+		var guard0: int = r.guard
+		var burn_ticks := 0
+		while not haz.items.is_empty() and burn_ticks < 400:
+			haz.step(1.0 / 60.0)
+			burn_ticks += 1
+		var want_ticks: int = int(SliceTuning.G_THROW_BURN_S / SliceTuning.G_THROW_TICK_S)
+		_check(haz.burnt == want_ticks and (r.hp < r.hp_max or r.guard < guard0) and absf(burn_ticks / 60.0 - SliceTuning.G_THROW_BURN_S) < 0.05, "stood in the burn %.1f s he took %d ticks (of %d), HP %d of %d, Guard %d of %d" % [burn_ticks / 60.0, haz.burnt, want_ticks, r.hp, r.hp_max, r.guard, guard0])
+		var burnt0: int = haz.burnt
+		haz.throw(th, r.position + Vector2(SliceTuning.G_THROW_R_PX + 60.0, 0))
+		for k in range(int((SliceTuning.G_THROW_FLY_S + SliceTuning.G_THROW_BURN_S) * 60.0) + 5):
+			haz.step(1.0 / 60.0)
+		_check(haz.burnt == burnt0 and haz.items.is_empty(), "out of the circle the burn still took %d ticks" % (haz.burnt - burnt0))
+	# the dodge: Space, about three of his widths in a quarter of a second, nothing landing, then two seconds
+	var sp := InputEventKey.new()
+	sp.physical_keycode = KEY_SPACE
+	var kr := InputEventKey.new()
+	kr.physical_keycode = KEY_R
+	_check(InputMap.event_is_action(sp, "slice_dodge") and not InputMap.event_is_action(sp, "slice_reload") and InputMap.event_is_action(kr, "slice_reload"), "Space isn't the dodge alone, or R isn't the reload")
+	_check(PauseScript72.KEYS.has(["Dodge", "Space"]) and PauseScript72.KEYS.has(["Reload", "R"]), "the pause's keys don't say Dodge on Space and Reload on R")
+	for mn in world.men():
+		mn.hold(mn.position)
+	r.position = world.resolve_circle(Vector2(SliceTuning.PARK_W * 0.5, SliceTuning.PARK_H * 0.5), SliceTuning.RUNNER_R)
+	r.velocity = Vector2.ZERO
+	r.dodge_cd = 0.0
+	r.dodge_t = 0.0
+	r.auto_move = Vector2.ZERO
+	r.debug_aim_at(r.position + Vector2(0, -500))
+	_r6_tick(world)
+	r.reloading = true
+	r.debug_sights = true
+	var from: Vector2 = r.position
+	var d0: int = r.dodges
+	r.debug_dodge = true
+	_r6_tick(world)
+	var mid: bool = r.dodging() and not r.reloading and not r.sights and not r.can_fire()
+	var rounds = load("res://slice/round.gd").layer(world)
+	var miss: Dictionary = rounds._hit_runner({"man": null, "ms": SliceBridge.man_state(ctx, 0), "pos": r.position}, r)
+	r.debug_dodge = true                     # a second press inside it, and inside its two seconds
+	for k in range(int(SliceTuning.DODGE_S * 60.0) + 3):
+		_r6_tick(world)
+	r.debug_sights = false
+	var went: Vector2 = r.position - from
+	_check(mid and r.dodges == d0 + 1 and not r.dodging() and absf(went.length() - SliceTuning.DODGE_PX) < 30.0 and went.normalized().dot(Vector2.UP) > 0.95, "the dodge, stood still and aiming up: mid-dive ok %s, %d dodges, went %s (%.0f px, not %.0f up)" % [str(mid), r.dodges - d0, str(went), went.length(), SliceTuning.DODGE_PX])
+	_check(bool(miss["result"].get("missed", false)) and bool(miss["result"].get("dodged", false)), "a round on him mid-dodge: %s" % str(miss["result"]))
+	_check(r.dodge_cd > SliceTuning.DODGE_EVERY_S - SliceTuning.DODGE_S - 0.2 and not r.dodge(), "the next dodge is %.2f s off, and one was allowed inside it" % r.dodge_cd)
+	world.queue_free()
+	# the HUD's tile: the seconds to go, then lit with its name
+	var hud = HudScript72.new()
+	main.add_child(hud)
+	var st := {"dodge_left": 1.4}
+	hud.show_state(st)
+	var cooling: Array = [hud._dodge["secs"].text, hud._dodge["shade"].visible, hud._dodge_name.visible]
+	st["dodge_left"] = 0.0
+	hud.show_state(st)
+	_check(cooling == ["2", true, false] and hud._dodge["secs"].text == "" and not hud._dodge["shade"].visible and hud._dodge_name.visible and hud._dodge["key"].text == "Space", "the dodge's tile cooling %s, ready '%s' / shade %s / name %s" % [str(cooling), hud._dodge["secs"].text, str(hud._dodge["shade"].visible), str(hud._dodge_name.visible)])
+	var tiles: Array = hud._skills.map(func(d): return d["panel"]) + [hud._dodge["panel"]] + hud._meds.map(func(d): return d["panel"])
+	var xs: Array = tiles.map(func(pn): return pn.position.x)
+	var sorted_xs: Array = xs.duplicate()
+	sorted_xs.sort()
+	_check(xs == sorted_xs and tiles.back().position.x + HudScript72.TILE <= hud._bar_w() - 19.5 and range(tiles.size() - 1).all(func(i): return tiles[i + 1].position.x - tiles[i].position.x >= HudScript72.TILE + HudScript72.TILE_GAP - 0.5), "the bar's tiles run %s in a bar %.0f wide" % [str(xs), hud._bar_w()])
+	hud.queue_free()
+	print("r12 men ok: the gangs' make-up %s; a rusher's swing, a marksman's round after %.1f s, a bottle's %.1f s flight and %.0f s burn; the dodge %.0f px in %.2f s" % [str(made), SliceTuning.G_MARK_AIM_S, SliceTuning.G_THROW_FLY_S, SliceTuning.G_THROW_BURN_S, SliceTuning.DODGE_PX, SliceTuning.DODGE_S])
 
 
 class R9Target:
@@ -49269,4 +49447,5 @@ func _r6_checks(_main) -> void:
 	_r9_feel_checks(_main)
 	_r10_sights_checks(_main)
 	_r11_band_checks(_main)
+	_r12_men_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

@@ -19,7 +19,7 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
   5 before it (1d82108; its sprites 0e0d00f). 10 Nov, from his first plays (none cleared): gang HP ×0.06 (about a dozen
   rifle rounds a man), gang damage its own at ×2, a hit's shove fixed; a test Poacher in kit for the level picked.
   Round 7 on Matt's "build it" (boards F to H), in three
-  stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men, 3 the Poacher's six skills as
+  stages: 1 the HUD's band and hit feedback (in), 2 the dodge and three kinds of men (in), 3 the Poacher's six skills as
   tools. After it, his design thoughts for the next pass (the backlog): the search after the gangs, crates only then
   and off the minimap, an objective, rooms and corridors, three levels from a fresh runner, generated levels.
   Waiting on Matt: his play of round 6, each
@@ -8391,3 +8391,15 @@ panel), the play the screen above it, the camera stopping at the band's top; the
 (board G said none - Matt's call); the minimap wasn't on board H and went into the band with the rest. Checked: r11 in
 the smoke, proved red three ways; a screenshot looked at; a review (the mouse over the band, the fog's men, the notes
 over the bar fixed from it); lint 0; the full smoke on Matt's machine. Sights: 7d9e8ae.
+
+The slice, round 7, stage 2 (10 Nov; board G on Matt's "build it"): the dodge on Space (240 px in a quarter of a
+second, two seconds between, nothing landing in it; the reload on R alone; its tile in the bar, the band's panels
+trimmed to make room) and three kinds of men - the rusher (no gun, straight on, a swing in reach), the marksman (far
+back, his line on you 1.5 s then one heavy round), the thrower (a bottle every 8 s: a circle's warning, a 3 s burn) -
+each gang's first men, one new kind a gang. Off the board: the kinds step up first, not last (the review: as a gang's
+last men they waited at the back). From the review, fixed: the bottle's circle drawn under the car park's floor; a
+rusher holding the gang's search clock; a marksman creeping in and flanking. Not done: sprites for the kinds (a
+coloured ring each), sounds for a swing and a bottle, pad buttons for the dodge and the sights. Checked: r12 in the
+smoke, proved red five ways; a review; lint 0; the full smoke on Matt's machine. Stage 1's commit follows this entry's
+in the log. Matt's runs since the sights: two clears at level 12 (time x0.91 and x0.81, HP lost x0.21 and x0.18
+against the game's own), a death at level 15 with 9 of 15 down.

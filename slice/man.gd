@@ -17,6 +17,9 @@ const C_HARD := Color("5e1f1a")
 const C_HARD_LINE := Color("d9a441")
 const C_HURT := Color("e6e1d3")
 const C_STUN := Color("7fb4d9")
+const C_KIND := {"rusher": Color("e07a2e"), "marksman": Color("c58be0"), "thrower": Color("3fb0bf")}     # (round 7) a kind's ring, till each has his sprite
+const C_AIM := Color("e0705a")        # a marksman's line on the runner
+const Hazards := preload("res://slice/hazards.gd")
 const NAME_PX := 22                   # the hard man's name over his token, on screen (drawn at NAME_PX / CAM_ZOOM in the world)
 const BAR_H := 6.0                    # (round 5's review) his HP bar's height on screen, px (BAR_H / CAM_ZOOM in the world)
 
@@ -50,6 +53,13 @@ var stuck_t := 0.0
 var detour := Vector2.ZERO
 var detour_t := 0.0
 var flash_t := 0.0
+var kind := ""                          # (round 7, board G) "": a plain man; "rusher", "marksman", "thrower"
+var swing_cd := 0.0                     # a rusher's next swing
+var swings := 0                         # ...and how many he's made (a check's)
+var aim_t := 0.0                        # a marksman's line on the runner, seconds unbroken
+var rest_t := 0.0                       # ...and his rest after his round
+var throw_cd := 0.0                     # a thrower's next bottle
+var thrown := 0
 var flinch_cd := 0.0                    # (round 7) seconds till a hit can put him off his aim again
 var flinched := 0                       # ...and how often one has (a check's)
 var knock_left := Vector2.ZERO          # (10 Nov) the shove still to give him, in pixels: given at KNOCK_SPEED, never added to his walk
@@ -73,6 +83,9 @@ func setup(world_v, gang_v, state_v: Dictionary, at: Vector2, flank: bool) -> vo
 	traits = ms.get("traits", [])
 	flanker = flank
 	rng = world.rng
+	kind = str(ms.get("kind", ""))
+	if kind == "thrower":
+		throw_cd = rng.randf_range(2.0, T.G_THROW_EVERY_S)     # not the moment he's in (the review: only his roll, the seeded checks' dice as they were)
 	radius = T.G_HARD_R if hard else T.G_MAN_R
 	position = at
 	add_to_group("slice_man")
@@ -119,7 +132,7 @@ func take_shot(shot: Dictionary) -> Dictionary:
 		flinched += 1
 	if state == "cover" or state == "enter":
 		move_left = minf(move_left, 0.6)          # shot at: he thinks about moving
-	if not res["killed"] and hp < hp_max * T.G_RETREAT_HP and state != "retreat":
+	if not res["killed"] and hp < hp_max * T.G_RETREAT_HP and state != "retreat" and kind != "rusher":     # (round 7) a rusher doesn't stop for fire
 		_retreat()
 	if res["killed"]:
 		_die(res)
@@ -146,6 +159,7 @@ func hold(at: Vector2) -> void:
 	target = at
 	sees = false
 	burst_left = 0
+	aim_t = 0.0                               # (round 7's review) a marksman sent back: his line's lost
 
 
 ## His turn: he steps up and engages (cover, flanking, fire), with his reaction beat.
@@ -247,7 +261,16 @@ func step(dt: float) -> void:
 	if sees and gang != null:
 		gang.note_runner(rp)                          # (round 6) only a man who sees him says where he is
 	pause_left = maxf(0.0, pause_left - dt)           # (round 6) the pause between bursts runs behind cover too
+	rest_t = maxf(0.0, rest_t - dt)                   # (round 7's review) a marksman's rest too
+	if stunned:
+		aim_t = 0.0
+	if kind == "rusher":
+		_rush(dt, rp, dist, stunned)
+		queue_redraw()
+		return
 	_think(dt, rp)
+	if kind == "thrower":
+		_throw_step(dt, rp, dist, stunned)
 	if not stunned:
 		_move(dt)
 		_fire(dt, rp, dist)
@@ -256,6 +279,68 @@ func step(dt: float) -> void:
 		velocity = _walk_v
 		knock_left = Vector2.ZERO
 	queue_redraw()
+
+
+## (round 7, board G) The rusher: straight for the runner (where the gang last knew him, out of sight), round cover by
+## the walk's own detours, and a swing when he's on him - worth G_RUSH_FIRE_S of a man's fire, missed by a dodge.
+func _rush(dt: float, rp: Vector2, dist: float, stunned: bool) -> void:
+	state = "rush"
+	var goal: Vector2 = rp if sees else _known()
+	var off: Vector2 = global_position - goal
+	# (the review) up to him, not onto him: he stops touching, in reach of his swing
+	target = goal + off.normalized() * (radius + T.RUNNER_R) if sees and off.length() > 1.0 else goal
+	swing_cd = maxf(0.0, swing_cd - dt)
+	if stunned:
+		_walk_v = _walk_v.move_toward(Vector2.ZERO, T.G_MAN_ACCEL * dt)
+		velocity = _walk_v
+		knock_left = Vector2.ZERO
+		return
+	_move(dt)
+	var runner = world.runner
+	if swing_cd > 0.0 or runner.is_dead() or dist > radius + T.RUNNER_R + T.G_RUSH_REACH_PX:
+		return
+	swing_cd = T.G_RUSH_SWING_S
+	swings += 1
+	tracer_t = 0.12                              # his pose for the blow
+	if runner.has_method("dodging") and runner.dodging():
+		return
+	var blow: Dictionary = ms.duplicate()
+	blow["round_x"] = T.G_RUSH_FIRE_S * SliceBridge.their_rps() * T.G_HIT_OPEN
+	var res: Dictionary = SliceBridge.hit_on_runner(world.ctx, runner, blow, world.rng, gang.on_you() if gang != null else 1, false)
+	if not bool(res["missed"]) and (int(res["hp_loss"]) > 0 or int(res["guard_loss"]) > 0):
+		runner.apply_hit(res)
+		landed += 1
+
+
+## (round 7, board G) The thrower: a plain man who, the runner in sight and in range, lobs a bottle at where he stands
+## every G_THROW_EVERY_S (slice/hazards.gd: the circle, the landing, the burn).
+func _throw_step(dt: float, rp: Vector2, dist: float, stunned: bool) -> void:
+	throw_cd = maxf(0.0, throw_cd - dt)
+	if throw_cd > 0.0 or stunned or not sees or dist > T.G_THROW_RANGE_PX:
+		return
+	if gang != null and gang.has_method("may_fire") and not gang.may_fire(self):
+		return
+	throw_cd = T.G_THROW_EVERY_S
+	thrown += 1
+	Hazards.layer(world).throw(self, rp)
+
+
+## (round 7, board G) The marksman's fire: his line on the runner G_MARK_AIM_S unbroken (drawn: the warning), then one
+## round at where he stands worth G_MARK_FIRE_S of a man's fire, and a rest. Out of his sight the line is lost.
+func _mark_fire(dt: float, rp: Vector2) -> void:
+	if rest_t > 0.0:
+		aim_t = 0.0
+		return
+	aim_t += dt
+	if aim_t < T.G_MARK_AIM_S:
+		return
+	aim_t = 0.0
+	rest_t = T.G_MARK_REST_S
+	tracer_to = rp
+	tracer_t = 0.06
+	SliceRound.layer(world).fire_man(self, rp)
+	fired += 1
+	fired_at.emit(self, true, rp)
 
 
 func _think(dt: float, _rp: Vector2) -> void:
@@ -267,7 +352,7 @@ func _think(dt: float, _rp: Vector2) -> void:
 				_in_cover()
 		"cover":
 			if sees:
-				if move_left <= 0.0 and not pinned:
+				if move_left <= 0.0 and not pinned and kind != "marksman":     # (round 7's review) a marksman holds his far spot
 					_pick_spot()                          # a spot with a line of its own: he fires from it a while, then moves
 			else:
 				_think_lean(dt, pinned)
@@ -377,8 +462,10 @@ func _spread() -> void:
 ## Where to next: cover near him, or round the side (a flanker), facing the runner.
 func _pick_spot(frac := 0.35) -> void:
 	var rp: Vector2 = _known()                     # (round 6) where the gang knows him to be, not where he is
+	if kind == "marksman":
+		frac = minf(frac, T.G_MARK_FRAC)           # (round 7) he stays far back
 	var near: Vector2 = global_position.lerp(rp, frac)
-	if flanker:
+	if flanker and kind != "marksman":
 		var line: Vector2 = (global_position - rp).normalized()
 		var side := Vector2(-line.y, line.x) * (1.0 if (get_instance_id() % 2) == 0 else -1.0)
 		near = rp + line * T.G_FLANK_DIST * 0.6 + side * T.G_FLANK_DIST
@@ -419,7 +506,7 @@ func _move(dt: float) -> void:
 	if detour_t > 0.0:
 		detour_t -= dt
 		want = (want + detour * 1.2).normalized()
-	var speed: float = T.G_MAN_SPEED * (T.G_LEG_SLOW_X if float(ms.get("leg_t", 0.0)) > 0.0 else 1.0) * (1.0 - (ctx_chill() if float(ms.get("chill_t", 0.0)) > 0.0 else 0.0))
+	var speed: float = T.G_MAN_SPEED * (T.G_RUSH_PACE_X if kind == "rusher" else 1.0) * (T.G_LEG_SLOW_X if float(ms.get("leg_t", 0.0)) > 0.0 else 1.0) * (1.0 - (ctx_chill() if float(ms.get("chill_t", 0.0)) > 0.0 else 0.0))
 	var goal: Vector2 = want.limit_length(1.0) * speed
 	_walk_v = _walk_v.move_toward(goal, T.G_MAN_ACCEL * dt)
 	var shove: Vector2 = knock_left.limit_length(T.KNOCK_SPEED * dt)
@@ -446,11 +533,16 @@ func ctx_chill() -> float:
 
 func _fire(dt: float, rp: Vector2, dist: float) -> void:
 	if not sees:
+		aim_t = 0.0                             # (round 7) a marksman's line, broken
 		return
 	if gang != null and gang.has_method("may_fire") and not gang.may_fire(self):
+		aim_t = 0.0
 		return                                  # the sim's contact: only so many of them on you at once
 	if react_left > 0.0:
 		react_left -= dt
+		return
+	if kind == "marksman":
+		_mark_fire(dt, rp)
 		return
 	if pause_left > 0.0:
 		return
@@ -525,6 +617,11 @@ func _draw() -> void:
 		draw_line(f * 0.4, f * 1.15, C_LINE, 5.0)
 	if float(ms.get("stun_t", 0.0)) > 0.0:
 		draw_arc(Vector2.ZERO, radius + 8.0, 0.0, TAU, 40, C_STUN, 3.0)
+	if kind != "" and not dead:                  # (round 7) his kind's ring, and a marksman's line as it settles on the runner
+		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 40, C_KIND.get(kind, C_LINE), 5.0)
+		if kind == "marksman" and aim_t > 0.0 and world != null and world.runner != null:
+			var k: float = clampf(aim_t / T.G_MARK_AIM_S, 0.0, 1.0)
+			draw_line(Vector2.ZERO, to_local(world.runner.global_position), Color(C_AIM, 0.25 + 0.6 * k), (1.5 + 3.0 * k) / T.CAM_ZOOM)
 	if hard and name_text != "" and not dead and world != null:
 		var f: Font = world.font() if world.has_method("font") else ThemeDB.fallback_font
 		var np: int = name_px()

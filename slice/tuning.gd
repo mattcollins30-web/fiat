@@ -60,6 +60,30 @@ const CAM_LEAD_MAX := 760.0          # ...at most this far (world px; 380 on scr
 # (round 7, board H; Matt: "the skill bar needs to sit outside of the play as the player can walk behind it and miss
 # things") The HUD's band along the screen's foot: the play is the screen above it, and the camera stops at its top.
 const HUD_BAND_H := 156.0
+# (round 7, board G) The dodge: Space, the way he's walking (his aim's way stood still). Nothing lands on him in it.
+const DODGE_PX := 240.0               # how far: three of his own widths
+const DODGE_S := 0.25                 # ...in this long
+const DODGE_EVERY_S := 2.0            # from one dodge to the next
+# (round 7, board G) Three kinds of men, each a question the gun alone answers badly. Each gang brings these among its
+# plain men, its last ones (one plain man at least; the hard man is none of them). Every figure is a first guess.
+const G_MEN_BY_GANG := [["rusher"], ["rusher", "marksman"], ["rusher", "marksman", "thrower"]]
+const G_RUSH_HP_X := 0.6              # the rusher: a man's HP times this
+const G_RUSH_PACE_X := 1.6            # ...his pace times this
+const G_RUSH_REACH_PX := 26.0         # ...he swings from this far past touching
+const G_RUSH_SWING_S := 1.2           # ...this often
+const G_RUSH_FIRE_S := 2.0            # ...a swing worth this many seconds of a man's fire
+const G_MARK_HP_X := 0.8              # the marksman: a man's HP times this
+const G_MARK_AIM_S := 1.5             # ...his line on the runner this long, unbroken, before he fires
+const G_MARK_REST_S := 2.5            # ...then this long before he lines up again
+const G_MARK_FIRE_S := 3.0            # ...his round worth this many seconds of a man's fire
+const G_MARK_FRAC := 0.1              # ...he takes cover this share of the way to the runner (a plain man's 0.35)
+const G_THROW_EVERY_S := 8.0          # the thrower: a bottle this often, the runner in sight
+const G_THROW_RANGE_PX := 1400.0      # ...from this near
+const G_THROW_FLY_S := 1.2            # ...on the ground this long after it leaves his hand (the circle's warning)
+const G_THROW_R_PX := 240.0           # ...burning a circle of this radius
+const G_THROW_BURN_S := 3.0           # ...for this long
+const G_THROW_FIRE_S := 2.0           # ...the whole burn worth this many seconds of a man's fire, stood in it
+const G_THROW_TICK_S := 0.5           # ...taken a tick at a time
 # (round 7, board G) Hit feedback: the crosshair's mark for a round landed, and the man's flinch.
 const G_MARK_S := 0.12                # a hit's ticks on the crosshair last this long (white; a headshot's red)
 const G_MARK_KILL_S := 0.3            # ...a kill's cross this long

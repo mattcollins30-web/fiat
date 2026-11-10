@@ -33,6 +33,11 @@ var refilling := false               # this reload fills the magazine from the p
 var jammed := false
 var jam_left := 0.0
 var swap_left := 0.0
+var dodge_t := 0.0                   # (round 7, board G) in a dodge: seconds of it left (nothing lands on him meanwhile)
+var dodge_cd := 0.0                  # ...and seconds till the next
+var dodge_dir := Vector2.RIGHT
+var dodges := 0
+var debug_dodge := false             # a check's press of Space
 var swap_asked := false              # (10 Nov) the wheel turned since the last tick
 var sights := false                  # (10 Nov) down the sights this tick: the right button held, the main gun ready
 var debug_sights := false            # a check's hold of the right button
@@ -71,6 +76,16 @@ static func ensure_actions() -> void:
 		rb.button_index = MOUSE_BUTTON_RIGHT
 		rb.device = -1
 		InputMap.action_add_event("slice_sights", rb)
+	if not InputMap.has_action("slice_dodge"):         # (round 7) the dodge on Space; the reload on R alone
+		InputMap.add_action("slice_dodge", 0.5)
+		var sp := InputEventKey.new()
+		sp.physical_keycode = KEY_SPACE
+		sp.device = -1
+		InputMap.action_add_event("slice_dodge", sp)
+	if InputMap.has_action("slice_reload"):
+		for ev in InputMap.action_get_events("slice_reload"):
+			if ev is InputEventKey and (ev.physical_keycode == KEY_SPACE or ev.keycode == KEY_SPACE):
+				InputMap.action_erase_event("slice_reload", ev)
 	if InputMap.has_action("slice_swap"):
 		var has_v := false
 		for ev in InputMap.action_get_events("slice_swap"):
@@ -135,6 +150,10 @@ func tick(dt: float) -> void:
 	_last_legs_step(dt)
 	if dead:
 		return
+	dodge_cd = maxf(0.0, dodge_cd - dt)
+	if debug_dodge or (InputMap.has_action("slice_dodge") and Input.is_action_just_pressed("slice_dodge")):
+		dodge()
+	debug_dodge = false
 	_sights_step()
 	_move(dt)
 	_aim()
@@ -162,7 +181,37 @@ func tick(dt: float) -> void:
 	queue_redraw()
 
 
+## (round 7, board G) The dodge: a short dive the way he's walking (the way he's aiming, stood still). It drops a reload
+## and the sights; nothing lands on him while it lasts (dodging()). False when it isn't ready.
+func dodge() -> bool:
+	if dead or dodge_cd > 0.0 or dodge_t > 0.0 or leaving_frac > 0.0:
+		return false
+	var want := auto_move
+	if want == Vector2.ZERO:
+		want = Input.get_vector("slice_move_left", "slice_move_right", "slice_move_up", "slice_move_down", T.MOVE_DEADZONE)
+	dodge_dir = want.normalized() if want.length() > 0.1 else (velocity.normalized() if velocity.length() > 40.0 else aim_dir)
+	dodge_t = T.DODGE_S
+	dodge_cd = T.DODGE_EVERY_S
+	dodges += 1
+	reloading = false
+	refilling = false
+	sights = false
+	return true
+
+
+func dodging() -> bool:
+	return dodge_t > 0.0
+
+
 func _move(dt: float) -> void:
+	if dodge_t > 0.0:
+		var step_s: float = minf(dt, dodge_t)
+		dodge_t -= dt
+		velocity = dodge_dir * (T.DODGE_PX / T.DODGE_S)
+		position = world.resolve_circle(position + velocity * step_s, T.RUNNER_R)
+		if dodge_t <= 0.0:
+			velocity = dodge_dir * pace_px       # out of it at his walk, not at the dive's speed
+		return
 	var want := auto_move
 	if want == Vector2.ZERO:
 		want = Input.get_vector("slice_move_left", "slice_move_right", "slice_move_up", "slice_move_down", T.MOVE_DEADZONE)
@@ -213,7 +262,7 @@ func sights_wanted() -> bool:
 
 
 func _sights_step() -> void:
-	sights = sights_wanted() and gun_i == 0 and gun_i < guns.size() and not is_melee() and not reloading and not refilling and swap_left <= 0.0 and searching == null and not dead
+	sights = sights_wanted() and dodge_t <= 0.0 and gun_i == 0 and gun_i < guns.size() and not is_melee() and not reloading and not refilling and swap_left <= 0.0 and searching == null and not dead
 
 
 # ---------------------------------------------------------------- the gun
@@ -250,7 +299,7 @@ func _gun_timers(dt: float) -> void:
 
 
 func can_fire() -> bool:
-	return not dead and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
+	return not dead and dodge_t <= 0.0 and not reloading and not jammed and swap_left <= 0.0 and shot_cd <= SHOT_EPS and gun_i < guns.size() and (rounds[gun_i] > 0 or is_melee())
 
 
 ## (build 76) A melee weapon in hand: it swings, no rounds.

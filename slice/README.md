@@ -40,7 +40,7 @@ rounds at REFILL_MULT times the reload. The box is the camp's boxes of that type
 swapped for the fixture's rifle, said on the HUD; skills the slice doesn't play show greyed, "Not in the slice".
 
 Controls (board C; round 2: R reloads, the third skill moved to C): WASD / left stick, mouse / right stick, left button
-/ RT fire, right button held aim down sights (10 Nov; no pad button yet), mouse wheel or V / Y swap, R or Space / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
+/ RT fire, right button held aim down sights (10 Nov; no pad button yet), Space dodge (round 7; no pad button yet), mouse wheel or V / Y swap, R / X reload, Q E C / LB RB LT skills, 1-4 / d-pad meds, F / A held search,
 X / B held to get out, Tab / Back the Kit room (the fight held), Esc / Start pause.
 
 The test knobs on the pause: "Gang HP" ×0.06 (MAN_HP_X, the start) / ×0.1 / ×0.04, and "Gang damage": THEIR_DMG_X
@@ -109,6 +109,19 @@ Stage 1, the HUD's band and hit feedback:
 - Hit feedback (board G): the crosshair's mark for a round landed (white ticks; red for a headshot; a cross for a
   kill; none for a man the fog hides), and a man's flinch - hit, he's off his aim G_FLINCH_S, at most once every
   G_FLINCH_EVERY_S. The damage numbers and the HP bar over a hurt man were there already (board A) and stay.
+
+Stage 2, the dodge and three kinds of men (board G):
+- The dodge (runner.gd): Space, DODGE_PX (240) in DODGE_S (0.25 s) the way he's walking (his aim's way stood still),
+  DODGE_EVERY_S (2 s) between. It drops a reload and the sights; rounds and a rusher's swing miss him in it (a burn
+  doesn't). The reload is R alone. Its tile sits between the skills and the meds.
+- The men (man.gd `kind`, gang.gd kind_for, bridge.make_kind; SliceTuning's G_RUSH_, G_MARK_, G_THROW_ figures, all
+  first guesses): each gang's first men are its kinds - gang 1 a rusher; gang 2 a rusher and a marksman; gang 3 those
+  and a thrower - one plain man kept at least, the hard man none of them. The rusher has no gun: he comes straight
+  on at 1.6 of a man's pace on 0.6 of his HP and swings in reach. The marksman stays far back on 0.8 of a man's HP:
+  his line on the runner (drawn) 1.5 s unbroken, one round worth 3 s of a man's fire, 2.5 s of rest. The thrower is a
+  plain man who lobs a bottle every 8 s (slice/hazards.gd): a circle on the ground 1.2 s, then a 3 s burn. Each wears
+  a ring of his kind's colour till he has his sprite. `ctx["kinds_off"]` gives a check its plain gang. The game's own
+  fight knows none of this.
 
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.

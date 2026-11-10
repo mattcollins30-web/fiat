@@ -16,7 +16,7 @@ const HP_STEPS := [0.06, 0.1, 0.04]    # "Gang HP" (10 Nov, by rounds to kill: a
 const DMG_STEPS := [2.0, 3.0, 1.0]     # "Gang damage" (10 Nov, its own again): twice the game's (THEIR_DMG_X, the start), three times, the game's
 
 ## Board C's two columns, as drawn: what it does, the key.
-const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Aim down sights", "Right button, held"], ["Swap gun", "Mouse wheel or V"], ["Reload", "R or Space"],
+const KEYS := [["Move", "W A S D"], ["Aim", "Mouse"], ["Fire", "Left button"], ["Aim down sights", "Right button, held"], ["Dodge", "Space"], ["Swap gun", "Mouse wheel or V"], ["Reload", "R"],
 		["Skills", "Q E C"], ["Med from the rig", "1 2 3 4"], ["Search, pick up", "F, held"], ["Get out", "X, held"], ["Kit and runner", "Tab"], ["Pause", "Esc"]]
 const PAD := [["Move", "Left stick"], ["Aim", "Right stick, with a lock-on"], ["Fire", "Right trigger"], ["Swap gun", "Y"], ["Reload", "X"],
 		["Skills", "LB, RB, LT"], ["Med from the rig", "D-pad"], ["Search, pick up", "A, held"], ["Get out", "B, held"], ["Kit and runner", "Back"], ["Pause", "Start"]]

@@ -851,7 +851,17 @@ static func their_rps() -> float:
 ## second (round 5's review: over the rate alone it landed ~40% of it; Matt: "not taking much if any damage"); cover cuts
 ## it still. Times the pause's "Gang damage" knob (ctx.their_dmg_x, live).
 static func their_round(ctx: Dictionary, ms: Dictionary) -> float:
-	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * their_x(ctx)
+	return float(ms["dps"]) / (their_rps() * T.G_HIT_OPEN) * their_x(ctx) * float(ms.get("round_x", 1.0))     # (round 7) round_x: a marksman's round, a rusher's swing, a burn's tick
+
+
+## (round 7, board G) A man made one of the three kinds: the rusher's and the marksman's HP, the marksman's heavy round.
+static func make_kind(ms: Dictionary, kind: String) -> void:
+	ms["kind"] = kind
+	var hp_x: float = T.G_RUSH_HP_X if kind == "rusher" else (T.G_MARK_HP_X if kind == "marksman" else 1.0)
+	ms["hp"] = float(ms["hp"]) * hp_x
+	ms["hp_max"] = float(ms["hp_max"]) * hp_x
+	if kind == "marksman":
+		ms["round_x"] = T.G_MARK_FIRE_S * their_rps() * T.G_HIT_OPEN
 
 
 ## Their damage against the game's: the pause's knob, its own (10 Nov, Matt's "go": round 6 tied it to the gang's HP -

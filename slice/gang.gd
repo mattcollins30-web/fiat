@@ -4,6 +4,7 @@ extends Node2D
 ## bridge's frame (SliceBridge.tick) itself. H reads the clock: gang_i, gangs, next_in, alive, hard_man.
 const SliceMan := preload("res://slice/man.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
 const SliceBridge := preload("res://slice/bridge.gd")     # (no class_name: Matt's headless smoke has no editor scan to know one)
+const Hazards := preload("res://slice/hazards.gd")
 const SliceRound := preload("res://slice/round.gd")     # (build 76) the rounds in flight, stepped here
 
 const T := preload("res://slice/tuning.gd")
@@ -185,7 +186,7 @@ func _search(dt: float) -> void:
 		_search_in = 0.0
 		return
 	# the clock runs once they are at their cover with nothing to shoot at: men still on their way in haven't lost him
-	if live.all(func(mn): return mn.state in SETTLED):
+	if live.all(func(mn): return mn.state in SETTLED or str(mn.get("kind")) == "rusher"):     # (round 7's review) a rusher is never at cover: he doesn't hold the clock
 		seen_ago += dt
 	if not lost_him():
 		return
@@ -196,9 +197,10 @@ func _search(dt: float) -> void:
 		last_seen = last_seen.move_toward(world.runner.global_position, T.G_SEARCH_CLOSER_PX)
 	searches += 1
 	_search_in = T.G_SEARCH_AGAIN_S
-	live.sort_custom(func(a, b): return a.global_position.distance_to(last_seen) < b.global_position.distance_to(last_seen))
-	for k in range(mini(T.G_SEARCHERS, live.size())):
-		live[k].search(last_seen + Vector2(70.0, 0.0).rotated(PI * k))
+	var lookers: Array = live.filter(func(mn): return str(mn.get("kind")) != "rusher")     # (round 7's review) a rusher goes himself
+	lookers.sort_custom(func(a, b): return a.global_position.distance_to(last_seen) < b.global_position.distance_to(last_seen))
+	for k in range(mini(T.G_SEARCHERS, lookers.size())):
+		lookers[k].search(last_seen + Vector2(70.0, 0.0).rotated(PI * k))
 
 
 ## The men who may fire this frame (the review: the sim's contact(t), so many on you at once): the nearest of those who
@@ -258,6 +260,7 @@ func _step(dt: float) -> void:
 		if is_instance_valid(mn) and not mn.gone:
 			mn.step(dt)
 	SliceRound.layer(world).step(dt)                   # (build 76) the rounds in flight, the runner's and theirs
+	Hazards.layer(world).step(dt)                      # (round 7) the bottles on the ground
 	_all = _all.filter(func(mn): return is_instance_valid(mn) and not mn.gone)
 	_men = _men.filter(func(mn): return is_instance_valid(mn) and not mn.is_dead())
 	alive = _men.size()
@@ -315,6 +318,9 @@ func _arrive(i: int) -> void:
 			if r.randf() < Data.HARD66_TWO:
 				traits_v.append(pool[r.randi_range(0, pool.size() - 1)])
 		var ms: Dictionary = SliceBridge.man_state(ctx, i, hname, traits_v)
+		var kd: String = kind_for(i, k, size, hard_at >= 0, bool(ctx.get("kinds_off", false)))
+		if kd != "":
+			SliceBridge.make_kind(ms, kd)
 		var mn := SliceMan.new()
 		var at: Vector2 = ways[k % ways.size()] + Vector2(world.rng.randf_range(-90.0, 90.0), world.rng.randf_range(-90.0, 90.0)) if not ways.is_empty() else rp + Vector2(1200, 0)
 		var root: Node = world.men_root if world.get("men_root") != null else self
@@ -333,6 +339,21 @@ func _arrive(i: int) -> void:
 	alive = _men.size()
 	_fill_front(0.0, true)                             # the gang in: the first `contact` (an older gang's waiting first) step up
 	gang_arrived.emit(i, size)
+
+
+## (round 7, board G) The kind of gang i's man k of `size`: its first men are the gang's kinds (the first to step up:
+## the review - as its last they waited at the back till the front fell)
+## (SliceTuning.G_MEN_BY_GANG), one plain man kept at least; the hard man (the gang's last) is none of them. `off`: a
+## check's plain gang.
+static func kind_for(i: int, k: int, size: int, has_hard: bool, off := false) -> String:
+	if off or T.G_MEN_BY_GANG.is_empty():
+		return ""
+	var kinds: Array = T.G_MEN_BY_GANG[clampi(i, 0, T.G_MEN_BY_GANG.size() - 1)]
+	var plain: int = size - (1 if has_hard else 0)
+	var n: int = mini(kinds.size(), maxi(0, plain - 1))
+	if k >= n:
+		return ""
+	return str(kinds[k])
 
 
 ## A man down (SliceMan calls it): the gang's count, the hard man gone.

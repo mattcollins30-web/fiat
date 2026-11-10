@@ -215,6 +215,8 @@ func _hit_man(rd: Dictionary, mn, p: Vector2) -> Dictionary:
 ## Their round on the runner: the bridge's hit (types, armour, the crowd, Guard first).
 func _hit_runner(rd: Dictionary, r) -> Dictionary:
 	var mn = rd["man"]
+	if r.has_method("dodging") and r.dodging():       # (round 7, board G) in a dodge nothing lands
+		return {"man": r, "point": rd["pos"], "result": {"missed": true, "dodged": true, "hp_loss": 0, "guard_loss": 0, "amount": 0.0, "by_type": {}}}
 	var gang = world.get("gang")
 	var on_you: int = gang.on_you() if gang != null else 1
 	var spot: bool = gang != null and gang.spotter_on(int(Dictionary(rd["ms"]).get("gang", 0)))

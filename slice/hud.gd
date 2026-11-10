@@ -19,14 +19,14 @@ const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 
 # the board's measures (board A, 1920 x 1080); the bottom row sits on the screen's foot at any height
 const EDGE := 24.0                    # the panels' gap from the screen's edge
-const SITE_W := 300.0                 # the site and the gang clock (round 7: in the band)
+const SITE_W := 276.0                 # the site and the gang clock (round 7: in the band)
 const SITE_H := 132.0                 # (round 4) a line more: "3 on you · 4 waiting"; (round 7) the band's height, the test settings' line in it
-const MAP_W := 211.0                  # the minimap's panel (round 7: in the band, at its right end)
+const MAP_W := 174.0                  # the minimap's panel (round 7: in the band, at its right end)
 const MAP_H := 132.0
 const BAND_H := SliceTuning.HUD_BAND_H     # (round 7, board H) the HUD's own strip along the screen's foot: every panel in it, the play above
 const BAND_PAD := 12.0                # ...its panels this far from its edges and each other
 const MAP_IN := 16.0                  # the park drawn inside it
-const ME_W := 500.0                   # bottom left: the runner
+const ME_W := 464.0                   # bottom left: the runner
 const ME_H := 118.0
 const FACE := 64.0                    # the portrait at half its 128 (People: whole or a clean half)
 const TILE := 72.0                    # a skill or med slot
@@ -51,6 +51,8 @@ var pops: Array = []                  # [{label, t, at}] the numbers in flight
 var _arrived := 0                     # gangs come so far (the director's gang_arrived)
 
 var _site: Panel
+var _dodge: Dictionary = {}            # (round 7) the dodge's tile
+var _dodge_name: Label
 var _band: ColorRect                  # (round 7) the band's ground and its top line
 var _band_line: ColorRect
 var _site_kicker: Label
@@ -198,7 +200,7 @@ func _build_me() -> void:
 
 
 func _bar_w() -> float:
-	return 20.0 + GUN_W + 20.0 + 1.0 + 20.0 + 3.0 * TILE + 2.0 * TILE_GAP + 24.0 + 4.0 * TILE + 3.0 * TILE_GAP + 20.0
+	return 20.0 + GUN_W + 20.0 + 1.0 + 20.0 + 3.0 * TILE + 2.0 * TILE_GAP + 24.0 + TILE + 24.0 + 4.0 * TILE + 3.0 * TILE_GAP + 20.0     # (round 7) the dodge's tile between the skills and the meds
 
 
 func _build_bar() -> void:
@@ -237,6 +239,9 @@ func _build_bar() -> void:
 		_skills.append(_slot(x, SKILL_KEYS[k]))
 		x += TILE + TILE_GAP
 	x += 24.0 - TILE_GAP
+	_dodge = _slot(x, "Space")                 # (round 7, board G) the dodge: its seconds to go, lit when ready
+	_dodge_name = UI.label(_dodge["panel"], Rect2(0, 0, TILE, TILE), "Dodge", "SemiBold", 14, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	x += TILE + 24.0
 	for k in range(4):
 		_meds.append(_slot(x, "%d · Med" % (k + 1)))
 		x += TILE + TILE_GAP
@@ -320,6 +325,7 @@ func read_state() -> Dictionary:
 			st["waiting"] = int(g.waiting_count())
 	st["cls"] = str(ctx.get("class_name", "Poacher"))
 	st["level"] = int(ctx.get("level", 1))
+	st["dodge_left"] = float(r.get("dodge_cd")) if r != null and is_instance_valid(r) and r.get("dodge_cd") != null else 0.0
 	st["test_runner"] = bool(ctx.get("fixture", false))     # (10 Nov) the test Poacher, not the camp's runner
 	st["portrait"] = str(ctx.get("portrait", ""))
 	if r == null or not is_instance_valid(r):
@@ -458,6 +464,15 @@ func show_state(st: Dictionary) -> void:
 		var edge: Color = Pal.ACCENT if left <= 0.0 and not short else (Pal.BAD if short and left <= 0.0 else Pal.CARD_LINE)
 		d["panel"].add_theme_stylebox_override("panel", UI.box(Pal.CARD, 8, 2, edge))
 		d["pic"].modulate = Color(1, 1, 1, 0.45) if short else Color.WHITE
+	var dodge_left: float = float(st.get("dodge_left", 0.0))
+	_dodge["pic"].visible = false
+	_dodge["shade"].visible = dodge_left > 0.0
+	var dshare: float = clampf(dodge_left / maxf(0.01, SliceTuning.DODGE_EVERY_S), 0.0, 1.0)
+	_dodge["shade"].position = Vector2(0, TILE * (1.0 - dshare))
+	_dodge["shade"].size = Vector2(TILE, TILE * dshare)
+	_dodge["secs"].text = ("%d" % int(ceil(dodge_left))) if dodge_left > 0.0 else ""
+	_dodge_name.visible = dodge_left <= 0.0
+	_dodge["panel"].add_theme_stylebox_override("panel", UI.box(Pal.CARD, 8, 2, Pal.GOOD if dodge_left <= 0.0 else Pal.CARD_LINE))
 	_note_sk.visible = not out_keys.is_empty()
 	_note_sk.text = "Not in the slice: %s" % ", ".join(out_keys) if not out_keys.is_empty() else ""
 	# the meds
@@ -645,7 +660,7 @@ func _on_hit(man: Node, result: Dictionary, point: Vector2) -> void:
 ## anything).
 func text_nodes() -> Array:
 	var out: Array = [_site_kicker, _site_name, _site_clock, _waves, _me_name, _me_hp, _me_line, _me_energy, _gun_line, _gun_rounds, _gun_spare, _gun_state, _banner,
-		_news, _note_gun, _note_sk, _reload_hint, _tests]
+		_news, _note_gun, _note_sk, _reload_hint, _tests, _dodge_name, _dodge["key"]]
 	for d in _skills + _meds:
 		out.append(d["secs"])
 		out.append(d["key"])
