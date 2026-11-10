@@ -259,6 +259,7 @@ const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of 
 func _init() -> void:
 	load("res://scripts/ui/barracks.gd").clip_off = true     # the smoke never writes the system clipboard (the fix round, 30 Oct: it ran beside Matt's work)
 	Sim.exploits_off = true     # no other check meets an exploit by chance (the review); _exploit_checks turns them on
+	load("res://slice/run_log.gd").off = true     # the smoke's slice runs write no lines to Matt's run log (10 Nov)
 	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
 	var si := args.find("seed")
@@ -48535,6 +48536,57 @@ func _r6_end_checks(main) -> void:
 	print("r6 end ok: the game's own fight at level 12 %s, %d HP" % [Fmt.mss(float(game["time_s"])), int(round(float(game["hp_lost"])))])
 
 
+## The run log (10 Nov, Matt: "is there anything in the slice that records this info for you to read? If not let's
+## build it"): a run's end adds one line to slice_runs.jsonl - the run's figures, the game's own fight, the settings in
+## force, you over the game's when cleared - and the headless smoke's own runs write none.
+func _r7_log_checks(main) -> void:
+	var RunLog = load("res://slice/run_log.gd")
+	_check(RunLog.off and RunLog.dir == "" and RunLog.path() == "", "the smoke's own runs would write to '%s'" % RunLog.path())
+	var folder := "user://r7_log"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
+	RunLog.dir = folder
+	var file: String = RunLog.path()
+	if FileAccess.file_exists(file):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
+	var run = load("res://slice/launch.gd").open(main, H72_SEED, false)
+	var game: Dictionary = SliceBridge.game_fight(run.world.ctx)
+	run.set_hp_x(0.25)
+	var stats := {"kills": 20, "headshots": 3, "damage_done": 34460, "damage_taken": 612, "shots": 200, "hits": 82, "time_s": 228.04, "haul": [{"name": "A find"}]}
+	run._on_ended("cleared", stats)
+	stats["damage_taken"] = 204
+	stats["time_s"] = 31.0
+	run._on_ended("died", stats)
+	var lines: Array = []
+	var f := FileAccess.open(file, FileAccess.READ)
+	if f != null:
+		lines = Array(f.get_as_text().split("\n", false))
+		f.close()
+	_check(lines.size() == 2, "two runs ended wrote %d lines to %s" % [lines.size(), file])
+	var a = JSON.parse_string(str(lines[0])) if lines.size() > 0 else null
+	var b = JSON.parse_string(str(lines[1])) if lines.size() > 1 else null
+	if a is Dictionary and b is Dictionary:
+		_check(str(a["outcome"]) == "cleared" and int(a["round"]) == RunLog.ROUND and str(a["class"]) == str(run.world.ctx["class_name"]) and int(a["site_level"]) == int(game["level"]) and int(a["seed"]) == H72_SEED, "the cleared run's line: %s" % str(a))
+		_check(is_equal_approx(float(a["time_s"]), 228.0) and int(a["hp_lost"]) == 612 and int(a["kills"]) == 20 and int(a["shots"]) == 200 and is_equal_approx(float(a["accuracy"]), 0.41) and int(a["finds"]) == 1, "the cleared run's figures: %s" % str(a))
+		_check(is_equal_approx(float(a["game_time_s"]), snappedf(float(game["time_s"]), 0.1)) and int(a["game_hp_lost"]) == int(round(float(game["hp_lost"]))), "the game's fight on the line: %s against %s" % [str(a), str(game)])
+		_check(absf(float(a["time_x"]) - 228.04 / float(game["time_s"])) < 0.001 and absf(float(a["hp_lost_x"]) - 612.0 / float(game["hp_lost"])) < 0.001, "you over the game's: time x%s, HP lost x%s" % [str(a.get("time_x")), str(a.get("hp_lost_x"))])
+		_check(is_equal_approx(float(a["gang_hp_x"]), 0.25) and is_equal_approx(float(a["gang_damage_x"]), SliceBridge.their_x(run.world.ctx)) and is_equal_approx(float(a["gang_damage_x"]), SliceTuning.THEIR_DMG_X / 0.25), "the settings in force on the line: gang HP x%s, gang damage x%s" % [str(a["gang_hp_x"]), str(a["gang_damage_x"])])
+		_check(a.has("gang_reached") and a.has("men_left") and a.has("hp_end") and a.has("last_legs_used") and (a["guns"] as Array).size() >= 1, "the line lacks where the run had got to: %s" % str(a))
+		_check(str(b["outcome"]) == "died" and int(b["hp_lost"]) == 204 and not b.has("time_x") and not b.has("hp_lost_x"), "a run that died carries a figure against the game's: %s" % str(b))
+	else:
+		_check(false, "the run log's lines don't read as JSON: %s" % str(lines))
+	run.back_to_title()
+	run.free()
+	RunLog.dir = ""
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
+	# where a played run's line goes (the review): the first folder with a docs/balance in it, else the game's own
+	var here: String = ProjectSettings.globalize_path(folder)
+	var with_dir: String = here.path_join("with")
+	DirAccess.make_dir_recursive_absolute(with_dir.path_join(RunLog.DIR))
+	_check(RunLog.resolve(["", here.path_join("without"), with_dir]) == with_dir.path_join(RunLog.DIR).path_join(RunLog.FILE), "the run log's place with a docs/balance to hand: %s" % RunLog.resolve(["", here.path_join("without"), with_dir]))
+	_check(RunLog.resolve(["", here.path_join("without")]) == "user://" + RunLog.FILE, "the run log's place with no docs/balance: %s" % RunLog.resolve(["", here.path_join("without")]))
+	print("r7 run log ok: a line a run ended (%d fields), you over the game's on a clear, none from the smoke's own runs" % (a.size() if a is Dictionary else 0))
+
+
 ## Round 6, part 4 (board E): held fire widens the spread and the crosshair shows it; easing off settles it; bursts
 ## beat a held trigger at range.
 func _r6_kick_checks(main) -> void:
@@ -48862,4 +48914,5 @@ func _r6_checks(_main) -> void:
 	_r6_sound_checks(_main)
 	_r6_kick_checks(_main)
 	_r6_end_checks(_main)
+	_r7_log_checks(_main)
 	print("r6 ok: stood in the open %.1f HP a second against the game's %.1f x %.1f, %.1f men seeing him; lost, %d went to look, then spread; the waiting men kept out of sight" % [float(st["rate"]), float(st["game"]), float(st["tie"]), float(st["seeing"]), SliceTuning.G_SEARCHERS])

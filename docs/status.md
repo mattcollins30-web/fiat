@@ -16,7 +16,10 @@ The idler cut of FIAT. Concept: `docs/design/concept.md`. Repo at `C:\Users\matt
 - **Alongside (9 Nov, night): the ARPG slice, round 6** (board E, Matt: "Build it") - the gang as a threat (men lean
   out of cover, fire and duck back; two search where they last saw you), gang damage tied to the gang HP knob (x2 at
   x0.5 HP), the game's sounds, the gun's kick and a crosshair, the end screen's "You against the runner alone". Round
-  5 before it (1d82108; its sprites 0e0d00f). Waiting on Matt: his play of round 6. Next for the slice, on his word and
+  5 before it (1d82108; its sprites 0e0d00f). Waiting on Matt: his play of round 6, each
+  run now logged (10 Nov: docs/balance/slice_runs.jsonl, you against the runner alone). Matt, 10 Nov: both fights
+  are kept, with auto runs on sites already cleared (the review: the doc "Lesser England - what the ARPG fight
+  keeps"). Next for the slice, on his word and
   a mockup each: kinds of men, the hard man's own behaviour, a dodge or sprint, head aim, half-cover, hit feedback, a
   sight cone (the backlog). The slice doesn't touch 0.15.3's playtest.
 - **Matt's calls (8 Nov): "1-fix it, 2-fix it, 3-keep it, 4-keep it."** Built into 0.15.3 before its commit: (1) a
@@ -8323,3 +8326,11 @@ game's times the tie (10.7-13.4 HP a second against 15); a slow gun's kick does 
 first guesses; no sounds for crates, death or getting out; the title's music plays on under the fight. Checked: the
 slice's smoke areas (r6 new) with each fix proved red, two reviews, lint 0, the full smoke on Matt's machine. No change
 to shared code; the camp stays read-only.
+
+The slice's run log (10 Nov; Matt, on the two figures the end screen shows against the runner alone: "is there anything
+in the slice that records this info for you to read? If not let's build it"): slice/run_log.gd adds a JSON line a run
+ended (cleared, got out, dead) to docs/balance/slice_runs.jsonl - who and where, the test settings in force, time, HP
+lost, accuracy, kills, the gang reached, and the game's own fight; a cleared run carries time_x and hp_lost_x, you
+over the game's. No screen changed. The smoke's own runs write none; its check (r7) proved red three ways; a review,
+lint 0, the full smoke on Matt's machine. Round 6 itself is eaff9e0. The same morning, Matt on the review of what the
+shift keeps: "want to keep both and allow auto runs on already cleared sites" - logged in the backlog, no build.

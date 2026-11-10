@@ -145,6 +145,29 @@ improvements"): kinds of men (a rusher, a marksman, a man who throws); the hard 
 sprint; head aim that pays; half-cover you fire over; hit feedback (a flinch, a hit mark, their HP bars); a sight
 cone or a soft edge to the fog. Each needs its mockup and Matt's word before a build.
 
+What the shift keeps (10 Nov, Matt: "review the core game and figure out what can be retained with the shift to the
+arpg fight style. Balance and bots included"): the review is the doc "Lesser England - what the ARPG fight keeps"
+(https://claude.ai/artifact/FwJwFByyKs3uhEvxrQccxB). Its first open call: keep the game's fight as the runner alone
+beside the fight under your hands, or only the one. No build. Matt's call the same morning: "First point is want to keep
+both and allow auto runs on already cleared sites." So: the game's fight stays as the runner alone (odds, the other
+runners, the hands' trips, the convoys, the balance reads), and a site cleared by hand can be run by the game on its
+own. To design when the ARPG fight goes past the slice; no build.
+
+The slice, raised 10 Nov before Matt's play of round 6 (Matt: "Don't add any of these I just want them out of my head
+and onto the board for now"):
+- Searching a crate in the Kit room. Matt: "the inventory screen needs to be shown when searching crates and the crate
+  itself replaces the runners gear slots side of the view. Tarkov style it searches as your in the inventory and then
+  you drag and drop from the crate to the inventory once searching is complete. This replaces the search we have at
+  the moment."
+- The same for bodies. Matt: "the above also applies to bodies during and after the fight for dropped gear - this
+  presents a problem for the gear screen tho as one of the rules we have is equip from floor so you don't need the
+  backpack space to equip a new item." Open question, his: with the crate or body where the worn slots are, how a
+  find is worn straight off the floor without pack space.
+- Laser sights and torches. Matt: "we need to add last sights as an attachment and it needs to be visible in the
+  fight, same for torches we already have." (Read as laser sights - to confirm.)
+- Melee, damage over time and splash. Matt: "melee needs some thought along with dots and splash damage."
+Each needs the talk, its mockup and Matt's word before a build.
+
 ## Measure when the resists cap (parked 9 Nov, Matt: "Log is in the backlog after my play test")
 
 Matt asked whether a good player can roll 75% in all five resists with every damage line for the build (a poison

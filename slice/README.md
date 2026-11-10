@@ -12,6 +12,7 @@ fire, the way out. Out: every other site and class, final art (tokens drawn in c
 - slice.tscn / slice.gd (SliceWorld, W) - the world: steps everything in tick(dt); signals for the HUD; the geometry
   (sight, cover spots, collision as circles against rectangles)
 - level.gd - the car park's layout and look; crate.gd - a crate; fx.gd - tracers, flashes, prompts, the crosshair (W)
+- run_log.gd (10 Nov) - a line a run ended in docs/balance/slice_runs.jsonl: the run against the game's own fight
 - sounds.gd (round 6) - the game's own sounds (scripts/ui/sound.gd), cued off the world's signals; no new files
 - runner.gd (W) - the runner: moving, aiming (mouse, or right stick with a soft lock-on), the gun, crates, the way
   out, death and Last legs
@@ -64,6 +65,16 @@ real magazine sizes by gun kind. The gun's line over its rounds reads "AR · 10 
   sound. None yet for crates, death or getting out; the title's music plays on under the fight.
 - The end screen (end_screen.gd): cleared, it sets you against the runner alone - its time and HP lost against what
   the game's own fight would expect at this level (the bridge runs it), meds and Guard not counted.
+
+## The run log (10 Nov, Matt: "is there anything in the slice that records this info for you to read? If not let's build it")
+
+Every run that ends (cleared, got out, dead) adds one JSON line to docs/balance/slice_runs.jsonl (the folder git
+ignores; the project run from its folder or the .exe sat in it, else the game's own folder): the time on the machine,
+the class, level and guns, the car park's level, gang HP and gang damage in force, time, HP lost, kills, headshots,
+rounds and hits, damage done, finds, the gang reached and men left, searches, Last legs, and the game's own fight
+(game_time_s, game_hp_lost). A cleared run also carries you over the game's: time_x and hp_lost_x, the two figures
+the review of what the shift keeps calibrates on. Back to the title from the pause writes none; the smoke's own runs
+write none (RunLog.off). ROUND in run_log.gd is bumped with each round.
 
 Not in round 6, logged in docs/design/ideas_backlog.md: kinds of men, the hard man's own behaviour, a dodge or sprint,
 head aim, half-cover, hit feedback, a sight cone.

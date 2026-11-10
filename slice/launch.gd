@@ -13,6 +13,7 @@ const EndScript := preload("res://slice/end_screen.gd")
 const KitScript := preload("res://slice/kit_room.gd")     # (round 4) the game's own Kit room, on the slice's Sim
 const SoundsScript := preload("res://slice/sounds.gd") # (round 6) the game's own sounds off the world's signals
 const PickScript := preload("res://slice/level_pick.gd")  # (build 76) the level picker before the fight
+const RunLog := preload("res://slice/run_log.gd")        # (10 Nov) a line a run ended, for the read after a play
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
@@ -215,7 +216,9 @@ func _on_ended(outcome: String, stats: Dictionary) -> void:
 	pause.close()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var site: Dictionary = world.ctx.get("site", {}) if world.ctx.get("site") is Dictionary else {}
-	end.open(outcome, stats, str(site.get("name", "The car park")), SliceBridge.game_fight(world.ctx))
+	var game: Dictionary = SliceBridge.game_fight(world.ctx)
+	end.open(outcome, stats, str(site.get("name", "The car park")), game)
+	RunLog.write(RunLog.entry(world, outcome, stats, game))
 
 
 ## The pause's other test setting (build 76, the magazine's gone): their damage a round times x, live - the bridge
